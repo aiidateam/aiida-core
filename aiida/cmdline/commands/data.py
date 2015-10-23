@@ -460,6 +460,104 @@ class Importable(object):
         func(filename, **parsed_args)
 
 
+class Depositable(object):
+    """
+    Provides shell completion for depositable data nodes.
+
+    .. note:: classes, inheriting Depositable, MUST NOT contain
+        attributes, starting with ``_deposit_``, which are not plugins for
+        depositing.
+    """
+    deposit_prefix = '_deposit_'
+    deposit_parameters_postfix = '_parameters'
+
+    def get_deposit_plugins(self):
+        """
+        Get the list of all implemented deposition methods for data class.
+        """
+        method_names = dir(self) # get list of class methods names
+        valid_formats = [ i[len(self.deposit_prefix):] for i in method_names
+                         if i.startswith(self.deposit_prefix) and \
+                            not i.endswith(self.deposit_parameters_postfix)] # filter
+
+        return {k: getattr(self,self.deposit_prefix + k) for k in valid_formats}
+
+    def deposit(self, *args):
+        """
+        Deposit the data node to a given database.
+
+        :param args: a namespace with parsed command line parameters.
+        """
+        # DEVELOPER NOTE: to add a new plugin, just add a _deposit_xxx() method.
+        import argparse,os
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Deposit data object.')
+        parser.add_argument('data_id', type=int, default=None,
+                            help="ID of the data object to be deposited.")
+
+        default_database = None
+        try:
+            default_database = self._default_deposition_database
+        except AttributeError:
+            if len(self.get_deposit_plugins().keys()) == 1:
+                default_database = self.get_deposit_plugins().keys()[0]
+            else:
+                default_database = None
+
+        parser.add_argument('--database', '-d', type=str, default=default_database,
+                            help="Label of the database for deposition.",
+                            choices=self.get_deposit_plugins().keys())
+
+        # Augmenting the command line parameters with ones, that are used by
+        # individual plugins
+        for cmd in dir(self):
+            if not cmd.startswith(self.deposit_prefix) or \
+               not cmd.endswith(self.deposit_parameters_postfix):
+                continue
+            getattr(self,cmd)(parser)
+
+        args = list(args)
+        parsed_args = vars(parser.parse_args(args))
+
+        database = parsed_args.pop('database')
+        data_id = parsed_args.pop('data_id')
+
+        # Removing the keys, whose values are None
+        for key in parsed_args.keys():
+            if parsed_args[key] is None:
+                parsed_args.pop(key)
+
+        if database is None:
+            print "Default database is not defined, please specify.\n" + \
+                  "Valid databases are:"
+            for i in self.get_deposit_plugins().keys():
+                print "  {}".format(i)
+            sys.exit(0)
+
+        try:
+            func = self.get_deposit_plugins()[database]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_deposit_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        from aiida.orm.node import Node
+        n = Node.get_subclass_from_pk(data_id)
+
+        try:
+            if not isinstance(n,self.dataclass):
+                print("Node {} is of class {} instead "
+                      "of {}".format(n,type(n),self.dataclass))
+                sys.exit(1)
+        except AttributeError:
+            pass
+
+        calc = func(n,**parsed_args)
+        print calc
+
+
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
 # subcommand of verdi data.
@@ -865,7 +963,8 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
                 raise
 
 
-class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
+class _Structure(VerdiCommandWithSubcommands,
+                 Listable, Visualizable, Exportable, Depositable):
     """
     Visualize AiIDA structures
     """
@@ -881,8 +980,9 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
             'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_none),
+            'deposit': (self.deposit, self.complete_none),
         }
-
+        
     def query(self, args):
         """
         Perform the query
@@ -1103,13 +1203,31 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
                 else:
                     raise
 
-    def _export_xsf(self, node):
+    def _export_tcod(self, node, parameter_data=None, **kwargs):
+        """
+        Plugin for TCOD
+        """
+        parameters = None
+        if parameter_data is not None:
+            from aiida.orm import DataFactory
+            ParameterData = DataFactory('parameter')
+            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+        print node._exportstring('tcod',parameters=parameters,**kwargs)
+
+    def _export_tcod_parameters(self, parser, **kwargs):
+        """
+        Command line parameters for TCOD
+        """
+        from aiida.tools.dbexporters.tcod import extend_with_cmdline_parameters
+        extend_with_cmdline_parameters(parser,self.dataclass.__name__)
+
+    def _export_xsf(self, node, **kwargs):
         """
         Exporter to XSF.
         """
         print node._exportstring('xsf')
 
-    def _export_cif(self, node):
+    def _export_cif(self, node, **kwargs):
         """
         Exporter to CIF.
         """
@@ -1121,8 +1239,30 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
         """
         print node._exportstring('xyz')
 
+    def _deposit_tcod(self, node, parameter_data=None, **kwargs):
+        """
+        Deposition plugin for TCOD.
+        """
+        from aiida.tools.dbexporters.tcod import deposit
+        parameters = None
+        if parameter_data is not None:
+            from aiida.orm import DataFactory
+            ParameterData = DataFactory('parameter')
+            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+        return deposit(node,parameters=parameters,**kwargs)
 
-class _Cif(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable, Importable):
+    def _deposit_tcod_parameters(self,parser,**kwargs):
+        """
+        Command line parameters deposition plugin for TCOD.
+        """
+        from aiida.tools.dbexporters.tcod import (deposition_cmdline_parameters,
+                                                  extend_with_cmdline_parameters)
+        deposition_cmdline_parameters(parser,self.dataclass.__name__)
+        extend_with_cmdline_parameters(parser,self.dataclass.__name__)
+
+
+class _Cif(VerdiCommandWithSubcommands,
+           Listable, Visualizable, Exportable, Importable, Depositable):
     """
     Visualize CIF structures
     """
@@ -1139,6 +1279,7 @@ class _Cif(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable, Impo
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_none),
             'import': (self.importfile, self.complete_none),
+            'deposit': (self.deposit, self.complete_none),
         }
 
     def _show_jmol(self, exec_name, structure_list):
@@ -1219,11 +1360,29 @@ class _Cif(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable, Impo
         """
         return ["ID", "formulae", "source_uri"]
 
-    def _export_cif(self, node):
+    def _export_cif(self, node, **kwargs):
         """
         Exporter to CIF.
         """
         print node._exportstring('cif')
+
+    def _export_tcod(self, node, parameter_data=None, **kwargs):
+        """
+        Plugin for TCOD
+        """
+        parameters = None
+        if parameter_data is not None:
+            from aiida.orm import DataFactory
+            ParameterData = DataFactory('parameter')
+            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+        print node._exportstring('tcod',parameters=parameters,**kwargs)
+
+    def _export_tcod_parameters(self,parser,**kwargs):
+        """
+        Command line parameters for TCOD
+        """
+        from aiida.tools.dbexporters.tcod import extend_with_cmdline_parameters
+        extend_with_cmdline_parameters(parser,self.dataclass.__name__)
 
     def _import_cif(self, filename, **kwargs):
         """
@@ -1237,8 +1396,30 @@ class _Cif(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable, Impo
         except ValueError as e:
             print e
 
+    def _deposit_tcod(self, node, parameter_data=None, **kwargs):
+        """
+        Deposition plugin for TCOD.
+        """
+        from aiida.tools.dbexporters.tcod import deposit
+        parameters = None
+        if parameter_data is not None:
+            from aiida.orm import DataFactory
+            ParameterData = DataFactory('parameter')
+            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+        return deposit(node,parameters=parameters,**kwargs)
 
-class _Trajectory(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
+    def _deposit_tcod_parameters(self, parser, **kwargs):
+        """
+        Command line parameters deposition plugin for TCOD.
+        """
+        from aiida.tools.dbexporters.tcod import (deposition_cmdline_parameters,
+                                                  extend_with_cmdline_parameters)
+        deposition_cmdline_parameters(parser,self.dataclass.__name__)
+        extend_with_cmdline_parameters(parser,self.dataclass.__name__)
+
+
+class _Trajectory(VerdiCommandWithSubcommands,
+                  Listable, Visualizable, Exportable, Depositable):
     """
     View and manipulate TrajectoryData instances.
     """
@@ -1254,6 +1435,7 @@ class _Trajectory(VerdiCommandWithSubcommands, Listable, Visualizable, Exportabl
             'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_none),
+            'deposit': (self.deposit, self.complete_none),
         }
 
     def _show_jmol(self, exec_name, trajectory_list, **kwargs):
@@ -1297,7 +1479,6 @@ class _Trajectory(VerdiCommandWithSubcommands, Listable, Visualizable, Exportabl
         """
         import tempfile, subprocess
 
-
         if len(trajectory_list) > 1:
             raise MultipleObjectsError("Visualization of multiple trajectories "
                                        "is not implemented")
@@ -1327,21 +1508,63 @@ class _Trajectory(VerdiCommandWithSubcommands, Listable, Visualizable, Exportabl
         Exporter to XSF.
         """
         print node._exportstring('xsf', **kwargs)
-        
+
+    def _export_tcod(self, node, parameter_data=None, **kwargs):
+        """
+        Plugin for TCOD
+        """
+        parameters = None
+        if parameter_data is not None:
+            from aiida.orm import DataFactory
+            ParameterData = DataFactory('parameter')
+            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+        print node._exportstring('tcod',
+                                 parameters=parameters,
+                                 **kwargs)
+
+    def _export_tcod_parameters(self, parser, **kwargs):
+        """
+        Command line parameters for TCOD
+        """
+        from aiida.tools.dbexporters.tcod import extend_with_cmdline_parameters
+        extend_with_cmdline_parameters(parser,self.dataclass.__name__)
+
     def _export_cif(self, node, **kwargs):
         """
         Exporter to CIF.
         """
         print node._exportstring('cif', **kwargs)
 
-    def _export_cif_parameters(self, parser):
+    def _export_cif_parameters(self, parser, **kwargs):
         """
         Describe command line parameters.
         """
-        parser.add_argument('--step',
+        parser.add_argument('--step', dest='trajectory_index',
                             help="ID of the trajectory step. If none is "
                                  "supplied, all steps are exported.",
                             type=int, action='store')
+
+    def _deposit_tcod(self, node, parameter_data=None, **kwargs):
+        """
+        Deposition plugin for TCOD.
+        """
+        from aiida.tools.dbexporters.tcod import deposit
+        parameters = None
+        if parameter_data is not None:
+            from aiida.orm import DataFactory
+            ParameterData = DataFactory('parameter')
+            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+        return deposit(node,parameters=parameters,**kwargs)
+
+    def _deposit_tcod_parameters(self, parser, **kwargs):
+        """
+        Command line parameters deposition plugin for TCOD.
+        """
+        from aiida.tools.dbexporters.tcod import (deposition_cmdline_parameters,
+                                                  extend_with_cmdline_parameters)
+        deposition_cmdline_parameters(parser,self.dataclass.__name__)
+        extend_with_cmdline_parameters(parser,self.dataclass.__name__)
+        self._export_cif_parameters(parser)
 
 
 class _Parameter(VerdiCommandWithSubcommands, Visualizable):

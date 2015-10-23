@@ -458,6 +458,8 @@ be found :doc:`here<setup/computerandcodes>`.
 Optional dependencies
 +++++++++++++++++++++
 
+.. _CIF_manipulation_dependencies:
+
 CIF manipulation
 ----------------
 
@@ -466,14 +468,16 @@ following dependencies are required to be installed:
 
 * `PyCifRW`_
 * `pymatgen`_
+* `pyspglib`_
 * `jmol`_
 * `Atomic Simulation Environment (ASE)`_
 * :doc:`cod-tools<plugins/codtools/index>`
 
-First three can be installed from the default repositories::
+First four can be installed from the default repositories::
 
     sudo pip install pycifrw==3.6.2.1
     sudo pip install pymatgen==3.0.13
+    sudo pip install pyspglib
     sudo apt-get install jmol
 
 ASE has to be installed from source::
@@ -493,6 +497,7 @@ For the setting up of cod-tools please refer to
 .. _Atomic Simulation Environment (ASE): https://wiki.fysik.dtu.dk/ase/
 .. _PyCifRW: https://pypi.python.org/pypi/PyCifRW/3.6.2
 .. _jmol: http://jmol.sourceforge.net
+.. _pyspglib: http://spglib.sourceforge.net/pyspglibForASE/
 
 Further comments and troubleshooting
 ++++++++++++++++++++++++++++++++++++

@@ -135,3 +135,67 @@ class TestPort(AiidaTestCase):
             import_data(filename, silent=True)
 
         import_data(filename, ignore_unknown_nodes=True, silent=True)
+
+    def test_4(self):
+        """
+        Test control of licenses.
+        """
+        from aiida.common.exceptions import LicensingException
+        from aiida.common.folders import SandboxFolder
+        from aiida.orm.importexport import export_tree
+
+        StructureData = DataFactory('structure')
+        sd = StructureData()
+        sd.source = {'license': 'GPL'}
+        sd.store()
+
+        folder = SandboxFolder()
+        export_tree([sd.dbnode], folder=folder, silent=True,
+                    allowed_licenses=['GPL'])
+        # Folder should contain two files of metadata + nodes/
+        self.assertEquals(len(folder.get_content_list()), 3)
+
+        folder = SandboxFolder()
+        export_tree([sd.dbnode], folder=folder, silent=True,
+                    forbidden_licenses=['Academic'])
+        # Folder should contain two files of metadata + nodes/
+        self.assertEquals(len(folder.get_content_list()), 3)
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        allowed_licenses=['CC0'])
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        forbidden_licenses=['GPL'])
+
+        def cc_filter(license):
+            return license.startswith('CC')
+
+        def gpl_filter(license):
+            return license == 'GPL'
+
+        def crashing_filter(license):
+            raise NotImplementedError("not implemented yet")
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        allowed_licenses=cc_filter)
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        forbidden_licenses=gpl_filter)
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        allowed_licenses=crashing_filter)
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        forbidden_licenses=crashing_filter)

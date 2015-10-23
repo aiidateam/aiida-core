@@ -16,6 +16,7 @@ Developer's guide
    dev_data_cmdline
 
    data_cmdline
+   tcod_exporter
    git_cheatsheet
    sphinx_cheatsheet
    ../verdi/properties

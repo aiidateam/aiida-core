@@ -639,12 +639,49 @@ def symop_fract_from_ortho(cell):
     ])
 
 
+def ase_refine_cell(aseatoms, **kwargs):
+    """
+    Detect the symmetry of the structure, remove symmetric atoms and
+    refine unit cell.
+
+    :param aseatoms: an ase.atoms.Atoms instance
+    :param symprec: symmetry precision, used by pyspglib
+    :return newase: refined cell with reduced set of atoms
+    :return symmetry: a dictionary describing the symmetry space group
+    """
+    from pyspglib.spglib import refine_cell, get_symmetry_dataset
+    from ase.atoms import Atoms
+    cell, positions, numbers = refine_cell(aseatoms, **kwargs)
+
+    refined_atoms = Atoms(numbers, scaled_positions=positions, cell=cell,
+                          pbc=True)
+
+    sym_dataset = get_symmetry_dataset(refined_atoms, **kwargs)
+
+    unique_numbers = []
+    unique_positions = []
+
+    for i in set(sym_dataset['equivalent_atoms']):
+        unique_numbers.append(refined_atoms.numbers[i])
+        unique_positions.append(refined_atoms.get_scaled_positions()[i])
+
+    unique_atoms = Atoms(unique_numbers,
+                         scaled_positions=unique_positions,
+                         cell=cell, pbc=True)
+
+    return unique_atoms,{'hm': sym_dataset['international'],
+                         'hall': sym_dataset['hall'],
+                         'tables': sym_dataset['number'],
+                         'rotations': sym_dataset['rotations'],
+                         'translations':sym_dataset['translations']}
+
+
 @optional_inline
 def _get_cif_ase_inline(struct=None, parameters=None):
     """
     Creates :py:class:`aiida.orm.data.cif.CifData` using ASE.
 
-    :note: requires ASE module.
+    .. note:: requires ASE module.
     """
     from aiida.orm.data.cif import CifData
 
@@ -845,6 +882,13 @@ class StructureData(Data):
 
         cif = CifData(ase=self.get_ase())
         return cif._prepare_cif()
+
+    def _prepare_tcod(self,**kwargs):
+        """
+        Write the given structure to a string of format TCOD CIF.
+        """
+        from aiida.tools.dbexporters.tcod import export_cif
+        return export_cif(self,**kwargs)
 
     def _prepare_xyz(self):
         """

@@ -497,7 +497,7 @@ class Devel(VerdiCommandWithSubcommands):
                     # DB test
                     for dbtest in v:
                         db_test_list.append(dbtest)
-
+        
         for test_folder in test_folders:
             print "v" * 75
             print ">>> Tests for module {} <<<".format(test_folder.ljust(50))
@@ -506,7 +506,6 @@ class Devel(VerdiCommandWithSubcommands):
                 test_folder, top_level_dir=os.path.dirname(aiida.__file__))
             test_runner = unittest.TextTestRunner()
             test_runner.run(testsuite)
-
         if do_db:
             # As a first thing, I want to set the correct flags.
             # This allow to work on temporary DBs and a temporary repository.
@@ -517,11 +516,12 @@ class Devel(VerdiCommandWithSubcommands):
             # that you have already configured also for tests. Otherwise, 
             # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
 
-            # TODO: allow the use of this flag
+            # The prefix is then checked inside get_profile_config and stripped
+            # but it is needed to know if this is a test or not
             if get_property('tests.use_sqlite'):
                 profile_prefix = 'testsqlite_'
             else:
-                profile_prefix = 'testsqlite_'
+                profile_prefix = 'test_'
 
             profile = "{}{}".format(profile_prefix,
                                     settings_profile.AIIDADB_PROFILE if

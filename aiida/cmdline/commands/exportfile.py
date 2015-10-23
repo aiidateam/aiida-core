@@ -37,7 +37,10 @@ class Export(VerdiCommand):
         parser.add_argument('-n', '--nodes', nargs='+', type=int, metavar="PK",
                             help="Export the given nodes")
         parser.add_argument('-g', '--groups', nargs='+', metavar="GROUPNAME",
-                            help="Export all nodes in the given group(s).",
+                            help="Export all nodes in the given group(s), identified by name.",
+                            type=str)
+        parser.add_argument('-G', '--group_pks', nargs='+', metavar="PK",
+                            help="Export all nodes in the given group(s), identified by pk.",
                             type=str)
         parser.add_argument('-P', '--no-parents',
                             dest='no_parents', action='store_true',
@@ -83,6 +86,17 @@ class Export(VerdiCommand):
                     sys.exit(1)
                 node_pk_list += group.dbgroup.dbnodes.values_list('pk', flat=True)
                 groups_list.append(group.dbgroup)
+                
+        if parsed_args.group_pks is not None:
+            for group_pk in parsed_args.group_pks:
+                try:
+                    group = Group.get(pk=group_pk)
+                except (ValueError, NotExistent) as e:
+                    print >> sys.stderr, e.message
+                    sys.exit(1)
+                node_pk_list += group.dbgroup.dbnodes.values_list('pk', flat=True)
+                groups_list.append(group.dbgroup)
+        
         node_pk_list = set(node_pk_list)
         
         node_list = list(

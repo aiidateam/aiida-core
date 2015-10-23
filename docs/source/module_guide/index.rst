@@ -14,5 +14,5 @@ Modules
    ../parsers/dev
    ../querying/dev
    ../dbimporters/dev
+   ../dbexporters/dev
    ../tools/dev
-

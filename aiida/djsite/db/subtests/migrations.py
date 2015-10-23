@@ -13,6 +13,7 @@ class CalcStateChanges(AiidaTestCase):
         import logging
 
         from django.utils import timezone
+        from aiida.orm.calculation import Calculation
 
         # Have to use this ugly way of importing because the django migration
         # files start with numbers which are not a valid package name
@@ -38,8 +39,20 @@ class CalcStateChanges(AiidaTestCase):
             DbCalcState(dbnode=job.dbnode, state=state).save()
 
             time_before_fix = timezone.now()
+
+            # Temporarily disable logging to the stream handler (i.e. screen)
+            # because otherwise fix_calc_states will print warnings
+            handler = next((h for h in logging.getLogger('aiida').handlers if
+                           isinstance(h, logging.StreamHandler)), None)
+            if handler:
+                handler.setLevel(logging.ERROR)
+
             # Call the code that deals with updating these states
             state_change.fix_calc_states(None, None)
+            
+            if handler:
+                handler.setLevel(logging.NOTSET)
+
             current_state = job.get_state()
             self.assertNotEqual(current_state, state,
                                 "Migration code failed to change removed state {}".

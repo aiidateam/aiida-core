@@ -23,13 +23,13 @@ that AiiDA doesn't perform the calculations but orchestrates the calculation
 procedure following the user's orders. Therefore, AiiDA executes (external)
 codes and it should be clear:
 
-* Where the code is.
+* where the code is;
 
-* How to prepare the input for the code. This is called an input plugin or a
-  calculation.
+* how to prepare the input for the code. This is called an `input plugin` or a
+  `calculation`;
 
-* How to parse the output of the code. This is called an output plugin or a
-  parser.
+* how to parse the output of the code. This is called an `output plugin` or a
+  `parser`.
 
 It is also useful, but not necessary, to have a script that launches the
 calculation with the necessary parameters.
@@ -70,11 +70,15 @@ name is given as a parameter::
 
 The result will be stored in JSON format in a file which name is also passed
 as parameter. The resulting file from the script will be handled by AiiDA. The
-code can be downloaded from :download:`here <sum_calc.py>`.
+code can be downloaded from :download:`here <sum_executable.py>`.
 
 To install the above code, we should execute::
 
     verdi code setup
+
+.. note:: When you setup the code, you need to already have placed the `input
+    plugin` of this code in the right place (please see the following section)
+    and mention it in the code setup.
 
 After defining the code, we should be able to see it in the list of our installed
 codes by typing::
@@ -113,8 +117,12 @@ Which will give us an output similar to the following::
 
 What is important to keep from the above is that we have informed AiiDA for the
 existence of a code that resides at a specific location and we have also
-specified the `default plugin` that will be used. This will be covered in one
-of the following sections, the `output plugin section`.
+specified the `default (input) plugin` that will be used. This will be covered in the
+`input plugin` section.
+
+.. note:: Don't forget that the code should be able to be executed by the
+    scheduler. Therefore, it should have the necessary permissions.
+    E.g. ``chmod +x sum_executable.py``
 
 Input plugin
 ------------
@@ -229,19 +237,19 @@ summation code::
             return calcinfo
 
 
-The above input plug-in can be downloaded from here
+The above input plug-in can be downloaded from
 (:download:`here <sum_calc.py>`) and should be place at ``aiida/orm/calculation/job/sum.py``.
 
 In order the plugin to be discoverable, it is important to:
 
 * give the right name to the file. This should be the name of your input plugin;
 
-* place the plugin ``aiida/orm/calculation/job``;
+* place the plugin under ``aiida/orm/calculation/job``;
 
 * name the class inside the plugin as plug_in_nameCalculation. For example, the
   class name of the summation input plugin is, as you see above, `SumCalculation`;
 
-* inherit from ``JobCalculation``. Otherwise the plugin will not work.
+* inherit from ``JobCalculation``.
 
 By doing the above, your plugin will be able to be loaded with ``CalculationFactory``.
 
@@ -251,7 +259,7 @@ By doing the above, your plugin will be able to be loaded with ``CalculationFact
   contains all the methods to run on a remote scheduler, get the calculation
   state, copy files remotely and retrieve them, ...
 
-The kind of parameters that the input plugin expect is defined by the following
+The parameters that the input plugin expects are defined by the following
 code snippet::
 
     retdict.update({
@@ -281,8 +289,8 @@ in the ``parameters`` variable::
     with open(input_filename, 'w') as infile:
         json.dump(input_json, infile)
 
-Since the input file is ready, we can now create the calculation info and link the
-current calculation object to it::
+We can now create the calculation info and link the current calculation
+object to it::
 
     calcinfo.uuid = self.uuid
 

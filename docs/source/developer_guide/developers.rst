@@ -54,23 +54,23 @@ and output nodes are also stored.
 Database schema
 +++++++++++++++
 
-The Django database schema can be found in :py:mod:`aiida.djsite.db.models`.
+The Django database schema can be found in :py:mod:`aiida.backends.djsite.db.models`.
 
 If you need to change the database schema follow these steps:
 
-1. Make all the necessary changes to :py:mod:`aiida.djsite.db.models`
-2. Create a new migration file.  From ``aiida/djsite``, run::
+1. Make all the necessary changes to :py:mod:`aiida.backends.djsite.db.models`
+2. Create a new migration file.  From ``aiida/backends/djsite``, run::
 
      python manage.py makemigrations
 
-   This will create the migration file in ``aiida/djsite/db/migrations`` whose
+   This will create the migration file in ``aiida/backends/djsite/db/migrations`` whose
    name begins with a number followed by some description.  If the description
    is not appropriate then change to it to something better but retain the
    number.
 
 3. Open the generated file and make the following changes::
 
-    from aiida.djsite.db.migrations import update_schema_version
+    from aiida.backends.djsite.db.migrations import update_schema_version
     ...
     SCHEMA_VERSION = # choose an appropriate version number
                      # (hint: higher than the last migration!)
@@ -83,14 +83,14 @@ If you need to change the database schema follow these steps:
       ]
 
 5. Change the ``LATEST_MIGRATION`` variable in
-   ``aiida/djsite/db/migrations/__init__.py`` to the name of your migration
+   ``aiida/backends/djsite/db/migrations/__init__.py`` to the name of your migration
    file::
 
      LATEST_MIGRATION = '0003_my_db_update'
 
    This let's AiiDA get the version number from your migration and check sure the
    database and the code are in sync.
-6. Migrate your database to the new version, (again from ``aiida/djsite``),
+6. Migrate your database to the new version, (again from ``aiida/backends/djsite``),
    run::
 
      python manage.py migrate

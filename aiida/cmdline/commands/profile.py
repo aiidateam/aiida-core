@@ -70,7 +70,7 @@ class Profile(VerdiCommandWithSubcommands):
 
     def profile_list(self, *args):
         from aiida.common.setup import get_profiles_list, get_default_profile
-        from aiida.djsite.settings import settings_profile
+        from aiida.backends.djsite.settings import settings_profile
 
         current_profile = settings_profile.AIIDADB_PROFILE
         default_profile = get_default_profile(

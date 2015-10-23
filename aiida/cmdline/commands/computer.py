@@ -1002,7 +1002,6 @@ class Computer(VerdiCommandWithSubcommands):
 
         ToDo: use an API or cache the results, sometime it is quite slow!
         """
-        load_dbenv()
         from aiida.orm.computer import Computer as AiidaOrmComputer
 
         return AiidaOrmComputer.list_names()
@@ -1011,7 +1010,6 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Get a Computer object with given name, or raise NotExistent
         """
-        load_dbenv()
         from aiida.orm.computer import Computer as AiidaOrmComputer
 
         return AiidaOrmComputer.get(name)

@@ -99,6 +99,6 @@ class AiidaTestCase(unittest.TestCase):
 
         DbComputer.objects.all().delete()
 
-        from aiida.djsite.db.models import DbLog
+        from aiida.backends.djsite.db.models import DbLog
 
         DbLog.objects.all().delete()

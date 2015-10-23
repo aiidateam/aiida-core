@@ -12,7 +12,7 @@ from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError)
 from aiida.backends.djsite.settings.settings import (
     AIIDANODES_UUID_VERSION, AUTH_USER_MODEL)
-import aiida.djsite.db.migrations as migrations
+import aiida.backends.djsite.db.migrations as migrations
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"

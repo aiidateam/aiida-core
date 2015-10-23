@@ -9,7 +9,7 @@ import stat
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
 from dateutil.parser import parse
 from os.path import expanduser
-from aiida.djsite.utils import load_dbenv
+from aiida.backends.djsite.utils import load_dbenv
 
 # Needed initialization for Django
 load_dbenv()

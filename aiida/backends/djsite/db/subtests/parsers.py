@@ -147,7 +147,7 @@ def read_test(outfolder):
         raise ValueError("This test does provide a check file, but it cannot "
                          "be JSON-decoded!")
 
-    mod_path = 'aiida.djsite.db.subtests.parser_tests.{}'.format(os.path.split(outfolder)[1])
+    mod_path = 'aiida.backends.djsite.db.subtests.parser_tests.{}'.format(os.path.split(outfolder)[1])
 
     skip_test = False
     try:

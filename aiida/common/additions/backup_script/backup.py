@@ -11,8 +11,8 @@ from pytz import timezone as ptimezone
 from aiida.orm.node import Node
 from aiida.orm.workflow import Workflow
 
-from aiida.djsite.db.models import DbNode
-from aiida.djsite.db.models import DbWorkflow
+from aiida.backends.djsite.db.models import DbNode
+from aiida.backends.djsite.db.models import DbWorkflow
 
 from aiida.common.folders import RepositoryFolder
 
@@ -304,7 +304,7 @@ class Backup(object):
         return query_sets
     
     def _backup_needed_files(self, query_sets):
-        from aiida.djsite.settings.settings import REPOSITORY_PATH
+        from aiida.backends.djsite.settings.settings import REPOSITORY_PATH
         repository_path = os.path.normpath(REPOSITORY_PATH)
         
         parent_dir_set = set()

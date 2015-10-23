@@ -49,27 +49,26 @@ class JobCalculation(AbstractJobCalculation):
           from ``aiida.common.datastructures.calc_states``.
         :raise: ModificationNotAllowed if the given state was already set.
         """
+
+        from aiida.common.datastructures import sort_states
+
         if self._to_be_stored:
             raise ModificationNotAllowed("Cannot set the calculation state "
                                          "before storing")
-
-        if state == calc_states.NOTFOUND:
-            raise ValueError(
-                "You cannot manually set a calculation in the '{}' "
-                "state".format(state))
 
         if state not in calc_states:
             raise ValueError(
                 "'{}' is not a valid calculation status".format(state))
 
         old_state = self.get_state()
-        state_sequence = [state, old_state]
+        if old_state:
+            state_sequence = [state, old_state]
 
-        # sort from new to old: if they are equal, then it is a valid
-        # advance in state (otherwise, we are going backwards...)
-        if sort_states(state_sequence) != state_sequence:
-            raise ModificationNotAllowed("Cannot change the state from {} "
-                                         "to {}".format(old_state, state))
+            # sort from new to old: if they are equal, then it is a valid
+            # advance in state (otherwise, we are going backwards...)
+            if sort_states(state_sequence) != state_sequence:
+                raise ModificationNotAllowed("Cannot change the state from {} "
+                                             "to {}".format(old_state, state))
 
         try:
             with transaction.commit_on_success():

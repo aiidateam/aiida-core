@@ -12,7 +12,7 @@ def is_dbenv_loaded():
     Return True of the dbenv was already loaded (with a call to load_dbenv),
     False otherwise.
     """
-    from aiida.djsite.settings import settings_profile
+    from aiida.backends.djsite.settings import settings_profile
     return settings_profile.LOAD_DBENV_CALLED
 
 def load_dbenv(process=None, profile=None):
@@ -88,7 +88,7 @@ def get_current_profile():
 
     Return None if load_dbenv has not been loaded yet.
     """
-    from aiida.djsite.settings import settings_profile
+    from aiida.backends.djsite.settings import settings_profile
 
     if is_dbenv_loaded():
         return settings_profile.AIIDADB_PROFILE
@@ -287,7 +287,7 @@ def check_schema_version():
         raise ConfigurationError(
             "The code schema version is {}, but the version stored in the"
             "database (DbSetting table) is {}, stopping.\n"
-            "To migrate to latest version, go to aiida/djsite and run:\n"
+            "To migrate to latest version, go to aiida.backends.djsite and run:\n"
             "python manage.py --aiida-profile={} migrate".
             format(code_schema_version, db_schema_version,
                    get_current_profile())

@@ -276,7 +276,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
     from aiida.orm import Node, Group
     from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
-    from aiida.djsite.db import models
+    from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
 
@@ -632,9 +632,9 @@ def import_data(in_path,ignore_unknown_nodes=False,
                         # New link    
                         links_to_store.append(models.DbLink(
                             input_id=in_id, output_id=out_id, label=link['label']))
-                        if 'aiida.djsite.db.models.DbLink' not in ret_dict:
-                            ret_dict['aiida.djsite.db.models.DbLink'] = { 'new': [] }
-                        ret_dict['aiida.djsite.db.models.DbLink']['new'].append((in_id,out_id))
+                        if 'aiida.backends.djsite.db.models.DbLink' not in ret_dict:
+                            ret_dict['aiida.backends.djsite.db.models.DbLink'] = { 'new': [] }
+                        ret_dict['aiida.backends.djsite.db.models.DbLink']['new'].append((in_id,out_id))
     
             # Store new links
             if links_to_store:
@@ -871,7 +871,7 @@ def get_all_fields_info():
     import django.db.models.fields as djf
     import django_extensions
 
-    from aiida.djsite.db import models
+    from aiida.backends.djsite.db import models
 
     all_fields_info = {}
 
@@ -990,7 +990,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
     from django.db.models import Q
 
     import aiida
-    from aiida.djsite.db import models
+    from aiida.backends.djsite.db import models
     from aiida.orm import Node, Calculation, load_node
     from aiida.orm.data import Data
     from aiida.common.exceptions import LicensingException
@@ -1046,8 +1046,8 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
     if allowed_licenses is not None or forbidden_licenses is not None:
         from inspect import isfunction
 
-        node_licenses = list(aiida.djsite.db.models.DbNode.objects.filter(
-            reduce(operator.and_, entries_to_add['aiida.djsite.db.models.DbNode']),
+        node_licenses = list(aiida.backends.djsite.db.models.DbNode.objects.filter(
+            reduce(operator.and_, entries_to_add['aiida.backends.djsite.db.models.DbNode']),
             dbattributes__key='source.license').values_list('pk', 'dbattributes__tval'))
         for pk, license in node_licenses:
             if allowed_licenses is not None:

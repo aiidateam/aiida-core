@@ -39,7 +39,7 @@ class User(VerdiCommandWithSubcommands):
         return "\n".join(emails)
 
     def user_configure(self, *args):
-        from aiida.djsite.settings import settings_profile
+        from aiida.backends.djsite.settings import settings_profile
         from aiida import is_dbenv_loaded
         if not is_dbenv_loaded():
             load_dbenv()

@@ -586,7 +586,6 @@ class Code(VerdiCommandWithSubcommands):
                             help="The pk of the codes to reveal",
         )
         parsed_args = parser.parse_args(args)
-        load_dbenv()
         from aiida.orm.code import Code
 
         for pk in parsed_args.pks:
@@ -699,7 +698,6 @@ class Code(VerdiCommandWithSubcommands):
         """
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
 
-        load_dbenv()
         from aiida.orm import Code as AiidaOrmCode
 
         try:

@@ -40,13 +40,13 @@ class FloatsumCalculation(JobCalculation):
             "floatdata1": {
                'valid_types': FloatData,
                'additional_parameter': None,
-               'linkname': 'float_data_1',
+               'linkname': 'floatdata1',
                'docstring': ("Use a node that specifies the input float"),
                },
             "floatdata2": {
                'valid_types': FloatData,
                'additional_parameter': None,
-               'linkname': 'float_data_2',
+               'linkname': 'floatdata2',
                'docstring': ("Use a node that specifies the input float"),
                },
             })
@@ -73,7 +73,7 @@ class FloatsumCalculation(JobCalculation):
             raise InputValidationError("Float data2 is not specified for this calculation")
 
 
-        if (not isinstance(float_data_1, FloatData)) or (not isinstance(floatdata2, FloatData)):
+        if (not isinstance(floatdata1, FloatData)) or (not isinstance(floatdata2, FloatData)):
             raise InputValidationError("Data is not of type FloatData.")
 
         try:
@@ -89,7 +89,7 @@ class FloatsumCalculation(JobCalculation):
         ##############################
         
         # input_json = parameters.get_dict()
-        input_json = {"x1": float_data_1.value, "x2": float_data_2.value}
+        input_json = {"x1": floatdata1.value, "x2": floatdata2.value}
 
         # write all the input to a file
         input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)

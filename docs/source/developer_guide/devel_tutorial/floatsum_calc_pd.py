@@ -77,8 +77,7 @@ class FloatsumCalculation(JobCalculation):
         # END OF INITIAL INPUT CHECK #
         ##############################
         
-        # input_json = parameters.get_dict()
-        input_json = {"x1": float_data_1.value, "x2": float_data_2.value}
+        input_json = parameters.get_dict()
 
         # write all the input to a file
         input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)

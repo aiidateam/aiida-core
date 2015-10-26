@@ -511,14 +511,14 @@ class LocalTransport(aiida.transport.Transport):
         the_source = os.path.join(self.curdir, source)
         shutil.copytree(the_source, destination, symlinks=not(dereference))
 
-    def copy(self, source, destination, dereference=True):
+    def copy(self, source, destination, dereference=False):
         """
         Copies a file or a folder from 'remote' source to 'remote' destination.
         Automatically redirects to copyfile or copytree.
 
         :param (str) source: path to local file
         :param (str) destination: path to remote file
-        :param (bool) dereference: follow symbolic links. Default = True
+        :param (bool) dereference: follow symbolic links. Default = False
 
         :raise ValueError: if 'remote' source or destination is not valid
         :raise OSError: if source does not exist
@@ -598,14 +598,14 @@ class LocalTransport(aiida.transport.Transport):
 
         shutil.copyfile(the_source, the_destination)
 
-    def copytree(self, source, destination, dereference=True):
+    def copytree(self, source, destination, dereference=False):
         """
         Copies a folder from 'remote' source to
         'remote' destination.
 
         :param (str) source: path to local file
         :param (str) destination: path to remote file
-        :param (bool) dereference: follow symbolic links. Default = True
+        :param (bool) dereference: follow symbolic links. Default = False
         
         :raise ValueError: if 'remote' source or destination is not valid
         :raise OSError: if source does not exist

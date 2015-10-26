@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
+
 import sys
+import datetime
+import argparse
+
+from aiida.backends.cmdline import get_group_list
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+
 from aiida import load_dbenv
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -122,10 +128,7 @@ class Group(VerdiCommandWithSubcommands):
         load_dbenv()
 
         from aiida.orm.group import get_group_type_mapping
-        from aiida.backends.djsite.utils import get_automatic_user
-        import datetime
-        import argparse
-        from aiida.orm import Group as G
+        from aiida.backends.utils import get_automatic_user
         from aiida.utils import timezone
 
         parser = argparse.ArgumentParser(
@@ -188,31 +191,21 @@ class Group(VerdiCommandWithSubcommands):
         else:
             n_days_ago = None
 
-        name_filter_dict = dict([('name__{}'.format(name_filter), getattr(parsed_args,name_filter))
-                                 for name_filter in ['startswith','endswith','contains']
-                                 if getattr(parsed_args,name_filter) is not None])
+        name_filters = dict((k, getattr(parsed_args, k))
+                            for k in ['startswith','endswith','contains'])
 
-        groups = G.query(user=user, type_string=type_string, past_days=n_days_ago,
-                         **name_filter_dict)
+        groups = get_group_list(user, type_string, parsed_args, past_days=n_days_ago,
+                       name_filters=name_filters)
+
 
         # nice formatting
         # gather all info
 
-        pks = []
-        users = []
-        names = []
-        nodes = []
-        for group in groups:
-            pks.append(str(group.pk))
-            names.append(group.name)
-            nodes.append(len(group.nodes))
-            users.append(group.user.email.strip())
-
         # get the max length
-        max_pks_len = max([len(i) for i in pks]) if pks else 4
-        max_names_len = max([len(i) for i in names]) if names else 4
-        max_nodes_len = max([len(str(i)) for i in nodes]) if nodes else 4
-        max_users_len = max([len(i) for i in users]) if users else 4
+        max_pks_len = max([len(i[0]) for i in groups]) if groups else 4
+        max_names_len = max([len(i[1]) for i in groups]) if groups else 4
+        max_nodes_len = max([len(str(i[2])) for i in groups]) if groups else 4
+        max_users_len = max([len(i[3]) for i in groups]) if groups else 4
 
         tolerated_name_length = (80 - 11 - max_nodes_len -
                                  max_users_len - max_pks_len - 1)
@@ -223,13 +216,12 @@ class Group(VerdiCommandWithSubcommands):
         if parsed_args.with_description:
             print "# Format: PK | GroupName | NumNodes | User | Description"
 
-            descriptions = [g.description for g in groups]
             fmt_string = "* {:<" + str(max_pks_len) + "} | "
             fmt_string += "{:<" + str(max_names_len) + "} | "
             fmt_string += "{:" + str(max_nodes_len) + "d} | "
             fmt_string += "{:" + str(max_users_len) + "s} | {}"
-            for pk, nam, nod, usr, desc in zip(
-                pks, names, nodes, users, descriptions):
+
+            for pk, nam, nod, usr, desc in groups:
                 print fmt_string.format(pk, nam, nod, usr, desc)
 
         else:
@@ -245,7 +237,7 @@ class Group(VerdiCommandWithSubcommands):
             extra_fmt_string += " " * max_nodes_len + " | "
             extra_fmt_string += " " * max_users_len
 
-            for pk, nam, nod, usr in zip(pks, names, nodes, users):
+            for pk, nam, nod, usr, _ in groups:
                 the_nams = [nam[i:i + tolerated_name_length] for i in range(0, len(nam), tolerated_name_length)]
                 print first_fmt_string.format(pk, the_nams[0], nod, usr)
                 for i in the_nams[1:]:

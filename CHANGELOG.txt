@@ -3,3 +3,4 @@ Main changes apported by new versions of AiiDA
 v0.5
 * Support to multiple codes. CalcInfo format has changed. 
   Non back compatible change. Previous calculation plugins need realignment.
+* Change default behavior for the copy of the symbolic links in the transport plugins:  "put"/"get" methods -> symbolic links are followed before copy; "copy" methods -> symbolic links are not followed (copied "as is").

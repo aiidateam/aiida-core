@@ -210,7 +210,7 @@ class LocalTransport(aiida.transport.Transport):
         else:
             os.chmod(real_path, mode)
 
-    def put(self, source, destination, dereference=False, overwrite=True,
+    def put(self, source, destination, dereference=True, overwrite=True,
             ignore_nonexisting=False):
         """
         Copies a file or a folder from source to destination.
@@ -219,7 +219,7 @@ class LocalTransport(aiida.transport.Transport):
         :param (str) source: absolute path to local file
         :param (str) destination: path to remote file
         :param (bool) dereference: if True follows symbolic links.
-                                 Default = False
+                                 Default = True
         :param (bool) overwrite: if True overwrites destination.
                                  Default = False
 
@@ -318,7 +318,7 @@ class LocalTransport(aiida.transport.Transport):
 
         shutil.copyfile(source, the_destination)
 
-    def puttree(self, source, destination, dereference=False, overwrite=True):
+    def puttree(self, source, destination, dereference=True, overwrite=True):
         """
         Copies a folder recursively from source to destination.
         Automatically redirects to putfile or puttree.
@@ -326,7 +326,7 @@ class LocalTransport(aiida.transport.Transport):
         :param (str) source: absolute path to local file
         :param (str) destination: path to remote file
         :param (bool) dereference: follow symbolic links.
-                                 Default = False
+                                 Default = True
         :param (bool) overwrite: if True overwrites destination.
                                Default = False
 
@@ -357,7 +357,7 @@ class LocalTransport(aiida.transport.Transport):
 
         the_destination = os.path.join(self.curdir, destination)
 
-        shutil.copytree(source, the_destination, symlinks=dereference)
+        shutil.copytree(source, the_destination, symlinks=not(dereference))
 
     def rmtree(self, path):
         """
@@ -374,7 +374,7 @@ class LocalTransport(aiida.transport.Transport):
             else:
                 raise e
 
-    def get(self, source, destination, dereference=False, overwrite=True,
+    def get(self, source, destination, dereference=True, overwrite=True,
             ignore_nonexisting=False):
         """
         Copies a folder or a file recursively from 'remote' source to
@@ -384,7 +384,7 @@ class LocalTransport(aiida.transport.Transport):
         :param (str) source: path to local file
         :param (str) destination: absolute path to remote file
         :param (bool) dereference: follow symbolic links
-                                 default = False
+                                 default = True
         :param (bool) overwrite: if True overwrites destination
                                default = False
 
@@ -475,14 +475,14 @@ class LocalTransport(aiida.transport.Transport):
 
         shutil.copyfile(the_source, destination)
 
-    def gettree(self, source, destination, dereference=False, overwrite=True):
+    def gettree(self, source, destination, dereference=True, overwrite=True):
         """
         Copies a folder recursively from 'remote' source to
         'local' destination.
 
         :param (str) source: path to local file
         :param (str) destination: absolute path to remote file
-        :param (bool) dereference: follow symbolic links. Default = False
+        :param (bool) dereference: follow symbolic links. Default = True
         :param (bool) overwrite: if True overwrites destination. Default = False
 
         :raise IOError: if 'remote' source is not valid
@@ -509,16 +509,16 @@ class LocalTransport(aiida.transport.Transport):
             destination = os.path.join(destination, os.path.split(source)[1])
 
         the_source = os.path.join(self.curdir, source)
-        shutil.copytree(the_source, destination, symlinks=dereference)
+        shutil.copytree(the_source, destination, symlinks=not(dereference))
 
-    def copy(self, source, destination, dereference=False):
+    def copy(self, source, destination, dereference=True):
         """
         Copies a file or a folder from 'remote' source to 'remote' destination.
         Automatically redirects to copyfile or copytree.
 
         :param (str) source: path to local file
         :param (str) destination: path to remote file
-        :param (bool) dereference: follow symbolic links. Default = False
+        :param (bool) dereference: follow symbolic links. Default = True
 
         :raise ValueError: if 'remote' source or destination is not valid
         :raise OSError: if source does not exist
@@ -562,7 +562,7 @@ class LocalTransport(aiida.transport.Transport):
                     shutil.copy(the_s, the_destination)
                 else:
                     # With self.copytree, the (possible) relative path is OK
-                    self.copytree(s, destination)
+                    self.copytree(s, destination, dereference)
 
         else:
             # If s is an absolute path, then the_source = source
@@ -572,7 +572,7 @@ class LocalTransport(aiida.transport.Transport):
                 shutil.copy(the_source, the_destination)
             else:
                 # With self.copytree, the (possible) relative path is OK
-                self.copytree(source, destination)
+                self.copytree(source, destination, dereference)
 
     def copyfile(self, source, destination):
         """
@@ -598,14 +598,14 @@ class LocalTransport(aiida.transport.Transport):
 
         shutil.copyfile(the_source, the_destination)
 
-    def copytree(self, source, destination, dereference=False):
+    def copytree(self, source, destination, dereference=True):
         """
         Copies a folder from 'remote' source to
         'remote' destination.
 
         :param (str) source: path to local file
         :param (str) destination: path to remote file
-        :param (bool) dereference: follow symbolic links. Default = False
+        :param (bool) dereference: follow symbolic links. Default = True
         
         :raise ValueError: if 'remote' source or destination is not valid
         :raise OSError: if source does not exist
@@ -626,7 +626,7 @@ class LocalTransport(aiida.transport.Transport):
             the_destination = os.path.join(the_destination,
                                            os.path.split(source)[1])
 
-        shutil.copytree(the_source, the_destination, symlinks=dereference)
+        shutil.copytree(the_source, the_destination, symlinks=not(dereference))
 
     def get_attribute(self, path):
         """

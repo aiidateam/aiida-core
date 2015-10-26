@@ -8,18 +8,9 @@ from aiida.common.exceptions import ValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
 import json
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE " \
-                u"(Theory and Simulation of Materials (THEOS) and National Centre " \
-                u"for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), " \
-                u"Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-
 class SumCalculation(JobCalculation):
     """
-    A generic plugin for calculations based on the ASE calculators.
-    
-    Requirement: the node should be able to import ase
+    A generic plugin for adding two numbers.
     """
     
     def _init_internal_params(self):

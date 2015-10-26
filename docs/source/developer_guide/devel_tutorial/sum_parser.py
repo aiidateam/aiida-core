@@ -7,31 +7,10 @@ from aiida.orm.data.parameter import ParameterData
 
 import json
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE " \
-                u"(Theory and Simulation of Materials (THEOS) and National Centre " \
-                u"for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), " \
-                u"Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-
-
 class SumParser(Parser):
     """
     This class is the implementation of the Parser class for Sum.
     """    
-    _outarray_name = 'output_data'
-    
-    def __init__(self, calculation):
-        """
-        Initialize the instance of SumParser
-        """
-        # super(SumParser, self).__init__(calculation)
-        super(SumParser, self).__init__(Parser)
-        # check for valid input
-        if not isinstance(calculation,SumCalculation):
-            raise OutputParsingError("Input calc must be a SumCalculation")
-        self._calc = calculation
-            
     def parse_with_retrieved(self, retrieved):
         """
         Parses the datafolder, stores results.
@@ -64,11 +43,10 @@ class SumParser(Parser):
             self.logger.error("Error parsing the output json")
             return successful,()
         
-        # save the arrays
         output_data = ParameterData(dict=out_dict)
-        link_name = 'output_data'
+        link_name = self.get_linkname_outparams()
         new_nodes_list = [(link_name, output_data)]
-        
+                    
         return successful,new_nodes_list
 
 

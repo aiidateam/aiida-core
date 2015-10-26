@@ -42,14 +42,10 @@ class Workflow(VerdiCommandWithSubcommands):
 
         load_dbenv()
 
+        from aiida.backends.utils import get_workflow_list, get_automatic_user
         from aiida.orm.workflow import get_workflow_info
-        from aiida.backends.djsite.db.models import DbWorkflow
-        from aiida.common.datastructures import wf_states
-        from aiida.backends.djsite.utils import get_automatic_user
 
-        from django.db.models import Q
-        from aiida.utils import timezone
-        import datetime, argparse
+        import argparse
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -78,30 +74,18 @@ class Workflow(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        if parsed_args.pks:
-            q_object = Q(pk__in=parsed_args.pks)
-        else:
-            q_object = Q(user=get_automatic_user())
-            if not parsed_args.all_states:
-                q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
-                q_object.add(~Q(state=wf_states.ERROR), Q.AND)
-            if parsed_args.past_days:
-                now = timezone.now()
-                n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
-                q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+        workflows = get_workflow_list(parsed_args.pks,
+                                      user=get_automatic_user(),
+                                      all_states=parsed_args.all_states,
+                                      n_days_ago=parsed_args.past_days)
 
-        wf_list = DbWorkflow.objects.filter(q_object).order_by('ctime')
-
-        # create dictionary of the form {pk: parent_workflow_pk}
-        parent_pks = dict(DbWorkflow.objects.filter(q_object).order_by(
-            'ctime').values_list('pk', 'parent_workflow_step__parent'))
-
-        for w in wf_list:
-            if parent_pks[w.pk] not in parent_pks.keys():
+        for w in workflows:
+            if w.parent_workflow_step.parent not in workflows:
                 print "\n".join(get_workflow_info(w, tab_size=tab_size,
                                                   short=parsed_args.short,
                                                   depth=parsed_args.depth))
-        if not wf_list:
+
+        if not workflows:
             if parsed_args.all_states:
                 print "# No workflows found"
             else:
@@ -207,12 +191,13 @@ class Workflow(VerdiCommandWithSubcommands):
 
 
     def print_logshow(self, *args):
-        from aiida.common.exceptions import NotExistent
-        from aiida.orm.workflow import Workflow
-        from aiida.backends.djsite.utils import get_log_messages
         from aiida import load_dbenv
 
         load_dbenv()
+
+        from aiida.backends.utils import get_log_messages
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm.workflow import Workflow
 
         for wf_pk in args:
             try:
@@ -244,5 +229,3 @@ class Workflow(VerdiCommandWithSubcommands):
                 # Print the message, with a few spaces in front of each line
                 print "\n".join(["|   {}".format(_)
                                  for _ in log['message'].splitlines()])
-
-

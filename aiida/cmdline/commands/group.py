@@ -4,8 +4,6 @@ import sys
 import datetime
 import argparse
 
-from aiida.backends.cmdline import get_group_list
-
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 from aiida import load_dbenv
@@ -128,7 +126,7 @@ class Group(VerdiCommandWithSubcommands):
         load_dbenv()
 
         from aiida.orm.group import get_group_type_mapping
-        from aiida.backends.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user, get_group_list
         from aiida.utils import timezone
 
         parser = argparse.ArgumentParser(
@@ -185,17 +183,12 @@ class Group(VerdiCommandWithSubcommands):
                     get_group_type_mapping().keys()))
                 sys.exit(1)
 
-        if parsed_args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
-        else:
-            n_days_ago = None
-
         name_filters = dict((k, getattr(parsed_args, k))
                             for k in ['startswith','endswith','contains'])
 
-        groups = get_group_list(user, type_string, parsed_args, past_days=n_days_ago,
-                       name_filters=name_filters)
+        groups = get_group_list(user, type_string,
+                                n_days_ago=parsed_args.past_days,
+                                name_filters=name_filters)
 
 
         # nice formatting

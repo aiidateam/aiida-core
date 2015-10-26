@@ -156,7 +156,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         load_dbenv()
         from aiida.orm.computer import Computer as AiiDAOrmComputer
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -647,7 +647,7 @@ class Computer(VerdiCommandWithSubcommands):
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
         from aiida.backends.djsite.db.models import DbUser
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
         from aiida.orm.computer import Computer as OrmComputer
 
         parser = argparse.ArgumentParser(

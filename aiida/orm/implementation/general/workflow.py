@@ -15,8 +15,7 @@ from aiida.common import aiidalogger
 from aiida.orm.implementation.calculation import JobCalculation
 
 
-# TODO SP: abstract get_automatic_user
-from aiida.backends.djsite.utils import get_automatic_user
+from aiida.backends.utils import get_automatic_user
 # TODO SP: abstract the dependence on DbWorkflow
 from aiida.backends.djsite.db.models import DbWorkflow
 

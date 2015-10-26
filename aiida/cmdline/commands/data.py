@@ -98,7 +98,7 @@ class Listable(object):
         """
         load_dbenv()
         from django.db.models import Q
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         q_object = None
         if args.all_users is False:
@@ -725,7 +725,7 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
         from aiida.common.utils import grouper
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.backends.djsite.db import models
@@ -980,7 +980,7 @@ class _Structure(VerdiCommandWithSubcommands,
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
         from aiida.common.utils import grouper
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.backends.djsite.db import models
@@ -1306,7 +1306,7 @@ class _Cif(VerdiCommandWithSubcommands,
         """
         load_dbenv()
         from django.db.models import Q
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         q_object = None
         if args.all_users is False:

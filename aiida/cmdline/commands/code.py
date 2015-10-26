@@ -629,7 +629,7 @@ class Code(VerdiCommandWithSubcommands):
         reveal_filter = parsed_args.all_codes
 
         from django.db.models import Q
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         django_filter = Q()
         if not all_users:
@@ -784,7 +784,7 @@ class Code(VerdiCommandWithSubcommands):
 
     def code_update(self, *args):
         import datetime
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         if len(args) != 1:
             print >> sys.stderr, ("after 'code update' there should be one "

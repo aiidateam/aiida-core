@@ -34,7 +34,7 @@ class Comment(VerdiCommandWithSubcommands):
         Add comment to a node
         """
         import argparse
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         load_dbenv()
         from aiida.orm.node import Node as AiidaOrmNode
@@ -78,7 +78,7 @@ class Comment(VerdiCommandWithSubcommands):
         Show the comments of a node
         """
         import argparse
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         load_dbenv()
         from aiida.orm.node import Node as AiidaOrmNode
@@ -129,7 +129,7 @@ class Comment(VerdiCommandWithSubcommands):
         """
         # Note: in fact, the user can still manually delete any comment
         import argparse
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         load_dbenv()
         from aiida.orm.node import Node as AiidaOrmNode
@@ -193,7 +193,7 @@ class Comment(VerdiCommandWithSubcommands):
         Update a comment
         """
         import argparse
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         load_dbenv()
         from aiida.orm.node import Node as AiidaOrmNode

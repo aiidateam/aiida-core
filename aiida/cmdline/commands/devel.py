@@ -383,7 +383,7 @@ class Devel(VerdiCommandWithSubcommands):
         load_dbenv()
         from django.db.models import Q
         from aiida.orm.node import Node
-        from aiida.backends.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         q_object = Q(user=get_automatic_user())
         q_object.add(Q(parents__isnull=True), Q.AND)

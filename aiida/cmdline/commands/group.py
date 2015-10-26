@@ -28,7 +28,7 @@ class Group(VerdiCommandWithSubcommands):
             'show': (self.group_show, self.complete_none),
             'description': (self.group_description, self.complete_none),
         }
-        
+
     def group_show(self, *args):
         """
         Show information on a given group. Pass the PK as a parameter.
@@ -39,16 +39,16 @@ class Group(VerdiCommandWithSubcommands):
         from aiida.common.exceptions import NotExistent
         from aiida.orm import Group as G
         from aiida.common.utils import str_timedelta
-        from django.utils import timezone
+        from aiida.utils import timezone
         from aiida.orm.node import from_type_to_pluginclassname
-        
+
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Information on a given AiiDA group.')
         parser.add_argument('-r', '--raw',
                             dest='raw', action='store_true',
                             help="Show only a space-separated list of PKs of "
-                            "the calculations in the group")        
+                            "the calculations in the group")
         parser.add_argument('PK',type=int, help="The PK of the group to show")
         parser.set_defaults(raw=False)
 
@@ -61,7 +61,7 @@ class Group(VerdiCommandWithSubcommands):
         except NotExistent as e:
             print >> sys.stderr, "Error: {}.".format(e.message)
             sys.exit(1)
-        
+
         if parsed_args.raw:
             print " ".join(str(_.pk) for _ in group.nodes)
         else:
@@ -84,7 +84,7 @@ class Group(VerdiCommandWithSubcommands):
 
     def group_description(self, *args):
         """
-        Edit the group description. 
+        Edit the group description.
         """
         load_dbenv()
 
@@ -97,10 +97,10 @@ class Group(VerdiCommandWithSubcommands):
             description='Change the description of a given group.')
         parser.add_argument('PK',type=int, help="The PK of the group for which "
                             "you want to edit the description")
-        parser.add_argument('description',type=str, 
+        parser.add_argument('description',type=str,
                             help="The new description. If not provided, "
                             "just show the current description.")
-        
+
         args = list(args)
         parsed_args = parser.parse_args(args)
 
@@ -109,12 +109,12 @@ class Group(VerdiCommandWithSubcommands):
             group = G(dbgroup=group_pk)
         except NotExistent as e:
             print >> sys.stderr, "Error: {}.".format(e.message)
-            sys.exit(1)        
+            sys.exit(1)
 
         group.description = parsed_args.description
-        
-        
-        
+
+
+
     def group_list(self, *args):
         """
         Print a list of groups in the DB.

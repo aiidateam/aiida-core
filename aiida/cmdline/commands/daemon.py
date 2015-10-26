@@ -363,7 +363,7 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from django.utils import timezone
+        from aiida.utils import timezone
 
         from django.core.exceptions import ObjectDoesNotExist
 

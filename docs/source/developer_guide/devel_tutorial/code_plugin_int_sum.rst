@@ -1,5 +1,5 @@
-Developer code plugin tutorial  - Integer summation
-===================================================
+Developer calculation plugin tutorial  - Integer summation
+==========================================================
 
 .. toctree::
    :maxdepth: 2

@@ -1,4 +1,4 @@
-Developer code plugin tutorial  - Float summation
+Developer data plugin tutorial  - Float summation
 =================================================
 
 .. toctree::
@@ -10,8 +10,35 @@ and how the plugins have to be modified to encompass these changes.
 
 Introducing a new data type
 ---------------------------
-Imagine that we would like to introduce the following kind of data that is
-called ``FloatData``::
+We will start by describing what is a data plugin, and by creating a new one.
+
+A data plugin is a subclass of :py:class:`Data<aiida.orm.data.Data>`. What
+you have to do is just to define a subclass with a suitable name inside the
+``aiida/orm/data`` folder (with the same name convention of Calculation plugins:
+the class should be called ``NameData`` (with ``Name`` being a name of your
+choice) and put in a ``aiida/orm/data/name.py`` file. 
+In the class, you should provide methods that the end user should use to store
+high-level objects (for instance, for a crystal structure, there can be a method
+for setting the unit cell, one for adding an atom in a given position, ...).
+Internally, you should choose where to store the content. There are two options:
+
+* **In the AiiDA database**. This is useful for small amounts of data, that you plan 
+  to query. In this case, use ``self._set_attr(attr_name, attr_value)`` to store
+  the required value. 
+* **In the AiiDA file repository (as a file on the disk)**. This is suitable 
+  for big files and quantities that you do not 
+  want to query. In this case, access the folder using ``self.folder`` and 
+  use the methods of ``self.folder`` to create files, subfolders, ...
+  
+Of course, it is also good practice to provide "getter" methods to retrieve
+the data in the database and return it back to the user. The idea is that the
+user can operate directly only with the methods you provide, and should not
+need to know how you decided to store the data inside the AiiDA database.
+
+As a simple example that we will use for the exercise below, 
+imagine that we want to introduce a new type of data node that simply 
+stores a float number. We will call it ``FloatData``, and the class 
+implementation can look like this::
 
    from aiida.orm.data import Data
 
@@ -37,138 +64,91 @@ This file should be placed under ``aiida/orm/data/float.py`` and it should exten
 the class ``Data``. It can also be downloaded from :download:`here <float.py>`.
 
 
-Modifying the output plugin
----------------------------
-As a first step, this class can be used to better represent our data when stored
-in AiiDA. Therefore, one of the first steps that we can do is to modify the
-`output plugin` \ `parser` to create a ``FloatData`` object when storing it
-in AiiDA. This can be as simple as changing the following lines of the `output
-plugin` of the :doc:`integer summation <code_plugin_int_sum>`::
+Exercise: Modifying the calculation plugin
+------------------------------------------
+Your exercise consists in creating a new code plugin (let's call it for instance
+``floatsum``) that will also perform the sum, but accept as input two ``FloatData``
+node and return also a ``FloatData`` node containing the sum.
 
-    output_data = ParameterData(dict=out_dict)
-    link_name = 'output_data'
-    new_nodes_list = [(link_name, output_data)]
+Below, you will find some hints on the parts you need to modify with respect
+to the :doc:`previous tutorial<code_plugin_int_sum>` using instead 
+``ParameterData`` both as inputs and outputs.
 
-to the following ones::
+.. note:: remember to create copies of your files with a new name 
+   ``floatsum.py`` instead of ``sum.py``, and to change the class
+   name accordingly.
+
+Changes to the parser
+/////////////////////
+
+The plugin should now return a ``FloatData`` instead of a ``ParameterData``,
+therefore the parser code should contain something like the following::
 
     output_data = FloatData()
     output_data.value = out_dict["sum"]
     linkname = 'output_data'
 
-A small test will convince you that the correct objects are stored in AiiDA.
-For example, imagine that the output plugin of calculation `327` stores
-``FloatData`` objects. We can load the node that corresponds to this calculation
-and verify that it is the case::
+Changes to the input plugin
+///////////////////////////
 
-    $ verdi shell
-    Python 2.7.6 (default, Jun 22 2015, 17:58:13)
-    Type "copyright", "credits" or "license" for more information.
-
-    IPython 1.2.1 -- An enhanced Interactive Python.
-    ?         -> Introduction and overview of IPython's features.
-    %quickref -> Quick reference.
-    help      -> Python's own help system.
-    object?   -> Details about 'object', use 'object??' for extra details.
-
-    In [1]: c = load_node(327)
-
-    In [2]: c.get_outputs()
-    Out[2]:
-    [<FolderData: uuid: 019e09e8-0ed8-42a2-b298-7dc9ec5d3ee7 (pk: 329)>,
-     <RemoteData: uuid: e8d40558-435c-444c-8eb3-b74637bf91a1 (pk: 328)>,
-     <FloatData: uuid: 0a711199-3093-4ab3-9478-9edc2813c496 (pk: 330)>]
-
-
-The complete ``FloatsumParser`` can be downloaded from :download:`here <floatsum_parser.py>`.
-and it should be placed at ``aiida/parsers/plugins/floatsum.py``.
-
-
-Modifying the input plugin
---------------------------
 To be able to run your new ``FloatsumParser``, you will need the corresponding
-input plugin (``FloatsumCalculation``). A basic ``FloatsumCalculation`` can be
-a copy of the contents of the ``SumCalculation`` mentioned in the :doc:`plugin
-introduction <code_plugin_int_sum>`, with a small change. It should point to
-the correct `output plugin / parser`::
+input plugin (``FloatsumCalculation``). The first modification is then to link
+to the correct parser class::
 
     self._default_parser = 'floatsum'
 
-As you can see, we can still use the ParameterData at the `input plugin` without
-any problem.
-
-A version of this ``FloatsumCalculation`` calculation can be downloaded from
-:download:`here <floatsum_calc_pd.py>` and should be placed at
-``aiida/orm/calculation/job/floatsum.py``.
-
-Code re-utilisation
--------------------
-If we have a look at the integer summation code mentioned in the
-:doc:`previous section<code_plugin_int_sum>`, we notice that it is not
-integer specific. Therefore, we can re-use it for the float summation of this
-section too. However, there is a small detail. The default `input plugin`
-mentioned during the code setup, is the ``SumCalculation``::
-
-    $ verdi code show 73
-     * PK:             73
-     * UUID:           34b44d33-86c1-478b-88ff-baadfb6f30bf
-     * Label:          sum
-     * Description:    sum
-     * Default plugin: sum
-     * Used by:        10 calculations
-     * Type:           remote
-     * Remote machine: user_pc
-     * Remote absolute path:
-       /home/aiida_user/Desktop/aiida/pluginTest/original/sum_executable.py
-     * prepend text:
-       # No prepend text.
-     * append text:
-       # No append text.
-
-There is no need to change the setup of the code or re-register it for a second
-time with a different `default plugin`. We just have to mention the desired
-input plugin (if we don't want the default to be used) at the submission script.
-
-More specifically, when we create the code object in the submission script, we
-should also mention the desired `input plugin`::
-
-    code = Code.get_from_string(codename)
-    code.set_input_plugin_name('floatsum')
-
-The full submission script can be downloaded from :download:`here <float_sum_submission_pd.py>`.
-
-Using the ``FloatData`` in the input plugin
--------------------------------------------
-
-It is not necessary but you can also use the ``FloatData`` in the input plugin.
-To achieve it, you have to adapt it to accept two ``FloatData`` objects as input
-parameters. Therefore, you have to update the ``retdict`` object accordingly at
-the beginning of the plugin::
+For consistency, we also want that the input plugin accepts two
+``FloatData`` instead of a single ``ParameterData``.
+Therefore, you have to update the ``retdict`` object accordingly::
 
     retdict.update({
         "float_data_1": {
            'valid_types': FloatData,
            'additional_parameter': None,
            'linkname': 'float_data_1',
-           'docstring': ("Use a node that specifies the input float"),
+           'docstring': ("The first addend"),
            },
         "float_data_2": {
            'valid_types': FloatData,
            'additional_parameter': None,
            'linkname': 'float_data_2',
-           'docstring': ("Use a node that specifies the input float"),
+           'docstring': ("The second addend"),
            },
         })
 
-After defining the parameters, you should also parse them using the appropriate
-``linkname``:
+You need then to change the main code to use the values obtained from the
+two nodes, rather than from a single node as before. This should be easy, 
+so we leave this task to you. Note that we plan to use the same python code
+to actually perform the sum, so the JSON file to be generated should have
+the same format.
 
-Last but not least, since the code remained the same, the expected JSON input
-file should be constructed and have the same style as in the summation input
-plug-in.
+We also suggest that you add utility methods (to the benefit of the end user)
+to provide the addends to the code, something like::
 
-The final input plugin can be downloaded from :download:`here <floatsum_calc_fd.py>`
-and should be placed at ``aiida/orm/calculation/job/floatsum.py``.
+   def set_addend1(self, value):
+       fl = FloatData()
+       fl.value = value
+       self.use_float_data_1(fl)
 
-Please note that since the input plugin, expects ``FloatData`` objects, then
-the submission script should also be adapted. A version can be found
-:download:`here <float_sum_submission_fd.py>`.
+and similarly for the second addend.
+
+The final input plugin should be placed 
+at ``aiida/orm/calculation/job/floatsum.py``.
+
+Code
+////
+The python code that actually performs the calculation does not need to be
+modified. We can reuse the same file, but we suggest to setup a new code
+in AiiDA, with a different name, using as default plugin the ``floatsum``
+plugin.
+
+Submission script
+/////////////////
+Finally, adapt your submission script to create the correct input nodes, 
+and try to perform a sum of two numbers to verify that you did all correctly!
+
+.. note:: After placing your files, do not forget to restart the daemon so that
+   it will recognize the files! The same should be done if you do any change to
+   the plugin, otherwise the daemon may have cached the old file and will keep
+   using it.
+   

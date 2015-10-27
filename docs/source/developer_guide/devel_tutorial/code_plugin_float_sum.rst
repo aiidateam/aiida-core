@@ -60,8 +60,8 @@ implementation can look like this::
            """
            self._set_attr('number', float(value))
 
-This file should be placed under ``aiida/orm/data/float.py`` and it should extend
-the class ``Data``. It can also be downloaded from :download:`here <float.py>`.
+This file should be placed under ``aiida/orm/data/float.py`` and it should 
+extend the class ``Data``. 
 
 
 Exercise: Modifying the calculation plugin

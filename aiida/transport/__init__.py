@@ -509,8 +509,8 @@ class Transport(object):
         src must be an absolute path (dst not necessarily))
         Redirects to putfile and puttree.
        
-        :param str localpath: path to remote destination
-        :param str remotepath: absolute path to local source
+        :param str localpath: absolute path to local source
+        :param str remotepath: path to remote destination
         """
         raise NotImplementedError
 
@@ -520,8 +520,8 @@ class Transport(object):
         Put a file from local src to remote dst.
         src must be an absolute path (dst not necessarily))
         
-        :param str localpath: path to remote file
-        :param str remotepath: absolute path to local file
+        :param str localpath: absolute path to local file
+        :param str remotepath: path to remote file
         """
         raise NotImplementedError
 
@@ -531,8 +531,8 @@ class Transport(object):
         Put a folder recursively from local src to remote dst.
         src must be an absolute path (dst not necessarily))
         
-        :param str localpath: path to remote folder
-        :param str remotepath: absolute path to local folder
+        :param str localpath: absolute path to local folder
+        :param str remotepath: path to remote folder
         """
         raise NotImplementedError
 

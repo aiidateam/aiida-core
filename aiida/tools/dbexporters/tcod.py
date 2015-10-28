@@ -464,7 +464,7 @@ def _collect_files(base, path=''):
                     'name': path,
                     'type': 'folder',
                 })
-        for f in folder.get_content_list():
+        for f in sorted(folder.get_content_list()):
             files = _collect_files(base,path=os.path.join(path,f))
             files_now.extend(files)
         return files_now

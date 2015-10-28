@@ -108,25 +108,26 @@ class TestTcodDbExporter(AiidaTestCase):
         sha1 = 'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3'
         self.assertEquals(
             _collect_files(sf.abspath),
-            [{'name': 'aiida.in', 'contents': 'test', 'md5': md5,
+            [{'name': '_.out', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'},
-             {'name': 'save/', 'type': 'folder'},
-             {'name': 'save/1/', 'type': 'folder'},
-             {'name': 'save/1/log.log', 'contents': 'test', 'md5': md5,
+             {'name': '_aiidasubmit.sh', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'},
-             {'name': 'save/2/', 'type': 'folder'},
-             {'name': '_.out', 'contents': 'test', 'md5': md5,
+             {'name': 'aiida.in', 'contents': 'test', 'md5': md5,
+                      'sha1': sha1, 'type': 'file'},
+             {'name': 'aiida.out', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'},
              {'name': 'out/', 'type': 'folder'},
              {'name': 'out/out', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'},
              {'name': 'pseudo/', 'type': 'folder'},
-             {'name': '_aiidasubmit.sh', 'contents': 'test', 'md5': md5,
+             {'name': 'save/', 'type': 'folder'},
+             {'name': 'save/1/', 'type': 'folder'},
+             {'name': 'save/1/log.log', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'},
-             {'name': 'aiida.out', 'contents': 'test', 'md5': md5,
-                      'sha1': sha1, 'type': 'file'}])
+             {'name': 'save/2/', 'type': 'folder'}])
 
-    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_ase() or not has_pyspglib(),
+                     "Unable to import ase or pyspglib")
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
@@ -438,8 +439,8 @@ class TestTcodDbExporter(AiidaTestCase):
             '_dft_atom_type_valence_configuration': ['2s', '3s2p'],
         })
 
-    @unittest.skipIf(not has_ase() or not has_pycifrw(),
-                     "Unable to import ase or pycifrw")
+    @unittest.skipIf(not has_ase() or not has_pycifrw() or not has_pyspglib(),
+                     "Unable to import ase, pycifrw or pyspglib")
     def test_inline_export(self):
         from aiida.orm.data.cif import CifData
         from aiida.tools.dbexporters.tcod import export_values
@@ -471,7 +472,7 @@ class TestTcodDbExporter(AiidaTestCase):
         function = '_get_aiida_structure_ase_inline'
         self.assertNotEqual(script.find(function), script.rfind(function))
 
-    @unittest.skipIf(not has_ase() or not has_pyspglib,
+    @unittest.skipIf(not has_ase() or not has_pyspglib(),
                      "Unable to import ase or pyspglib")
     def test_symmetry_reduction(self):
         from aiida.orm.data.structure import StructureData
@@ -524,8 +525,8 @@ class TestTcodDbExporter(AiidaTestCase):
 
         self.assertEqual(options, {})
 
-    @unittest.skipIf(not has_ase() or not has_pycifrw(),
-                     "Unable to import ase or pycifrw")
+    @unittest.skipIf(not has_ase() or not has_pycifrw() or not has_pyspglib(),
+                     "Unable to import ase, pycifrw or pyspglib")
     def test_export_trajectory(self):
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.array.trajectory import TrajectoryData

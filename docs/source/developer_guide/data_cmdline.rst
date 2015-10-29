@@ -198,8 +198,7 @@ The ``_show_simple()`` method will be:
 	    from aiida.cmdline import print_dictionary
 
 	    for node in node_list:
-	        the_dict = node.get_dict()
-	        print the_dict.value
+	        print node.value
 
 In this method we have passed the executable name and the list of nodes. 
 To print FloatData in simple format we are just printing the corresponding

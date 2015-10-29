@@ -117,10 +117,10 @@ Now we will add the method to launch the actual calculations. We have already do
 
             computer_name = 'localhost'
             computer = Computer.get(computer_name)             
-            calc.set_computer(computer)
 
             # create new calculation
             calc = code.new_calc()
+            calc.set_computer(computer)
             calc.label = "Add two numbers"
             calc.description = "Calculation step in a workflow to add more than two numbers"
             calc.set_max_wallclock_seconds(30*60) # 30 min

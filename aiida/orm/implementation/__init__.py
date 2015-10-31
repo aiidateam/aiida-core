@@ -16,4 +16,4 @@ elif STORAGE_BACKEND == "django":
     from aiida.orm.implementation.django.code import Code, delete_code
     from aiida.orm.implementation.django.utils import delete_computer
 
-    from django.core.exceptions import ObjectDoesNotExist
+    from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned

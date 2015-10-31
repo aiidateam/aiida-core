@@ -692,55 +692,31 @@ class Calculation(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        # valid calculation states
-        valid_states = [calc_states.FINISHED, calc_states.RETRIEVALFAILED,
-                        calc_states.PARSINGFAILED, calc_states.FAILED]
 
         user = get_automatic_user()
 
-        q_object = Q(user=user)
-        q_state = models.DbAttribute.objects.filter(key='state',
-                                                    tval__in=valid_states)
-        # NOTE: IMPORTED state is not a dbattribute so won't be filtered out
-        # at this stage, but this case should be sorted out later when we try
-        # to access the remote_folder (if directory is not accessible, we skip)
+        if (parsed_args.pk is not None and
+            (parsed_args.past_days is not None) or
+            (parsed_args.older_than is not None)):
 
-        if parsed_args.pk is not None:
-            # list of pks is passed
-            if ((parsed_args.past_days is not None) or
-                    (parsed_args.older_than is not None)):
-                print >> sys.stderr, ("You cannot specify both a list of "
-                                      "calculation pks and the -p or -o "
-                                      "options")
-                sys.exit(0)
-            calc_list = JobCalculation.query(q_object,
-                                             pk__in=parsed_args.pk,
-                                             dbattributes__in=q_state).distinct().order_by('mtime')
+            print >> sys.stderr, ("You cannot specify both a list of "
+                                    "calculation pks and the -p or -o "
+                                    "options")
+            sys.exit(0)
 
-        else:
-            # calculations to be cleaned identified by modification time
-            now = timezone.now()
-            if ((parsed_args.past_days is None) and
-                    (parsed_args.older_than is None)):
-                print >> sys.stderr, ("Either a list of calculation pks or the "
-                                      "-p and/or -o options should be specified")
-                sys.exit(0)
+        if ((parsed_args.past_days is None) and
+                (parsed_args.older_than is None)):
+            print >> sys.stderr, ("Either a list of calculation pks or the "
+                                    "-p and/or -o options should be specified")
+            sys.exit(0)
 
-            if parsed_args.past_days is not None:
-                n_days_after = now - datetime.timedelta(
-                    days=parsed_args.past_days)
-                q_object.add(Q(mtime__gte=n_days_after), Q.AND)
-            if parsed_args.older_than is not None:
-                n_days_before = now - datetime.timedelta(
-                    days=parsed_args.older_than)
-                q_object.add(Q(mtime__lte=n_days_before), Q.AND)
-
-            if parsed_args.computers is not None:
-                q_object.add(Q(dbcomputer__name__in=parsed_args.computers), Q.AND)
-
-            # TODO: return directly a remote_folder list from the query
-            calc_list = JobCalculation.query(q_object,
-                                             dbattributes__in=q_state).distinct().order_by('mtime')
+        calc_list = get_valid_job_calculation(
+            user=user,
+            pk_list=parsed_args.pk,
+            n_days_after=parsed_args.past_days,
+            n_days_before=parsed_args.older_than,
+            computers=parsed_args.computers
+        )
 
         if not parsed_args.force:
             sys.stderr.write("Are you sure you want to clean the work directory? "
@@ -748,18 +724,16 @@ class Calculation(VerdiCommandWithSubcommands):
             if not wait_for_confirmation():
                 sys.exit(0)
 
+
+
         # get the uuids of all calculations matching the filters
         calc_list_data = calc_list.values_list('pk', 'dbcomputer', 'uuid')
-        calc_pks = [_[0] for _ in calc_list_data]
-        dbcomp_pks = list(set([_[1] for _ in calc_list_data]))
+
         # also, get the pks of dbcomputers and the pks of dbattributes
         # (the remote_workdir path is in the dbattribute)
         # dbattrs_and_dbcomp_pks = [ (_[1],_[2]) for _ in calc_list_data ]
 
         # get all computers associated to the calc uuids above, and load them
-        q_object = Q(user=user)
-        dbcomputers = list(models.DbComputer.objects.filter(pk__in=dbcomp_pks).distinct())
-        computers = [Computer.get(_) for _ in dbcomputers]
 
         # now build a dictionary with the info of folders to delete
         remotes = {}

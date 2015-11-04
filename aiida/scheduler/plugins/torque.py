@@ -14,7 +14,7 @@ from .pbsbaseclasses import PbsBaseClass
 #Q -  job is queued, eligible to run or routed. [same as above]
 #R -  job is running. [same as above]
 #T -  job is being moved to new location. [same as above]
-#W -  job is waiting for its execution time 
+#W -  job is waiting for its execution time
 #     (-a option) to be reached. [similar to above]
 #S -  (Unicos only) job is suspend. [as above]
 
@@ -40,6 +40,7 @@ class TorqueScheduler(PbsBaseClass):
     #_map_status = _map_status_pbs_common
 
     def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine,
+                            num_cores_per_node,
                             max_memory_kb, max_wallclock_seconds):
         """
         Return the lines for machines, memory and wallclock relative
@@ -49,7 +50,7 @@ class TorqueScheduler(PbsBaseClass):
 
         select_string = "nodes={}".format(num_machines)
         if num_mpiprocs_per_machine:
-            select_string += ":ppn={}".format(num_mpiprocs_per_machine)
+            select_string += ":ppn={}".format(num_cores_per_node)
 
         if max_wallclock_seconds is not None:
             try:
@@ -65,7 +66,7 @@ class TorqueScheduler(PbsBaseClass):
             tot_minutes = tot_secs % 3600
             minutes = tot_minutes // 60
             seconds = tot_minutes % 60
-            # There is always something before, at least the total # 
+            # There is always something before, at least the total #
             # of nodes
             select_string += (",walltime={:02d}:{:02d}:{:02d}".format(
                 hours, minutes, seconds))
@@ -80,7 +81,7 @@ class TorqueScheduler(PbsBaseClass):
                     "max_memory_kb must be "
                     "a positive integer (in kB)! It is instead '{}'"
                     "".format((max_memory_kb)))
-            # There is always something before, at least the total # 
+            # There is always something before, at least the total #
             # of nodes
             select_string += ",mem={}kb".format(virtualMemoryKb)
 

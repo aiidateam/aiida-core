@@ -40,7 +40,7 @@ class TorqueScheduler(PbsBaseClass):
     #_map_status = _map_status_pbs_common
 
     def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine,
-                            num_cores_per_node,
+                            num_cores_per_machine,
                             max_memory_kb, max_wallclock_seconds):
         """
         Return the lines for machines, memory and wallclock relative
@@ -50,7 +50,7 @@ class TorqueScheduler(PbsBaseClass):
 
         select_string = "nodes={}".format(num_machines)
         if num_mpiprocs_per_machine:
-            select_string += ":ppn={}".format(num_cores_per_node)
+            select_string += ":ppn={}".format(num_cores_per_machine)
 
         if max_wallclock_seconds is not None:
             try:

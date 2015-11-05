@@ -921,7 +921,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                         " < 'aiida.in'" in submit_script_text)
 
-    def test_submit_script_with_num_cores_per_node(self):
+    def test_submit_script_with_num_cores_per_machine(self):
         """
         """
         from aiida.scheduler.datastructures import JobTemplate
@@ -933,7 +933,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=2,
-            num_cores_per_node=24
+            num_cores_per_machine=24
         )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
@@ -950,7 +950,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
 
         self.assertTrue('#PBS -l select=1:mpiprocs=2' in submit_script_text)
-        # Note: here 'num_cores_per_node' should NOT override the mpiprocs
+        # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
 
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" +
                         " < 'aiida.in'" in submit_script_text)

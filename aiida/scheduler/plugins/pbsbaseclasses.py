@@ -86,7 +86,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
     _map_status = _map_status_pbs_common
 
     def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine,
-                            num_cores_per_node,
+                            num_cores_per_machine,
                             max_memory_kb, max_wallclock_seconds):
         """
         Return a set a list of lines (possibly empty) with the header
@@ -94,7 +94,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
 
         * num_machines
         * num_mpiprocs_per_machine
-        * num_cores_per_node
+        * num_cores_per_machine
         * max_memory_kb
         * max_wallclock_seconds
 
@@ -248,7 +248,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
         resource_lines = self._get_resource_lines(
             num_machines=job_tmpl.job_resource.num_machines,
             num_mpiprocs_per_machine=job_tmpl.job_resource.num_mpiprocs_per_machine,
-            num_cores_per_node=job_tmpl.job_resource.num_cores_per_node,
+            num_cores_per_machine=job_tmpl.job_resource.num_cores_per_machine,
             max_memory_kb=job_tmpl.max_memory_kb,
             max_wallclock_seconds=job_tmpl.max_wallclock_seconds)
 

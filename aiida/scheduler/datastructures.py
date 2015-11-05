@@ -47,17 +47,17 @@ class JobResource(DefaultFieldsAttributeDict):
     A class to store the job resources. It must be inherited and redefined by the specific
     plugin, that should contain a _job_resource_class attribute pointing to the correct
     JobResource subclass.
-    
+
     It should at least define the get_tot_num_mpiprocs() method, plus an __init__ to accept
     its set of variables.
 
     Typical attributes are:
-    
+
     * ``num_machines``
     * ``num_mpiprocs_per_machine``
-    
+
     or (e.g. for SGE)
-    
+
     * ``tot_num_mpiprocs``
     * ``parallel_env``
 
@@ -70,8 +70,8 @@ class JobResource(DefaultFieldsAttributeDict):
     def accepts_default_mpiprocs_per_machine(cls):
         """
         Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
-        key, False otherwise. 
-        
+        key, False otherwise.
+
         Should be implemented in each subclass.
         """
         raise NotImplementedError
@@ -92,13 +92,13 @@ class JobResource(DefaultFieldsAttributeDict):
 
 class NodeNumberJobResource(JobResource):
     """
-    An implementation of JobResource for schedulers that support 
+    An implementation of JobResource for schedulers that support
     the specification of a number of nodes and a number of cpus per node
     """
     _default_fields = (
         'num_machines',
         'num_mpiprocs_per_machine',
-        'num_cores_per_node',
+        'num_cores_per_machine',
     )
 
     @classmethod
@@ -113,7 +113,7 @@ class NodeNumberJobResource(JobResource):
     def accepts_default_mpiprocs_per_machine(cls):
         """
         Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
-        key, False otherwise. 
+        key, False otherwise.
         """
         return True
 
@@ -121,7 +121,7 @@ class NodeNumberJobResource(JobResource):
         """
         Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
-        
+
         Should raise only ValueError or TypeError on invalid parameters.
         """
         try:
@@ -153,13 +153,13 @@ class NodeNumberJobResource(JobResource):
             tot_num_mpiprocs = None
         except ValueError:
             raise ValueError("tot_num_mpiprocs must an integer")
-            
+
         try:
-            num_cores_per_node = int(kwargs.pop('num_cores_per_node'))
+            num_cores_per_machine = int(kwargs.pop('num_cores_per_machine'))
         except KeyError:
-            num_cores_per_node = None
+            num_cores_per_machine = None
         except ValueError:
-            raise ValueError("num_cores_per_node must an integer")
+            raise ValueError("num_cores_per_machine must an integer")
 
         if kwargs:
             raise TypeError("The following parameters were not recognized for "
@@ -211,15 +211,15 @@ class NodeNumberJobResource(JobResource):
             raise ValueError("num_mpiprocs_per_machine must be >= 1")
         if self.num_machines <= 0:
             raise ValueError("num_machine must be >= 1")
-        
-        if not num_cores_per_node:
+
+        if not num_cores_per_machine:
             # set to num_mpiprocs_per_machine unless the user has explicitly
             # specified the value
-            self.num_cores_per_node = num_mpiprocs_per_machine
+            self.num_cores_per_machine = num_mpiprocs_per_machine
         else:
-            if num_cores_per_node <= 0:
-                raise ValueError("num_cores_per_node must be >= 1")
-            self.num_cores_per_node = num_cores_per_node
+            if num_cores_per_machine <= 0:
+                raise ValueError("num_cores_per_machine must be >= 1")
+            self.num_cores_per_machine = num_cores_per_machine
 
     def get_tot_num_mpiprocs(self):
         """
@@ -230,7 +230,7 @@ class NodeNumberJobResource(JobResource):
 
 class ParEnvJobResource(JobResource):
     """
-    An implementation of JobResource for schedulers that support 
+    An implementation of JobResource for schedulers that support
     the specification of a parallel environment (a string) + the total number of nodes
     """
     _default_fields = (
@@ -243,7 +243,7 @@ class ParEnvJobResource(JobResource):
         """
         Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
-        
+
         :raise ValueError: on invalid parameters.
         :raise TypeError: on invalid parameters.
         :raise ConfigurationError: if default_mpiprocs_per_machine was set for this
@@ -279,7 +279,7 @@ class ParEnvJobResource(JobResource):
     def accepts_default_mpiprocs_per_machine(cls):
         """
         Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
-        key, False otherwise. 
+        key, False otherwise.
         """
         return False
 
@@ -291,15 +291,15 @@ class JobTemplate(DefaultFieldsAttributeDict):
 
     The required fields are: working_directory, job_name, num_machines,
       num_mpiprocs_per_machine, argv.
-    
+
     Fields:
-    
+
       * ``submit_as_hold``: if set, the job will be in a 'hold' status right
         after the submission
       * ``rerunnable``: if the job is rerunnable (boolean)
       * ``job_environment``: a dictionary with environment variables to set
         before the execution of the code.
-      * ``working_directory``: the working directory for this job. During 
+      * ``working_directory``: the working directory for this job. During
         submission, the transport will first do a 'chdir' to this directory,
         and then possibly set a scheduler parameter, if this is supported
         by the scheduler.
@@ -307,7 +307,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
       * ``email_on_started``: if True, ask the scheduler to send an email when the
         job starts.
       * ``email_on_terminated``: if True, ask the scheduler to send an email when
-        the job ends. This should also send emails on job failure, when 
+        the job ends. This should also send emails on job failure, when
         possible.
       * ``job_name``: the name of this job. The actual name of the job can be
         different from the one specified here, e.g. if there are unsupported
@@ -320,8 +320,8 @@ class JobTemplate(DefaultFieldsAttributeDict):
         partition), on which the job will be submitted.
       * ``job_resource``: a suitable :py:class:`JobResource`
         subclass with information on how many
-        nodes and cpus it should use. It must be an instance of the 
-        :py:attr:`aiida.scheduler.Scheduler._job_resource_class` class. 
+        nodes and cpus it should use. It must be an instance of the
+        :py:attr:`aiida.scheduler.Scheduler._job_resource_class` class.
         Use the Scheduler.create_job_resource method to create it.
       * ``num_machines``: how many machines (or nodes) should be used
       * ``num_mpiprocs_per_machine``: how many MPI procs should be used on each
@@ -332,40 +332,40 @@ class JobTemplate(DefaultFieldsAttributeDict):
         to allocate ON EACH NODE, in kilobytes
       * ``max_wallclock_seconds``: The maximum wall clock time that all processes
         of a job are allowed to exist, in seconds
-      * ``custom_scheduler_commands``: a string that will be inserted right 
+      * ``custom_scheduler_commands``: a string that will be inserted right
         after the last scheduler command, and before any other non-scheduler
         command; useful if some specific flag needs to be added and is not
         supported by the plugin
-      * ``prepend_text``: a (possibly multi-line) string to be inserted 
+      * ``prepend_text``: a (possibly multi-line) string to be inserted
         in the scheduler script before the main execution line
-      * ``append_text``: a (possibly multi-line) string to be inserted 
+      * ``append_text``: a (possibly multi-line) string to be inserted
         in the scheduler script after the main execution line
       * ``import_sys_environment``: import the system environment variables
       * ``codes_info``: a list of aiida.common.datastructures.CalcInfo objects.
-        Each contains the information necessary to run a single code. At the 
+        Each contains the information necessary to run a single code. At the
         moment, it can contain:
-        
+
         * ``cmdline_parameters``: a list of strings with the command line arguments
           of the program to run. This is the main program to be executed.
           NOTE: The first one is the executable name.
-          For MPI runs, this will probably be "mpirun" or a similar program; 
+          For MPI runs, this will probably be "mpirun" or a similar program;
           this has to be chosen at a upper level.
-        * ``stdin_name``: the (relative) file name to be used as stdin for the 
+        * ``stdin_name``: the (relative) file name to be used as stdin for the
           program specified with argv.
-        * ``stdout_name``: the (relative) file name to be used as stdout for the 
+        * ``stdout_name``: the (relative) file name to be used as stdout for the
           program specified with argv.
-        * ``stderr_name``: the (relative) file name to be used as stderr for the 
+        * ``stderr_name``: the (relative) file name to be used as stderr for the
           program specified with argv.
-        * ``join_files``: if True, stderr is redirected on the same file 
+        * ``join_files``: if True, stderr is redirected on the same file
           specified for stdout.
-          
-      * ``codes_run_mode``: sets the run_mode with which the (multiple) codes 
+
+      * ``codes_run_mode``: sets the run_mode with which the (multiple) codes
         have to be executed. For example, parallel execution::
-        
+
           mpirun -np 8 a.x &
           mpirun -np 8 b.x &
           wait
-        
+
         The serial execution would be without the &'s.
         Values are given by aiida.common.datastructures.code_run_modes.
     """
@@ -399,7 +399,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
 #        'join_files',
 #        'argv',
 #        'stdin_name',
-#        'stdout_name',        
+#        'stdout_name',
         'codes_run_mode',
         'codes_info',
     )
@@ -454,7 +454,7 @@ class JobInfo(DefaultFieldsAttributeDict):
        * ``num_machines``: the number of machines (i.e., nodes), required by the
          job. If ``allocated_machines`` is not None, this number must be equal to
          ``len(allocated_machines)``. Otherwise, for schedulers not supporting
-         the retrieval of the full list of allocated machines, this 
+         the retrieval of the full list of allocated machines, this
          attribute can be used to know at least the number of machines.
        * ``queue_name``: The name of the queue in which the job is queued or
          running.
@@ -466,7 +466,7 @@ class JobInfo(DefaultFieldsAttributeDict):
          of type datetime.datetime
        * ``dispatch_time``: the absolute time at which the job first entered the
          'started' state, of type datetime.datetime
-       * ``finish_time``: the absolute time at which the job first entered the 
+       * ``finish_time``: the absolute time at which the job first entered the
          'finished' state, of type datetime.datetime
     """
     _default_fields = (
@@ -493,7 +493,7 @@ class JobInfo(DefaultFieldsAttributeDict):
 
     # If some fields require special serializers, specify them here.
     # You then need to define also the respective _serialize_FIELDTYPE and
-    # _deserialize_FIELDTYPE methods        
+    # _deserialize_FIELDTYPE methods
     _special_serializers = {
         'submission_time': 'date',
         'dispatch_time': 'date',
@@ -578,7 +578,6 @@ class JobInfo(DefaultFieldsAttributeDict):
         for k, v in deser_data.iteritems():
             self[k] = self.deserialize_field(
                 v, self._special_serializers.get(k, None))
-            
-        
-        
-        
+
+
+

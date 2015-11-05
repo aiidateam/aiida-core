@@ -892,7 +892,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                         " < 'aiida.in'" in submit_script_text)
 
-    def test_submit_script_with_num_cores_per_node(self):
+    def test_submit_script_with_num_cores_per_machine(self):
         """
         """
         from aiida.scheduler.datastructures import JobTemplate
@@ -904,7 +904,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=1,
-            num_cores_per_node=24
+            num_cores_per_machine=24
         )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600

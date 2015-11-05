@@ -58,6 +58,33 @@ PBS/Torque and Loadleveler are not fully supported yet, even if their support is
 top priorities. For the moment, you can try the PBSPro plugin instead of PBS/Torque, that *may*
 also work for PBS/Torque (even if there will probably be some small issues).
 
+Direct execution (bypassing schedulers)
+---------------------------------------
+
+The direct scheduler, to be used mainly for debugging, is an implementation 
+of a scheduler plugin that does not require a real scheduler installed, 
+but instead directly executes a command, puts it in the background, and checks 
+for its process ID (PID) to discover if the execution is completed.
+
+.. warning:: The direct execution mode is very fragile. Currently, it
+    spawns a separate Bash shell to execute a job and track each shell by
+    process ID (PID). This poses following problems:
+
+    * PID numeration is reset during reboots;
+    * PID numeration is different from machine to machine, thus direct
+      execution is *not* possible in multi-machine clusters, redirecting
+      each SSH login to a different node in round-robin fashion;
+    * there is no real queueing, hence, all calculation started will be run in
+      parallel.
+
+.. warning:: Direct execution bypasses schedulers, so it should be used
+    with care in order not to disturb the functioning of machines.
+
+All the main features are supported with this scheduler.
+
+The JobResource class to be used when setting the job resources is the
+:ref:`NodeNumberJobResource`
+
 Job resources
 +++++++++++++
 

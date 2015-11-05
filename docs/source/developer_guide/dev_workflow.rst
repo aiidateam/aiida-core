@@ -117,10 +117,10 @@ Now we will add the method to launch the actual calculations. We have already do
 
             computer_name = 'localhost'
             computer = Computer.get(computer_name)             
-            calc.set_computer(computer)
 
             # create new calculation
             calc = code.new_calc()
+            calc.set_computer(computer)
             calc.label = "Add two numbers"
             calc.description = "Calculation step in a workflow to add more than two numbers"
             calc.set_max_wallclock_seconds(30*60) # 30 min
@@ -175,13 +175,15 @@ in the database as a container of calculations and sub-workflows.
 Several functions are available to the user when coding a workflow step, and 
 in the above method we have used basic ones discussed below:
 
+
+
 * ``self.get_parameters()``: with this method we can retrieve the parameters 
   passed to the workflow when it was initialized. Parameters cannot be modified 
   during an execution, while attributes can be added and removed.
 
-* ``self.attach_calculation(calc)``: this is a key point in the workflow, and 
-  something possible only inside a step method. ``JobCalculation``s, generated in 
-  the method itself or retrieved from other utility methods, are attached to the 
+* ``self.attach_calculation(calc)``: this is a key point in the workflow, and
+  something possible only inside a step method. Every ``JobCalculation``, generated in 
+  the method itself or retrieved from other utility methods, is attached to the 
   workflow’s step. They are then launched and executed completely by 
   the daemon, without the need of user interaction. 
   Any number of calculations can be attached. The 
@@ -212,7 +214,7 @@ in the above method we have used basic ones discussed below:
 The above start step calls method ``validate_input()`` to validate the input 
 parameters. When the workflow will be launched through the ``start`` method, 
 the AiiDA daemon will load the workflow, execute the step, launch all the
- calculations and monitor their state.
+calculations and monitor their state.
 
 Now we will create a second step to retrieve the addition of first two numbers 
 from the first step and then we will add the third input number. 

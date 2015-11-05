@@ -115,12 +115,14 @@ class Data(Node):
             func = exporters[fileformat]
         except KeyError:
             if len(exporters.keys()) > 0:
-                raise ValueError("The format is not accepted. "
+                raise ValueError("The format {} is not implemented for {}. "
                                  "Currently implemented are: {}.".format(
+                    fileformat, self.__class__.__name__,
                     ",".join(exporters.keys())))
             else:
-                raise ValueError("The format is not accepted. "
-                                 "No formats are implemented yet.")
+                raise ValueError("The format {} is not implemented for {}. "
+                                 "No formats are implemented yet.".format(
+                    fileformat, self.__class__.__name__))
 
         return func(**kwargs)
 
@@ -171,12 +173,14 @@ class Data(Node):
             func = converters[object_format]
         except KeyError:
             if len(converters.keys()) > 0:
-                raise ValueError("The format is not accepted. "
+                raise ValueError("The format {} is not implemented for {}. "
                                  "Currently implemented are: {}.".format(
+                    object_format, self.__class__.__name__,
                     ",".join(converters.keys())))
             else:
-                raise ValueError("The format is not accepted. "
-                                 "No formats are implemented yet.")
+                raise ValueError("The format {} is not implemented for {}. "
+                                 "No formats are implemented yet.".format(
+                    object_format, self.__class__.__name__))
 
         return func(*args)
         

@@ -32,7 +32,7 @@ from aiida.scheduler.datastructures import (
 #Q -  job is queued, eligible to run or routed. [same as above]
 #R -  job is running. [same as above]
 #T -  job is being moved to new location. [same as above]
-#W -  job is waiting for its execution time 
+#W -  job is waiting for its execution time
 #     (-a option) to be reached. [similar to above]
 #S -  (Unicos only) job is suspend. [as above]
 
@@ -52,7 +52,7 @@ _map_status_pbs_common = {
     'Q': job_states.QUEUED,
     'R': job_states.RUNNING,
     'S': job_states.SUSPENDED,
-    'T': job_states.QUEUED, # We assume that from the AiiDA point of view 
+    'T': job_states.QUEUED, # We assume that from the AiiDA point of view
                             # it is still queued
     'U': job_states.SUSPENDED,
     'W': job_states.QUEUED,
@@ -86,6 +86,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
     _map_status = _map_status_pbs_common
 
     def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine,
+                            num_cores_per_machine,
                             max_memory_kb, max_wallclock_seconds):
         """
         Return a set a list of lines (possibly empty) with the header
@@ -93,10 +94,11 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
 
         * num_machines
         * num_mpiprocs_per_machine
+        * num_cores_per_machine
         * max_memory_kb
         * max_wallclock_seconds
 
-        This is done in an external function because it may change in 
+        This is done in an external function because it may change in
         different subclasses.
         """
         raise NotImplementedError("Implement the _get_resource_lines in "
@@ -184,7 +186,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
         if job_tmpl.job_name:
             # From qsub man page:
             # string, up to 15 characters in length.  It must
-            # consist of an  alphabetic  or  numeric  character 
+            # consist of an  alphabetic  or  numeric  character
             # followed  by printable, non-white-space characters.
             # Default:  if a script is used to submit the job, the job's name
             # is the name of the script.  If no script  is  used,  the  job's
@@ -200,7 +202,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
                         job_title[0] not in string.letters + string.digits):
                 job_title = 'j' + job_title
 
-            # Truncate to the first 15 characters 
+            # Truncate to the first 15 characters
             # Nothing is done if the string is shorter.
             job_title = job_title[:15]
 
@@ -214,9 +216,9 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
 
         if job_tmpl.sched_join_files:
             # from qsub man page:
-            # 'oe': Standard error and standard output are merged  into 
+            # 'oe': Standard error and standard output are merged  into
             #       standard output
-            # 'eo': Standard error and standard output are merged  into 
+            # 'eo': Standard error and standard output are merged  into
             #       standard error
             # 'n' : Standard error and standard output are not merged (default)
             lines.append("#PBS -j oe")
@@ -246,15 +248,16 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
         resource_lines = self._get_resource_lines(
             num_machines=job_tmpl.job_resource.num_machines,
             num_mpiprocs_per_machine=job_tmpl.job_resource.num_mpiprocs_per_machine,
+            num_cores_per_machine=job_tmpl.job_resource.num_cores_per_machine,
             max_memory_kb=job_tmpl.max_memory_kb,
             max_wallclock_seconds=job_tmpl.max_wallclock_seconds)
-        
+
         lines += resource_lines
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        # Job environment variables are to be set on one single line. 
+        # Job environment variables are to be set on one single line.
         # This is a tough job due to the escaping of commas, etc.
         # moreover, I am having issues making it work.
         # Therefore, I assume that this is bash and export variables by
@@ -283,7 +286,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
     def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
-        
+
         Args:
             submit_script: the path of the submit script relative to the working
                 directory.
@@ -299,12 +302,12 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
         """
         Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command (qstat -f).
-        
-        Return a list of JobInfo objects, one of each job, 
+
+        Return a list of JobInfo objects, one of each job,
         each relevant parameters implemented.
 
-        Note: depending on the scheduler configuration, finished jobs may 
-            either appear here, or not. 
+        Note: depending on the scheduler configuration, finished jobs may
+            either appear here, or not.
             This function will only return one element for each job find
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
@@ -337,7 +340,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
         jobdata_raw = []  # will contain raw data parsed from qstat output
         # Get raw data and split in lines
         for line_num, l in enumerate(stdout.split('\n'), start=1):
-            # Each new job stanza starts with the string 'Job Id:': I 
+            # Each new job stanza starts with the string 'Job Id:': I
             # create a new item in the jobdata_raw list
             if l.startswith('Job Id:'):
                 jobdata_raw.append(
@@ -353,7 +356,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
                         # The list is still empty! (This means that I found a
                         # non-empty line, before finding the first 'Job Id:'
                         # string: it is an error. However this may happen
-                        # only before the first job. 
+                        # only before the first job.
                         raise SchedulerParsingError("I did not find the header for the first job")
                         #self.logger.warning("I found some text before the "
                         #"first job: {}".format(l))
@@ -363,7 +366,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
                             jobdata_raw[-1]['lines'].append(l)
                         elif l.startswith('\t'):
                             # If a line starts with a TAB,
-                            # I append to the previous string 
+                            # I append to the previous string
                             # stripping the TAB
                             if not jobdata_raw[-1]['lines']:
                                 raise SchedulerParsingError(
@@ -374,8 +377,8 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
                             #raise SchedulerParsingError(
                             #    "Wrong starting character at line {}! ({})"
                             #    "".format(line_num, l))
-                            ## For some reasons, the output of 'comment' and 
-                            ## 'Variable_List', for instance, can have 
+                            ## For some reasons, the output of 'comment' and
+                            ## 'Variable_List', for instance, can have
                             ## newlines if they are included... # I do a
                             ## workaround
                             jobdata_raw[-1]['lines'][-1] += "\n{}".format(l)
@@ -591,9 +594,9 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
             #
             # ctime: The time that the job was created
             # mtime: The time that the job was last modified, changed state,
-            #        or changed locations. 
+            #        or changed locations.
             # qtime: The time that the job entered the current queue
-            # stime: The time when the job started execution.  
+            # stime: The time when the job started execution.
             # etime: The time that the job became eligible to run, i.e. in a
             #        queued state while residing in an execution queue.
 
@@ -691,9 +694,9 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
         """
         Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
-        
+
         To be implemented by the plugin.
-        
+
         Return a string with the JobID.
         """
         if retval != 0:
@@ -724,7 +727,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
     def _parse_kill_output(self, retval, stdout, stderr):
         """
         Parse the output of the kill command.
-        
+
         To be implemented by the plugin.
 
         :return: True if everything seems ok, False otherwise.

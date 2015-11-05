@@ -28,6 +28,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini"
 
+
 class PbsproScheduler(PbsBaseClass):
     """
     Subclass to support the PBSPro scheduler
@@ -45,11 +46,15 @@ class PbsproScheduler(PbsBaseClass):
     #_map_status = _map_status_pbs_common
 
     def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine,
+                            num_cores_per_machine,
                             max_memory_kb, max_wallclock_seconds):
         """
         Return the lines for machines, memory and wallclock relative
         to pbspro.
         """
+        # Note: num_cores_per_machine is not used here but is provided by
+        #       the parent class ('_get_submit_script_header') method
+
         return_lines = []
 
         select_string = "select={}".format(num_machines)
@@ -87,4 +92,3 @@ class PbsproScheduler(PbsBaseClass):
 
         return_lines.append("#PBS -l {}".format(select_string))
         return return_lines
-

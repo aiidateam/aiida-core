@@ -156,6 +156,60 @@ class Data(Node):
                          for k in valid_format_names}
         return valid_formats
 
+    def importstring(self, inputstring, fileformat, **kwargs):
+        """
+        Converts a Data object to other text format.
+
+        :param fileformat: a string (the extension) to describe the file format.
+        :returns: a string with the structure description.
+        """
+        importers = self._get_importers()
+
+        try:
+            func = importers[fileformat]
+        except KeyError:
+            if len(importers.keys()) > 0:
+                raise ValueError("The format {} is not implemented for {}. "
+                                 "Currently implemented are: {}.".format(
+                    fileformat, self.__class__.__name__,
+                    ",".join(importers.keys())))
+            else:
+                raise ValueError("The format {} is not implemented for {}. "
+                                 "No formats are implemented yet.".format(
+                    fileformat, self.__class__.__name__))
+
+        # func is bound to self by getattr in _get_importers()
+        func(inputstring, **kwargs)
+
+    def importfile(self, fname, fileformat=None):
+        """
+        Populate a Data object from a file.
+
+        :param fname: string with file name. Can be an absolute or relative path.
+        :param fileformat: kind of format to use for the export. If not present,
+            it will try to use the extension of the file name.
+        """
+        if fileformat is None:
+            fileformat = fname.split('.')[-1]
+        with open(fname, 'r') as f:  # reads in cwd, if fname is not absolute
+            self.importstring(f.read(), fileformat)
+
+    def _get_importers(self):
+        """
+        Get all implemented import formats.
+        The convention is to find all _parse_... methods.
+        Returns a list of strings.
+        """
+        # NOTE: To add support for a new format, write a new function called as
+        # _parse_"" with the name of the new format
+        importer_prefix = '_parse_'
+        method_names = dir(self)  # get list of class methods names
+        valid_format_names = [i[len(importer_prefix):] for i in method_names
+                              if i.startswith(importer_prefix)]  # filter them
+        valid_formats = {k: getattr(self, importer_prefix + k)
+                         for k in valid_format_names}
+        return valid_formats
+
     def convert(self, object_format=None, *args):
         """
         Convert the AiiDA StructureData into another python object

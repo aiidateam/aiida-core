@@ -151,7 +151,7 @@ class Parser(object):
         except KeyError:
             from aiida.common.exceptions import ContentNotExistent
 
-            raise ContentNotExistent("Key energy not found in results")
+            raise ContentNotExistent("Key {} not found in results".format(key_name))
 
         # TODO: eventually, here insert further operations
         # (ex: key_name = energy_float_rydberg could return only the last element of a list,

@@ -925,6 +925,7 @@ class TestSubmitScript(unittest.TestCase):
         """
         """
         from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, code_run_modes
 
         s = PbsproScheduler()
 

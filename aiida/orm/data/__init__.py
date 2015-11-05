@@ -170,10 +170,10 @@ class Data(Node):
         try:
             func = converters[object_format]
         except KeyError:
-            if len(exporters.keys()) > 0:
+            if len(converters.keys()) > 0:
                 raise ValueError("The format is not accepted. "
                                  "Currently implemented are: {}.".format(
-                    ",".join(exporters.keys())))
+                    ",".join(converters.keys())))
             else:
                 raise ValueError("The format is not accepted. "
                                  "No formats are implemented yet.")

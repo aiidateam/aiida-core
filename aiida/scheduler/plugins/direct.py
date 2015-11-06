@@ -12,11 +12,11 @@ from aiida.scheduler.datastructures import (
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Andrius Merkys"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
 
 _map_status_ps = {
-    'R':  job_states.RUNNING,
-    'R+': job_states.RUNNING, # If exiting, for our purposes it is still running
+    'R': job_states.RUNNING,
+    'R+': job_states.RUNNING,  # If exiting, for our purposes it is still running
     'F': job_states.DONE,
     'H': job_states.QUEUED_HELD,
     'Tl': job_states.UNDETERMINED,
@@ -30,30 +30,32 @@ _map_status_ps = {
     'S<l': job_states.SUSPENDED,
     'Ss': job_states.SUSPENDED,
     'Ss+': job_states.SUSPENDED,
-    'T': job_states.DONE, # TODO: what to do here?
+    'T': job_states.DONE,  # TODO: what to do here?
     'U': job_states.SUSPENDED,
     'W': job_states.QUEUED,
     'X': job_states.DONE,
-    }
+}
+
 
 class DirectJobResource(NodeNumberJobResource):
     pass
+
 
 class DirectScheduler(aiida.scheduler.Scheduler):
     """
     Support for the direct execution bypassing schedulers.
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('direct')
-    
+
     # Query only by list of jobs and not by user
     _features = {
         'can_query_by_user': True,
-        }
+    }
 
     # The class to be used for the job resource.
     _job_resource_class = DirectJobResource
 
-    def _get_joblist_command(self,jobs=None,user=None): 
+    def _get_joblist_command(self, jobs=None, user=None):
         """
         The command to report full information on existing jobs.
 
@@ -77,8 +79,8 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         if user and not jobs:
             if user != '$USER':
                 user = escape_for_bash(user)
-            command += ' -U {} -u {} h'.format(user,user)
-            
+            command += ' -U {} -u {} h'.format(user, user)
+
         return command
 
     def _get_submit_script_header(self, job_tmpl):
@@ -89,12 +91,12 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         Args:
            job_tmpl: an JobTemplate instance with relevant parameters set.
         """
-        import re 
+        import re
         import string
 
         lines = []
         empty_line = ""
-          
+
         if job_tmpl.max_memory_kb:
             try:
                 virtualMemoryKb = int(job_tmpl.max_memory_kb)
@@ -105,19 +107,19 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                     "max_memory_kb must be "
                     "a positive integer (in kB)! It is instead '{}'"
                     "".format((job_tmpl.MaxMemoryKb)))
-            lines.append("ulimit -v {}",virtualMemoryKb)
+            lines.append("ulimit -v {}", virtualMemoryKb)
         if not job_tmpl.import_sys_environment:
             lines.append("env --ignore-environment \\")
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        # Job environment variables are to be set on one single line. 
+        # Job environment variables are to be set on one single line.
         # This is a tough job due to the escaping of commas, etc.
         # moreover, I am having issues making it work.
         # Therefore, I assume that this is bash and export variables by
         # and.
-        
+
         if job_tmpl.job_environment:
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
@@ -126,8 +128,8 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                                  "a dictionary")
             for k, v in job_tmpl.job_environment.iteritems():
                 lines.append("export {}={}".format(
-                        k.strip(),
-                        escape_for_bash(v)))
+                    k.strip(),
+                    escape_for_bash(v)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)
 
@@ -152,24 +154,24 @@ class DirectScheduler(aiida.scheduler.Scheduler):
     def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
-        
+
         Args:
             submit_script: the path of the submit script relative to the working
                 directory.
                 IMPORTANT: submit_script should be already escaped.
         """
-        submit_command = 'bash -e {} & echo $!'.format(escape_for_bash(submit_script))
+        submit_command = 'bash -e {} & echo $!'.format(submit_script)
 
         self.logger.info("submitting with: " + submit_command)
 
         return submit_command
-      
+
     def _parse_joblist_output(self, retval, stdout, stderr):
         """
         Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command (qstat -f).
-        
-        Return a list of JobInfo objects, one of each job, 
+
+        Return a list of JobInfo objects, one of each job,
         each relevant parameters implemented.
 
         .. note:: depending on the scheduler configuration, finished jobs
@@ -183,7 +185,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         filtered_stderr = '\n'.join(l for l in stderr.split('\n'))
         if filtered_stderr.strip():
             self.logger.warning("Warning in _parse_joblist_output, non-empty "
-                "(filtered) stderr='{}'".format(filtered_stderr))
+                                "(filtered) stderr='{}'".format(filtered_stderr))
             if retval != 0:
                 raise SchedulerError(
                     "Error during direct execution parsing (_parse_joblist_output function)")
@@ -191,11 +193,11 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         # Create dictionary and parse specific fields
         job_list = []
         for line in stdout.split('\n'):
-            if re.search('^\s*PID',line) or line == '':
+            if re.search('^\s*PID', line) or line == '':
                 # Skip the header if present
                 continue
-            line = re.sub('^\s+','',line)
-            job = re.split('\s+',line)
+            line = re.sub('^\s+', '', line)
+            job = re.split('\s+', line)
             this_job = JobInfo()
             this_job.job_id = job[0]
 
@@ -231,7 +233,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                 pass
             except ValueError:
                 self.logger.warning("Error parsing 'resources_used.walltime' "
-                    "for job id {}".format(this_job.job_id))
+                                    "for job id {}".format(this_job.job_id))
 
             # I append to the list of jobs to return
             job_list.append(this_job)
@@ -248,11 +250,13 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                                                          as_dict=as_dict)
 
         found_jobs = []
+        # Get the list of known jobs
         if as_dict:
             found_jobs = job_stats.keys()
         else:
             found_jobs = [j.job_id for j in job_stats]
-        not_found_jobs = list(set(jobs)-set(found_jobs))
+        # Now check if there are any the user requested but were not found
+        not_found_jobs = list(set(jobs) - set(found_jobs)) if jobs else []
 
         for job_id in not_found_jobs:
             job = JobInfo()
@@ -266,23 +270,23 @@ class DirectScheduler(aiida.scheduler.Scheduler):
 
         return job_stats
 
-    def _convert_time(self,string):
+    def _convert_time(self, string):
         """
         Convert a string in the format HH:MM:SS to a number of seconds.
         """
         pieces = string.split(':')
         if len(pieces) != 3:
             self.logger.warning("Wrong number of pieces (expected 3) for "
-                "time string {}".format(string))
+                                "time string {}".format(string))
             raise ValueError("Wrong number of pieces for time string.")
 
         days = 0
         pieces_first = pieces[0].split('-')
 
         if len(pieces_first) == 2:
-            days,pieces[0] = pieces_first
+            days, pieces[0] = pieces_first
             days = int(days)
-        
+
         try:
             hours = int(pieces[0])
             if hours < 0:
@@ -309,35 +313,35 @@ class DirectScheduler(aiida.scheduler.Scheduler):
             self.logger.warning("Not a valid number of seconds: {}".format(
                 pieces[2]))
             raise ValueError("Not a valid number of seconds.")
-        
+
         return days * 86400 + hours * 3600 + mins * 60 + secs
 
     def _parse_submit_output(self, retval, stdout, stderr):
         """
         Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
-        
+
         To be implemented by the plugin.
-        
+
         Return a string with the JobID.
         """
         if retval != 0:
             self.logger.error("Error in _parse_submit_output: retval={}; "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             raise SchedulerError("Error during submission, retval={}\n"
                                  "stdout={}\nstderr={}".format(
                 retval, stdout, stderr))
 
         if stderr.strip():
             self.logger.warning("in _parse_submit_output for {}: "
-                "there was some text in stderr: {}".format(
-                    str(self.transport),stderr))
+                                "there was some text in stderr: {}".format(
+                str(self.transport), stderr))
 
         if not stdout.strip():
             self.logger.debug("Unable to get the PID: retval={}; "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             raise SchedulerError("Unable to get the PID: retval={}; "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
+                                 "stdout={}; stderr={}".format(retval, stdout, stderr))
 
         return stdout.strip()
 
@@ -354,24 +358,24 @@ class DirectScheduler(aiida.scheduler.Scheduler):
     def _parse_kill_output(self, retval, stdout, stderr):
         """
         Parse the output of the kill command.
-        
+
         To be implemented by the plugin.
 
         :return: True if everything seems ok, False otherwise.
         """
         if retval != 0:
             self.logger.error("Error in _parse_kill_output: retval={}; "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             return False
 
         if stderr.strip():
             self.logger.warning("in _parse_kill_output for {}: "
-                "there was some text in stderr: {}".format(
-                    str(self.transport),stderr))
+                                "there was some text in stderr: {}".format(
+                str(self.transport), stderr))
 
         if stdout.strip():
             self.logger.warning("in _parse_kill_output for {}: "
-                "there was some text in stdout: {}".format(
-                    str(self.transport),stdout))
+                                "there was some text in stdout: {}".format(
+                str(self.transport), stdout))
 
         return True

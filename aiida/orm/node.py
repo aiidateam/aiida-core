@@ -783,19 +783,6 @@ class Node(object):
 
         return new_outputs
 
-    def get_inputdata_dict(self, only_in_db=False):
-        """
-        Return a dictionary where the key is the label of the input link, and
-        the value is the input node. Includes only the data nodes, no
-        calculations or codes.
-        
-        :return: a dictionary {label:object}
-        """
-        from aiida.orm import Data
-
-        return dict(self.get_inputs(type=Data, also_labels=True,
-                                    only_in_db=only_in_db))
-
     def get_inputs(self, type=None, also_labels=False, only_in_db=False):
         """
         Return a list of nodes that enter (directly) in this node

@@ -263,7 +263,8 @@ class Calculation(VerdiCommandWithSubcommands):
             if code is not None:
                 print "Using code: {}".format(code.label)
             print "##### INPUTS:"
-            for k, v in calc.get_inputdata_dict().iteritems():
+            for k, v in calc.get_inputs_dict().iteritems():
+                if k=='code': continue
                 print k, v.pk, v.__class__.__name__
             print "##### OUTPUTS:"
             for k, v in calc.get_outputs(also_labels=True):

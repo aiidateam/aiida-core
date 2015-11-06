@@ -83,7 +83,7 @@ class PwimmigrantCalculation(PwCalculation):
             * a ``'settings'`` ParameterData node, if there are any fixed
               coordinates, or if the gamma kpoint is used;
 
-        and can be retrieved as a dictionary using the ``get_inputdata_dict()``
+        and can be retrieved as a dictionary using the ``get_inputs_dict()``
         method. *These input links are cached-links; nothing is stored by this
         method (including the calculation node itself).*
 

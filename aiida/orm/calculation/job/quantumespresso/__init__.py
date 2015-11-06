@@ -150,7 +150,7 @@ class BasePwCpInputGenerator(object):
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
         :param inputdict: a dictionary with the input nodes, as they would
-                be returned by get_inputdata_dict (without the Code!)
+                be returned by get_inputs_dict (without the Code!)
         """
         from aiida.common.utils import get_unique_filename, get_suggestion
         import re
@@ -684,7 +684,7 @@ class BasePwCpInputGenerator(object):
         from collections import defaultdict
 
         try:
-            structure = self.get_inputdata_dict()[self.get_linkname('structure')]
+            structure = self.get_inputs_dict()[self.get_linkname('structure')]
         except AttributeError:
             raise ValueError("Structure is not set yet! Therefore, the method "
                              "use_pseudos_from_family cannot automatically set "

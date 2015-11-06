@@ -53,6 +53,7 @@ def copy_from_remote_to_remote(transportsource,transportdestination,
                                   remotesource,remotedestination,**kwargs):
     """
     Copy files or folders from a remote computer to another remote computer.
+    
     :param transportsource: transport to be used for the source computer
     :param transportdestination: transport to be used for the destination computer
     :param str remotesource: path to the remote source directory / file
@@ -271,6 +272,7 @@ class Transport(object):
                                       remotesource,remotedestination,**kwargs):
         """
         Copy files or folders from a remote computer to another remote computer.
+        
         :param transportdestination: transport to be used for the destination computer
         :param str remotesource: path to the remote source directory / file
         :param str remotedestination: path to the remote destination directory / file
@@ -278,16 +280,16 @@ class Transport(object):
             except for 'dereference' that is passed to self.get
         
         .. note:: the keyword 'dereference' SHOULD be set to False for the
-            final put (onto the destination), while it can be set to the 
-            value given in kwargs for the get from the source. In that 
-            way, a symbolic link would never be followed in the final 
-            copy to the remote destination. That way we could avoid getting 
-            unknown (potentially malicious) files into the destination computer.
-            HOWEVER, since dereference=False is currently NOT
-            supported by all plugins, we still force it to True for the final put.
+         final put (onto the destination), while it can be set to the 
+         value given in kwargs for the get from the source. In that 
+         way, a symbolic link would never be followed in the final 
+         copy to the remote destination. That way we could avoid getting 
+         unknown (potentially malicious) files into the destination computer.
+         HOWEVER, since dereference=False is currently NOT
+         supported by all plugins, we still force it to True for the final put.
             
         .. note:: the supported keys in kwargs are callback, dereference,
-            overwrite and ignore_nonexisting.
+           overwrite and ignore_nonexisting.
         """
         from aiida.common.folders import SandboxFolder
         

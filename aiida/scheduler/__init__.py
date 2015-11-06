@@ -402,7 +402,6 @@ stderr:
             self._get_kill_command(jobid))
         return self._parse_kill_output(retval, stdout, stderr)
 
-    @abstractmethod
     def _get_kill_command(self, jobid):
         """
         Return the command to kill the job with specified jobid.
@@ -411,7 +410,6 @@ stderr:
         """
         raise NotImplementedError
 
-    @abstractmethod
     def _parse_kill_output(self, retval, stdout, stderr):
         """
         Parse the output of the kill command.

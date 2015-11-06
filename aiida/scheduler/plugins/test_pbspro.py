@@ -954,3 +954,106 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" +
                         " < 'aiida.in'" in submit_script_text)
+
+    def test_submit_script_with_num_cores_per_mpiproc(self):
+        """
+        """
+        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, code_run_modes
+
+        s = PbsproScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = s.create_job_resource(
+            num_machines=1,
+            num_mpiprocs_per_machine=1,
+            num_cores_per_mpiproc=24
+        )
+        job_tmpl.uuid = str(uuid.uuid4())
+        job_tmpl.max_wallclock_seconds = 24 * 3600
+        code_info = CodeInfo()
+        code_info.cmdline_params = [
+            "mpirun", "-np", "23",
+            "pw.x", "-npool", "1"
+        ]
+        code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [code_info]
+        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+
+        submit_script_text = s.get_submit_script(job_tmpl)
+
+        self.assertTrue('#PBS -r n' in submit_script_text)
+        self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
+
+        self.assertTrue('#PBS -l select=1:mpiprocs=1:ppn=24' in submit_script_text)
+        # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
+
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" +
+                        " < 'aiida.in'" in submit_script_text)
+
+    def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):
+        """
+        """
+        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, code_run_modes
+
+        s = PbsproScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = s.create_job_resource(
+            num_machines=1,
+            num_mpiprocs_per_machine=1,
+            num_cores_per_machine=24,
+            num_cores_per_mpiproc=24
+        )
+        job_tmpl.uuid = str(uuid.uuid4())
+        job_tmpl.max_wallclock_seconds = 24 * 3600
+        code_info = CodeInfo()
+        code_info.cmdline_params = [
+            "mpirun", "-np", "23",
+            "pw.x", "-npool", "1"
+        ]
+        code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [code_info]
+        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+
+        submit_script_text = s.get_submit_script(job_tmpl)
+
+        self.assertTrue('#PBS -r n' in submit_script_text)
+        self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
+        self.assertTrue('#PBS -l select=1:mpiprocs=1:ppn=24' in submit_script_text)
+        # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
+
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" +
+                        " < 'aiida.in'" in submit_script_text)
+
+    def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):
+        """
+        """
+        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, code_run_modes
+
+        s = PbsproScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = s.create_job_resource(
+            num_machines=1,
+            num_mpiprocs_per_machine=1,
+            num_cores_per_machine=24,
+            num_cores_per_mpiproc=23
+        )
+        job_tmpl.uuid = str(uuid.uuid4())
+        job_tmpl.max_wallclock_seconds = 24 * 3600
+        code_info = CodeInfo()
+        code_info.cmdline_params = [
+            "mpirun", "-np", "23",
+            "pw.x", "-npool", "1"
+        ]
+        code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [code_info]
+        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+
+        with self.assertRaises(ValueError):
+            s.get_submit_script(job_tmpl)
+
+

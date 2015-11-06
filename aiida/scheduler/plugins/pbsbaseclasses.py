@@ -62,8 +62,32 @@ _map_status_pbs_common = {
 
 
 class PbsJobResource(NodeNumberJobResource):
-    pass
+    def __init__(self, *args, **kwargs):
+	super(PbsJobResource, self).__init__(*args, **kwargs)
 
+	value_error = ("num_cores_per_machine must be equal to "
+                      "num_cores_per_mpiproc * num_mpiprocs_per_machine, "
+                      "and in perticular it should be a multiple of "
+                      "num_cores_per_mpiproc and/or num_mpiprocs_per_machine")
+
+        if (self.num_cores_per_machine is not None and 
+                self.num_cores_per_mpiproc is not None):
+            if self.num_cores_per_machine != (self.num_cores_per_mpiproc 
+                			* self.num_mpiprocs_per_machine):
+                # If user specify both values, check if specified 
+                # values are correct
+                raise ValueError(value_error)
+        elif self.num_cores_per_mpiproc is not None:
+            # set no of cores per mpiproc specified by user
+            if self.num_cores_per_mpiproc <= 0:
+                raise ValueError("num_cores_per_mpiproc must be >=1")
+            # calculate num_cores_per_machine if none
+            # In this plugin we never used num_cores_per_mpiproc so if it 
+            # is not defined it is OK.
+            self.num_cores_per_machine = (self.num_cores_per_mpiproc 
+                                 * self.num_mpiprocs_per_machine)
+        
+                
 class PbsBaseClass(aiida.scheduler.Scheduler):
     """
     Base class with support for the PBSPro scheduler
@@ -86,8 +110,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
     _map_status = _map_status_pbs_common
 
     def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine,
-                            num_cores_per_machine,
-                            max_memory_kb, max_wallclock_seconds):
+                            num_cores_per_machine, max_memory_kb, max_wallclock_seconds):
         """
         Return a set a list of lines (possibly empty) with the header
         lines relative to:

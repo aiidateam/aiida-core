@@ -99,6 +99,7 @@ class NodeNumberJobResource(JobResource):
         'num_machines',
         'num_mpiprocs_per_machine',
         'num_cores_per_machine',
+        'num_cores_per_mpiproc',
     )
 
     @classmethod
@@ -155,11 +156,18 @@ class NodeNumberJobResource(JobResource):
             raise ValueError("tot_num_mpiprocs must an integer")
 
         try:
-            num_cores_per_machine = int(kwargs.pop('num_cores_per_machine'))
+            self.num_cores_per_machine = int(kwargs.pop('num_cores_per_machine'))
         except KeyError:
-            num_cores_per_machine = None
+            self.num_cores_per_machine = None
         except ValueError:
             raise ValueError("num_cores_per_machine must an integer")
+
+        try:
+            self.num_cores_per_mpiproc = int(kwargs.pop('num_cores_per_mpiproc'))
+        except KeyError:
+            self.num_cores_per_mpiproc = None
+        except ValueError:
+            raise ValueError("num_cores_per_mpiproc must an integer")
 
         if kwargs:
             raise TypeError("The following parameters were not recognized for "
@@ -212,14 +220,6 @@ class NodeNumberJobResource(JobResource):
         if self.num_machines <= 0:
             raise ValueError("num_machine must be >= 1")
 
-        if not num_cores_per_machine:
-            # set to num_mpiprocs_per_machine unless the user has explicitly
-            # specified the value
-            self.num_cores_per_machine = num_mpiprocs_per_machine
-        else:
-            if num_cores_per_machine <= 0:
-                raise ValueError("num_cores_per_machine must be >= 1")
-            self.num_cores_per_machine = num_cores_per_machine
 
     def get_tot_num_mpiprocs(self):
         """

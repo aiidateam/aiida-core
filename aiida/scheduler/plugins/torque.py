@@ -49,8 +49,13 @@ class TorqueScheduler(PbsBaseClass):
         return_lines = []
 
         select_string = "nodes={}".format(num_machines)
-        if num_mpiprocs_per_machine:
+        if num_cores_per_machine:
             select_string += ":ppn={}".format(num_cores_per_machine)
+        elif num_mpiprocs_per_machine:
+            # if num_cores_per_machine is not defined then use 
+            # num_mpiprocs_per_machine
+            select_string += ":ppn={}".format(num_mpiprocs_per_machine)
+            
 
         if max_wallclock_seconds is not None:
             try:

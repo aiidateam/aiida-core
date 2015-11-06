@@ -177,7 +177,7 @@ Here follows a brief documentation of their action.
   like the number of nodes, wall-time, ..., by passing a dictionary to 
   this method. The keys of this dictionary, i.e. the resources, depend 
   on the specific scheduler plugin that has to run them. Look at the 
-  documentation of the scheduler (type is given by: ``calc.computer.get_scheduler_type()``).
+  documentation of the scheduler (type is given by: ``calc.get_computer().get_scheduler_type()``).
 * ``c.set_withmpi``: True or False, if True (the default) it will 
   call the executable as a parallel run.
 

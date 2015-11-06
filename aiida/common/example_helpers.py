@@ -30,7 +30,7 @@ def test_and_get_code(codename, expected_code_type, use_exceptions=False):
         if code.get_input_plugin_name() != expected_code_type:
             raise ValueError
     except (NotExistent, ValueError):
-        valid_code_labels = ["{}@{}".format(c.label, c.computer.name) for c in Code.query(
+        valid_code_labels = ["{}@{}".format(c.label, c.get_computer().name) for c in Code.query(
             dbattributes__key="input_plugin",
             dbattributes__tval=expected_code_type)]
         if valid_code_labels:

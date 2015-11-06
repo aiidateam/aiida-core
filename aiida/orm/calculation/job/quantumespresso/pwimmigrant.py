@@ -182,7 +182,7 @@ class PwimmigrantCalculation(PwCalculation):
             )
 
         # Check that open_transport is the correct transport type.
-        if type(open_transport) is not self.computer.get_transport_class():
+        if type(open_transport) is not self.get_computer().get_transport_class():
             raise InputValidationError(
                 "The transport passed as the `open_transport` parameter is "
                 "not the same transport type linked to the computer. Please "
@@ -355,7 +355,7 @@ class PwimmigrantCalculation(PwCalculation):
         # Manually add the remote working directory as a RemoteData output
         # node.
         self._set_state(calc_states.SUBMITTING)
-        remotedata = RemoteData(computer=self.computer,
+        remotedata = RemoteData(computer=self.get_computer(),
                                 remote_path=self._get_remote_workdir())
         remotedata._add_link_from(self, label='remote_folder')
         remotedata.store()
@@ -394,7 +394,7 @@ class PwimmigrantCalculation(PwCalculation):
             )
 
         # Check that open_transport is the correct transport type.
-        if type(open_transport) is not self.computer.get_transport_class():
+        if type(open_transport) is not self.get_computer().get_transport_class():
             raise InputValidationError(
                 "The transport passed as the `open_transport` parameter is "
                 "not the same transport type linked to the computer. Please "

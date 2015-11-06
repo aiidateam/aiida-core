@@ -151,8 +151,6 @@ The input/output links of the node can be accessed by the following methods.
 
 - :py:meth:`~aiida.orm.node.Node.get_inputs_dict` returns a dictionary where the key is the label of the input link.
 
-- :py:meth:`~aiida.orm.node.Node.get_inputdata_dict` returns the inputs as dictionary
-
 - :py:meth:`~aiida.orm.node.Node.get_inputs` returns the list of input nodes
 
 - :py:meth:`~aiida.orm.node.Node.inp` returns a :py:meth:`~aiida.orm.node.NodeInputManager` object that can be used to access the node's parents.

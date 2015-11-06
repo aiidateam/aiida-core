@@ -896,6 +896,7 @@ class TestParserQstat(unittest.TestCase):
 class TestSubmitScript(unittest.TestCase):
     def test_submit_script(self):
         """
+        Test to verify if scripts works fine with default options
         """
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, code_run_modes
@@ -923,6 +924,8 @@ class TestSubmitScript(unittest.TestCase):
 
     def test_submit_script_with_num_cores_per_machine(self):
         """
+        Test to verify if script works fine if we specify only
+        num_cores_per_machine value.
         """
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, code_run_modes
@@ -957,6 +960,8 @@ class TestSubmitScript(unittest.TestCase):
 
     def test_submit_script_with_num_cores_per_mpiproc(self):
         """
+        Test to verify if scripts works fine if we pass only 
+        num_cores_per_mpiproc value
         """
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, code_run_modes
@@ -993,6 +998,10 @@ class TestSubmitScript(unittest.TestCase):
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):
         """
+        Test to verify if scripts works fine if we pass both
+        num_cores_per_machine and num_cores_per_mpiproc correct values.
+        It should pass in check:
+        res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, code_run_modes
@@ -1029,6 +1038,10 @@ class TestSubmitScript(unittest.TestCase):
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):
         """
+        Test to verify if scripts works fine if we pass 
+        num_cores_per_machine and num_cores_per_mpiproc wrong values.
+        It should fail in check:
+        res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, code_run_modes
@@ -1036,24 +1049,11 @@ class TestSubmitScript(unittest.TestCase):
         s = PbsproScheduler()
 
         job_tmpl = JobTemplate()
-        job_tmpl.job_resource = s.create_job_resource(
-            num_machines=1,
-            num_mpiprocs_per_machine=1,
-            num_cores_per_machine=24,
-            num_cores_per_mpiproc=23
-        )
-        job_tmpl.uuid = str(uuid.uuid4())
-        job_tmpl.max_wallclock_seconds = 24 * 3600
-        code_info = CodeInfo()
-        code_info.cmdline_params = [
-            "mpirun", "-np", "23",
-            "pw.x", "-npool", "1"
-        ]
-        code_info.stdin_name = 'aiida.in'
-        job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = code_run_modes.SERIAL
-
-        with self.assertRaises(ValueError):
-            s.get_submit_script(job_tmpl)
-
+	with self.assertRaises(ValueError):
+            job_tmpl.job_resource = s.create_job_resource(
+                num_machines=1,
+                num_mpiprocs_per_machine=1,
+                num_cores_per_machine=24,
+                num_cores_per_mpiproc=23
+            )
 

@@ -116,7 +116,7 @@ you have the following fields that you can set:
 * ``res.num_cores_per_mpiproc``: specify the number of cores to run each MPI
   process
   
-Note that you need to specify only two among the five fields above, for
+Note that you need to specify only two among the first three fields above, for
 instance::
 
     res = NodeNumberJobResource()

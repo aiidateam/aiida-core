@@ -1,4 +1,5 @@
-STORAGE_BACKEND = "django"
+STORAGE_BACKEND = "sqlalchemy"
+AIIDANODES_UUID_VERSION = 4
 
 TIME_ZONE = "Europe/Paris"
 USE_TZ = True

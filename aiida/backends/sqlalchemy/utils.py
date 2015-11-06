@@ -6,8 +6,19 @@ from sqlalchemy.orm import sessionmaker
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.setup import (get_default_profile, DEFAULT_PROCESS,
                                 get_profile_config)
-from aiida.backends.sqlalchemy import _GlobalSession
+from aiida.backends import sqlalchemy
 from aiida.backends.sqlalchemy import settings
+
+from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
+from aiida.backends.sqlalchemy.models.comment import DbComment
+from aiida.backends.sqlalchemy.models.computer import DbComputer
+from aiida.backends.sqlalchemy.models.group import DbGroup
+from aiida.backends.sqlalchemy.models.lock import DbLock
+from aiida.backends.sqlalchemy.models.log import DbLog
+from aiida.backends.sqlalchemy.models.node import DbLink, DbNode, DbPath
+from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
 
 def is_dbenv_loaded():
     """
@@ -50,5 +61,5 @@ def load_dbenv(process=None, profile=None):
     engine = create_engine(engine_url)
 
     Session = sessionmaker(bind=engine)
-    setattr(_GlobalSession, "session", Session())
+    sqlalchemy.session = Session()
 

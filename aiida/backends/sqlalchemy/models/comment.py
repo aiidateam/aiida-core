@@ -9,6 +9,8 @@ from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 
 class DbComment(Base):
+    __tablename__ = "db_dbcomment"
+
     id = Column(Integer, primary_key=True)
 
     dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE"))

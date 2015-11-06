@@ -13,8 +13,14 @@ from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 
-from aiida.orm import from_type_to_pluginclassname
-from aiida.orm.node import Node
+# from aiida.orm import from_type_to_pluginclassname
+# from aiida.orm.node import Node
+def from_type_to_pluginclassname(arg):
+    pass
+
+class Node(object):
+    pass
+
 from aiida.common import aiidalogger
 from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
@@ -23,6 +29,7 @@ from aiida.common.exceptions import DbContentError, MissingPluginError
 class DbLink(Base):
     __tablename__ = "db_dblink"
 
+    id = Column(Integer, primary_key=True)
     input_id = Column(Integer, ForeignKey('db_dbnode.id'))
     output_id = Column(Integer, ForeignKey('db_dbnode.id'))
 
@@ -44,6 +51,7 @@ class DbLink(Base):
 class DbPath(Base):
     __tablename__ = "db_dbpath"
 
+    id = Column(Integer, primary_key=True)
     parent_id = Column(Integer, ForeignKey('db_dbnode.id'))
     child_id = Column(Integer, ForeignKey('db_dbnode.id'))
 
@@ -59,7 +67,7 @@ class DbPath(Base):
 
 
 class DbNode(Base):
-    __tablename__ = "db_dbuser"
+    __tablename__ = "db_dbnode"
 
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID, default=uuid_func)
@@ -73,12 +81,12 @@ class DbNode(Base):
     outputs = relationship("DbNode", secondary="db_dblink",
                            primaryjoin="DbNode.id == DbLink.input_id",
                            secondaryjoin="DbNode.id == DbLink.output_id",
-                           backref="inputs")
+                           backref="inputs", lazy="dynamic")
 
     child_paths = relationship("DbNode", secondary="db_dbpath",
                                primaryjoin="DbNode.id == DbPath.parent_id",
                                secondaryjoin="DbNode.id == DbPath.child_id",
-                               backref="parent_paths")
+                               backref="parent_paths", lazy="dynamic")
 
     # TODO SP: prevent modification
     ctime = Column(DateTime(timezone=True), default=timezone.now)

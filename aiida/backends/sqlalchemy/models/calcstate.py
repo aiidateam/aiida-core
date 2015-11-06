@@ -12,6 +12,7 @@ from aiida.common.datastructures import calc_states
 from aiida.utils import timezone
 
 class DbCalcState(Base):
+    __tablename__ = "db_dbcalcstate"
 
     id = Column(Integer, primary_key=True)
 

@@ -5,7 +5,8 @@ from sqlalchemy import orm
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy.ext.declarative import declarative_base
 
-from aiida.backends.sqlalchemy import _GlobalSession
+from aiida.backends.sqlalchemy import session
+from aiida.common.exceptions import InvalidOperation
 
 # Taken from
 # https://github.com/mitsuhiko/flask-sqlalchemy/blob/master/flask_sqlalchemy/__init__.py#L491
@@ -20,12 +21,21 @@ class _QueryProperty(object):
         except UnmappedClassError:
             return None
 
+
+class _SessionProperty(object):
+    def __get__(self, obj, _type):
+        if not session:
+            raise InvalidOperation("You need to call load_dbenv before "
+                                   "accessing the session of SQLALchemy.")
+        return session
+
+
 class Model(object):
 
     query = _QueryProperty()
     query_class = orm.Query
 
-    session = _GlobalSession()
+    session = _SessionProperty()
 
     def save(self, commit=True):
         self.session.add(self)

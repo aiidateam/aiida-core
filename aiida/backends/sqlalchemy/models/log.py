@@ -10,6 +10,8 @@ from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.exceptions import ValidationError
 
 class DbLog(Base):
+    __tablename__ = "db_dblog"
+
     id = Column(Integer, primary_key=True)
 
     time = Column(DateTime(timezone=True), default=timezone.now)

@@ -16,6 +16,7 @@ from aiida.orm.computer import Computer
 
 
 class DbComputer(Base):
+    __tablename__ = "db_dbcomputer"
 
     id = Column(Integer, primary_key=True)
 

@@ -15,6 +15,7 @@ from aiida.orm.computer import Computer
 
 
 class DbAuthInfo(Base):
+    __tablename__ = "db_dbauthinfo"
 
     id = Column(Integer, primary_key=True)
 

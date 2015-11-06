@@ -783,19 +783,6 @@ class Node(object):
 
         return new_outputs
 
-    def get_inputdata_dict(self, only_in_db=False):
-        """
-        Return a dictionary where the key is the label of the input link, and
-        the value is the input node. Includes only the data nodes, no
-        calculations or codes.
-        
-        :return: a dictionary {label:object}
-        """
-        from aiida.orm import Data
-
-        return dict(self.get_inputs(type=Data, also_labels=True,
-                                    only_in_db=only_in_db))
-
     def get_inputs(self, type=None, also_labels=False, only_in_db=False):
         """
         Return a list of nodes that enter (directly) in this node
@@ -1092,20 +1079,11 @@ class Node(object):
 
     def get_extras(self):
         """
-        Get the value of extras, reading directly from the DB!
-        Since extras can be added only after storing the node, this
-        function is meaningful to be called only after the .store() method.
+        Get the value of extras.
         
         :return: the dictionary of extras ({} if no extras)
         """
-
-        from aiida.djsite.db.models import DbExtra
-
-        if self._to_be_stored:
-            raise AttributeError("DbExtra does not exist yet, the "
-                                 "node is not stored")
-        else:
-            return DbExtra.get_all_values_for_node(dbnode=self.dbnode)
+        return dict(self.iterextras())
 
     def del_extra(self, key):
         """
@@ -1190,6 +1168,12 @@ class Node(object):
                 if not also_updatable and attr in updatable_list:
                     continue
                 yield (attr, all_attrs[attr])
+
+    def get_attrs(self):
+        """
+        Return a dictionary with all attributes of this node.      
+        """
+        return dict(self.iterattrs())
 
     def attrs(self):
         """

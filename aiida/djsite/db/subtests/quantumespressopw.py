@@ -103,7 +103,8 @@ class TestQEPWInputGeneration(QETestCase):
         # Reset logging level
         logging.disable(logging.NOTSET)
 
-        inputdict = c.get_inputdata_dict()
+        inputdict = c.get_inputs_dict()
+        inputdict.pop('code',None)
 
         with SandboxFolder() as f:
             # I use the same SandboxFolder more than once because nothing

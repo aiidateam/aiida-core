@@ -128,20 +128,18 @@ class AbstractNode(object):
         pass
 
     @property
-    @abstractmethod
     def ctime(self):
         """
         Return the creation time of the node.
         """
-        pass
+        return self.dbnode.ctime
 
     @property
-    @abstractmethod
     def mtime(self):
         """
         Return the modification time of the node.
         """
-        pass
+        return self.dbnode.mtime
 
     @abstractmethod
     def __int__(self):
@@ -302,48 +300,44 @@ class AbstractNode(object):
 
 
     @property
-    @abstractmethod
     def label(self):
         """
         Get the label of the node.
 
         :return: a string.
         """
-        pass
+        return self.dbnode.label
 
     @label.setter
-    @abstractmethod
     def label(self, label):
         """
         Set the label of the node.
 
         :param label: a string
         """
-        pass
+        self._update_db_label_field(label)
 
     @abstractmethod
     def _update_db_label_field(self, field_value):
         pass
 
     @property
-    @abstractmethod
     def description(self):
         """
         Get the description of the node.
 
         :return: a string
         """
-        pass
+        return self.dbnode.description
 
     @description.setter
-    @abstractmethod
     def description(self, desc):
         """
         Set the description of the node
 
         :param desc: a string
         """
-        pass
+        self._update_db_description_field(desc)
 
     @abstractmethod
     def _update_db_description_field(self, field_value):
@@ -371,7 +365,7 @@ class AbstractNode(object):
 
         :return: a Django DbUser model object
         """
-        pass
+        return self.dbnode.user
 
     def _has_cached_links(self):
         """
@@ -635,7 +629,10 @@ class AbstractNode(object):
 
         :return: the Computer object or None.
         """
-        pass
+        if self.dbnode.dbcomputer is None:
+            return None
+        else:
+            return Computer(dbcomputer=self.dbnode.dbcomputer)
 
     @abstractmethod
     def set_computer(self, computer):

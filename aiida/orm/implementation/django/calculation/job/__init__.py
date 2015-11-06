@@ -16,20 +16,6 @@ from aiida.backends.djsite.utils import get_automatic_user
 from aiida.utils import timezone
 
 
-def from_type_to_pluginclassname(typestr):
-    """
-    Return the string to pass to the load_plugin function, starting from
-    the 'type' field of a Node.
-    """
-    # Fix for base class
-    if typestr == "":
-        typestr = "node.Node."
-    if not typestr.endswith("."):
-        raise DbContentError("The type name '{}' is not valid!".format(
-            typestr))
-    return typestr[:-1]  # Strip final dot
-
-
 
 class JobCalculation(AbstractJobCalculation):
 

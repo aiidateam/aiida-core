@@ -138,8 +138,12 @@ you have the following fields that you can set:
   to use on each machine
 * ``res.tot_num_mpiprocs``: the total number of MPI processes that this job is
   requesting
+* ``res.num_cores_per_machine``: specify the number of cores to use on each
+  machine
+* ``res.num_cores_per_mpiproc``: specify the number of cores to run each MPI
+  process
   
-Note that you need to specify only two among the three fields above, for
+Note that you need to specify only two among the first three fields above, for
 instance::
 
     res = NodeNumberJobResource()
@@ -147,7 +151,7 @@ instance::
     res.num_mpiprocs_per_machine = 16
 
 asks the scheduler to allocate 4 machines, with 16 MPI processes on
-each machine.
+each machine. 
 This will automatically ask for a total of ``4*16=64`` total number of
 MPI processes.
 
@@ -161,7 +165,8 @@ method of the :py:meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation
 
     calc.set_resources({"num_machines": 4, "num_mpiprocs_per_machine": 16})
 
-.. note:: If you specify all three fields (not recommended), make sure that they satisfy::
+.. note:: If you specify res.num_machines, res.num_mpiprocs_per_machine,
+   and res.tot_num_mpiprocs fields (not recommended), make sure that they satisfy::
 
       res.num_machines * res.num_mpiprocs_per_machine = res.tot_num_mpiprocs
     
@@ -179,6 +184,22 @@ method of the :py:meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation
   Moreover, you can explicitly specify ``num_mpiprocs_per_machine`` if 
   you want to use a value different from the default one.
 
+
+The num_cores_per_machine and num_cores_per_mpiproc fields are optional.
+If you specify num_mpiprocs_per_machine and num_cores_per_machine fields, 
+make sure that::
+   
+  res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
+
+If you want to specifiy single value in num_mpiprocs_per_machine and 
+num_cores_per_machine, please make sure that res.num_cores_per_machine is 
+multiple of res.num_cores_per_mpiproc and/or res.num_mpiprocs_per_machine.
+
+.. note:: In PBSPro, the num_mpiprocs_per_machine and num_cores_per_machine fields
+   are used for mpiprocs and ppn respectively.
+
+.. note:: In Torque, the num_mpiprocs_per_machine field is used for ppn unless 
+   the num_mpiprocs_per_machine is specified.
 
 .. _ParEnvJobResource:
 

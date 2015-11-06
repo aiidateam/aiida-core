@@ -320,20 +320,20 @@ class Node(object):
             # Base Node class, with empty string
             return DbNode.aiidaobjects.filter(*args, **kwargs)
 
-    @property
-    def computer(self):
-        """
-        Get the Computer associated to this node, or None if no computer
-        is associated.
+#     @property
+#     def computer(self):
+#         """
+#         Get the Computer associated to this node, or None if no computer
+#         is associated.
         
-        :return: a computer object
-        """
-        from aiida.orm import Computer
+#         :return: a computer object
+#         """
+#         from aiida.orm import Computer
 
-        if self.dbnode.dbcomputer is None:
-            return None
-        else:
-            return Computer(dbcomputer=self.dbnode.dbcomputer)
+#         if self.dbnode.dbcomputer is None:
+#             return None
+#         else:
+#             return Computer(dbcomputer=self.dbnode.dbcomputer)
 
     def _set_with_defaults(self, **kwargs):
         """

@@ -73,8 +73,8 @@ class Code(Node):
         if self.is_local():
             computer_str = "repository"
         else:
-            if self.computer is not None:
-                computer_str = self.computer.name
+            if self.get_computer() is not None:
+                computer_str = self.get_computer().name
             else:
                 computer_str = "[unknown]"
 
@@ -350,7 +350,7 @@ class Code(Node):
         if self.is_local():
             raise ValueError("The code is local")
 
-        return self.computer
+        return self.get_computer()
 
     def _set_local(self):
         """

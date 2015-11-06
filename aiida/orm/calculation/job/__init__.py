@@ -297,7 +297,7 @@ class JobCalculation(Calculation):
         like the number of nodes, cpus, ...
         This dictionary is scheduler-plugin dependent. Look at the documentation
         of the scheduler.
-        (scheduler type can be found with calc.computer.get_scheduler_type() )
+        (scheduler type can be found with calc.get_computer().get_scheduler_type() )
         """
         # Note: for the time being, resources are only validated during the
         # 'store' because here we are not sure that a Computer has been set

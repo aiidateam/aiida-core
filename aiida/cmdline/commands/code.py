@@ -762,7 +762,7 @@ class Code(VerdiCommandWithSubcommands):
             print "ERROR! A code with name {} could not be found".format(old_name)
             sys.exit(1)
 
-        suffix = '@{}'.format(code.computer.name)
+        suffix = '@{}'.format(code.get_computer().name)
         if new_name.endswith(suffix):
             new_name = new_name[:-len(suffix)]
 
@@ -770,10 +770,10 @@ class Code(VerdiCommandWithSubcommands):
             print >> sys.stderr, "ERROR! Do not put '@' symbols in the code name"
             sys.exit(1)
 
-        retrieved_old_name = '{}@{}'.format(code.label, code.computer.name)
+        retrieved_old_name = '{}@{}'.format(code.label, code.get_computer().name)
         # CHANGE HERE
         code.label = new_name
-        retrieved_new_name = '{}@{}'.format(code.label, code.computer.name)
+        retrieved_new_name = '{}@{}'.format(code.label, code.get_computer().name)
 
         print "Renamed code with ID={} from '{}' to '{}'".format(
             code.pk, retrieved_old_name, retrieved_new_name)
@@ -814,7 +814,7 @@ class Code(VerdiCommandWithSubcommands):
             # file_list = [ code._get_folder_pathsubfolder.get_abs_path(i)
             #    for i in code.get_folder_list() ]
         else:
-            set_params.computer = code.computer
+            set_params.computer = code.get_computer()
             set_params.remote_abs_path = code.get_remote_exec_path()
 
         set_params.prepend_text = code.get_prepend_text()
@@ -835,7 +835,7 @@ class Code(VerdiCommandWithSubcommands):
         if was_local_before:
             new_comment.append("local_executable: {}".format(code.get_local_executable()))
         else:
-            new_comment.append("computer: {}".format(code.computer))
+            new_comment.append("computer: {}".format(code.get_computer()))
             new_comment.append("remote_exec_path: {}".format(code.get_remote_exec_path()))
         new_comment.append("prepend_text: {}".format(code.get_prepend_text()))
         new_comment.append("append_text: {}".format(code.get_append_text()))

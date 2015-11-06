@@ -909,42 +909,72 @@ class StructureData(Data):
 
         import re
 
-        # import glob
         pos_regex = re.compile(r"""
-                (?P<sym>[a-zA-Z0-9]+)\s+
-                (?P<x>[-]?\d+[\.]?\d+([E | e][+|-]?\+)?)\s+
-                (?P<y>[-]?\d+[\.]?\d+([E | e][+|-]?\+)?)\s+
-                (?P<z>[-]?\d+[\.]?\d+([E | e][+|-]?\+)?)""", re.X)
+^                                                                             # Linestart 
+[ \t]*                                                                        # Optional white space  
+(?P<sym>[A-Za-z]+[A-Za-z0-9]*)\s+                                             # get the symbol
+(?P<x> [\-|\+]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([E | e][+|-]?\d+)? ) [ \t]+  # Get x
+(?P<y> [\-|\+]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([E | e][+|-]?\d+)? ) [ \t]+  # Get y
+(?P<z> [\-|\+]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([E | e][+|-]?\d+)? )         # Get z
+""",  re.X | re.M)
         pos_block_regex = re.compile(r"""
-                    (
-                        \s*   #White space in the beginning (maybe)
-                        [A-Za-z0-9]+  #A tag for a species
-                        (
-                           \s+ [-]?\d+[\.]?\d+([E | e][+|-]?\+)?  #The number   ([E | e][+|-]?[0-9]+)?)?
-                        ){3}
-                        \s* [\n] #White space and line break in the end
-                    )+ #A block should be one or more lines
-                    """, re.X | re.M)
+                                                            # First line contains an integer
+                                                            # and only an integer: the number of atoms
+^[ \t]* (?P<natoms> [0-9]+) [ \t]*[\n]                      # End first line
+(?P<comment>.*) [\n]                                        # The second line is a comment
+(?P<positions>                                              # This is the block of positions
+    (  
+        (
+            \s*                                             # White space in front of the element spec is ok
+            (
+                [A-Za-z]+[A-Za-z0-9]*                       # Element spec
+                (
+                   \s+                                      # White space in front of the number
+                   [\- | \+ ]?                              # Plus or minus in front of the number (optional)
+                    (\d*                                    # optional decimal in the beginning .0001 is ok, for example
+                    [\.]                                    # There has to be a dot followed by
+                    \d+)                                    # at least one decimal
+                    |                                       # OR
+                    (\d+                                    # at least one decimal, followed by
+                    [\.]?                                   # an optional dot
+                    \d*)                                    # followed by optional decimals
+                    ([E | e][+|-]?\d+)?                     # optional exponents E+03, e-05 
+                ){3}                                        # I expect three float values
+                |
+                \#                                          # If a line is commented out, that is also ok
+            )
+            .*                                              # I do not care what is after the comment or the position spec
+            |                                               # OR
+            \s*                                             # A line only containing white space
+         )                       
+        [\n]                                                # line break at the end
+    )+
+)                                                           # A positions block should be one or more lines
+                    """, re.X | re.M )
 
         block = None
-
-        # idiom to get the last element,
-        # in case the XYZ file contains multiple frames
         for block in pos_block_regex.finditer(inputstring):
             pass
-
+        print block.group(0)
         if block is None:
             raise TypeError("The data does not contain any XYZ data")
-
+        print '##############'
         self.clear_kinds()
-
-        for match in pos_regex.finditer(block.group(0)):
+        natoms = int(block.group('natoms'))
+        atoms_added = 0
+        for match in pos_regex.finditer(block.group('positions')):
+            #~ print match.group(0)
+            print match.group(0)
             self.append_atom(symbols=match.group('sym'),
                     position=(
                         float(match.group('x')),
                         float(match.group('y')),
                         float(match.group('z'))))
-
+            atoms_added +=  1
+        if atoms_added != natoms:
+            raise TypeError('{} atoms were specified in folder, whereas {} should be'.format(atoms_added, natoms))
+        print  natoms, atoms_added
+        
     def get_symbols_set(self):
         """
         Return a set containing the names of all elements involved in

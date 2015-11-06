@@ -26,7 +26,7 @@ class TestCalcStatus(AiidaTestCase):
 
         # Use the AiidaTestCase test computer
 
-        c = JobCalculation(computer=self.get_computer(),
+        c = JobCalculation(computer=self.computer,
                            resources={
                                'num_machines': 1,
                                'num_mpiprocs_per_machine': 1}
@@ -57,7 +57,7 @@ class TestCalcStatus(AiidaTestCase):
         c._set_state(calc_states.FINISHED)
         self.assertEquals(c.get_state(), calc_states.FINISHED)
 
-        # Try to set a previous state (that is, going backward from 
+        # Try to set a previous state (that is, going backward from
         # FINISHED to WITHSCHEDULER, for instance)
         # and check that this is not allowed
         with self.assertRaises(ModificationNotAllowed):
@@ -393,13 +393,13 @@ loop_
    A
    B
    C
- 
+
 loop_
   _atom_site_occupancy
    1.0
    0.5
    0.5
- 
+
 _publ_section_title                     'Test CIF'
 ''')
 
@@ -418,7 +418,7 @@ loop_
    A  1.0
    B  0.5
    C  0.5
- 
+
 _publ_section_title                     'Test CIF'
 ''')
 
@@ -1050,7 +1050,7 @@ class TestStructureData(AiidaTestCase):
 
     def test_kind_1(self):
         """
-        Test the management of kinds (automatic detection of kind of 
+        Test the management of kinds (automatic detection of kind of
         simple atoms).
         """
         from aiida.orm.data.structure import StructureData
@@ -1189,7 +1189,7 @@ class TestStructureData(AiidaTestCase):
         s.append_atom(symbols='Fe', position=[2, 0, 0])
         s.append_atom(symbols='Fe', position=[4, 0, 0])
 
-        # I expect only two species, the first one with name 'Fe', mass 12, 
+        # I expect only two species, the first one with name 'Fe', mass 12,
         # and referencing the first three atoms; the second with name
         # 'Fe1', mass = elements[26]['mass'], and referencing the last two atoms
         self.assertEquals(
@@ -1223,7 +1223,7 @@ class TestStructureData(AiidaTestCase):
 
         s = StructureData(ase=asecell)
 
-        # I expect only two species, the first one with name 'Fe', mass 12, 
+        # I expect only two species, the first one with name 'Fe', mass 12,
         # and referencing the first three atoms; the second with name
         # 'Fe1', mass = elements[26]['mass'], and referencing the last two atoms
         self.assertEquals(
@@ -1256,7 +1256,7 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals([k.name for k in a.kinds],
                           ['Ba', 'Ti', 'Ti2', 'Ba1'])
         #############################
-        # Here I start the real tests        
+        # Here I start the real tests
         # No such kind
         with self.assertRaises(ValueError):
             a.get_kind('Ti3')
@@ -1387,7 +1387,7 @@ class TestStructureData(AiidaTestCase):
                           'C Ba O3 Ti')
         self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6),
                           'C6H6')
-        self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6, 
+        self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6,
                                       mode="hill_compact"),
                           'CH')
         self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
@@ -1433,11 +1433,11 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(c._prepare_cif(),
                           """#\#CIF1.1
 ##########################################################################
-#               Crystallographic Information Format file 
+#               Crystallographic Information Format file
 #               Produced by PyCifRW module
-# 
+#
 #  This is a CIF file.  CIF has been adopted by the International
-#  Union of Crystallography as the standard for data archiving and 
+#  Union of Crystallography as the standard for data archiving and
 #  transmission.
 #
 #  For information on this file format, follow the CIF links at
@@ -1454,7 +1454,7 @@ loop_
    Ba1  0.0  0.0  0.0  Ba
    Ba2  0.25  0.25  0.25  Ba
    Ti1  0.5  0.5  0.5  Ti
- 
+
 _cell_angle_alpha                       90.0
 _cell_angle_beta                        90.0
 _cell_angle_gamma                       90.0
@@ -1464,7 +1464,7 @@ _cell_length_c                          2.0
 loop_
   _symmetry_equiv_pos_as_xyz
    'x, y, z'
- 
+
 _symmetry_Int_Tables_number             1
 _symmetry_space_group_name_H-M          'P 1'
 _symmetry_space_group_name_Hall         'P 1'
@@ -2325,7 +2325,7 @@ class TestTrajectoryData(AiidaTestCase):
             newkinds = [s.kind_name for s in struc.sites]
             self.assertEqual(newkinds, symbols.tolist())
 
-            # Weird assignments (nobody should ever do this, but it is possible in 
+            # Weird assignments (nobody should ever do this, but it is possible in
             # principle and we want to check
             k1 = Kind(name='C', symbols='Cu')
             k2 = Kind(name='H', symbols='He')
@@ -2484,7 +2484,7 @@ class TestKpointsData(AiidaTestCase):
             _ = k.get_kpoints(cartesian=True)
 
         # try to set also weights
-        # should fail if the weights length do not match kpoints 
+        # should fail if the weights length do not match kpoints
         input_weights = numpy.ones(6)
         with self.assertRaises(ValueError):
             k.set_kpoints(input_klist, weights=input_weights)
@@ -2533,7 +2533,7 @@ class TestKpointsData(AiidaTestCase):
         # set kpoints list
         k.set_kpoints(input_klist)
 
-        # verify that it is not the same of the input 
+        # verify that it is not the same of the input
         # (at least I check that there something has been done)
         klist = k.get_kpoints(cartesian=True)
         self.assertFalse(numpy.array_equal(klist, input_klist))

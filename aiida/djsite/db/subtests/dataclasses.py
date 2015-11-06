@@ -26,7 +26,7 @@ class TestCalcStatus(AiidaTestCase):
 
         # Use the AiidaTestCase test computer
 
-        c = JobCalculation(computer=self.computer,
+        c = JobCalculation(computer=self.get_computer(),
                            resources={
                                'num_machines': 1,
                                'num_mpiprocs_per_machine': 1}

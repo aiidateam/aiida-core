@@ -128,7 +128,7 @@ class Computer(AbstractComputer):
         self.validate()
 
         try:
-            with session.begin_nested():
+            with session.begin(subtransactions=True):
                 self.dbcomputer.save()
         except SQLAlchemyError:
             raise ValueError("Integrity error, probably the hostname already exists in the DB")

@@ -158,7 +158,7 @@ class Workflow(AbstractWorkflow):
         """
         self.dbworkflowinstance.label = field_value
         if not self._to_be_stored:
-            with session.begin_nested():
+            with session.begin(subtransactions=True):
                 self._dbworkflowinstance.save(commit=False)
                 self._increment_version_number_db()
 
@@ -183,7 +183,7 @@ class Workflow(AbstractWorkflow):
         """
         self.dbworkflowinstance.description = field_value
         if not self._to_be_stored:
-            with session.begin_nested():
+            with session.begin(subtransactions=True):
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()
 

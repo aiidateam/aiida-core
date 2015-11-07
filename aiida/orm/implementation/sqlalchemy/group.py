@@ -94,7 +94,7 @@ class Group(AbstractGroup):
                                          "already stored")
         else:
             try:
-                with session.begin_nested():
+                with session.begin(subtransactions=True):
                     self.dbgroup.save(commit=False)
             except SQLAlchemyError:
                 raise UniquenessError("A group with the same name (and of the "

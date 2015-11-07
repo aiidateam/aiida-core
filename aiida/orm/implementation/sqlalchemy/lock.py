@@ -12,7 +12,7 @@ from aiida.orm.implementation.general.lock import AbstractLockManager, AbstractL
 class LockManager(AbstractLockManager):
     def aquire(self, key, timeout=3600, owner="None"):
         try:
-            with session.begin_nested():
+            with session.begin(subtransactions=True):
                 dblock = DbLock(key=key, timeout=timeout, owner=owner)
                 session.add(dblock)
 
@@ -35,7 +35,7 @@ class LockManager(AbstractLockManager):
             raise InternalError("Something went wrong, try to keep on.")
 
     def clear_all(self):
-        with session.begin_nested():
+        with session.begin(subtransactions=True):
             DbLock.query.delete()
 
 class Lock(AbstractLock):

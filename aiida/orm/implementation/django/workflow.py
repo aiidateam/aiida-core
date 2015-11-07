@@ -19,6 +19,7 @@ from aiida.backends.djsite.utils import get_automatic_user
 
 from aiida.common import aiidalogger
 from aiida.utils import timezone
+
 logger = aiidalogger.getChild('Workflow')
 
 

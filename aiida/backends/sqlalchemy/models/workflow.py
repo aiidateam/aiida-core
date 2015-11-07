@@ -4,7 +4,7 @@ import json
 
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import Column, UniqueConstraint, Table
 from sqlalchemy.types import Integer, String, DateTime, Text
 
@@ -237,7 +237,7 @@ class DbWorkflowStep(Base):
     id = Column(Integer, primary_key=True)
 
     parent_id = Column(Integer, ForeignKey('db_dbworkflow.id'))
-    parent = relationship("DbWorkflow", backref='data')
+    parent = relationship("DbWorkflow", backref=backref('steps', lazy='dynamic'))
 
     name = Column(String(255)) # Blank = false
     time = Column(DateTime(timezone=True), default=timezone.now)
@@ -249,7 +249,7 @@ class DbWorkflowStep(Base):
                                 backref="workflow_step")
     sub_workflows = relationship("DbWorkflow",
                                  secondary=table_workflowstep_subworkflow,
-                                 backref="parent_workflow_step")
+                                 backref=backref("parent_workflow_step", lazy="dynamic"))
 
     __table_args__ = (
         UniqueConstraint('parent', 'name'),
@@ -273,6 +273,7 @@ class DbWorkflowStep(Base):
 
     # TODO SP: handle delete
     def remove_calculations(self):
+
         self.calculations.all().delete()
 
     def add_sub_workflow(self, sub_wf):

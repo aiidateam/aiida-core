@@ -6,7 +6,7 @@ import importlib
 
 
 from aiida.backends.utils import get_automatic_user
-from aiida.backends.sqlalchemmy import session
+from aiida.backends.sqlalchemy import session
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowStep
 

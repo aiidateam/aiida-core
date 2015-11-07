@@ -3,9 +3,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from aiida.common.exceptions import InvalidOperation
+from aiida.common.exceptions import InvalidOperation, ConfigurationError
 from aiida.common.setup import (get_default_profile, DEFAULT_PROCESS,
-                                get_profile_config)
+                                get_profile_config, DEFAULT_USER_CONFIG_FIELD)
 from aiida.backends import sqlalchemy
 from aiida.backends.sqlalchemy import settings
 
@@ -19,6 +19,7 @@ from aiida.backends.sqlalchemy.models.log import DbLog
 from aiida.backends.sqlalchemy.models.node import DbLink, DbNode, DbPath
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
+
 
 def is_dbenv_loaded():
     """
@@ -63,3 +64,34 @@ def load_dbenv(process=None, profile=None):
     Session = sessionmaker(bind=engine)
     sqlalchemy.session = Session()
 
+
+def get_automatic_user():
+    global _aiida_autouser_cache
+
+    if _aiida_autouser_cache is not None:
+        return _aiida_autouser_cache
+
+    email = get_configured_user_email()
+
+    _aiida_autouser_cache = DbUser.query.filter(DbUser.email == email).first()
+
+    if not _aiida_autouser_cache:
+        raise ConfigurationError("No aiida user with email {}".format(
+            email))
+    return _aiida_autouser_cache
+
+def get_configured_user_email():
+    """
+    Return the email (that is used as the username) configured during the
+    first verdi install.
+    """
+    try:
+        profile_conf = get_profile_config(settings.AIIDADB_PROFILE,
+                                          set_test_location=False)
+        email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
+    # I do not catch the error in case of missing configuration, because
+    # it is already a ConfigurationError
+    except KeyError:
+        raise ConfigurationError("No 'default_user' key found in the "
+                                 "AiiDA configuration file")
+    return email

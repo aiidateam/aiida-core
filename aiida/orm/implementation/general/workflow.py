@@ -16,8 +16,6 @@ from aiida.orm.implementation.calculation import JobCalculation
 
 
 from aiida.backends.utils import get_automatic_user
-# TODO SP: abstract the dependence on DbWorkflow
-from aiida.backends.djsite.db.models import DbWorkflow
 
 # TODO SP: abstract timezone
 from aiida.utils import timezone
@@ -992,6 +990,8 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     """
     # Note: pre_string becomes larger at each call of get_workflow_info on the
     #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
+    # TODO SP: abstract the dependence on DbWorkflow
+    from aiida.backends.djsite.db.models import DbWorkflow
 
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")

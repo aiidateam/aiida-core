@@ -36,6 +36,8 @@ class DbGroup(Base):
     user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE'))
     user = relationship('DbUser', backref='dbgroups')
 
+    dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref="dbgroups", lazy='dynamic')
+
     __table_args__ = (
         UniqueConstraint('name', 'type'),
     )

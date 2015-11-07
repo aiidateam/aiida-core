@@ -194,6 +194,7 @@ class Group(AbstractGroup):
     def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
               user=None, node_attributes=None, past_days=None, **kwargs):
         # TODO SP: query method
+        pass
 
     def delete(self):
         if self.id is not None:

@@ -4,9 +4,6 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 
 from aiida.common.exceptions import UniquenessError, NotExistent, MultipleObjectsError
 
-from aiida.orm.data.upf import UPFGROUP_TYPE
-from aiida.orm.autogroup import VERDIAUTOGROUP_TYPE
-from aiida.cmdline.commands.importfile import IMPORTGROUP_TYPE
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -23,6 +20,9 @@ def get_group_type_mapping():
     It is defined as a function so that the import statements are confined
     inside here.
     """
+    from aiida.orm.data.upf import UPFGROUP_TYPE
+    from aiida.orm.autogroup import VERDIAUTOGROUP_TYPE
+    from aiida.cmdline.commands.importfile import IMPORTGROUP_TYPE
 
     return {'data.upf': UPFGROUP_TYPE,
             'import': IMPORTGROUP_TYPE,

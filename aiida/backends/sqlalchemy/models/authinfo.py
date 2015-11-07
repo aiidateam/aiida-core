@@ -11,7 +11,6 @@ from aiida.transport import TransportFactory
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.exceptions import (DbContentError, MissingPluginError,
                                      ConfigurationError)
-from aiida.orm.computer import Computer
 
 
 class DbAuthInfo(Base):
@@ -26,7 +25,7 @@ class DbAuthInfo(Base):
     dbcomputer = relationship('DbComputer')
 
     # TODO SP: JSON
-    metadata = Column(Text, default="{}")
+    _metadata = Column('metadata', Text, default="{}")
 
     enabled = Column(Boolean, default=True)
 
@@ -65,6 +64,7 @@ class DbAuthInfo(Base):
         Given a computer and an aiida user (as entries of the DB) return a configured
         transport to connect to the computer.
         """
+        from aiida.orm.computer import Computer
         try:
             ThisTransport = TransportFactory(self.dbcomputer.transport_type)
         except MissingPluginError as e:

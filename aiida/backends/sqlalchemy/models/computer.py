@@ -12,7 +12,6 @@ from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 
 from aiida.common.exceptions import NotExistent, DbContentError, ConfigurationError
-from aiida.orm.computer import Computer
 
 
 class DbComputer(Base):
@@ -31,7 +30,7 @@ class DbComputer(Base):
     scheduler_type = Column(String(255))
     # TODO: remplace by JSON
     transport_params = Column(Text, default="{}")
-    metadata = Column(Text, default="{}")
+    _metadata = Column('metadata', Text, default="{}")
 
     @classmethod
     def get_dbcomputer(cls, computer):
@@ -39,6 +38,7 @@ class DbComputer(Base):
         Return a DbComputer from its name (or from another Computer or DbComputer instance)
         """
 
+        from aiida.orm.computer import Computer
         if isinstance(computer, basestring):
             try:
                 dbcomputer = cls.query(name=computer).one()
@@ -64,7 +64,7 @@ class DbComputer(Base):
     def get_workdir(self):
         # TODO SP: json for metadata
         try:
-            metadata = json.loads(self.metadata)
+            metadata = json.loads(self._metadata)
         except ValueError:
             raise DbContentError(
                 "Error while reading metadata for DbComputer {} ({})".format(

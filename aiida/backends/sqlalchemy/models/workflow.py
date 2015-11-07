@@ -18,7 +18,6 @@ from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.common.datastructures import (wf_states, wf_data_types,
                                          wf_data_value_types, wf_default_call)
-from aiida.orm import JobCalculation, Node, Workflow
 from aiida.utils import timezone
 
 
@@ -137,6 +136,7 @@ class DbWorkflow(Base):
         self.save()
 
     def get_calculations(self):
+        from aiida.orm import JobCalculation
         return JobCalculation.query(workflow_step=self.steps)
 
     def get_sub_workflows(self):
@@ -172,7 +172,7 @@ class DbWorkflowData(Base):
     name = Column(String(255)) # Blank = false
     time = Column(DateTime(timezone=True), default=timezone.now)
     data_type = Column(String(255), default=wf_data_types.PARAMETER) # blank = false
-    value_type = Column(String(255), default=wf_data_types.NONE) # blank = false
+    value_type = Column(String(255), default=wf_data_value_types.NONE) # blank = false
     json_value = Column(Text)
 
     aiida_obj_id = Column(Integer, ForeignKey('db_dbnode.id'), nullable=True)
@@ -185,6 +185,8 @@ class DbWorkflowData(Base):
     # TODO SP: save again
 
     def set_value(self, arg):
+
+        from aiida.orm import Node
         try:
             if isinstance(arg, Node) or issubclass(arg.__class__, Node):
                 if arg.pk is None:
@@ -211,7 +213,7 @@ class DbWorkflowData(Base):
 
     def __str__(self):
         return "Data for workflow {} [{}]: {}".format(
-            self.parent.module_class, self.parent.pk, self.name)
+            self.parent.module_class, self.parent.id, self.name)
 
 
 table_workflowstep_calc = Table(
@@ -252,10 +254,12 @@ class DbWorkflowStep(Base):
                                  backref=backref("parent_workflow_step", lazy="dynamic"))
 
     __table_args__ = (
-        UniqueConstraint('parent', 'name'),
+        UniqueConstraint('parent_id', 'name'),
     )
 
     def add_calculation(self, step_calculation):
+
+        from aiida.orm import JobCalculation
         if (not isinstance(step_calculation, JobCalculation)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")
 
@@ -265,6 +269,8 @@ class DbWorkflowStep(Base):
             raise ValueError("Error adding calculation to step")
 
     def get_calculations(self, state=None):
+
+        from aiida.orm import JobCalculation
         if (state == None):
             return JobCalculation.query(workflow_step=self)
         else:
@@ -277,6 +283,7 @@ class DbWorkflowStep(Base):
         self.calculations.all().delete()
 
     def add_sub_workflow(self, sub_wf):
+        from aiida.orm import Workflow
         if (not issubclass(sub_wf.__class__, Workflow) and not isinstance(sub_wf, Workflow)):
             raise ValueError("Cannot add a workflow not of type Workflow")
         try:

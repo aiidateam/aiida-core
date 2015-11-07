@@ -18,7 +18,7 @@ from aiida.common.exceptions import ValidationError
 
 from aiida.orm.implementation.general.node import AbstractNode
 from aiida.orm.implementation.sqlalchemy.computer import Computer
-from aiida.orm import Group
+from aiida.orm.implementation.sqlalchemy.group import Group
 
 import aiida.orm.autogroup
 

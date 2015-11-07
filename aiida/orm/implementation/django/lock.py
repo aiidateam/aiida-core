@@ -10,6 +10,7 @@ from aiida.backends.djsite.db.models import DbLock
 # TODO SP: to replace
 from aiida.utils import timezone
 
+
 class LockManager(AbstractLockManager):
     def aquire(self, key, timeout=3600, owner="None"):
         try:
@@ -40,6 +41,7 @@ class LockManager(AbstractLockManager):
             DbLock.objects.all().delete()
         except IntegrityError:
             transaction.savepoint_rollback(sid)
+
 
 class Lock(AbstractLock):
 

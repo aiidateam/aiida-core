@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import collections
 
 from aiida.orm.implementation.general.group import AbstractGroup

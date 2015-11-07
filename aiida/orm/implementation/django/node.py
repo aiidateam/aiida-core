@@ -20,6 +20,7 @@ from aiida.backends.djsite.utils import get_automatic_user
 
 
 class Node(AbstractNode):
+
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
         try:
@@ -125,6 +126,8 @@ class Node(AbstractNode):
             # If it is 'calculation.Calculation.', we want to filter
             # for things that start with 'calculation.' and so on
             plug_type = cls._plugin_type_string
+
+            # Remove the implementation.django or sqla part.
             if plug_type.startswith('implementation.'):
                 plug_type = '.'.join(plug_type.split('.')[2:])
             pre, sep, _ = plug_type[:-1].rpartition('.')

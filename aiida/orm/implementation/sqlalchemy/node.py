@@ -114,8 +114,33 @@ class Node(AbstractNode):
 
     @classmethod
     def query(cls, *args, **kwargs):
-        # TODO SP: is it still needed ?
-        pass
+        # SP: compatibility layer. Could be simplified if we remove Django.
+
+        return
+
+        if cls._plugin_type_string:
+            if not cls._plugin_type_string.endswith('.'):
+                raise InternalError("The plugin type string does not "
+                                    "finish with a dot??")
+
+
+            # If it is 'calculation.Calculation.', we want to filter
+            # for things that start with 'calculation.' and so on
+            plug_type = cls._plugin_type_string
+
+            # Remove the implementation.django or sqla part.
+            if plug_type.startswith('implementation.'):
+                plug_type = '.'.join(plug_type.split('.')[2:])
+
+            pre, sep, _ = plug_type[:-1].rpartition('.')
+            superclass_string = "".join([pre, sep])
+
+            # TODO SP: explore args/kwargs usally passed
+            DbNode.query.filter(DbNode.type.like("{}%".format(superclass_string)))
+
+        else:
+            # Base Node class, with empty string
+            return DbNode.aiidaobjects.filter(*args, **kwargs)
 
     @property
     def computer(self):
@@ -724,6 +749,7 @@ class Node(AbstractNode):
 
         return self
 
+    @property
     def has_children(self):
         return session.query(literal(True)).filter(
             self.dbnode.child_paths.exists()).scalar() or False

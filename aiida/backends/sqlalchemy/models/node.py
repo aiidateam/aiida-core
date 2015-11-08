@@ -7,19 +7,11 @@ from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
 # Or maybe rely on sqlalchemy-utils UUID type
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.utils import uuid_func
-
-# from aiida.orm import from_type_to_pluginclassname
-# from aiida.orm.node import Node
-def from_type_to_pluginclassname(arg):
-    pass
-
-class Node(object):
-    pass
 
 from aiida.common import aiidalogger
 from aiida.common.pluginloader import load_plugin
@@ -95,12 +87,14 @@ class DbNode(Base):
     # TODO SP: on delete here should not be needed. The default behaviour from
     # any sane database is to prevent removal of an row if other row are
     # referencing it.
-    computer_id = Column(Integer, ForeignKey('db_dbcomputer.id'),
+    dbcomputer_id = Column(Integer, ForeignKey('db_dbcomputer.id'),
                          nullable=True)
-    dbcomputer = relationship('DbComputer', backref('dbnodes'))
+    dbcomputer = relationship('DbComputer', backref=backref('dbnodes'))
 
     nodeversion = Column(Integer, default=1)
     public = Column(Boolean, default=False)
+
+    attributes = Column(JSONB)
 
     # TODO SP: repetition between django/sqlalchemy here.
     def get_aiida_class(self):
@@ -108,6 +102,9 @@ class DbNode(Base):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
+        from aiida.orm import from_type_to_pluginclassname
+        from aiida.orm.node import Node
+
 
         try:
             pluginclassname = from_type_to_pluginclassname(self.type)

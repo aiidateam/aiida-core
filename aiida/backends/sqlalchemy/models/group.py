@@ -13,11 +13,11 @@ from aiida.backends.sqlalchemy.models.utils import uuid_func
 
 
 table_groups_nodes = Table(
-    'db_dbnode_groups',
+    'db_dbgroup_dbnodes',
     Base.metadata,
     Column('id', Integer, primary_key=True),
     Column('db_dbnode_id', Integer, ForeignKey('db_dbnode.id')),
-    Column('db_dbgroup_id', Integer, ForeignKey('db_dbuser.id'))
+    Column('db_dbgroup_id', Integer, ForeignKey('db_dbgroup.id'))
 )
 
 class DbGroup(Base):
@@ -36,7 +36,8 @@ class DbGroup(Base):
     user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE'))
     user = relationship('DbUser', backref='dbgroups')
 
-    dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref="dbgroups", lazy='dynamic')
+    dbnodes = relationship('DbNode', secondary=table_groups_nodes,
+                           backref="dbgroups", lazy='dynamic')
 
     __table_args__ = (
         UniqueConstraint('name', 'type'),

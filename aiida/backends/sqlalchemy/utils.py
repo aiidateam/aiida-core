@@ -9,6 +9,7 @@ from aiida.common.setup import (get_default_profile, DEFAULT_PROCESS,
 from aiida.backends import sqlalchemy
 from aiida.backends.sqlalchemy import settings
 
+# Those import are necessary for SQLAlchemy to correvtly detect the models
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
 from aiida.backends.sqlalchemy.models.comment import DbComment

@@ -23,8 +23,6 @@ from aiida.orm.implementation.sqlalchemy.group import Group
 import aiida.orm.autogroup
 
 
-
-
 class Node(AbstractNode):
 
     def __init__(self, **kwargs):
@@ -115,8 +113,6 @@ class Node(AbstractNode):
     @classmethod
     def query(cls, *args, **kwargs):
         # SP: compatibility layer. Could be simplified if we remove Django.
-
-        return
 
         if cls._plugin_type_string:
             if not cls._plugin_type_string.endswith('.'):
@@ -303,18 +299,16 @@ class Node(AbstractNode):
 
 
     def _set_attr(self, key, value):
-        # TODO SP: when attributes are done
-        DbAttribute.validate_key(key)
-
         if self._to_be_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
         else:
-            if key in self._updatable_attributes:
-                DbAttribute.set_value_for_node(self.dbnode, key, value)
-                self._increment_version_number_db()
-            else:
-                raise ModificationNotAllowed(
-                    "Cannot set an attribute after saving a node")
+            # TODO SP: updatable attributes ?
+            # if key in self._updatable_attributes:
+            #     DbAttribute.set_value_for_node(self.dbnode, key, value)
+            #     self._increment_version_number_db()
+            # else:
+            raise ModificationNotAllowed(
+                "Cannot set an attribute after saving a node")
 
     def _del_attr(self, key):
         if self._to_be_stored:
@@ -324,15 +318,16 @@ class Node(AbstractNode):
                 raise AttributeError(
                     "DbAttribute {} does not exist".format(key))
         else:
-            if key in self._updatable_attributes:
-                if not DbAttribute.has_key(self.dbnode, key):
-                    raise AttributeError("DbAttribute {} does not exist".format(
-                        key))
-                DbAttribute.del_value_for_node(self.dbnode, key)
-                self._increment_version_number_db()
-            else:
-                raise ModificationNotAllowed("Cannot delete an attribute after "
-                                             "saving a node")
+            # TODO SP: updatable attributes ?
+            # if key in self._updatable_attributes:
+            #     if not DbAttribute.has_key(self.dbnode, key):
+            #         raise AttributeError("DbAttribute {} does not exist".format(
+            #             key))
+            #     DbAttribute.del_value_for_node(self.dbnode, key)
+            #     self._increment_version_number_db()
+            # else:
+            raise ModificationNotAllowed("Cannot delete an attribute after "
+                                            "saving a node")
 
     def get_attr(self, key, *args):
         if len(args) > 1:

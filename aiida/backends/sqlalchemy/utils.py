@@ -26,7 +26,7 @@ def is_dbenv_loaded():
     """
     Return if the environment has already been loaded or not.
     """
-    pass
+    return sqlalchemy.session is not None
 
 def load_dbenv(process=None, profile=None):
     """

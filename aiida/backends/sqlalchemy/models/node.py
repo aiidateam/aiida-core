@@ -91,10 +91,9 @@ class DbNode(Base):
                          nullable=True)
     dbcomputer = relationship('DbComputer', backref=backref('dbnodes'))
 
-    nodeversion = Column(Integer, default=1)
-    public = Column(Boolean, default=False)
+    nodeversion = Column(Integer, default=False)
 
-    attributes = Column(JSONB)
+    attributes = Column(JSONB, default={})
 
     # TODO SP: repetition between django/sqlalchemy here.
     def get_aiida_class(self):
@@ -141,13 +140,6 @@ class DbNode(Base):
         else:
             thistype = thistype[:-1]  # Strip final dot
             return thistype.rpartition('.')[2]
-
-    @property
-    def attributes(self):
-        """
-        Return all attributes of the given node as a single dictionary.
-        """
-        # TODO SP: attributes
 
     @property
     def extras(self):

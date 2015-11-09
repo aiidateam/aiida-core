@@ -67,6 +67,8 @@ def attributes_to_dict(attr_list):
                 val = a.fval
             elif dt == "int":
                 val = a.ival
+            elif dt == "bool":
+                val = a.bval
             else:
                 # It's a datetime, we will handle this later
                 continue
@@ -108,7 +110,7 @@ def migrate_attributes():
         for node in nodes:
             attrs = attributes_to_dict(sorted(node.old_attrs, key=lambda a: a.key))
 
-            node.attrs = attrs
+            node.attributes = attrs
             sa.session.add(node)
 
     sa.session.commit()

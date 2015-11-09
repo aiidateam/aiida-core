@@ -506,3 +506,36 @@ class TrajectoryData(ArrayData):
                              "with s=number of steps and n=number of symbols")
 
         self.set_array('positions', positions)
+
+    def _parse_xyz_vel(self, inputstring):
+        """
+        Load velocities from a XYZ file.
+
+        .. note:: The steps and symbols must be set manually before calling this
+            import function as a consistency measure. See also comment for
+            :py:meth:`._import_xy_pos`
+        """
+
+        from aiida.common.exceptions import ValidationError
+        from aiida.common.utils import xyz_parser_iterator
+        from numpy import array
+
+        try:
+            numsteps = self.get_array('steps').size
+        except:
+            raise ValidationError("steps must be set before importing positional data")
+
+        try:
+            numatoms = self.get_array('symbols').size
+        except:
+            raise ValidationError("symbols must be set before importing positional data")
+
+        velocities = array([
+            [list(velocity) for _, velocity in atoms]
+                    for _, _, atoms in xyz_parser_iterator(inputstring)])
+
+        if velocities.shape != (numsteps, numatoms, 3):
+            raise ValueError("TrajectoryData.velocities must have shape (s,n,3), "
+                             "with s=number of steps and n=number of symbols")
+
+        self.set_array('velocities', velocities)

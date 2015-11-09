@@ -44,7 +44,7 @@ REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
 
 DATABASES = {
     'default': {
-        # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'. 
+        # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
         'ENGINE': 'django.db.backends.' + DBENGINE,
         'NAME': DBNAME,  # Or path to database file if using sqlite3.
         'USER': DBUSER,  # Not used with sqlite3.
@@ -94,7 +94,7 @@ SECRET_KEY = get_secret_key()
 
 # Usual Django settings starts here.............
 
-# Keep it to False! Otherwise every query is stored 
+# Keep it to False! Otherwise every query is stored
 # in memory and looks like a memory leak with celery
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
@@ -291,9 +291,6 @@ LOGGING = {
     },
 }
 
-# VERSION TO USE FOR DBNODES.
-AIIDANODES_UUID_VERSION = 4
-
 # -------------------------
 # Tastypie (API) settings
 # -------------------------
@@ -329,7 +326,7 @@ djcelery_tasks = {
 }
 
 # Choose here how often the tasks should be run. Note that if the previous task
-# is still running, the new one does not start thanks to the DbLock feature 
+# is still running, the new one does not start thanks to the DbLock feature
 # that we added.
 CELERYBEAT_SCHEDULE = {
     djcelery_tasks['submitter']: {

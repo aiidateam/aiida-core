@@ -12,8 +12,8 @@ def is_dbenv_loaded():
     Return True of the dbenv was already loaded (with a call to load_dbenv),
     False otherwise.
     """
-    from aiida.backends.djsite.settings import settings_profile
-    return settings_profile.LOAD_DBENV_CALLED
+    from aiida.backends import settings
+    return settings.LOAD_DBENV_CALLED
 
 def load_dbenv(process=None, profile=None):
     """
@@ -43,41 +43,41 @@ def _load_dbenv_noschemacheck(process, profile):
     import os
     import django
     from aiida.common.exceptions import InvalidOperation
-    from aiida.backends.djsite.settings import settings_profile
+    from aiida.backends import settings
     from aiida.common.setup import get_default_profile
     from aiida.common.setup import DEFAULT_PROCESS
 
-    if settings_profile.LOAD_DBENV_CALLED:
+    if settings.LOAD_DBENV_CALLED:
         raise InvalidOperation("You cannot call load_dbenv multiple times!")
-    settings_profile.LOAD_DBENV_CALLED = True
+    settings.LOAD_DBENV_CALLED = True
 
-    # settings_profile.CURRENT_AIIDADB_PROCESS should always be defined
+    # settings.CURRENT_AIIDADB_PROCESS should always be defined
     # by either verdi or the deamon
-    if settings_profile.CURRENT_AIIDADB_PROCESS is None and process is None:
+    if settings.CURRENT_AIIDADB_PROCESS is None and process is None:
         # This is for instance the case of a python script containing a
         # 'load_dbenv()' command and run with python
 
-        settings_profile.CURRENT_AIIDADB_PROCESS = DEFAULT_PROCESS
+        settings.CURRENT_AIIDADB_PROCESS = DEFAULT_PROCESS
     elif (process is not None and
-          process != settings_profile.CURRENT_AIIDADB_PROCESS):
+          process != settings.CURRENT_AIIDADB_PROCESS):
         ## The user specified a process that is different from the current one
 
         # I re-set the process
-        settings_profile.CURRENT_AIIDADB_PROCESS = process
+        settings.CURRENT_AIIDADB_PROCESS = process
         # I also remove the old profile
-        settings_profile.AIIDADB_PROFILE = None
+        settings.AIIDADB_PROFILE = None
 
-    if settings_profile.AIIDADB_PROFILE is not None:
+    if settings.AIIDADB_PROFILE is not None:
         if profile is not None:
             raise ValueError("You are specifying a profile, but the "
-                "settings_profile.AIIDADB_PROFILE is already set")
+                "settings.AIIDADB_PROFILE is already set")
     else:
         if profile is not None:
             the_profile = profile
         else:
             the_profile = get_default_profile(
-                settings_profile.CURRENT_AIIDADB_PROCESS)
-        settings_profile.AIIDADB_PROFILE = the_profile
+                settings.CURRENT_AIIDADB_PROCESS)
+        settings.AIIDADB_PROFILE = the_profile
 
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings.settings'
     django.setup()
@@ -88,10 +88,10 @@ def get_current_profile():
 
     Return None if load_dbenv has not been loaded yet.
     """
-    from aiida.backends.djsite.settings import settings_profile
+    from aiida.backends import settings
 
     if is_dbenv_loaded():
-        return settings_profile.AIIDADB_PROFILE
+        return settings.AIIDADB_PROFILE
     else:
         return None
 
@@ -141,10 +141,10 @@ def get_configured_user_email():
     """
     from aiida.common.exceptions import ConfigurationError
     from aiida.common.setup import get_profile_config, DEFAULT_USER_CONFIG_FIELD
-    from aiida.backends.djsite.settings import settings_profile
+    from aiida.backends import settings
 
     try:
-        profile_conf = get_profile_config(settings_profile.AIIDADB_PROFILE,
+        profile_conf = get_profile_config(settings.AIIDADB_PROFILE,
                                           set_test_location=False)
         email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
     # I do not catch the error in case of missing configuration, because

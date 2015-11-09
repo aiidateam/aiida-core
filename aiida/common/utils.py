@@ -12,10 +12,10 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 class classproperty(object):
     """
-    A class that, when used as a decorator, works as if the 
+    A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together
     (i.e., the object works as a property, both for the Class and for any
-    of its instance; and is called with the class cls rather than with the 
+    of its instance; and is called with the class cls rather than with the
     instance as its first argument).
     """
 
@@ -29,24 +29,17 @@ class classproperty(object):
 def get_new_uuid():
     """
     Return a new UUID (typically to be used for new nodes).
-    It uses the UUID version specified in 
-    aiida.backends.djsite.settings.settings_profile.AIIDANODES_UUID_VERSION
+    It uses the UUID version specified in
+    aiida.backends.settings.AIIDANODES_UUID_VERSION
     """
-    from aiida.backends.djsite.settings.settings import (
-        AIIDANODES_UUID_VERSION)
+    from aiida.backends.settings import AIIDANODES_UUID_VERSION
     import uuid
-
-    # Taken from UUIDField
-    try:
-        from django.utils.encoding import force_unicode
-    except ImportError:
-        from django.utils.encoding import force_text as force_unicode
 
     if AIIDANODES_UUID_VERSION != 4:
         raise NotImplementedError("Only version 4 of UUID supported currently")
 
     the_uuid = uuid.uuid4()
-    return force_unicode(the_uuid)
+    return unicode(the_uuid)
 
 # To speed up the process (os.path.abspath calls are slow)
 _repository_folder_cache = {}
@@ -59,8 +52,8 @@ def get_repository_folder(subfolder=None):
         return _repository_folder_cache[subfolder]
     except KeyError:
         try:
-            from aiida.backends.djsite.settings.settings import REPOSITORY_PATH
-            
+            from aiida.settings import REPOSITORY_PATH
+
             if not os.path.isdir(REPOSITORY_PATH):
                 raise ImportError
         except ImportError:
@@ -83,19 +76,19 @@ def escape_for_bash(str_to_escape):
     """
     This function takes any string and escapes it in a way that
     bash will interpret it as a single string.
-    
+
     Explanation:
 
     At the end, in the return statement, the string is put within single
     quotes. Therefore, the only thing that I have to escape in bash is the
     single quote character. To do this, I substitute every single
     quote ' with '"'"' which means:
-                 
+
     First single quote: exit from the enclosing single quotes
 
     Second, third and fourth character: "'" is a single quote character,
     escaped by double quotes
-    
+
     Last single quote: reopen the single quote to continue the string
 
     Finally, note that for python I have to enclose the string '"'"'
@@ -115,7 +108,7 @@ def get_suggestion(provided_string, allowed_strings):
     Args:
         provided_string: the string to compare
         allowed_strings: a list of valid strings
-    
+
     Returns:
         A string to print on output, to suggest to the user a possible valid
         value.
@@ -189,7 +182,7 @@ def conv_to_fortran(val):
 def get_unique_filename(filename, list_of_filenames):
     """
     Return a unique filename that can be added to the list_of_filenames.
-    
+
     If filename is not in list_of_filenames, it simply returns the filename
     string itself. Otherwise, it appends a integer number to the filename
     (before the extension) until it finds a unique filename.
@@ -197,7 +190,7 @@ def get_unique_filename(filename, list_of_filenames):
     :param filename: the filename to add
     :param list_of_filenames: the list of filenames to which filename
         should be added, without name duplicates
-    
+
     :returns: Either filename or its modification, with a number appended
         between the name and the extension.
     """
@@ -338,9 +331,9 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):
 
 def create_display_name(field):
     """
-    Given a string, creates the suitable "default" display name: replace 
+    Given a string, creates the suitable "default" display name: replace
     underscores with spaces, and capitalize each word.
-    
+
     :return: the converted string
     """
     return ' '.join(_.capitalize() for _ in field.split('_'))
@@ -389,7 +382,7 @@ def grouper(n, iterable):
     Given an iterable, returns an iterable that returns tuples of groups of
     elements from iterable of length n, except the last one that has the
     required length to exaust iterable (i.e., there is no filling applied).
-    
+
     :param n: length of each tuple (except the last one,that will have length
        <= n
     :param iterable: the iterable to divide in groups

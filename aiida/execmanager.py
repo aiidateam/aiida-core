@@ -14,6 +14,7 @@ from aiida.common.exceptions import (
     ModificationNotAllowed,
 )
 from aiida.common import aiidalogger
+from aiida.orm import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -475,7 +476,7 @@ def submit_calc(calc, authinfo, transport=None):
                                                         use_unstored_links=False)
 
             codes_info = calcinfo.codes_info
-            input_codes = [ Code.get_subclass_from_uuid(_.code_uuid) for _ in codes_info ]
+            input_codes = [ load_node(_.code_uuid, type=Code) for _ in codes_info ]
 
             for code in input_codes:
                 if not code.can_run_on(computer):

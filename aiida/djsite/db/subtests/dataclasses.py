@@ -3,7 +3,7 @@
 Tests for specific subclasses of Data
 """
 from django.utils import unittest
-
+from aiida.orm import load_node
 from aiida.orm import Node
 from aiida.common.exceptions import \
     ModificationNotAllowed, UniquenessError, ValidationError
@@ -97,7 +97,7 @@ class TestSinglefileData(AiidaTestCase):
             self.assertEquals(f.read(), file_content)
         self.assertEquals(a.get_folder_list(), [basename])
 
-        b = Node.get_subclass_from_uuid(the_uuid)
+        b = load_node(the_uuid)
 
         # I check the retrieved object
         self.assertTrue(isinstance(b, SinglefileData))
@@ -155,7 +155,7 @@ class TestCifData(AiidaTestCase):
             self.assertEquals(f.read(), file_content)
         self.assertEquals(a.get_folder_list(), [basename])
 
-        b = Node.get_subclass_from_uuid(the_uuid)
+        b = load_node(the_uuid)
 
         # I check the retrieved object
         self.assertTrue(isinstance(b, CifData))
@@ -1565,7 +1565,7 @@ class TestStructureDataReload(AiidaTestCase):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
 
         # Fully reload from UUID
-        b = StructureData.get_subclass_from_uuid(a.uuid)
+        b = load_node(a.uuid, type=StructureData)
 
         for i in range(3):
             for j in range(3):
@@ -2042,7 +2042,7 @@ class TestArrayData(AiidaTestCase):
         self.assertEquals(second.shape, n2.get_shape('second'))
 
         # Same checks, after reloading with UUID
-        n2 = ArrayData.get_subclass_from_uuid(n.uuid)
+        n2 = load_node(n.uuid, type=ArrayData)
         self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
         self.assertAlmostEquals(abs(first - n2.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n2.get_array('second')).max(), 0.)
@@ -2247,7 +2247,7 @@ class TestTrajectoryData(AiidaTestCase):
 
         ##############################################################
         # Again, but after reloading from uuid
-        n = TrajectoryData.get_subclass_from_uuid(n.uuid)
+        n = load_node(n.uuid, type=TrajectoryData)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)

@@ -6,6 +6,7 @@ from aiida.cmdline.baseclass import (
 from aiida import load_dbenv
 from aiida.common.exceptions import MultipleObjectsError
 from aiida.cmdline.commands.node import _Label, _Description
+from aiida.orm import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -264,9 +265,9 @@ class Visualizable(object):
             sys.exit(1)
 
         load_dbenv()
-        from aiida.orm.node import Node
+#        from aiida.orm.node import Node
 
-        n_list = [Node.get_subclass_from_pk(id) for id in data_id]
+        n_list = [load_node(id) for id in data_id]
 
         for n in n_list:
             try:
@@ -366,9 +367,9 @@ class Exportable(object):
             sys.exit(1)
 
         load_dbenv()
-        from aiida.orm.node import Node
+#        from aiida.orm.node import Node
 
-        n = Node.get_subclass_from_pk(data_id)
+        n = load_node(data_id)
 
         try:
             if not isinstance(n, self.dataclass):
@@ -543,8 +544,7 @@ class Depositable(object):
             sys.exit(1)
 
         load_dbenv()
-        from aiida.orm.node import Node
-        n = Node.get_subclass_from_pk(data_id)
+        n = load_node(data_id)
 
         try:
             if not isinstance(n,self.dataclass):
@@ -1211,7 +1211,7 @@ class _Structure(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, type=ParameterData)
         print node._exportstring('tcod',parameters=parameters,**kwargs)
 
     def _export_tcod_parameters(self, parser, **kwargs):
@@ -1248,7 +1248,7 @@ class _Structure(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, type=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self,parser,**kwargs):
@@ -1374,7 +1374,7 @@ class _Cif(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, type=ParameterData)
         print node._exportstring('tcod',parameters=parameters,**kwargs)
 
     def _export_tcod_parameters(self,parser,**kwargs):
@@ -1405,7 +1405,7 @@ class _Cif(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, type=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self, parser, **kwargs):
@@ -1517,7 +1517,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, type=ParameterData)
         print node._exportstring('tcod',
                                  parameters=parameters,
                                  **kwargs)
@@ -1553,7 +1553,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, type=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self, parser, **kwargs):

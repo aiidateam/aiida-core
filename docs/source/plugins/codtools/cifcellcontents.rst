@@ -25,7 +25,7 @@ Outputs
     Contains formulae in (`CIF datablock name`,`formula`) pairs. For
     example::
 
-        print ParameterData.get_subclass_from_pk(1).get_dict()
+        print load_node(1, type=ParameterData).get_dict()
 
     would print::
 

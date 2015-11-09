@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.node import Node
-from aiida.orm.workflow import Workflow
 from aiida.orm.calculation import Calculation
 from aiida.orm.calculation.job import JobCalculation
-from aiida.orm.data import Data
 from aiida.orm.code import Code
+from aiida.orm.data import Data
+from aiida.orm.workflow import Workflow
 from aiida.orm.computer import Computer
 from aiida.orm.group import Group
 
@@ -50,7 +50,7 @@ def WorkflowFactory(module):
     return BaseFactory(module, Workflow, "aiida.workflows")
 
 
-def load_node(node_id=None, pk=None, uuid=None):
+def load_node(node_id=None, pk=None, uuid=None, type=None):
     """
     Return an AiiDA node given PK or UUID.
 
@@ -61,24 +61,35 @@ def load_node(node_id=None, pk=None, uuid=None):
     :raises: ValueError if none or more than one of parameters is supplied
         or type of node_id is neither string nor integer
     """
+    from aiida.orm.node import Node
+    from aiida.common.exceptions import NotExistent
+    
     if int(node_id is None) + int(pk is None) + int(uuid is None) == 3:
         raise ValueError("one of the parameters 'node_id', 'pk' and 'uuid' "
                          "has to be supplied")
     if int(node_id is None) + int(pk is None) + int(uuid is None) < 2:
         raise ValueError("only one of parameters 'node_id', 'pk' and 'uuid' "
                          "has to be supplied")
+    loaded_node = None
     if node_id is not None:
         if isinstance(node_id, str) or isinstance(node_id, unicode):
-            return Node.get_subclass_from_uuid(node_id)
+            loaded_node = Node.get_subclass_from_uuid(node_id)
         elif isinstance(node_id, int):
-            return Node.get_subclass_from_pk(node_id)
+            loaded_node = Node.get_subclass_from_pk(node_id)
         else:
             raise ValueError("'node_id' has to be either string, unicode or "
                              "integer, {} given".format(type(node_id)))
-    if pk is not None:
-        return Node.get_subclass_from_pk(pk)
-    else:
-        return Node.get_subclass_from_uuid(uuid)
+    if loaded_node is None:
+        if pk is not None:
+            loaded_node = Node.get_subclass_from_pk(pk)
+        else:
+            loaded_node = Node.get_subclass_from_uuid(uuid)
+
+    if type is not None:
+        if not isinstance(loaded_node, type):
+            raise NotExistent('No node found of type {}'.format(type))
+
+    return loaded_node
 
 
 def load_workflow(wf_id=None, pk=None, uuid=None):

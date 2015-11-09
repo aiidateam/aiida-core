@@ -3,6 +3,7 @@ import sys
 import os
 import subprocess
 from aiida import load_dbenv
+from aiida.orm import load_node
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands.node import _Label, _Description
@@ -71,7 +72,6 @@ class Calculation(VerdiCommandWithSubcommands):
         """
         from aiida.common.exceptions import NotExistent
         from aiida.orm import JobCalculation
-        from aiida.orm import Node as AiidaOrmNode
         from aiida import load_dbenv
 
         try:
@@ -91,9 +91,9 @@ class Calculation(VerdiCommandWithSubcommands):
 
         try:
             if is_pk:
-                calc = AiidaOrmNode.get_subclass_from_pk(pk)
+                calc = load_node(pk)
             else:
-                calc = AiidaOrmNode.get_subclass_from_pk(uuid)
+                calc = load_node(uuid)
         except NotExistent:
             print >> sys.stderr, "No node exists with ID={}.".format(calc_id)
             sys.exit(1)
@@ -219,7 +219,7 @@ class Calculation(VerdiCommandWithSubcommands):
         load_dbenv()
 
         try:
-            calc = OrmCalculation.get_subclass_from_pk(int(parsed_args.PK))
+            calc = load_node(int(parsed_args.PK))
         except ValueError:
             print >> sys.stderr, "*** {}: Not a valid PK".format(parsed_args.PK)
             sys.exit(1)
@@ -251,7 +251,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         for calc_pk in args:
             try:
-                calc = OrmCalculation.get_subclass_from_pk(int(calc_pk))
+                calc = load_node(int(calc_pk))
             except ValueError:
                 print "*** {}: Not a valid PK".format(calc_pk)
                 continue
@@ -287,7 +287,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         for calc_pk in args:
             try:
-                calc = OrmCalculation.get_subclass_from_pk(int(calc_pk))
+                calc = load_node(int(calc_pk))
             except ValueError:
                 print "*** {}: Not a valid PK".format(calc_pk)
                 continue
@@ -402,7 +402,7 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.common.pluginloader import get_class_typestring
 
         try:
-            calc = OrmCalculation.get_subclass_from_pk(parsed_args.calc)
+            calc = load_node(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
@@ -460,10 +460,9 @@ class Calculation(VerdiCommandWithSubcommands):
         parsed_args = parser.parse_args(args)
 
         load_dbenv()
-        from aiida.orm import Node as OrmNode
 
         try:
-            calc = OrmNode.get_subclass_from_pk(parsed_args.calc)
+            calc = load_node(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
@@ -505,10 +504,9 @@ class Calculation(VerdiCommandWithSubcommands):
         parsed_args = parser.parse_args(args)
 
         load_dbenv()
-        from aiida.orm import Node as OrmNode
 
         try:
-            calc = OrmNode.get_subclass_from_pk(parsed_args.calc)
+            calc = load_node(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
@@ -559,7 +557,7 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.common.pluginloader import get_class_typestring
 
         try:
-            calc = OrmCalculation.get_subclass_from_pk(parsed_args.calc)
+            calc = load_node(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
@@ -632,7 +630,8 @@ class Calculation(VerdiCommandWithSubcommands):
         counter = 0
         for calc_pk in parsed_args.calcs:
             try:
-                c = Calc.get_subclass_from_pk(calc_pk)
+                c = load_node(calc_pk,type=Calc)
+                                
                 c.kill()  # Calc.kill(calc_pk)
                 counter += 1
             except NotExistent:

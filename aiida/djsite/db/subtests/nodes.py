@@ -4,7 +4,7 @@ Tests for nodes, attributes and links
 """
 from django.utils import unittest
 
-from aiida.orm import Node
+from aiida.orm import Node, load_node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.djsite.db.testbase import AiidaTestCase
 
@@ -761,7 +761,7 @@ class TestNodeBasic(AiidaTestCase):
 
         a.store()
 
-        b = Node.get_subclass_from_uuid(a.uuid)
+        b = load_node(a.uuid)
         self.assertIsNone(a.get_attr('none'))
         self.assertEquals(self.boolval, b.get_attr('bool'))
         self.assertEquals(self.intval, b.get_attr('integer'))

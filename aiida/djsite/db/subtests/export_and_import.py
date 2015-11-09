@@ -11,6 +11,7 @@ from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.orm import DataFactory
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.importexport import export, import_data
+from aiida.orm import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -38,7 +39,7 @@ class TestPort(AiidaTestCase):
 
         attrs = {}
         for pk in pks:
-            node = Node.get_subclass_from_pk(pk)
+            node = load_node(pk)
             attrs[node.uuid] = dict()
             for k in node.attrs():
                 attrs[node.uuid][k] = node.get_attr(k)
@@ -56,7 +57,7 @@ class TestPort(AiidaTestCase):
         # databases is that pk always increment, even if you've deleted elements
         import_data(filename, silent=True)
         for uuid in attrs.keys():
-            node = Node.get_subclass_from_uuid(uuid)
+            node = load_node(uuid)
             for k in node.attrs():
                 self.assertEquals(attrs[uuid][k], node.get_attr(k))
 

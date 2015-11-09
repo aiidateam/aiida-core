@@ -20,6 +20,7 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas M
 
 default_modules_list = [
     # ("aiida.djsite.db.models","DbNode","DbNode"),
+    ("aiida.orm", "load_node", "load_node"),
     ("aiida.orm", "Node", "Node"),
     ("aiida.orm", "Calculation", "Calculation"),
     ("aiida.orm", "JobCalculation", "JobCalculation"),
@@ -30,7 +31,6 @@ default_modules_list = [
     ("aiida.orm", "WorkflowFactory", "WorkflowFactory"),
     ("aiida.orm", "Computer", "Computer"),
     ("aiida.orm", "Group", "Group"),
-    ("aiida.orm", "load_node", "load_node"),
     ("aiida.orm.workflow", "Workflow", "Workflow"),
     ("aiida.orm", "load_workflow", "load_workflow"),
     ("aiida.djsite.db", "models", "models"),

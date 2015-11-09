@@ -8,6 +8,7 @@ import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida import load_dbenv
+from aiida.orm import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -565,7 +566,7 @@ class Code(VerdiCommandWithSubcommands):
         )
         parsed_args = parser.parse_args(args)
         for pk in parsed_args.pks:
-            code = Code.get_subclass_from_pk(pk)
+            code = load_node(pk, type=Code)
             code._hide()
 
     def code_reveal(self, *args):
@@ -584,7 +585,7 @@ class Code(VerdiCommandWithSubcommands):
         )
         parsed_args = parser.parse_args(args)
         for pk in parsed_args.pks:
-            code = Code.get_subclass_from_pk(pk)
+            code = load_node(pk, type=Code)
             code._reveal()
 
     def code_list(self, *args):

@@ -57,9 +57,13 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None):
     :param node_id: PK (integer) or UUID (string) or a node
     :param pk: PK of a node
     :param uuid: UUID of a node
+    :param parent_class: if specified, checks whether the node loaded is a 
+        subclass of parent_class
     :return: an AiiDA node
-    :raises: ValueError if none or more than one of parameters is supplied
-        or type of node_id is neither string nor integer
+    :raise ValueError: if none or more than one of parameters is supplied
+        or type of node_id is neither string nor integer.
+    :raise NotExistent: if the parent_class is specified 
+        and no matching Node is found.
     """
     from aiida.orm.node import Node
     from aiida.common.exceptions import NotExistent
@@ -89,7 +93,8 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None):
         if not issubclass(parent_class, Node):
             raise ValueError("parent_class must be a subclass of Node")
         if not isinstance(loaded_node, parent_class):
-            raise NotExistent('No node found as subclass of {}'.format(parent_class))
+            raise NotExistent('No node found as '
+                              'subclass of {}'.format(parent_class))
 
     return loaded_node
 

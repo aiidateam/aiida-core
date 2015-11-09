@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, Query
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
@@ -10,7 +10,7 @@ from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from aiida.utils import timezone
-from aiida.backends.sqlalchemy.models.base import Base
+from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQuery
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 
 from aiida.common import aiidalogger
@@ -60,6 +60,8 @@ class DbPath(Base):
 
 class DbNode(Base):
     __tablename__ = "db_dbnode"
+
+    aiida_query = _QueryProperty(_AiidaQuery)
 
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID, default=uuid_func)

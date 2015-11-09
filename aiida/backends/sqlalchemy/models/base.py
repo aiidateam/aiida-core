@@ -13,11 +13,15 @@ from aiida.common.exceptions import InvalidOperation
 
 
 class _QueryProperty(object):
+
+    def __init__(self, query_class=orm.Query):
+        self.query_class = query_class
+
     def __get__(self, obj, _type):
         try:
             mapper = orm.class_mapper(_type)
             if mapper:
-                return _type.query_class(mapper, session=sa.session)
+                return self.query_class(mapper, session=sa.session)
         except UnmappedClassError:
             return None
 
@@ -29,11 +33,19 @@ class _SessionProperty(object):
                                    "accessing the session of SQLALchemy.")
         return sa.session
 
+class _AiidaQuery(orm.Query):
+
+    def __init__(self, *args, **kwargs):
+            super(_AiidaQuery, self).__init__(*args, **kwargs)
+
+    def __iter__(self):
+        iterator = super(_AiidaQuery, self).__iter__()
+        return (r.get_aiida_class() for r in iterator)
+
 
 class Model(object):
 
     query = _QueryProperty()
-    query_class = orm.Query
 
     session = _SessionProperty()
 

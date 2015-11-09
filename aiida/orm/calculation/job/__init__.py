@@ -1308,6 +1308,7 @@ class JobCalculation(Calculation):
         from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, code_run_modes
         from aiida.orm.code import Code 
+        from aiida.orm import load_node
 
         computer = self.get_computer()
 
@@ -1431,7 +1432,7 @@ class JobCalculation(Calculation):
                 raise PluginInternalError("CalcInfo should have "
                                           "the information of the code "
                                           "to be launched")
-            this_code = Code.get_subclass_from_uuid(code_info.code_uuid)
+            this_code = load_node(code_info.code_uuid, parent_calc=Code)
             
             this_withmpi = code_info.withmpi    # to decide better how to set the default
             if this_withmpi is None:

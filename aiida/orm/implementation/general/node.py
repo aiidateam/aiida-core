@@ -358,7 +358,6 @@ class AbstractNode(object):
         """
         return True
 
-    @abstractmethod
     def get_user(self):
         """
         Get the user.
@@ -622,13 +621,13 @@ class AbstractNode(object):
         """
         pass
 
-    @abstractmethod
     def get_computer(self):
         """
         Get the computer associated to the node.
 
         :return: the Computer object or None.
         """
+        from aiida.orm.computer import Computer
         if self.dbnode.dbcomputer is None:
             return None
         else:

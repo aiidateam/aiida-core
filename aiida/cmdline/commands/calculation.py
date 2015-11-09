@@ -630,7 +630,7 @@ class Calculation(VerdiCommandWithSubcommands):
         counter = 0
         for calc_pk in parsed_args.calcs:
             try:
-                c = load_node(calc_pk,type=Calc)
+                c = load_node(calc_pk, parent_class=Calc)
                                 
                 c.kill()  # Calc.kill(calc_pk)
                 counter += 1

@@ -56,7 +56,7 @@ try:
 except ValueError:
     raise ValueError('Parent_id not an integer: {}'.format(parent_id))
 
-parentcalc = load_node(parent_id, type=Calculation)
+parentcalc = load_node(parent_id, parent_class=Calculation)
 
 queue = None
 # queue = "P_share_queue"

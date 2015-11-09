@@ -74,7 +74,7 @@ Outputs
 * :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` (optional)
     Contains lines of output messages and/or errors. For example::
 
-        print load_node(1, type=ParameterData).get_dict()
+        print load_node(1, parent_class=ParameterData).get_dict()
 
     would print::
 

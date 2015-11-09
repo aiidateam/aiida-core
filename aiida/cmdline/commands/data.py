@@ -1211,7 +1211,7 @@ class _Structure(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = load_node(parameter_data, type=ParameterData)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         print node._exportstring('tcod',parameters=parameters,**kwargs)
 
     def _export_tcod_parameters(self, parser, **kwargs):
@@ -1248,7 +1248,7 @@ class _Structure(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = load_node(parameter_data, type=ParameterData)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self,parser,**kwargs):
@@ -1374,7 +1374,7 @@ class _Cif(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = load_node(parameter_data, type=ParameterData)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         print node._exportstring('tcod',parameters=parameters,**kwargs)
 
     def _export_tcod_parameters(self,parser,**kwargs):
@@ -1405,7 +1405,7 @@ class _Cif(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = load_node(parameter_data, type=ParameterData)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self, parser, **kwargs):
@@ -1517,7 +1517,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = load_node(parameter_data, type=ParameterData)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         print node._exportstring('tcod',
                                  parameters=parameters,
                                  **kwargs)
@@ -1553,7 +1553,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = load_node(parameter_data, type=ParameterData)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self, parser, **kwargs):

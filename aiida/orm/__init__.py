@@ -50,7 +50,7 @@ def WorkflowFactory(module):
     return BaseFactory(module, Workflow, "aiida.workflows")
 
 
-def load_node(node_id=None, pk=None, uuid=None, type=None):
+def load_node(node_id=None, pk=None, uuid=None, parent_class=None):
     """
     Return an AiiDA node given PK or UUID.
 
@@ -85,9 +85,11 @@ def load_node(node_id=None, pk=None, uuid=None, type=None):
         else:
             loaded_node = Node.get_subclass_from_uuid(uuid)
 
-    if type is not None:
-        if not isinstance(loaded_node, type):
-            raise NotExistent('No node found of type {}'.format(type))
+    if parent_class is not None:
+        if not isinstance(parent_class, Node):
+            raise ValueError("parent_class must be a subclass of Node")
+        if not isinstance(loaded_node, parent_class):
+            raise NotExistent('No node found as subclass of {}'.format(parent_class))
 
     return loaded_node
 

@@ -566,7 +566,7 @@ class Code(VerdiCommandWithSubcommands):
         )
         parsed_args = parser.parse_args(args)
         for pk in parsed_args.pks:
-            code = load_node(pk, type=Code)
+            code = load_node(pk, parent_class=Code)
             code._hide()
 
     def code_reveal(self, *args):
@@ -585,7 +585,7 @@ class Code(VerdiCommandWithSubcommands):
         )
         parsed_args = parser.parse_args(args)
         for pk in parsed_args.pks:
-            code = load_node(pk, type=Code)
+            code = load_node(pk, parent_class=Code)
             code._reveal()
 
     def code_list(self, *args):

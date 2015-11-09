@@ -1565,7 +1565,7 @@ class TestStructureDataReload(AiidaTestCase):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
 
         # Fully reload from UUID
-        b = load_node(a.uuid, type=StructureData)
+        b = load_node(a.uuid, parent_class=StructureData)
 
         for i in range(3):
             for j in range(3):
@@ -2042,7 +2042,7 @@ class TestArrayData(AiidaTestCase):
         self.assertEquals(second.shape, n2.get_shape('second'))
 
         # Same checks, after reloading with UUID
-        n2 = load_node(n.uuid, type=ArrayData)
+        n2 = load_node(n.uuid, parent_class=ArrayData)
         self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
         self.assertAlmostEquals(abs(first - n2.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n2.get_array('second')).max(), 0.)
@@ -2247,7 +2247,7 @@ class TestTrajectoryData(AiidaTestCase):
 
         ##############################################################
         # Again, but after reloading from uuid
-        n = load_node(n.uuid, type=TrajectoryData)
+        n = load_node(n.uuid, parent_class=TrajectoryData)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)

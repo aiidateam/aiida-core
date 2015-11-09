@@ -476,7 +476,7 @@ def submit_calc(calc, authinfo, transport=None):
                                                         use_unstored_links=False)
 
             codes_info = calcinfo.codes_info
-            input_codes = [ load_node(_.code_uuid, type=Code) for _ in codes_info ]
+            input_codes = [ load_node(_.code_uuid, parent_class=Code) for _ in codes_info ]
 
             for code in input_codes:
                 if not code.can_run_on(computer):

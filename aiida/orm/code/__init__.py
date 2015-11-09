@@ -152,7 +152,7 @@ class Code(Node):
         try:
             code_int = int(code_string)
             try:
-                return load_node(code_int, type=cls)
+                return load_node(code_int, parent_class=cls)
             except NotExistent:
                 raise ValueError()  # Jump to the following section
                 # to check if a code with the given

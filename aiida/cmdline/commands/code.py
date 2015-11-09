@@ -556,7 +556,7 @@ class Code(VerdiCommandWithSubcommands):
         Hide one or more codes from the verdi show command
         """
         import argparse
-        from aiida.orm.code import Code
+        from aiida.orm.code import Code as OrmCode
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
                                          description='Hide codes from the verdi show command.')
@@ -566,7 +566,7 @@ class Code(VerdiCommandWithSubcommands):
         )
         parsed_args = parser.parse_args(args)
         for pk in parsed_args.pks:
-            code = load_node(pk, parent_class=Code)
+            code = load_node(pk, parent_class=OrmCode)
             code._hide()
 
     def code_reveal(self, *args):
@@ -574,7 +574,7 @@ class Code(VerdiCommandWithSubcommands):
         Reveal (if it was hidden before) one or more codes from the verdi show command
         """
         import argparse
-        from aiida.orm.code import Code
+        from aiida.orm.code import Code as OrmCode
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -585,7 +585,7 @@ class Code(VerdiCommandWithSubcommands):
         )
         parsed_args = parser.parse_args(args)
         for pk in parsed_args.pks:
-            code = load_node(pk, parent_class=Code)
+            code = load_node(pk, parent_class=OrmCode)
             code._reveal()
 
     def code_list(self, *args):

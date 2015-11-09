@@ -86,7 +86,7 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None):
             loaded_node = Node.get_subclass_from_uuid(uuid)
 
     if parent_class is not None:
-        if not isinstance(parent_class, Node):
+        if not issubclass(parent_class, Node):
             raise ValueError("parent_class must be a subclass of Node")
         if not isinstance(loaded_node, parent_class):
             raise NotExistent('No node found as subclass of {}'.format(parent_class))

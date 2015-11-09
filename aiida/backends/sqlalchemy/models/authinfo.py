@@ -47,7 +47,7 @@ class DbAuthInfo(Base):
 
     def get_workdir(self):
         try:
-            metadata = json.loads(self.metadata)
+            metadata = json.loads(self._metadata)
         except ValueError:
             raise DbContentError(
                 "Error while reading metadata for authinfo, aiidauser={}, computer={}".format(

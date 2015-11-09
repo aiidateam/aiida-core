@@ -6,19 +6,21 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
 
-from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
-                                     NotExistent, UniquenessError)
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy import session
+
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
-from aiida.common.exceptions import ValidationError
+from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
+                                     NotExistent, UniquenessError,
+                                     ValidationError)
 
 from aiida.orm.implementation.general.node import AbstractNode
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
+from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
 
 import aiida.orm.autogroup
 
@@ -41,7 +43,7 @@ class Node(AbstractNode):
         if dbnode is not None:
             if not isinstance(dbnode, DbNode):
                 raise TypeError("dbnode is not a DbNode instance")
-            if dbnode.pk is None:
+            if dbnode.id is None:
                 raise ValueError("If cannot load an aiida.orm.Node instance "
                                  "from an unsaved DbNode object.")
             if kwargs:
@@ -114,6 +116,7 @@ class Node(AbstractNode):
     def query(cls, *args, **kwargs):
         # SP: compatibility layer. Could be simplified if we remove Django.
 
+        q = django_filter(DbNode, kwargs)
         if cls._plugin_type_string:
             if not cls._plugin_type_string.endswith('.'):
                 raise InternalError("The plugin type string does not "
@@ -131,12 +134,9 @@ class Node(AbstractNode):
             pre, sep, _ = plug_type[:-1].rpartition('.')
             superclass_string = "".join([pre, sep])
 
-            # TODO SP: explore args/kwargs usally passed
-            DbNode.query.filter(DbNode.type.like("{}%".format(superclass_string)))
+            q = q.filter(DbNode.type.like("{}%".format(superclass_string)))
 
-        else:
-            # Base Node class, with empty string
-            return DbNode.aiidaobjects.filter(*args, **kwargs)
+        return map(lambda n: n.get_aiida_class(), q.all())
 
     @property
     def computer(self):
@@ -261,7 +261,7 @@ class Node(AbstractNode):
                 if k in input_list_keys:
                     raise InternalError("There exist a link with the same name "
                                         "'{}' both in the DB and in the internal "
-                                        "cache for node pk= {}!".format(k, self.pk))
+                                        "cache for node pk= {}!".format(k, self.id))
                 inputs_list.append((k, v))
 
         if type is None:
@@ -329,103 +329,51 @@ class Node(AbstractNode):
             raise ModificationNotAllowed("Cannot delete an attribute after "
                                             "saving a node")
 
-    def get_attr(self, key, *args):
-        if len(args) > 1:
-            raise ValueError("After the key name you can pass at most one"
-                             "value, that is the default value to be used "
-                             "if no attribute is found.")
-        try:
-            if self._to_be_stored:
-                try:
-                    return self._attrs_cache[key]
-                except KeyError:
-                    raise AttributeError("DbAttribute '{}' does "
-                                         "not exist".format(key))
-            else:
-                return DbAttribute.get_value_for_node(dbnode=self.dbnode,
-                                                      key=key)
-        except AttributeError as e:
+    def get_attr(self, key, default=None):
+        if self._to_be_stored:
             try:
-                return args[0]
-            except IndexError:
-                raise e
+                return self._attrs_cache[key]
+            except KeyError:
+                raise AttributeError("DbAttribute '{}' does "
+                                        "not exist".format(key))
+        else:
+            try:
+                return get_attr(self.dbnode.attributes, key)
+            except (KeyError, IndexError) as e:
+                if default:
+                    return default
+                else:
+                    # little tweek to be consistent with the expected
+                    # exception
+                    raise AttributeError
 
     def set_extra(self, key, value):
-        DbExtra.validate_key(key)
-
-        if self._to_be_stored:
-            raise ModificationNotAllowed(
-                "The extras of a node can be set only after "
-                "storing the node")
-        DbExtra.set_value_for_node(self.dbnode, key, value)
-        self._increment_version_number_db()
+        # TODO SP: handle extra
+        pass
 
     def set_extra_exclusive(self, key, value):
-        DbExtra.validate_key(key)
-
-        if self._to_be_stored:
-            raise ModificationNotAllowed(
-                "The extras of a node can be set only after "
-                "storing the node")
-        DbExtra.set_value_for_node(self.dbnode, key, value,
-                                   stop_if_existing=True)
-        self._increment_version_number_db()
+        # TODO SP: handle extra
+        pass
 
     def get_extra(self, key, *args):
-        if len(args) > 1:
-            raise ValueError("After the key name you can pass at most one"
-                             "value, that is the default value to be used "
-                             "if no extra is found.")
-
-        try:
-            if self._to_be_stored:
-                raise AttributeError("DbExtra '{}' does not exist yet, the "
-                                     "node is not stored".format(key))
-            else:
-                return DbExtra.get_value_for_node(dbnode=self.dbnode,
-                                                  key=key)
-        except AttributeError as e:
-            try:
-                return args[0]
-            except IndexError:
-                raise e
+        # TODO SP: handle extra
+        pass
 
     def get_extras(self):
-        if self._to_be_stored:
-            raise AttributeError("DbExtra does not exist yet, the "
-                                 "node is not stored")
-        else:
-            return DbExtra.get_all_values_for_node(dbnode=self.dbnode)
+        # TODO SP: handle extra
+        pass
 
     def del_extra(self, key):
-        if self._to_be_stored:
-            raise ModificationNotAllowed(
-                "The extras of a node can be set and deleted "
-                "only after storing the node")
-        if not DbExtra.has_key(self.dbnode, key):
-            raise AttributeError("DbExtra {} does not exist".format(
-                key))
-        return DbExtra.del_value_for_node(self.dbnode, key)
-        self._increment_version_number_db()
+        # TODO SP: handle extra
+        pass
 
     def extras(self):
-        if self._to_be_stored:
-            return
-        else:
-            extraslist = DbExtra.list_all_node_elements(self.dbnode)
-        for e in extraslist:
-            yield e.key
+        # TODO SP: handle extra
+        pass
 
     def iterextras(self):
-        if self._to_be_stored:
-            # If it is not stored yet, there are no extras that can be
-            # added (in particular, we do not even have an ID to use!)
-            # Return without value, meaning that this is an empty generator
-            return
-        else:
-            extraslist = DbExtra.list_all_node_elements(self.dbnode)
-            for e in extraslist:
-                yield (e.key, e.getvalue())
+        # TODO SP: handle extra
+        pass
 
     def iterattrs(self, also_updatable=True):
         # TODO: check what happens if someone stores the object while
@@ -433,28 +381,24 @@ class Node(AbstractNode):
         updatable_list = [attr for attr in self._updatable_attributes]
 
         if self._to_be_stored:
-            for k, v in self._attrs_cache.iteritems():
-                if not also_updatable and k in updatable_list:
-                    continue
-                yield (k, v)
+            it_items = self._attrs_cache.iteritems()
         else:
-            all_attrs = DbAttribute.get_all_values_for_node(self.dbnode)
-            for attr in all_attrs:
-                if not also_updatable and attr in updatable_list:
-                    continue
-                yield (attr, all_attrs[attr])
+            it_items = self.dbnode.attributes.iteritems()
+        for k, v in it_items:
+            if also_updatable or not k in updatable_list:
+                yield (k, v)
 
     def attrs(self):
         # Note: I "duplicate" the code from iterattrs, rather than
         # calling iterattrs from here, because iterattrs is slow on each call
         # since it has to call .getvalue(). To improve!
+
         if self._to_be_stored:
-            for k in self._attrs_cache.iterkeys():
-                yield k
+            it = self._attrs_cache.iterkeys()
         else:
-            attrlist = DbAttribute.list_all_node_elements(self.dbnode)
-            for attr in attrlist:
-                yield attr.key
+            it = self.dbnode.attributes.iterkeys()
+        for k in it:
+            yield k
 
     def add_comment(self, content, user=None):
         if self._to_be_stored:
@@ -509,7 +453,7 @@ class Node(AbstractNode):
         comment.save()
 
     def _remove_comment(self, comment_pk, user):
-        comment = DbComment.query.filter_by(dbnode=self._dbnode, pk=comment_pk).first()
+        comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk).first()
         if comment:
             comment.delete()
 
@@ -633,7 +577,7 @@ class Node(AbstractNode):
 
         if self._to_be_stored:
             raise ModificationNotAllowed(
-                "Node with pk= {} is not stored yet".format(self.pk))
+                "Node with pk= {} is not stored yet".format(self.id))
 
         # This raises if there is an unstored node.
         self._check_are_parents_stored()
@@ -726,7 +670,7 @@ class Node(AbstractNode):
 
         else:
             raise ModificationNotAllowed(
-                "Node with pk= {} was already stored".format(self.pk))
+                "Node with pk= {} was already stored".format(self.id))
 
         # Set up autogrouping used be verdi run
         autogroup = aiida.orm.autogroup.current_autogroup

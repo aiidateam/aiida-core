@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__all__ = ['delete_computer', 'django_filter']
+__all__ = ['delete_computer', 'django_filter', 'get_attr']
 
 from sqlalchemy import inspect
 from sqlalchemy.exc import SQLAlchemyError
@@ -30,6 +30,39 @@ def delete_computer(computer):
     except SQLAlchemyError:
         raise InvalidOperation("Unable to delete the requested computer: there"
                                "is at least one node using this computer")
+
+def iter_dict(attrs):
+    if isinstance(attrs, dict):
+        for key in sorted(attrs.iterkeys()):
+            it = iter_dict(attrs[key])
+            for k, v in it:
+                new_key = key
+                if k:
+                    new_key += "." + str(k)
+                yield new_key, v
+    elif isinstance(attrs, list):
+        for i, val in enumerate(attrs):
+            it = iter_dict(val)
+            for k, v  in it:
+                new_key = str(i)
+                if k:
+                    new_key += "." + str(k)
+                yield new_key, v
+    else:
+        yield "", attrs
+
+
+def get_attr(attrs, key):
+    path = key.split('.')
+
+    d = attrs
+    for p in path:
+        if p.isdigit():
+            p = int(p)
+        # Let it raise the appropriate exception
+        d = d[p]
+
+    return d
 
 def _create_op_func(op):
     def f(attr, val):

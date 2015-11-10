@@ -1,19 +1,25 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+# XXX to remove when we implements the settings/tasks using SQLA
+from dateutil.parser import parse
 
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload
 
 from aiida.common.datastructures import sort_states, calc_states
 from aiida.common.exceptions import ModificationNotAllowed, DbContentError
 from aiida.common.utils import str_timedelta
 
 from aiida.backends.sqlalchemy import session
+from aiida.backends.sqlalchemy.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.group import DbGroup
 
+from aiida.orm.implementation.sqlalchemy.utils import django_filter
 from aiida.orm.implementation.general.calculation.job import AbstractJobCalculation
+from aiida.orm.implementation.general.calculation import from_type_to_pluginclassname
 from aiida.orm.group import Group
 
 from aiida.utils import timezone
@@ -94,8 +100,8 @@ class JobCalculation(AbstractJobCalculation):
             if self._to_be_stored:
                 return calc_states.NEW
             else:
-                this_calc_states = DbCalcState.query.filter_by(
-                    dbnode=self).with_entities(DbCalcState.state)
+                this_calc_states = (c.state.code for c in DbCalcState.query.filter_by(
+                    dbnode=self.dbnode).with_entities(DbCalcState.state))
                 if not this_calc_states:
                     return None
                 else:
@@ -154,169 +160,145 @@ class JobCalculation(AbstractJobCalculation):
 
         now = timezone.now()
 
-        join = None
-        filters = []
+        filters = {}
 
         if pks:
-            filters.append(DbNode.id.in_(pks))
+            filters["id__in"] = pks
         else:
-            if group or group_pk:
-                join = DbGroup
-
-            if group is not None:
-                filters.append(DbGroup.id.in_(g_pk))
-
-            if group_pk is not None:
-                filters.append(DbGroup.id == group_pk)
-
+            if group:
+                filters["dbgroups__id__in"] = g_pk
+            if group_pk:
+                filters["dbgroups__id"] = group_pk
             if not all_users:
-                filters.append(DbNode.user == get_automatic_user())
-
+                filters["user"] = get_automatic_user()
+            if past_days is not None:
+                now = timezone.now()
+                n_days_ago = now - datetime.timedelta(days=past_days)
+                filters["ctime__gte"] = n_days_ago
             # TODO SP: attributes
             # if states is not None:
             #     q_object.add(Q(dbattributes__key='state',
             #                    dbattributes__tval__in=states, ), Q.AND)
 
-            if past_days is not None:
-                now = timezone.now()
-                n_days_ago = now - datetime.timedelta(days=past_days)
-                filters.append(DbNode.ctime >= n_days_ago)
+        q = cls.query(**filters)
 
-        # TODO SP: actual query. We will see once implemented in Node.
-        # calc_list_pk = list(cls.query(q_object).distinct().values_list('pk', flat=True))
-        #
-        # calc_list = cls.query(pk__in=calc_list_pk).order_by('ctime')
 
-        # TODO SP: attributes
-        # scheduler_states = dict(DbAttribute.objects.filter(dbnode__pk__in=calc_list_pk,
-                                                           # key='scheduler_state').values_list('dbnode__pk', 'tval'))
+        calc_list = q.distinct().order_by('ctime').options(
+            joinedload('dbcomputer').subqueryload('authinfos')
+        ).all()
 
-        # TODO SP: uncomment everything when the stuff above is done
-        # I do the query now, so that the list of pks gets cached
-        # calc_list_data = list(
-        #     calc_list.filter(
-        #         # dbcomputer__dbauthinfo__aiidauser=F('user')
-        #     ).distinct().order_by('ctime').values(
-        #         'pk', 'dbcomputer__name', 'ctime',
-        #         'type', 'dbcomputer__enabled',
-        #         'dbcomputer__pk',
-        #         'user__pk'))
-        # list_comp_pk = [i['dbcomputer__pk'] for i in calc_list_data]
-        # list_aiduser_pk = [i['user__pk']
-        #                    for i in calc_list_data]
-        # enabled_data = DbAuthInfo.objects.filter(
-        #     dbcomputer__pk__in=list_comp_pk, aiidauser__pk__in=list_aiduser_pk
-        # ).values_list('dbcomputer__pk', 'aiidauser__pk', 'enabled')
-        #
-        # enabled_auth_dict = {(i[0], i[1]): i[2] for i in enabled_data}
-        #
-        # states = {c.pk: c._get_state_string() for c in calc_list}
-        #
-        # scheduler_lastcheck = dict(DbAttribute.objects.filter(
-        #     dbnode__in=calc_list,
-        #     key='scheduler_lastchecktime').values_list('dbnode__pk', 'dval'))
-        #
-        # ## Get the last daemon check
-        # try:
-        #     last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
-        # except ValueError:
-        #     last_check_string = ("# Last daemon state_updater check: "
-        #                          "(Error while retrieving the information)")
-        # else:
-        #     if last_daemon_check is None:
-        #         last_check_string = "# Last daemon state_updater check: (Never)"
-        #     else:
-        #         last_check_string = ("# Last daemon state_updater check: "
-        #                              "{} ({})".format(
-        #             str_timedelta(now - last_daemon_check, negative_to_zero=True),
-        #             timezone.localtime(last_daemon_check).strftime("at %H:%M:%S on %Y-%m-%d")))
-        #
-        # disabled_ignorant_states = [
-        #     None, calc_states.FINISHED, calc_states.SUBMISSIONFAILED,
-        #     calc_states.RETRIEVALFAILED, calc_states.PARSINGFAILED,
-        #     calc_states.FAILED
-        # ]
-        #
-        # if not calc_list:
-        #     return last_check_string
-        # else:
-        #     # first save a matrix of results to be printed
-        #     res_str_list = [last_check_string]
-        #     str_matrix = []
-        #     title = ['# Pk', 'State', 'Creation',
-        #              'Sched. state', 'Computer', 'Type']
-        #     str_matrix.append(title)
-        #     len_title = [len(i) for i in title]
-        #
-        #     for calcdata in calc_list_data:
-        #         remote_state = "None"
-        #
-        #         calc_state = states[calcdata['pk']]
-        #         remote_computer = calcdata['dbcomputer__name']
-        #         try:
-        #             sched_state = scheduler_states.get(calcdata['pk'], None)
-        #             if sched_state is None:
-        #                 remote_state = "(unknown)"
-        #             else:
-        #                 remote_state = '{}'.format(sched_state)
-        #                 if calc_state == calc_states.WITHSCHEDULER:
-        #                     last_check = scheduler_lastcheck.get(calcdata['pk'], None)
-        #                     if last_check is not None:
-        #                         when_string = " {}".format(
-        #                             str_timedelta(now - last_check, short=True,
-        #                                           negative_to_zero=True))
-        #                         verb_string = "was "
-        #                     else:
-        #                         when_string = ""
-        #                         verb_string = ""
-        #                     remote_state = "{}{}{}".format(verb_string,
-        #                                                    sched_state, when_string)
-        #         except ValueError:
-        #             raise
-        #
-        #         calc_module = from_type_to_pluginclassname(calcdata['type']).rsplit(".", 1)[0]
-        #         prefix = 'calculation.job.'
-        #         prefix_len = len(prefix)
-        #         if calc_module.startswith(prefix):
-        #             calc_module = calc_module[prefix_len:].strip()
-        #
-        #         if relative_ctime:
-        #             calc_ctime = str_timedelta(now - calcdata['ctime'],
-        #                                        negative_to_zero=True,
-        #                                        max_num_fields=1)
-        #         else:
-        #             calc_ctime = " ".join([timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
-        #                                    timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[
-        #                                        0].rsplit(":", 1)[0]])
-        #
-        #         the_state = states[calcdata['pk']]
-        #
-        #         # decide if it is needed to print enabled/disabled information
-        #         # By default, if the computer is not configured for the
-        #         # given user, assume it is user_enabled
-        #         user_enabled = enabled_auth_dict.get((calcdata['dbcomputer__pk'],
-        #                                               calcdata['user__pk']), True)
-        #         global_enabled = calcdata["dbcomputer__enabled"]
-        #
-        #         enabled = "" if (user_enabled and global_enabled or
-        #                          the_state in disabled_ignorant_states) else " [Disabled]"
-        #
-        #         str_matrix.append([calcdata['pk'],
-        #                            the_state,
-        #                            calc_ctime,
-        #                            remote_state,
-        #                            remote_computer + "{}".format(enabled),
-        #                            calc_module
-        #                            ])
-        #
-        #     # prepare a formatted text of minimal row length (to fit in terminals!)
-        #     rows = []
-        #     for j in range(len(str_matrix[0])):
-        #         rows.append([len(str(i[j])) for i in str_matrix])
-        #     line_lengths = [str(max(max(rows[i]), len_title[i])) for i in range(len(rows))]
-        #     fmt_string = "{:<" + "}|{:<".join(line_lengths) + "}"
-        #     for row in str_matrix:
-        #         res_str_list.append(fmt_string.format(*[str(i) for i in row]))
-        #
-        #     res_str_list += ["# {}".format(_) for _ in warnings_list]
-        #     return "\n".join(res_str_list)
+
+        ## Get the last daemon check
+        try:
+            # last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
+            # XXX place holder until we can access the settings from SQLA
+            last_daemon_check = parse('2015-10-16 14:16:11.454866+02')
+        except ValueError:
+            last_check_string = ("# Last daemon state_updater check: "
+                                 "(Error while retrieving the information)")
+        else:
+            if last_daemon_check is None:
+                last_check_string = "# Last daemon state_updater check: (Never)"
+            else:
+                last_check_string = ("# Last daemon state_updater check: "
+                                     "{} ({})".format(
+                    str_timedelta(now - last_daemon_check, negative_to_zero=True),
+                    timezone.localtime(last_daemon_check).strftime("at %H:%M:%S on %Y-%m-%d")))
+
+        disabled_ignorant_states = [
+            None, calc_states.FINISHED, calc_states.SUBMISSIONFAILED,
+            calc_states.RETRIEVALFAILED, calc_states.PARSINGFAILED,
+            calc_states.FAILED
+        ]
+
+        if not calc_list:
+            return last_check_string
+
+        # Variable to print latter on
+        res_str_list = [last_check_string]
+        str_matrix = []
+        title = ['# Pk', 'State', 'Creation',
+                    'Sched. state', 'Computer', 'Type']
+        str_matrix.append(title)
+        len_title = [len(i) for i in title]
+
+        for calc in calc_list:
+            remote_state = "None"
+
+            state = calc._get_state_string()
+            remote_computer = calc.dbnode.dbcomputer.name
+            scheduler_state = calc.dbnode.attributes.get("scheduler_state", None)
+
+            if scheduler_state is None:
+                remote_state = '(unknown)'
+            else:
+                remote_state = str(scheduler_state)
+                if scheduler_state == calc_states.WITHSCHEDULER:
+                    last_check = calc.dbnode.attributes.get("scheduler_lastchecktime", None)
+
+                    when_string, verb_string = "", ""
+                    if last_check is not None:
+                        when_string = " {}".format(str_timedelta(
+                            now - last_check, short=True,
+                            negative_to_zero=True)
+                        )
+                        verb_string = "was "
+
+                    remote_state = "{}{}{}".format(verb_string, sched_state,
+                                                   when_string)
+            # On the Django version, there is a try/except for a ValueError. I
+            # don't what call can raise it, since every call to `get` has an
+            # associated default value.
+
+            calc_module = (from_type_to_pluginclassname(calc.dbnode.type)
+                            .rsplit(".", 1)[0])
+
+            prefix = 'calculation.job'
+            prefix_len = len(prefix)
+            if calc_module.startswith(prefix):
+                calc_module = calc_module[prefix_len:].strip()
+
+            if relative_ctime:
+                calc_ctime = str_timedelta(now - calc.dbnode.ctime,
+                                           negative_to_zero=True,
+                                           max_num_fields=1)
+            else:
+                calc_ctime = " ".join(
+                    [timezone.localtime(calc.dbnode.ctime).isoformat().split('T')[0],
+                     timezone.localtime(calc.dbnode.ctime).isoformat().split('T')[1]
+                     .split('.')[0].rsplit(":", 1)[0]])
+
+            # Get the auth info of the computer corresponding to the
+            # calculation user
+            users = filter(lambda a: a.aiidauser_id == calc.dbnode.user_id,
+                           calc.dbnode.dbcomputer.authinfos)
+            user_enabled = users[0].enabled if users else True
+
+            global_enabled = calc.dbnode.dbcomputer.enabled
+
+            enabled = " [Disabled]"
+            if (user_enabled and global_enabled or
+                state in disabled_ignorant_states):
+
+                enabled = ""
+
+            str_matrix.append([
+                calc.dbnode.id,
+                state,
+                calc_ctime,
+                remote_state,
+                remote_computer + "{}".format(enabled),
+                calc_module
+            ])
+
+        # prepare a formatted text of minimal row length (to fit in terminals!)
+        rows = []
+        for j in range(len(str_matrix[0])):
+            rows.append([len(str(i[j])) for i in str_matrix])
+        line_lengths = [str(max(max(rows[i]), len_title[i])) for i in range(len(rows))]
+        fmt_string = "{:<" + "}|{:<".join(line_lengths) + "}"
+        for row in str_matrix:
+            res_str_list.append(fmt_string.format(*[str(i) for i in row]))
+
+        res_str_list += ["# {}".format(_) for _ in warnings_list]
+        return "\n".join(res_str_list)

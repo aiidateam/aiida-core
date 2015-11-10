@@ -5,16 +5,19 @@ import datetime
 from django.db import transaction, IntegrityError
 from django.db.models import Q
 
+from aiida.common.utils import str_timedelta
 from aiida.common.datastructures import sort_states, calc_states
 from aiida.common.exceptions import ModificationNotAllowed, DbContentError
-from aiida.common.utils import str_timedelta
-from aiida.orm.implementation.general.calculation.job import AbstractJobCalculation
-from aiida.orm.group import Group
+
 from aiida.backends.djsite.db.models import DbCalcState, DbAuthInfo, DbAttribute
 from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
 from aiida.backends.djsite.utils import get_automatic_user
-from aiida.utils import timezone
 
+from aiida.orm.group import Group
+from aiida.orm.implementation.general.calculation.job import AbstractJobCalculation
+from aiida.orm.implementation.general.calculation import from_type_to_pluginclassname
+
+from aiida.utils import timezone
 
 
 class JobCalculation(AbstractJobCalculation):

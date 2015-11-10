@@ -86,12 +86,12 @@ _from_op = {
     'iendswith': lambda attr, val: attr.ilike('%{}'.format(val))
 }
 
-def django_filter(cls, **kwargs):
-    # Only handle filter like workflow_step=foo or id__gte=5
-    # cls in the cls in which you are filtering
+def django_filter(cls_query, **kwargs):
+    # Pass the query object you want to use.
     # This also assume a AND between each arguments
 
-    q = cls.query
+    cls = inspect(cls_query)._entity_zero().type
+    q = cls_query
 
     # We regroup all the filter on a relationship at the same place, so that
     # when a join is done, we can filter it, and then reset to the original

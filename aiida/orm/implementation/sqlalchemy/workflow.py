@@ -19,6 +19,7 @@ from aiida.common.utils import md5_file, str_timedelta
 
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.orm.implementation.sqlalchemy.calculation.job import JobCalculation
+from aiida.orm.implementation.sqlalchemy.utils import django_filter
 
 from aiida.common import aiidalogger
 from aiida.utils import timezone
@@ -212,8 +213,9 @@ class Workflow(AbstractWorkflow):
         Workflow objects instead of DbWorkflow entities.
 
         """
-        # TODO SP: query, again
-        return DbWorkflow.aiidaobjects.filter(*args, **kwargs)
+
+        q = django_filter(DbWorkflow.aiida_query, **kwargs)
+        return q
 
     @property
     def logger(self):

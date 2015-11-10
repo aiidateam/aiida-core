@@ -93,6 +93,9 @@ class DbNode(Base):
                          nullable=True)
     dbcomputer = relationship('DbComputer', backref=backref('dbnodes'))
 
+    user_id = Column(Integer, ForeignKey('db_dbuser.id'), nullable=False)
+    user = relationship('DbUser', backref='dbnodes')
+
     nodeversion = Column(Integer, default=False)
 
     attributes = Column(JSONB, default={})

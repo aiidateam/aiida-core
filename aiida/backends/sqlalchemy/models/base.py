@@ -40,7 +40,12 @@ class _AiidaQuery(orm.Query):
 
     def __iter__(self):
         iterator = super(_AiidaQuery, self).__iter__()
-        return (r.get_aiida_class() for r in iterator)
+        for r in iterator:
+            # Allow the use of with_entities
+            if issubclass(type(r), Model):
+                yield r.get_aiida_class()
+            else:
+                yield r
 
 
 class Model(object):

@@ -21,8 +21,8 @@ class DbAuthInfo(Base):
     aiidauser_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete="CASCADE"))
     dbcomputer_id = Column(Integer, ForeignKey('db_dbcomputer.id', ondelete="CASCADE"))
 
-    aiidauser = relationship('DbUser')
-    dbcomputer = relationship('DbComputer')
+    aiidauser = relationship('DbUser', backref='authinfos')
+    dbcomputer = relationship('DbComputer', backref='authinfos')
 
     # TODO SP: JSON
     _metadata = Column('metadata', Text, default="{}")

@@ -67,12 +67,15 @@ def load_dbenv(process=None, profile=None):
     Session = sessionmaker(bind=engine)
     sqlalchemy.session = Session()
 
+_aiida_autouser_cache = None
 
 def get_automatic_user():
     global _aiida_autouser_cache
 
     if _aiida_autouser_cache is not None:
         return _aiida_autouser_cache
+
+    from aiida.backends.sqlalchemy.models.user import DbUser
 
     email = get_configured_user_email()
 

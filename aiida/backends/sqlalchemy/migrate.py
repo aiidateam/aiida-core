@@ -31,6 +31,23 @@ class DbAttribute(Base):
     dbnode_id = Column(Integer, ForeignKey('db_dbnode.id'), nullable=False)
     dbnode = relationship('DbNode', backref='old_attrs')
 
+class DbExtra(Base):
+    __tablename__ = "db_dbextra"
+
+    id = Column(Integer, primary_key=True)
+
+    key = Column(String(1024), nullable=False)
+    datatype = Column(String(10), nullable=False)
+
+    tval = Column(Text, nullable=False)
+    fval = Column(Float)
+    ival = Column(Integer)
+    bval = Column(Boolean)
+    dval = Column(DateTime(timezone=True))
+
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id'), nullable=False)
+    dbnode = relationship('DbNode', backref='old_extras')
+
 
 def attributes_to_dict(attr_list):
     """
@@ -97,14 +114,32 @@ def select_from_key(key, d):
     return tmp_d
 
 
-
-def migrate_attributes():
-
+def migrate_extras(create_column=False):
     if not is_dbenv_loaded():
         load_dbenv()
 
     with sa.session.begin(subtransactions=True):
-        # sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN attributes JSONB DEFAULT \'{}\'')
+        if create_column:
+            sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN extras JSONB DEFAULT \'{}\'')
+        nodes = DbNode.query.options(subqueryload('old_extra')).all()
+
+        for node in nodes:
+            attrs = attributes_to_dict(sorted(node.old_extra, key=lambda a: a.key))
+
+            node.extras = attrs
+            sa.session.add(node)
+
+    sa.session.commit()
+
+
+
+def migrate_attributes(create_column=False):
+    if not is_dbenv_loaded():
+        load_dbenv()
+
+    with sa.session.begin(subtransactions=True):
+        if create_column:
+            sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN attributes JSONB DEFAULT \'{}\'')
         nodes = DbNode.query.options(subqueryload('old_attrs')).all()
 
         for node in nodes:

@@ -343,31 +343,46 @@ class Node(AbstractNode):
                     raise AttributeError
 
     def set_extra(self, key, value):
-        # TODO SP: handle extra
-        pass
+        # TODO SP: validate key
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The extras of a node can be set only after "
+                "storing the node")
+
+        self.dbnode.set_extra(key, value)
+        self._increment_version_number_db()
 
     def set_extra_exclusive(self, key, value):
-        # TODO SP: handle extra
+        # TODO SP: handle exclusive (what to do in case the key already exist
+        # ?)
         pass
 
-    def get_extra(self, key, *args):
-        # TODO SP: handle extra
-        pass
+    def get_extra(self, key, default=None):
+        # TODO SP: in the Django implementation, if the node is not stored,
+        # we can't get an extra. In the SQLA one, because this is simply a
+        # column, we could still return one if it exists.
+        try:
+            return get_attr(self.dbnode.extras, key)
+        except (KeyError, IndexError) as e:
+            if default:
+                return default
+            else:
+                raise AttributeError
 
     def get_extras(self):
-        # TODO SP: handle extra
-        pass
+        return self.dbnode.extras
 
     def del_extra(self, key):
-        # TODO SP: handle extra
-        pass
+        self.dbnode.del_extra(key)
 
     def extras(self):
-        # TODO SP: handle extra
+        # TODO SP: the expected key are probably of the form l.0.val. How to we
+        # deal with it with SQLA ? Do we translate them ?
         pass
 
     def iterextras(self):
-        # TODO SP: handle extra
+        # TODO SP: kind of the same as for extras: do we generate a key each
+        # time ?
         pass
 
     def iterattrs(self, also_updatable=True):
@@ -378,16 +393,14 @@ class Node(AbstractNode):
         if self._to_be_stored:
             it_items = self._attrs_cache.iteritems()
         else:
+            # TODO SP: verify if a complex object (dict/list) is expected to be
+            # returned, or simply the key/val as in the DB
             it_items = self.dbnode.attributes.iteritems()
         for k, v in it_items:
             if also_updatable or not k in updatable_list:
                 yield (k, v)
 
     def attrs(self):
-        # Note: I "duplicate" the code from iterattrs, rather than
-        # calling iterattrs from here, because iterattrs is slow on each call
-        # since it has to call .getvalue(). To improve!
-
         if self._to_be_stored:
             it = self._attrs_cache.iterkeys()
         else:

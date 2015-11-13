@@ -100,6 +100,7 @@ class DbNode(Base):
     nodeversion = Column(Integer, default=False)
 
     attributes = Column(JSONB, default={})
+    extras = Column(JSONB, default={})
 
     # TODO SP: repetition between django/sqlalchemy here.
     def get_aiida_class(self):
@@ -147,29 +148,36 @@ class DbNode(Base):
             thistype = thistype[:-1]  # Strip final dot
             return thistype.rpartition('.')[2]
 
-    def set_attr(key, value):
+    def set_attr(self, key, value):
+        DbNode._set_attr(self.attributes, key, value)
+
+    def set_extra(self, key, value):
+        DbNode._set_attr(self.extras, key, value)
+
+    def del_attr(self, key, value):
+        DbNode._del_attr(self.attributes, key, value)
+
+    def del_extra(self, key, value):
+        DbNode._del_attr(self.extras, key, value)
+
+    @classmethod
+    def _set_attr(d, key, value):
         if '.' in key:
             raise ValueError("We don't know how to treat key with dot in it yet")
 
-        self.attributes[key] = value
-        flag_modified(self.attributes)
+        d[key] = value
+        flag_modified(d)
 
-    def del_attr(key, value):
+    @classmethod
+    def _del_attr(d, key, value):
         if '.' in key:
             raise ValueError("We don't know how to treat key with dot in it yet")
 
-        if key not in self.attributes:
+        if key not in d:
             raise ValueError("Key {} does not exists".format(key))
 
-        del self.attributes[key]
-        flag_modified(self.attributes)
-
-    @property
-    def extras(self):
-        """
-        Return all extras of the given node as a single dictionary.
-        """
-        # TODO SP: extra attributes
+        del d[key]
+        flag_modified(d)
 
     def __str__(self):
         simplename = self.get_simple_name(invalid_result="Unknown")

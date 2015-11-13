@@ -2,6 +2,7 @@
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref, Query
+from sqlaalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
@@ -145,6 +146,23 @@ class DbNode(Base):
         else:
             thistype = thistype[:-1]  # Strip final dot
             return thistype.rpartition('.')[2]
+
+    def set_attr(key, value):
+        if '.' in key:
+            raise ValueError("We don't know how to treat key with dot in it yet")
+
+        self.attributes[key] = value
+        flag_modified(self.attributes)
+
+    def del_attr(key, value):
+        if '.' in key:
+            raise ValueError("We don't know how to treat key with dot in it yet")
+
+        if key not in self.attributes:
+            raise ValueError("Key {} does not exists".format(key))
+
+        del self.attributes[key]
+        flag_modified(self.attributes)
 
     @property
     def extras(self):

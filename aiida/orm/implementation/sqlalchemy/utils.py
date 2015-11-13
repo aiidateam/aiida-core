@@ -64,6 +64,7 @@ def get_attr(attrs, key):
 
     return d
 
+
 def _create_op_func(op):
     def f(attr, val):
         return getattr(attr, op)(val)

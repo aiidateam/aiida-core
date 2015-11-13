@@ -302,13 +302,12 @@ class Node(AbstractNode):
         if self._to_be_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
         else:
-            # TODO SP: updatable attributes ?
-            # if key in self._updatable_attributes:
-            #     DbAttribute.set_value_for_node(self.dbnode, key, value)
-            #     self._increment_version_number_db()
-            # else:
-            raise ModificationNotAllowed(
-                "Cannot set an attribute after saving a node")
+            if key in self._updatable_attributes:
+                self.dbnode.set_attr(key, value)
+                self._increment_version_number_db()
+            else:
+                raise ModificationNotAllowed(
+                    "Cannot set an attribute after saving a node")
 
     def _del_attr(self, key):
         if self._to_be_stored:
@@ -316,25 +315,21 @@ class Node(AbstractNode):
                 del self._attrs_cache[key]
             except KeyError:
                 raise AttributeError(
-                    "DbAttribute {} does not exist".format(key))
+                    "Attribute {} does not exist".format(key))
         else:
-            # TODO SP: updatable attributes ?
-            # if key in self._updatable_attributes:
-            #     if not DbAttribute.has_key(self.dbnode, key):
-            #         raise AttributeError("DbAttribute {} does not exist".format(
-            #             key))
-            #     DbAttribute.del_value_for_node(self.dbnode, key)
-            #     self._increment_version_number_db()
-            # else:
-            raise ModificationNotAllowed("Cannot delete an attribute after "
-                                            "saving a node")
+            if key in self._updatable_attributes:
+                self.dbnode.del_attr(key)
+                self._increment_version_number_db()
+            else:
+                raise ModificationNotAllowed("Cannot delete an attribute after "
+                                                "saving a node")
 
     def get_attr(self, key, default=None):
         if self._to_be_stored:
             try:
                 return self._attrs_cache[key]
             except KeyError:
-                raise AttributeError("DbAttribute '{}' does "
+                raise AttributeError("Attribute '{}' does "
                                         "not exist".format(key))
         else:
             try:

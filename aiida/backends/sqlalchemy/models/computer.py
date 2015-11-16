@@ -6,7 +6,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, Text
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.utils import uuid_func
@@ -28,9 +28,9 @@ class DbComputer(Base):
 
     transport_type = Column(String(255))
     scheduler_type = Column(String(255))
-    # TODO: remplace by JSON
-    transport_params = Column(Text, default="{}")
-    _metadata = Column('metadata', Text, default="{}")
+
+    transport_params = Column(JSONB, default={})
+    _metadata = Column('metadata', JSONB, default={})
 
     @classmethod
     def get_dbcomputer(cls, computer):
@@ -62,16 +62,8 @@ class DbComputer(Base):
         return dbcomputer
 
     def get_workdir(self):
-        # TODO SP: json for metadata
         try:
-            metadata = json.loads(self._metadata)
-        except ValueError:
-            raise DbContentError(
-                "Error while reading metadata for DbComputer {} ({})".format(
-                    self.name, self.hostname))
-
-        try:
-            return metadata['workdir']
+            return self.metadata['workdir']
         except KeyError:
             raise ConfigurationError('No workdir found for DbComputer {} '.format(
                 self.name))

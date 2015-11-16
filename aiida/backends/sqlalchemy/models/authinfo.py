@@ -6,6 +6,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Integer, Boolean, Text
+from sqlalchemy.dialects.postgresql import JSONB
 
 from aiida.transport import TransportFactory
 from aiida.backends.sqlalchemy.models.base import Base
@@ -24,8 +25,7 @@ class DbAuthInfo(Base):
     aiidauser = relationship('DbUser', backref='authinfos')
     dbcomputer = relationship('DbComputer', backref='authinfos')
 
-    # TODO SP: JSON
-    _metadata = Column('metadata', Text, default="{}")
+    _metadata = Column('metadata', JSONB, default={})
 
     enabled = Column(Boolean, default=True)
 
@@ -47,14 +47,7 @@ class DbAuthInfo(Base):
 
     def get_workdir(self):
         try:
-            metadata = json.loads(self._metadata)
-        except ValueError:
-            raise DbContentError(
-                "Error while reading metadata for authinfo, aiidauser={}, computer={}".format(
-                    self.aiidauser.email, self.dbcomputer.hostname))
-
-        try:
-            return metadata['workdir']
+            return self.metadata['workdir']
         except KeyError:
             return self.dbcomputer.get_workdir()
 

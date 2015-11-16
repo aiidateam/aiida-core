@@ -150,3 +150,23 @@ def migrate_attributes(create_column=False):
 
     sa.session.commit()
 
+def migrate_json_column():
+    """
+    Migrate the TEXT column containing JSON into JSON columns
+    """
+
+    table_col = [
+        ('db_dbauthinfo', 'metadata'),
+        ('db_dbcomputer', 'metadata'),
+        ('db_dblog', 'metadata')
+    ]
+
+    sql_alter = "ALTER TABLE {table} ALTER COLUMN {column} TYPE JSONB USING {column}::JSONB"
+
+    with sa.sesion.begin(subtransactions=True):
+
+        for table, col in table_col:
+            sa.session.execute(sql.format(table=table, column=column))
+
+
+    sa.session.commit()

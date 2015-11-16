@@ -148,11 +148,11 @@ class Computer(AbstractComputer):
         return self.dbcomputer.hostname
 
     def _get_metadata(self):
-        # TODO SP: when we use json instead
-        return json.loads(self.dbcomputer.metadata)
+        return self.dbcomputer.metadata
 
     def _set_metadata(self, metadata_dict):
-        self.dbcomputer.metadata = json.dumps(metadata_dict)
+        self.dbcomputer.metadata = metadata_dict
+        flag_modified(self.dbcomputer.metadata)
         if not self.to_be_stored:
             self.dbcomputer.save()
 

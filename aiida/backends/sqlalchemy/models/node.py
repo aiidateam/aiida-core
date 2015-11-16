@@ -2,7 +2,7 @@
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref, Query
-from sqlaalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic

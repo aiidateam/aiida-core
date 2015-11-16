@@ -16,8 +16,8 @@ table_groups_nodes = Table(
     'db_dbgroup_dbnodes',
     Base.metadata,
     Column('id', Integer, primary_key=True),
-    Column('db_dbnode_id', Integer, ForeignKey('db_dbnode.id')),
-    Column('db_dbgroup_id', Integer, ForeignKey('db_dbgroup.id'))
+    Column('dbnode_id', Integer, ForeignKey('db_dbnode.id')),
+    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id'))
 )
 
 class DbGroup(Base):

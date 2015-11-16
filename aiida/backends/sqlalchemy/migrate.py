@@ -8,7 +8,6 @@ from sqlalchemy.types import Integer, String, Boolean, DateTime, Text, Float
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.utils import load_dbenv, is_dbenv_loaded
 
 
@@ -117,14 +116,15 @@ def select_from_key(key, d):
 def migrate_extras(create_column=False):
     if not is_dbenv_loaded():
         load_dbenv()
+    from aiida.backends.sqlalchemy.models.node import DbNode
 
     with sa.session.begin(subtransactions=True):
         if create_column:
             sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN extras JSONB DEFAULT \'{}\'')
-        nodes = DbNode.query.options(subqueryload('old_extra')).all()
+        nodes = DbNode.query.options(subqueryload('old_extras')).all()
 
         for node in nodes:
-            attrs = attributes_to_dict(sorted(node.old_extra, key=lambda a: a.key))
+            attrs = attributes_to_dict(sorted(node.old_extras, key=lambda a: a.key))
 
             node.extras = attrs
             sa.session.add(node)
@@ -136,6 +136,7 @@ def migrate_extras(create_column=False):
 def migrate_attributes(create_column=False):
     if not is_dbenv_loaded():
         load_dbenv()
+    from aiida.backends.sqlalchemy.models.node import DbNode
 
     with sa.session.begin(subtransactions=True):
         if create_column:
@@ -154,6 +155,8 @@ def migrate_json_column():
     """
     Migrate the TEXT column containing JSON into JSON columns
     """
+    if not is_dbenv_loaded():
+        load_dbenv()
 
     table_col = [
         ('db_dbauthinfo', 'metadata'),
@@ -161,12 +164,12 @@ def migrate_json_column():
         ('db_dblog', 'metadata')
     ]
 
-    sql_alter = "ALTER TABLE {table} ALTER COLUMN {column} TYPE JSONB USING {column}::JSONB"
+    sql = "ALTER TABLE {table} ALTER COLUMN {column} TYPE JSONB USING {column}::JSONB"
 
-    with sa.sesion.begin(subtransactions=True):
+    with sa.session.begin(subtransactions=True):
 
         for table, col in table_col:
-            sa.session.execute(sql.format(table=table, column=column))
+            sa.session.execute(sql.format(table=table, column=col))
 
 
     sa.session.commit()

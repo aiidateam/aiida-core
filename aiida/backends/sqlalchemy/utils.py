@@ -9,6 +9,8 @@ from aiida.common.setup import (get_default_profile, DEFAULT_PROCESS,
 from aiida.backends import sqlalchemy
 from aiida.backends import settings
 
+def is_profile_loaded():
+    return settings.LOAD_PROFILE_CALLED
 
 def is_dbenv_loaded():
     """
@@ -16,15 +18,13 @@ def is_dbenv_loaded():
     """
     return sqlalchemy.session is not None
 
-def load_dbenv(process=None, profile=None):
+def load_profile(process=None, profile=None):
     """
-    Load the SQLAlchemy database.
+    Load only the profile
     """
-
-    # TODO SP: factorize this at some point ?
-    if settings.LOAD_DBENV_CALLED:
-        raise InvalidOperation("You cannot call load_dbenv multiple times!")
-    settings.LOAD_DBENV_CALLED = True
+    if settings.LOAD_PROFILE_CALLED:
+        raise InvalidOperation("You cannot call load_profile multiple times!")
+    settings.LOAD_PROFILE_CALLED = True
 
     if settings.CURRENT_AIIDADB_PROCESS is None and process is None:
         settings.CURRENT_AIIDADB_PROCESS = DEFAULT_PROCESS
@@ -46,6 +46,22 @@ def load_dbenv(process=None, profile=None):
     if config["AIIDADB_ENGINE"] != "postgresql_psycopg2":
         raise ValueError("You can only use SQLAlchemy with the Postgresql backend.")
 
+    return config
+
+
+def load_dbenv(process=None, profile=None, engine=None):
+    """
+    Load the SQLAlchemy database.
+    """
+    if settings.LOAD_DBENV_CALLED:
+        raise InvalidOperation("You cannot call load_dbenv multiple times!")
+    settings.LOAD_DBENV_CALLED = True
+
+    if not is_profile_loaded():
+        config = load_profile(process, profile)
+    else:
+        config = get_profile_config(settings.AIIDADB_PROFILE)
+
     # Those import are necessary for SQLAlchemy to correvtly detect the models
     # These should be on top of the file, but because of a circular import they need to be
     # here...
@@ -60,12 +76,13 @@ def load_dbenv(process=None, profile=None):
     from aiida.backends.sqlalchemy.models.user import DbUser
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
 
-    engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-                  "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
-    engine = create_engine(engine_url)
+    if not engine:
+        engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+                      "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
+        engine = create_engine(engine_url)
 
-    Session = sessionmaker(bind=engine)
-    sqlalchemy.session = Session()
+    Session = sessionmaker()
+    sqlalchemy.session = Session(bind=engine)
 
 _aiida_autouser_cache = None
 

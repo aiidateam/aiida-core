@@ -56,6 +56,17 @@ class Computer(AbstractComputer):
             # Set all remaining parameters, stop if unknown
             self.set(**kwargs)
 
+    def set(self, **kwargs):
+        for key, val in kwargs.iteritems():
+            if hasattr(self._dbcomputer, key):
+                setattr(self._dbcomputer, key, val)
+            else:
+                import ipdb; ipdb.set_trace()
+                self._dbcomputer._metadata[key] = val
+
+        flag_modified(self._dbcomputer, "_metadata")
+
+
     @classmethod
     def list_names(cls):
         return list(DbComputer.objects.filter().values_list('name', flat=True))
@@ -183,6 +194,15 @@ class Computer(AbstractComputer):
         except ConfigurationError:
             # This happens the first time: I provide a reasonable default value
             return "/scratch/{username}/aiida_run/"
+
+    def set_workdir(self, val):
+        pass
+        # if self.to_be_stored:
+        metadata = self._get_metadata()
+        metadata['workdir'] = val
+        self._set_metadata(metadata)
+        #else:
+        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_name(self):
         return self.dbcomputer.name

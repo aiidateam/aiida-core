@@ -2,7 +2,6 @@
 from abc import abstractmethod, abstractproperty
 
 import logging
-import collections
 import os
 
 
@@ -168,18 +167,9 @@ class AbstractComputer(object):
     def __init__(self, **kwargs):
         pass
 
+    @abstractmethod
     def set(self, **kwargs):
-
-        for k, v in kwargs.iteritems():
-            try:
-                method = getattr(self, 'set_{}'.format(k))
-            except AttributeError:
-                raise ValueError("Unable to set '{0}', no set_{0} method "
-                                 "found".format(k))
-            if not isinstance(method, collections.Callable):
-                raise ValueError("Unable to set '{0}', set_{0} is not "
-                                 "callable!".format(k))
-            method(v)
+        pass
 
     @classmethod
     @abstractmethod
@@ -679,13 +669,9 @@ class AbstractComputer(object):
     def get_workdir(self):
         pass
 
+    @abstractmethod
     def set_workdir(self, val):
-        # if self.to_be_stored:
-        metadata = self._get_metadata()
-        metadata['workdir'] = val
-        self._set_metadata(metadata)
-        #else:
-        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        pass
 
     @abstractmethod
     def get_name(self):

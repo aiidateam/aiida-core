@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import collections
 
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ObjectDoesNotExist
@@ -48,6 +49,19 @@ class Computer(AbstractComputer):
 
             # Set all remaining parameters, stop if unknown
             self.set(**kwargs)
+
+
+    def set(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            try:
+                method = getattr(self, 'set_{}'.format(k))
+            except AttributeError:
+                raise ValueError("Unable to set '{0}', no set_{0} method "
+                                 "found".format(k))
+            if not isinstance(method, collections.Callable):
+                raise ValueError("Unable to set '{0}', set_{0} is not "
+                                 "callable!".format(k))
+            method(v)
 
     @classmethod
     def list_names(cls):
@@ -181,6 +195,14 @@ class Computer(AbstractComputer):
         except ConfigurationError:
             # This happens the first time: I provide a reasonable default value
             return "/scratch/{username}/aiida_run/"
+
+    def set_workdir(self, val):
+        # if self.to_be_stored:
+        metadata = self._get_metadata()
+        metadata['workdir'] = val
+        self._set_metadata(metadata)
+        #else:
+        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_name(self):
         return self.dbcomputer.name

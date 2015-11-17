@@ -26,7 +26,7 @@ class DbGroup(Base):
 
     id = Column(Integer, primary_key=True)
 
-    uuid = Column(UUID, default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=uuid_func)
     name = Column(String(255), index=True)
 
     type = Column(String(255), default="", index=True)

@@ -65,11 +65,11 @@ class DbNode(Base):
     aiida_query = _QueryProperty(_AiidaQuery)
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID, default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=uuid_func)
 
     type = Column(String(255), index=True)
-    label = Column(String(255), index=True, nullable=True)
-    description = Column(Text(), nullable=True)
+    label = Column(String(255), index=True, nullable=True, default="")
+    description = Column(Text(), nullable=True, default="")
 
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
     # won't take care of automatic deleting in the DbLink table. This still
@@ -99,7 +99,9 @@ class DbNode(Base):
     user_id = Column(Integer, ForeignKey('db_dbuser.id'), nullable=False)
     user = relationship('DbUser', backref='dbnodes')
 
-    nodeversion = Column(Integer, default=False)
+    public = Column(Boolean, default=False)
+
+    nodeversion = Column(Integer, default=1)
 
     attributes = Column(JSONB, default={})
     extras = Column(JSONB, default={})

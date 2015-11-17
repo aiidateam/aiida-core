@@ -19,7 +19,7 @@ class DbComputer(Base):
 
     id = Column(Integer, primary_key=True)
 
-    uuid = Column(UUID, default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=uuid_func)
     name = Column(String(255), unique=True, nullable=False)
     hostname = Column(String(255))
 

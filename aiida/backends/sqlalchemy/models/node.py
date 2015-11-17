@@ -24,7 +24,7 @@ class DbLink(Base):
 
     id = Column(Integer, primary_key=True)
     input_id = Column(Integer, ForeignKey('db_dbnode.id'))
-    output_id = Column(Integer, ForeignKey('db_dbnode.id'))
+    output_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE"))
 
     label = Column(String(255), index=True, nullable=False)
 
@@ -71,12 +71,17 @@ class DbNode(Base):
     label = Column(String(255), index=True, nullable=True)
     description = Column(Text(), nullable=True)
 
-    # TODO SP: compare to the django's implementation, you can either delete an
-    # output or an output, with no restriction. This might need to be explored.
+    # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
+    # won't take care of automatic deleting in the DbLink table. This still
+    # isn't exactly the same behaviour than with Django. The solution to
+    # this is probably a ON DELETE inside the DB. On removing node with id=x,
+    # we would remove all link with x as an output.
     outputs = relationship("DbNode", secondary="db_dblink",
                            primaryjoin="DbNode.id == DbLink.input_id",
                            secondaryjoin="DbNode.id == DbLink.output_id",
-                           backref="inputs", lazy="dynamic")
+                           backref=backref("inputs", passive_deletes=True),
+                           lazy="dynamic",
+                           passive_deletes=True)
 
     child_paths = relationship("DbNode", secondary="db_dbpath",
                                primaryjoin="DbNode.id == DbPath.parent_id",
@@ -87,9 +92,6 @@ class DbNode(Base):
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now)
 
-    # TODO SP: on delete here should not be needed. The default behaviour from
-    # any sane database is to prevent removal of an row if other row are
-    # referencing it.
     dbcomputer_id = Column(Integer, ForeignKey('db_dbcomputer.id'),
                          nullable=True)
     dbcomputer = relationship('DbComputer', backref=backref('dbnodes'))

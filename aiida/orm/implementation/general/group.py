@@ -308,7 +308,6 @@ class AbstractGroup(object):
             return '"{}" [type {}], of user {}'.format(
                 self.name, self.type_string, self.user.email)
         else:
-            # TODO SP: self.user here, might need to be abstracted.
             return '"{}" [user-defined], of user {}'.format(
                 self.name, self.user.email)
 

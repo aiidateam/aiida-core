@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
 
+from aiida.backends.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.user import DbUser
@@ -61,7 +62,6 @@ class Node(AbstractNode):
 
         else:
             # TODO: allow to get the user from the parameters
-            # TODO SP: get automatic user
             user = get_automatic_user()
             self._dbnode = DbNode(user=user,
                                   uuid=get_new_uuid(),
@@ -108,7 +108,6 @@ class Node(AbstractNode):
         if self._to_be_store:
             return None
         else:
-            # TODO SP: _dbnode ? how should it implemented ?
             return self._dbnode.id
 
 

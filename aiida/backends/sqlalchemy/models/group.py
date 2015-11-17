@@ -20,6 +20,7 @@ table_groups_nodes = Table(
     Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id'))
 )
 
+# TODO SP: add dbuser_groups table
 class DbGroup(Base):
     __tablename__ = "db_dbgroup"
 

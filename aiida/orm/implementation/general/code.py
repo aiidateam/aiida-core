@@ -127,7 +127,6 @@ class AbstractCode(Node):
         :raise MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
-        # TODO SP: rework the query ?
         # if sep:
         #     codes = cls.query(label=codename, dbcomputer__name=computername)
         # else:
@@ -421,8 +420,6 @@ def delete_code(code):
     needed to set the internal state of the object after calling
     computer.delete().
     """
-    # TODO SP: why not a simple `delete` method on the code ? is there any
-    # advantages to this ?
     raise NotImplementedError
 
 

@@ -58,7 +58,6 @@ class DbWorkflow(Base):
         """
         return Workflow.get_subclass_from_uuid(self.uuid)
 
-    # TODO: modify the save
     def set_state(self, state):
         self.state = state;
         self.save()
@@ -184,8 +183,6 @@ class DbWorkflowData(Base):
         UniqueConstraint("parent_id", "name", "data_type"),
     )
 
-    # TODO SP: save again
-
     def set_value(self, arg):
 
         from aiida.orm import Node
@@ -279,9 +276,7 @@ class DbWorkflowStep(Base):
             return JobCalculation.query(workflow_step=self).filter(
                 dbattributes__key="state", dbattributes__tval=state)
 
-    # TODO SP: handle delete
     def remove_calculations(self):
-
         self.calculations.all().delete()
 
     def add_sub_workflow(self, sub_wf):

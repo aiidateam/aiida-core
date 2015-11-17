@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Integer, DateTime
 
@@ -17,7 +17,7 @@ class DbCalcState(Base):
     id = Column(Integer, primary_key=True)
 
     dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE"))
-    dbnode = relationship('DbNode', backref='dbstates')
+    dbnode = relationship('DbNode', backref=backref('dbstates', passive_deletes=True))
 
     state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
 

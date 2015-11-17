@@ -3,6 +3,7 @@ import os
 import sys
 import traceback
 import inspect
+import logging
 
 from abc import abstractmethod, abstractproperty
 
@@ -15,10 +16,11 @@ from aiida.common import aiidalogger
 from aiida.orm.implementation.calculation import JobCalculation
 
 
+
 from aiida.backends.utils import get_automatic_user
 
-# TODO SP: abstract timezone
 from aiida.utils import timezone
+from aiida.utils.logger import get_dblogger_extra
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -113,7 +115,6 @@ class AbstractWorkflow(object):
 
     @abstractmethod
     def _get_dbworkflowinstance(self):
-        # TODO SP: see decoupling.md for remark about that.
         pass
 
     @abstractproperty
@@ -296,10 +297,6 @@ class AbstractWorkflow(object):
         :return: LoggerAdapter object, that works like a logger, but also has
           the 'extra' embedded
         """
-        # TODO SP: abstract the logger
-        import logging
-        from aiida.utils.logger import get_dblogger_extra
-
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self))
 
@@ -996,7 +993,6 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")
 
-    # TODO SP: abstract this
     now = timezone.now()
 
     lines = []

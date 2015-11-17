@@ -6,6 +6,7 @@ from copy import copy
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
+from sqlalchemy.orm.attributes import flag_modified
 
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
@@ -148,11 +149,11 @@ class Computer(AbstractComputer):
         return self.dbcomputer.hostname
 
     def _get_metadata(self):
-        return self.dbcomputer.metadata
+        return self.dbcomputer._metadata
 
     def _set_metadata(self, metadata_dict):
-        self.dbcomputer.metadata = metadata_dict
-        flag_modified(self.dbcomputer.metadata)
+        self.dbcomputer._metadata = metadata_dict
+        flag_modified(self.dbcomputer, "_metadata")
         if not self.to_be_stored:
             self.dbcomputer.save()
 

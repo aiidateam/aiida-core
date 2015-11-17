@@ -32,6 +32,11 @@ class DbComputer(Base):
     transport_params = Column(JSONB, default={})
     _metadata = Column('metadata', JSONB, default={})
 
+    def __init__(self, *args, **kwargs):
+        super(DbComputer, self).__init__(*args, **kwargs)
+        if self._metadata is None:
+            self._metadata = {}
+
     @classmethod
     def get_dbcomputer(cls, computer):
         """
@@ -63,10 +68,11 @@ class DbComputer(Base):
 
     def get_workdir(self):
         try:
-            return self.metadata['workdir']
+            return self._metadata['workdir']
         except KeyError:
             raise ConfigurationError('No workdir found for DbComputer {} '.format(
                 self.name))
+
 
     def __str__(self):
         if self.enabled:

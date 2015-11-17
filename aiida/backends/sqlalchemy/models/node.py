@@ -154,15 +154,19 @@ class DbNode(Base):
 
     def set_attr(self, key, value):
         DbNode._set_attr(self.attributes, key, value)
+        flag_modified(self, "attributes")
 
     def set_extra(self, key, value):
         DbNode._set_attr(self.extras, key, value)
+        flag_modified(self, "extras")
 
     def del_attr(self, key, value):
         DbNode._del_attr(self.attributes, key, value)
+        flag_modified(self, "attributes")
 
     def del_extra(self, key, value):
         DbNode._del_attr(self.extras, key, value)
+        flag_modified(self, "extras")
 
     @classmethod
     def _set_attr(d, key, value):
@@ -170,7 +174,6 @@ class DbNode(Base):
             raise ValueError("We don't know how to treat key with dot in it yet")
 
         d[key] = value
-        flag_modified(d)
 
     @classmethod
     def _del_attr(d, key, value):
@@ -181,7 +184,6 @@ class DbNode(Base):
             raise ValueError("Key {} does not exists".format(key))
 
         del d[key]
-        flag_modified(d)
 
     def __str__(self):
         simplename = self.get_simple_name(invalid_result="Unknown")

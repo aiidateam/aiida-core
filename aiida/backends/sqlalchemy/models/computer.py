@@ -24,18 +24,19 @@ class DbComputer(Base):
     hostname = Column(String(255))
 
     description = Column(Text, nullable=True)
-    enabled = Column(Boolean, default=True)
+    enabled = Column(Boolean)
 
     transport_type = Column(String(255))
     scheduler_type = Column(String(255))
 
-    transport_params = Column(JSONB, default={})
-    _metadata = Column('metadata', JSONB, default={})
+    transport_params = Column(JSONB)
+    _metadata = Column('metadata', JSONB)
 
     def __init__(self, *args, **kwargs):
+        self.enabled = True
+        self._metadata = {}
+        self.transport_params = {}
         super(DbComputer, self).__init__(*args, **kwargs)
-        if self._metadata is None:
-            self._metadata = {}
 
     @classmethod
     def get_dbcomputer(cls, computer):

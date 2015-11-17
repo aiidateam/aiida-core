@@ -68,8 +68,8 @@ class DbNode(Base):
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
 
     type = Column(String(255), index=True)
-    label = Column(String(255), index=True, nullable=True, default="")
-    description = Column(Text(), nullable=True, default="")
+    label = Column(String(255), index=True, nullable=True)
+    description = Column(Text(), nullable=True)
 
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
     # won't take care of automatic deleting in the DbLink table. This still
@@ -105,6 +105,15 @@ class DbNode(Base):
 
     attributes = Column(JSONB, default={})
     extras = Column(JSONB, default={})
+
+    def __init__(self, *args, **kwargs):
+        self.description = ""
+        self.label = ""
+        self.public = False
+        self.nodeversion = 1
+        self.attributes = {}
+        self.extras = {}
+        super(DbNode, self).__init__(*args, **kwargs)
 
     # TODO SP: repetition between django/sqlalchemy here.
     def get_aiida_class(self):

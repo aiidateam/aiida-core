@@ -28,11 +28,16 @@ class DbAuthInfo(Base):
     _metadata = Column('metadata', JSONB)
     auth_params = Column(JSONB)
 
-    enabled = Column(Boolean, default=True)
+    enabled = Column(Boolean)
 
     __table_args__ = (
         UniqueConstraint("aiidauser_id", "dbcomputer_id"),
     )
+
+    def __init__(self, *args, **kwargs):
+        self._metadata = {}
+        self.enabled = True
+        super(DbAuthInfo, self).__init__(*args, **kwargs)
 
     def get_auth_params(self):
         return self.auth_params

@@ -31,6 +31,9 @@ class DbUser(Base):
         self.last_name = last_name
         self.institution = institution
 
+        self.is_staff = False
+        self.is_active = False
+
         for field in ['is_staff', 'is_active', 'date_joined']:
             if field in kwargs:
                 setattr(self, field, kwargs[field])

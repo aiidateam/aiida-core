@@ -22,7 +22,7 @@ class DbLog(Base):
     objname = Column(String(255), index=True)
     objpk = Column(Integer, index=True, nullable=True)
 
-    _metadata = Column('metadata', JSONB, default={})
+    _metadata = Column('metadata', JSONB)
 
 
     def __init__(self, loggername="", levelname="", objname="", objpk=None,
@@ -37,7 +37,7 @@ class DbLog(Base):
         self.objname = objname
         self.objpk = objpk
         self.message = message
-        self.metadata = metadata
+        self._metadata = metadata or {}
 
 
     def __str__(self):

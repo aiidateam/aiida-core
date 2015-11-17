@@ -38,8 +38,8 @@ class DbWorkflow(Base):
     label = Column(String(255), index=True)
     description = Column(Text)
 
-    nodeversion = Column(Integer, default=1)
-    lastsyncedversion = Column(Integer, default=0)
+    nodeversion = Column(Integer)
+    lastsyncedversion = Column(Integer)
 
     state = Column(ChoiceType((_, _) for _ in wf_states),
                    default=wf_states.INITIALIZED)
@@ -51,6 +51,11 @@ class DbWorkflow(Base):
     script_path = Column(Text)  # Blank = False
     # TODO SP: restrict the size of this column, MD5 have a fixed size
     script_md5 = Column(String(255)) # Blank = False.
+
+    def __init__(self, *args, **kwargs):
+        super(DbWorkflow, self).__init__(*args, **kwargs)
+        self.nodeversion = 1
+        self.lastsyncedversion = 0
 
     def get_aiida_class(self):
         """

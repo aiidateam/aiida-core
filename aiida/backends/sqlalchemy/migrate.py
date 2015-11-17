@@ -160,6 +160,7 @@ def migrate_json_column():
 
     table_col = [
         ('db_dbauthinfo', 'metadata'),
+        ('db_dbauthinfo', 'auth_params'),
         ('db_dbcomputer', 'metadata'),
         ('db_dblog', 'metadata')
     ]

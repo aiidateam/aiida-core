@@ -25,7 +25,8 @@ class DbAuthInfo(Base):
     aiidauser = relationship('DbUser', backref='authinfos')
     dbcomputer = relationship('DbComputer', backref='authinfos')
 
-    _metadata = Column('metadata', JSONB, default={})
+    _metadata = Column('metadata', JSONB)
+    auth_params = Column(JSONB)
 
     enabled = Column(Boolean, default=True)
 
@@ -34,20 +35,14 @@ class DbAuthInfo(Base):
     )
 
     def get_auth_params(self):
-        try:
-            return json.loads(self.auth_params)
-        except ValueError:
-            raise DbContentError(
-                "Error while reading auth_params for authinfo, aiidauser={}, computer={}".format(
-                    self.aiidauser.email, self.dbcomputer.hostname))
+        return self.auth_params
 
     def set_auth_params(self, auth_params):
-        # Raises ValueError if data is not JSON-serializable
-        self.auth_params = json.dumps(auth_params)
+        self.auth_params = auth_params
 
     def get_workdir(self):
         try:
-            return self.metadata['workdir']
+            return self._metadata['workdir']
         except KeyError:
             return self.dbcomputer.get_workdir()
 

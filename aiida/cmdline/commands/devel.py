@@ -295,7 +295,8 @@ class Devel(VerdiCommandWithSubcommands):
                 out_found = False
                 o = {}
 
-            io = {'i': i, 'o': o, 'pk': job, 'label': c.label,
+            io = {'extras': c.get_extras(), 'attrs': c.get_attrs(), 
+                  'i': i, 'o': o, 'pk': job, 'label': c.label,
                   'desc': c.description, 'state': c.get_state(),
                   'sched_state': c.get_scheduler_state(),
                   'owner': c.dbnode.user.email}

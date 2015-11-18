@@ -107,8 +107,11 @@ def django_filter(cls_query, **kwargs):
         splits = key.split("__")
         if len(splits) > 3:
             raise ValueError("Too many parameters to handle.")
+        # something like "computer__id__in"
         elif len(splits) == 3:
             join, field, op = splits
+        # we have either "computer__id", which means join + field quality or
+        # "id__gte" which means field + op
         elif len(splits) == 2:
             if splits[1] in _from_op.iterkeys():
                 field, op = splits
@@ -117,8 +120,13 @@ def django_filter(cls_query, **kwargs):
         else:
             field = splits[0]
 
-        if "dbattributes" in [join, field]:
-            # We don't handle this right now.
+        if "dbattributes" == join:
+            if field == "key":
+                q = q.filter(cls.attributes.has_key(val))
+            continue
+        elif "dbextras" == join:
+            if field == "key":
+                q = q.filter(cls.extras.has_key(val))
             continue
 
         current_cls = cls

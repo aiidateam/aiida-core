@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
+import copy
+
 from sqlalchemy import literal
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
@@ -11,6 +13,7 @@ from aiida.backends.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.sqlalchemy.models.computer import DbComputer
 
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
@@ -145,29 +148,30 @@ class Node(AbstractNode):
             return Computer(dbcomputer=self.dbnode.dbcomputer)
 
     def _update_db_label_field(self, field_value):
+        from aiida.backends.sqlalchemy import session
         self.dbnode.label = field_value
         if not self._to_be_stored:
-            with session.begin():
-                self._dbnode.save(commit=False)
-                self._increment_version_number_db()
+            self._dbnode.save(commit=False)
+            self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
+        from aiida.backends.sqlalchemy import session
         self.dbnode.description = field_value
         if not self._to_be_stored:
-            with session.begin():
-                self._dbnode.save(commit=False)
-                self._increment_version_number_db()
+            self._dbnode.save(commit=False)
+            self._increment_version_number_db()
 
     def _replace_dblink_from(self, src, label):
+        from aiida.backends.sqlalchemy import session
         try:
             self._add_dblink_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
-            with session.begin():
-                self._remove_dblink_from(label)
-                self._add_dblink_from(src, label)
+            self._remove_dblink_from(label)
+            self._add_dblink_from(src, label)
 
     def _remove_dblink_from(self, label):
+        from aiida.backends.sqlalchemy import session
         link = self.dbnode.outputs.filter_by(label=label).first()
         session.delete(link)
         session.commit()
@@ -220,7 +224,7 @@ class Node(AbstractNode):
             safety_counter = 0
             while True:
                 safety_counter += 1
-                if safety_counter > 100:
+                if safety_counter > 3:
                     # Well, if you have more than 100 concurrent addings
                     # to the same node, you are clearly doing something wrong...
                     raise InternalError("Hey! We found more than 100 concurrent"
@@ -232,21 +236,21 @@ class Node(AbstractNode):
                     session.add(link)
                     session.commit()
                     break
-                except SQLAlchemyError:
+                except SQLAlchemyError as e:
                     session.rollback()
                     # Retry loop until you find a new loop
                     autolabel_idx += 1
         else:
             try:
-                link = DbLink(input=src.dbnode, output=self.dbnode,
+                link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
                               label=label)
                 session.add(link)
                 session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 session.rollback()
                 raise UniquenessError("There is already a link with the same "
                                       "name (raw message was {})"
-                                      "".format(e.message))
+                                      "".format(e))
 
     def get_inputs(self, type=None, also_labels=False, only_in_db=False):
         inputs_list = [(i.label, i.input.get_aiida_class()) for i in
@@ -292,7 +296,8 @@ class Node(AbstractNode):
 
     def set_computer(self, computer):
         if self._to_be_stored:
-            self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
+            computer = DbComputer.get_dbcomputer(computer)
+            self.dbnode.dbcomputer = computer
         else:
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
@@ -325,12 +330,14 @@ class Node(AbstractNode):
                                                 "saving a node")
 
     def get_attr(self, key, default=None):
+        exception = AttributeError("Attribute '{}' does not exist".format(key))
         if self._to_be_stored:
             try:
                 return self._attrs_cache[key]
             except KeyError:
-                raise AttributeError("Attribute '{}' does "
-                                        "not exist".format(key))
+                if default:
+                    return default
+                raise exception
         else:
             try:
                 return get_attr(self.dbnode.attributes, key)
@@ -340,7 +347,7 @@ class Node(AbstractNode):
                 else:
                     # little tweek to be consistent with the expected
                     # exception
-                    raise AttributeError
+                    raise exception
 
     def set_extra(self, key, value):
         # TODO SP: validate key
@@ -409,6 +416,7 @@ class Node(AbstractNode):
             yield k
 
     def add_comment(self, content, user=None):
+        from aiida.backends.sqlalchemy import session
         if self._to_be_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
@@ -521,9 +529,13 @@ class Node(AbstractNode):
         self._store_input_nodes()
         self.store(with_transaction=False)
         self._store_cached_input_links(with_transaction=False)
+        from aiida.backends.sqlalchemy import session
 
         if with_transaction:
-            session.commit()
+            try:
+                session.commit()
+            except SQLAlchemyError as e:
+                session.rollback()
             # TODO SP: What to do if this fails ?
 
         return self
@@ -603,9 +615,13 @@ class Node(AbstractNode):
         for link in links_to_store:
             del self._inputlinks_cache[link]
 
+        from aiida.backends.sqlalchemy import session
         if with_transaction:
             # TODO SP: same as for `store_all`, what to do if this fails ?
-            self.dbnode.session.commit()
+            try:
+                session.commit()
+            except SQLAlchemyError as e:
+                session.rollback()
 
 
     def store(self, with_transaction=True):
@@ -643,8 +659,6 @@ class Node(AbstractNode):
             self._repository_folder.replace_with_folder(
                 self._get_temp_folder().abspath, move=True, overwrite=True)
 
-            # I do the transaction only during storage on DB to avoid timeout
-            # problems, especially with SQLite
             try:
                 self._dbnode.save(commit=False)
                 # Save its attributes 'manually' without incrementing

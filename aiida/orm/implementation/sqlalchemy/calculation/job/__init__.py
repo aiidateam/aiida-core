@@ -11,7 +11,7 @@ from aiida.common.datastructures import sort_states, calc_states
 from aiida.common.exceptions import ModificationNotAllowed, DbContentError
 from aiida.common.utils import str_timedelta
 
-from aiida.backends.sqlalchemy import session
+from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
 from aiida.backends.sqlalchemy.models.node import DbNode
@@ -62,8 +62,7 @@ class JobCalculation(AbstractJobCalculation):
                                              "to {}".format(old_state, state))
 
         try:
-            with session.begin(subtransactions=True):
-                new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
+            new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
         except SQLAlchemyError:
             raise ModificationNotAllowed("Calculation pk= {} already transited through "
                                          "the state {}".format(self.pk, state))
@@ -100,8 +99,8 @@ class JobCalculation(AbstractJobCalculation):
             if self._to_be_stored:
                 return calc_states.NEW
             else:
-                this_calc_states = (c.state.code for c in DbCalcState.query.filter_by(
-                    dbnode=self.dbnode).with_entities(DbCalcState.state))
+                this_calc_states = [c.state.code for c in DbCalcState.query.filter_by(
+                    dbnode=self.dbnode).with_entities(DbCalcState.state)]
                 if not this_calc_states:
                     return None
                 else:

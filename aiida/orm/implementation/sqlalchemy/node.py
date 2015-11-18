@@ -4,13 +4,13 @@ from __future__ import absolute_import
 from sqlalchemy import literal
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.attributes import flag_modified
 
 
 from aiida.backends.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy import session
 
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
@@ -173,6 +173,7 @@ class Node(AbstractNode):
         session.commit()
 
     def _add_dblink_from(self, src, label=None):
+        from aiida.backends.sqlalchemy import session
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
         if self.uuid == src.uuid:
@@ -198,9 +199,9 @@ class Node(AbstractNode):
         #
         # I am linking src->self; a loop would be created if a DbPath exists
         # already in the TC table from self to src
-        c = session.query(DbPath.query
-                          .filter_by(parent=self.dbnode, child=src.dbnode)
-                          .exists())
+        c = session.query(literal(True)).filter(DbPath.query
+                          .filter_by(parent_id=self.dbnode.id, child_id=src.dbnode.id)
+                          .exists()).scalar()
         if c:
             raise ValueError(
                 "The link you are attempting to create would generate a loop")
@@ -226,7 +227,7 @@ class Node(AbstractNode):
                                         " adds of links "
                                         "to the same nodes! Are you really doing that??")
                 try:
-                    link = DbLink(input=src.dbnode, output=self.dbnode,
+                    link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
                                   label="link_{}".format(autolabel_idx))
                     session.add(link)
                     session.commit()
@@ -604,7 +605,7 @@ class Node(AbstractNode):
 
         if with_transaction:
             # TODO SP: same as for `store_all`, what to do if this fails ?
-            session.commit()
+            self.dbnode.session.commit()
 
 
     def store(self, with_transaction=True):
@@ -648,10 +649,8 @@ class Node(AbstractNode):
                 self._dbnode.save(commit=False)
                 # Save its attributes 'manually' without incrementing
                 # the version for each add.
-                # TODO SP: handle attributes here
-                DbAttribute.reset_values_for_node(self.dbnode,
-                                                    attributes=self._attrs_cache,
-                                                    with_transaction=False)
+                self.dbnode.attributes = self._attrs_cache
+                flag_modified(self.dbnode, "attributes")
                 # This should not be used anymore: I delete it to
                 # possibly free memory
                 del self._attrs_cache
@@ -661,10 +660,10 @@ class Node(AbstractNode):
 
                 # Here, I store those links that were in the cache and
                 # that are between stored nodes.
-                self._store_cached_input_links()
+                self._store_cached_input_links(with_transaction=False)
 
                 if with_transaction:
-                    session.commit()
+                    self.dbnode.session.commit()
 
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception

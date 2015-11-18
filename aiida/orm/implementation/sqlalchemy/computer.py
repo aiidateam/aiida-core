@@ -10,7 +10,6 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-from aiida.backends.sqlalchemy import session
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
 from aiida.orm.implementation.general.computer import AbstractComputer
@@ -61,7 +60,6 @@ class Computer(AbstractComputer):
             if hasattr(self._dbcomputer, key):
                 setattr(self._dbcomputer, key, val)
             else:
-                import ipdb; ipdb.set_trace()
                 self._dbcomputer._metadata[key] = val
 
         flag_modified(self._dbcomputer, "_metadata")
@@ -140,9 +138,9 @@ class Computer(AbstractComputer):
         self.validate()
 
         try:
-            with session.begin(subtransactions=True):
-                self.dbcomputer.save()
-        except SQLAlchemyError:
+            with self.dbcomputer.session.begin(subtransactions=True):
+                self.dbcomputer.save(commit=False)
+        except SQLAlchemyError as e:
             raise ValueError("Integrity error, probably the hostname already exists in the DB")
 
         return self

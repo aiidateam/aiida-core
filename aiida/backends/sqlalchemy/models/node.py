@@ -50,9 +50,9 @@ class DbPath(Base):
 
     depth = Column(Integer)
 
-    entry_edge_id = Column(Integer, ForeignKey('db_dbnode.id'))
-    direct_edge_id = Column(Integer, ForeignKey('db_dbnode.id'))
-    exit_edge_id = Column(Integer, ForeignKey('db_dbnode.id'))
+    entry_edge_id = Column(Integer)
+    direct_edge_id = Column(Integer)
+    exit_edge_id = Column(Integer)
 
     __table_args__ = (
         UniqueConstraint('parent_id', 'child_id'),

@@ -26,6 +26,9 @@ class DbLink(Base):
     input_id = Column(Integer, ForeignKey('db_dbnode.id'))
     output_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE"))
 
+    input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
+    output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
+
     label = Column(String(255), index=True, nullable=False)
 
     __table_args__ = (
@@ -177,14 +180,14 @@ class DbNode(Base):
         DbNode._del_attr(self.extras, key, value)
         flag_modified(self, "extras")
 
-    @classmethod
+    @staticmethod
     def _set_attr(d, key, value):
         if '.' in key:
             raise ValueError("We don't know how to treat key with dot in it yet")
 
         d[key] = value
 
-    @classmethod
+    @staticmethod
     def _del_attr(d, key, value):
         if '.' in key:
             raise ValueError("We don't know how to treat key with dot in it yet")

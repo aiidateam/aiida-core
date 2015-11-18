@@ -49,7 +49,7 @@ def load_profile(process=None, profile=None):
     return config
 
 
-def load_dbenv(process=None, profile=None, engine=None):
+def load_dbenv(process=None, profile=None, connection=None):
     """
     Load the SQLAlchemy database.
     """
@@ -76,13 +76,15 @@ def load_dbenv(process=None, profile=None, engine=None):
     from aiida.backends.sqlalchemy.models.user import DbUser
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
 
-    if not engine:
+    if not connection:
         engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
                       "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
         engine = create_engine(engine_url)
-
-    Session = sessionmaker()
-    sqlalchemy.session = Session(bind=engine)
+        Session = sessionmaker(bind=engine)
+        sqlalchemy.session = Session()
+    else:
+        Session = sessionmaker()
+        sqlalchemy.session = Session(bind=connection)
 
 _aiida_autouser_cache = None
 

@@ -72,6 +72,9 @@ def load_node(node_id=None, pk=None, uuid=None):
             raise ValueError("'node_id' has to be either string, unicode or "
                              "integer, {} given".format(type(node_id)))
     if pk is not None:
+        if not isinstance(pk, int) and not isinstance(pk, long):
+            raise ValueError("The 'pk' argument needs to be either an int or a long"
+                             " but it was {}".format(type(pk)))
         return Node.get_subclass_from_pk(pk)
     else:
         return Node.get_subclass_from_uuid(uuid)

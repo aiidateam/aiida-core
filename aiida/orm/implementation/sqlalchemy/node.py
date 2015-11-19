@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import copy
 
 from sqlalchemy import literal
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, ProgrammingError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -88,8 +88,8 @@ class Node(AbstractNode):
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
         try:
-            node = cls.query.filter(uuid=uuid).one().get_aiida_class()
-        except NoResultFound:
+            node = cls.query(uuid=uuid).one()
+        except (NoResultFound, ProgrammingError):
             raise NotExistent("No entry with UUID={} found".format(uuid))
         if not isinstance(node, cls):
             raise NotExistent("UUID={} is not an instance of {}".format(
@@ -99,8 +99,10 @@ class Node(AbstractNode):
     @classmethod
     def get_subclass_from_pk(cls, pk):
         try:
-            node = cls.query.get(id=pk).one().get_aiida_class()
+            node = cls.query(id=pk).one()
         except NoResultFound:
+            # DataError is thrown when you pass a string instead of an int for
+            # instance
             raise NotExistent("No entry with pk= {} found".format(pk))
         if not isinstance(node, cls):
             raise NotExistent("pk= {} is not an instance of {}".format(
@@ -383,14 +385,12 @@ class Node(AbstractNode):
         self.dbnode.del_extra(key)
 
     def extras(self):
-        # TODO SP: the expected key are probably of the form l.0.val. How to we
-        # deal with it with SQLA ? Do we translate them ?
-        pass
+        return self.dbnode.extras
 
     def iterextras(self):
         # TODO SP: kind of the same as for extras: do we generate a key each
         # time ?
-        pass
+        return self.dbnode.extras.iteritems()
 
     def iterattrs(self, also_updatable=True):
         # TODO: check what happens if someone stores the object while
@@ -428,9 +428,13 @@ class Node(AbstractNode):
     def get_comments(self, pk=None):
         comments = self._get_dbcomments(pk)
 
-        return [
-            (c.id, c.user.email, c.ctime, c.mtime, c.content) for c in comments
-        ]
+        return [{
+            "id": c.id,
+            "user__email": c.user.email,
+            "ctime": c.ctime,
+            "mtime": c.mtime,
+            "content": c.content
+        } for c in comments ]
 
     def _get_dbcomments(self, pk=None, with_user=False):
         comments = DbComment.query.filter_by(dbnode=self._dbnode)

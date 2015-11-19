@@ -20,6 +20,7 @@ class DbComment(Base):
     mtime = Column(DateTime(timezone=True), default=timezone.now)
 
     user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete="CASCADE"))
+    user = relationship("DbUser")
 
     content = Column(Text, nullable=True)
 

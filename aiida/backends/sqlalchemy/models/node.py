@@ -57,9 +57,6 @@ class DbPath(Base):
     direct_edge_id = Column(Integer)
     exit_edge_id = Column(Integer)
 
-    __table_args__ = (
-        UniqueConstraint('parent_id', 'child_id'),
-    )
 
 
 class DbNode(Base):
@@ -172,12 +169,12 @@ class DbNode(Base):
         DbNode._set_attr(self.extras, key, value)
         flag_modified(self, "extras")
 
-    def del_attr(self, key, value):
-        DbNode._del_attr(self.attributes, key, value)
+    def del_attr(self, key):
+        DbNode._del_attr(self.attributes, key)
         flag_modified(self, "attributes")
 
-    def del_extra(self, key, value):
-        DbNode._del_attr(self.extras, key, value)
+    def del_extra(self, key):
+        DbNode._del_attr(self.extras, key)
         flag_modified(self, "extras")
 
     @staticmethod
@@ -188,7 +185,7 @@ class DbNode(Base):
         d[key] = value
 
     @staticmethod
-    def _del_attr(d, key, value):
+    def _del_attr(d, key):
         if '.' in key:
             raise ValueError("We don't know how to treat key with dot in it yet")
 

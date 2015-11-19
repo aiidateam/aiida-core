@@ -48,9 +48,9 @@ class SqlAlchemyTests(unittest.TestCase):
         email = get_configured_user_email()
 
         user = DbUser(email, "foo", "bar", "tests")
-        session.add(user)
-
-        session.commit()
+        sa.session.add(user)
+        sa.session.commit()
+        sa.session.expire_all()
 
         computer = Computer(name='localhost',
                             hostname='localhost',
@@ -95,7 +95,7 @@ class SqlAlchemyTests(unittest.TestCase):
                 # ensure that state is expired the way
                 # session.commit() at the top level normally does
                 # (optional step)
-                # session.expire_all()
+                session.expire_all()
 
                 session.begin_nested()
 

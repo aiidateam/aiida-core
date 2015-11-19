@@ -4,6 +4,8 @@ __all__ = ['delete_computer', 'django_filter', 'get_attr']
 
 from sqlalchemy import inspect
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.mapper import Mapper
+from sqlalchemy.types import Integer, Boolean
 
 from aiida.backends.sqlalchemy import session
 from aiida.common.exceptions import InvalidOperation
@@ -99,6 +101,10 @@ def django_filter(cls_query, **kwargs):
     # query.
     current_join = None
 
+
+    tmp_attr = dict(key=None, val=None)
+    tmp_extra = dict(key=None, val=None)
+
     for key in sorted(kwargs.iterkeys()):
         val = kwargs[key]
 
@@ -121,12 +127,16 @@ def django_filter(cls_query, **kwargs):
             field = splits[0]
 
         if "dbattributes" == join:
-            if field == "key":
-                q = q.filter(cls.attributes.has_key(val))
+            if "val" in field:
+                field = "val"
+            if field in ["key", "val"]:
+                tmp_attr[field] = val
             continue
         elif "dbextras" == join:
-            if field == "key":
-                q = q.filter(cls.extras.has_key(val))
+            if "val" in field:
+                field = "val"
+            if field in ["key", "val"]:
+                tmp_extra[field] = val
             continue
 
         current_cls = cls
@@ -137,12 +147,20 @@ def django_filter(cls_query, **kwargs):
 
             current_cls = filter(lambda r: r[0] == join,
                                  inspect(cls).relationships.items()
-                                 )[0][1].argument()
+                                 )[0][1].argument
+            if isinstance(current_cls, Mapper):
+                current_cls = current_cls.class_
+            else:
+                current_cls = current_cls()
+
         else:
             if current_join is not None:
                 # Filter on the queried class again
                 q = q.reset_joinpoint()
                 current_join = None
+
+        if field == "pk":
+            field = "id"
 
         filtered_field = getattr(current_cls, field)
         if not op:
@@ -154,4 +172,29 @@ def django_filter(cls_query, **kwargs):
     # We reset one last time
     q.reset_joinpoint()
 
+    key = tmp_attr["key"]
+    if key:
+        val = tmp_attr["val"]
+        if val:
+            q = q.filter(apply_json_cast(cls.attributes[key], val) == val)
+        else:
+            q = q.filter(cls.attributes.has_key(tmp_attr["key"]))
+    key = tmp_extra["key"]
+    if key:
+        val = tmp_extra["val"]
+        if val:
+            q = q.filter(apply_json_cast(cls.extras[key], val) == val)
+        else:
+            q = q.filter(cls.extras.has_key(tmp_extra["key"]))
+
     return q
+
+def apply_json_cast(attr, val):
+    if isinstance(val, basestring):
+        attr = attr.astext
+    if isinstance(val, int) or isinstance(val, long):
+        attr = attr.astext.cast(Integer)
+    if isinstance(val, bool):
+        attr = attr.astext.cast(Boolean)
+
+    return attr

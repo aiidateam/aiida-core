@@ -6,7 +6,7 @@ import unittest
 from sqlalchemy.exc import SQLAlchemyError
 
 
-from aiida.backends.sqlalchemy.models.node import DbLink, DbPath
+from aiida.backends.sqlalchemy.models.node import DbLink, DbPath, DbNode
 from aiida.backends.sqlalchemy.tests.base import SqlAlchemyTests
 
 from aiida.orm.node import Node
@@ -211,7 +211,6 @@ class TestQueryWithAiidaObjects(SqlAlchemyTests):
         self.assertEquals(set([n.uuid for n in a4.get_outputs()]),
                           set([]))
 
-    @unittest.skip("")
     def test_links_and_queries(self):
         a = Node()
         a._set_attr('myvalue', 123)
@@ -230,13 +229,13 @@ class TestQueryWithAiidaObjects(SqlAlchemyTests):
         a4._add_link_from(a2)
         a4._add_link_from(a3)
 
-        b = Node.query(pk=a2)
+        b = Node.query(id=a2.id).all()
         self.assertEquals(len(b), 1)
         # It is a aiida.orm.Node instance
         self.assertTrue(isinstance(b[0], Node))
         self.assertEquals(b[0].uuid, a2.uuid)
 
-        going_out_from_a2 = Node.query(inputs__in=b)
+        going_out_from_a2 = Node.query(inputs__id__in=[_.id for _ in b]).all()
         # Two nodes going out from a2
         self.assertEquals(len(going_out_from_a2), 2)
         self.assertTrue(isinstance(going_out_from_a2[0], Node))
@@ -246,38 +245,40 @@ class TestQueryWithAiidaObjects(SqlAlchemyTests):
         # I check that I can query also directly the django DbNode
         # class passing a aiida.orm.Node entity
 
-        going_out_from_a2_db = DbNode.objects.filter(inputs__in=b)
-        self.assertEquals(len(going_out_from_a2_db), 2)
-        self.assertTrue(isinstance(going_out_from_a2_db[0], DbNode))
-        self.assertTrue(isinstance(going_out_from_a2_db[1], DbNode))
-        uuid_set_db = set([going_out_from_a2_db[0].uuid,
-                           going_out_from_a2_db[1].uuid])
-
-        # I check that doing the query with a Node or DbNode instance,
-        # I get the same nodes
-        self.assertEquals(uuid_set, uuid_set_db)
-
-        # This time I don't use the __in filter, but I still pass a Node instance
-        going_out_from_a2_bis = Node.query(inputs=b[0])
-        self.assertEquals(len(going_out_from_a2_bis), 2)
-        self.assertTrue(isinstance(going_out_from_a2_bis[0], Node))
-        self.assertTrue(isinstance(going_out_from_a2_bis[1], Node))
-
-        # Query for links starting from b[0]==a2 using again the Node class
-        output_links_b = DbLink.objects.filter(input=b[0])
-        self.assertEquals(len(output_links_b), 2)
-        self.assertTrue(isinstance(output_links_b[0], DbLink))
-        self.assertTrue(isinstance(output_links_b[1], DbLink))
-        uuid_set_db_link = set([output_links_b[0].output.uuid,
-                                output_links_b[1].output.uuid])
-        self.assertEquals(uuid_set, uuid_set_db_link)
+        # # XXX SP: we can't do this using SqlAlchemy => pass a Node instance and
+        # # expect a filter on the DbNode id
+        # going_out_from_a2_db = DbNode.query.filter(DbNode.inputs.in_(b)).all()
+        # self.assertEquals(len(going_out_from_a2_db), 2)
+        # self.assertTrue(isinstance(going_out_from_a2_db[0], DbNode))
+        # self.assertTrue(isinstance(going_out_from_a2_db[1], DbNode))
+        # uuid_set_db = set([going_out_from_a2_db[0].uuid,
+        #                    going_out_from_a2_db[1].uuid])
+        #
+        # # I check that doing the query with a Node or DbNode instance,
+        # # I get the same nodes
+        # self.assertEquals(uuid_set, uuid_set_db)
+        #
+        # # This time I don't use the __in filter, but I still pass a Node instance
+        # going_out_from_a2_bis = Node.query(inputs=b[0]).all()
+        # self.assertEquals(len(going_out_from_a2_bis), 2)
+        # self.assertTrue(isinstance(going_out_from_a2_bis[0], Node))
+        # self.assertTrue(isinstance(going_out_from_a2_bis[1], Node))
+        #
+        # # Query for links starting from b[0]==a2 using again the Node class
+        # output_links_b = DbLink.query.filter_by(input=b[0])
+        # self.assertEquals(len(output_links_b), 2)
+        # self.assertTrue(isinstance(output_links_b[0], DbLink))
+        # self.assertTrue(isinstance(output_links_b[1], DbLink))
+        # uuid_set_db_link = set([output_links_b[0].output.uuid,
+        #                         output_links_b[1].output.uuid])
+        # self.assertEquals(uuid_set, uuid_set_db_link)
 
 
         # Query for related fields using django syntax
         # Note that being myvalue an attribute, it is internally stored starting
         # with an underscore
         nodes_with_given_attribute = Node.query(dbattributes__key='myvalue',
-                                                dbattributes__ival=145)
+                                                dbattributes__ival=145).all()
         # should be entry a3
         self.assertEquals(len(nodes_with_given_attribute), 1)
         self.assertTrue(isinstance(nodes_with_given_attribute[0], Node))

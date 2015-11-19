@@ -498,6 +498,10 @@ class Node(AbstractNode):
         return self.dbnode.id
 
     @property
+    def id(self):
+        return self.dbnode.id
+
+    @property
     def dbnode(self):
         return self._dbnode
 

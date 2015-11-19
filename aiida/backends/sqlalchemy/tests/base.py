@@ -2,6 +2,7 @@
 
 import unittest
 import functools
+import shutil
 
 
 from sqlalchemy import create_engine, event
@@ -77,6 +78,12 @@ class SqlAlchemyTests(unittest.TestCase):
     def tearDownClass(cls):
         # Clean what we added before
         cls.connection.close()
+        config = get_profile_config("tests")
+        repo_dir = config["AIIDADB_REPOSITORY_URI"]
+        # We only treat the case where its a folder
+        if repo_dir.startswith("file://"):
+            repo_dir = repo_dir.split("file://")[-1]
+            shutil.rmtree(repo_dir)
 
     def setUp(self):
         connec = self.__class__.connection

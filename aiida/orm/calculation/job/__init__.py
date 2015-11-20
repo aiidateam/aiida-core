@@ -1432,7 +1432,7 @@ class JobCalculation(Calculation):
                 raise PluginInternalError("CalcInfo should have "
                                           "the information of the code "
                                           "to be launched")
-            this_code = load_node(code_info.code_uuid, parent_calc=Code)
+            this_code = load_node(code_info.code_uuid, parent_class=Code)
             
             this_withmpi = code_info.withmpi    # to decide better how to set the default
             if this_withmpi is None:

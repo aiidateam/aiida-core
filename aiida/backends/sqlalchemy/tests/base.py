@@ -57,7 +57,7 @@ class SqlAlchemyTests(unittest.TestCase):
                             hostname='localhost',
                             transport_type='local',
                             scheduler_type='pbspro',
-                            workdir='/tmp/aiida')
+                            workdir='/tmp/aiida_tests')
         computer.store()
 
         session.close()
@@ -83,13 +83,19 @@ class SqlAlchemyTests(unittest.TestCase):
         # We only treat the case where its a folder
         if repo_dir.startswith("file://"):
             repo_dir = repo_dir.split("file://")[-1]
-            shutil.rmtree(repo_dir)
+            try:
+                shutil.rmtree(repo_dir)
+            except OSError:
+                # If the folder doesn't exist, we don't care
+                pass
 
     def setUp(self):
         connec = self.__class__.connection
         self.trans = connec.begin()
         self.session = Session(bind=connec)
         sa.session = self.session
+
+        self.computer = DbComputer.query.filter_by(name="localhost").first()
 
 
         self.session.begin_nested()

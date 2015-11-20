@@ -64,6 +64,7 @@ class JobCalculation(AbstractJobCalculation):
         try:
             new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
         except SQLAlchemyError:
+            self.dbnode.session.rollback()
             raise ModificationNotAllowed("Calculation pk= {} already transited through "
                                          "the state {}".format(self.pk, state))
 
@@ -174,10 +175,8 @@ class JobCalculation(AbstractJobCalculation):
                 now = timezone.now()
                 n_days_ago = now - datetime.timedelta(days=past_days)
                 filters["ctime__gte"] = n_days_ago
-            # TODO SP: attributes
-            # if states is not None:
-            #     q_object.add(Q(dbattributes__key='state',
-            #                    dbattributes__tval__in=states, ), Q.AND)
+            if states is not None:
+                filters['dbattributes']['state'] = states
 
         q = cls.query(**filters)
 

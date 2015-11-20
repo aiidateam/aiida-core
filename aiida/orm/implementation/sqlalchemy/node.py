@@ -331,24 +331,29 @@ class Node(AbstractNode):
                 raise ModificationNotAllowed("Cannot delete an attribute after "
                                                 "saving a node")
 
-    def get_attr(self, key, default=None):
+    def get_attr(self, key, *args):
         exception = AttributeError("Attribute '{}' does not exist".format(key))
+        if len(args) > 1:
+            raise ValueError("After the key name you can pass at most one"
+                             "value, that is the default value to be used "
+                             "if no attribute is found.")
+        has_default = len(args) == 1
+        if has_default:
+            default = args[0]
         if self._to_be_stored:
             try:
                 return self._attrs_cache[key]
             except KeyError:
-                if default:
+                if has_default:
                     return default
                 raise exception
         else:
             try:
                 return get_attr(self.dbnode.attributes, key)
             except (KeyError, IndexError) as e:
-                if default:
+                if has_default:
                     return default
                 else:
-                    # little tweek to be consistent with the expected
-                    # exception
                     raise exception
 
     def set_extra(self, key, value):

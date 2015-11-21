@@ -61,13 +61,13 @@ def load_profile(process=None, profile=None):
         if profile is not None:
             raise ValueError("You are specifying a profile, but the "
                              "settings.AIIDADB_PROFILE is already set")
+    else:
+        if profile is not None:
+            the_profile = profile
         else:
-            if profile is not None:
-                the_profile = profile
-            else:
-                the_profile = get_default_profile(
-                    settings.CURRENT_AIIDADB_PROCESS)
-            settings.AIIDADB_PROFILE = the_profile
+            the_profile = get_default_profile(
+                settings.CURRENT_AIIDADB_PROCESS)
+        settings.AIIDADB_PROFILE = the_profile
 
 
 def load_dbenv(process=None, profile=None):

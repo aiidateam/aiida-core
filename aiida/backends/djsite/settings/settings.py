@@ -9,7 +9,7 @@ from aiida.common.exceptions import ConfigurationError
 # get_property is used to read properties stored in the config json
 from aiida.common.setup import (get_config, get_secret_key, get_property,
                                 get_profile_config, parse_repository_uri)
-from aiida.backends.settings import AIIDADB_PROFILE
+from aiida.backends import settings
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 
@@ -27,11 +27,11 @@ try:
 except ConfigurationError:
     raise ConfigurationError("Please run the AiiDA Installation, no config found")
 
-if AIIDADB_PROFILE is None:
-    raise ConfigurationError("AIIDADB_PROFILE not defined, did you load django"
+if settings.AIIDADB_PROFILE is None:
+    raise ConfigurationError("settings.AIIDADB_PROFILE not defined, did you load django"
                              "through the AiiDA load_dbenv()?")
 
-profile_conf = get_profile_config(AIIDADB_PROFILE, conf_dict=confs)
+profile_conf = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)
 
 # put all database specific portions of settings here
 DBENGINE = profile_conf.get('AIIDADB_ENGINE', '')

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
-from aiida import settings
 
+from aiida.backends.settings import BACKEND
 
-if settings.BACKEND == "sqlalchemy":
+if BACKEND == "sqlalchemy":
     from aiida.backends.sqlalchemy.utils import get_automatic_user
-elif settings.BACKEND == "django":
+elif BACKEND == "django":
     from aiida.backends.djsite.utils import get_automatic_user
     from aiida.backends.djsite.cmdline import (
         get_group_list, get_workflow_list, get_log_messages

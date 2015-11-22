@@ -962,6 +962,7 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        load_dbenv()
         from aiida.orm.data.structure import StructureData
 
         self.dataclass = StructureData
@@ -976,7 +977,6 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         Perform the query
         """
-        load_dbenv()
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q

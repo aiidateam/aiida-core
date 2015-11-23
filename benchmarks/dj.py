@@ -37,7 +37,7 @@ def build_query_attr(filter_):
     pks = models.DbAttribute.objects.filter(
         dbnode__in=nodes, key__startswith=filter_
     ).distinct().values_list(
-        'dbnode__pk', 'key', 'datatype', 'tval', 'ival', 'bval', 'dval').distinct()
+        'dbnode__pk', 'key', 'datatype', 'tval', 'fval', 'ival', 'bval', 'dval').distinct()
     # Unnecessary distinct at the end ?
 
     return lambda: build_deserialized_dict(pks)

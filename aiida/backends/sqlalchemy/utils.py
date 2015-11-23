@@ -112,7 +112,7 @@ def dumps_json(d):
         return v
 
     # return json.dumps(f(d))
-    return ujson.dumps(f(d))
+    return ujson.dumps(f(d), double_precision=15)
 
 def loads_json(s):
     """

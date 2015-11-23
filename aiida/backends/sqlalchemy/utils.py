@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import ujson
-import simplejson as json
+# import simplejson as json
 import datetime
 from dateutil import parser
 
@@ -135,7 +135,7 @@ def loads_json(s):
             # that the date is in a parsable format.
             try:
                 return parser.parse(d)
-            except ValueError:
+            except (ValueError, TypeError):
                 return d
         return d
 

@@ -3,7 +3,7 @@
 import math
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship, subqueryload, joinedload
+from sqlalchemy.orm import relationship, subqueryload, joinedload, load_only
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text, Float
 from sqlalchemy.sql.expression import func
@@ -116,36 +116,57 @@ def select_from_key(key, d):
 
     return tmp_d
 
-def create_columns():
+def print_debug(debug, m):
+    if debug:
+        print(m)
+
+def create_columns(debug=False):
     table = 'db_dbnode'
     verify_stmt = "SELECT column_name FROM information_schema.columns WHERE table_name='{}' AND column_name='{}'"
 
     attributes = sa.session.execute(verify_stmt.format(table, 'attributes'))
     if not attributes.scalar():
+        print_debug(debug, "Creating attributes column")
         sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN attributes JSONB DEFAULT \'{}\'')
 
     extras = sa.session.execute(verify_stmt.format(table, 'extras'))
     if not extras.scalar():
+        print_debug(debug, "Creating extras column")
         sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN extras JSONB DEFAULT \'{}\'')
 
 
-def migrate_extras(create_column=False, profile=None):
+def migrate_extras(create_column=False, profile=None, group_size=1000, debug=False):
     if not is_dbenv_loaded():
         load_dbenv(profile=profile)
+    print_debug(debug, "Starting migration")
 
     with sa.session.begin(subtransactions=True):
         if create_column:
-            create_columns()
+            print_debug(debug, "Creating columns..")
+            create_columns(debug)
         from aiida.backends.sqlalchemy.models.node import DbNode
-        nodes = DbNode.query.options(subqueryload('old_extras')).all()
+        total_nodes = sa.session.query(func.count(DbNode.id)).scalar()
 
+        total_groups = int(math.ceil(total_nodes/float(group_size)))
         error = False
-        for node in nodes:
-            attrs, err_ = attributes_to_dict(sorted(node.old_extras, key=lambda a: a.key))
-            error |= err_
 
-            node.extras = attrs
-            sa.session.add(node)
+        for i in xrange(total_groups):
+
+            print_debug(debug, "Migrating group {} of {}".format(i, total_groups))
+            nodes = DbNode.query.options(
+                subqueryload('old_extras'), load_only('id', 'extras')
+            ).order_by(DbNode.id)[i*group_size:(i+1)*group_size]
+
+
+            for node in nodes:
+                attrs, err_ = attributes_to_dict(sorted(node.old_extras, key=lambda a: a.key))
+                error |= err_
+
+                node.extras = attrs
+                sa.session.add(node)
+
+            sa.session.flush()
+            sa.session.expunge_all()
 
         if error:
             cont_s = raw_input("There has been some errors during the migration. Do you want to continue ? [y/N] ")
@@ -157,26 +178,41 @@ def migrate_extras(create_column=False, profile=None):
     sa.session.commit()
 
 
-def migrate_attributes(create_column=False, profile=None):
+def migrate_attributes(create_column=False, profile=None, group_size=1000, debug=False):
     if not is_dbenv_loaded():
         load_dbenv(profile=profile)
+    print_debug(debug, "Starting migration")
 
     with sa.session.begin(subtransactions=True):
         if create_column:
-            create_columns()
+            print_debug(debug, "Creating columns..")
+            create_columns(debug)
         from aiida.backends.sqlalchemy.models.node import DbNode
-        nodes = DbNode.query.options(subqueryload('old_attrs')).all()
+        total_nodes = sa.session.query(func.count(DbNode.id)).scalar()
 
+        total_groups = int(math.ceil(total_nodes/float(group_size)))
         error = False
-        for node in nodes:
-            attrs, err_ = attributes_to_dict(sorted(node.old_attrs, key=lambda a: a.key))
-            error |= err_
 
-            node.attributes = attrs
-            sa.session.add(node)
+        for i in xrange(total_groups):
+            print_debug(debug, "Migrating group {} of {}".format(i, total_groups))
+
+            nodes = DbNode.query.options(
+                subqueryload('old_attrs'), load_only('id', 'attributes')
+            ).order_by(DbNode.id)[i*group_size:(i+1)*group_size]
+
+
+            for node in nodes:
+                attrs, err_ = attributes_to_dict(sorted(node.old_attrs, key=lambda a: a.key))
+                error |= err_
+
+                node.attributes = attrs
+                sa.session.add(node)
+
+            sa.session.flush()
+            sa.session.expunge_all()
 
         if error:
-            cont_s = raw_input("There has been some errorss during the migration. Do you want to continue ? [y/N] ")
+            cont_s = raw_input("There has been some errors during the migration. Do you want to continue ? [y/N] ")
             cont = cont_s.lower() == "y"
             if not cont:
                 sa.session.rollback()

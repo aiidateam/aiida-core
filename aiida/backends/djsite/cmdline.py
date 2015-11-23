@@ -8,22 +8,21 @@ import json
 from django.db.models import Q
 
 from aiida.common.datastructures import wf_states
-from aiida.orm.calculation.job import JobCalculation
-from aiida.orm.implementation.django.group import Group
-from aiida.backends.djsite.db.models import DbWorkflow, DbLog, DbAttribute
 from aiida.utils import timezone
 from aiida.utils.logger import get_dblogger_extra
 
 def get_group_list(user, type_string, n_days_ago=None,
                    name_filters={}):
+    from aiida.orm.implementation.django.group import Group
 
-    name_filters = { "name__" + k: v for (k, v) in name_filters.iteritems() if v}
+    name_filters = {"name__" + k: v for (k, v) in name_filters.iteritems() if v}
 
     if n_days_ago:
         n_days_ago = timezone.now() - datetime.timedelta(days=n_days_ago)
 
-    groups = Group.query(user=user, type_string=type_string, past_days=n_days_ago,
-                        **name_filters)
+    groups = Group.query(user=user, type_string=type_string,
+                         past_days=n_days_ago,
+                         **name_filters)
 
     return tuple([
         (str(g.pk), g.name, len(g.nodes), g.user.email.strip(), g.description)
@@ -34,6 +33,9 @@ def get_workflow_list(pk_list=[], user=None, all_states=False, n_days_ago=None):
     """
     Get a list of workflow.
     """
+
+    from aiida.backends.djsite.db.models import DbWorkflow
+
     if pk_list:
         filters = Q(pk__in=pk_list)
     else:
@@ -56,6 +58,7 @@ def get_log_messages(obj):
     """
     Get the log messages for the object.
     """
+    from aiida.backends.djsite.db.models import DbLog
     extra = get_dblogger_extra(obj)
     # convert to list, too
     log_messages = list(DbLog.objects.filter(**extra).order_by('time').values(
@@ -75,10 +78,13 @@ def get_valid_job_calculation(user=None, pk_list=[], n_days_after=None,
     Currently, this also select the associated computer with it.
     """
 
+    from aiida.orm.calculation.job import JobCalculation
+    from aiida.backends.djsite.db.models import DbAttribute
+
     valid_states = [calc_states.FINISHED, calc_states.RETRIEVALFAILED,
                     calc_states.PARSINGFAILED, calc_states.FAILED]
 
-    attributes_filter = models.DbAttribute.objects.filter(key='state',
+    attributes_filter = DbAttribute.objects.filter(key='state',
                                                           tval__in=valid_states)
     # NOTE: IMPORTED state is not a dbattribute so won't be filtered out
     # at this stage, but this case should be sorted out later when we try
@@ -105,6 +111,8 @@ def get_valid_job_calculation(user=None, pk_list=[], n_days_after=None,
                     .distinct().order_by('mtime')
                     .select_related("dbcomputer"))
 
+    return calculations
+
 
 def get_computers_work_dir(calculations, user):
     """
@@ -112,6 +120,9 @@ def get_computers_work_dir(calculations, user):
 
    `calculations` should be a list of JobCalculation object.
     """
+
+    from aiida.orm.computer import Computer
+    from aiida.execmanager import get_authinfo
 
     computers = [Computer.get(c.dbcomputer) for c in calculations]
 
@@ -121,5 +132,7 @@ def get_computers_work_dir(calculations, user):
             'transport': get_authinfo(computer=computer, aiidauser=user).get_transport(),
             'computer': computer,
         }
+
+    return remotes
 
 

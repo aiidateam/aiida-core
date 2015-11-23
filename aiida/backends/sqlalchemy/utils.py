@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import ujson
+import simplejson as json
+import datetime
+from dateutil import parser
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -47,7 +52,9 @@ def load_dbenv(process=None, profile=None, connection=None):
     if not connection:
         engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
                       "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
-        engine = create_engine(engine_url)
+        engine = create_engine(engine_url,
+                               json_serializer=dumps_json,
+                               json_deserializer=loads_json)
         Session = sessionmaker(bind=engine)
         sqlalchemy.session = Session()
     else:
@@ -90,6 +97,51 @@ def get_configured_user_email():
     return email
 
 
+def dumps_json(d):
+    """
+    Transforms all datetime object into isoformat and then returns the JSON
+    """
+
+    def f(v):
+        if isinstance(v, list):
+            return [f(_) for _ in v]
+        elif isinstance(v, dict):
+            return dict((key, f(val)) for key, val in v.iteritems())
+        elif isinstance(v, datetime.datetime):
+            return v.isoformat()
+        return v
+
+    # return json.dumps(f(d))
+    return ujson.dumps(f(d))
+
+def loads_json(s):
+    """
+    Loads the json and try to parse each basestring as a datetime object
+    """
+
+    # TODO: use the object_hook mecanism instead ?
+    # ret = json.loads(s)
+    ret = ujson.loads(s)
+
+    def f(d):
+        if isinstance(d, list):
+            return [f(_) for _ in d]
+        elif isinstance(d, dict):
+            for k, v in d.iteritems():
+                d[k] = f(v)
+            return d
+        elif isinstance(d, basestring):
+            # XXX: it might be faster to first check with a precompiled regex
+            # that the date is in a parsable format.
+            try:
+                return parser.parse(d)
+            except ValueError:
+                return d
+        return d
+
+    return f(ret)
+
+
 def install_tc(session):
     links_table_name = "db_dblink"
     links_table_input_field = "input_id"
@@ -102,10 +154,6 @@ def install_tc(session):
                               links_table_output_field, closure_table_name,
                               closure_table_parent_field,
                               closure_table_child_field))
-
-#====================================
-#   Postgresql Transive Closure
-#====================================
 
 def get_pg_tc(links_table_name,
               links_table_input_field,

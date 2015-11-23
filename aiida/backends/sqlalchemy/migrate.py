@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import math
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, subqueryload, joinedload
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text, Float
+from sqlalchemy.sql.expression import func
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base
@@ -55,8 +57,16 @@ def attributes_to_dict(attr_list):
     """
     d = {}
 
+    error = False
     for a in attr_list:
-        tmp_d = select_from_key(a.key, d)
+        try:
+            tmp_d = select_from_key(a.key, d)
+        except Exception:
+            # TODO SP: handle this correctly. At least log them
+            print("Couldn't transfer attribute {} with key {} for dbnode {}"
+                  .format(a.id, a.key, a.dbnode_id))
+            error = True
+            continue
         key = a.key.split('.')[-1]
 
         if key.isdigit():
@@ -65,36 +75,30 @@ def attributes_to_dict(attr_list):
         dt = a.datatype
 
         if dt == "dict":
-            if isinstance(tmp_d, list):
-                tmp_d.append({})
-            else:
-                tmp_d[key] = {}
+            tmp_d[key] = {}
         elif dt == "list":
-            # Handle list of list
-            if isinstance(tmp_d, list):
-                tmp_d.append([])
-            else:
-                tmp_d[key] = []
+            tmp_d[key] = [None] * a.ival
         else:
             val = None
             if dt == "txt":
                 val = a.tval
             elif dt == "float":
                 val = a.fval
+                if math.isnan(val):
+                    val = 'NaN'
             elif dt == "int":
                 val = a.ival
             elif dt == "bool":
                 val = a.bval
-            else:
-                # It's a datetime, we will handle this later
-                continue
+            elif dt == "date":
+                val = a.dval
 
             if isinstance(tmp_d, list):
                 tmp_d.append(val)
             else:
                 tmp_d[key] = val
 
-    return d
+    return (d, error)
 
 def select_from_key(key, d):
     """
@@ -123,14 +127,22 @@ def migrate_extras(create_column=False):
             sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN extras JSONB DEFAULT \'{}\'')
         nodes = DbNode.query.options(subqueryload('old_extras')).all()
 
+        error = False
         for node in nodes:
-            attrs = attributes_to_dict(sorted(node.old_extras, key=lambda a: a.key))
+            attrs, err_ = attributes_to_dict(sorted(node.old_extras, key=lambda a: a.key))
+            error |= err_
 
             node.extras = attrs
             sa.session.add(node)
 
-    sa.session.commit()
+        if error:
+            cont_s = raw_input("There has been some errors during the migration. Do you want to continue ? [y/N] ")
+            cont = cont_s.lower() == "y"
+            if not cont:
+                sa.session.rollback()
+                return
 
+    sa.session.commit()
 
 
 def migrate_attributes(create_column=False):
@@ -143,11 +155,20 @@ def migrate_attributes(create_column=False):
             sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN attributes JSONB DEFAULT \'{}\'')
         nodes = DbNode.query.options(subqueryload('old_attrs')).all()
 
+        error = False
         for node in nodes:
-            attrs = attributes_to_dict(sorted(node.old_attrs, key=lambda a: a.key))
+            attrs, err_ = attributes_to_dict(sorted(node.old_attrs, key=lambda a: a.key))
+            error |= err_
 
             node.attributes = attrs
             sa.session.add(node)
+
+        if error:
+            cont_s = raw_input("There has been some errorss during the migration. Do you want to continue ? [y/N] ")
+            cont = cont_s.lower() == "y"
+            if not cont:
+                sa.session.rollback()
+                return
 
     sa.session.commit()
 

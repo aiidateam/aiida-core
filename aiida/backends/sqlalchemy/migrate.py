@@ -117,9 +117,9 @@ def select_from_key(key, d):
     return tmp_d
 
 
-def migrate_extras(create_column=False):
+def migrate_extras(create_column=False, profile=None):
     if not is_dbenv_loaded():
-        load_dbenv()
+        load_dbenv(profile=profile)
     from aiida.backends.sqlalchemy.models.node import DbNode
 
     with sa.session.begin(subtransactions=True):
@@ -145,9 +145,9 @@ def migrate_extras(create_column=False):
     sa.session.commit()
 
 
-def migrate_attributes(create_column=False):
+def migrate_attributes(create_column=False, profile=None):
     if not is_dbenv_loaded():
-        load_dbenv()
+        load_dbenv(profile=profile)
     from aiida.backends.sqlalchemy.models.node import DbNode
 
     with sa.session.begin(subtransactions=True):

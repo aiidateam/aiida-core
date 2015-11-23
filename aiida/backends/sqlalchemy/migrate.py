@@ -93,10 +93,7 @@ def attributes_to_dict(attr_list):
             elif dt == "date":
                 val = a.dval
 
-            if isinstance(tmp_d, list):
-                tmp_d.append(val)
-            else:
-                tmp_d[key] = val
+            tmp_d[key] = val
 
     return (d, error)
 

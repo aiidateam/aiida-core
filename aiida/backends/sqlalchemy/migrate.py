@@ -116,15 +116,27 @@ def select_from_key(key, d):
 
     return tmp_d
 
+def create_columns():
+    table = 'db_dbnode'
+    verify_stmt = "SELECT column_name FROM information_schema.columns WHERE table_name='{}' AND column_name='{}'"
+
+    attributes = sa.session.execute(verify_stmt.format(table, 'attributes'))
+    if not attributes.scalar():
+        sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN attributes JSONB DEFAULT \'{}\'')
+
+    extras = sa.session.execute(verify_stmt.format(table, 'extras'))
+    if not extras.scalar():
+        sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN extras JSONB DEFAULT \'{}\'')
+
 
 def migrate_extras(create_column=False, profile=None):
     if not is_dbenv_loaded():
         load_dbenv(profile=profile)
-    from aiida.backends.sqlalchemy.models.node import DbNode
 
     with sa.session.begin(subtransactions=True):
         if create_column:
-            sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN extras JSONB DEFAULT \'{}\'')
+            create_columns()
+        from aiida.backends.sqlalchemy.models.node import DbNode
         nodes = DbNode.query.options(subqueryload('old_extras')).all()
 
         error = False
@@ -148,11 +160,11 @@ def migrate_extras(create_column=False, profile=None):
 def migrate_attributes(create_column=False, profile=None):
     if not is_dbenv_loaded():
         load_dbenv(profile=profile)
-    from aiida.backends.sqlalchemy.models.node import DbNode
 
     with sa.session.begin(subtransactions=True):
         if create_column:
-            sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN attributes JSONB DEFAULT \'{}\'')
+            create_columns()
+        from aiida.backends.sqlalchemy.models.node import DbNode
         nodes = DbNode.query.options(subqueryload('old_attrs')).all()
 
         error = False

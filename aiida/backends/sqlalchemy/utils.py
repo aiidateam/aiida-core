@@ -5,6 +5,8 @@ import ujson
 import datetime
 from dateutil import parser
 
+import re
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -114,6 +116,8 @@ def dumps_json(d):
     # return json.dumps(f(d))
     return ujson.dumps(f(d), double_precision=15)
 
+date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
+
 def loads_json(s):
     """
     Loads the json and try to parse each basestring as a datetime object
@@ -133,10 +137,12 @@ def loads_json(s):
         elif isinstance(d, basestring):
             # XXX: it might be faster to first check with a precompiled regex
             # that the date is in a parsable format.
-            try:
-                return parser.parse(d)
-            except (ValueError, TypeError):
-                return d
+            if date_reg.match(d)
+                try:
+                    return parser.parse(d)
+                except (ValueError, TypeError):
+                    return d
+            return d
         return d
 
     return f(ret)

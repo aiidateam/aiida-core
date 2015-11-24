@@ -22,11 +22,13 @@ INDEX_NAME = "dbnode_attributes_idx"
 def delete_gin_index():
     delete = "DROP INDEX IF EXISTS {};".format(INDEX_NAME)
     sa.session.execute(delete)
+    sa.session.commit()
     _vacuum_analyaze()
 
 def create_gin_index():
     insert = "CREATE INDEX {} ON db_dbnode USING gin(attributes);".format(INDEX_NAME)
     sa.session.execute(insert)
+    sa.session.commit()
     _vacuum_analyaze()
 
 def _vacuum_analyaze():

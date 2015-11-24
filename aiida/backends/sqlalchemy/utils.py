@@ -137,7 +137,7 @@ def loads_json(s):
         elif isinstance(d, basestring):
             # XXX: it might be faster to first check with a precompiled regex
             # that the date is in a parsable format.
-            if date_reg.match(d)
+            if date_reg.match(d):
                 try:
                     return parser.parse(d)
                 except (ValueError, TypeError):

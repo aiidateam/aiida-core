@@ -169,6 +169,8 @@ Manages database data objects.
 
     * **import**: create or return (if already present) a database node,
       having the contents of a supplied file
+
+    * **exportfamily**: export a family of pseudopotential files into a folder
   
   * **structure**: handles the StructureData
   

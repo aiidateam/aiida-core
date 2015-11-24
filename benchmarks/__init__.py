@@ -44,6 +44,25 @@ benchmarking JSON, so we will leave them for later.
 
 import argparse
 import time
+from collections import namedtuple
+
+class Result(namedtuple("Result", "length first_run mean mean_minus_first")):
+    __slots__ = ()
+
+    def __new__(cls, length, first_run, mean=None, mean_minus_first=None):
+        return super(cls, Result).__new__(cls, length, first_run, mean,
+                                          mean_minus_first)
+
+    def __str__(self):
+        s = ("  - Length: {length}\n"
+             "  - First: {first}")
+        if self.mean:
+            s += "\n  - Mean: {mean}"
+        if self.mean_minus_first:
+            s += "\n  - Mean minus first: {mean_minus_first}"
+
+        return s.format(length=self.length, first=self.first_run,
+                        mean=self.mean, mean_minus_first=self.mean_minus_first)
 
 from aiida.backends.profile import load_profile
 
@@ -67,15 +86,21 @@ def time_it(f, n=10):
     times = []
     for _ in xrange(n):
         start = time.time()
-        f()
+        res = f()
         end = time.time()
         times.append(end - start)
+    size = len(res)
 
-    ret = (times[0],)
+    ret = {
+        "length": size,
+        "first_run": times[0],
+    }
+
     if n > 1:
-        ret = tuple([ret[0], sum(times)/len(times), sum(times[1:])/len(times)])
+        ret["mean"] = sum(times)/len(times)
+        ret["mean_minus_first"] = sum(times[1:])/len(times[1:])
 
-    return ret
+    return Result(**ret)
 
 
 if __name__ == "__main__":
@@ -104,10 +129,8 @@ if __name__ == "__main__":
     for key, q in queries.iteritems():
         print('Running queries "{}":'.format(key))
         for name, query in q.iteritems():
-            first, mean, mean_minus_first = time_it(query)
             print('  Query "{}":'.format(name))
-            print('   - First: {}'.format(first))
-            print('   - Mean: {}'.format(mean))
-            print('   - Mean minus first: {}'.format(mean_minus_first))
+            res = time_it(query)
+            print(res)
 
 

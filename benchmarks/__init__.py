@@ -44,6 +44,7 @@ benchmarking JSON, so we will leave them for later.
 
 import argparse
 import time
+
 from collections import namedtuple
 
 class Result(namedtuple("Result", "length first_run mean mean_minus_first")):
@@ -119,10 +120,12 @@ if __name__ == "__main__":
 
     parser.add_argument('--gin-index', dest='gin_index', default=False,
                         action='store_true', help="add a gin index to attributes")
+    parser.add_argument('--delete-gin-index', dest='delete_gin_index', default=False,
+                        action='store_true', help="delete the gin index if existing")
 
     args = parser.parse_args()
 
-    if args.backend != "sqlalchemy" and args.gin_index:
+    if args.backend != "sqlalchemy" and (args.gin_index or args.delete_gin_index):
         raise parser.error("You can't use a GIN index with Django.")
 
     load_profile(profile=profiles[args.backend])
@@ -133,11 +136,15 @@ if __name__ == "__main__":
     if args.backend == "django":
         from dj import queries
     else:
-        from sqla import queries, recreate_gin_index
+        from sqla import queries, create_gin_index, delete_gin_index
+        from aiida.backends import sqlalchemy as sa
 
+    if args.delete_gin_index:
+        print('Deleting GIN index on attributes..')
+        delete_gin_index()
     if args.gin_index:
         print('Recreating GIN index on attributes..')
-        recreate_gin_index()
+        create_gin_index()
 
 
     for key, q in queries.iteritems():

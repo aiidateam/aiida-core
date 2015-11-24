@@ -112,7 +112,10 @@ if __name__ == "__main__":
                         help="backend to use")
 
     parser.add_argument('-r', '--reboot', dest='reboot', action='store_true',
-                        default=False)
+                        default=False, help='reboot the database between queries')
+
+    parser.add_argument('-n', dest='times', default=10, type=int,
+                        help='number of times to run each query')
 
     args = parser.parse_args()
 
@@ -130,7 +133,7 @@ if __name__ == "__main__":
         print('Running queries "{}":'.format(key))
         for name, query in q.iteritems():
             print('  Query "{}":'.format(name))
-            res = time_it(query)
+            res = time_it(query, n=args.times)
             print(res)
 
 

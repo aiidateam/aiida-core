@@ -117,7 +117,13 @@ if __name__ == "__main__":
     parser.add_argument('-n', dest='times', default=10, type=int,
                         help='number of times to run each query')
 
+    parser.add_argument('--gin-index', dest='gin_index', default=False,
+                        action='store_true', help="add a gin index to attributes")
+
     args = parser.parse_args()
+
+    if args.backend != "sqlalchemy" and args.gin_index:
+        raise parser.error("You can't use a GIN index with Django.")
 
     load_profile(profile=profiles[args.backend])
 
@@ -127,7 +133,12 @@ if __name__ == "__main__":
     if args.backend == "django":
         from dj import queries
     else:
-        from sqla import queries
+        from sqla import queries, recreate_gin_index
+
+    if args.gin_index:
+        print('Recreating GIN index on attributes..')
+        recreate_gin_index()
+
 
     for key, q in queries.iteritems():
         print('Running queries "{}":'.format(key))

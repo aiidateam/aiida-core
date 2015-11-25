@@ -127,11 +127,21 @@ if __name__ == "__main__":
                         help="group of queries to run")
     parser.add_argument('-q', '--query', dest='query',
                         help="specify the query to run")
+    parser.add_argument('--bprofile', dest='bprofile',
+                        help="store the bprofile output into the specified file")
 
     args = parser.parse_args()
 
     if args.backend != "sqlalchemy" and (args.gin_index or args.delete_gin_index):
         raise parser.error("You can't use a GIN index with Django.")
+
+    if args.bprofile:
+        from bprofile import BProfile
+        profiler = lambda: BProfile(args.bprofile)
+    else:
+        from contextlib import contextmanager
+        # noop context manager
+        profiler = contextmanager(lambda: (yield))
 
     load_profile(profile=profiles[args.backend])
 
@@ -142,7 +152,6 @@ if __name__ == "__main__":
         from dj import queries
     else:
         from sqla import queries, create_gin_index, delete_gin_index
-        from aiida.backends import sqlalchemy as sa
 
     if args.delete_gin_index:
         print('Deleting GIN index on attributes..')
@@ -152,6 +161,7 @@ if __name__ == "__main__":
         create_gin_index()
 
 
+    print('Start of benchmarking..')
     for key, q in queries.iteritems():
         if args.group and args.group != key:
             continue
@@ -160,7 +170,8 @@ if __name__ == "__main__":
             if args.query and args.query != name:
                 continue
             print('  Query "{}":'.format(name))
-            res = time_it(query, n=args.times)
+            with profiler():
+                res = time_it(query, n=args.times)
             print(res)
 
 

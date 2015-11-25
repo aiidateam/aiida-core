@@ -123,6 +123,11 @@ if __name__ == "__main__":
     parser.add_argument('--delete-gin-index', dest='delete_gin_index', default=False,
                         action='store_true', help="delete the gin index if existing")
 
+    parser.add_argument('-g', '--group', dest='group',
+                        help="group of queries to run")
+    parser.add_argument('-q', '--query', dest='query',
+                        help="specify the query to run")
+
     args = parser.parse_args()
 
     if args.backend != "sqlalchemy" and (args.gin_index or args.delete_gin_index):
@@ -148,8 +153,12 @@ if __name__ == "__main__":
 
 
     for key, q in queries.iteritems():
+        if args.group and args.group != key:
+            continue
         print('Running queries "{}":'.format(key))
         for name, query in q.iteritems():
+            if args.query and args.query != name:
+                continue
             print('  Query "{}":'.format(name))
             res = time_it(query, n=args.times)
             print(res)

@@ -5,17 +5,25 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.group import DbGroup
 
+BEGIN_GROUP = 'N_elements_'
+END_GROUP = '_clean_cif_primitive_dup_filtered'
 
 def build_query_attr(filter_):
-    begin_group = 'N_elements_'
-    end_group = '_clean_cif_primitive_dup_filtered'
-
     q = DbNode.query.join(DbGroup, DbNode.dbgroups).filter(
         DbNode.attributes.has_key(filter_),
-        DbGroup.name.like("{}%{}".format(begin_group, end_group))
+        DbGroup.name.like("{}%{}".format(BEGIN_GROUP, END_GROUP))
     )
 
-    return lambda : q.all()
+    return lambda: q.all()
+
+def build_query_attr_only(filter_):
+    q = (sa.session.query(DbNode.attributes[filter_])
+         .join(DbGroup, DbNode.dbgroups)
+         .filter(DbGroup.name.like("{}%{}".format(BEGIN_GROUP, END_GROUP)))
+         .filter(DbNode.attributes.has_key(filter_)))
+
+    return lambda: q.all()
+
 
 INDEX_NAME = "dbnode_attributes_idx"
 
@@ -43,7 +51,12 @@ queries = {
     "attributes": {
         'kinds': build_query_attr('kinds'),
         'sites': build_query_attr('sites'),
-        'cell:': build_query_attr('cell')
+        'cell': build_query_attr('cell'),
+    },
+    "attributes_only": {
+        'kinds': build_query_attr_only('kinds'),
+        'sites': build_query_attr_only('sites'),
+        'cell': build_query_attr_only('cell'),
     }
 }
 

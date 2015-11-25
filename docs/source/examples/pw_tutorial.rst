@@ -107,7 +107,7 @@ Where in the last line we just load the database object representing the code.
 
   or even more generally get the code from its (integer) PK::
     
-    code = Code.get_subclass_from_pk(PK)
+    code = load_node(PK)
 
 Structure
 ---------

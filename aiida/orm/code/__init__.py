@@ -147,11 +147,12 @@ class Code(Node):
             a code
         """
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.orm import load_node
 
         try:
             code_int = int(code_string)
             try:
-                return cls.get_subclass_from_pk(code_int)
+                return load_node(code_int, parent_class=cls)
             except NotExistent:
                 raise ValueError()  # Jump to the following section
                 # to check if a code with the given

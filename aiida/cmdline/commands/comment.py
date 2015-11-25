@@ -6,6 +6,7 @@ import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida import load_dbenv
+from aiida.orm import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -35,7 +36,6 @@ class Comment(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.djsite.utils import get_automatic_user
-        from aiida.orm.node import Node as AiidaOrmNode
 
         load_dbenv()
         user = get_automatic_user()
@@ -70,7 +70,7 @@ class Comment(VerdiCommandWithSubcommands):
                 pass
             comment = "\n".join(newlines)
 
-        node = AiidaOrmNode.get_subclass_from_pk(parsed_args.pk)
+        node = load_node(parsed_args.pk)
         node.add_comment(comment, user)
 
     def comment_show(self, *args):
@@ -79,7 +79,6 @@ class Comment(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.djsite.utils import get_automatic_user
-        from aiida.orm.node import Node as AiidaOrmNode
 
         load_dbenv()
         user = get_automatic_user()
@@ -96,7 +95,7 @@ class Comment(VerdiCommandWithSubcommands):
         # Note that this is a false description, I'm using the DBComment.pk
         parsed_args = parser.parse_args(args)
 
-        node = AiidaOrmNode.get_subclass_from_pk(parsed_args.pk)
+        node = load_node(parsed_args.pk)
         all_comments = node.get_comments(pk=parsed_args.id)
 
         if parsed_args.user is not None:
@@ -130,7 +129,6 @@ class Comment(VerdiCommandWithSubcommands):
         # Note: in fact, the user can still manually delete any comment
         import argparse
         from aiida.djsite.utils import get_automatic_user
-        from aiida.orm.node import Node as AiidaOrmNode
         from aiida.common.exceptions import ModificationNotAllowed
 
         load_dbenv()
@@ -155,7 +153,7 @@ class Comment(VerdiCommandWithSubcommands):
             print "Only one between -a and ID should be provided"
             sys.exit(1)
 
-        node = AiidaOrmNode.get_subclass_from_pk(parsed_args.pk)
+        node = load_node(parsed_args.pk)
         all_comments = node.get_comments(parsed_args.id)  # Filter those with desired id, if present
 
         allowed_trues = ['1', 't', 'true', 'y', 'yes']
@@ -195,7 +193,6 @@ class Comment(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.djsite.utils import get_automatic_user
-        from aiida.orm.node import Node as AiidaOrmNode
 
         load_dbenv()
         user = get_automatic_user()
@@ -233,7 +230,7 @@ class Comment(VerdiCommandWithSubcommands):
         else:
             the_comment = parsed_args.comment
 
-        node = AiidaOrmNode.get_subclass_from_pk(parsed_args.pk)
+        node = load_node(parsed_args.pk)
         node._update_comment(the_comment, parsed_args.id, user)
         
         

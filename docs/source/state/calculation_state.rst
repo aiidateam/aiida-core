@@ -88,7 +88,7 @@ need to specify the ID of the calculation you are interested in::
   ## pk must be a valid integer pk
   calc = load_node(pk)
   ## Alternatively, with the UUID (uuid must be a valid UUID string)
-  # calc = JobCalculation.get_subclass_from_uuid(uuid)
+  # calc = load_node(uuid)
   print "AiiDA state:", calc.get_state()  
   print "Last scheduler state seen by the AiiDA deamon:", calc.get_scheduler_state()
 

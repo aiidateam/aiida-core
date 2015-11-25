@@ -6,6 +6,7 @@ import aiida
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
+from aiida.orm import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -282,7 +283,7 @@ class Devel(VerdiCommandWithSubcommands):
             values_to_print = []
             in_found = True
             out_found = True
-            c = OrmCalculation.get_subclass_from_pk(job)
+            c = load_node(job, parent_class=OrmCalculation)
             try:
                 i = c.inp.parameters.get_dict()
             except AttributeError:
@@ -294,7 +295,8 @@ class Devel(VerdiCommandWithSubcommands):
                 out_found = False
                 o = {}
 
-            io = {'i': i, 'o': o, 'pk': job, 'label': c.label,
+            io = {'extras': c.get_extras(), 'attrs': c.get_attrs(), 
+                  'i': i, 'o': o, 'pk': job, 'label': c.label,
                   'desc': c.description, 'state': c.get_state(),
                   'sched_state': c.get_scheduler_state(),
                   'owner': c.dbnode.user.email}

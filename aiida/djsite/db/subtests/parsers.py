@@ -70,10 +70,10 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     import string
 
     from aiida.common.folders import Folder
-    from aiida.orm import JobCalculation
+    from aiida.orm import JobCalculation, load_node
     from aiida.orm.importexport import export_tree
     
-    c = JobCalculation.get_subclass_from_pk(pk)
+    c = load_node(pk, parent_class=JobCalculation)
     outfolder = "test_{}_{}".format(
         c.get_parser_name().replace('.', '_'),
         testname)

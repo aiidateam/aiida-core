@@ -6,6 +6,7 @@ from aiida.cmdline.baseclass import (
 from aiida import load_dbenv
 from aiida.common.exceptions import MultipleObjectsError
 from aiida.cmdline.commands.node import _Label, _Description
+from aiida.orm import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -264,9 +265,9 @@ class Visualizable(object):
             sys.exit(1)
 
         load_dbenv()
-        from aiida.orm.node import Node
+#        from aiida.orm.node import Node
 
-        n_list = [Node.get_subclass_from_pk(id) for id in data_id]
+        n_list = [load_node(id) for id in data_id]
 
         for n in n_list:
             try:
@@ -366,9 +367,9 @@ class Exportable(object):
             sys.exit(1)
 
         load_dbenv()
-        from aiida.orm.node import Node
+#        from aiida.orm.node import Node
 
-        n = Node.get_subclass_from_pk(data_id)
+        n = load_node(data_id)
 
         try:
             if not isinstance(n, self.dataclass):
@@ -543,8 +544,7 @@ class Depositable(object):
             sys.exit(1)
 
         load_dbenv()
-        from aiida.orm.node import Node
-        n = Node.get_subclass_from_pk(data_id)
+        n = load_node(data_id)
 
         try:
             if not isinstance(n,self.dataclass):
@@ -579,6 +579,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             'uploadfamily': (self.uploadfamily, self.complete_auto),
             'listfamilies': (self.listfamilies, self.complete_none),
             'import': (self.importfile, self.complete_none),
+            'exportfamily': (self.exportfamily, self.complete_auto)
         }
 
     def uploadfamily(self, *args):
@@ -589,12 +590,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         
         Call without parameters to get some help.
         """
-        import inspect
-        import readline
         import os.path
-
-        from aiida.common.exceptions import NotExistent, ValidationError
-        from aiida.orm import Computer as AiidaOrmComputer
 
         if not len(args) == 3 and not len(args) == 4:
             print >> sys.stderr, ("After 'upf uploadfamily' there should be three "
@@ -620,7 +616,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             sys.exit(1)
 
         load_dbenv()
-
         import aiida.orm.data.upf as upf
 
         files_found, files_uploaded = upf.upload_upf_family(folder, group_name,
@@ -654,12 +649,9 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         parsed_args = parser.parse_args(args)
 
         load_dbenv()
-
         from aiida.orm import DataFactory
 
-
         UpfData = DataFactory('upf')
-
         groups = UpfData.get_upf_groups(filter_elements=parsed_args.element)
 
         if groups:
@@ -692,6 +684,43 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
                                                        description_string)
         else:
             print "No valid UPF pseudopotential family found."
+
+    
+    def exportfamily(self, *args):
+        """
+        Export a pseudopotential family into a folder.
+        Call without parameters to get some help.
+        """
+        import os
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import DataFactory
+        load_dbenv()
+        
+        if not len(args) == 2:
+            print >> sys.stderr, ("After 'upf export' there should be two "
+                                  "arguments:")
+            print >> sys.stderr, ("folder, upf_family_name\n")
+            sys.exit(1)
+
+        folder = os.path.abspath(args[0])
+        group_name = args[1]
+        
+        UpfData = DataFactory('upf')
+        try:
+            group = UpfData.get_upf_group(group_name)
+        except NotExistent:
+            print >> sys.stderr, ("upf family {} not found".format(group_name))
+
+        for u in group.nodes:
+            dest_path = os.path.join(folder,u.filename)
+            if not os.path.isfile(dest_path):
+                with open(dest_path,'w') as dest:
+                    with u._get_folder_pathsubfolder.open(u.filename) as source:
+                        dest.write(source.read())
+            else:
+                print >> sys.stdout, ("File {} is already present in the "
+                                      "destination folder".format(u.filename))
+        
 
     def _import_upf(self, filename, **kwargs):
         """
@@ -1211,7 +1240,7 @@ class _Structure(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         print node._exportstring('tcod',parameters=parameters,**kwargs)
 
     def _export_tcod_parameters(self, parser, **kwargs):
@@ -1248,7 +1277,7 @@ class _Structure(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self,parser,**kwargs):
@@ -1374,7 +1403,7 @@ class _Cif(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         print node._exportstring('tcod',parameters=parameters,**kwargs)
 
     def _export_tcod_parameters(self,parser,**kwargs):
@@ -1405,7 +1434,7 @@ class _Cif(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self, parser, **kwargs):
@@ -1517,7 +1546,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         print node._exportstring('tcod',
                                  parameters=parameters,
                                  **kwargs)
@@ -1553,7 +1582,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self, parser, **kwargs):

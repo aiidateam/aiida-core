@@ -4,6 +4,7 @@ from aiida.cmdline.baseclass import (
     VerdiCommand, VerdiCommandRouter, VerdiCommandWithSubcommands)
 from aiida import load_dbenv
 from aiida.cmdline.baseclass import VerdiCommand
+from aiida.orm import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -167,10 +168,9 @@ class _Repo(VerdiCommandWithSubcommands):
         parsed_args = parser.parse_args(args)
 
         load_dbenv()
-        from aiida.orm import Node as OrmNode
 
         try:
-            n = OrmNode.get_subclass_from_pk(parsed_args.pk)
+            n = load_node(parsed_args.pk)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
@@ -202,10 +202,9 @@ class _Repo(VerdiCommandWithSubcommands):
         parsed_args = parser.parse_args(args)
 
         load_dbenv()
-        from aiida.orm import Node as OrmNode
 
         try:
-            n = OrmNode.get_subclass_from_pk(parsed_args.pk)
+            n = load_node(parsed_args.pk)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
@@ -271,7 +270,7 @@ class _Show(VerdiCommand):
 
         for pk in parsed_args.pk:
             try:
-                n = Node.get_subclass_from_pk(pk)
+                n = load_node(pk)
                 self.print_node_info(n, depth=parsed_args.depth, indent=indent,
                                      print_uuid=parsed_args.print_uuid)
             except NotExistent as e:
@@ -352,7 +351,6 @@ class _Label(VerdiCommandWithSubcommands):
     def run(self, *args):
         load_dbenv()
         import argparse
-        from aiida.orm import Node as OrmNode
         from aiida.cmdline import wait_for_confirmation
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
@@ -380,7 +378,7 @@ class _Label(VerdiCommandWithSubcommands):
 
         if not parsed_args.set:
             for pk in pks:
-                n = OrmNode.get_subclass_from_pk(pk)
+                n = load_node(pk)
                 if not self._node_class_ok(n):
                     print "Node {} is not a subclass of {}. Exiting...".format(pk,
                                                                                self._node_subclass)
@@ -406,7 +404,7 @@ class _Label(VerdiCommandWithSubcommands):
                                  ". Exiting...\n")
                 sys.exit(1)
 
-            n = OrmNode.get_subclass_from_pk(pk)
+            n = load_node(pk)
 
             if not self._node_class_ok(n):
                 print "Node {} is not a subclass of {}. Exiting...".format(pk,
@@ -449,7 +447,6 @@ class _Description(VerdiCommandWithSubcommands):
     def run(self, *args):
         load_dbenv()
         import argparse
-        from aiida.orm import Node as OrmNode
         from aiida.cmdline import wait_for_confirmation
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
@@ -487,7 +484,7 @@ class _Description(VerdiCommandWithSubcommands):
         if not parsed_args.set:
             also_labels = parsed_args.no_labels
             for pk in pks:
-                n = OrmNode.get_subclass_from_pk(pk)
+                n = load_node(pk)
 
                 if not self._node_class_ok(n):
                     print "Node {} is not a subclass of {}. Exiting...".format(pk,
@@ -528,7 +525,7 @@ class _Description(VerdiCommandWithSubcommands):
                 sys.exit(1)
 
             if not parsed_args.add_to_description:
-                n = OrmNode.get_subclass_from_pk(pk)
+                n = load_node(pk)
                 if not self._node_class_ok(n):
                     print "Node {} is not a subclass of {}. Exiting...".format(pk,
                                                                                self._node_subclass)
@@ -546,7 +543,7 @@ class _Description(VerdiCommandWithSubcommands):
                 n.description = new_description
 
             else:
-                n = OrmNode.get_subclass_from_pk(pk)
+                n = load_node(pk)
                 if not self._node_class_ok(n):
                     print "Node {} is not a subclass of {}. Exiting...".format(pk,
                                                                                self._node_subclass)

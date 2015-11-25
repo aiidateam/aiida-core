@@ -5,7 +5,7 @@ functions to operate on them.
 """
 
 from aiida.orm import Data
-from aiida.common.utils import classproperty
+from aiida.common.utils import classproperty, xyz_parser_iterator
 from aiida.orm.calculation.inline import optional_inline
 import itertools
 import copy
@@ -907,43 +907,18 @@ class StructureData(Data):
         Read the structure from a string of format XYZ.
         """
 
-        import re
-
-        # import glob
-        pos_regex = re.compile(r"""
-                (?P<sym>[a-zA-Z0-9]+)\s+
-                (?P<x>[-]?\d+[\.]?\d+([E | e][+|-]?\+)?)\s+
-                (?P<y>[-]?\d+[\.]?\d+([E | e][+|-]?\+)?)\s+
-                (?P<z>[-]?\d+[\.]?\d+([E | e][+|-]?\+)?)""", re.X)
-        pos_block_regex = re.compile(r"""
-                    (
-                        \s*   #White space in the beginning (maybe)
-                        [A-Za-z0-9]+  #A tag for a species
-                        (
-                           \s+ [-]?\d+[\.]?\d+([E | e][+|-]?\+)?  #The number   ([E | e][+|-]?[0-9]+)?)?
-                        ){3}
-                        \s* [\n] #White space and line break in the end
-                    )+ #A block should be one or more lines
-                    """, re.X | re.M)
-
-        block = None
-
-        # idiom to get the last element,
-        # in case the XYZ file contains multiple frames
-        for block in pos_block_regex.finditer(inputstring):
+        # idiom to get to the last block
+        atoms = None
+        for _, _, atoms in xyz_parser_iterator(inputstring):
             pass
 
-        if block is None:
+        if atoms is None:
             raise TypeError("The data does not contain any XYZ data")
 
         self.clear_kinds()
 
-        for match in pos_regex.finditer(block.group(0)):
-            self.append_atom(symbols=match.group('sym'),
-                    position=(
-                        float(match.group('x')),
-                        float(match.group('y')),
-                        float(match.group('z'))))
+        for sym, position in atoms:
+            self.append_atom(symbols=sym, position=position)
 
     def get_symbols_set(self):
         """

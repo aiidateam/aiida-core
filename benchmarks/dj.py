@@ -46,6 +46,6 @@ queries = {
     "attributes": {
         'kinds': build_query_attr('kinds'),
         'sites': build_query_attr('sites'),
-        'cell:': build_query_attr('cell')
+        'cell': build_query_attr('cell')
     }
 }

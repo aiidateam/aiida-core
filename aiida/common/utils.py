@@ -555,3 +555,9 @@ class EmptyContextManager(object):
     def __exit__(self, exc_type, exc_value, traceback):
         pass
 
+
+def get_extremas_from_positions (positions):
+    """
+    returns the minimum and maximum value for each dimension in the positions given
+    """
+    return zip(*[( max(values), min(values)) for values in  zip(* positions)])

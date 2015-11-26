@@ -432,6 +432,7 @@ class Importable(object):
             if not cmd.startswith(self.import_prefix) or \
                     not cmd.endswith(self.import_parameters_postfix):
                 continue
+            print 'here', cmd 
             getattr(self, cmd)(parser)
 
         args = list(args)
@@ -993,7 +994,11 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
 
 
 class _Structure(VerdiCommandWithSubcommands,
-                 Listable, Visualizable, Exportable, Depositable):
+                 Listable, 
+                 Visualizable, 
+                 Exportable, 
+                 Importable,
+                 Depositable):
     """
     Visualize AiIDA structures
     """
@@ -1010,6 +1015,7 @@ class _Structure(VerdiCommandWithSubcommands,
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_none),
             'deposit': (self.deposit, self.complete_none),
+            'import': (self.importfile, self.complete_none),
         }
         
     def query(self, args):
@@ -1267,6 +1273,56 @@ class _Structure(VerdiCommandWithSubcommands,
         Exporter to XYZ.
         """
         print node._exportstring('xyz')
+
+
+    def _import_parameters(self, parser):
+        """
+        Adding some functionality to the parser to deal with importing files
+        """
+        # In order to deal with structures that do not have a cell defined:
+        # We can increase the size of the cell from the minimal cell
+        # The minimal cell is the cell the just accomodates the structure given, 
+        # defined by the minimum and maximum of position in each dimension
+        parser.add_argument('--vacuum-factor', type=float, default=1.0,
+                help = 'The factor by which the cell accomodating the structure should be increased, default: 1.0')
+        #To that increased cell, we can also add a "safety margin"
+        parser.add_argument('--vacuum-addition', type=float, default=10.0,
+                help = 'The distance to add to the unit cell after vacuum-factor was applied to expand in each dimension, default: 10.0')
+        parser.add_argument('--pbc', type=int, nargs = 3, default= [0,0,0],
+                help = """
+                Set periodic boundary conditions for each lattice direction,
+                0 for no periodicity, any other integer for periodicty""")
+
+    def _import_xyz(self, filename, **kwargs):
+        """
+        Imports an XYZ-file.
+        """
+        from os.path import abspath
+
+        vacuum_addition = kwargs.pop('vacuum_addition')
+        vacuum_factor = kwargs.pop('vacuum_factor')
+        pbc = [bool(i) for i in kwargs.pop('pbc')]
+
+        print 'importing XYZ-structure from: \n  {}'.format(abspath(filename))
+        filepath =  abspath(filename)
+        with open(filepath) as f:
+            xyz_txt = f.read()
+        new_structure = self.dataclass()
+        try:
+            new_structure._parse_xyz(xyz_txt)
+            new_structure._adjust_default_cell( vacuum_addition = vacuum_addition,
+                                                vacuum_factor = vacuum_factor,
+                                                pbc = pbc)
+            new_structure.store()
+            print  (
+                    '  Succesfully imported structure {}, '
+                    '(PK = {})'.format(new_structure.get_formula(), new_structure.pk)
+                )
+
+        except ValueError as e:
+            print e
+
+
 
     def _deposit_tcod(self, node, parameter_data=None, **kwargs):
         """

@@ -1273,8 +1273,7 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         print node._exportstring('xyz')
 
-
-    def _import_parameters(self, parser):
+    def _import_xyz_parameters(self, parser):
         """
         Adding some functionality to the parser to deal with importing files
         """
@@ -1290,17 +1289,20 @@ class _Structure(VerdiCommandWithSubcommands,
         parser.add_argument('--pbc', type=int, nargs = 3, default= [0,0,0],
                 help = """
                 Set periodic boundary conditions for each lattice direction,
-                0 for no periodicity, any other integer for periodicty""")
+                0 for no periodicity, any other integer for periodicity""")
+        parser.add_argument('--view', action='store_true', default = False, help= 'View resulting structure using ASE')
+        parser.add_argument('--dont-store', action='store_true', default = False, help= 'Do not store the structure')
 
     def _import_xyz(self, filename, **kwargs):
         """
         Imports an XYZ-file.
         """
         from os.path import abspath
-
         vacuum_addition = kwargs.pop('vacuum_addition')
         vacuum_factor = kwargs.pop('vacuum_factor')
         pbc = [bool(i) for i in kwargs.pop('pbc')]
+        dont_store = kwargs.pop('dont_store')
+        view_in_ase = kwargs.pop('view')
 
         print 'importing XYZ-structure from: \n  {}'.format(abspath(filename))
         filepath =  abspath(filename)
@@ -1312,7 +1314,12 @@ class _Structure(VerdiCommandWithSubcommands,
             new_structure._adjust_default_cell( vacuum_addition = vacuum_addition,
                                                 vacuum_factor = vacuum_factor,
                                                 pbc = pbc)
-            new_structure.store()
+
+            if not dont_store:
+                new_structure.store()
+            if view_in_ase:
+                from ase.visualize import view
+                view(new_structure.get_ase())
             print  (
                     '  Succesfully imported structure {}, '
                     '(PK = {})'.format(new_structure.get_formula(), new_structure.pk)

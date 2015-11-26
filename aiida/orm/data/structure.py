@@ -940,7 +940,7 @@ class StructureData(Data):
 
         #Calculating the minimal cell:
         positions = np.array([site.position for site in self.sites])
-        position_max, position_min   = get_extremas_from_positions(positions)
+        position_min, position_max   = get_extremas_from_positions(positions)
 
         # Translate the structure to the origin, such that the minimal values in each dimension 
         # amount to (0,0,0)
@@ -949,20 +949,15 @@ class StructureData(Data):
             site['position'] = list(positions[index])
 
         # The orthorhombic cell that (just) accomodates the whole structure is now given by the 
-        # extremas of position in each dimension
-        minimal_orthorhombic_cell_dimensions =  np.array(get_extremas_from_positions(positions)[0])
-        minimal_orthorhombic_cell_dimensions *= vacuum_factor
+        # extremas of position in each dimension:
+        minimal_orthorhombic_cell_dimensions  =  np.array(get_extremas_from_positions(positions)[1])
+        minimal_orthorhombic_cell_dimensions  = np.dot(vacuum_factor, minimal_orthorhombic_cell_dimensions)
         minimal_orthorhombic_cell_dimensions += vacuum_addition
 
         # Transform the vector (a, b, c ) to [[a,0,0], [0,b,0], [0,0,c]]
-        newcell = np.zeros([3,3])
-        for index, vlength in enumerate(minimal_orthorhombic_cell_dimensions):
-            newcell[index][index] = vlength
-
+        newcell = np.diag(minimal_orthorhombic_cell_dimensions)
         self.set_cell(newcell.tolist())
 
-        # Uncomment to view results:
-        # view(self.get_ase())
 
 
 

@@ -432,7 +432,6 @@ class Importable(object):
             if not cmd.startswith(self.import_prefix) or \
                     not cmd.endswith(self.import_parameters_postfix):
                 continue
-            print 'here', cmd 
             getattr(self, cmd)(parser)
 
         args = list(args)

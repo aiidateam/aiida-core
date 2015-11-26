@@ -1756,6 +1756,32 @@ class TestStructureDataFromAse(AiidaTestCase):
         self.assertEquals(list(b.get_tags()), [0, 1, 0, 2, 3, 4, 5, 6])
 
 
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    def test_conversion_of_types_4(self):
+        from aiida.orm.data.structure import StructureData
+        import ase
+
+        atoms = ase.Atoms('Fe5')
+        atoms[2].tag = 1
+        atoms[3].tag = 1
+        atoms[4].tag = 4
+        s = StructureData(ase=atoms)
+        kindnames = set([k.name for k in s.kinds])
+        self.assertEquals(kindnames, set(['Fe', 'Fe1', 'Fe4']))
+
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    def test_conversion_of_types_5(self):
+        from aiida.orm.data.structure import StructureData
+        import ase
+
+        atoms = ase.Atoms('Fe5')
+        atoms[0].tag = 1
+        atoms[2].tag = 1
+        atoms[3].tag = 4
+        s = StructureData(ase=atoms)
+        kindnames = set([k.name for k in s.kinds])
+        self.assertEquals(kindnames, set(['Fe', 'Fe1', 'Fe4']))
+
 class TestStructureDataFromPymatgen(AiidaTestCase):
     """
     Tests the creation of StructureData from a pymatgen Structure and

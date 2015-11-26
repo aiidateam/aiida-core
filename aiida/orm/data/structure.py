@@ -1075,6 +1075,12 @@ class StructureData(Data):
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
         self._set_attr('kinds', self.get_attr('kinds', []) + [new_kind.get_raw()])
+        # Note, this is a dict (with integer keys) so it allows for empty
+        # spots!
+        if not hasattr(self, '_internal_kind_tags'):
+            self._internal_kind_tags = {}
+        self._internal_kind_tags[len(
+            self.get_attr('kinds'))-1] = kind._internal_tag
 
     def append_site(self, site):
         """
@@ -1157,8 +1163,14 @@ class StructureData(Data):
             # If the kind is identical to an existing one, I use the existing
             # one, otherwise I replace it
             exists_already = False
-            for existing_kind in _kinds:
-
+            for idx, existing_kind in enumerate(_kinds):
+                try:
+                    existing_kind._internal_tag = self._internal_kind_tags[idx]
+                except KeyError:
+                    # self._internal_kind_tags does not contain any info for
+                    # the kind in position idx: I don't have to add anything
+                    # then, and I continue
+                    pass
                 if (kind.compare_with(existing_kind)[0]):
                     kind = existing_kind
                     exists_already = True
@@ -1280,6 +1292,7 @@ class StructureData(Data):
                 "it has already been stored")
 
         self._set_attr('kinds', [])
+        self._internal_kind_tags = {}
         self.clear_sites()
 
     def clear_sites(self):
@@ -1746,6 +1759,7 @@ class Kind(object):
                 self.set_symbols_and_weights(oldkind.symbols, oldkind.weights)
                 self.mass = oldkind.mass
                 self.name = oldkind.name
+                self._internal_tag = oldkind._internal_tag
             except AttributeError:
                 raise ValueError("Error using the Kind object. Are you sure "
                                  "it is a Kind object? [Introspection says it is "

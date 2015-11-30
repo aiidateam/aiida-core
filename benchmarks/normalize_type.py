@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 
 
 def create_connection():
@@ -26,7 +27,8 @@ def migrate_denormalized(conn):
         ))
 
         trans.commit()
-    except:
+    except SQLAlchemyError as e:
+        print("Error: {}".format(e))
         trans.rollback()
 
     trans = conn.begin()
@@ -49,7 +51,8 @@ def migrate_denormalized(conn):
         conn.execute(
             "ALTER TABLE db_dbnode DROP COLUMN type"
         )
-    except:
+    except SQLAlchemyError as e:
+        print("Error: {}".format(e))
         trans.rollback()
 
 

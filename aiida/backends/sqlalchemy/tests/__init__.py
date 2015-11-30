@@ -11,4 +11,5 @@ if __name__ == "__main__":
     load_profile(profile=PROFILE)
     from aiida.backends.sqlalchemy.tests.nodes import *
     from aiida.backends.sqlalchemy.tests.dataclasses import *
+    from aiida.backends.sqlalchemy.tests.generic import *
     unittest.main()

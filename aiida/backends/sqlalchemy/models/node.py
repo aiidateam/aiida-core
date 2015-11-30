@@ -57,6 +57,27 @@ class DbPath(Base):
     direct_edge_id = Column(Integer)
     exit_edge_id = Column(Integer)
 
+    def expand(self):
+        """
+        Method to expand a DbPath (recursive function), i.e., to get a list
+        of all dbnodes that are traversed in the given path.
+
+        :return: list of DbNode objects representing the expanded DbPath
+        """
+
+        if self.depth == 0:
+            return [self.parent_id, self.child_id]
+        else:
+            path_entry = []
+            path_direct = DbPath.query.filter_by(id=self.direct_edge_id).first().expand()
+            path_exit = []
+            # we prevent DbNode repetitions
+            if self.entry_edge_id != self.direct_edge_id:
+                path_entry = DbPath.query.filter_by(id=self.entry_edge_id).first().expand()[:-1]
+            if self.exit_edge_id != self.direct_edge_id:
+                path_exit = DbPath.query.filter_by(id=self.exit_edge_id).first().expand()[1:]
+
+            return path_entry + path_direct + path_exit
 
 
 class DbNode(Base):
@@ -94,7 +115,7 @@ class DbNode(Base):
 
     dbcomputer_id = Column(Integer, ForeignKey('db_dbcomputer.id'),
                          nullable=True)
-    dbcomputer = relationship('DbComputer', backref=backref('dbnodes'))
+    dbcomputer = relationship('DbComputer', backref=backref('dbnodes', passive_deletes=True))
 
     user_id = Column(Integer, ForeignKey('db_dbuser.id'), nullable=False)
     user = relationship('DbUser', backref='dbnodes')

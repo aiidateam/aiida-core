@@ -36,6 +36,10 @@ class DbComputer(Base):
         self.enabled = True
         self._metadata = {}
         self.transport_params = {}
+        # TODO SP: it's supposed to be nullable, but there is a NOT NULL
+        # constraint inside the DB.
+        self.description= ""
+
         super(DbComputer, self).__init__(*args, **kwargs)
 
     @classmethod
@@ -59,6 +63,7 @@ class DbComputer(Base):
             if computer.id is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer
+
         elif isinstance(computer, Computer):
             if computer.dbcomputer.id is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")

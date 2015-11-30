@@ -25,7 +25,8 @@ class DbUser(Base):
 
     is_active = True
 
-    def __init__(self, email, first_name, last_name, institution, **kwargs):
+    # XXX is it safe to set name and institution to an empty string ?
+    def __init__(self, email, first_name="", last_name="", institution="", **kwargs):
         self.email = email
         self.first_name = first_name
         self.last_name = last_name
@@ -54,3 +55,7 @@ class DbUser(Base):
 
     def __str__(self):
         return self.email
+
+    def delete(self):
+        self.session.delete(self)
+        self.session.commit()

@@ -123,7 +123,6 @@ def loads_json(s):
     Loads the json and try to parse each basestring as a datetime object
     """
 
-    # TODO: use the object_hook mecanism instead ?
     # ret = json.loads(s)
     ret = ujson.loads(s)
 
@@ -135,8 +134,6 @@ def loads_json(s):
                 d[k] = f(v)
             return d
         elif isinstance(d, basestring):
-            # XXX: it might be faster to first check with a precompiled regex
-            # that the date is in a parsable format.
             if date_reg.match(d):
                 try:
                     return parser.parse(d)

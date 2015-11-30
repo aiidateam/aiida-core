@@ -1,10 +1,22 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy.exc import SQLAlchemyError
+import collections
 
+from copy import copy
+
+
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.session import make_transient
+
+
+from aiida.backends import sqlalchemy as sa
+from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
+from aiida.backends.sqlalchemy.models.node import DbNode
+from aiida.backends.utils import get_automatic_user
+
+from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError)
 
 from aiida.orm.implementation.general.group import AbstractGroup
-from aiida.backends.sqlalchemy import session
 
 
 class Group(AbstractGroup):
@@ -34,12 +46,14 @@ class Group(AbstractGroup):
             group_type = kwargs.pop('type_string', "")  # By default, an user group
             user = kwargs.pop('user', get_automatic_user())
             description = kwargs.pop('description', "")
-            self._dbgroup = DbGroup(name=name, description=description,
-                                    user=user, type=group_type)
+
             if kwargs:
                 raise ValueError("Too many parameters passed to Group, the "
                                  "unknown parameters are: {}".format(
-                    ", ".join(kwargs.keys())))
+                                     ", ".join(kwargs.keys())))
+
+            self._dbgroup = DbGroup(name=name, description=description,
+                                    user=user, type=group_type)
 
     @property
     def name(self):
@@ -72,7 +86,7 @@ class Group(AbstractGroup):
 
     @property
     def pk(self):
-        return self._dbgroup.id
+        return self.dbgroup.id
 
     @property
     def uuid(self):
@@ -86,7 +100,7 @@ class Group(AbstractGroup):
 
     @property
     def _is_stored(self):
-        return self.id is not None
+        return self.pk is not None
 
     def store(self):
         if self._is_stored:
@@ -94,8 +108,7 @@ class Group(AbstractGroup):
                                          "already stored")
         else:
             try:
-                with session.begin(subtransactions=True):
-                    self.dbgroup.save(commit=False)
+                self.dbgroup.save()
             except SQLAlchemyError:
                 raise UniquenessError("A group with the same name (and of the "
                                       "same type) already "
@@ -107,6 +120,7 @@ class Group(AbstractGroup):
         if not self._is_stored:
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
+        from aiida.orm.implementation.sqlalchemy.node import Node
 
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
@@ -117,21 +131,24 @@ class Group(AbstractGroup):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "add_nodes, can only be a Node, DbNode, or a list "
                             "of such objects, it is instead {}".format(
-                str(type(nodes))))
+                                str(type(nodes))))
 
-        list_pk = []
+        list_nodes = []
         for node in nodes:
             if not isinstance(node, (Node, DbNode)):
                 raise TypeError("Invalid type of one of the elements passed "
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(
-                    str(type(node))))
+                                    str(type(node))))
             if node.id is None:
                 raise ValueError("At least one of the provided nodes is "
                                  "unstored, stopping...")
-            list_pk.append(node.id)
+            if isinstance(node, Node):
+                list_nodes.append(node.dbnode)
+            else:
+                list_nodes.append(node)
 
-        self.dbgroup.dbnodes.extend(list_pk)
+        self.dbgroup.dbnodes.extend(list_nodes)
 
     @property
     def nodes(self):
@@ -148,7 +165,7 @@ class Group(AbstractGroup):
                 return self
 
             def __len__(self):
-                return self.dbnodes.count()
+                return len(self.dbnodes)
 
             # For future python-3 compatibility
             def __next__(self):
@@ -164,6 +181,7 @@ class Group(AbstractGroup):
             raise ModificationNotAllowed("Cannot remove nodes from a group "
                                          "before storing")
 
+        from aiida.orm.implementation.sqlalchemy.node import Node
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
@@ -173,29 +191,87 @@ class Group(AbstractGroup):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "remove_nodes, can only be a Node, DbNode, or a "
                             "list of such objects, it is instead {}".format(
-                str(type(nodes))))
+                                str(type(nodes))))
 
-        list_pk = []
+        list_nodes = []
         for node in nodes:
             if not isinstance(node, (Node, DbNode)):
                 raise TypeError("Invalid type of one of the elements passed "
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(
-                    str(type(node))))
-            if node.pk is None:
+                                    str(type(node))))
+            if node.id is None:
                 raise ValueError("At least one of the provided nodes is "
                                  "unstored, stopping...")
-            list_pk.append(node.pk)
+            if isinstance(node, Node):
+                node = node.dbnode
+            # If we don't check first, SqlA might issue a DELETE statement for
+            # an unexisting key, resulting in an error
+            if node in self.dbgroup.dbnodes:
+                list_nodes.append(node)
 
-        list(map(lambda _id: self.dbgroup.dbnodes.remove, list_pk))
+        list(map(self.dbgroup.dbnodes.remove, list_nodes))
 
 
     @classmethod
     def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
               user=None, node_attributes=None, past_days=None, **kwargs):
-        # TODO SP: query method
-        pass
+        from aiida.orm.implementation.sqlalchemy.node import Node
+
+        filters = []
+
+        if name:
+            filters.append(DbGroup.name == name)
+        if type_string:
+            filters.append(DbGroup.type == type_string)
+        if pk:
+            filters.append(DbGroup.id == pk)
+        if uuid:
+            filters.append(DbGroup.uuid == uuid)
+        if past_days:
+            filters.append(DbGroup.time >= past_days)
+        if nodes:
+            if not isinstance(nodes, collections.Iterable):
+                nodes = [nodes]
+
+            if not all(map(lambda n: isinstance(n, (Node, DbNode)), nodes)):
+                raise TypeError("At least one of the elements passed as "
+                                "nodes for the query on Group is neither "
+                                "a Node nor a DbNode")
+
+
+            # In the case of the Node orm from Sqlalchemy, there is an id
+            # property on it.
+            sub_query = (sa.session.query(table_groups_nodes).filter(
+                table_groups_nodes.c["dbnode_id"].in_(map(lambda n: n.id, nodes)),
+                table_groups_nodes.c["dbgroup_id"] == DbGroup.id
+            ).exists())
+
+            filters.append(sub_query)
+        if user:
+            if isinstance(user, basestring):
+                filters.append(DbGroup.user.has(email = user))
+            else:
+                # This should be a DbUser
+                filters.append(DbGroup.user == user)
+
+        if node_attributes:
+            # TODO SP: IMPLEMENT THIS
+            pass
+
+        # TODO SP: handle **kwargs
+        groups = (sa.session.query(DbGroup.id).filter(*filters)
+                  .order_by(DbGroup.id).distinct().all())
+
+        return [cls(dbgroup=g[0]) for g in groups]
+
 
     def delete(self):
-        if self.id is not None:
-            session.delete(self.dbgroup)
+        if self.pk is not None:
+            sa.session.delete(self._dbgroup)
+            sa.session.commit()
+
+            new_group = copy(self._dbgroup)
+            make_transient(new_group)
+            new_group.id = None
+            self._dbgroup = new_group

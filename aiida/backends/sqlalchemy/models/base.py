@@ -59,4 +59,6 @@ class Model(object):
         if commit:
             self.session.commit()
 
+        return self
+
 Base = declarative_base(cls=Model, name='Model')

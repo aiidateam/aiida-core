@@ -6,7 +6,7 @@ import importlib
 
 
 from aiida.backends.utils import get_automatic_user
-from aiida.backends.sqlalchemy import session
+from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowStep
 
@@ -159,9 +159,8 @@ class Workflow(AbstractWorkflow):
         """
         self.dbworkflowinstance.label = field_value
         if not self._to_be_stored:
-            with session.begin(subtransactions=True):
-                self._dbworkflowinstance.save(commit=False)
-                self._increment_version_number_db()
+            self._dbworkflowinstance.save(commit=False)
+            self._increment_version_number_db()
 
     @property
     def description(self):
@@ -184,9 +183,8 @@ class Workflow(AbstractWorkflow):
         """
         self.dbworkflowinstance.description = field_value
         if not self._to_be_stored:
-            with session.begin(subtransactions=True):
-                self._dbworkflowinstance.save()
-                self._increment_version_number_db()
+            self._dbworkflowinstance.save(commit=False)
+            self._increment_version_number_db()
 
 
     def _increment_version_number_db(self):
@@ -203,8 +201,8 @@ class Workflow(AbstractWorkflow):
         # I use self._dbnode because this will not do a query to update the node; here I only
         # need to get its pk
         self.dbworkflowinstance.nodeversion = DbWorkflow.nodeversion + 1
-        session.add(self.dbworkflowinstance)
-        session.commit()
+        sa.session.add(self.dbworkflowinstance)
+        sa.session.commit()
 
     @classmethod
     def query(cls, *args, **kwargs):

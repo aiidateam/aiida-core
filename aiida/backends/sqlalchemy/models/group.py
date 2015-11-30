@@ -35,7 +35,7 @@ class DbGroup(Base):
     description = Column(Text, nullable=True)
 
     user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE'))
-    user = relationship('DbUser', backref='dbgroups')
+    user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
     dbnodes = relationship('DbNode', secondary=table_groups_nodes,
                            backref="dbgroups", lazy='dynamic')

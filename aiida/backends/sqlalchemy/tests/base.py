@@ -53,14 +53,20 @@ class SqlAlchemyTests(unittest.TestCase):
         sa.session.commit()
         sa.session.expire_all()
 
-        computer = Computer(name='localhost',
-                            hostname='localhost',
-                            transport_type='local',
-                            scheduler_type='pbspro',
-                            workdir='/tmp/aiida_tests')
+        computer = SqlAlchemyTests._create_computer()
         computer.store()
 
         session.close()
+
+    @staticmethod
+    def _create_computer(**kwargs):
+        defaults = dict(name='localhost',
+                        hostname='localhost',
+                        transport_type='local',
+                        scheduler_type='pbspro',
+                        workdir='/tmp/aiida')
+        defaults.update(kwargs)
+        return Computer(**defaults)
 
     @staticmethod
     def inject_computer(f):
@@ -95,8 +101,8 @@ class SqlAlchemyTests(unittest.TestCase):
         self.session = Session(bind=connec)
         sa.session = self.session
 
-        self.computer = DbComputer.query.filter_by(name="localhost").first()
-
+        dbcomputer = DbComputer.query.filter_by(name="localhost").first()
+        self.computer = Computer(dbcomputer=dbcomputer)
 
         self.session.begin_nested()
 

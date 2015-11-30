@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 
+import os
+
+
+from aiida.backends.sqlalchemy.models.computer import DbComputer
+
 from aiida.common.exceptions import NotExistent, MultipleObjectsError, InvalidOperation
+
 from aiida.orm.implementation.general.code import AbstractCode
+from aiida.orm.implementation.sqlalchemy.computer import Computer
 
 class Code(AbstractCode):
 
@@ -148,8 +155,8 @@ class Code(AbstractCode):
             if not isinstance(dbcomputer, DbComputer):
                 raise ValueError("computer must be either a Computer or DbComputer object")
             dbcomputer = DbComputer.get_dbcomputer(computer)
-            return (dbcomputer.pk ==
-                    self.get_remote_computer().dbcomputer.pk)
+            return (dbcomputer.id ==
+                    self.get_remote_computer().dbcomputer.id)
 
 def delete_code(code):
     """

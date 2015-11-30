@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
 
-from aiida.backends.sqlalchemy import session
+from aiida.backends import sqlalchemy as sa
 from aiida.common.exceptions import InvalidOperation
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 
@@ -27,8 +27,8 @@ def delete_computer(computer):
                         "aiida.orm.computer.Computer")
 
     try:
-        session.delete(computer.dbcomputer)
-        session.commit()
+        sa.session.delete(computer.dbcomputer)
+        sa.session.commit()
     except SQLAlchemyError:
         raise InvalidOperation("Unable to delete the requested computer: there"
                                "is at least one node using this computer")

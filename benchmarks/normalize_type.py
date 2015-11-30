@@ -13,23 +13,23 @@ def create_connection():
 
 
 def migrate_denormalized(conn):
-    trans = conn.begin()
-    try:
-        result = conn.execute("SELECT DISTINCT type FROM db_dbnode;")
-
-        values = set([e["type"] for e in result])
-
-        conn.execute("DROP INDEX IF EXISTS db_dbnode_type;")
-        conn.execute("CREATE TABLE db_dbnode_type (id serial CONSTRAINT db_dbnode_type_pk PRIMARY KEY, name varchar(255) not null);")
-
-        conn.execute("INSERT INTO db_dbnode_type (name) VALUES {};".format(
-            ", ".join(["('{}')".format(e) for e in values])
-        ))
-
-        trans.commit()
-    except SQLAlchemyError as e:
-        print("Error: {}".format(e))
-        trans.rollback()
+    # trans = conn.begin()
+    # try:
+    #     result = conn.execute("SELECT DISTINCT type FROM db_dbnode;")
+    #
+    #     values = set([e["type"] for e in result])
+    #
+    #     conn.execute("DROP INDEX IF EXISTS db_dbnode_type;")
+    #     conn.execute("CREATE TABLE db_dbnode_type (id serial CONSTRAINT db_dbnode_type_pk PRIMARY KEY, name varchar(255) not null);")
+    #
+    #     conn.execute("INSERT INTO db_dbnode_type (name) VALUES {};".format(
+    #         ", ".join(["('{}')".format(e) for e in values])
+    #     ))
+    #
+    #     trans.commit()
+    # except SQLAlchemyError as e:
+    #     print("Error: {}".format(e))
+    #     trans.rollback()
 
     trans = conn.begin()
     try:
@@ -48,9 +48,10 @@ def migrate_denormalized(conn):
             "FROM db_dbnode_type WHERE db_dbnode_type.name = db_dbnode.type"
         )
 
-        conn.execute(
-            "ALTER TABLE db_dbnode DROP COLUMN type"
-        )
+        # conn.execute(
+        #     "ALTER TABLE db_dbnode DROP COLUMN type"
+        # )
+        trans.commit()
     except SQLAlchemyError as e:
         print("Error: {}".format(e))
         trans.rollback()

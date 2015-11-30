@@ -1342,9 +1342,8 @@ class TestStructureData(AiidaTestCase):
         b,sym = ase_refine_cell(a)
         sym.pop('rotations')
         sym.pop('translations')
-        self.assertEquals(b.cell.tolist(),[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
-        self.assertEquals(b.get_scaled_positions().tolist(),
-                          [[0,0,0]])
+        self.assertEquals(b.cell.tolist(),[[6.0606,0,0],[0,8.0956,0],[0,0,12.132]])
+        self.assertEquals(b.get_scaled_positions().tolist(),[[0,0,0]])
 
         a = ase.Atoms(cell=[10,10,10])
         a.append(ase.Atom('C',[5,5,5]))

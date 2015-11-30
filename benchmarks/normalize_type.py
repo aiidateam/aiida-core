@@ -19,7 +19,7 @@ def migrate_denormalized(conn):
 
         values = set([e["type"] for e in result])
 
-        conn.execute("DROP INDEX db_dbnode_type;")
+        conn.execute("DROP INDEX IF EXISTS db_dbnode_type;")
         conn.execute("CREATE TABLE db_dbnode_type (id serial CONSTRAINT db_dbnode_type_pk PRIMARY KEY, name varchar(255) not null);")
 
         conn.execute("INSERT INTO db_dbnode_type (name) VALUES {};".format(

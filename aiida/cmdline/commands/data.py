@@ -3,7 +3,7 @@ import sys
 
 from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv
 from aiida.common.exceptions import MultipleObjectsError
 from aiida.cmdline.commands.node import _Label, _Description
 

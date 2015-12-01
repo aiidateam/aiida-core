@@ -312,7 +312,7 @@ class Install(VerdiCommand):
     """
 
     def run(self, *args):
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
         from aiida.common.setup import (create_base_dirs, create_configuration,
                                         set_default_profile, DEFAULT_UMASK)
 
@@ -427,7 +427,7 @@ class Run(VerdiCommand):
     """
 
     def run(self, *args):
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
 
         load_dbenv()
         import argparse

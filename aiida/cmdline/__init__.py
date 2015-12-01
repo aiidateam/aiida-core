@@ -99,7 +99,7 @@ def pass_to_django_manage(argv, profile=None):
     """
     Call the corresponding django manage.py command
     """
-    from aiida import load_dbenv
+    from aiida.backends.utils import load_dbenv
     import django.core.management
 
     load_dbenv(profile=profile)

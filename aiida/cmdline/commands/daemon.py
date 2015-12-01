@@ -50,7 +50,7 @@ class Daemon(VerdiCommandWithSubcommands):
         start, stop, status and restart.
         """
         from aiida.common import setup
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
 
         load_dbenv(process='daemon')
 

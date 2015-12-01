@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
 

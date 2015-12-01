@@ -38,7 +38,7 @@ class Workflow(VerdiCommandWithSubcommands):
         """
         Return a list of workflows on screen
         """
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
 
         load_dbenv()
 
@@ -96,7 +96,7 @@ class Workflow(VerdiCommandWithSubcommands):
         """
         Print the report of a workflow.
         """
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
         from aiida.common.exceptions import NotExistent
 
         load_dbenv()
@@ -130,7 +130,7 @@ class Workflow(VerdiCommandWithSubcommands):
         Pass a list of workflow PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
 
         load_dbenv()
 
@@ -191,7 +191,7 @@ class Workflow(VerdiCommandWithSubcommands):
 
 
     def print_logshow(self, *args):
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
 
         load_dbenv()
 

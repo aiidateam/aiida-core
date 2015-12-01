@@ -4,7 +4,7 @@ import os
 
 import aiida
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
 from aiida.common.exceptions import InternalError
 

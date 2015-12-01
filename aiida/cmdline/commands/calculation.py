@@ -2,7 +2,7 @@
 import sys
 import os
 
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands.node import _Label, _Description
 
@@ -68,7 +68,7 @@ class Calculation(VerdiCommandWithSubcommands):
         computer on which the calculation is being/has been executed.
         """
         from aiida.common.exceptions import NotExistent
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
 
         try:
             calc_id = args[0]
@@ -600,7 +600,7 @@ class Calculation(VerdiCommandWithSubcommands):
         Pass a list of calculation PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
 
         load_dbenv()
 

@@ -101,13 +101,12 @@ class DbNode(Base):
                            primaryjoin="DbNode.id == DbLink.input_id",
                            secondaryjoin="DbNode.id == DbLink.output_id",
                            backref=backref("inputs", passive_deletes=True),
-                           lazy="dynamic",
                            passive_deletes=True)
 
     child_paths = relationship("DbNode", secondary="db_dbpath",
                                primaryjoin="DbNode.id == DbPath.parent_id",
                                secondaryjoin="DbNode.id == DbPath.child_id",
-                               backref="parent_paths", lazy="dynamic")
+                               backref="parent_paths")
 
     # TODO SP: prevent modification
     ctime = Column(DateTime(timezone=True), default=timezone.now)

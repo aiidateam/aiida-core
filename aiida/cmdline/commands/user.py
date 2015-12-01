@@ -5,7 +5,7 @@ This allows to setup and configure a user from command line.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"

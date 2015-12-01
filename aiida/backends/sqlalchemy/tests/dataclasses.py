@@ -1688,8 +1688,8 @@ class TestStructureDataFromPymatgen(SqlAlchemyTests):
         # roundtrip.
 
         pymatgen_struct_roundtrip = struct.get_pymatgen_structure()
-        dict1 = pymatgen_struct.to_dict
-        dict2 = pymatgen_struct_roundtrip.to_dict
+        dict1 = pymatgen_struct.as_dict()
+        dict2 = pymatgen_struct_roundtrip.as_dict()
 
         for i in dict1['sites']:
             i['abc'] = [round(j, 2) for j in i['abc']]
@@ -1773,7 +1773,7 @@ class TestPymatgenFromStructureData(SqlAlchemyTests):
         a_struct = StructureData(ase=aseatoms)
         p_struct = a_struct.get_pymatgen_structure()
 
-        coord_array = [x['abc'] for x in p_struct.to_dict['sites']]
+        coord_array = [x['abc'] for x in p_struct.as_dict()['sites']]
         for i in range(len(coord_array)):
             coord_array[i] = [round(x, 2) for x in coord_array[i]]
 
@@ -1805,7 +1805,7 @@ class TestPymatgenFromStructureData(SqlAlchemyTests):
         a_struct = StructureData(ase=aseatoms)
         p_mol = a_struct.get_pymatgen_molecule()
 
-        self.assertEquals([x['xyz'] for x in p_mol.to_dict['sites']],
+        self.assertEquals([x['xyz'] for x in p_mol.as_dict()['sites']],
                           [[0.0, 0.0, 0.0],
                            [1.0, 1.0, 1.0],
                            [2.0, 2.0, 2.0],

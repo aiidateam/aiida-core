@@ -144,9 +144,12 @@ class Group(AbstractGroup):
                 raise ValueError("At least one of the provided nodes is "
                                  "unstored, stopping...")
             if isinstance(node, Node):
-                list_nodes.append(node.dbnode)
+                to_add = node.dbnode
             else:
-                list_nodes.append(node)
+                to_add = node
+
+            if to_add not in self.dbgroup.dbnodes:
+                list_nodes.append(to_add)
 
         self.dbgroup.dbnodes.extend(list_nodes)
 

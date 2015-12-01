@@ -397,7 +397,6 @@ class TestNodeBasic(SqlAlchemyTests):
 
             print max(len(i) for i in all_keys)
 
-    @unittest.skip("Datetime not implemented yet")
     def test_datetime_attribute(self):
         from aiida.utils.timezone import (
             get_current_timezone, is_naive, make_aware, now)

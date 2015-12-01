@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.utils import (
     load_dbenv, is_dbenv_loaded, get_configured_user_email, get_automatic_user,
-    install_tc
+    install_tc, loads_json, dumps_json
 )
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.user import DbUser
@@ -34,7 +34,9 @@ class SqlAlchemyTests(unittest.TestCase):
         config = get_profile_config("tests")
         engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
                       "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
-        engine = create_engine(engine_url)
+        engine = create_engine(engine_url,
+                               json_serializer=dumps_json,
+                               json_deserializer=loads_json)
 
         cls.connection = engine.connect()
 

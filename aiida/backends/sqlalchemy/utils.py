@@ -124,25 +124,26 @@ def loads_json(s):
     """
 
     # ret = json.loads(s)
-    ret = ujson.loads(s)
+    ret = ujson.loads(s, precise_float=True)
 
-    def f(d):
-        if isinstance(d, list):
-            return [f(_) for _ in d]
-        elif isinstance(d, dict):
-            for k, v in d.iteritems():
-                d[k] = f(v)
-            return d
-        elif isinstance(d, basestring):
-            if date_reg.match(d):
+    stack = [(ret, it[0], it[1]) for it in ret.iteritems()]
+
+    while stack:
+        curr, key, val = stack.pop()
+        if isinstance(val, dict):
+            for sub_key, sub_val in val.iteritems():
+                stack.append((val, sub_key, sub_val))
+        if isinstance(val, list):
+            for i, sub_val in enumerate(val):
+                stack.append((val, i, sub_val))
+        if isinstance(val, basestring):
+            if date_reg.match(val):
                 try:
-                    return parser.parse(d)
+                    curr[key] = parser.parse(val)
                 except (ValueError, TypeError):
-                    return d
-            return d
-        return d
+                    pass
 
-    return f(ret)
+    return ret
 
 
 def install_tc(session):

@@ -118,37 +118,66 @@ def dumps_json(d):
 
 date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
 
+
 def loads_json(s):
     """
     Loads the json and try to parse each basestring as a datetime object
     """
 
     # ret = json.loads(s)
-    ret = ujson.loads(s, precise_float=True)
+    ret = ujson.loads(s)
 
-    if isinstance(ret, dict):
-        stack = [(ret, it[0], it[1]) for it in ret.iteritems()]
-    elif isinstance(ret, list):
-        stack = [(ret, i, key) for i, key in enumerate(ret)]
-    else:
-        return ret
-
-    while stack:
-        curr, key, val = stack.pop()
-        if isinstance(val, dict):
-            for sub_key, sub_val in val.iteritems():
-                stack.append((val, sub_key, sub_val))
-        if isinstance(val, list):
-            for i, sub_val in enumerate(val):
-                stack.append((val, i, sub_val))
-        if isinstance(val, basestring):
-            if date_reg.match(val):
+    def f(d):
+        if isinstance(d, list):
+            for i, val in enumerate(d):
+                d[i] = f(val)
+            return d
+        elif isinstance(d, dict):
+            for k, v in d.iteritems():
+                d[k] = f(v)
+            return d
+        elif isinstance(d, basestring):
+            if date_reg.match(d):
                 try:
-                    curr[key] = parser.parse(val)
+                    return parser.parse(d)
                 except (ValueError, TypeError):
-                    pass
+                    return d
+            return d
+        return d
 
-    return ret
+    return f(ret)
+
+# def loads_json(s):
+#     """
+#     Loads the json and try to parse each basestring as a datetime object
+#     """
+#
+#     # ret = json.loads(s)
+#     ret = ujson.loads(s, precise_float=True)
+#
+#     if isinstance(ret, dict):
+#         stack = [(ret, it[0], it[1]) for it in ret.iteritems()]
+#     elif isinstance(ret, list):
+#         stack = [(ret, i, key) for i, key in enumerate(ret)]
+#     else:
+#         return ret
+#
+#     while stack:
+#         curr, key, val = stack.pop()
+#         if isinstance(val, dict):
+#             for sub_key, sub_val in val.iteritems():
+#                 stack.append((val, sub_key, sub_val))
+#         if isinstance(val, list):
+#             for i, sub_val in enumerate(val):
+#                 stack.append((val, i, sub_val))
+#         if isinstance(val, basestring):
+#             if date_reg.match(val):
+#                 try:
+#                     curr[key] = parser.parse(val)
+#                 except (ValueError, TypeError):
+#                     pass
+#
+#     return ret
 
 
 def install_tc(session):

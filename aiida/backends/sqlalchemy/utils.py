@@ -126,7 +126,12 @@ def loads_json(s):
     # ret = json.loads(s)
     ret = ujson.loads(s, precise_float=True)
 
-    stack = [(ret, it[0], it[1]) for it in ret.iteritems()]
+    if isinstance(ret, dict):
+        stack = [(ret, it[0], it[1]) for it in ret.iteritems()]
+    elif isinstance(ret, list):
+        stack = [(ret, i, key) for i, key in enumerate(ret)]
+    else:
+        return ret
 
     while stack:
         curr, key, val = stack.pop()

@@ -146,7 +146,6 @@ def list_data_structure(element=None, query_group_size=100):
     return f
 
 
-
 queries = {
     "attributes": {
         'kinds': build_query_attr('kinds'),
@@ -161,7 +160,9 @@ queries = {
         "1": complex_query()
     },
     "verdi": {
-        "list_data": list_data_structure(),
-        "list_element": list_data_structure(element="C")
+        "list_element": list_data_structure(element="C"),
     }
 }
+
+for i in [100, 250, 500, 750, 1000]:
+    queries["verdi"]["list_element_{}".format(i)] = list_data_structure(query_group_size=i)

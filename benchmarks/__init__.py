@@ -111,6 +111,8 @@ if __name__ == "__main__":
                         choices=["sqlalchemy", "django"],
                         required=True,
                         help="backend to use")
+    parser.add_argument('-p', '--profile', dest='profile',
+                        help="specify a profile to use")
 
     parser.add_argument('-r', '--reboot', dest='reboot', action='store_true',
                         default=False, help='reboot the database between queries')
@@ -143,7 +145,8 @@ if __name__ == "__main__":
         # noop context manager
         profiler = contextmanager(lambda: (yield))
 
-    load_profile(profile=profiles[args.backend])
+    profile = args.profile or profiles[args.backend]
+    load_profile(profile=profile)
 
     from aiida.backends.utils import load_dbenv
     load_dbenv()

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import ujson
+
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.node import DbNode
@@ -71,7 +73,19 @@ def complex_query():
 
     return lambda: storeremotes.all()
 
+def list_data_structure(element=None, distinct=True):
+    q = (sa.session.query(DbNode.id, DbNode.attributes['kinds'], DbNode.attributes['sites'])
+         .filter(DbNode.type.like("data.structure.%"),
+                 DbNode.attributes.has_key('kinds'),
+                 DbNode.attributes.has_key('sites'))
+         .order_by(DbNode.ctime))
+    if element:
+        d = [{"symbols": [element]}]
+        q = q.filter(DbNode.attributes["kinds"].op("@>")(ujson.dumps(d)))
+    if distinct:
+        q = q.distinct()
 
+    return lambda: q.all()
 
 
 queries = {
@@ -87,6 +101,11 @@ queries = {
     },
     "complex": {
         "1": complex_query()
+    },
+    "verdi": {
+        "list_data": list_data_structure(),
+        "list_data_no_distinct": list_data_structure(distinct=False),
+        "list_element": list_data_structure(distinct=False, element="C")
     }
 }
 

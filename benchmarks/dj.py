@@ -7,8 +7,13 @@ from aiida.backends.profile import load_profile
 from aiida.backends.djsite.utils import load_dbenv
 from aiida.backends.djsite.db import models
 
+from aiida.common.utils import grouper
+
 from aiida.orm import DataFactory, CalculationFactory
 from aiida.orm.implementation.general.calculation.inline import InlineCalculation
+
+
+from django.db.models import Q
 
 
 def build_deserialized_dict(query_values):
@@ -95,6 +100,40 @@ def complex_query():
 
     return lambda: list(q)
 
+def list_data_structure(element=None, distinct=True, query_group_size=100):
+    struct_list = models.DbNode.objects.filter(type__startswith="data.structure.")
+    if element:
+        attr_query = models.DbAttribute.objects.filter(
+            key__startswith='kinds.',
+            key__contains='.symbols.',
+            tval=element
+        )
+        struct_list = struct_list.filter(dbattributes__in=attr_query)
+    if distinct:
+        struct_list = struct_list.distinct()
+    struct_list = struct_list.order_by('ctime').values_list('pk', 'label')
+
+    def f():
+        struc_list_pks_grouped = grouper(query_group_size,
+                                         [_[0] for _ in struct_list])
+
+        d = {}
+        for struc_list_pks_part in struc_list_pks_grouped:
+            attr_query = Q(key__startswith='kinds') | Q(key__startswith='sites')
+            attrs = models.DbAttribute.objects.filter(
+                attr_query,
+                dbnode__in=struc_list_pks_part).values_list(
+                    'dbnode__pk', 'key', 'datatype', 'tval', 'fval',
+                    'ival', 'bval', 'dval'
+                )
+
+            d.update(build_deserialized_dict(attrs))
+
+        return d
+
+    return f
+
+
 
 queries = {
     "attributes": {
@@ -108,6 +147,10 @@ queries = {
     },
     "complex": {
         "1": complex_query()
+    },
+    "verdi": {
+        "list_data": list_data_structure(),
+        "list_data_no_distinct": list_data_structure(distinct=False),
+        "list_element": list_data_structure(distinct=False, element="C")
     }
-
 }

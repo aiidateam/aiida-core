@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import ujson
-# import simplejson as json
+
+try:
+    import ultrajson as json
+    from functools import partial
+    json_dumps = partial(json.dumps, double_precision=15)
+    json_loads = partial(json.loads, precise_float=True)
+except ImportError:
+    import json
+    json_dumps = json.dumps
+    json_loads = json.loads
+
 import datetime
 from dateutil import parser
 
@@ -113,8 +122,7 @@ def dumps_json(d):
             return v.isoformat()
         return v
 
-    # return json.dumps(f(d))
-    return ujson.dumps(f(d), double_precision=15)
+    return json_dumps(f(d))
 
 date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
 
@@ -124,8 +132,7 @@ def loads_json(s):
     Loads the json and try to parse each basestring as a datetime object
     """
 
-    # ret = json.loads(s)
-    ret = ujson.loads(s)
+    ret = json_loads(s)
 
     def f(d):
         if isinstance(d, list):
@@ -146,38 +153,6 @@ def loads_json(s):
         return d
 
     return f(ret)
-
-# def loads_json(s):
-#     """
-#     Loads the json and try to parse each basestring as a datetime object
-#     """
-#
-#     # ret = json.loads(s)
-#     ret = ujson.loads(s, precise_float=True)
-#
-#     if isinstance(ret, dict):
-#         stack = [(ret, it[0], it[1]) for it in ret.iteritems()]
-#     elif isinstance(ret, list):
-#         stack = [(ret, i, key) for i, key in enumerate(ret)]
-#     else:
-#         return ret
-#
-#     while stack:
-#         curr, key, val = stack.pop()
-#         if isinstance(val, dict):
-#             for sub_key, sub_val in val.iteritems():
-#                 stack.append((val, sub_key, sub_val))
-#         if isinstance(val, list):
-#             for i, sub_val in enumerate(val):
-#                 stack.append((val, i, sub_val))
-#         if isinstance(val, basestring):
-#             if date_reg.match(val):
-#                 try:
-#                     curr[key] = parser.parse(val)
-#                 except (ValueError, TypeError):
-#                     pass
-#
-#     return ret
 
 
 def install_tc(session):

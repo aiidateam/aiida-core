@@ -73,7 +73,7 @@ def complex_query():
 
     return lambda: storeremotes.all()
 
-def list_data_structure(element=None, distinct=True):
+def list_data_structure(element=None):
     q = (sa.session.query(DbNode.id, DbNode.attributes['kinds'], DbNode.attributes['sites'])
          .filter(DbNode.type.like("data.structure.%"),
                  or_(DbNode.attributes.has_key('kinds'),
@@ -82,8 +82,6 @@ def list_data_structure(element=None, distinct=True):
     if element:
         d = {"kinds": [{"symbols": [element]}]}
         q = q.filter(DbNode.attributes.contains(d))
-    if distinct:
-        q = q.distinct()
 
     return lambda: q.all()
 
@@ -104,8 +102,7 @@ queries = {
     },
     "verdi": {
         "list_data": list_data_structure(),
-        "list_data_no_distinct": list_data_structure(distinct=False),
-        "list_element": list_data_structure(distinct=False, element="C")
+        "list_element": list_data_structure(element="C")
     }
 }
 

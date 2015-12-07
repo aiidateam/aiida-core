@@ -114,7 +114,7 @@ def complex_query():
 
     return lambda: list(q)
 
-def list_data_structure(element=None, distinct=True, query_group_size=100):
+def list_data_structure(element=None, query_group_size=100):
     struct_list = models.DbNode.objects.filter(type__startswith="data.structure.")
     if element:
         attr_query = models.DbAttribute.objects.filter(
@@ -123,9 +123,7 @@ def list_data_structure(element=None, distinct=True, query_group_size=100):
             tval=element
         )
         struct_list = struct_list.filter(dbattributes__in=attr_query)
-    if distinct:
-        struct_list = struct_list.distinct()
-    struct_list = struct_list.order_by('ctime').values_list('pk', 'label')
+    struct_list = struct_list.distinct().order_by('ctime').values_list('pk', 'label')
 
     def f():
         struc_list_pks_grouped = grouper(query_group_size,
@@ -164,7 +162,6 @@ queries = {
     },
     "verdi": {
         "list_data": list_data_structure(),
-        "list_data_no_distinct": list_data_structure(distinct=False),
-        "list_element": list_data_structure(distinct=False, element="C")
+        "list_element": list_data_structure(element="C")
     }
 }

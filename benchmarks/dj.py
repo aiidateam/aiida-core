@@ -165,4 +165,4 @@ queries = {
 }
 
 for i in [100, 250, 500, 750, 1000]:
-    queries["verdi"]["list_element_{}".format(i)] = list_data_structure(query_group_size=i)
+    queries["verdi"]["list_data_{}".format(i)] = list_data_structure(query_group_size=i)

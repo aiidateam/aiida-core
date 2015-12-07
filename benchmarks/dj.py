@@ -56,7 +56,13 @@ def get_closest_cif():
     Get closest cif data in the parents of all nodes
     :param nodes: list of nodes
     """
+
+    # Cif nodes are usually the in the root of the graph
+    # BandsData are the leaves of the graph
+    # This query uses the transitive closure table
     node_type = 'CifData'
+    BandsData = DataFactory('array.bands')
+    nodes = BandsData.query()
 
     depth = models.DbPath.objects.filter(
         child__in=nodes, parent__type__contains=node_type
@@ -66,23 +72,31 @@ def get_closest_cif():
         parent__type__contains=node_type, child__in=nodes,depth=depth
     ).distinct()
 
-    return list(CifData.query(
-        children__in=nodes,child_paths__in=q).distinct().order_by('ctime'))
+    res = DataFactory('cif').query(
+        children__in=nodes,child_paths__in=q
+    ).distinct().order_by('ctime')
+
+    return lambda: list(res)
 
 
 def get_farthest_struc():
+    BandsData = DataFactory('array.bands')
+    nodes = BandsData.query()
     struc_type = DataFactory('structure')().__class__.__name__
 
     depth = models.DbPath.objects.filter(
-        child=node, parent__type__contains=struc_type
+        child__in=nodes, parent__type__contains=struc_type
     ).distinct().order_by('-depth').values_list('depth')[0][0]
 
     q = models.DbPath.objects.filter(
-        parent__type__contains=struc_type, child=node,depth=depth
+        parent__type__contains=struc_type, child__in=nodes,depth=depth
     ).distinct()
 
-    return list(DataFactory('structure').query(
-        children=node,child_paths__in=q).distinct().order_by('ctime'))
+    res = DataFactory('structure').query(
+        children__in=nodes,child_paths__in=q
+    ).distinct().order_by('ctime')
+
+    return lambda: list(res)
 
 def complex_query():
     RemoteData = DataFactory('remote')
@@ -142,8 +156,8 @@ queries = {
         'cell': build_query_attr('cell')
     },
     "paths": {
-        "closest_cif": get_closest_cif,
-        "farthest_struc": get_farthest_struc,
+        "closest_cif": get_closest_cif(),
+        "farthest_struc": get_farthest_struc(),
     },
     "complex": {
         "1": complex_query()

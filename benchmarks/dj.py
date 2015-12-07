@@ -76,7 +76,7 @@ def get_closest_cif():
         children__in=nodes,child_paths__in=q
     ).distinct().order_by('ctime')
 
-    return lambda: list(res)
+    return list(res)
 
 
 def get_farthest_struc():
@@ -96,7 +96,7 @@ def get_farthest_struc():
         children__in=nodes,child_paths__in=q
     ).distinct().order_by('ctime')
 
-    return lambda: list(res)
+    return list(res)
 
 def complex_query():
     RemoteData = DataFactory('remote')
@@ -154,8 +154,8 @@ queries = {
         'cell': build_query_attr('cell')
     },
     "paths": {
-        "closest_cif": get_closest_cif(),
-        "farthest_struc": get_farthest_struc(),
+        "closest_cif": get_closest_cif,
+        "farthest_struc": get_farthest_struc,
     },
     "complex": {
         "1": complex_query()

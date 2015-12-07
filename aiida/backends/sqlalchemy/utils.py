@@ -126,7 +126,6 @@ def dumps_json(d):
 
 date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
 
-
 def loads_json(s):
     """
     Loads the json and try to parse each basestring as a datetime object
@@ -153,6 +152,7 @@ def loads_json(s):
         return d
 
     return f(ret)
+
 
 
 def install_tc(session):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import ujson
+from sqlalchemy import or_
 
 
 from aiida.backends import sqlalchemy as sa
@@ -76,12 +76,12 @@ def complex_query():
 def list_data_structure(element=None, distinct=True):
     q = (sa.session.query(DbNode.id, DbNode.attributes['kinds'], DbNode.attributes['sites'])
          .filter(DbNode.type.like("data.structure.%"),
-                 DbNode.attributes.has_key('kinds'),
-                 DbNode.attributes.has_key('sites'))
-         .order_by(DbNode.ctime))
+                 or_(DbNode.attributes.has_key('kinds'),
+                     DbNode.attributes.has_key('sites'))
+                 ).order_by(DbNode.ctime))
     if element:
-        d = [{"symbols": [element]}]
-        q = q.filter(DbNode.attributes["kinds"].op("@>")(ujson.dumps(d)))
+        d = {"kinds": [{"symbols": [element]}]}
+        q = q.filter(DbNode.attributes.contains(d))
     if distinct:
         q = q.distinct()
 

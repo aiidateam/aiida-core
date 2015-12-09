@@ -12,7 +12,7 @@ from aiida.scheduler.datastructures import (
 # This maps PbsPro status letters to our own status list
 
 ## List of states from the man page of qstat
-#B  Array job has at least one subjob running.
+# B  Array job has at least one subjob running.
 #E  Job is exiting after having run.
 #F  Job is finished.
 #H  Job is held.
@@ -37,7 +37,6 @@ from aiida.scheduler.datastructures import (
 #S -  (Unicos only) job is suspend. [as above]
 
 
-
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
@@ -57,12 +56,26 @@ _map_status_pbs_common = {
     'U': job_states.SUSPENDED,
     'W': job_states.QUEUED,
     'X': job_states.DONE,
-    'C': job_states.DONE, # This is the completed state of PBS/Torque
+    'C': job_states.DONE,  # This is the completed state of PBS/Torque
 }
 
 
 class PbsJobResource(NodeNumberJobResource):
     def __init__(self, *args, **kwargs):
+        """
+        It extends the base class init method and calculates the 
+        num_cores_per_machine fields to pass to PBSlike schedulars.
+        
+        * Ckeck: num_cores_per_machine should be a multiple of
+        num_cores_per_mpiproc and/or num_mpiprocs_per_machine 
+        
+        * Check sequence:
+        1. If num_cores_per_mpiproc and num_cores_per_machine both are 
+        specified check whether it satisfies the check
+        2. If only num_cores_per_mpiproc is passed, calculate 
+        num_cores_per_machine
+        3. If only num_cores_per_machine is passed, use it
+        """  
 	super(PbsJobResource, self).__init__(*args, **kwargs)
 
 	value_error = ("num_cores_per_machine must be equal to "
@@ -78,10 +91,9 @@ class PbsJobResource(NodeNumberJobResource):
                 # values are correct
                 raise ValueError(value_error)
         elif self.num_cores_per_mpiproc is not None:
-            # set no of cores per mpiproc specified by user
             if self.num_cores_per_mpiproc <= 0:
                 raise ValueError("num_cores_per_mpiproc must be >=1")
-            # calculate num_cores_per_machine if none
+            # calculate num_cores_per_machine
             # In this plugin we never used num_cores_per_mpiproc so if it 
             # is not defined it is OK.
             self.num_cores_per_machine = (self.num_cores_per_mpiproc 
@@ -125,7 +137,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
         different subclasses.
         """
         raise NotImplementedError("Implement the _get_resource_lines in "
-            " each subclass!")
+                                  " each subclass!")
 
     def _get_joblist_command(self, jobs=None, user=None):
         """
@@ -136,22 +148,27 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
         """
         from aiida.common.exceptions import FeatureNotAvailable
 
-        if user:
-            raise FeatureNotAvailable("Cannot query by user in SLURM")
+        command = ['qstat', '-f']
 
-        command = 'qstat -f'
+        if jobs and user:
+            raise FeatureNotAvailable("Cannot query by user and job(s) in PBS")
+
+        if user:
+            command.append('-u{}'.format(user))
+
         if jobs:
             if isinstance(jobs, basestring):
-                command += ' {}'.format(escape_for_bash(jobs))
+                command.append('{}'.format(escape_for_bash(jobs)))
             else:
                 try:
-                    command += ' {}'.format(' '.join(escape_for_bash(j) for j in jobs))
+                    command.append('{}'.format(' '.join(escape_for_bash(j) for j in jobs)))
                 except TypeError:
                     raise TypeError(
-                        "If provided, the 'jobs' variable must be a string or a list of strings")
+                        "If provided, the 'jobs' variable must be a string or an iterable of strings")
 
-        self.logger.debug("qstat command: {}".format(command))
-        return command
+        comm = ' '.join(command)
+        self.logger.debug("qstat command: {}".format(comm))
+        return comm
 
     def _get_detailed_jobinfo_command(self, jobid):
         """
@@ -343,7 +360,6 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
         #self.logger.warning("Error in _parse_joblist_output: retval={}; "
         #    "stdout={}; stderr={}".format(retval, stdout, stderr))
 
-
         # issue a warning if there is any stderr output
         # but I strip lines containing "Unknown Job Id", that happens
         # also when I ask for a calculation that has finished
@@ -369,8 +385,8 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
                 jobdata_raw.append(
                     {'id': l.split(':', 1)[1].strip(),
                      'lines': [], 'warning_lines_idx': []})
-                     # warning_lines_idx: lines that do not start either with
-                     # tab or space
+                # warning_lines_idx: lines that do not start either with
+                # tab or space
             else:
                 if l.strip():
                     # This is a non-empty line, therefore it is an attribute
@@ -406,7 +422,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
                             ## workaround
                             jobdata_raw[-1]['lines'][-1] += "\n{}".format(l)
                             jobdata_raw[-1]['warning_lines_idx'].append(
-                                len(jobdata_raw[-1]['lines'])-1)
+                                len(jobdata_raw[-1]['lines']) - 1)
 
         # Create dictionary and parse specific fields
         job_list = []
@@ -444,7 +460,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
             problematic_fields = []
             for line_with_warning in set(job['warning_lines_idx']):
                 problematic_fields.append(job['lines'][line_with_warning].split(
-                    '=',1)[0].strip().lower())
+                    '=', 1)[0].strip().lower())
             if problematic_fields:
                 # These are the fields that contain unexpected newlines
                 raw_data['warning_fields_with_newlines'] = problematic_fields
@@ -693,7 +709,6 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
 
         return hours * 3600 + mins * 60 + secs
 
-
     def _parse_time_string(self, string, fmt='%a %b %d %H:%M:%S %Y'):
         """
         Parse a time string in the format returned from qstat -f and
@@ -745,7 +760,6 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
         self.logger.info("killing job {}".format(jobid))
 
         return submit_command
-
 
     def _parse_kill_output(self, retval, stdout, stderr):
         """

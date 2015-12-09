@@ -6,6 +6,7 @@ from django.utils import unittest
 from aiida.orm import load_node
 from aiida.orm import Node
 from aiida.common.exceptions import \
+
     ModificationNotAllowed, UniquenessError, ValidationError
 from aiida.djsite.db.testbase import AiidaTestCase
 

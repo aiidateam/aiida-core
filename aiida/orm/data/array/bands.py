@@ -9,8 +9,8 @@ import numpy
 from string import Template
 from aiida.common.exceptions import ValidationError
 
-__copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 
 #TODO: set and get bands could have more functionalities: how do I know the number of bands for example?

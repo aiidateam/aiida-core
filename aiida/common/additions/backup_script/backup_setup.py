@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import logging
@@ -12,6 +13,7 @@ from os.path import expanduser
 from aiida.djsite.utils import load_dbenv
 
 # Needed initialization for Django
+
 load_dbenv()
 from backup import Backup
 

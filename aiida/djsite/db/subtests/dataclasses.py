@@ -4,10 +4,7 @@ Tests for specific subclasses of Data
 """
 from django.utils import unittest
 from aiida.orm import load_node
-from aiida.orm import Node
-from aiida.common.exceptions import \
-
-    ModificationNotAllowed, UniquenessError, ValidationError
+from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 from aiida.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."

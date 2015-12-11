@@ -2,6 +2,8 @@
 
 import math
 
+import gc
+
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, subqueryload, joinedload, load_only
 from sqlalchemy.schema import Column
@@ -207,6 +209,10 @@ def migrate_attributes(create_column=False, profile=None, group_size=1000, debug
 
             sa.session.flush()
             sa.session.expunge_all()
+
+            del nodes
+            gc.collect()
+
 
         if error:
             cont_s = raw_input("There has been some errors during the migration. Do you want to continue ? [y/N] ")

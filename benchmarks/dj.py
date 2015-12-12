@@ -36,17 +36,20 @@ def build_deserialized_dict(query_values):
 
     return result_dict
 
-def build_query_attr(filter_):
+def build_query_attr(filter_, distinct=True):
     nodes = models.DbNode.objects.filter(
         dbgroups__name__startswith='N_elements_',
         dbgroups__name__endswith='_clean_cif_primitive_dup_filtered'
-    ).distinct()
+    )
+    if distinct:
+        nodes = nodes.distinct()
 
     pks = models.DbAttribute.objects.filter(
         dbnode__in=nodes, key__startswith=filter_
-    ).distinct().values_list(
-        'dbnode__pk', 'key', 'datatype', 'tval', 'fval', 'ival', 'bval', 'dval').distinct()
-    # Unnecessary distinct at the end ?
+    ).values_list(
+        'dbnode__pk', 'key', 'datatype', 'tval', 'fval', 'ival', 'bval', 'dval')
+    if distinct:
+        pks = pks.distinct()
 
     return lambda: build_deserialized_dict(pks)
 
@@ -151,6 +154,11 @@ queries = {
         'kinds': build_query_attr('kinds'),
         'sites': build_query_attr('sites'),
         'cell': build_query_attr('cell')
+    },
+    "attributes_no_distinct": {
+        'kinds': build_query_attr('kinds', distinct=False),
+        'sites': build_query_attr('sites', distinct=False),
+        'cell': build_query_attr('cell', distinct=False)
     },
     "paths": {
         "closest_cif": get_closest_cif,

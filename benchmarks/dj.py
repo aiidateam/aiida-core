@@ -51,7 +51,7 @@ def build_query_attr(filter_, distinct=True):
     if distinct:
         pks = pks.distinct()
 
-    return lambda: build_deserialized_dict(pks.clone())
+    return lambda: build_deserialized_dict(pks.all())
 
 
 def get_closest_cif():
@@ -115,7 +115,7 @@ def complex_query():
 
     q = storeremotes.values_list('uuid', flat=True)
 
-    return lambda: list(q.clone())
+    return lambda: list(q.all())
 
 def list_data_structure(element=None, query_group_size=100):
     struct_list = models.DbNode.objects.filter(type__startswith="data.structure.")

@@ -44,6 +44,7 @@ benchmarking JSON, so we will leave them for later.
 
 import argparse
 import time
+import sys
 
 from collections import namedtuple
 
@@ -125,6 +126,11 @@ if __name__ == "__main__":
     parser.add_argument('--delete-gin-index', dest='delete_gin_index', default=False,
                         action='store_true', help="delete the gin index if existing")
 
+    parser.add_argument('--json', dest="json", default=None,
+                        help=("json function to use between "
+                              "ujson (no date) and json (Python module)"),
+                        choices=["ujson", "json"])
+
     parser.add_argument('-g', '--group', dest='group',
                         help="group of queries to run")
     parser.add_argument('-q', '--query', dest='query',
@@ -151,10 +157,12 @@ if __name__ == "__main__":
     from aiida.backends.utils import load_dbenv
     load_dbenv()
 
+    # XXX remove this and use the profile to decide which backend to use
     if args.backend == "django":
         from dj import queries
     else:
         from sqla import queries, create_gin_index, delete_gin_index
+        from aiida.backends import sqlalchemy
 
     if args.delete_gin_index:
         print('Deleting GIN index on attributes..')
@@ -162,6 +170,22 @@ if __name__ == "__main__":
     if args.gin_index:
         print('Recreating GIN index on attributes..')
         create_gin_index()
+
+    if args.json and args.backends != "sqlalchemy":
+        print("Specifying the JSON functions to use is only available for SqlAlchemy")
+
+    if args.json == "ujson":
+        try:
+            import ujson
+            sqlalchemy.session.bind.dialect._json_serializer = ujson.dumps
+            sqlalchemy.session.bind.dialect._json_deserializer = ujson.loads
+        except ImportError:
+            print("ultrajson doesn't seem to be installed..")
+            sys.exit(-1)
+    elif args.json == "json":
+        import json
+        sqlalchemy.session.bind.dialect._json_serializer = json.dumps
+        sqlalchemy.session.bind.dialect._json_deserializer = json.loads
 
 
     print('Start of benchmarking..')

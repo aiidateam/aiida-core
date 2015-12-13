@@ -171,14 +171,14 @@ if __name__ == "__main__":
         print('Recreating GIN index on attributes..')
         create_gin_index()
 
-    if args.json and args.backends != "sqlalchemy":
+    if args.json and args.backend != "sqlalchemy":
         print("Specifying the JSON functions to use is only available for SqlAlchemy")
 
     if args.json == "ujson":
         try:
-            import ujson
-            sqlalchemy.session.bind.dialect._json_serializer = ujson.dumps
-            sqlalchemy.session.bind.dialect._json_deserializer = ujson.loads
+            import ultrajson
+            sqlalchemy.session.bind.dialect._json_serializer = ultrajson.dumps
+            sqlalchemy.session.bind.dialect._json_deserializer = ultrajson.loads
         except ImportError:
             print("ultrajson doesn't seem to be installed..")
             sys.exit(-1)

@@ -8,7 +8,7 @@ from aiida.common.utils import (export_shard_uuid, get_class_string,
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Eric Hontz, Giovanni Pizzi, Martin Uhrin"
 
 IMPORTGROUP_TYPE = 'aiida.import'
 

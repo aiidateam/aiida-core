@@ -16,7 +16,7 @@ from django.core.management.base import NoArgsCommand
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA and Django Software Foundation and individual contributors. All rights reserved."
 __license__ = "MIT license, and Django license, see LICENSE.txt file"
 __version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Eric Hontz, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 default_modules_list = [
     # ("aiida.djsite.db.models","DbNode","DbNode"),

@@ -15,7 +15,7 @@ setup(
     name='aiida',
     url='http://www.aiida.net/',
     license='MIT licence, see LICENCE.txt',
-    version="0.4.1",
+    version="0.5.0",
     # Abstract dependencies.  Concrete versions are listed in
     # requirements.txt
     # See https://caremad.io/2013/07/setup-vs-requirement/ for an explanation

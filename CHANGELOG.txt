@@ -6,15 +6,17 @@ General
 
     Final paper published, ref: G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky, AiiDA: automated interactive infrastructure and database for computational science, Comp. Mat. Sci 111, 218-230 (2016)
     Core, concrete, requirements kept in requirements.txt and optionals moved to optional_requirements.txt
+    Schema change to v1.0.2: got rid of calc_states.UNDETERMINED
 
 Import/export, backup and code interaction
 
+    [non-back-compatible] Now supporting multiple codes execution in the same submission script. Plugin interface changed, requires adaptation of the code plugins.
     Added import support for XYZ files
     Added support for van der Waals table in QE input
     Restart QE calculations avoiding using scratch using copy of parent calc
     Adding database importer for NNIN/C Pseudopotential Virtual Vault
-    Implementing conversion of pymatgen Molecule lists to AiiDA's TrajectoryData?
-    Adding a converter from pymatgen Molecule to AiiDA StructureData?
+    Implemented conversion of pymatgen Molecule lists to AiiDA's TrajectoryData
+    Adding a converter from pymatgen Molecule to AiiDA StructureData
     Queries now much faster when exporting
     Added an option to export a zip file
     Added backup scripts for efficient incremental backup of large AiiDA repositories
@@ -47,7 +49,7 @@ verdi
     Added possibility to show trajectory data with xcrysden
     Added filters on group name in 'verdi group list'
     Added possibility to load custom modules in the verdi shell (additional property verdishell.modules created; can be set with verdi devel setproperty verdishell.modules)
-    Added 'verdi data array show' command, using 'json_date' serialization to display the contents of ArrayData?
+    Added 'verdi data array show' command, using 'json_date' serialization to display the contents of ArrayData
     Added 'verdi data trajectory deposit' command line command
     Added command options --computer and --code to 'verdi data * deposit'
     Added a command line option '--all-users' for 'verdi data * list' to list objects, owned by all users

@@ -12,7 +12,9 @@ except ImportError:
     from distutils.core import setup
 
 # Get the version number
-with open('aiida/__init__.py') as aiida_init:
+aiida_folder = os.path.split(os.path.abspath(__file__))[0]
+fname = os.path.join(aiida_folder, 'aiida', '__init__.py')
+with open(fname) as aiida_init:
     ns = {}
     exec(aiida_init.read(), ns)
     aiida_version = ns['__version__']
@@ -25,6 +27,7 @@ else:
     aiida_name = 'aiida'
     aiida_license = 'MIT license, see LICENSE.txt'
 
+bin_folder = os.path.join(aiida_folder, 'bin')
 setup(
     name=aiida_name,
     url='http://www.aiida.net/',
@@ -43,8 +46,8 @@ setup(
         'python-dateutil', 'python-mimeparse',
         ],
     packages=find_packages(),
-    scripts=[os.path.join("bin", f) for f in os.listdir("bin")
-             if not os.path.isdir(os.path.join("bin", f))],
-    long_description=open('README.rst').read(),
+    scripts=[os.path.join(bin_folder, f) for f in os.listdir(bin_folder)
+             if not os.path.isdir(os.path.join(bin_folder, f))],
+    long_description=open(os.path.join(aiida_folder, 'README.rst')).read(),
 )
 

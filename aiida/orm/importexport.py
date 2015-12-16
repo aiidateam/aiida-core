@@ -182,11 +182,16 @@ def extract_tree(infile, folder, silent=False):
         root = args['root']
         for f in files:
             fullpath = os.path.join(path,f)
-            if os.path.isfile(fullpath) == False:
-                continue
             relpath = os.path.relpath(fullpath,root)
+            if os.path.isdir(fullpath):
+                if os.path.dirname(relpath) != '':
+	            folder.get_subfolder(os.path.dirname(relpath)+os.sep,
+                                     create=True)
+            elif not os.path.isfile(fullpath):
+                continue
             if os.path.dirname(relpath) != '':
-                folder.get_subfolder(os.path.dirname(relpath)+os.sep,create=True)
+                folder.get_subfolder(os.path.dirname(relpath)+os.sep,
+                                     create=True)
             folder.insert_path(os.path.abspath(fullpath),relpath)
 
     os.path.walk(infile,add_files,{'folder': folder,'root': infile})

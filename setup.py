@@ -17,10 +17,18 @@ with open('aiida/__init__.py') as aiida_init:
     exec(aiida_init.read(), ns)
     aiida_version = ns['__version__']
 
+if os.path.exists('CHANGELOG_EPFL.txt'):
+    # EPFL version
+    aiida_name = 'aiida-epfl'
+    aiida_license = 'MIT and EPFL licenses, see LICENSE.txt'
+else:
+    aiida_name = 'aiida'
+    aiida_license = 'MIT license, see LICENSE.txt'
+
 setup(
-    name='aiida',
+    name=aiida_name,
     url='http://www.aiida.net/',
-    license='MIT licence, see LICENCE.txt',
+    license=aiida_license,
     version=aiida_version,
     # Abstract dependencies.  Concrete versions are listed in
     # requirements.txt

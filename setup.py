@@ -11,11 +11,17 @@ try:
 except ImportError:
     from distutils.core import setup
 
+# Get the version number
+with open('aiida/__init__.py') as aiida_init:
+    ns = {}
+    exec(aiida_init.read(), ns)
+    aiida_version = ns['__version__']
+
 setup(
     name='aiida',
     url='http://www.aiida.net/',
     license='MIT licence, see LICENCE.txt',
-    version="0.5.0",
+    version=aiida_version,
     # Abstract dependencies.  Concrete versions are listed in
     # requirements.txt
     # See https://caremad.io/2013/07/setup-vs-requirement/ for an explanation

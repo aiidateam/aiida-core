@@ -1854,8 +1854,8 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         # roundtrip.
 
         pymatgen_struct_roundtrip = struct.get_pymatgen_structure()
-        dict1 = pymatgen_struct.to_dict
-        dict2 = pymatgen_struct_roundtrip.to_dict
+        dict1 = pymatgen_struct.as_dict()
+        dict2 = pymatgen_struct_roundtrip.as_dict()
 
         for i in dict1['sites']:
             i['abc'] = [round(j, 2) for j in i['abc']]

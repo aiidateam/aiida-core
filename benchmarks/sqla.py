@@ -32,6 +32,27 @@ def _vacuum_analyaze():
     raw_conn.cursor().execute("VACUUM ANALYZE")
     raw_conn.set_isolation_level(isolation_level)
 
+_jsonb_func_sql = """
+CREATE OR REPLACE FUNCTION jsonb_merge(JSONB, JSONB)
+RETURNS JSONB AS $$
+WITH json_union AS (
+    SELECT * FROM JSONB_EACH($1)
+    UNION ALL
+    SELECT * FROM JSONB_EACH($2)
+) SELECT JSON_OBJECT_AGG(key, value)::JSONB FROM json_union;
+$$ LANGUAGE SQL;
+"""
+
+def _add_random_number():
+    """
+    Add a key random to each attributes, with a random value from 0 to 100.
+    """
+    sa.session.execute(_jsonb_func_sql)
+    sa.session.commit()
+
+    q = ("UPDATE db_dbnode SET attributes = jsonb_merge(attributes, "
+         "('{\"random\": ' || random() * 100 || '}')::jsonb)")
+
 
 BEGIN_GROUP = 'N_elements_'
 END_GROUP = '_clean_cif_primitive_dup_filtered'
@@ -51,6 +72,55 @@ def build_query_attr_only(filter_):
          .filter(DbNode.attributes.has_key(filter_)))
 
     return lambda: q.all()
+
+def get_farthest_cif():
+
+    nodes = ParameterData.query().with_entities('id')
+    cif_type = CifData._query_type_string
+
+    depth = (sa.session.query(DbPath.depth)
+             .filter(DbPath.child_id.in_(nodes))
+             .join(DbNode, DbPath.parent)
+             .filter(DbNode.type.like("%{}%".format(cif_type)))
+             .order_by(DbPath.depth.desc())
+             .distinct()
+             [0])[0]
+
+    q = (DbPath.query.filter(DbPath.child_id.in_(nodes))
+         .join(DbNode, DbPath.parent)
+         .filter(DbNode.type.like("%{}%".format(cif_type)))
+         .filter(DbPath.depth == depth)
+         .distinct().with_entities(DbPath.id)
+         )
+
+    res = (CifData.query(children__id__in=nodes, child_paths__id__in=q)
+           .distinct().order_by(DbNode.ctime))
+
+    return res.all()
+
+def get_closest_struc():
+    nodes = ParameterData.query().with_entities('id')
+    struc_type = StructureData._query_type_string
+
+    depth = (sa.session.query(DbPath.depth)
+             .filter(DbPath.child_id.in_(nodes))
+             .join(DbNode, DbPath.parent)
+             .filter(DbNode.type.like("%{}%".format(struc_type)))
+             .order_by(DbPath.depth.desc())
+             .distinct()
+             [0])[0]
+
+    q = (DbPath.query.filter(DbPath.child_id.in_(nodes))
+         .join(DbNode, DbPath.parent)
+         .filter(DbNode.type.like("%{}%".format(struc_type)))
+         .filter(DbPath.depth == depth)
+         .distinct().with_entities(DbPath.id)
+         )
+
+    res = (StructureData.query(children__id__in=nodes,child_paths__id__in=q)
+           .distinct().order_by('ctime'))
+
+    return res.all()
 
 def complex_query():
     RemoteData = DataFactory('remote')
@@ -99,6 +169,10 @@ queries = {
     },
     "complex": {
         "1": complex_query()
+    },
+    "paths": {
+        "farthest_cif": get_farthest_cif,
+        "closest_struc": get_closest_struc,
     },
     "verdi": {
         "list_data": list_data_structure(),

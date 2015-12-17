@@ -56,6 +56,8 @@ def _add_random_number():
 
     q = ("UPDATE db_dbnode SET attributes = jsonb_merge(attributes, "
          "('{\"random\": ' || random() * 100 || '}')::jsonb)")
+    sa.session.execute(q)
+    sa.session.commit()
 
 
 BEGIN_GROUP = 'N_elements_'

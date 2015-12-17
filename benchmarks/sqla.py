@@ -4,7 +4,7 @@ from sqlalchemy import or_
 
 
 from aiida.backends import sqlalchemy as sa
-from aiida.backends.sqlalchemy.models.node import DbNode
+from aiida.backends.sqlalchemy.models.node import DbNode, DbPath
 from aiida.backends.sqlalchemy.models.group import DbGroup
 
 from aiida.orm import DataFactory, CalculationFactory

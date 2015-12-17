@@ -51,6 +51,9 @@ class DbPath(Base):
     parent_id = Column(Integer, ForeignKey('db_dbnode.id'))
     child_id = Column(Integer, ForeignKey('db_dbnode.id'))
 
+    parent = relationship("DbNode", primaryjoin="DbPath.parent_id == DbNode.id")
+    child = relationship("DbNode", primaryjoin="DbPath.child_id == DbNode.id")
+
     depth = Column(Integer)
 
     entry_edge_id = Column(Integer)

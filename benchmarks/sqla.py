@@ -8,6 +8,9 @@ from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.group import DbGroup
 
 from aiida.orm import DataFactory, CalculationFactory
+from aiida.orm.data.cif import CifData
+from aiida.orm.data.parameter import ParameterData
+from aiida.orm.data.structure import StructureData
 from aiida.orm.implementation.general.calculation.inline import InlineCalculation
 
 

@@ -11,6 +11,9 @@ from aiida.common.utils import grouper
 
 from aiida.orm import DataFactory, CalculationFactory
 from aiida.orm.implementation.general.calculation.inline import InlineCalculation
+from aiida.orm.data.cif import CifData
+from aiida.orm.data.parameter import ParameterData
+from aiida.orm.data.structure import StructureData
 
 
 from django.db.models import Q
@@ -53,49 +56,38 @@ def build_query_attr(filter_, distinct=True):
 
     return lambda: build_deserialized_dict(pks.all())
 
+def get_farthest_cif():
 
-def get_closest_cif():
-    """
-    Get closest cif data in the parents of all nodes
-    :param nodes: list of nodes
-    """
-
-    # Cif nodes are usually the in the root of the graph
-    # BandsData are the leaves of the graph
-    # This query uses the transitive closure table
-    node_type = 'CifData'
-    BandsData = DataFactory('array.bands')
-    nodes = BandsData.query()
+    nodes = ParameterData.query()
+    cif_type = CifData._query_type_string
 
     depth = models.DbPath.objects.filter(
-        child__in=nodes, parent__type__contains=node_type
-    ).distinct().order_by('depth').values_list('depth')[0][0]
+        child__in=nodes, parent__type__contains=cif_type
+    ).distinct().order_by('-depth').values_list('depth')[0][0]
 
     q = models.DbPath.objects.filter(
-        parent__type__contains=node_type, child__in=nodes,depth=depth
+        parent__type__contains=cif_type, child__in=nodes,depth=depth
     ).distinct()
 
-    res = DataFactory('cif').query(
-        children__in=nodes,child_paths__in=q
+    res = CifData.query(
+        children__in=nodes, child_paths__in=q
     ).distinct().order_by('ctime')
 
     return list(res)
 
-
-def get_farthest_struc():
-    BandsData = DataFactory('array.bands')
-    nodes = BandsData.query()
-    struc_type = DataFactory('structure')().__class__.__name__
+def get_closest_struc():
+    nodes = ParameterData.query()
+    struc_type = StructureData._query_type_string
 
     depth = models.DbPath.objects.filter(
         child__in=nodes, parent__type__contains=struc_type
-    ).distinct().order_by('-depth').values_list('depth')[0][0]
+    ).distinct().order_by('depth').values_list('depth')[0][0]
 
     q = models.DbPath.objects.filter(
         parent__type__contains=struc_type, child__in=nodes,depth=depth
     ).distinct()
 
-    res = DataFactory('structure').query(
+    res = StructureData.query(
         children__in=nodes,child_paths__in=q
     ).distinct().order_by('ctime')
 
@@ -161,8 +153,8 @@ queries = {
         'cell': build_query_attr('cell', distinct=False)
     },
     "paths": {
-        "closest_cif": get_closest_cif,
-        "farthest_struc": get_farthest_struc,
+        "farthest_cif": get_farthest_cif,
+        "closest_struc": get_closest_struc,
     },
     "complex": {
         "1": complex_query()

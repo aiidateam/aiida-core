@@ -2,6 +2,10 @@
 Installation and Deployment of AiiDA
 ====================================
 
+If you are updating from a previous version and you don't want to
+reinstall everything from scratch, read the instructions 
+:ref:`here<updating_aiida>`.
+
 Supported architecture
 ++++++++++++++++++++++
 AiiDA has a few strict requirements, in its current version:
@@ -535,3 +539,35 @@ Further comments and troubleshooting
 
     (it will ask your password, because it is connecting via ssh to ``localhost``
     to install your public key inside ~/.ssh/authorized_keys).
+
+.. _updating_aiida:
+
+Updating AiiDA from a previous version
+++++++++++++++++++++++++++++++++++++++
+
+Updating from 0.4.1 to 0.5.0
+----------------------------
+
+* Stop your daemon (using ``verdi daemon stop``)
+* Store your aiida source folder somewhere in case you did some 
+  modifications to some files
+* Replace the aiida folder with the new one (either from the tar.gz or, 
+  if you are using git, by doing a ``git pull``). If you use the same 
+  folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
+  variables
+* Run a ``verdi`` command, e.g., ``verdi calculation list``. This should 
+  raise an exception, and in the exception message you will see the
+  command to run to update the schema version of the DB (v.0.5.0
+  is using a newer version of the schema).
+  The command will look like 
+  ``python manage.py --aiida-profile=default migrate``, but please read the
+  message for the correct command to run.
+* If you run ``verdi calculation list`` again now, it should work without 
+  error messages.
+* You can now restart your daemon and work as usual.
+
+.. note:: If you modified or added files, you need to put them back in place. 
+  Note that if you were working on a plugin, the plugin interface changed: 
+  you need to change the CalcInfo returning also a CodeInfo, as specified
+  :ref:`here<qeplugin-prepare-input>` and also accept a ``Code`` object 
+  among the inputs (also described in the same page).

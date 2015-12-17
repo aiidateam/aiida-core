@@ -177,7 +177,7 @@ What did we do?
   to specify a list of kinds that are associated with the same pseudopotential
   file (while in the example above only one kind string can be passed).
 
-   
+.. _qeplugin-prepare-input:
 
 Step 3: prepare a text input
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -121,7 +121,7 @@ def get_closest_struc():
          )
 
     res = (StructureData.query(children__id__in=nodes,child_paths__id__in=q)
-           .distinct().order_by('ctime'))
+           .distinct().order_by(DbNode.ctime))
 
     return res.all()
 

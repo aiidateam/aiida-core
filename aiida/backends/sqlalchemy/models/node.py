@@ -51,8 +51,10 @@ class DbPath(Base):
     parent_id = Column(Integer, ForeignKey('db_dbnode.id'))
     child_id = Column(Integer, ForeignKey('db_dbnode.id'))
 
-    parent = relationship("DbNode", primaryjoin="DbPath.parent_id == DbNode.id")
-    child = relationship("DbNode", primaryjoin="DbPath.child_id == DbNode.id")
+    parent = relationship("DbNode", primaryjoin="DbPath.parent_id == DbNode.id",
+                          backref="child_paths")
+    child = relationship("DbNode", primaryjoin="DbPath.child_id == DbNode.id",
+                         backref="parent_paths")
 
     depth = Column(Integer)
 
@@ -106,10 +108,10 @@ class DbNode(Base):
                            backref=backref("inputs", passive_deletes=True),
                            passive_deletes=True)
 
-    child_paths = relationship("DbNode", secondary="db_dbpath",
+    children = relationship("DbNode", secondary="db_dbpath",
                                primaryjoin="DbNode.id == DbPath.parent_id",
                                secondaryjoin="DbNode.id == DbPath.child_id",
-                               backref="parent_paths")
+                               backref="parents")
 
     # TODO SP: prevent modification
     ctime = Column(DateTime(timezone=True), default=timezone.now)

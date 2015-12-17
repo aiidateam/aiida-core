@@ -121,6 +121,7 @@ class Node(AbstractNode):
         # SP: compatibility layer. Could be simplified if we remove Django.
 
         q = django_filter(DbNode.aiida_query, **kwargs)
+        q = q.reset_joinpoint()
         if cls._plugin_type_string:
             if not cls._plugin_type_string.endswith('.'):
                 raise InternalError("The plugin type string does not "

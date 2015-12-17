@@ -17,8 +17,8 @@ from aiida.djsite.db.testbase import db_test_list
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 tests_to_run = settings_profile.__dict__.get('aiida_test_list', None)
 if tests_to_run is None:
@@ -35,7 +35,7 @@ for test in set(tests_to_run):
     except KeyError:
         print >> sys.stderr, "Unknown DB test {}... skipping".format(test)
         continue
-    
+
     module = importlib.import_module(modulename)
     for objname, obj in module.__dict__.iteritems():
         if inspect.isclass(obj) and issubclass(obj, unittest.TestCase):
@@ -44,17 +44,17 @@ for test in set(tests_to_run):
             testmethods = [
                 m for m in inspect.getmembers(obj, predicate=inspect.ismethod)
                 if m[0].startswith("test_")]
-            if testmethods: # at least a method starting with test_
+            if testmethods:  # at least a method starting with test_
                 if objname in locals():
                     raise InternalError(
                         "Test class {} defined more than once".format(objname))
                 locals()[objname] = obj
                 num_tests_expected += len(testmethods)
-                #for debug
+                # for debug
                 #print "{} ==> {} ({})".format(modulename, objname, len(testmethods))
     actually_run_tests.append(test)
 
-obj = None # To avoid double runnings of the last test
+obj = None  # To avoid double runnings of the last test
 
 print >> sys.stderr, "DB tests that will be run: {} (expecting {} tests)".format(
     ",".join(actually_run_tests), num_tests_expected)

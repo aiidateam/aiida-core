@@ -21,6 +21,9 @@ from the package can be obtained by invoking commands with ``--help`` and
     requirements and IUCr data validation criteria (Version: 2000.06.09,
     ftp://ftp.iucr.ac.uk/pub/dvntests or ftp://ftp.iucr.org/pub/dvntests)
 
+* cif_cod_deposit
+    Deposit CIFs into COD database using CGI deposition interface.
+
 * cif_cod_numbers
     Find COD numbers for the .cif files in given directories of file lists.
 
@@ -93,30 +96,16 @@ follow these steps:
 
     make -C cod-tools
 
-  .. note:: as the source of `Inline::C`_ is not nicely portable, some
-    tests may fail. In that case the C CIF parser will not be available and
-    some scripts that allow the user to choose between C and Perl CIF
-    parsers have to be invoked with ``--use-perl-parser`` command line
-    option.
-
 * Prepare the environment:
-    As the layout of the scripts and libraries is somewhat non-standard,
-    more than a single path has to be added to ``${PATH}`` and
-    ``${PERL5LIB}``. Described below are two methods of setting the
-    environment for **cod-tools** as of source revision 2930:
+    Described below are two methods of setting the environment for
+    **cod-tools** as of source revision 3393:
 
     * Using Bash::
 
         CODTOOLS_SRC=~/src/cod-tools
 
-        export PATH=${CODTOOLS_SRC}/perl-scripts:${PATH}
-        export PERL5LIB=${CODTOOLS_SRC}:${PERL5LIB}
-        export PERL5LIB=${CODTOOLS_SRC}/CCIFParser:${PERL5LIB}
-        export PERL5LIB=${CODTOOLS_SRC}/CIFData:${PERL5LIB}
-        export PERL5LIB=${CODTOOLS_SRC}/CIFParser:${PERL5LIB}
-        export PERL5LIB=${CODTOOLS_SRC}/CIFTags:${PERL5LIB}
-        export PERL5LIB=${CODTOOLS_SRC}/Spacegroups:${PERL5LIB}
-        export PERL5LIB=${CODTOOLS_SRC}/lib/perl5:${PERL5LIB}
+        export PATH=${CODTOOLS_SRC}/scripts:${PATH}
+        export PERL5LIB=${CODTOOLS_SRC}/src/lib/perl5:${PERL5LIB}
 
       These commands can be pasted to ``~/.bashrc`` file, which is sourced
       automatically by the AiiDA before each calculation.
@@ -130,14 +119,8 @@ follow these steps:
         module-whatis    loads the cod-tools environment
         
         set             CODTOOLS_SRC    ~/src/cod-tools
-        prepend-path    PATH            ${CODTOOLS_SRC}/perl-scripts
-        prepend-path    PERL5LIB        ${CODTOOLS_SRC}
-        prepend-path    PERL5LIB        ${CODTOOLS_SRC}/CCIFParser
-        prepend-path    PERL5LIB        ${CODTOOLS_SRC}/CIFData
-        prepend-path    PERL5LIB        ${CODTOOLS_SRC}/CIFParser
-        prepend-path    PERL5LIB        ${CODTOOLS_SRC}/CIFTags
-        prepend-path    PERL5LIB        ${CODTOOLS_SRC}/Spacegroups
-        prepend-path    PERL5LIB        ${CODTOOLS_SRC}/lib/perl5
+        prepend-path    PATH            ${CODTOOLS_SRC}/scripts
+        prepend-path    PERL5LIB        ${CODTOOLS_SRC}/src/lib/perl5
 
 Examples
 ^^^^^^^^
@@ -257,5 +240,6 @@ Plugins
    ciffilter
    cifcellcontents
    cifcodcheck
+   cifcoddeposit
    cifcodnumbers
    cifsplitprimitive

@@ -19,8 +19,8 @@ from aiida.tools.codespecific.quantumespresso import pwinputparser
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
 class PwimmigrantCalculation(PwCalculation):
@@ -83,7 +83,7 @@ class PwimmigrantCalculation(PwCalculation):
             * a ``'settings'`` ParameterData node, if there are any fixed
               coordinates, or if the gamma kpoint is used;
 
-        and can be retrieved as a dictionary using the ``get_inputdata_dict()``
+        and can be retrieved as a dictionary using the ``get_inputs_dict()``
         method. *These input links are cached-links; nothing is stored by this
         method (including the calculation node itself).*
 
@@ -182,7 +182,7 @@ class PwimmigrantCalculation(PwCalculation):
             )
 
         # Check that open_transport is the correct transport type.
-        if type(open_transport) is not self.computer.get_transport_class():
+        if type(open_transport) is not self.get_computer().get_transport_class():
             raise InputValidationError(
                 "The transport passed as the `open_transport` parameter is "
                 "not the same transport type linked to the computer. Please "
@@ -265,13 +265,13 @@ class PwimmigrantCalculation(PwCalculation):
             # units, that will be taken care of by the input parsing tools, and
             # we are safe to fake that they were never there in the first place.
             parameters_dict = deepcopy(pwinputfile.namelists)
-            for namelist,blocked_key in self._blocked_keywords:
+            for namelist, blocked_key in self._blocked_keywords:
                 keys = parameters_dict[namelist].keys()
                 for this_key in parameters_dict[namelist].keys():
                     # take into account that celldm and celldm(*) must be blocked
-                    if re.sub("[(0-9)]","",this_key) == blocked_key:
-                        parameters_dict[namelist].pop(this_key,None) 
-            
+                    if re.sub("[(0-9)]", "", this_key) == blocked_key:
+                        parameters_dict[namelist].pop(this_key, None)
+
             parameters = ParameterData(dict=parameters_dict)
             self.use_parameters(parameters)
 
@@ -339,7 +339,7 @@ class PwimmigrantCalculation(PwCalculation):
         # the parser will extract the results from. This would normally be
         # performed in self._prepare_for_submission prior to submission.
         self._set_attr('retrieve_list',
-                      [self._OUTPUT_FILE_NAME, self._DATAFILE_XML])
+                       [self._OUTPUT_FILE_NAME, self._DATAFILE_XML])
         self._set_attr('retrieve_singlefile_list', [])
 
         # Make sure the calculation and input links are stored.
@@ -355,7 +355,7 @@ class PwimmigrantCalculation(PwCalculation):
         # Manually add the remote working directory as a RemoteData output
         # node.
         self._set_state(calc_states.SUBMITTING)
-        remotedata = RemoteData(computer=self.computer,
+        remotedata = RemoteData(computer=self.get_computer(),
                                 remote_path=self._get_remote_workdir())
         remotedata._add_link_from(self, label='remote_folder')
         remotedata.store()
@@ -394,7 +394,7 @@ class PwimmigrantCalculation(PwCalculation):
             )
 
         # Check that open_transport is the correct transport type.
-        if type(open_transport) is not self.computer.get_transport_class():
+        if type(open_transport) is not self.get_computer().get_transport_class():
             raise InputValidationError(
                 "The transport passed as the `open_transport` parameter is "
                 "not the same transport type linked to the computer. Please "

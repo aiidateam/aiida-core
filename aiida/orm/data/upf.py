@@ -8,8 +8,8 @@ import re
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
 
 UPFGROUP_TYPE = 'data.upf.family'
 
@@ -38,7 +38,8 @@ _element_v2_regexp = re.compile(
     (?P=quote_symbol).*
    """, re.VERBOSE)
 
-def get_pseudos_from_structure(structure, family_name):       
+
+def get_pseudos_from_structure(structure, family_name):
     """
     Given a family name (a UpfFamily group in the DB) and a AiiDA
     structure, return a dictionary associating each kind name with its
@@ -58,7 +59,7 @@ def get_pseudos_from_structure(structure, family_name):
             if node.element in family_pseudos:
                 raise MultipleObjectsError(
                     "More than one UPF for element {} found in "
-                    "family {}".format(node.element, family_name))   
+                    "family {}".format(node.element, family_name))
             family_pseudos[node.element] = node
 
     pseudo_list = {}
@@ -69,11 +70,12 @@ def get_pseudos_from_structure(structure, family_name):
         except KeyError:
             raise NotExistent("No UPF for element {} found in family {}".format(
                 symbol, family_name))
-            
+
     return pseudo_list
 
+
 def upload_upf_family(folder, group_name, group_description,
-                        stop_if_existing=True):
+                      stop_if_existing=True):
     """
     Upload a set of UPF files in a given group.
     
@@ -88,7 +90,7 @@ def upload_upf_family(folder, group_name, group_description,
         If False, simply adds the existing UPFData node to the group.
     """
     import os
-    
+
     import aiida.common
     from aiida.common import aiidalogger
     from aiida.orm import Group
@@ -97,57 +99,57 @@ def upload_upf_family(folder, group_name, group_description,
 
     if not os.path.isdir(folder):
         raise ValueError("folder must be a directory")
-    
+
     # only files, and only those ending with .upf or .UPF;
     # go to the real file if it is a symlink
-    files = [os.path.realpath(os.path.join(folder,i))
-             for i in os.listdir(folder) if 
-             os.path.isfile(os.path.join(folder,i)) and 
+    files = [os.path.realpath(os.path.join(folder, i))
+             for i in os.listdir(folder) if
+             os.path.isfile(os.path.join(folder, i)) and
              i.lower().endswith('.upf')]
-    
+
     nfiles = len(files)
-    
+
     try:
         group = Group.get(name=group_name, type_string=UPFGROUP_TYPE)
         group_created = False
     except NotExistent:
         group = Group(name=group_name, type_string=UPFGROUP_TYPE,
-                        user=get_automatic_user())
+                      user=get_automatic_user())
         group_created = True
-        
+
     if group.user != get_automatic_user():
         raise UniquenessError("There is already a UpfFamily group with name {}"
                               ", but it belongs to user {}, therefore you "
                               "cannot modify it".format(group_name,
                                                         group.user.email))
-         
+
     # Always update description, even if the group already existed
     group.description = group_description
 
     # NOTE: GROUP SAVED ONLY AFTER CHECKS OF UNICITY
-    
+
     pseudo_and_created = []
-    
+
     for f in files:
         md5sum = aiida.common.utils.md5_file(f)
         existing_upf = UpfData.query(dbattributes__key="md5",
-                                     dbattributes__tval = md5sum)
-        
+                                     dbattributes__tval=md5sum)
+
         if len(existing_upf) == 0:
             # return the upfdata instances, not stored
-            pseudo, created = UpfData.get_or_create(f, use_first = True,
-                                                    store_upf = False)
+            pseudo, created = UpfData.get_or_create(f, use_first=True,
+                                                    store_upf=False)
             # to check whether only one upf per element exists
             # NOTE: actually, created has the meaning of "to_be_created"
-            pseudo_and_created.append( (pseudo,created) )
+            pseudo_and_created.append((pseudo, created))
         else:
             if stop_if_existing:
-                raise ValueError("A UPF with identical MD5 to "+f+" cannot be added with stop_if_existing")
+                raise ValueError("A UPF with identical MD5 to " + f + " cannot be added with stop_if_existing")
             pseudo = existing_upf[0]
-            pseudo_and_created.append( (pseudo,False) )
-    
+            pseudo_and_created.append((pseudo, False))
+
     # check whether pseudo are unique per element
-    elements = [ (i[0].element, i[0].md5sum) for i in pseudo_and_created ]
+    elements = [(i[0].element, i[0].md5sum) for i in pseudo_and_created]
     # If group already exists, check also that I am not inserting more than
     # once the same element
     if not group_created:
@@ -156,42 +158,42 @@ def upload_upf_family(folder, group_name, group_description,
             if not isinstance(aiida_n, UpfData):
                 continue
             elements.append((aiida_n.element, aiida_n.md5sum))
-    
-    elements = set(elements) # Discard elements with the same MD5, that would
-                             # not be stored twice
+
+    elements = set(elements)  # Discard elements with the same MD5, that would
+    # not be stored twice
     elements_names = [e[0] for e in elements]
-       
-    if not len(elements_names) == len(set(elements_names) ):
+
+    if not len(elements_names) == len(set(elements_names)):
         duplicates = set([x for x in elements_names
                           if elements_names.count(x) > 1])
         duplicates_string = ", ".join(i for i in duplicates)
         raise UniquenessError("More than one UPF found for the elements: " +
-                              duplicates_string+".")    
-    
-    # At this point, save the group, if still unstored
+                              duplicates_string + ".")
+
+        # At this point, save the group, if still unstored
     if group_created:
         group.store()
-    
+
     # save the upf in the database, and add them to group    
-    for pseudo,created in pseudo_and_created:
+    for pseudo, created in pseudo_and_created:
         if created:
             pseudo.store()
-            
+
             aiidalogger.debug("New node {} created for file {}".format(
-               pseudo.uuid, pseudo.filename))
+                pseudo.uuid, pseudo.filename))
         else:
             aiidalogger.debug("Reusing node {} for file {}".format(
-               pseudo.uuid, pseudo.filename))
-    
+                pseudo.uuid, pseudo.filename))
+
     # Add elements to the group all togetehr
     group.add_nodes(pseudo for pseudo, created in pseudo_and_created)
-    
+
     nuploaded = len([_ for _, created in pseudo_and_created if created])
-     
+
     return nfiles, nuploaded
-        
-            
-def parse_upf(fname, check_filename = True):
+
+
+def parse_upf(fname, check_filename=True):
     """
     Try to get relevant information from the UPF. For the moment, only the 
     element name. Note that even UPF v.2 cannot be parsed with the XML minidom!
@@ -201,7 +203,7 @@ def parse_upf(fname, check_filename = True):
     does not start with the element name.
     """
     import os
-    
+
     from aiida.common.exceptions import ParsingError
     from aiida.common import aiidalogger
     # TODO: move these data in a 'chemistry' module
@@ -219,7 +221,7 @@ def parse_upf(fname, check_filename = True):
         else:
             aiidalogger.debug("Assuming version 1 for file {}".format(fname))
             version = "1"
-        
+
         parsed_data['version'] = version
         try:
             version_major = int(version.partition('.')[0])
@@ -228,9 +230,9 @@ def parse_upf(fname, check_filename = True):
             # to version 1
             aiidalogger.debug("Falling back to version 1 for file {}, "
                               "version string '{}' unrecognized".format(
-                                  fname, version))
+                fname, version))
             version_major = 1
-        
+
         element = None
         if version_major == 1:
             for l in f:
@@ -238,13 +240,13 @@ def parse_upf(fname, check_filename = True):
                 if match:
                     element = match.group('element_name')
                     break
-        else: # all versions > 1
+        else:  # all versions > 1
             for l in f:
                 match = _element_v2_regexp.match(l.strip())
-                if match: 
+                if match:
                     element = match.group('element_name')
                     break
-            
+
         if element is None:
             raise ParsingError("Unable to find the element of UPF {}".format(
                 fname))
@@ -254,17 +256,17 @@ def parse_upf(fname, check_filename = True):
                 element, fname))
         if check_filename:
             if not os.path.basename(fname).lower().startswith(
-                  element.lower()):
+                    element.lower()):
                 raise ParsingError("Filename {0} was recognized for element "
                                    "{1}, but the filename does not start "
                                    "with {1}".format(fname, element))
 
         parsed_data['element'] = element
 
-
     return parsed_data
-    
-#def test_parser(folder):
+
+
+# def test_parser(folder):
 #    import os
 #    from aiida.common.exceptions import ParsingError
 #    
@@ -275,15 +277,15 @@ def parse_upf(fname, check_filename = True):
 #            except ParsingError as e:
 #                print ">>>>>>>>>>>>>>>> ERROR: %s" % e.message
 
-                
 
-class UpfData(SinglefileData): 
+
+class UpfData(SinglefileData):
     """
     Function not yet documented.
     """
-    
+
     @classmethod
-    def get_or_create(cls,filename,use_first = False,store_upf=True):
+    def get_or_create(cls, filename, use_first=False, store_upf=True):
         """
         Pass the same parameter of the init; if a file with the same md5
         is found, that UpfData is returned. 
@@ -301,11 +303,11 @@ class UpfData(SinglefileData):
         import aiida.common.utils
         import os
         from aiida.common.exceptions import ParsingError
-        
+
         if not os.path.abspath(filename):
             raise ValueError("filename must be an absolute path")
         md5 = aiida.common.utils.md5_file(filename)
-        
+
         pseudos = cls.from_md5(md5)
         if len(pseudos) == 0:
             if store_upf:
@@ -320,10 +322,10 @@ class UpfData(SinglefileData):
                     return (pseudos[0], False)
                 else:
                     raise ValueError("More than one copy of a pseudopotential "
-                        "with the same MD5 has been found in the "
-                        "DB. pks={}".format(
-                          ",".join([str(i.pk) for i in pseudos])))
-            else:        
+                                     "with the same MD5 has been found in the "
+                                     "DB. pks={}".format(
+                        ",".join([str(i.pk) for i in pseudos])))
+            else:
                 return (pseudos[0], False)
 
     @classproperty
@@ -344,13 +346,13 @@ class UpfData(SinglefileData):
 
         parsed_data = parse_upf(upf_abspath)
         md5sum = aiida.common.utils.md5_file(upf_abspath)
-        
+
         try:
             element = parsed_data['element']
         except KeyError:
             raise ParsingError("No 'element' parsed in the UPF file {};"
                                " unable to store".format(self.filename))
-        
+
         self._set_attr('element', str(element))
         self._set_attr('md5', md5sum)
 
@@ -377,22 +379,31 @@ class UpfData(SinglefileData):
 
         parsed_data = parse_upf(filename)
         md5sum = aiida.common.utils.md5_file(filename)
-        
+
         try:
             element = parsed_data['element']
         except KeyError:
             raise ParsingError("No 'element' parsed in the UPF file {};"
                                " unable to store".format(self.filename))
-        
-        super(UpfData,self).set_file(filename)
-            
+
+        super(UpfData, self).set_file(filename)
+
         self._set_attr('element', str(element))
         self._set_attr('md5', md5sum)
-        
+
+    def get_upf_family_names(self):
+        """
+        Get the list of all upf family names to which the pseudo belongs
+        """
+        from aiida.orm import Group
+
+        return [_.name for _ in Group.query(nodes=self,
+                                            type_string=self.upffamily_type_string)]
+
     @property
     def element(self):
         return self.get_attr('element', None)
- 
+
     @property
     def md5sum(self):
         return self.get_attr('md5', None)
@@ -401,8 +412,7 @@ class UpfData(SinglefileData):
         from aiida.common.exceptions import ValidationError, ParsingError
         import aiida.common.utils
 
-        super(UpfData,self)._validate()
-
+        super(UpfData, self)._validate()
 
         upf_abspath = self.get_file_abs_path()
         if not upf_abspath:
@@ -414,13 +424,13 @@ class UpfData(SinglefileData):
             raise ValidationError("The file '{}' could not be "
                                   "parsed".format(upf_abspath))
         md5 = aiida.common.utils.md5_file(upf_abspath)
-        
+
         try:
             element = parsed_data['element']
         except KeyError:
             raise ValidationError("No 'element' could be parsed in the UPF "
                                   "file {}".format(upf_abspath))
-        
+
         try:
             attr_element = self.get_attr('element')
         except AttributeError:
@@ -434,26 +444,26 @@ class UpfData(SinglefileData):
         if attr_element != element:
             raise ValidationError("Attribute 'element' says '{}' but '{}' was "
                                   "parsed instead.".format(
-                    attr_element, element))
+                attr_element, element))
 
         if attr_md5 != md5:
             raise ValidationError("Attribute 'md5' says '{}' but '{}' was "
                                   "parsed instead.".format(
-                    attr_md5, md5))
+                attr_md5, md5))
 
 
     @classmethod
-    def get_upf_group(cls,group_name):
+    def get_upf_group(cls, group_name):
         """
         Return the UpfFamily group with the given name.
         """
         from aiida.orm import Group
-        
+
         return Group.get(name=group_name, type_string=cls.upffamily_type_string)
 
 
     @classmethod
-    def get_upf_groups(cls,filter_elements=None, user=None):
+    def get_upf_groups(cls, filter_elements=None, user=None):
         """
         Return all names of groups of type UpfFamily, possibly with some filters.
             
@@ -482,10 +492,10 @@ class UpfData(SinglefileData):
                 'element': actual_filter_elements}
 
         all_upf_groups = Group.query(**group_query_params)
-        
+
         groups = [(g.name, g) for g in all_upf_groups]
         # Sort by name
-        groups.sort()         
+        groups.sort()
         # Return the groups, without name
         return [_[1] for _ in groups]
         

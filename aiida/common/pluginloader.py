@@ -6,10 +6,11 @@ from aiida.common.exceptions import MissingPluginError
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
 
 logger = aiida.common.aiidalogger.getChild('pluginloader')
+
 
 def get_class_typestring(type_string):
     """
@@ -21,7 +22,7 @@ def get_class_typestring(type_string):
     the third one is the name of the python class that would be loaded.
     """
     from aiida.common.exceptions import DbContentError
-    
+
     if type_string == "":
         return ("node", "")
     else:
@@ -31,7 +32,7 @@ def get_class_typestring(type_string):
         if len(pieces) < 3:
             raise DbContentError("Not enough parts in the type string")
         return pieces[0], ".".join(pieces[1:-2]), pieces[-2]
-        
+
 
 def _existing_plugins_with_module(base_class, plugins_module_path,
                                   pkgname, basename, max_depth, suffix=None):
@@ -53,19 +54,19 @@ def _existing_plugins_with_module(base_class, plugins_module_path,
     """
     import pkgutil
     import os
-    
+
     if max_depth == 0:
         return []
     else:
-        retlist = _find_module(base_class, pkgname, basename, suffix) 
-        
+        retlist = _find_module(base_class, pkgname, basename, suffix)
+
         for _, name, ismod in pkgutil.walk_packages([plugins_module_path]):
             if ismod:
                 retlist += _existing_plugins_with_module(
-                     base_class, os.path.join(plugins_module_path,name),
-                     "{}.{}".format(pkgname, name),
-                     "{}.{}".format(basename, name) if basename else name,
-                     max_depth-1, suffix=suffix)
+                    base_class, os.path.join(plugins_module_path, name),
+                    "{}.{}".format(pkgname, name),
+                    "{}.{}".format(basename, name) if basename else name,
+                    max_depth - 1, suffix=suffix)
 
             # This has to be done anyway, for classes in the __init__ file.
             this_pkgname = "{}.{}".format(pkgname, name)
@@ -73,8 +74,8 @@ def _existing_plugins_with_module(base_class, plugins_module_path,
 
             retlist += _find_module(base_class, this_pkgname, this_basename, suffix)
 
-                
         return list(set(retlist))
+
 
 def _find_module(base_class, pkgname, this_basename, suffix=None):
     """
@@ -103,19 +104,19 @@ def _find_module(base_class, pkgname, this_basename, suffix=None):
     import inspect
 
     retlist = []
-            
-    #print ' '*(5-max_depth), '>', pkgname
+
+    # print ' '*(5-max_depth), '>', pkgname
     #print ' '*(5-max_depth), ' ', this_basename
 
     pkg = importlib.import_module(pkgname)
     for k, v in pkg.__dict__.iteritems():
-        if (inspect.isclass(v) and # A class
-            v != base_class and # Not the class itself
-            issubclass(v, base_class) and # a proper subclass
-            pkgname == v.__module__):   # We are importing it from its
-                                        # module: avoid to import it
-                                        # from another module, if it
-                                        # was simply imported there
+        if (inspect.isclass(v) and  # A class
+                    v != base_class and  # Not the class itself
+                issubclass(v, base_class) and  # a proper subclass
+                    pkgname == v.__module__):  # We are importing it from its
+            # module: avoid to import it
+            # from another module, if it
+            # was simply imported there
             # Try to return the shorter name if the subclass name
             # has the correct pattern, as expected by the Factory
             # functions
@@ -125,15 +126,16 @@ def _find_module(base_class, pkgname, this_basename, suffix=None):
                 actual_suffix = suffix
 
             if k == "{}{}".format(
-              pkgname.rpartition('.')[2].capitalize(),
-              actual_suffix):
+                    pkgname.rpartition('.')[2].capitalize(),
+                    actual_suffix):
                 retlist.append(this_basename)
             else:
                 retlist.append(
-                   ("{}.{}".format(this_basename, k) if this_basename
-                    else k))
-        #print ' '*(5-max_depth), ' ->', "{}.{}".format(this_basename, k)
-    return retlist        
+                    ("{}.{}".format(this_basename, k) if this_basename
+                     else k))
+                #print ' '*(5-max_depth), ' ->', "{}.{}".format(this_basename, k)
+    return retlist
+
 
 def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
     """
@@ -163,6 +165,7 @@ def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
                                          plugins_module_name,
                                          "",
                                          max_depth, suffix)
+
 
 def load_plugin(base_class, plugins_module, plugin_type):
     """
@@ -198,9 +201,9 @@ def load_plugin(base_class, plugins_module, plugin_type):
        and plugin_class will be the class 'aiida.transport.plugins.ssh.SshTransport'
     """
 
-    module_name = ".".join([plugins_module,plugin_type])
-    real_plugin_module, plugin_name = module_name.rsplit('.',1)
-    
+    module_name = ".".join([plugins_module, plugin_type])
+    real_plugin_module, plugin_name = module_name.rsplit('.', 1)
+
     try:
         pluginmod = importlib.import_module(real_plugin_module)
     except ImportError:
@@ -208,12 +211,11 @@ def load_plugin(base_class, plugins_module, plugin_type):
             real_plugin_module))
 
     try:
-        pluginclass = pluginmod.__dict__[plugin_name] 
+        pluginclass = pluginmod.__dict__[plugin_name]
     except KeyError:
         raise MissingPluginError("Unable to load the class {} within {}".format(
             plugin_name, real_plugin_module))
 
-    
     try:
         if issubclass(pluginclass, base_class):
             return pluginclass
@@ -256,7 +258,7 @@ def BaseFactory(module, base_class, base_modname, suffix=None):
             found. E.g., 'aiida.orm.calculation.job'.
     :param suffix: If specified, the suffix that the class name will have.
       By default, use the name of the base_class.
-    """   
+    """
     try:
         return load_plugin(base_class, base_modname, module)
     except MissingPluginError as e1:
@@ -266,7 +268,7 @@ def BaseFactory(module, base_class, base_modname, suffix=None):
         else:
             actual_suffix = suffix
         mname = module.rpartition('.')[2].capitalize() + actual_suffix
-        new_module = module+ '.' +mname
+        new_module = module + '.' + mname
         try:
             return load_plugin(base_class, base_modname, new_module)
         except MissingPluginError as e2:

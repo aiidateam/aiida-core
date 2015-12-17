@@ -6,8 +6,8 @@ from aiida.common.example_helpers import test_and_get_code
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 # This example runs a set of calculation for at various lattice parameter
 # and fit a BirchMurnaghan equation of state.
@@ -15,8 +15,8 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 ############# INPUT #############
 
-element = 'Ba'     # cation in XTiO3
-starting_alat = 4. # central point of the Murnaghan curve
+element = 'Ba'  # cation in XTiO3
+starting_alat = 4.  # central point of the Murnaghan curve
 
 #################################
 
@@ -35,15 +35,13 @@ except IndexError:
                           "--send or --dont-send")
     sys.exit(1)
 
-
 try:
     codename = sys.argv[2]
 except IndexError:
     codename = None
 code = test_and_get_code(codename, expected_code_type='quantumespresso.pw')
 
-
-valid_pseudo_groups = UpfData.get_upf_groups(filter_elements=[element,'Ti','O'])
+valid_pseudo_groups = UpfData.get_upf_groups(filter_elements=[element, 'Ti', 'O'])
 try:
     pseudo_family = sys.argv[3]
 except IndexError:
@@ -61,18 +59,16 @@ except NotExistent:
     print >> sys.stderr, ",".join(i.name for i in valid_pseudo_groups)
     sys.exit(1)
 
-
-
 ParameterData = DataFactory('parameter')
 
-params_dict = {'pw_codename':codename,
-               'num_machines':1,
-               'max_wallclock_seconds':60*20,
-               'pseudo_family':pseudo_family,
-               'x_material':element,
-               'starting_alat':starting_alat,
-               'alat_steps':10,
-               }
+params_dict = {'pw_codename': codename,
+               'num_machines': 1,
+               'max_wallclock_seconds': 60 * 20,
+               'pseudo_family': pseudo_family,
+               'x_material': element,
+               'starting_alat': starting_alat,
+               'alat_steps': 10,
+}
 
 w = WorkflowXTiO3_EOS()
 w.set_params(params_dict)

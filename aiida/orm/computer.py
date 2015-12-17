@@ -6,8 +6,9 @@ from aiida.common.utils import classproperty
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Marco Dorigo, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Marco Dorigo, Martin Uhrin, Nicolas Mounet"
+
 
 def delete_computer(computer):
     """
@@ -20,15 +21,17 @@ def delete_computer(computer):
     computer.delete(). 
     """
     from django.db.models.deletion import ProtectedError
+
     if not isinstance(computer, Computer):
         raise TypeError("computer must be an instance of "
                         "aiida.orm.computer.Computer")
 
-    try:    
+    try:
         computer.dbcomputer.delete()
     except ProtectedError:
         raise InvalidOperation("Unable to delete the requested computer: there"
                                "is at least one node using this computer")
+
 
 class Computer(object):
     """
@@ -47,9 +50,9 @@ class Computer(object):
     In the plugin, also set the _plugin_type_string, to be set in the DB in the 'type' field.
     """
     import logging
-    
+
     _logger = logging.getLogger(__name__)
-        
+
     @classproperty
     def _conf_attributes(self):
         """
@@ -94,25 +97,25 @@ class Computer(object):
              "Description",
              "A human-readable description of this computer",
              False,
-            ),                        
+            ),
             ("enabled_state",
              "Enabled",
              "True or False; if False, the computer is disabled and calculations\n"
              "associated with it will not be submitted",
              False,
-            ), 
+            ),
             ("transport_type",
              "Transport type",
              "The name of the transport to be used. Valid names are: {}".format(
-                ",".join(Transport.get_valid_transports())),
+                 ",".join(Transport.get_valid_transports())),
              False,
-             ),
+            ),
             ("scheduler_type",
              "Scheduler type",
              "The name of the scheduler to be used. Valid names are: {}".format(
-                ",".join(Scheduler.get_valid_schedulers())),
+                 ",".join(Scheduler.get_valid_schedulers())),
              False,
-             ),
+            ),
             ("workdir",
              "AiiDA work directory",
              "The absolute path of the directory on the computer where AiiDA will\n"
@@ -120,7 +123,7 @@ class Computer(object):
              "can use the {username} replacement, that will be replaced by your\n"
              "username on the remote computer",
              False,
-             ),
+            ),
             # Must be called after the scheduler!
             ("mpirun_command",
              "mpirun command",
@@ -129,30 +132,30 @@ class Computer(object):
              "replaced by the total number of cpus, or the other scheduler-dependent\n"
              "replacement fields (see the scheduler docs for more information)",
              False,
-             ),
-             ("default_mpiprocs_per_machine",
+            ),
+            ("default_mpiprocs_per_machine",
              "Default number of CPUs per machine",
              "Enter here the default number of CPUs per machine (node) that \n"
              "should be used if nothing is otherwise specified. Leave empty \n"
              "if you do not want to provide a default value.\n",
              False,
-             ),           
+            ),
             ("prepend_text",
              "Text to prepend to each command execution",
              "This is a multiline string, whose content will be prepended inside\n"
              "the submission script before the real execution of the job. It is\n"
              "your responsibility to write proper bash code!",
              True,
-             ),
+            ),
             ("append_text",
              "Text to append to each command execution",
              "This is a multiline string, whose content will be appended inside\n"
              "the submission script after the real execution of the job. It is\n"
              "your responsibility to write proper bash code!",
              True,
-             ),
-            ] 
-        
+            ),
+        ]
+
     def __int__(self):
         """
         Convert the class to an integer. This is needed to allow querying with Django.
@@ -167,19 +170,19 @@ class Computer(object):
         Return the UUID in the DB.
         """
         return self._dbcomputer.uuid
-    
+
     @property
     def pk(self):
         """
         Return the principal key in the DB.
         """
         return self._dbcomputer.pk
-    
-    def __init__(self,**kwargs):
+
+    def __init__(self, **kwargs):
         from aiida.djsite.db.models import DbComputer
         from django.core.exceptions import ObjectDoesNotExist
-        from aiida.common.exceptions import NotExistent 
-        
+        from aiida.common.exceptions import NotExistent
+
         uuid = kwargs.pop('uuid', None)
         if uuid is not None:
             if kwargs:
@@ -191,28 +194,28 @@ class Computer(object):
                 raise NotExistent("No entry with UUID={} found".format(uuid))
 
             self._dbcomputer = dbcomputer
-        else:            
+        else:
             if 'dbcomputer' in kwargs:
-                dbcomputer = kwargs.pop('dbcomputer')            
-                if not(isinstance(dbcomputer, DbComputer)):
+                dbcomputer = kwargs.pop('dbcomputer')
+                if not (isinstance(dbcomputer, DbComputer)):
                     raise TypeError("dbcomputer must be of type DbComputer")
                 self._dbcomputer = dbcomputer
-    
+
                 if kwargs:
                     raise ValueError("If you pass a dbcomputer parameter, "
                                      "you cannot pass any further parameter")
             else:
                 self._dbcomputer = DbComputer()
-    
+
             # Set all remaining parameters, stop if unknown
             self.set(**kwargs)
 
     def set(self, **kwargs):
         import collections
-        
+
         for k, v in kwargs.iteritems():
             try:
-                method = getattr(self,'set_{}'.format(k))
+                method = getattr(self, 'set_{}'.format(k))
             except AttributeError:
                 raise ValueError("Unable to set '{0}', no set_{0} method "
                                  "found".format(k))
@@ -227,7 +230,8 @@ class Computer(object):
         Return a list with all the names of the computers in the DB.
         """
         from aiida.djsite.db.models import DbComputer
-        return list(DbComputer.objects.filter().values_list('name',flat=True))
+
+        return list(DbComputer.objects.filter().values_list('name', flat=True))
 
     @property
     def full_text_info(self):
@@ -253,7 +257,7 @@ class Computer(object):
                 def_cpus_machine))
         ret_lines.append(" * Used by:        {} nodes".format(
             len(self.dbcomputer.dbnodes.all())))
-        
+
         ret_lines.append(" * prepend text:")
         if self.get_prepend_text().strip():
             for l in self.get_prepend_text().split('\n'):
@@ -274,11 +278,12 @@ class Computer(object):
         return (self._dbcomputer.pk is None)
 
     @classmethod
-    def get(cls,computer):
+    def get(cls, computer):
         """
         Return a computer from its name (or from another Computer or DbComputer instance)
         """
         from aiida.djsite.db.models import DbComputer
+
         return cls(dbcomputer=DbComputer.get_dbcomputer(computer))
 
     @property
@@ -286,32 +291,32 @@ class Computer(object):
         return self._logger
 
     @classmethod
-    def _name_validator(cls,name):
+    def _name_validator(cls, name):
         """
         Validates the name.
         """
         from aiida.common.exceptions import ValidationError
-    
+
         if not name.strip():
             raise ValidationError("No name specified")
 
     def _get_hostname_string(self):
         return self.get_hostname()
 
-    def _set_hostname_string(self,string):
+    def _set_hostname_string(self, string):
         """
         Set the hostname starting from a string.
         """
         self._hostname_validator(string)
         self.set_hostname(string)
-        
+
     @classmethod
-    def _hostname_validator(cls,hostname):
+    def _hostname_validator(cls, hostname):
         """
         Validates the hostname.
         """
         from aiida.common.exceptions import ValidationError
-    
+
         if not hostname.strip():
             raise ValidationError("No hostname specified")
 
@@ -324,15 +329,15 @@ class Computer(object):
             return ""
         else:
             return str(def_cpus_per_machine)
-        
+
 
     def _set_default_mpiprocs_per_machine_string(self, string):
         """
         Set the default number of CPUs per machine (node) from a string (set to
         None if the string is empty)
-        """       
+        """
         from aiida.common.exceptions import ValidationError
-        
+
         if not string:
             def_cpus_per_machine = None
         else:
@@ -342,10 +347,10 @@ class Computer(object):
                 raise ValidationError("Invalid value for default_mpiprocs_per_machine, "
                                       "must be a positive integer, or an empty "
                                       "string if you do not want to provide a "
-                                      "default value.")                
-        
+                                      "default value.")
+
         self._default_mpiprocs_per_machine_validator(def_cpus_per_machine)
-        
+
         self.set_default_mpiprocs_per_machine(def_cpus_per_machine)
 
     def _default_mpiprocs_per_machine_validator(self, def_cpus_per_machine):
@@ -356,14 +361,14 @@ class Computer(object):
 
         if def_cpus_per_machine is None:
             return
-        
+
         if not isinstance(def_cpus_per_machine, (
-                int,long)) or def_cpus_per_machine <= 0:
+                int, long)) or def_cpus_per_machine <= 0:
             raise ValidationError("Invalid value for default_mpiprocs_per_machine, "
                                   "must be a positive integer, or an empty "
                                   "string if you do not want to provide a "
                                   "default value.")
-        
+
     def _shouldcall_default_mpiprocs_per_machine(self):
         """
         Return True if the scheduler can accept 'default_mpiprocs_per_machine',
@@ -373,18 +378,18 @@ class Computer(object):
         avoid exceptions.
         """
         from aiida.scheduler import SchedulerFactory
-        
+
         try:
             SchedulerClass = SchedulerFactory(self.get_scheduler_type())
         except MissingPluginError:
             # Return True if the Scheduler was not found...
             return True
-    
+
         JobResourceClass = SchedulerClass._job_resource_class
         if JobResourceClass is None:
             # Odd situation...
             return False
-        
+
         return JobResourceClass.accepts_default_mpiprocs_per_machine()
 
     def _cleanup_default_mpiprocs_per_machine(self):
@@ -400,12 +405,12 @@ class Computer(object):
     def _get_enabled_state_string(self):
         return "True" if self.is_enabled() else "False"
 
-    def _set_enabled_state_string(self,string):
+    def _set_enabled_state_string(self, string):
         """
         Set the enabled state starting from a string.
         """
         from aiida.common.exceptions import ValidationError
-        
+
         upper_string = string.upper()
         if upper_string in ['YES', 'Y', 'T', 'TRUE']:
             enabled_state = True
@@ -414,34 +419,34 @@ class Computer(object):
         else:
             raise ValidationError("Invalid value '{}' for the enabled state, must "
                                   "be a boolean".format(string))
-            
+
         self._enabled_state_validator(enabled_state)
-        
+
         self.set_enabled_state(enabled_state)
-        
+
     @classmethod
-    def _enabled_state_validator(cls,enabled_state):
+    def _enabled_state_validator(cls, enabled_state):
         """
         Validates the hostname.
         """
         from aiida.common.exceptions import ValidationError
-    
-        if not isinstance(enabled_state,bool):
+
+        if not isinstance(enabled_state, bool):
             raise ValidationError("Invalid value '{}' for the enabled state, must "
                                   "be a boolean".format(str(enabled_state)))
 
     def _get_description_string(self):
         return self.get_description()
 
-    def _set_description_string(self,string):
+    def _set_description_string(self, string):
         """
         Set the description starting from a string.
         """
         self._description_validator(string)
         self.set_description(string)
-        
+
     @classmethod
-    def _description_validator(cls,description):
+    def _description_validator(cls, description):
         """
         Validates the description.
         """
@@ -451,7 +456,7 @@ class Computer(object):
     def _get_transport_type_string(self):
         return self.get_transport_type()
 
-    def _set_transport_type_string(self,string):
+    def _set_transport_type_string(self, string):
         """
         Set the transport_type starting from a string.
         """
@@ -465,14 +470,14 @@ class Computer(object):
         """
         from aiida.common.exceptions import ValidationError
         from aiida.transport import Transport
-        
+
         if transport_type not in Transport.get_valid_transports():
             raise ValidationError("The specified transport is not a valid one")
 
     def _get_scheduler_type_string(self):
         return self.get_scheduler_type()
 
-    def _set_scheduler_type_string(self,string):
+    def _set_scheduler_type_string(self, string):
         """
         Set the scheduler_type starting from a string.
         """
@@ -486,14 +491,14 @@ class Computer(object):
         """
         from aiida.common.exceptions import ValidationError
         from aiida.scheduler import Scheduler
-        
+
         if scheduler_type not in Scheduler.get_valid_schedulers():
             raise ValidationError("The specified scheduler is not a valid one")
 
     def _get_prepend_text_string(self):
         return self.get_prepend_text()
 
-    def _set_prepend_text_string(self,string):
+    def _set_prepend_text_string(self, string):
         """
         Set the prepend_text starting from a string.
         """
@@ -511,7 +516,7 @@ class Computer(object):
     def _get_append_text_string(self):
         return self.get_append_text()
 
-    def _set_append_text_string(self,string):
+    def _set_append_text_string(self, string):
         """
         Set the append_text starting from a string.
         """
@@ -529,7 +534,7 @@ class Computer(object):
     def _get_workdir_string(self):
         return self.get_workdir()
 
-    def _set_workdir_string(self,string):
+    def _set_workdir_string(self, string):
         """
         Set the workdir starting from a string.
         """
@@ -546,7 +551,7 @@ class Computer(object):
 
         if not workdir.strip():
             raise ValidationError("No workdir specified")
-        
+
         try:
             convertedwd = workdir.format(username="test")
         except KeyError as e:
@@ -554,14 +559,14 @@ class Computer(object):
                                   "field '{}'".format(e.message))
         except ValueError as e:
             raise ValidationError("Error in the string: '{}'".format(e.message))
-        
+
         if not os.path.isabs(convertedwd):
             raise ValidationError("The workdir must be an absolute path")
 
     def _get_mpirun_command_string(self):
         return " ".join(self.get_mpirun_command())
 
-    def _set_mpirun_command_string(self,string):
+    def _set_mpirun_command_string(self, string):
         """
         Set the mpirun command string (from a string to a list).
         """
@@ -578,17 +583,17 @@ class Computer(object):
         """
         from aiida.common.exceptions import ValidationError
 
-        if not isinstance(mpirun_cmd,(tuple,list)) or not(
-            all(isinstance(i,basestring) for i in mpirun_cmd)):
-                raise ValidationError("the mpirun_command must be a list of strings")
+        if not isinstance(mpirun_cmd, (tuple, list)) or not (
+                all(isinstance(i, basestring) for i in mpirun_cmd)):
+            raise ValidationError("the mpirun_command must be a list of strings")
 
         try:
             job_resource_keys = self.get_scheduler()._job_resource_class.get_valid_keys()
         except MissingPluginError:
             raise ValidationError("Unable to load the scheduler for this computer")
-        
+
         subst = {i: 'value' for i in job_resource_keys}
-        subst['tot_num_mpiprocs'] = 'value'        
+        subst['tot_num_mpiprocs'] = 'value'
 
         try:
             for arg in mpirun_cmd:
@@ -612,7 +617,7 @@ class Computer(object):
         In the subclass, always call the super().validate() method first!
         """
         from aiida.common.exceptions import ValidationError
-        
+
         if not self.get_name().strip():
             raise ValidationError("No name specified")
 
@@ -642,6 +647,7 @@ class Computer(object):
         Return a copy of the current object to work with, not stored yet.
         """
         from aiida.djsite.db.models import DbComputer
+
         if self.to_be_stored:
             raise InvalidOperation("You can copy a computer only after having stored it")
         newdbcomputer = DbComputer.objects.get(pk=self.dbcomputer.pk)
@@ -663,8 +669,8 @@ class Computer(object):
         are to be changed (e.g. a new mpirun command, etc.) 
         """
         from django.db import IntegrityError, transaction
-        
-#        if self.to_be_stored:
+
+        # if self.to_be_stored:
 
         # As a first thing, I check if the data is valid
         self.validate()
@@ -696,12 +702,13 @@ class Computer(object):
     @property
     def hostname(self):
         return self.dbcomputer.hostname
-        
+
     def _get_metadata(self):
         import json
+
         return json.loads(self.dbcomputer.metadata)
 
-    def _set_metadata(self,metadata_dict):
+    def _set_metadata(self, metadata_dict):
         """
         Set the metadata.
         
@@ -710,14 +717,14 @@ class Computer(object):
            times, differently from AiiDA Node objects).
         """
         import json
-#        if not self.to_be_stored:
-#            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        # if not self.to_be_stored:
+        #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
         self.dbcomputer.metadata = json.dumps(metadata_dict)
         if not self.to_be_stored:
             self.dbcomputer.save()
 
 
-    def _del_property(self,k,raise_exception=True):
+    def _del_property(self, k, raise_exception=True):
         olddata = self._get_metadata()
         try:
             del olddata[k]
@@ -729,12 +736,12 @@ class Computer(object):
                 return
         self._set_metadata(olddata)
 
-    def _set_property(self,k,v):
+    def _set_property(self, k, v):
         olddata = self._get_metadata()
         olddata[k] = v
         self._set_metadata(olddata)
 
-    def _get_property(self,k,*args):
+    def _get_property(self, k, *args):
         if len(args) > 1:
             raise TypeError("_get_property expected at most 2 arguments")
         olddata = self._get_metadata()
@@ -749,13 +756,13 @@ class Computer(object):
     def get_prepend_text(self):
         return self._get_property("prepend_text", "")
 
-    def set_prepend_text(self,val):
+    def set_prepend_text(self, val):
         self._set_property("prepend_text", unicode(val))
 
     def get_append_text(self):
         return self._get_property("append_text", "")
 
-    def set_append_text(self,val):
+    def set_append_text(self, val):
         self._set_property("append_text", unicode(val))
 
     def get_mpirun_command(self):
@@ -766,16 +773,16 @@ class Computer(object):
         I also provide a sensible default that may be ok in many cases.
         """
         return self._get_property("mpirun_command",
-            ["mpirun", "-np", "{tot_num_mpiprocs}"])
+                                  ["mpirun", "-np", "{tot_num_mpiprocs}"])
 
-    def set_mpirun_command(self,val):
+    def set_mpirun_command(self, val):
         """
         Set the mpirun command. It must be a list of strings (you can use
         string.split() if you have a single, space-separated string).
         """
-        if not isinstance(val,(tuple,list)) or not(
-            all(isinstance(i,basestring) for i in val)):
-                raise TypeError("the mpirun_command must be a list of strings")
+        if not isinstance(val, (tuple, list)) or not (
+                all(isinstance(i, basestring) for i in val)):
+            raise TypeError("the mpirun_command must be a list of strings")
         self._set_property("mpirun_command", val)
 
     def get_default_mpiprocs_per_machine(self):
@@ -784,8 +791,8 @@ class Computer(object):
         or None if it was not set.
         """
         return self._get_property("default_mpiprocs_per_machine",
-            None)
-    
+                                  None)
+
     def set_default_mpiprocs_per_machine(self, def_cpus_per_machine):
         """
         Set the default number of CPUs per machine (node) for this computer.
@@ -794,12 +801,13 @@ class Computer(object):
         if def_cpus_per_machine is None:
             self._del_property("default_mpiprocs_per_machine", raise_exception=False)
         else:
-            if not isinstance(def_cpus_per_machine, (int,long)):
+            if not isinstance(def_cpus_per_machine, (int, long)):
                 raise TypeError("def_cpus_per_machine must be an integer (or None)")
         self._set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
 
     def get_transport_params(self):
         import json
+
         try:
             return json.loads(self.dbcomputer.transport_params)
         except ValueError:
@@ -807,10 +815,10 @@ class Computer(object):
                 "Error while reading transport_params for computer {}".format(
                     self.hostname))
 
-    def set_transport_params(self,val):
+    def set_transport_params(self, val):
         import json
 
-#        if self.to_be_stored:
+        # if self.to_be_stored:
         try:
             self.dbcomputer.transport_params = json.dumps(val)
         except ValueError:
@@ -818,8 +826,8 @@ class Computer(object):
         if not self.to_be_stored:
             self.dbcomputer.save()
 
-#        else:
-#            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        #        else:
+        #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_workdir(self):
         try:
@@ -828,8 +836,8 @@ class Computer(object):
             # This happens the first time: I provide a reasonable default value
             return "/scratch/{username}/aiida_run/"
 
-    def set_workdir(self,val):
-        #if self.to_be_stored:
+    def set_workdir(self, val):
+        # if self.to_be_stored:
         metadata = self._get_metadata()
         metadata['workdir'] = val
         self._set_metadata(metadata)
@@ -839,7 +847,7 @@ class Computer(object):
     def get_name(self):
         return self.dbcomputer.name
 
-    def set_name(self,val):
+    def set_name(self, val):
         self.dbcomputer.name = val
         if not self.to_be_stored:
             self.dbcomputer.save()
@@ -847,7 +855,7 @@ class Computer(object):
     def get_hostname(self):
         return self.dbcomputer.hostname
 
-    def set_hostname(self,val):
+    def set_hostname(self, val):
         self.dbcomputer.hostname = val
         if not self.to_be_stored:
             self.dbcomputer.save()
@@ -855,14 +863,14 @@ class Computer(object):
     def get_description(self):
         return self.dbcomputer.description
 
-    def set_description(self,val):
+    def set_description(self, val):
         self.dbcomputer.description = val
         if not self.to_be_stored:
             self.dbcomputer.save()
 
     def is_enabled(self):
         return self.dbcomputer.enabled
-    
+
     def get_dbauthinfo(self, user):
         """
         Return the aiida.djsite.db.models.DbAuthInfo instance for the
@@ -880,13 +888,13 @@ class Computer(object):
         from aiida.common.exceptions import NotExistent
 
         try:
-            return DbAuthInfo.objects.get(dbcomputer=self.dbcomputer, 
-                                   aiidauser=user)
+            return DbAuthInfo.objects.get(dbcomputer=self.dbcomputer,
+                                          aiidauser=user)
         except ObjectDoesNotExist:
             raise NotExistent("The user '{}' is not configured for "
                               "computer '{}'".format(
                 user.email, self.name))
-    
+
     def is_user_configured(self, user):
         """
         Return True if the computer is configured for the given user, 
@@ -902,7 +910,7 @@ class Computer(object):
             return True
         except NotExistent:
             return False
-            
+
     def is_user_enabled(self, user):
         """
         Return True if the computer is enabled for the given user (looking only
@@ -932,8 +940,8 @@ class Computer(object):
     def get_scheduler_type(self):
         return self.dbcomputer.scheduler_type
 
-    def set_scheduler_type(self,val):
-        
+    def set_scheduler_type(self, val):
+
         self.dbcomputer.scheduler_type = val
         if not self.to_be_stored:
             self.dbcomputer.save()
@@ -941,22 +949,22 @@ class Computer(object):
     def get_transport_type(self):
         return self.dbcomputer.transport_type
 
-    def set_transport_type(self,val):
+    def set_transport_type(self, val):
         self.dbcomputer.transport_type = val
         if not self.to_be_stored:
             self.dbcomputer.save()
-    
+
     def get_transport_class(self):
         from aiida.transport import TransportFactory
-        
+
         try:
             # I return the class, not an instance
             return TransportFactory(self.get_transport_type())
         except MissingPluginError as e:
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
                 self.name, self.get_transport_type(), e.message))
-        
-    
+
+
     def get_scheduler(self):
         from aiida.scheduler import SchedulerFactory
 
@@ -970,11 +978,11 @@ class Computer(object):
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
-    
+
     def __str__(self):
         if self.is_enabled():
             return "{} ({}), pk: {}".format(self.name, self.hostname,
-                                           self.pk)
+                                            self.pk)
         else:
             return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname,
-                                                      self.pk)
+                                                       self.pk)

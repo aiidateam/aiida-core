@@ -43,7 +43,12 @@ The following parameters are required only for the mysql query:
 
         ssh -L 3306:localhost:3306 username@icsddbhostname.com
 
-      Therefore the database can then be accessed using "127.0.0.1" as host::
+      If you get an URLError with Errno 111 (Connection refused) when
+      you query the database, try to use instead::
+        
+        ssh -L 3306:localhost:3306 -L 8010:localhost:80 username@icsddbhostname.com
+        
+      The database can then be accessed using "127.0.0.1" as host::
 
         host = "127.0.0.1"
 
@@ -104,7 +109,6 @@ Full example
 
 Here is a full example how the icsd importer can be used::
 
-
     import aiida.tools.dbimporters.plugins.icsd
 
     cif_nr_list = [
@@ -116,15 +120,11 @@ Here is a full example how the icsd importer can be used::
     ]
 
     importer = aiida.tools.dbimporters.plugins.icsd.IcsdDbImporter(server="http://ICSDSERVER.com/",
-    host= "127.0.0.1")
-
+        host= "127.0.0.1")
     query_results = importer.query(id=cif_nr_list)
-
     for result in query_results:
-        print result.source['extras']["cif_nr"]
-
+        print result.source['db_id']
         aiida_structure = result.get_aiida_structure()
-
         #do something with the structure
 
 
@@ -137,6 +137,12 @@ If the database is not hosted by your local machine,
 use the local port tunneling provided by ssh, as follows::
 
     ssh -L 3306:localhost:3306 username@icsddbhostname.com
+
+.. note:: If you get an URLError with Errno 111 (Connection refused) when
+  you query the database, try to use instead::
+        
+    ssh -L 3306:localhost:3306 -L 8010:localhost:80 username@icsddbhostname.com
+
 
 .. note:: You need an account on the host machine.
 .. note:: There are plenty of explanations online explaining
@@ -151,121 +157,3 @@ Then open a new ``verdi shell`` and type::
 
 If you do not get an error and it does not hang, you have successfully
 established your connection to the mysql database.
-
-
-
-
-Low Dimensionality Structure Finder
-+++++++++++++++++++++++++++++++++++
-
-In this section we are going to explain you how to extract
-low dimensionality structures out of a 3D structure.
-
-The low dimensionality structure finder takes an AiiDA structure
-as input and searches for groups of atoms which are only weakly
-bonded by van der Waals forces. It can either return the found
-structures or a dictionary containing information on dimensionality,
-chemical formula, chemical symbols, positions and cell parameters
-of the different groups.
-
-.. note:: Structures with different dimensionalities can be found
-    in a 3D crystal.
-
-.. note:: The lower dimensionality structure search is stopped when
-    all atoms of the original structure have been attributed to a group of atoms.
-
-Setup
-+++++
-
-The most important parameters to set up the LowDimFinder
-
-* **cov_bond_margin**: The criterium which defines if atoms are bonded or not.
-    The margin is percentage which is added to the covalent
-    bond length. (default: 0.16)
-
-* **vacuum_space**: The amount of empty space which is added around the lower
-    dimensionality structures.
-
-* **rotation**: If True, 2D structures are rotated into xy-plane and 1D structures
-    oriented along z-axis. (default: False)
-
-
-More infomation and settings is found under :py:class:`LowDimFinder <aiida.tools.lowdimfinder.LowDimFinder>`
-
-Example
-+++++++
-
-In this example first a layered graphite AiiDA structure is manually defined, which is then analysed with the low dimensionality structure finder::
-
-    import aiida.tools.lowdimfinder
-
-    #define the positions, the chemical symbols, and the cell of graphite
-    positions =   ((1.06085029e-16,   1.83744660e-16,   1.73250000e+00),
-                    (3.18255087e-16,   5.51233980e-16,   5.19750000e+00),
-                    (3.28129634e-16,   1.42591256e+00,   1.73250000e+00),
-                    (1.23500000e+00,   7.13170188e-01,   5.19750000e+00))
-
-    chemical_symbols = ['C', 'C', 'C', 'C']
-
-    cell = [[  2.47000000e+00,   0.00000000e+00,   0.00000000e+00],
-       [ -1.23500000e+00,   2.13908275e+00,   0.00000000e+00],
-       [  4.24340116e-16,   7.34978640e-16,   6.93000000e+00]]
-
-    #build a graphite AiiDA structure
-    StructureData = DataFactory("structure")
-    aiida_graphite = StructureData(cell=cell)
-
-    for idx, symbol in enumerate(chemical_symbols):
-        aiida_graphite.append_atom(position=positions[idx],symbols=symbol)
-
-    #pass the structure to the LowDimFinder
-    low_dim_finder = aiida.tools.lowdimfinder.LowDimFinder(aiida_structure = aiida_graphite)
-
-    #analyse the structure and store the layers
-    graphene_layers = low_dim_finder.get_reduced_aiida_structures()
-
-    #print the dimensionality of the two layers, which should be as expected [2,2]
-    print low_dim_finder.get_group_data()["dimensionality"]
-
-
-
-Example 2 with ICSD importer
-++++++++++++++++++++++++++++
-
-The low dimensionality structure finder can be combined with the
-:py:class:`IcsdDbImporter <aiida.tools.dbimporters.plugins.icsd.IcsdDbImporter>`::
-
-    import aiida.tools.lowdimfinder
-    import aiida.tools.dbimporters.plugins.icsd
-
-    # A selection of layered structures
-    cif_list = ["617290","35538", "152836", "626809", "647260","280850"]
-
-    # ICSDSERVER.com should be replaced by the server domain name
-    # and a mysql connection to the database should be set up.
-
-    importer = aiida.tools.dbimporters.plugins.icsd.IcsdDbImporter(server="http://ICSDSERVER.com", host= "127.0.0.1")
-
-    query_results = importer.query(id=cif_list)
-
-    for i in query_results:
-
-        aiida_structure = i.get_aiida_structure()
-
-        low_dim_finder = aiida.tools.lowdimfinder.LowDimFinder(aiida_structure = aiida_structure)
-
-        groupdata = low_dim_finder.get_group_data()
-
-        print i.source['extras']["cif_nr"], groupdata["dimensionality"]
-
-
-
-
-
-
-
-
-
-
-
-

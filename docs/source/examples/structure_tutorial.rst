@@ -242,3 +242,43 @@ symbol in order to get the species name::
   it is possible that exporting a AiiDA structure
   to ASE and then importing it again will not perfectly preserve the kinds and
   kind names.
+
+Conversion to/from pymatgen
+---------------------------
+
+AiiDA structure can be converted to pymatgen's `Molecule`_ and
+`Structure`_ objects by using, accordingly,
+:py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen_molecule`
+and
+:py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen_structure`
+methods::
+
+    pymatgen_molecule  = aiida_structure.get_pymatgen_molecule()
+    pymatgen_structure = aiida_structure.get_pymatgen_structure()
+
+A single method
+:py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen` can be
+used for both tasks: converting periodic structures (periodic boundary
+conditions are met in all three directions) to pymatgen's Structure and
+other structures to pymatgen's Molecule::
+
+    pymatgen_object = aiida_structure.get_pymatgen()
+
+It is also possible to convert pymatgen's Molecule and Structure
+objects to AiiDA structures::
+
+    StructureData = DataFactory("structure")
+    from_mol      = StructureData(pymatgen_molecule=mol)
+    from_struct   = StructureData(pymatgen_structure=struct)
+
+Also in this case, a generic converter is provided::
+
+    StructureData = DataFactory("structure")
+    from_mol      = StructureData(pymatgen=mol)
+    from_struct   = StructureData(pymatgen=struct)
+
+.. note:: Converters work with version 3.0.13 or later of
+  pymatgen. Earlier versions may cause errors.
+
+.. _Molecule:  http://pymatgen.org/pymatgen.core.html#pymatgen.core.structure.Molecule
+.. _Structure: http://pymatgen.org/pymatgen.core.html#pymatgen.core.structure.Structure

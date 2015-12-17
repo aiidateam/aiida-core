@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+
+from abc import ABCMeta, abstractmethod
 import aiida.common
 from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import AiidaException
@@ -6,8 +8,9 @@ from aiida.scheduler.datastructures import JobTemplate
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Marco Dorigo"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Gianluca Prandini, Giovanni Pizzi, Marco Dorigo, Martin Uhrin"
+
 
 def SchedulerFactory(module):
     """
@@ -17,19 +20,23 @@ def SchedulerFactory(module):
     :return: the scheduler subclass contained in module 'module'
     """
     from aiida.common.pluginloader import BaseFactory
-    
+
     return BaseFactory(module, Scheduler, "aiida.scheduler.plugins")
+
 
 class SchedulerError(AiidaException):
     pass
 
+
 class SchedulerParsingError(SchedulerError):
     pass
+
 
 class Scheduler(object):
     """
     Base class for all schedulers.
     """
+    __metaclass__ = ABCMeta
     _logger = aiida.common.aiidalogger.getChild('scheduler')
 
     # A list of features
@@ -45,29 +52,29 @@ class Scheduler(object):
     def __init__(self):
         self._transport = None
 
-    def set_transport(self,transport):
+    def set_transport(self, transport):
         """
         Set the transport to be used to query the machine or to submit scripts.
         This class assumes that the transport is open and active.
         """
-        self._transport = transport        
+        self._transport = transport
 
     @classmethod
     def get_valid_schedulers(cls):
         from aiida.common.pluginloader import existing_plugins
-        
+
         return existing_plugins(Scheduler, "aiida.scheduler.plugins")
 
     @classmethod
-    def get_short_doc(self):
+    def get_short_doc(cls):
         """
         Return the first non-empty line of the class docstring, if available
         """
         # Remove empty lines
-        docstring = self.__doc__
+        docstring = cls.__doc__
         if not docstring:
             return "No documentation available"
-            
+
         doclines = [i for i in docstring.splitlines() if i.strip()]
         if doclines:
             return doclines[0].strip()
@@ -91,6 +98,7 @@ class Scheduler(object):
             return self._logger
         except AttributeError:
             from aiida.common.exceptions import InternalError
+
             raise InternalError("No self._logger configured for {}!")
 
     @classmethod
@@ -107,7 +115,7 @@ class Scheduler(object):
         """
         Return the submit script as a string.
         :parameter job_tmpl: a aiida.scheduler.datastrutures.JobTemplate object.
-        
+
         The plugin returns something like
 
         #!/bin/bash <- this shebang line could be configurable in the future
@@ -118,18 +126,19 @@ class Scheduler(object):
         postpend_code
         postpend_computer
         """
-        # #TODO: understand if, in the future, we want to pass more
-        #        than one calculation, e.g. for job arrays.
-        # #TODO: in the future: environment_variables [from calcinfo, possibly,
+        # TODO: understand if, in the future, we want to pass more
+        # than one calculation, e.g. for job arrays.
+        # and from scheduler_requirements e.g. for OpenMP? or maybe
+        # TODO: in the future: environment_variables [from calcinfo, possibly,
         #        and from scheduler_requirements e.g. for OpenMP? or maybe
         #        the openmp part is better managed in the scheduler_dependent
         #        part above since it will be machine-dependent]
 
         from aiida.common.exceptions import InternalError
-        
+
         if not isinstance(job_tmpl, JobTemplate):
             raise InternalError("job_tmpl should be of type JobTemplate")
-        
+
         empty_line = ""
 
         shebang = "#!/bin/bash"
@@ -138,7 +147,7 @@ class Scheduler(object):
         script_lines = []
         script_lines.append(shebang)
         script_lines.append(empty_line)
-        
+
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 
@@ -146,10 +155,8 @@ class Scheduler(object):
             script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
 
-        script_lines.append(self._get_run_line(
-                job_tmpl.argv, job_tmpl.stdin_name,
-                job_tmpl.stdout_name, job_tmpl.stderr_name,
-                job_tmpl.join_files))
+        script_lines.append(self._get_run_line(job_tmpl.codes_info,
+                                               job_tmpl.codes_run_mode))
         script_lines.append(empty_line)
 
         if job_tmpl.append_text:
@@ -157,7 +164,8 @@ class Scheduler(object):
             script_lines.append(empty_line)
 
         return "\n".join(script_lines)
-        
+
+    @abstractmethod
     def _get_submit_script_header(self, job_tmpl):
         """
         Return the submit script header, using the parameters from the
@@ -167,13 +175,19 @@ class Scheduler(object):
         """
         raise NotImplementedError
 
-    def _get_run_line(self, argv, stdin_name, stdout_name, 
-                      stderr_name, join_files):
+    def _get_run_line(self, codes_info, codes_run_mode):
         """
         Return a string with the line to execute a specific code with
         specific arguments.
-        
-        Args:  
+
+        :parameter codes_info: a list of aiida.common.datastructures.CodeInfo
+          objects. Each contains the information needed to run the code. I.e.
+          cmdline_params, stdin_name, stdout_name, stderr_name, join_files.
+          See the documentation of JobTemplate and CodeInfo
+        :parameter codes_run_mode: contains the information on how to launch the
+          multiple codes. As described in aiida.common.datastructures.code_run_modes
+
+
             argv: an array with the executable and the command line arguments.
               The first argument is the executable. This should contain
               everything, including the mpirun command etc.
@@ -185,55 +199,71 @@ class Scheduler(object):
             stderr_name: the filename to be used to store the standard error,
               relative to the working dir,
               or None if no stderr redirection is required.
-            join_files: if True, stderr is redirected to stdout; the value of 
+            join_files: if True, stderr is redirected to stdout; the value of
               stderr_name is ignored.
-        
+
         Return a string with the following format:
         [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
         """
-        command_to_exec_list = []
-        for arg in argv:
-            command_to_exec_list.append(escape_for_bash(arg))
-        command_to_exec = " ".join(command_to_exec_list)
-        
-        stdin_str = "< {}".format(
-            escape_for_bash(stdin_name)) if stdin_name else ""
-        stdout_str = "> {}".format(
-            escape_for_bash(stdout_name)) if stdout_name else ""
-        if join_files:
-            stderr_str = "2>&1"
+        from aiida.common.datastructures import code_run_modes
+
+        list_of_runlines = []
+
+        for code_info in codes_info:
+            command_to_exec_list = []
+            for arg in code_info.cmdline_params:
+                command_to_exec_list.append(escape_for_bash(arg))
+            command_to_exec = " ".join(command_to_exec_list)
+
+            stdin_str = "< {}".format(
+                escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ""
+            stdout_str = "> {}".format(
+                escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ""
+
+            join_files = code_info.join_files
+            if join_files:
+                stderr_str = "2>&1"
+            else:
+                stderr_str = "2> {}".format(
+                    escape_for_bash(code_info.stderr_name)) if code_info.stderr_name else ""
+
+            output_string = ("{} {} {} {}".format(
+                command_to_exec,
+                stdin_str, stdout_str, stderr_str))
+
+            list_of_runlines.append(output_string)
+
+        self.logger.debug('_get_run_line output: {}'.format(list_of_runlines))
+        if codes_run_mode == code_run_modes.PARALLEL:
+            list_of_runlines.append('wait\n')
+            return " &\n\n".join(list_of_runlines)
+        elif codes_run_mode == code_run_modes.SERIAL:
+            return "\n\n".join(list_of_runlines)
         else:
-            stderr_str = "2> {}".format(
-                escape_for_bash(stderr_name)) if stderr_name else ""
-            
-        output_string= ("{} {} {} {}".format(
-                       command_to_exec,
-                       stdin_str, stdout_str, stderr_str))
-                       
-        self.logger.debug('_get_run_line output: {}'.format(output_string))
-        return output_string
-    
-    def _get_joblist_command(self,jobs=None,user=None):
+            raise NotImplementedError('Unrecognized code run mode')
+
+    @abstractmethod
+    def _get_joblist_command(self, jobs=None, user=None):
         """
         Return the qstat (or equivalent) command to run with the required
         command-line parameters to get the most complete description possible;
         also specifies the output format of qsub to be the one to be used
         by the parse_queue_output method.
 
-        Must be implemented in the plugin. 
+        Must be implemented in the plugin.
 
         :param jobs: either None to get a list of all jobs in the machine,
                or a list of jobs.
         :param user: either None, or a string with the username (to show only
                      jobs of the specific user).
-        
+
         Note: typically one can pass only either jobs or user, depending on the
-            specific plugin. The choice can be done according to the value 
+            specific plugin. The choice can be done according to the value
             returned by self.get_feature('can_query_by_user')
         """
         raise NotImplementedError
 
-    def _get_detailed_jobinfo_command(self,jobid):
+    def _get_detailed_jobinfo_command(self, jobid):
         """
         Return the command to run to get the detailed information on a job.
         This is typically called after the job has finished, to retrieve
@@ -252,8 +282,8 @@ class Scheduler(object):
         At the moment, the output text is just retrieved
         and stored for logging purposes, but no parsing is performed.
         """
-        #TODO: Parsing?
-        
+        # TODO: Parsing?
+
         command = self._get_detailed_jobinfo_command(jobid=jobid)
         retval, stdout, stderr = self.transport.exec_command_wait(
             command)
@@ -267,41 +297,42 @@ stderr:
 {}
 """.format(command, retval, stdout, stderr)
 
+    @abstractmethod
     def _parse_joblist_output(self, retval, stdout, stderr):
         """
         Parse the joblist output ('qstat'), as returned by executing the
         command returned by _get_joblist_command method.
-        
+
         To be implemented by the plugin.
-        
-        Return a list of JobInfo objects, one of each job, 
+
+        Return a list of JobInfo objects, one of each job,
         each with at least its default params implemented.
         """
         raise NotImplementedError
-        
+
     def getJobs(self, jobs=None, user=None, as_dict=False):
         """
         Get the list of jobs and return it.
-        
+
         Typically, this function does not need to be modified by the plugins.
-        
+
         :param list jobs: a list of jobs to check; only these are checked
         :param str user: a string with a user: only jobs of this user are checked
         :param list as_dict: if False (default), a list of JobInfo objects is
              returned. If True, a dictionary is returned, having as key the
              job_id and as value the JobInfo object.
-        
+
         Note: typically, only either jobs or user can be specified. See also
         comments in _get_joblist_command.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_joblist_command(jobs=jobs,user=user))
-        
+            self._get_joblist_command(jobs=jobs, user=user))
+
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:
             jobdict = {j.job_id: j for j in joblist}
             if None in jobdict:
-                raise SchedulerError("Found at least a job without jobid")
+                raise SchedulerError("Found at least one job without jobid")
             return jobdict
         else:
             return joblist
@@ -316,37 +347,39 @@ stderr:
                                  "transport for the scheduler first.")
         else:
             return self._transport
-        
+
+    @abstractmethod
     def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
         To be implemented by the plugin.
-        
+
         :param str submit_script: the path of the submit script relative to the
-              working directory. 
+              working directory.
             IMPORTANT: submit_script should be already escaped.
         :return: the string to execute to submit a given script.
         """
         raise NotImplementedError
-        
+
+    @abstractmethod
     def _parse_submit_output(self, retval, stdout, stderr):
         """
         Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
-        
+
         To be implemented by the plugin.
-        
+
         :return: a string with the JobID.
         """
         raise NotImplementedError
-        
+
     def submit_from_script(self, working_directory, submit_script):
         """
         Goes in the working directory and submits the submit_script.
-        
+
         Return a string with the JobID in a valid format to be used for
         querying.
-        
+
         Typically, this function does not need to be modified by the plugins.
         """
 
@@ -354,17 +387,17 @@ stderr:
         retval, stdout, stderr = self.transport.exec_command_wait(
             self._get_submit_command(escape_for_bash(submit_script)))
         return self._parse_submit_output(retval, stdout, stderr)
-        
+
     def kill(self, jobid):
         """
         Kill a remote job, and try to parse the output message of the scheduler
         to check if the scheduler accepted the command.
-        
+
         ..note:: On some schedulers, even if the command is accepted, it may
         take some seconds for the job to actually disappear from the queue.
-        
+
         :param str jobid: the job id to be killed
-        
+
         :return: True if everything seems ok, False otherwise.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(
@@ -374,16 +407,15 @@ stderr:
     def _get_kill_command(self, jobid):
         """
         Return the command to kill the job with specified jobid.
-        
+
         To be implemented by the plugin.
         """
         raise NotImplementedError
 
-
     def _parse_kill_output(self, retval, stdout, stderr):
         """
         Parse the output of the kill command.
-        
+
         To be implemented by the plugin.
 
         :return: True if everything seems ok, False otherwise.

@@ -3,8 +3,9 @@ from aiida.orm import Node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+
 
 class Code(Node):
     """
@@ -22,35 +23,35 @@ class Code(Node):
     methods (e.g., the set_preexec_code() can be used to load specific modules required
     for the code to be run).
     """
-    
+
     def _init_internal_params(self):
         """
         This function is called by the init method
         """
-        self._updatable_attributes = ('input_plugin','append_text', 
-                                      'prepend_text', 'hidden') 
+        self._updatable_attributes = ('input_plugin', 'append_text',
+                                      'prepend_text', 'hidden')
 
-        self._set_incompatibilities = [('remote_computer_exec','local_executable')]
-    
+        self._set_incompatibilities = [('remote_computer_exec', 'local_executable')]
+
     def _hide(self):
         """
         Hide the code (prevents from showing it in the verdi code list)
         """
         self._set_attr("hidden", True)
-    
+
     def _reveal(self):
         """
         Reveal the code (allows to show it in the verdi code list)
         By default, it is revealed
         """
         self._set_attr("hidden", False)
-    
+
     def _is_hidden(self):
         """
         Determines whether the Code is hidden or not
         """
-        return self.get_attr('hidden',False)
-        
+        return self.get_attr('hidden', False)
+
     def set_files(self, files):
         """
         Given a list of filenames (or a single filename string),
@@ -61,26 +62,27 @@ class Code(Node):
              to be able to call this function.
         """
         import os
+
         if isinstance(files, basestring):
-            files=[files]
+            files = [files]
         for f in files:
-            self.add_path(f,os.path.split(f)[1])
+            self.add_path(f, os.path.split(f)[1])
 
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
         if self.is_local():
             computer_str = "repository"
-        else:   
-            if self.computer is not None:
-                computer_str = self.computer.name
+        else:
+            if self.get_computer() is not None:
+                computer_str = self.get_computer().name
             else:
                 computer_str = "[unknown]"
-        
+
         return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str, self.label,
-                                           computer_str, self.pk, self.uuid)
+                                                             computer_str, self.pk, self.uuid)
 
     @classmethod
-    def get(cls,label,computername=None,useremail=None):
+    def get(cls, label, computername=None, useremail=None):
         """
         Get a code from its label. 
 
@@ -96,7 +98,7 @@ class Code(Node):
         """
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
         from django.db.models import Q
-        
+
         q_obj = Q(label=label)
         if computername is not None:
             q_obj &= Q(dbcomputer__name=computername)
@@ -114,12 +116,12 @@ class Code(Node):
             if useremail is not None:
                 otherstr += " of user '{}'".format(useremail)
             if len(valid_codes) == 0:
-                errstr = "No code in the DB with name '{}'{}".format(label,otherstr)
+                errstr = "No code in the DB with name '{}'{}".format(label, otherstr)
                 raise NotExistent(errstr)
             elif len(valid_codes) > 1:
                 errstr = ("More than one code in the DB with name "
                           "'{}'{}, please rename at least one of "
-                          "them".format(label,otherstr))
+                          "them".format(label, otherstr))
                 raise MultipleObjectsError
 
     @classmethod
@@ -145,15 +147,16 @@ class Code(Node):
             a code
         """
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.orm import load_node
 
         try:
             code_int = int(code_string)
             try:
-                return cls.get_subclass_from_pk(code_int)
+                return load_node(code_int, parent_class=cls)
             except NotExistent:
-                raise ValueError() # Jump to the following section
-                                   # to check if a code with the given
-                                   # label exists.                              
+                raise ValueError()  # Jump to the following section
+                # to check if a code with the given
+                # label exists.
             except MultipleObjectsError:
                 raise MultipleObjectsError("More than one code in the DB "
                                            "with pk='{}'!".format(code_string))
@@ -172,7 +175,7 @@ class Code(Node):
                                   "ID or label.".format(code_string))
             elif len(codes) > 1:
                 retstr = ("There are multiple codes with label '{}', having IDs: "
-                    "".format(code_string))
+                          "".format(code_string))
                 retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
                 retstr += ("Relabel them (using their ID), or refer to them "
                            "with their ID.")
@@ -181,7 +184,7 @@ class Code(Node):
                 return codes[0]
 
     @classmethod
-    def list_for_plugin(cls,plugin,labels=True):
+    def list_for_plugin(cls, plugin, labels=True):
         """
         Return a list of valid code strings for a given plugin.
         
@@ -192,7 +195,7 @@ class Code(Node):
           otherwise a list of integers with the code PKs.
         """
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        
+
         valid_codes = list(cls.query(
             dbattributes__key="input_plugin",
             dbattributes__tval=plugin))
@@ -204,12 +207,12 @@ class Code(Node):
 
     def _validate(self):
         from aiida.common.exceptions import ValidationError
-        
-        super(Code,self)._validate()
+
+        super(Code, self)._validate()
 
         if self.is_local() is None:
             raise ValidationError("You did not set whether the code is local "
-                                  "or remote")            
+                                  "or remote")
 
         if self.is_local():
             if not self.get_local_executable():
@@ -226,25 +229,25 @@ class Code(Node):
                 raise ValidationError("You did not specify a remote computer")
             if not self.get_remote_exec_path():
                 raise ValidationError("You did not specify a remote executable")
-            
-        
-    def _add_link_from(self,src,label=None):
+
+
+    def _add_link_from(self, src, label=None):
         raise ValueError("A code node cannot have any input nodes")
 
-    def _can_link_as_output(self,dest):
+    def _can_link_as_output(self, dest):
         """
         Raise a ValueError if a link from self to dest is not allowed.
         
         An output of a code can only be a calculation
         """
         from aiida.orm import Calculation
-        
+
         if not isinstance(dest, Calculation):
             raise ValueError("The output of a code node can only be a calculation")
 
         return super(Code, self)._can_link_as_output(dest)
 
-    def set_prepend_text(self,code):
+    def set_prepend_text(self, code):
         """
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
@@ -256,7 +259,7 @@ class Code(Node):
         Return the code that will be put in the scheduler script before the
         execution, or an empty string if no pre-exec code was defined.
         """
-        return self.get_attr('prepend_text',u"")
+        return self.get_attr('prepend_text', u"")
 
     def set_input_plugin_name(self, input_plugin):
         """
@@ -267,7 +270,7 @@ class Code(Node):
             self._set_attr('input_plugin', None)
         else:
             self._set_attr('input_plugin', unicode(input_plugin))
-        
+
     def get_input_plugin_name(self):
         """
         Return the name of the default input plugin (or None if no input plugin
@@ -275,7 +278,7 @@ class Code(Node):
         """
         return self.get_attr('input_plugin', None)
 
-    def set_append_text(self,code):
+    def set_append_text(self, code):
         """
         Pass a string of code that will be put in the scheduler script after the
         execution of the code.
@@ -286,20 +289,20 @@ class Code(Node):
         """
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
-        return self.get_attr('append_text',u"")
+        return self.get_attr('append_text', u"")
 
-    def set_local_executable(self,exec_name):
+    def set_local_executable(self, exec_name):
         """
         Set the filename of the local executable.
         Implicitly set the code as local.
         """
         self._set_local()
-        self._set_attr('local_executable',exec_name)
+        self._set_attr('local_executable', exec_name)
 
     def get_local_executable(self):
         return self.get_attr('local_executable', u"")
 
-    def set_remote_computer_exec(self,remote_computer_exec):
+    def set_remote_computer_exec(self, remote_computer_exec):
         """
         Set the code as remote, and pass the computer on which it resides
         and the absolute path on that computer.
@@ -314,22 +317,22 @@ class Code(Node):
         import os
         from aiida.orm import Computer
         from aiida.djsite.db.models import DbComputer
-        
-        if (not isinstance(remote_computer_exec,(list,tuple))
+
+        if (not isinstance(remote_computer_exec, (list, tuple))
             or len(remote_computer_exec) != 2):
             raise ValueError("remote_computer_exec must be a list or tuple "
                              "of length 2, with machine and executable "
                              "name")
-        
-        computer,remote_exec_path = tuple(remote_computer_exec)
-        
+
+        computer, remote_exec_path = tuple(remote_computer_exec)
+
         if not os.path.isabs(remote_exec_path):
             raise ValueError("exec_path must be an absolute path (on the remote machine)")
 
         remote_dbcomputer = computer
         if isinstance(remote_dbcomputer, Computer):
             remote_dbcomputer = remote_dbcomputer.dbcomputer
-        if not(isinstance(remote_dbcomputer, DbComputer)):
+        if not (isinstance(remote_dbcomputer, DbComputer)):
             raise TypeError("computer must be either a Computer or DbComputer object")
 
         self._set_remote()
@@ -347,8 +350,8 @@ class Code(Node):
 
         if self.is_local():
             raise ValueError("The code is local")
-        
-        return self.computer
+
+        return self.get_computer()
 
     def _set_local(self):
         """
@@ -397,7 +400,7 @@ class Code(Node):
         """
         from aiida.orm import Computer
         from aiida.djsite.db.models import DbComputer
-                
+
         if self.is_local():
             return True
         else:
@@ -408,8 +411,8 @@ class Code(Node):
                 raise ValueError("computer must be either a Computer or DbComputer object")
             dbcomputer = DbComputer.get_dbcomputer(computer)
             return (dbcomputer.pk ==
-                self.get_remote_computer().dbcomputer.pk)
-        
+                    self.get_remote_computer().dbcomputer.pk)
+
     def get_execname(self):
         """
         Return the executable string to be put in the script.
@@ -436,15 +439,15 @@ class Code(Node):
         """
         from aiida.orm import CalculationFactory
         from aiida.common.exceptions import MissingPluginError
-        
+
         plugin_name = self.get_input_plugin_name()
         if plugin_name is None:
             raise ValueError("You did not specify an input plugin "
                              "for this code")
-        
+
         try:
             C = CalculationFactory(plugin_name)
-            
+
         except MissingPluginError:
             raise MissingPluginError("The input_plugin name for this code is "
                                      "'{}', but it is not an existing plugin"
@@ -455,7 +458,7 @@ class Code(Node):
         if not self.is_local():
             if 'computer' not in kwargs:
                 kwargs['computer'] = self.get_remote_computer()
-        
+
         new_calc = C(*args, **kwargs)
         # I link to the code
         new_calc.use_code(self)
@@ -467,7 +470,7 @@ class Code(Node):
         Return a (multiline) string with a human-readable detailed information
         on this computer.
         """
-        
+
         ret_lines = []
         ret_lines.append(" * PK:             {}".format(self.pk))
         ret_lines.append(" * UUID:           {}".format(self.uuid))
@@ -476,21 +479,21 @@ class Code(Node):
         ret_lines.append(" * Default plugin: {}".format(
             self.get_input_plugin_name()))
         ret_lines.append(" * Used by:        {} calculations".format(
-             self.dbnode.outputs.count()))
+            self.dbnode.outputs.count()))
         if self.is_local():
             ret_lines.append(" * Type:           {}".format("local"))
             ret_lines.append(" * Exec name:      {}".format(self.get_execname()))
             ret_lines.append(" * List of files/folders:")
             for fname in self._get_folder_pathsubfolder.get_content_list():
                 ret_lines.append("   * [{}] {}".format(" dir" if
-                    self._get_folder_pathsubfolder.isdir(fname) else "file", fname))
+                                                       self._get_folder_pathsubfolder.isdir(fname) else "file", fname))
         else:
             ret_lines.append(" * Type:           {}".format("remote"))
             ret_lines.append(" * Remote machine: {}".format(
                 self.get_remote_computer().name))
             ret_lines.append(" * Remote absolute path: ")
             ret_lines.append("   " + self.get_remote_exec_path())
-        
+
         ret_lines.append(" * prepend text:")
         if self.get_prepend_text().strip():
             for l in self.get_prepend_text().split('\n'):
@@ -505,7 +508,8 @@ class Code(Node):
             ret_lines.append("   # No append text.")
 
         return "\n".join(ret_lines)
-    
+
+
 def delete_code(code):
     """
     Delete a code from the DB. 
@@ -520,16 +524,17 @@ def delete_code(code):
     """
     from django.db import transaction
     from aiida.common.exceptions import InvalidOperation
+
     if not isinstance(code, Code):
         raise TypeError("code must be an instance of "
                         "aiida.orm.computer.Code")
 
     existing_outputs = code.get_outputs()
 
-    if len(existing_outputs) != 0:    
+    if len(existing_outputs) != 0:
         raise InvalidOperation("Unable to delete the requested code because it "
                                "has {} output links".format(
-                                len(existing_outputs)))
+            len(existing_outputs)))
     else:
         repo_folder = code._repository_folder
         with transaction.commit_on_success():

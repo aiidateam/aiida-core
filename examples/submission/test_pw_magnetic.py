@@ -3,8 +3,8 @@
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 import sys
 import os
@@ -32,7 +32,6 @@ except IndexError:
                           "--send or --dont-send")
     sys.exit(1)
 
-
 try:
     codename = sys.argv[2]
 except IndexError:
@@ -40,7 +39,7 @@ except IndexError:
     codename = None
 
 queue = None
-#queue = "Q_aries_free"
+# queue = "Q_aries_free"
 settings = None
 #####
 
@@ -48,9 +47,10 @@ code = test_and_get_code(codename, expected_code_type='quantumespresso.pw')
 
 # Iron bcc crystal structure
 from ase.lattice.spacegroup import crystal
-a = 2.83265 # lattic parameter in Angstrom
-Fe_ase = crystal('Fe', [(0,0,0)], spacegroup=229,
-                 cellpar=[a, a, a, 90, 90, 90],  primitive_cell=True)
+
+a = 2.83265  # lattic parameter in Angstrom
+Fe_ase = crystal('Fe', [(0, 0, 0)], spacegroup=229,
+                 cellpar=[a, a, a, 90, 90, 90], primitive_cell=True)
 s = StructureData(ase=Fe_ase).store()
 
 elements = list(s.get_symbols_set())
@@ -79,33 +79,33 @@ max_seconds = 1000
 
 # parameters are adapted from D. Dragoni (but much less converged...)
 parameters = ParameterData(dict={
-            'CONTROL': {
-                'calculation': 'scf',
-                'restart_mode': 'from_scratch',
-                'wf_collect': True,
-                'max_seconds': max_seconds,
-                'tstress': True,
-                'tprnfor': True,
-                },
-            'SYSTEM': {
-                'ecutwfc': 50.,
-                'ecutrho': 600.,
-                'occupations': 'smearing',
-                'smearing': 'marzari-vanderbilt',
-                'degauss': 0.01,
-                'nspin': 2,
-                'starting_magnetization': 0.36,
-                'nosym': True,
-                },
-            'ELECTRONS': {
-                'electron_maxstep': 100,
-                'mixing_beta' : 0.2,
-                'conv_thr': 1.e-10,
-                }})
+    'CONTROL': {
+        'calculation': 'scf',
+        'restart_mode': 'from_scratch',
+        'wf_collect': True,
+        'max_seconds': max_seconds,
+        'tstress': True,
+        'tprnfor': True,
+    },
+    'SYSTEM': {
+        'ecutwfc': 50.,
+        'ecutrho': 600.,
+        'occupations': 'smearing',
+        'smearing': 'marzari-vanderbilt',
+        'degauss': 0.01,
+        'nspin': 2,
+        'starting_magnetization': 0.36,
+        'nosym': True,
+    },
+    'ELECTRONS': {
+        'electron_maxstep': 100,
+        'mixing_beta': 0.2,
+        'conv_thr': 1.e-10,
+    }})
 
 kpoints = KpointsData()
 kpoints_mesh = 10
-kpoints.set_kpoints_mesh([kpoints_mesh,kpoints_mesh,kpoints_mesh],
+kpoints.set_kpoints_mesh([kpoints_mesh, kpoints_mesh, kpoints_mesh],
                          offset=[0.5, 0.5, 0.5])
 
 calc = code.new_calc()
@@ -149,12 +149,12 @@ if submit_test:
     print "Submit file in {}".format(os.path.join(
         os.path.relpath(subfolder.abspath),
         script_filename
-        ))
+    ))
 else:
     calc.store_all()
     print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid,calc.dbnode.pk)
+        calc.uuid, calc.dbnode.pk)
     calc.submit()
     print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid,calc.dbnode.pk)
+        calc.uuid, calc.dbnode.pk)
 

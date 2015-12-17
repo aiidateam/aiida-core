@@ -10,8 +10,9 @@ from aiida import load_dbenv
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+
 
 class User(VerdiCommandWithSubcommands):
     """
@@ -20,6 +21,7 @@ class User(VerdiCommandWithSubcommands):
     Allow to see the list of AiiDA users, their permissions, and to configure
     old and new users.
     """
+
     def __init__(self):
         """
         A dictionary with valid commands and functions to be called.
@@ -27,31 +29,33 @@ class User(VerdiCommandWithSubcommands):
         self.valid_subcommands = {
             'configure': (self.user_configure, self.complete_emails),
             'list': (self.user_list, self.complete_none),
-            }
+        }
+
     def complete_emails(self, subargs_idx, subargs):
         load_dbenv()
-        
+
         from aiida.djsite.db import models
-        
-        emails = models.DbUser.objects.all().values_list('email',flat=True)
+
+        emails = models.DbUser.objects.all().values_list('email', flat=True)
         return "\n".join(emails)
 
     def user_configure(self, *args):
-        load_dbenv()
+        from aiida.djsite.settings import settings_profile
+        from aiida import is_dbenv_loaded
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import readline
         import getpass
-        
         from aiida.djsite.db import models
         from django.core.exceptions import ObjectDoesNotExist
 
-        
         if len(args) != 1:
             print >> sys.stderr, ("You have to pass (only) one parameter after "
                                   "'user configure', the email of")
-            print >> sys.stderr,  "the user to be configured."
+            print >> sys.stderr, "the user to be configured."
             sys.exit(1)
-            
+
         email = args[0]
 
         try:
@@ -78,11 +82,10 @@ class User(VerdiCommandWithSubcommands):
             user = models.DbUser(email=email)
             print "Configuring a new user with email '{}'".format(email)
 
-            
         if configure_user:
             try:
                 kwargs = {}
-    
+
                 for field in models.DbUser.REQUIRED_FIELDS:
                     verbose_name = models.DbUser._meta.get_field_by_name(
                         field)[0].verbose_name.capitalize()
@@ -91,10 +94,10 @@ class User(VerdiCommandWithSubcommands):
                     kwargs[field] = raw_input('{}: '.format(verbose_name))
             finally:
                 readline.set_startup_hook(lambda: readline.insert_text(""))
-    
+
             for k, v in kwargs.iteritems():
                 setattr(user, k, v)
-            
+
             change_password = False
             if user.has_usable_password():
                 reply = raw_input("Do you want to replace the user password? [y/N] ")
@@ -118,7 +121,7 @@ class User(VerdiCommandWithSubcommands):
                     change_password = True
                 else:
                     print "Invalid answer, assuming answer was 'NO'"
-            
+
             if change_password:
                 match = False
                 while not match:
@@ -131,7 +134,7 @@ class User(VerdiCommandWithSubcommands):
                         print "ERROR, the two passwords do not match."
                 ## Set the password here
                 user.set_password(new_password)
-            
+
             user.save()
             print ">> User {} saved. <<".format(user.get_full_name())
             if not user.has_usable_password():
@@ -141,16 +144,16 @@ class User(VerdiCommandWithSubcommands):
 
     def user_list(self, *args):
         load_dbenv()
-        
+
         from aiida.djsite.db.models import DbUser
         from aiida.djsite.utils import get_configured_user_email
         from aiida.common.exceptions import ConfigurationError
 
-        try:        
+        try:
             current_user = get_configured_user_email()
         except ConfigurationError:
             current_user = None
-        
+
         use_colors = False
         if args:
             try:
@@ -165,11 +168,11 @@ class User(VerdiCommandWithSubcommands):
                 sys.exit(1)
 
         if current_user is not None:
-            #print >> sys.stderr, "### The '>' symbol indicates the current default user ###"
+            # print >> sys.stderr, "### The '>' symbol indicates the current default user ###"
             pass
         else:
             print >> sys.stderr, "### No default user configured yet, run 'verdi install'! ###"
-            
+
         for user in DbUser.objects.all().order_by('email'):
             name_pieces = []
             if user.first_name:
@@ -179,11 +182,11 @@ class User(VerdiCommandWithSubcommands):
             full_name = " ".join(name_pieces)
             if full_name:
                 full_name = " {}".format(full_name)
-            
+
             institution_str = " ({})".format(
                 user.institution) if user.institution else ""
-            
-            color_id = 39 # Default foreground color
+
+            color_id = 39  # Default foreground color
             permissions_list = []
             if user.is_staff:
                 permissions_list.append("STAFF")
@@ -191,9 +194,9 @@ class User(VerdiCommandWithSubcommands):
                 permissions_list.append("SUPERUSER")
             if not user.has_usable_password():
                 permissions_list.append("NO_PWD")
-                color_id = 90 # Dark gray
+                color_id = 90  # Dark gray
             else:
-                color_id = 34 # Blue
+                color_id = 34  # Blue
             permissions_str = ",".join(permissions_list)
             if permissions_str:
                 permissions_str = " [{}]".format(permissions_str)
@@ -203,7 +206,7 @@ class User(VerdiCommandWithSubcommands):
                 color_id = 31
             else:
                 symbol = "*"
-            
+
             if use_colors:
                 start_color = "\x1b[{}m".format(color_id)
                 end_color = "\x1b[0m"
@@ -214,7 +217,7 @@ class User(VerdiCommandWithSubcommands):
                 end_color = ""
                 bold_sequence = ""
                 nobold_sequence = ""
-            
+
             print "{}{} {}{}{}:{}{}{}{}".format(
                 start_color, symbol,
                 bold_sequence, user.email, nobold_sequence,

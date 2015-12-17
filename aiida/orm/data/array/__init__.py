@@ -3,8 +3,9 @@ from aiida.orm import Data
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+
 
 class ArrayData(Data):
     """
@@ -23,11 +24,11 @@ class ArrayData(Data):
       cache with the :py:meth:`.clear_internal_cache` method. 
     """
     array_prefix = "array|"
-    
-    def __init__(self,*args,**kwargs):
+
+    def __init__(self, *args, **kwargs):
         super(ArrayData, self).__init__(*args, **kwargs)
         self._cached_arrays = {}
-        
+
 
     def delete_array(self, name):
         """
@@ -41,7 +42,7 @@ class ArrayData(Data):
         if fname not in self.get_folder_list():
             raise KeyError("Array with name '{}' not found in node pk= {}".format(
                 name, self.pk))
-        
+
         # remove both file and attribute
         self.remove_path(fname)
         try:
@@ -50,15 +51,15 @@ class ArrayData(Data):
             # Should not happen, but do not crash if for some reason the 
             # property was not set.
             pass
-        
-    def arraynames(self):     
+
+    def arraynames(self):
         """
         Return a list of all arrays stored in the node, listing the files (and 
         not relying on the properties).
         """
         return self._arraynames_from_properties()
 
-    def _arraynames_from_files(self):     
+    def _arraynames_from_files(self):
         """
         Return a list of all arrays stored in the node, listing the files (and 
         not relying on the properties).
@@ -66,13 +67,13 @@ class ArrayData(Data):
         return [i[:-4] for i in self.get_folder_list() if i.endswith('.npy')]
 
 
-    def _arraynames_from_properties(self):     
+    def _arraynames_from_properties(self):
         """
         Return a list of all arrays stored in the node, listing the attributes
         starting with the correct prefix.
         """
         return [i[len(self.array_prefix):] for i in
-                      self.attrs() if i.startswith(self.array_prefix)]
+                self.attrs() if i.startswith(self.array_prefix)]
 
     def get_shape(self, name):
         """
@@ -105,21 +106,21 @@ class ArrayData(Data):
             if fname not in self.get_folder_list():
                 raise KeyError(
                     "Array with name '{}' not found in node pk= {}".format(
-                    name, self.pk))
-        
+                        name, self.pk))
+
             array = numpy.load(self.get_abs_path(fname))
             return array
 
-        
+
         # Return with proper caching, but only after storing. Before, instead,
         # always re-read from disk
         if self._to_be_stored:
-            return get_array_from_file(self,name)
+            return get_array_from_file(self, name)
         else:
             if name not in self._cached_arrays:
-                self._cached_arrays[name] = get_array_from_file(self,name)
+                self._cached_arrays[name] = get_array_from_file(self, name)
             return self._cached_arrays[name]
-    
+
     def clear_internal_cache(self):
         """
         Clear the internal memory cache where the arrays are stored after being
@@ -129,7 +130,7 @@ class ArrayData(Data):
         do not want to waste memory to cache the arrays in RAM.
         """
         self._cached_arrays = {}
-    
+
     def set_array(self, name, array):
         """
         Store a new numpy array inside the node. Possibly overwrite the array
@@ -142,31 +143,31 @@ class ArrayData(Data):
         """
         import re
         import tempfile
-        
+
         import numpy
-    
-        if not(isinstance(array, numpy.ndarray)):
+
+        if not (isinstance(array, numpy.ndarray)):
             raise TypeError("ArrayData can only store numpy arrays. Convert "
                             "the object to an array first")
-        
+
         # Check if the name is valid
-        if not(name) or re.sub('[0-9a-zA-Z_]', '', name):
+        if not (name) or re.sub('[0-9a-zA-Z_]', '', name):
             raise ValueError("The name assigned to the array ({}) is not valid,"
                              "it can only contain digits, letters or underscores")
-                
+
         fname = "{}.npy".format(name)
-        
+
         with tempfile.NamedTemporaryFile() as f:
             # Store in a temporary file, and then add to the node
             numpy.save(f, array)
-            f.flush() # Important to flush here, otherwise the next copy command
-                      # will just copy an empty file
+            f.flush()  # Important to flush here, otherwise the next copy command
+            # will just copy an empty file
             self.add_path(f.name, fname)
-        
+
         # Mainly for convenience, for querying purposes (both stores the fact
         # that there is an array with that name, and its shape)
         self._set_attr("{}{}".format(self.array_prefix, name), list(array.shape))
-    
+
 
     def _validate(self):
         """
@@ -176,11 +177,12 @@ class ArrayData(Data):
         and memory.
         """
         from aiida.common.exceptions import ValidationError
+
         files = self._arraynames_from_files()
         properties = self._arraynames_from_properties()
-        
+
         if set(files) != set(properties):
             raise ValidationError("Mismatch of files and properties for ArrayData"
                                   " node (pk= {}): {} vs. {}".format(self.pk,
-                                        files, properties))
-        super(ArrayData,self)._validate()
+                                                                     files, properties))
+        super(ArrayData, self)._validate()

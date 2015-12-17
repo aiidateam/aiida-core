@@ -2,27 +2,30 @@
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+
 
 class VerdiCommand(object):
     """
     This command has no documentation yet.
     """
+
     class __metaclass__(type):
         """
         Some python black magic to set correctly the logger also in subclasses.
         """
+
         def __new__(cls, name, bases, attrs):
             newcls = type.__new__(cls, name, bases, attrs)
 
             # If the '_abstract' attribute is not explicitly defined in the
             # given class, set it to False.
-            if '_abstract' not in attrs:    
+            if '_abstract' not in attrs:
                 newcls._abstract = False
-            
+
             return newcls
-    
+
     # This is an abstract class
     _abstract = True
 
@@ -40,7 +43,7 @@ class VerdiCommand(object):
         from aiida.cmdline import execname
 
         subcommand_str = ""
-        
+
         if with_exec_name:
             exec_name_part = "{} ".format(execname)
         else:
@@ -58,13 +61,13 @@ class VerdiCommand(object):
             return cls.__name__.lower()
         else:
             return cls._custom_command_name
-    
-    def run(self,*args):
+
+    def run(self, *args):
         """
         Method executed when the command is called from the command line.
         """
         import sys
-        
+
         print >> sys.stderr, "This command has not been implemented yet"
 
     def complete(self, subargs_idx, subargs):
@@ -82,42 +85,43 @@ class VerdiCommand(object):
 
 class VerdiCommandRouter(VerdiCommand):
     _abstract = True
-    
+
     # Empty valid subcommands to start with; 
     # These should be a dictionary with 'key' the name to type on the 
     # command line, and value a VerdiCommand class to call when that subcommand
     # is invoked.
     routed_subcommands = {}
 
-    def no_subcommand(self,*args):
+    def no_subcommand(self, *args):
         import sys
-        
-        
+
+
         if self.routed_subcommands:
             print >> sys.stderr, ("You have to pass a valid subcommand to "
                                   "{}.\nValid subcommands are:".format(
-                                      self.get_full_command_name()))
-            print >> sys.stderr, "\n".join("  {}".format(sc) 
+                self.get_full_command_name()))
+            print >> sys.stderr, "\n".join("  {}".format(sc)
                                            for sc in self.routed_subcommands)
         else:
             print >> sys.stderr, ("There are no valid subcommand to "
                                   "{}.".format(self.get_full_command_name()))
         sys.exit(1)
 
-    def invalid_subcommand(self,*args):
+    def invalid_subcommand(self, *args):
         import sys
+
         if self.routed_subcommands:
             print >> sys.stderr, ("You passed an invalid subcommand to '{}'.\n"
                                   "Valid subcommands are:".format(
-                                      self.get_full_command_name()))
-            print >> sys.stderr, "\n".join("  {}".format(sc) 
+                self.get_full_command_name()))
+            print >> sys.stderr, "\n".join("  {}".format(sc)
                                            for sc in self.routed_subcommands)
         else:
             print >> sys.stderr, ("There are no valid subcommand to "
                                   "{}.".format(self.get_full_command_name()))
         sys.exit(1)
 
-    def run(self,*args):       
+    def run(self, *args):
         try:
             the_class = self.routed_subcommands[args[0]]
             the_class._custom_command_name = "{} {}".format(
@@ -127,10 +131,10 @@ class VerdiCommandRouter(VerdiCommand):
             function_to_call = self.no_subcommand
         except KeyError:
             function_to_call = self.invalid_subcommand
-            
+
         function_to_call(*args[1:])
 
-    def complete(self,subargs_idx, subargs):
+    def complete(self, subargs_idx, subargs):
         if subargs_idx == 0:
             print "\n".join(self.routed_subcommands.keys())
         elif subargs_idx >= 1:
@@ -138,13 +142,14 @@ class VerdiCommandRouter(VerdiCommand):
                 first_subarg = subargs[0]
             except  IndexError:
                 first_subarg = ''
-                
+
             try:
-                complete_function = self.routed_subcommands[first_subarg]().complete 
+                complete_function = self.routed_subcommands[first_subarg]().complete
             except KeyError:
                 print ""
                 return
             complete_function(subargs_idx - 1, subargs[1:])
+
 
 class VerdiCommandWithSubcommands(VerdiCommand):
     """
@@ -168,20 +173,20 @@ class VerdiCommandWithSubcommands(VerdiCommand):
     .. todo:: Improve the docstrings for commands with subcommands.
     """
     _abstract = True
-    
+
     valid_subcommands = {}
-    
-    def run(self,*args):       
+
+    def run(self, *args):
         try:
             function_to_call = self.valid_subcommands[args[0]][0]
         except IndexError:
             function_to_call = self.no_subcommand
         except KeyError:
             function_to_call = self.invalid_subcommand
-            
+
         function_to_call(*args[1:])
 
-    def complete(self,subargs_idx, subargs):
+    def complete(self, subargs_idx, subargs):
         if subargs_idx == 0:
             print "\n".join(self.valid_subcommands.keys())
         elif subargs_idx >= 1:
@@ -190,7 +195,7 @@ class VerdiCommandWithSubcommands(VerdiCommand):
             except  IndexError:
                 first_subarg = ''
             try:
-                complete_function = self.valid_subcommands[first_subarg][1] 
+                complete_function = self.valid_subcommands[first_subarg][1]
             except KeyError:
                 print ""
                 return
@@ -203,29 +208,29 @@ class VerdiCommandWithSubcommands(VerdiCommand):
 
     def complete_auto(self, subargs_idx, subargs):
         return None
-        
-    def no_subcommand(self,*args):
+
+    def no_subcommand(self, *args):
         import sys
-        
+
         if self.valid_subcommands:
             print >> sys.stderr, ("You have to pass a valid subcommand to "
                                   "'{}'.\nValid subcommands are:".format(
-                                      self.get_full_command_name()))
-            print >> sys.stderr, "\n".join("  {}".format(sc) 
+                self.get_full_command_name()))
+            print >> sys.stderr, "\n".join("  {}".format(sc)
                                            for sc in self.valid_subcommands)
         else:
             print >> sys.stderr, ("There are no valid subcommands to "
                                   "'{}'.".format(self.get_full_command_name()))
         sys.exit(1)
 
-    def invalid_subcommand(self,*args):
+    def invalid_subcommand(self, *args):
         import sys
-        
+
         if self.valid_subcommands:
             print >> sys.stderr, ("You passed an invalid subcommand to '{}'.\n"
                                   "Valid subcommands are:".format(
-                                    self.get_full_command_name()))
-            print >> sys.stderr, "\n".join("  {}".format(sc) 
+                self.get_full_command_name()))
+            print >> sys.stderr, "\n".join("  {}".format(sc)
                                            for sc in self.valid_subcommands)
         else:
             print >> sys.stderr, ("There are no valid subcommands to "
@@ -243,11 +248,11 @@ class VerdiCommandWithSubcommands(VerdiCommand):
           executable name ('verdi'). If False, omit it.
         """
         import inspect
-        
+
         from aiida.cmdline import execname
 
         subcommand_str = ""
-        
+
         try:
             # [0]: this function;
             # [1]: function that directly called this function
@@ -265,7 +270,7 @@ class VerdiCommandWithSubcommands(VerdiCommand):
         except (KeyError, AttributeError, IndexError):
             # Some of this info could not be retrived, do not set
             # the subcommand name
-            pass    
+            pass
 
         return "{}{}".format(
             super(VerdiCommandWithSubcommands, self).get_full_command_name(

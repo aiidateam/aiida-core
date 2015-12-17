@@ -18,9 +18,11 @@ import getpass
 import contextlib
 
 import aiida
-from aiida.common.exceptions import ConfigurationError
+from aiida.common.exceptions import (
+    AiidaException, ConfigurationError, ProfileConfigurationError)
 from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
+from aiida.djsite.settings import settings_profile
 
 ## Import here from other files; once imported, it will be found and
 ## used as a command-line parameter
@@ -34,6 +36,7 @@ from aiida.cmdline.commands.exportfile import Export
 from aiida.cmdline.commands.group import Group
 from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.node import Node
+from aiida.cmdline.commands.profile import Profile
 from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.comment import Comment
@@ -41,8 +44,70 @@ from aiida.cmdline import execname
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet, Riccardo Sabatini"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
+
+
+class ProfileParsingException(AiidaException):
+    """
+    Exception raised when parsing the profile command line option, if only
+    -p is provided, and no profile is specified
+    """
+    def __init__(self, *args, **kwargs):
+        self.minus_p_provided=kwargs.pop('minus_p_provided', False)
+        
+        super(ProfileParsingException, self).__init__(*args, **kwargs)
+
+def parse_profile(argv,merge_equal=False):
+    """
+    Parse the argv to see if a profile has been specified, return it with the
+    command position shift (index where the commands start)
+    
+    :param merge_equal: if True, merge things like
+      ('verdi', '--profile', '=', 'x', 'y') to ('verdi', '--profile=x', 'y')
+      but then return the correct index for the original array.
+    
+    :raise ProfileParsingException: if there is only 'verdi' specified, or
+      if only 'verdi -p' (in these cases, one has respectively 
+      exception.minus_p_provided equal to False or True)
+    """
+    if merge_equal:
+        if len(argv) >= 3:
+            if argv[1] == '--profile' and argv[2] == '=':
+                internal_argv = [argv[0], "".join(argv[1:4])] + list(argv[4:])
+                shift = 2
+            else:
+                internal_argv = list(argv)
+                shift = 0
+        else:
+            internal_argv = list(argv)
+            shift = 0            
+    else:
+        internal_argv = list(argv)
+        shift = 0
+        
+    profile = None # Use default profile if nothing is specified
+    command_position = 1 # If there is no profile option
+    try:
+        profile_switch = internal_argv[1]
+    except IndexError:
+        raise ProfileParsingException(minus_p_provided=False)
+    long_profile_prefix = '--profile='
+    if profile_switch == '-p':
+        try:
+            profile = internal_argv[2]
+        except IndexError:
+            raise ProfileParsingException(minus_p_provided=True)
+        command_position = 3
+    elif profile_switch.startswith(long_profile_prefix):
+        profile = profile_switch[len(long_profile_prefix):]
+        command_position = 2
+    else:
+        # No profile switch, continue using argv[1] as the command name
+        pass
+
+    return profile, command_position + shift
+
 
 @contextlib.contextmanager
 def update_environment(new_argv):
@@ -51,11 +116,12 @@ def update_environment(new_argv):
     new_argv argument, and restores it upon exit.
     """
     import sys
+
     _argv = sys.argv[:]
     sys.argv = new_argv[:]
     yield
 
-    #Restore old parameters when exiting from the context manager
+    # Restore old parameters when exiting from the context manager
     sys.argv = _argv
 
 
@@ -73,6 +139,7 @@ class CompletionCommand(VerdiCommand):
     eval "`verdi completioncommand`"
     to your .bashrc, *AFTER* having added the aiida/bin directory to the path.
     """
+
     def run(self, *args):
         """
         I put the documentation here, and I don't print it, so we
@@ -139,7 +206,7 @@ class Completion(VerdiCommand):
     """
     # TODO: manage completion at a deeper level
 
-    def run(self,*args):
+    def run(self, *args):
         try:
             cword = int(args[0])
             if cword <= 0:
@@ -149,7 +216,16 @@ class Completion(VerdiCommand):
         except ValueError:
             return
 
-        if cword == 1:
+        try:
+            profile, command_position = parse_profile(args[1:],merge_equal=True)
+        except ProfileParsingException as e:
+            cword_offset = 0
+        else:
+            cword_offset = command_position - 1
+        
+        
+                
+        if cword == 1 + cword_offset:
             print " ".join(sorted(short_doc.keys()))
             return
         else:
@@ -158,14 +234,16 @@ class Completion(VerdiCommand):
                 # args[1] is the executable (verdi)
                 # args[2] is the command for verdi
                 # args[3:] are the following subargs
-                command = args[2]
+                command = args[2+cword_offset]
             except IndexError:
                 return
             try:
                 CommandClass = list_commands[command]
             except KeyError:
                 return
-            CommandClass().complete(subargs_idx=cword-2, subargs=args[3:])
+            CommandClass().complete(subargs_idx=cword - 2 - cword_offset, 
+                                    subargs=args[3 + cword_offset:])
+
 
 class ListParams(VerdiCommand):
     """
@@ -174,9 +252,10 @@ class ListParams(VerdiCommand):
     List available commands and their short description.
     For the long description, use the 'help' command.
     """
-    
-    def run(self,*args):
+
+    def run(self, *args):
         print get_listparams()
+
 
 class Help(VerdiCommand):
     """
@@ -184,17 +263,21 @@ class Help(VerdiCommand):
 
     Pass a further argument to get a description of a given command.
     """
-    
+
     def run(self, *args):
         try:
             command = args[0]
         except IndexError:
             print get_listparams()
             print ""
+            print ("Before each command you can specify the AiiDA profile to use,"
+                   " with 'verdi -p <profile> <command>' or "
+                   "'verdi --profile=<profile> <command>'")
+            print ""
             print ("Use '{} help <command>' for more information "
                    "on a specific command.".format(execname))
             sys.exit(1)
-    
+
         if command in short_doc:
             print "Description for '%s %s'" % (execname, command)
             print ""
@@ -213,8 +296,9 @@ class Help(VerdiCommand):
         if subargs_idx == 0:
             print " ".join(sorted(short_doc.keys()))
         else:
-            print "" 
-    
+            print ""
+
+
 class Install(VerdiCommand):
     """
     Install/setup aiida for the current user
@@ -224,14 +308,14 @@ class Install(VerdiCommand):
     the repository location, does a setup of the daemon and runs
     a migrate command to create/setup the database.
     """
-    def run(self,*args):
-        import readline
+
+    def run(self, *args):
         from aiida import load_dbenv
         from aiida.common.setup import (create_base_dirs, create_configuration,
-                                        set_default_profile)        
+                                        set_default_profile, DEFAULT_UMASK)
 
         cmdline_args = list(args)
-        
+
         only_user_config = False
         try:
             cmdline_args.remove('--only-config')
@@ -239,47 +323,54 @@ class Install(VerdiCommand):
         except ValueError:
             # Parameter not provided
             pass
-        
+
         if cmdline_args:
             print >> sys.stderr, "Unknown parameters on the command line: "
             print >> sys.stderr, ", ".join(cmdline_args)
             sys.exit(1)
-        
+
         # create the directories to store the configuration files
         create_base_dirs()
-        
+        profile = 'default' if settings_profile.AIIDADB_PROFILE is None \
+                            else settings_profile.AIIDADB_PROFILE
         # ask and store the configuration of the DB
         try:
-            create_configuration(profile='default')
+            create_configuration(profile=profile)
         except ValueError as e:
             print >> sys.stderr, "Error during configuration: {}".format(e.message)
             sys.exit(1)
-        
+
         # set default DB profiles
-        set_default_profile('verdi','default')
-        set_default_profile('daemon','default')
-        
+        set_default_profile('verdi', profile, force_rewrite=False)
+        set_default_profile('daemon', profile, force_rewrite=False)
+
         if only_user_config:
             print "Only user configuration requested, skipping the migrate command"
         else:
             print "Executing now a migrate command..."
-            # For the moment, the verdi install works only for the default 
-            # profile, so we don't chose it, but in the future one should
-            pass_to_django_manage([execname, 'migrate'])
+            # The correct profile is selected within load_dbenv.
+            # Setting os.umask here since sqlite database gets created in
+            # this step.
+            old_umask = os.umask(DEFAULT_UMASK)
+            try:
+                pass_to_django_manage([execname, 'migrate'])
+            finally:
+                os.umask(old_umask)
 
         # I create here the default user
         print "Loading new environment..."
-        load_dbenv()
-        
+        if only_user_config:
+            # db environment has not been loaded in this case
+            load_dbenv()
+
         from aiida.common.setup import DEFAULT_AIIDA_USER
         from aiida.djsite.db import models
         from aiida.djsite.utils import get_configured_user_email
-        from django.core.exceptions import ObjectDoesNotExist
-        
+
         if not models.DbUser.objects.filter(email=DEFAULT_AIIDA_USER):
             print "Installing default AiiDA user..."
             # No password, so no access via API/AWI
-            models.DbUser.objects.create_superuser(email=DEFAULT_AIIDA_USER, 
+            models.DbUser.objects.create_superuser(email=DEFAULT_AIIDA_USER,
                                                    password='',
                                                    first_name="AiiDA",
                                                    last_name="Daemon")
@@ -290,15 +381,15 @@ class Install(VerdiCommand):
             print "therefore no further user configuration will be asked."
         else:
             # Ask to configure the new user
-            User().user_configure(email)        
-        
+            User().user_configure(email)
+
         print "Install finished."
 
     def complete(self, subargs_idx, subargs):
         """
         No completion after 'verdi install'.
         """
-        print "" 
+        print ""
 
 
 class Shell(VerdiCommand):
@@ -307,12 +398,14 @@ class Shell(VerdiCommand):
 
     This command opens an ipython shell with the AiiDA environment loaded.
     """
-    def run(self,*args):
+
+    def run(self, *args):
         pass_to_django_manage([execname, 'customshell'] + list(args))
 
     def complete(self, subargs_idx, subargs):
         # disable further completion
         print ""
+
 
 class Runserver(VerdiCommand):
     """
@@ -321,15 +414,19 @@ class Runserver(VerdiCommand):
     This command runs the webserver on the default port. Further command line
     options are passed to the Django manage runserver command 
     """
-    def run(self,*args):
+
+    def run(self, *args):
         pass_to_django_manage([execname, 'runserver'] + list(args))
+
 
 class Run(VerdiCommand):
     """
     Execute an AiiDA script
     """
-    def run(self,*args):
+
+    def run(self, *args):
         from aiida import load_dbenv
+
         load_dbenv()
         import argparse
         import aiida.cmdline
@@ -340,28 +437,28 @@ class Run(VerdiCommand):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Execute an AiiDA script.')
-        parser.add_argument('-g','--group', type=bool, default=True, 
+        parser.add_argument('-g', '--group', type=bool, default=True,
                             help='Enables the autogrouping, default = True')
-        parser.add_argument('-n','--groupname', type=str, default=None, 
+        parser.add_argument('-n', '--groupname', type=str, default=None,
                             help='Specify the name of the auto group')
-#        parser.add_argument('-o','--grouponly', type=str, nargs='+', default=['all'],
-#                            help='Limit the grouping to specific classes (by default, all classes are grouped')
-        parser.add_argument('-e','--exclude', type=str, nargs='+', default=[],
+        # parser.add_argument('-o','--grouponly', type=str, nargs='+', default=['all'],
+        #                            help='Limit the grouping to specific classes (by default, all classes are grouped')
+        parser.add_argument('-e', '--exclude', type=str, nargs='+', default=[],
                             help=('Autogroup only specific calculation classes.'
                                   " Select them by their module name.")
-                            )
-        parser.add_argument('-E','--excludesubclasses', type=str, nargs='+', default=[],
+        )
+        parser.add_argument('-E', '--excludesubclasses', type=str, nargs='+', default=[],
                             help=('Autogroup only specific calculation classes.'
                                   " Select them by their module name.")
-                            )
-        parser.add_argument('-i','--include', type=str, nargs='+', default=['all'],
+        )
+        parser.add_argument('-i', '--include', type=str, nargs='+', default=['all'],
                             help=('Autogroup only specific data classes.'
                                   " Select them by their module name.")
-                            )
-        parser.add_argument('-I','--includesubclasses', type=str, nargs='+', default=[],
+        )
+        parser.add_argument('-I', '--includesubclasses', type=str, nargs='+', default=[],
                             help=('Autogroup only specific code classes.'
                                   " Select them by their module name.")
-                            )
+        )
         parser.add_argument('scriptname', metavar='ScriptName', type=str,
                             help='The name of the script you want to execute')
         parser.add_argument('new_args', metavar='ARGS',
@@ -376,20 +473,21 @@ class Run(VerdiCommand):
             '__file__': parsed_args.scriptname,
             '__doc__': None,
             '__package__': None}
-        
+
         ## dynamically load modules (the same of verdi shell) - but in
         ## globals_dict, not in the current environment
         for app_mod, model_name, alias in default_modules_list:
             globals_dict["{}".format(alias)] = getattr(
-                            __import__(app_mod, {}, {}, model_name), model_name)
-        
+                __import__(app_mod, {}, {}, model_name), model_name)
+
         if parsed_args.group:
             automatic_group_name = parsed_args.groupname
             if automatic_group_name is None:
                 import datetime
+
                 now = datetime.datetime.now()
-                automatic_group_name = "Verdi autogroup on "+ now.strftime("%Y-%m-%d %H:%M:%S") 
-            
+                automatic_group_name = "Verdi autogroup on " + now.strftime("%Y-%m-%d %H:%M:%S")
+
             aiida_verdilib_autogroup = Autogroup()
             aiida_verdilib_autogroup.set_exclude(parsed_args.exclude)
             aiida_verdilib_autogroup.set_include(parsed_args.include)
@@ -399,7 +497,7 @@ class Run(VerdiCommand):
             ## Note: this is also set in the exec environment!
             ## This is the intended behavior
             aiida.orm.autogroup.current_autogroup = aiida_verdilib_autogroup
-        
+
         try:
             f = open(parsed_args.scriptname)
         except IOError:
@@ -414,8 +512,8 @@ class Run(VerdiCommand):
                     # Add local folder to sys.path
                     sys.path.insert(0, os.path.abspath(os.curdir))
                     # Pass only globals_dict
-                    exec(f,globals_dict)
-                # print sys.argv
+                    exec (f, globals_dict)
+                    # print sys.argv
             except SystemExit as e:
                 ## Script called sys.exit()
                 # print sys.argv, "(sys.exit {})".format(e.message)
@@ -426,7 +524,8 @@ class Run(VerdiCommand):
             finally:
                 f.close()
 
-#        print "Done."
+
+# print "Done."
 
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST
@@ -442,20 +541,21 @@ def get_listparams():
     """
     max_length = max(len(i) for i in short_doc.keys())
 
-    name_desc = [(cmd.ljust(max_length+2), desc.strip()) 
+    name_desc = [(cmd.ljust(max_length + 2), desc.strip())
                  for cmd, desc in short_doc.iteritems()]
 
     name_desc = sorted(name_desc)
-    
+
     return ("List of the most relevant available commands:" + os.linesep +
-            os.linesep.join(["  * {} {}".format(name, desc) 
+            os.linesep.join(["  * {} {}".format(name, desc)
                              for name, desc in name_desc]))
+
 
 def get_command_suggestion(command):
     """
     A function that prints on stderr a list of similar commands
-    """ 
-    import difflib 
+    """
+    import difflib
 
     similar_cmds = difflib.get_close_matches(command, short_doc.keys())
     if similar_cmds:
@@ -463,10 +563,18 @@ def get_command_suggestion(command):
         print >> sys.stderr, "Did you mean this?"
         print >> sys.stderr, "\n".join(["     {}".format(i)
                                         for i in similar_cmds])
-   
+
+
+def print_usage(execname):
+    print >> sys.stderr, ("Usage: {} [--profile=PROFILENAME|-p PROFILENAME] "
+                          "COMMAND [<args>]".format(execname))
+    print >> sys.stderr, ""
+    print >> sys.stderr, get_listparams()
+    print >> sys.stderr, "See '{} help' for more help.".format(execname)
+
 def exec_from_cmdline(argv):
     """
-    The main function to be called. Pass as paramater the sys.argv.
+    The main function to be called. Pass as parameter the sys.argv.
     """
     ### This piece of code takes care of creating a list of valid
     ### commands and of their docstrings for dynamic management of
@@ -488,51 +596,69 @@ def exec_from_cmdline(argv):
     # Retrieve the list of commands
     verdilib_namespace = verdilib.__dict__
 
-    list_commands ={v.get_command_name(): v for v in verdilib_namespace.itervalues()
-                    if inspect.isclass(v) and not v==VerdiCommand and 
-                    issubclass(v,VerdiCommand)
-                    and not v.__name__.startswith('_')
-                    and not v._abstract}
+    list_commands = {v.get_command_name(): v for v in verdilib_namespace.itervalues()
+                     if inspect.isclass(v) and not v == VerdiCommand and
+                     issubclass(v, VerdiCommand)
+                     and not v.__name__.startswith('_')
+                     and not v._abstract}
 
     # Retrieve the list of docstrings, managing correctly the 
     # case of empty docstrings. Each value is a list of lines
     raw_docstrings = {k: (v.__doc__ if v.__doc__ else "").splitlines()
-                       for k, v in list_commands.iteritems()}
+                      for k, v in list_commands.iteritems()}
 
     short_doc = {}
     long_doc = {}
     for k, v in raw_docstrings.iteritems():
         if k in hidden_commands:
             continue
-        lines = [l.strip() for l in v] 
+        lines = [l.strip() for l in v]
         empty_lines = [bool(l) for l in lines]
         try:
-            first_idx = empty_lines.index(True) # The first non-empty line
+            first_idx = empty_lines.index(True)  # The first non-empty line
         except ValueError:
             # All False
             short_doc[k] = "No description available"
             long_doc[k] = ""
             continue
         short_doc[k] = lines[first_idx]
-        long_doc[k]  = os.linesep.join(lines[first_idx+1:])
+        long_doc[k] = os.linesep.join(lines[first_idx + 1:])
 
     execname = os.path.basename(argv[0])
-
+   
     try:
-        command = argv[1]
-    except IndexError:
-        print >> sys.stderr,  "Usage: {} COMMAND [<args>]".format(execname)
-        print >> sys.stderr, ""
-        print >> sys.stderr, get_listparams()
-        print >> sys.stderr, "See '{} help' for more help.".format(execname)
-        sys.exit(1)
-        
-    if command in list_commands:
-        CommandClass = list_commands[command]()
-        CommandClass.run(*argv[2:])
-    else:
-        print >> sys.stderr, ("{}: '{}' is not a valid command. "
-            "See '{} help' for more help.".format(execname, command, execname))
-        get_command_suggestion(command)
+        profile, command_position = parse_profile(argv)
+    except ProfileParsingException as e:
+        print_usage(execname)
         sys.exit(1)
     
+    # We now set the internal variable, if needed
+    if profile is not None:
+        settings_profile.AIIDADB_PROFILE = profile
+    # I set the process to verdi
+    settings_profile.CURRENT_AIIDADB_PROCESS = "verdi"
+
+    # Finally, we parse the commands and their options    
+    try:
+        command = argv[command_position]
+    except IndexError:
+        print_usage(execname)
+        sys.exit(1)
+
+    try:
+        if command in list_commands:
+            CommandClass = list_commands[command]()
+            CommandClass.run(*argv[command_position + 1:])
+        else:
+            print >> sys.stderr, ("{}: '{}' is not a valid command. "
+                                  "See '{} help' for more help.".format(
+                                      execname, command, execname))
+            get_command_suggestion(command)
+            sys.exit(1)
+    except ProfileConfigurationError as e:
+        print >> sys.stderr, "The profile specified is not valid!"
+        print >> sys.stderr, e.message
+        sys.exit(1)
+        
+    
+        

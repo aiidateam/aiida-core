@@ -7,8 +7,9 @@ from aiida.common.datastructures import calc_states
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Tiziano Müller"
+
 
 class Parser(object):
     """
@@ -21,16 +22,17 @@ class Parser(object):
     """
     _linkname_outparams = 'output_parameters'
 
-    def __init__(self,calc):
+    def __init__(self, calc):
         """
         Init
-        """       
+        """
         from aiida.common import aiidalogger
+
         self._logger = aiidalogger.getChild('parser').getChild(
             self.__class__.__name__)
 
         self._calc = calc
-        
+
     @property
     def logger(self):
         """
@@ -42,8 +44,8 @@ class Parser(object):
 
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self._calc))
-        
-    def parse_with_retrieved(self,retrieved):
+
+    def parse_with_retrieved(self, retrieved):
         """
         Receives in input a dictionary of retrieved nodes.
         Implement all the logic in this function of the subclass.
@@ -62,17 +64,17 @@ class Parser(object):
         if out_folder is None:
             self.logger.error("No retrieved folder found")
             return False, ()
-        
+
         return self.parse_with_retrieved(
             {self._calc._get_linkname_retrieved(): out_folder})
-        
+
     @classmethod
     def get_linkname_outparams(self):
         """
         The name of the link used for the output parameters
         """
         return self._linkname_outparams
-    
+
     def get_result_dict(self):
         """
         Return a dictionary with all results (faster than doing multiple queries)
@@ -87,9 +89,9 @@ class Parser(object):
             resnode = self.get_result_parameterdata_node()
         except NotExistent:
             return {}
-        
+
         return resnode.get_dict()
-        
+
     def get_result_parameterdata_node(self):
         """
         Return the parameterdata node.
@@ -99,18 +101,19 @@ class Parser(object):
         """
         from aiida.orm.data.parameter import ParameterData
         from aiida.common.exceptions import NotExistent
-                
-        out_parameters = self._calc.get_outputs(type=ParameterData,also_labels=True)
-        out_parameterdata = [ i[1] for i in out_parameters if i[0]==self.get_linkname_outparams() ]
-        
+
+        out_parameters = self._calc.get_outputs(type=ParameterData, also_labels=True)
+        out_parameterdata = [i[1] for i in out_parameters if i[0] == self.get_linkname_outparams()]
+
         if not out_parameterdata:
             raise NotExistent("No output .res ParameterData node found")
         elif len(out_parameterdata) > 1:
             from aiida.common.exceptions import UniquenessError
+
             raise UniquenessError("Output ParameterData should be found once, "
                                   "found it instead {} times"
-                                  .format(len(out_parameterdata)) )
-        
+                                  .format(len(out_parameterdata)))
+
         return out_parameterdata[0]
 
 
@@ -135,23 +138,24 @@ class Parser(object):
 
         return resnode.keys()
 
-    def get_result(self,key_name):
+    def get_result(self, key_name):
         """
         Access the parameters of the output.
         The following method will should work for a generic parser,
         provided it has to query only one ParameterData object.
         """
         resnode = self.get_result_parameterdata_node()
-        
+
         try:
             value = resnode.get_attr(key_name)
         except KeyError:
             from aiida.common.exceptions import ContentNotExistent
-            raise ContentNotExistent("Key energy not found in results")
-        
-        #TODO: eventually, here insert further operations
+
+            raise ContentNotExistent("Key {} not found in results".format(key_name))
+
+        # TODO: eventually, here insert further operations
         # (ex: key_name = energy_float_rydberg could return only the last element of a list,
         # and convert in the right units)
-        
+
         return value
 

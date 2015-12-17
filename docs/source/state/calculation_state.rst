@@ -4,10 +4,12 @@ Calculations
 
 AiiDA calculations can be of two kinds:
 
-* **JobCalculation**: those who need to be run on a scheduler
+* :py:class:`JobCalculation <aiida.orm.calculation.job.JobCalculation>`:
+  those who need to be run on a scheduler
 
-* **InlineCalculation**: rapid executions that are executed by the daemon itself, on 
-  your local machine.
+* :py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`:
+  rapid executions that are executed by the daemon itself, on your local
+  machine.
 
 In the following, we will refer to the JobCalculations as a Calculation for the sake of 
 simplicity, unless we explicitly say otherwise. In the same way, also the command 
@@ -86,7 +88,7 @@ need to specify the ID of the calculation you are interested in::
   ## pk must be a valid integer pk
   calc = load_node(pk)
   ## Alternatively, with the UUID (uuid must be a valid UUID string)
-  # calc = JobCalculation.get_subclass_from_uuid(uuid)
+  # calc = load_node(uuid)
   print "AiiDA state:", calc.get_state()  
   print "Last scheduler state seen by the AiiDA deamon:", calc.get_scheduler_state()
 
@@ -135,7 +137,7 @@ Here follows a brief documentation of their action.
 
 * ``c.set_max_memory_kb``: require explicitely the memory to be allocated to the scheduler
   job.
-* ``c.set_append_text``: write a set of bash commands to be executed after the coll to the
+* ``c.set_append_text``: write a set of bash commands to be executed after the call to the
   executable. These commands are executed only for this instance of calculations. Look also
   at the computer and code append_text to write bash commands for any job run on that 
   computer or with that code.
@@ -175,7 +177,7 @@ Here follows a brief documentation of their action.
   like the number of nodes, wall-time, ..., by passing a dictionary to 
   this method. The keys of this dictionary, i.e. the resources, depend 
   on the specific scheduler plugin that has to run them. Look at the 
-  documentation of the scheduler (type is given by: ``calc.computer.get_scheduler_type()``).
+  documentation of the scheduler (type is given by: ``calc.get_computer().get_scheduler_type()``).
 * ``c.set_withmpi``: True or False, if True (the default) it will 
   call the executable as a parallel run.
 

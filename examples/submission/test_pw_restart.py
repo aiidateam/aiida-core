@@ -5,8 +5,8 @@ import os
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 # test pw restart:
 # do first a pw calculation (e.g. ./test_pw.py --send pw_codename, or 
@@ -26,7 +26,7 @@ StructureData = DataFactory('structure')
 RemoteData = DataFactory('remote')
 
 # Used to test the parent calculation
-QEPwCalc = CalculationFactory('quantumespresso.pw') 
+QEPwCalc = CalculationFactory('quantumespresso.pw')
 
 try:
     dontsend = sys.argv[1]
@@ -56,28 +56,28 @@ try:
 except ValueError:
     raise ValueError('Parent_id not an integer: {}'.format(parent_id))
 
-parentcalc = Calculation.get_subclass_from_pk(parent_id)
+parentcalc = load_node(parent_id, parent_class=Calculation)
 
 queue = None
-#queue = "P_share_queue"
+# queue = "P_share_queue"
 
 #####
 
-if isinstance(parentcalc,QEPwCalc):
+if isinstance(parentcalc, QEPwCalc):
 
     # do a restart pw calculation
-    if ( (parentcalc.get_state()=='FAILED') and
-        ('Maximum CPU time exceeded' in parentcalc.res.warnings) ):
-    
+    if ( (parentcalc.get_state() == 'FAILED') and
+             ('Maximum CPU time exceeded' in parentcalc.res.warnings) ):
+
         calc = parentcalc.create_restart(force_restart=True)
         #calc.label = "Test QE pw.x restart"
         calc.description = "Test restart calculation with the Quantum ESPRESSO pw.x code"
-    
+
     else:
         print >> sys.stderr, ("Parent calculation did not fail or did "
                               "not stop because of maximum CPU time limit.")
         sys.exit(1)
-        
+
 
 else:
     print >> sys.stderr, ("Parent calculation should be a pw.x "
@@ -93,12 +93,12 @@ if submit_test:
     print "Submit file in {}".format(os.path.join(
         os.path.relpath(subfolder.abspath),
         script_filename
-        ))
+    ))
 else:
     calc.store_all()
     print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid,calc.dbnode.pk)
+        calc.uuid, calc.dbnode.pk)
     calc.submit()
     print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid,calc.dbnode.pk)
+        calc.uuid, calc.dbnode.pk)
 

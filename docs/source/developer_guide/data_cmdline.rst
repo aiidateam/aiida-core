@@ -1,25 +1,16 @@
-Developer data command line plugins
-###################################
+Verdi command line plugins
+##########################
 
-AiiDA can be extended by adding custom types of Data nodes and means of
-manipulating them. One of the means of use and integration of AiiDA with
-the variety of free and open-source software is the command line. In this
-chapter the ways to extend the AiiDA command line interface are described.
+AiiDA can be extended by adding custom means of use to interact with it via
+the command line, by extending the 'verdi' commands. 
 
-To make a class/function loaded automatically while issuing ``verdi shell``,
-one has to register it in ``default_modules_list`` in
-``aiida.djsite.db.management.commands.customshell.py``.
-
-Adding a ``verdi`` command
-++++++++++++++++++++++++++
-
-.. todo:: Describe here
-
+We will describe in particular how to extend ``verdi data`` by adding a 
+new subcommand.
 
 Framework for ``verdi data``
 ++++++++++++++++++++++++++++
 
-Code for each of the ``verdi data <datatype> <action> [--format <plugin>]``
+The code for each of the ``verdi data <datatype> <action> [--format <plugin>]``
 commands is placed in ``_<Datatype>`` class inside
 ``aiida.cmdline.commands.data.py``. Standard actions, such as
 
@@ -30,16 +21,17 @@ commands is placed in ``_<Datatype>`` class inside
 
 are implemented in corresponding classes:
 
-* ``Listable``
-* ``Visualizable``
-* ``Importable``
-* ``Exportable``,
+* :py:class:`~aiida.cmdline.commands.data.Listable`
+* :py:class:`~aiida.cmdline.commands.data.Visualizable`
+* :py:class:`~aiida.cmdline.commands.data.Importable`
+* :py:class:`~aiida.cmdline.commands.data.Exportable`,
 
 which are inherited by ``_<Datatype>`` classes (multiple inheritance is
 possible). Actions ``show``, ``import`` and ``export`` can be extended with
 new format plugins simply by adding additional methods in ``_<Datatype>``
 (these are automatically detected). Action ``list`` can be extended by
-overriding default methods of the ``Listable``.
+overriding default methods of the
+:py:class:`~aiida.cmdline.commands.data.Listable`.
 
 Adding plugins for ``show``, ``import``, ``export`` and like
 ------------------------------------------------------------
@@ -57,7 +49,7 @@ As the ``--format`` option is optional, the default plugin can be specified
 by setting the value for ``_default_<action>_plugin`` in the inheriting class,
 for example::
 
-    class _Parameter(VerdiCommandWithSubcommands,Visualizable):
+    class _Parameter(VerdiCommandWithSubcommands, Visualizable):
         """
         View and manipulate Parameter data classes.
         """
@@ -73,7 +65,7 @@ for example::
                 'show': (self.show, self.complete_visualizers),
                 }
 
-        def _show_json_date(self,exec_name,node_list):
+        def _show_json_date(self, exec_name, node_list):
             """
             Show contents of ParameterData nodes.
             """
@@ -82,21 +74,177 @@ If the default plugin is not defined and there are more than one plugin,
 an exception will be raised upon issuing ``verdi data <datatype> <action>``
 to be caught and explained for the user.
 
+Plugin-specific command line options
+====================================
+
+Plugin-specific command line options can be appended in plugin-specific
+methods ``_<action>_<plugin>_parameters(self,parser)``. All these methods
+are called before parsing command line arguments, and are passed an
+``argparse.ArgumentParser`` instance, to which command line argument
+descriptions can be appended using ``parser.add_argument()``. For example::
+
+    def _show_jmol_parameters(self, parser):
+        """
+        Describe command line parameters.
+        """
+        parser.add_argument('--step',
+                            help="ID of the trajectory step. If none is "
+                                 "supplied, all steps are exported.",
+                            type=int, action='store')
+
+.. note:: as all ``_<action>_<plugin>_parameters(self,parser)`` methods are
+    called, it requires some attention in order not to make conflicting
+    command line argument names!
+.. note:: it's a good practice to set ``default=None`` for all command line
+    arguments, since ``None``-valued arguments are excluded before passing
+    the parsed argument dictionary to a desired plugin.
+
 Implementing ``list``
 ---------------------
 
 As listing of data nodes can be extended with filters, controllable using
-command line parameters, the code of ``Listable`` is split into a few
+command line parameters, the code of
+:py:class:`~aiida.cmdline.commands.data.Listable` is split into a few
 separate methods, that can be individually overridden:
 
-* ``list``:
+* :py:class:`~aiida.cmdline.commands.data.Listable.list`:
     the main method, parsing the command line arguments and printing the
     data node information to the standard output;
-* ``query``:
+* :py:class:`~aiida.cmdline.commands.data.Listable.query`:
     takes the parsed command line arguments and performs a query on the
     database, returns table of unformatted strings, representing the hits;
-* ``append_list_cmdline_arguments``
+* :py:class:`~aiida.cmdline.commands.data.Listable.append_list_cmdline_arguments`:
     informs the command line argument parser about additional, user-defined
-    parameters, used to control the ``query`` function;
-* ``get_column_names``
-    returns the names of columns to be printed by ``list`` method.
+    parameters, used to control the
+    :py:class:`~aiida.cmdline.commands.data.Listable.query` function;
+* :py:class:`~aiida.cmdline.commands.data.Listable.get_column_names`:
+    returns the names of columns to be printed by
+    :py:class:`~aiida.cmdline.commands.data.Listable.list` method.
+
+
+Adding a ``verdi`` command
+++++++++++++++++++++++++++
+
+Here we will add a new verdi command for the FloatData datatype 
+we created and used in 
+:doc:`Developer code plugin tutorial<devel_tutorial/code_plugin_float_sum>`
+exercise.  
+
+The new command will be::
+
+    >> verdi data float show <pk>
+
+To create the above verdi command, we will write a ``_Float`` class 
+inheriting from both ``VerdiCommandWithSubcommands`` and ``Visualizable`` 
+classes; this class will be added
+inside ``aiida.cmdline.commands.data.py`` file. 
+By inheriting from ``Visualizable``, our class will have a``show()`` method, 
+that we can use as the default action for ``verdi data float show``:
+
+.. code-block:: python
+
+	class _Float(VerdiCommandWithSubcommands, Visualizable):
+	    """
+	    View and manipulate Float data classes.
+	    """
+
+	    def __init__(self):
+		"""
+		A dictionary with valid commands and functions to be called.
+		"""
+		from aiida.orm.data.float import FloatData
+
+		self.dataclass = FloatData
+		self.valid_subcommands = {
+		    'show': (self.show, self.complete_none),
+		}
+		self._default_show_format = 'simple'
+
+
+The features used in ``init`` method are:
+
+* ``self.dataclass``: It is the data type for which the command is written. 
+  In this example it is ``FloatData``.
+
+* ``self.valid_subcommands``: It is the dictionary of valid subcommands and the
+  two functions to be called when the given command is called, or when bash
+  completion is needed.    Each key will be the command for the defined data
+  type. For ``FloatData`` we are therefore adding a ``show`` command,
+  that will call ``self.show()`` as method from base cass to be called on. 
+  We pass ``self.complete_none`` as completion function to disable further
+  bash completion after the command (this method is defined in the
+  ``VerdiCommandWithSubcommands`` base class).
+  The ``self.show()`` method creates a list of all methods of the current class
+  with prefix ``_show_`` in their name, and provides them as possible
+  formats.
+
+* ``self._default_show_format``: It is the default format to be displayed 
+  for the ``show'`` command when no specific format is passed as an argument. 
+  For FloatData, we will show data in a ``simple`` format by default. 
+  To display node in ``simple`` format, we will simply add a method called 
+  ``_show_simple()`` in the ``_Float`` class. 
+  Please note that the method name should follow the convention 
+  ``_show_ + format_name``.
+
+
+The ``_show_simple()`` method will be:
+
+.. code-block:: python
+
+	def _show_simple(self, exec_name, node_list):
+	    """
+	    Show contents of FloatData nodes.
+	    """
+	    from aiida.cmdline import print_dictionary
+
+	    for node in node_list:
+	        print node.value
+
+In this method we have passed the executable name and the list of nodes. 
+To print FloatData in simple format we are just printing the corresponding
+value on screen.
+
+Once the ``_Float`` class is added, make sure to add entry in 
+``self.routed_subcommands`` dictionary in the ``__init__`` method of the 
+``Data`` class in ``aiida.cmdline.commands.data.py`` file as shown below.
+
+.. code-block:: python
+
+	class Data(VerdiCommandRouter):
+	    """
+	    Setup and manage data specific types
+	    
+	    There is a list of subcommands for managing specific types of data.
+	    For instance, 'data upf' manages pseudopotentials in the UPF format.
+	    """
+
+	    def __init__(self):
+		"""
+		A dictionary with valid commands and functions to be called.
+		"""
+		## Add here the classes to be supported.
+		self.routed_subcommands = {
+		    .
+		    .
+		    # other entries
+		    'float': _Float,
+		}
+
+
+
+The new verdi command ``float``, is now ready!
+
+Try experimenting by adding other formats for ``show`` command 
+or by adding other commands like ``list``, ``import`` and ``export`` 
+for FloatData data type.
+
+
+
+
+
+
+
+
+
+
+

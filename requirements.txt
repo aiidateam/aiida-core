@@ -28,19 +28,9 @@ six==1.9
 supervisor==3.1.3
 meld3==1.0.0
 
-## For postgreSQL
-psycopg2==2.6
-
 ## ONLY if using mysql? 
 #sudo easy_install mysql-python
 #sudo apt-get install python-mysqldb on ubuntu 
-
-## To have a decent recent version of sqlite
-## Note that django uses pysqlite instead of the system-provided
-## sqlite3, if pysqlite is available: django/db/backends/sqlite3/base.py
-## This is because we need recursive triggers in sqlite, present
-## only after sqlite 3.6.18
-pysqlite==2.6.3
 
 ## Paramiko, for ssh connections
 paramiko==1.15.2
@@ -70,5 +60,3 @@ python-mimeparse==0.1.4
 ## ICSD tools
 #PyMySQL>=0.6.1
 
-## Support for the AiiDA CifData class
-#PyCifRW==3.6.2.1

@@ -39,8 +39,8 @@ from aiida.tools.codespecific.quantumespresso.pwinputparser import str2val
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Eric Hontz, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Eric Hontz, Giovanni Pizzi, Martin Uhrin"
 
 
 # Define the path to the directory containing the test PW runs.
@@ -59,6 +59,7 @@ class LocalTestCase(AiidaTestCase):
     Also sets up authinfo, so calcs can be retrieved and parsed, and sets up a
     code, so test submissions can be run.
     """
+
     @classmethod
     def setUpClass(cls):
         super(LocalTestCase, cls).setUpClass()
@@ -73,8 +74,8 @@ class LocalTestCase(AiidaTestCase):
         authinfo.save()
 
         # Set up a code linked to cls.computer. The path is just a fake string.
-        cls.code = Code(remote_computer_exec=(cls.computer, '/x.x'))
-
+        cls.code = Code(remote_computer_exec=(cls.computer, '/x.x')).store()
+        
     def run_tests_on_calcs_with_prefixes(self, prefixes):
         """
         Test immigration, retrieval, and parsing of calcs for all prefixes.
@@ -109,7 +110,7 @@ class LocalTestCase(AiidaTestCase):
                     'remote_workdir': TEST_JOB_DIR,
                     'input_file_name': prefix + '.in',
                     'output_file_name': prefix + '.out'
-                    }
+                }
                 # Initialize the calculation using the `set_` methods.
                 calc = PwimmigrantCalculation(**init_params)
                 # Set the code.
@@ -189,7 +190,7 @@ class LocalTestCase(AiidaTestCase):
                                 "are not within the specified number of "
                                 "decimal places."
                                 "".format(
-                                    val1, val2, prefixes[0], prefix
+                                val1, val2, prefixes[0], prefix
                             )
                         )
 
@@ -202,7 +203,7 @@ class LocalTestCase(AiidaTestCase):
                                 "input files for calcs with prefixes {} and {} "
                                 "did not match. They should have been "
                                 "identical!".format(
-                                    val1, val2, prefixes[0], prefix
+                                val1, val2, prefixes[0], prefix
                             )
                         )
 
@@ -237,7 +238,7 @@ class TestPwImmigrantCalculationAutomatic(LocalTestCase):
         """
 
         # Filter out all prefixes with automatic kpoints.
-        automatic_prefixes = filter(lambda x: 'automatic' in x, PEFIXES )
+        automatic_prefixes = filter(lambda x: 'automatic' in x, PEFIXES)
 
         # Test this group of prefixes.
         self.run_tests_on_calcs_with_prefixes(automatic_prefixes)
@@ -254,7 +255,7 @@ class TestPwImmigrantCalculationGamma(LocalTestCase):
         """
 
         # Filter out all prefixes with gamma kpoints.
-        gamma_prefixes = filter(lambda x: 'gamma' in x, PEFIXES )
+        gamma_prefixes = filter(lambda x: 'gamma' in x, PEFIXES)
 
         # Test this group of prefixes.
         self.run_tests_on_calcs_with_prefixes(gamma_prefixes)

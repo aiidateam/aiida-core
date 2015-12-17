@@ -21,8 +21,8 @@ from aiida.orm.data.structure import StructureData
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Eric Hontz, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Eric Hontz, Giovanni Pizzi, Martin Uhrin"
 
 # File names: a_celldm(1)_kpoints_cellparameters_atomicposition
 
@@ -58,7 +58,7 @@ class TestPwInputFile(AiidaTestCase):
         ref_structure = StructureData()
         ref_structure.set_cell(
             ((2.456, 0., 0.),
-            (-1.228, 2.12695, 0.),
+             (-1.228, 2.12695, 0.),
              (0., 0., 6.69604))
         )
         ref_structure.append_atom(
@@ -149,7 +149,7 @@ class TestPwInputFile(AiidaTestCase):
                                 [0., 0., 0.25],
                                 [0., 0., 0.5],
                                 [0.5, 0., 0.5],
-                                [0.3333333, 0.3333333,  0.5],
+                                [0.3333333, 0.3333333, 0.5],
                                 [0., 0., 0.5],
                                 [0.5, 0., 0.5],
                                 [0.5, 0., 0.],
@@ -157,7 +157,7 @@ class TestPwInputFile(AiidaTestCase):
                                 [0.3333333, 0.3333333, 0.5]])
         # Define reference weights.
         ref_weights = np.array(
-            [ 1., 1., 5., 2., 2., 4., 4., 1., 5., 2., 4., 5., 2., 4., 2.]
+            [1., 1., 5., 2., 2., 4., 4., 1., 5., 2., 4., 5., 2., 4., 2.]
         )
 
         # Filter out all input files with manually specified kpoints.
@@ -169,7 +169,6 @@ class TestPwInputFile(AiidaTestCase):
         # Check each input file for agreement with reference values.
         tol = 0.0001
         for input_file in manual_input_files:
-
             # Parse the input file and get the kpointsdata.
             pwinputfile = pwinputparser.PwInputFile(input_file)
             kpointsdata = pwinputfile.get_kpointsdata()
@@ -200,7 +199,6 @@ class TestPwInputFile(AiidaTestCase):
         # Check each input file for agreement with reference values.
         tol = 0.0001
         for input_file in automatic_input_files:
-
             # Parse the input file and get the kpointsdata.
             pwinputfile = pwinputparser.PwInputFile(input_file)
             kpointsdata = pwinputfile.get_kpointsdata()
@@ -231,7 +229,6 @@ class TestPwInputFile(AiidaTestCase):
         # Check each input file for agreement with reference values.
         tol = 0.0001
         for input_file in gamma_input_files:
-
             # Parse the input file and get the kpointsdata.
             pwinputfile = pwinputparser.PwInputFile(input_file)
             kpointsdata = pwinputfile.get_kpointsdata()
@@ -254,7 +251,6 @@ class TestPwInputFile(AiidaTestCase):
 
         # Check each input file for agreement with reference values.
         for input_file in INPUT_FILES:
-
             # Parse the input file
             pwinputfile = pwinputparser.PwInputFile(input_file)
 

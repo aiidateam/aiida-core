@@ -3,8 +3,8 @@
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
 
 import sys
 import os
@@ -23,7 +23,7 @@ CifData = DataFactory('cif')
 ParameterData = DataFactory('parameter')
 submit_test = None
 codename = None
-options = {"use-perl-parser":True}
+options = {"use-perl-parser": True}
 files = []
 
 sys.argv.pop(0)
@@ -45,11 +45,11 @@ while len(sys.argv) > 0:
             argval = True
         if argkey not in options.keys():
             options[argkey] = []
-        options[argkey].append( argval )
+        options[argkey].append(argval)
     else:
-        files.append( arg )
+        files.append(arg)
 
-code = test_and_get_code(codename, expected_code_type = "codtools.ciffilter")
+code = test_and_get_code(codename, expected_code_type="codtools.ciffilter")
 
 cif = None
 if len(files) == 1:
@@ -58,13 +58,14 @@ else:
     raise ValueError("Please specify a single CIF file")
 
 parameters = ParameterData(dict=options)
-computer = Computer.get( Computer.list_names()[0] )
+computer = Computer.get(Computer.list_names()[0])
 
 calc = code.new_calc()
 calc.label = "Test cod-tools cif_filter"
 calc.description = "Test calculation with the cod-tools cif_filter"
-calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1})
+calc.set_max_wallclock_seconds(30 * 60)  # 30 min
+calc.set_resources({"num_machines": 1,
+                    "num_mpiprocs_per_machine": 1})
 calc.set_computer(computer)
 
 calc.use_cif(cif)
@@ -77,11 +78,11 @@ if submit_test:
     print "Submit file in {}".format(os.path.join(
         os.path.relpath(subfolder.abspath),
         script_filename
-        ))
+    ))
 else:
     calc.store_all()
     print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid,calc.dbnode.pk)
+        calc.uuid, calc.dbnode.pk)
     calc.submit()
     print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid,calc.dbnode.pk)
+        calc.uuid, calc.dbnode.pk)

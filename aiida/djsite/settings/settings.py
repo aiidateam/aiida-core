@@ -3,7 +3,7 @@
 import sys, os
 from aiida.common.exceptions import ConfigurationError
 # get_property is used to read properties stored in the config json
-from aiida.common.setup import (get_config, get_secret_key, get_property, 
+from aiida.common.setup import (get_config, get_secret_key, get_property,
                                 get_profile_config, get_default_profile,
                                 parse_repository_uri)
 import aiida.common.setup
@@ -13,8 +13,8 @@ from aiida.djsite.settings import settings_profile
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA and Django Software Foundation and individual contributors. All rights reserved."
 __license__ = "MIT license, and Django license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet, Riccardo Sabatini, Valentin Bersier"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini, Valentin Bersier"
 
 AIIDA_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.split(AIIDA_DIR)[0]
@@ -29,9 +29,9 @@ if settings_profile.AIIDADB_PROFILE is None:
     raise ConfigurationError("AIIDADB_PROFILE not defined, did you load django"
                              "through the AiiDA load_dbenv()?")
 
-profile_conf = get_profile_config(settings_profile.AIIDADB_PROFILE,conf_dict = confs)
+profile_conf = get_profile_config(settings_profile.AIIDADB_PROFILE, conf_dict=confs)
 
-#put all database specific portions of settings here
+# put all database specific portions of settings here
 DBENGINE = profile_conf.get('AIIDADB_ENGINE', '')
 DBNAME = profile_conf.get('AIIDADB_NAME', '')
 DBUSER = profile_conf.get('AIIDADB_USER', '')
@@ -41,16 +41,16 @@ DBPORT = profile_conf.get('AIIDADB_PORT', '')
 REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
 
 DATABASES = {
-    'default' : {
+    'default': {
         # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'. 
-        'ENGINE'    : 'django.db.backends.' + DBENGINE, 
-        'NAME'      : DBNAME,  # Or path to database file if using sqlite3.   
-        'USER'      : DBUSER,  # Not used with sqlite3.
-        'PASSWORD'  : DBPASS,  # Not used with sqlite3.
-        'HOST'      : DBHOST,  # Set to empty string for localhost. Not used with sqlite3. 
-        'PORT'      : DBPORT,  # Set to empty string for default. Not used with sqlite3.      
-        }
+        'ENGINE': 'django.db.backends.' + DBENGINE,
+        'NAME': DBNAME,  # Or path to database file if using sqlite3.
+        'USER': DBUSER,  # Not used with sqlite3.
+        'PASSWORD': DBPASS,  # Not used with sqlite3.
+        'HOST': DBHOST,  # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': DBPORT,  # Set to empty string for default. Not used with sqlite3.
     }
+}
 
 # Increase timeout for SQLite engine
 # Does not solve the problem, but alleviates it for small number of calculations
@@ -89,7 +89,7 @@ AUTH_USER_MODEL = 'db.DbUser'
 # Make this unique, and don't share it with anybody.
 # This is generated with the first run of 'verdi install'
 SECRET_KEY = get_secret_key()
-        
+
 # Usual Django settings starts here.............
 
 # Keep it to False! Otherwise every query is stored 
@@ -163,14 +163,14 @@ STATICFILES_DIRS = (
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
+    #     'django.template.loaders.eggs.Loader',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -233,17 +233,17 @@ LOGGING = {
         'verbose': {
             'format': '%(levelname)s %(asctime)s %(module)s %(process)d '
                       '%(thread)d %(message)s',
-            },
+        },
         'halfverbose': {
             'format': '%(asctime)s, %(name)s: [%(levelname)s] %(message)s',
             'datefmt': '%m/%d/%Y %I:%M:%S %p',
-            },
         },
+    },
     'filters': {
         'require_debug_false': {
             '()': 'django.utils.log.RequireDebugFalse'
-            }
-        },
+        }
+    },
     'handlers': {
         'mail_admins': {
             'level': 'ERROR',
@@ -275,22 +275,22 @@ LOGGING = {
             'handlers': ['console', 'dblogger'],
             'level': get_property('logging.aiida_loglevel'),
             'propagate': False,
-            },
+        },
         'celery': {
             'handlers': ['console'],
             'level': get_property('logging.celery_loglevel'),
             'propagate': False,
-            },
+        },
         'paramiko': {
             'handlers': ['console'],
             'level': get_property('logging.paramiko_loglevel'),
             'propagate': False,
-            },
         },
+    },
 }
 
 # VERSION TO USE FOR DBNODES.
-AIIDANODES_UUID_VERSION=4
+AIIDANODES_UUID_VERSION = 4
 
 # -------------------------
 # Tastypie (API) settings
@@ -311,7 +311,7 @@ BROKER_URL = "django://"
 CELERY_RESULT_BACKEND = "database"
 # Avoid to store the results in the database, it uses a lot of resources
 # and we do not need results
-CELERY_IGNORE_RESULT=True
+CELERY_IGNORE_RESULT = True
 #CELERY_STORE_ERRORS_EVEN_IF_IGNORED=True
 #CELERYD_HIJACK_ROOT_LOGGER = False
 
@@ -321,30 +321,30 @@ CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
 # Key: internal name, left: actual celery name. Can be the same
 djcelery_tasks = {
     'submitter': 'submitter',
-    'updater':   'updater',
+    'updater': 'updater',
     'retriever': 'retriever',
-    'workflow':  'workflow_stepper',
-    }
+    'workflow': 'workflow_stepper',
+}
 
 # Choose here how often the tasks should be run. Note that if the previous task
 # is still running, the new one does not start thanks to the DbLock feature 
 # that we added.
 CELERYBEAT_SCHEDULE = {
     djcelery_tasks['submitter']: {
-        'task':'aiida.djsite.db.tasks.submitter',
+        'task': 'aiida.djsite.db.tasks.submitter',
         'schedule': timedelta(seconds=30),
-        },
+    },
     djcelery_tasks['updater']: {
-        'task':'aiida.djsite.db.tasks.updater',
+        'task': 'aiida.djsite.db.tasks.updater',
         'schedule': timedelta(seconds=30),
-        },
+    },
     djcelery_tasks['retriever']: {
-        'task':'aiida.djsite.db.tasks.retriever',
+        'task': 'aiida.djsite.db.tasks.retriever',
         'schedule': timedelta(seconds=30),
-        },
-   djcelery_tasks['workflow']: {
-        'task':'aiida.djsite.db.tasks.workflow_stepper',
+    },
+    djcelery_tasks['workflow']: {
+        'task': 'aiida.djsite.db.tasks.workflow_stepper',
         'schedule': timedelta(seconds=5),
-        },
+    },
 }
 

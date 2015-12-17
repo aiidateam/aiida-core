@@ -11,7 +11,8 @@ Modules
    ../execmanager/dev
    ../djsite/dev
    ../orm/dev
+   ../parsers/dev
    ../querying/dev
    ../dbimporters/dev
+   ../dbexporters/dev
    ../tools/dev
-

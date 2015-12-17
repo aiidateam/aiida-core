@@ -2,6 +2,10 @@
 Installation and Deployment of AiiDA
 ====================================
 
+If you are updating from a previous version and you don't want to
+reinstall everything from scratch, read the instructions 
+:ref:`here<updating_aiida>`.
+
 Supported architecture
 ++++++++++++++++++++++
 AiiDA has a few strict requirements, in its current version:
@@ -85,12 +89,7 @@ of packages to install- or ``yum`` in RedHat/Fedora).
 For Ubuntu, you can install the above packages using (tested on Ubuntu 12.04,
 names may change in different releases)::
 
-      sudo apt-get install git
-      sudo apt-get install python-pip
-      sudo apt-get install ipython
-      sudo apt-get install python2.7-dev
-      sudo apt-get install libsqlite3-dev
-      sudo apt-get install postgresql-server-dev-9.1
+      sudo apt-get install git python-pip ipython python2.7-dev
 
 .. note:: For the latter line, please use the same version (in the
   example above is 9.1) of the
@@ -112,9 +111,9 @@ Download the code using git in a directory of your choice (``~/git/aiida`` in
 this tutorial), using the
 following command::
 
-    git clone https://USERNAME@bitbucket.org/aiida_team/aiida.git ~/git/aiida
+    git clone https://USERNAME@bitbucket.org/aiida_team/aiida_core.git
 
-(or use ``git@bitbucket.org:aiida_team/aiida.git`` if you are downloading
+(or use ``git@bitbucket.org:aiida_team/aiida_core.git`` if you are downloading
 through SSH; note that this requires your ssh key to be added on the
 Bitbucket account.)
 
@@ -139,6 +138,19 @@ Then, install the python dependencies is as simple as this::
 ``requirements.txt`` file; the ``--user`` option allows to install
 the packages as a normal user, without the need of using ``sudo`` or
 becoming root). Check that every package is installed correctly.
+
+There are some additional dependencies need to be installed if you are 
+using PostgreSQL or MySql as backend database. No additional dependency 
+is required for SQLite.
+
+For PostgreSQL::
+
+  pip install psycopg2==2.6
+
+For MySQL::
+
+  pip install MySQL-python==1.2.5
+
 
 .. note:: This step should work seamlessly, but there are a number of reasons
   for which problems may occur. Often googling for the error message helps in
@@ -386,6 +398,15 @@ different from ``aiida@localhost``.
 If something fails, there is a high chance that you may have misconfigured
 the database. Double-check your settings before reporting an error.
 
+.. note:: The repository will contain the same number of folders
+  as the number of nodes plus the number of workflows. For very large databases,
+  some operations on the repository folder, such as rsync or scanning its content,
+  might be very slow, and if they are performed reguarly this will slow down 
+  the computer due to an intensive use of the hard drive. 
+  Check out our :ref:`tips<repo_troubleshooting>` in the 
+  troubeshooting section in case this happens.
+   
+
 Start the daemon
 -----------------
 If you configured your user account with your personal email (or if in
@@ -441,6 +462,8 @@ be found :doc:`here<setup/computerandcodes>`.
 Optional dependencies
 +++++++++++++++++++++
 
+.. _CIF_manipulation_dependencies:
+
 CIF manipulation
 ----------------
 
@@ -448,20 +471,23 @@ For the manipulation of `Crystallographic Information Framework (CIF) files`_,
 following dependencies are required to be installed:
 
 * `PyCifRW`_
+* `pymatgen`_
+* `pyspglib`_
 * `jmol`_
 * `Atomic Simulation Environment (ASE)`_
 * :doc:`cod-tools<plugins/codtools/index>`
 
-First two can be installed from the default repositories::
+First four can be installed from the default repositories::
 
     sudo pip install pycifrw==3.6.2.1
+    sudo pip install pymatgen==3.0.13
+    sudo pip install pyspglib
     sudo apt-get install jmol
 
 ASE has to be installed from source::
 
     curl https://wiki.fysik.dtu.dk/ase-files/python-ase-3.8.1.3440.tar.gz > python-ase-3.8.1.3440.tar.gz
-    gunzip python-ase-3.8.1.3440.tar.gz
-    tar -xvf python-ase-3.8.1.3440.tar
+    tar -zxvf python-ase-3.8.1.3440.tar.gz
     cd python-ase-3.8.1.3440
     setup.py build
     setup.py install
@@ -471,9 +497,11 @@ For the setting up of cod-tools please refer to
 :ref:`installation of cod-tools<codtools_installation>`.
 
 .. _Crystallographic Information Framework (CIF) files: http://www.iucr.org/resources/cif
+.. _pymatgen: http://pymatgen.org
 .. _Atomic Simulation Environment (ASE): https://wiki.fysik.dtu.dk/ase/
 .. _PyCifRW: https://pypi.python.org/pypi/PyCifRW/3.6.2
 .. _jmol: http://jmol.sourceforge.net
+.. _pyspglib: http://spglib.sourceforge.net/pyspglibForASE/
 
 Further comments and troubleshooting
 ++++++++++++++++++++++++++++++++++++
@@ -511,3 +539,35 @@ Further comments and troubleshooting
 
     (it will ask your password, because it is connecting via ssh to ``localhost``
     to install your public key inside ~/.ssh/authorized_keys).
+
+.. _updating_aiida:
+
+Updating AiiDA from a previous version
+++++++++++++++++++++++++++++++++++++++
+
+Updating from 0.4.1 to 0.5.0
+----------------------------
+
+* Stop your daemon (using ``verdi daemon stop``)
+* Store your aiida source folder somewhere in case you did some 
+  modifications to some files
+* Replace the aiida folder with the new one (either from the tar.gz or, 
+  if you are using git, by doing a ``git pull``). If you use the same 
+  folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
+  variables
+* Run a ``verdi`` command, e.g., ``verdi calculation list``. This should 
+  raise an exception, and in the exception message you will see the
+  command to run to update the schema version of the DB (v.0.5.0
+  is using a newer version of the schema).
+  The command will look like 
+  ``python manage.py --aiida-profile=default migrate``, but please read the
+  message for the correct command to run.
+* If you run ``verdi calculation list`` again now, it should work without 
+  error messages.
+* You can now restart your daemon and work as usual.
+
+.. note:: If you modified or added files, you need to put them back in place. 
+  Note that if you were working on a plugin, the plugin interface changed: 
+  you need to change the CalcInfo returning also a CodeInfo, as specified
+  :ref:`here<qeplugin-prepare-input>` and also accept a ``Code`` object 
+  among the inputs (also described in the same page).

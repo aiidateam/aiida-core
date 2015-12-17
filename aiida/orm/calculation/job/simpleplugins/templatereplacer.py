@@ -37,34 +37,33 @@ TODO: catch exceptions
 """
 from aiida.orm.calculation.job import JobCalculation
 from aiida.common.exceptions import InputValidationError
-from aiida.common.datastructures import CalcInfo
+from aiida.common.datastructures import CalcInfo, CodeInfo
 
 # TODO: write a 'input_type_checker' routine to automatically check the existence
 # and type of inputs + default values etc.
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Snehal Waychal"
 
-class TemplatereplacerCalculation(JobCalculation):   
+
+class TemplatereplacerCalculation(JobCalculation):
     """
     Simple stub of a plugin that can be used to replace some text in a given
     template. Can be used for many different codes, or as a starting point
     to develop a new plugin.
     """
-    def _prepare_for_submission(self,tempfolder,inputdict):        
+
+    def _prepare_for_submission(self, tempfolder, inputdict):
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
-        
-        This is the routine to be called when you want to create
-        the input files and related stuff with a plugin.
-        
+               
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
         :param inputdict: a dictionary with the input nodes, as they would
-                be returned by get_inputdata_dict (without the Code!)
+                be returned by get_inputs_dict (with the Code!)
         """
         import StringIO
 
@@ -73,19 +72,19 @@ class TemplatereplacerCalculation(JobCalculation):
         from aiida.orm.data.remote import RemoteData
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.exceptions import ValidationError
-        
+
         parameters_node = inputdict.pop('parameters', None)
         if parameters_node is None:
             parameters = {}
         else:
-            if not isinstance(parameters_node,ParameterData):
+            if not isinstance(parameters_node, ParameterData):
                 raise InputValidationError("'parameters' data is not of type ParameterData")
             parameters = dict(parameters_node.iterattrs())
 
         template_node = inputdict.pop('template', None)
         if template_node is None:
             raise InputValidationError("No 'template' input data")
-        if not isinstance(template_node,ParameterData):
+        if not isinstance(template_node, ParameterData):
             raise InputValidationError("'template' data is not of type ParameterData")
         template = dict(template_node.iterattrs())
 
@@ -94,15 +93,15 @@ class TemplatereplacerCalculation(JobCalculation):
         output_file_name = template.pop('output_file_name', None)
         cmdline_params_tmpl = template.pop('cmdline_params', [])
         input_through_stdin = template.pop('input_through_stdin', False)
-        files_to_copy = template.pop('files_to_copy',[])
+        files_to_copy = template.pop('files_to_copy', [])
 
         if template:
             raise InputValidationError("The following keys could not be "
                                        "used in the template node: {}".format(
-                                       template.keys()))
+                template.keys()))
 
         try:
-            validate_list_of_string_tuples(files_to_copy, tuple_length = 2)
+            validate_list_of_string_tuples(files_to_copy, tuple_length=2)
         except ValidationError as e:
             raise InputValidationError("invalid file_to_copy format: {}".format(e.message))
 
@@ -114,22 +113,26 @@ class TemplatereplacerCalculation(JobCalculation):
                 fileobj = inputdict.pop(link_name)
             except KeyError:
                 raise InputValidationError("You are asking to copy a file link {}, "
-                    "but there is no input link with such a name".format(link_name))
+                                           "but there is no input link with such a name".format(link_name))
             if isinstance(fileobj, SinglefileData):
-                local_copy_list.append((fileobj.get_file_abs_path(),dest_rel_path))
-            elif isinstance(fileobj, RemoteData): # can be a folder
+                local_copy_list.append((fileobj.get_file_abs_path(), dest_rel_path))
+            elif isinstance(fileobj, RemoteData):  # can be a folder
                 remote_copy_list.append(
-                    (fileobj.get_computer().uuid, fileobj.get_remote_path(),dest_rel_path)
-                    )
+                    (fileobj.get_computer().uuid, fileobj.get_remote_path(), dest_rel_path)
+                )
             else:
                 raise InputValidationError("If you ask to copy a file link {}, "
-                    "it must be either a SinglefileData or a RemoteData; it is instead of type {}".format(
-                        link_name, fileobj.__class__.__name__))
+                                           "it must be either a SinglefileData or a RemoteData; it is instead of type {}".format(
+                    link_name, fileobj.__class__.__name__))
+
+        code = inputdict.pop('code', None)
+        if code is None:
+            raise InputValidationError("No code in input")        
 
         if len(inputdict) > 0:
             raise InputValidationError("The input nodes with the following labels could not be "
                                        "used by the templatereplacer plugin: {}".format(
-                                       inputdict.keys()))
+                inputdict.keys()))
 
         if input_file_name is not None and not input_file_template:
             raise InputValidationError("If you give an input_file_name, you "
@@ -138,34 +141,31 @@ class TemplatereplacerCalculation(JobCalculation):
         if input_through_stdin and input_file_name is None:
             raise InputValidationError("If you ask for input_through_stdin you have to "
                                        "specify a input_file_name")
-            
+
         input_file = StringIO.StringIO(input_file_template.format(**parameters))
         if input_file_name:
             tempfolder.create_file_from_filelike(input_file, input_file_name)
         else:
             if input_file_template:
                 self.logger.warning("No input file name passed, but a input file template is present")
-        
+
         cmdline_params = [i.format(**parameters) for i in cmdline_params_tmpl]
 
         calcinfo = CalcInfo()
         calcinfo.retrieve_list = []
 
         calcinfo.uuid = self.uuid
-        calcinfo.cmdline_params = cmdline_params
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
-        if input_through_stdin is not None:
-            calcinfo.stdin_name = input_file_name
-        if output_file_name:
-            calcinfo.stdout_name = output_file_name
-            calcinfo.retrieve_list.append(output_file_name)
 
-        # TODO: implement
-        #        'job_environment',
-        #        'prepend_text',
-        #        'append_text', 
-        #        'stderr_name',
-        #        'join_files',
-        
+        codeinfo = CodeInfo()
+        codeinfo.cmdline_params = cmdline_params
+        if input_through_stdin is not None:
+            codeinfo.stdin_name = input_file_name
+        if output_file_name:
+            codeinfo.stdout_name = output_file_name
+            calcinfo.retrieve_list.append(output_file_name)
+        codeinfo.code_uuid = code.uuid
+        calcinfo.codes_info = [codeinfo]
+
         return calcinfo

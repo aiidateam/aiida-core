@@ -14,7 +14,7 @@ Let's start with a reference node that you loaded from the database, for example
 Now, we want to find the nodes which have a direct link to this node.
 There are several methods to extract this information (for developers see all 
 the methods and their docstring: ``get_outputs``, ``get_outputs_dict``, 
-``get_inputdata_dict``, ``c.get_inputs`` and ``c.get_inputs_dict``).
+``c.get_inputs`` and ``c.get_inputs_dict``).
 The most practical way to access this information, especially when working on 
 the ``verdi shell``, is by means of the ``inp`` and ``out`` methods.
 

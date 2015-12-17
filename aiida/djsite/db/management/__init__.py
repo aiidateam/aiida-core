@@ -2,35 +2,35 @@
 from django.contrib.auth import models as auth_models
 from django.conf import settings
 
-#====================================
+# ====================================
 #   SqLite Transive Closure
 #====================================
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
 
-def get_sqlite_tc_create_purgelist(links_table_name, 
-              links_table_input_field, 
-              links_table_output_field, 
-              closure_table_name, 
-              closure_table_parent_field, 
-              closure_table_child_field):
-    
+
+def get_sqlite_tc_create_purgelist(links_table_name,
+                                   links_table_input_field,
+                                   links_table_output_field,
+                                   closure_table_name,
+                                   closure_table_parent_field,
+                                   closure_table_child_field):
     return """
 CREATE TABLE purge_list (Id int);
 """
 
-def get_sqlite_tc_create_trigger_update(links_table_name, 
-              links_table_input_field, 
-              links_table_output_field, 
-              closure_table_name, 
-              closure_table_parent_field, 
-              closure_table_child_field):
-    
+
+def get_sqlite_tc_create_trigger_update(links_table_name,
+                                        links_table_input_field,
+                                        links_table_output_field,
+                                        closure_table_name,
+                                        closure_table_parent_field,
+                                        closure_table_child_field):
     from string import Template
-    
+
     trigger_update_text = Template("""
 CREATE TRIGGER update_tc INSERT ON $links_table_name
 WHEN 
@@ -117,20 +117,21 @@ INSERT INTO $closure_table_name (
 END;
 """)
     return trigger_update_text.substitute(links_table_name=links_table_name,
-                          links_table_input_field=links_table_input_field,
-                          links_table_output_field=links_table_output_field, 
-                          closure_table_name=closure_table_name,
-                          closure_table_parent_field=closure_table_parent_field,
-                          closure_table_child_field=closure_table_child_field)
+                                          links_table_input_field=links_table_input_field,
+                                          links_table_output_field=links_table_output_field,
+                                          closure_table_name=closure_table_name,
+                                          closure_table_parent_field=closure_table_parent_field,
+                                          closure_table_child_field=closure_table_child_field)
 
-def get_sqlite_tc_create_trigger_delete(links_table_name, 
-              links_table_input_field, 
-              links_table_output_field, 
-              closure_table_name, 
-              closure_table_parent_field, 
-              closure_table_child_field):
+
+def get_sqlite_tc_create_trigger_delete(links_table_name,
+                                        links_table_input_field,
+                                        links_table_output_field,
+                                        closure_table_name,
+                                        closure_table_parent_field,
+                                        closure_table_child_field):
     from string import Template
-    
+
     trigger_delete = Template("""
 CREATE TRIGGER deleted_from DELETE ON $links_table_name
 WHEN 
@@ -163,19 +164,21 @@ END
 
 """)
     return trigger_delete.substitute(links_table_name=links_table_name,
-              links_table_input_field=links_table_input_field,
-              links_table_output_field=links_table_output_field,
-              closure_table_name=closure_table_name,
-              closure_table_parent_field=closure_table_parent_field,
-              closure_table_child_field=closure_table_child_field)
+                                     links_table_input_field=links_table_input_field,
+                                     links_table_output_field=links_table_output_field,
+                                     closure_table_name=closure_table_name,
+                                     closure_table_parent_field=closure_table_parent_field,
+                                     closure_table_child_field=closure_table_child_field)
 
-def get_sqlite_tc_create_trigger_delete_NEW(links_table_name, 
-              links_table_input_field, 
-              links_table_output_field, 
-              closure_table_name, 
-              closure_table_parent_field, 
-              closure_table_child_field):
+
+def get_sqlite_tc_create_trigger_delete_NEW(links_table_name,
+                                            links_table_input_field,
+                                            links_table_output_field,
+                                            closure_table_name,
+                                            closure_table_parent_field,
+                                            closure_table_child_field):
     from string import Template
+
     trigger_delete_NEW = Template("""
 CREATE TRIGGER deleted_from DELETE ON $links_table_name
 BEGIN
@@ -189,19 +192,21 @@ DELETE FROM $closure_table_name WHERE Id IN (
 END
 """)
     return trigger_delete_NEW.substitute(links_table_name=links_table_name,
-              links_table_input_field=links_table_input_field,
-              links_table_output_field=links_table_output_field, 
-              closure_table_name=closure_table_name,
-              closure_table_parent_field=closure_table_parent_field, 
-              closure_table_child_field=closure_table_child_field)
+                                         links_table_input_field=links_table_input_field,
+                                         links_table_output_field=links_table_output_field,
+                                         closure_table_name=closure_table_name,
+                                         closure_table_parent_field=closure_table_parent_field,
+                                         closure_table_child_field=closure_table_child_field)
 
-def get_sqlite_tc_create_trigger_loop_NEW(links_table_name, 
-              links_table_input_field, 
-              links_table_output_field, 
-              closure_table_name, 
-              closure_table_parent_field, 
-              closure_table_child_field):
+
+def get_sqlite_tc_create_trigger_loop_NEW(links_table_name,
+                                          links_table_input_field,
+                                          links_table_output_field,
+                                          closure_table_name,
+                                          closure_table_parent_field,
+                                          closure_table_child_field):
     from string import Template
+
     trigger_loop_NEW = Template("""
 CREATE TRIGGER path_delete_recursive DELETE ON $closure_table_name 
 WHEN 
@@ -224,13 +229,15 @@ END
 """)
     return trigger_loop_NEW.substitute(closure_table_name=closure_table_name)
 
-def get_sqlite_tc_create_trigger_loop(links_table_name, 
-              links_table_input_field, 
-              links_table_output_field, 
-              closure_table_name, 
-              closure_table_parent_field, 
-              closure_table_child_field):
+
+def get_sqlite_tc_create_trigger_loop(links_table_name,
+                                      links_table_input_field,
+                                      links_table_output_field,
+                                      closure_table_name,
+                                      closure_table_parent_field,
+                                      closure_table_child_field):
     from string import Template
+
     create_trigger_loop = Template("""
 CREATE TRIGGER update_purgelist AFTER INSERT ON purge_list 
 WHEN 
@@ -260,17 +267,19 @@ END
 """)
     return create_trigger_loop.substitute(closure_table_name=closure_table_name)
 
+
 #====================================
 #   Postgresql Transive Closure
 #====================================
 
-def get_pg_tc(links_table_name, 
+def get_pg_tc(links_table_name,
               links_table_input_field,
               links_table_output_field,
               closure_table_name,
               closure_table_parent_field,
               closure_table_child_field):
     from string import Template
+
     pg_tc = Template("""
 
 DROP TRIGGER IF EXISTS autoupdate_tc ON $links_table_name;
@@ -436,24 +445,26 @@ CREATE TRIGGER autoupdate_tc
 
 """)
     return pg_tc.substitute(links_table_name=links_table_name,
-              links_table_input_field=links_table_input_field,
-              links_table_output_field=links_table_output_field,
-              closure_table_name=closure_table_name,
-              closure_table_parent_field=closure_table_parent_field,
-              closure_table_child_field=closure_table_child_field)
+                            links_table_input_field=links_table_input_field,
+                            links_table_output_field=links_table_output_field,
+                            closure_table_name=closure_table_name,
+                            closure_table_parent_field=closure_table_parent_field,
+                            closure_table_child_field=closure_table_child_field)
+
 
 #====================================
 #   Mysql Transive Closure
 #====================================
 
 def get_mysql_trigger_update(db_name,
-              links_table_name, 
-              links_table_input_field, 
-              links_table_output_field, 
-              closure_table_name, 
-              closure_table_parent_field, 
-              closure_table_child_field):
+                             links_table_name,
+                             links_table_input_field,
+                             links_table_output_field,
+                             closure_table_name,
+                             closure_table_parent_field,
+                             closure_table_child_field):
     from string import Template
+
     trigger_update = Template("""
 
 CREATE TRIGGER update_tc_insert AFTER INSERT ON $links_table_name
@@ -547,21 +558,23 @@ proc_label:BEGIN
 END;
 
 """)
-    return trigger_update.substitute(links_table_name=links_table_name, 
-                  links_table_input_field=links_table_input_field, 
-                  links_table_output_field=links_table_output_field, 
-                  closure_table_name=closure_table_name, 
-                  closure_table_parent_field=closure_table_parent_field, 
-                  closure_table_child_field=closure_table_child_field)
+    return trigger_update.substitute(links_table_name=links_table_name,
+                                     links_table_input_field=links_table_input_field,
+                                     links_table_output_field=links_table_output_field,
+                                     closure_table_name=closure_table_name,
+                                     closure_table_parent_field=closure_table_parent_field,
+                                     closure_table_child_field=closure_table_child_field)
+
 
 def get_mysql_trigger_delete(db_name,
-              links_table_name, 
-              links_table_input_field, 
-              links_table_output_field, 
-              closure_table_name, 
-              closure_table_parent_field, 
-              closure_table_child_field):
+                             links_table_name,
+                             links_table_input_field,
+                             links_table_output_field,
+                             closure_table_name,
+                             closure_table_parent_field,
+                             closure_table_child_field):
     from string import Template
+
     trigger_delete = Template("""
     
 CREATE TRIGGER update_tc_delete AFTER DELETE ON $links_table_name
@@ -610,11 +623,12 @@ proc_label:BEGIN
 END;
 """)
     return trigger_delete.substitute(links_table_name=links_table_name,
-              links_table_input_field=links_table_input_field,
-              links_table_output_field=links_table_output_field,
-              closure_table_name=closure_table_name,
-              closure_table_parent_field=closure_table_parent_field,
-              closure_table_child_field=closure_table_child_field)
+                                     links_table_input_field=links_table_input_field,
+                                     links_table_output_field=links_table_output_field,
+                                     closure_table_name=closure_table_name,
+                                     closure_table_parent_field=closure_table_parent_field,
+                                     closure_table_child_field=closure_table_child_field)
+
 
 #====================================
 #   Installer
@@ -622,6 +636,7 @@ END;
 
 def install_tc(sender, **kwargs):
     from django.db import connection, transaction
+
     cursor = connection.cursor()
 
     links_table_name = "db_dblink"
@@ -630,134 +645,146 @@ def install_tc(sender, **kwargs):
     closure_table_name = "db_dbpath"
     closure_table_parent_field = "parent_id"
     closure_table_child_field = "child_id"
-    
+
     if "mysql" in settings.DATABASES['default']['ENGINE']:
-        
+
         import MySQLdb
         import warnings
+
         warnings.filterwarnings("ignore", "PROCEDURE.*")
 
         print '== Mysql found, installing transitive closure engine =='
-        
-#         print get_mysql_tc(settings.DATABASES['default']['NAME'], links_table_name, links_table_input_field, links_table_output_field, 
-#                                  closure_table_name, closure_table_parent_field, closure_table_child_field)
+
+        #         print get_mysql_tc(settings.DATABASES['default']['NAME'], links_table_name, links_table_input_field, links_table_output_field,
+        #                                  closure_table_name, closure_table_parent_field, closure_table_child_field)
         db_name = settings.DATABASES['default']['NAME']
-        
+
         print "Cleaning old triggers"
         try:
-            cursor.execute("DROP PROCEDURE IF EXISTS `"+db_name+"`.`update_tc`;")
+            cursor.execute("DROP PROCEDURE IF EXISTS `" + db_name + "`.`update_tc`;")
         except MySQLdb.Warning:
             pass
         try:
             cursor.execute("DROP TRIGGER IF EXISTS update_tc_insert;")
         except MySQLdb.Warning:
             pass
-        
+
         try:
             cursor.execute("DROP TRIGGER IF EXISTS update_tc_delete;")
         except MySQLdb.Warning:
             pass
-        
+
         try:
             cursor.execute("DROP TABLE IF EXISTS PurgeList;")
         except MySQLdb.Warning:
             pass
-        
+
         cursor.execute("CREATE TABLE PurgeList (Id int);")
-        
+
         print "Installing trigger for update"
-        cursor.execute(get_mysql_trigger_update(db_name, links_table_name, links_table_input_field, links_table_output_field, 
-                                 closure_table_name, closure_table_parent_field, closure_table_child_field))
+        cursor.execute(
+            get_mysql_trigger_update(db_name, links_table_name, links_table_input_field, links_table_output_field,
+                                     closure_table_name, closure_table_parent_field, closure_table_child_field))
         transaction.commit_unless_managed()
-        
+
         print "Installing trigger for delete"
         cursor = connection.cursor()
-        cursor.execute(get_mysql_trigger_delete(db_name, links_table_name, links_table_input_field, links_table_output_field, 
-                                 closure_table_name, closure_table_parent_field, closure_table_child_field))
-        
+        cursor.execute(
+            get_mysql_trigger_delete(db_name, links_table_name, links_table_input_field, links_table_output_field,
+                                     closure_table_name, closure_table_parent_field, closure_table_child_field))
+
         transaction.commit_unless_managed()
-        
+
     elif "postgresql" in settings.DATABASES['default']['ENGINE']:
-        print '== Postegres found, installing transitive closure engine =='
-      
-        cursor.execute(get_pg_tc(links_table_name, links_table_input_field, links_table_output_field, 
+        print '== Postgres found, installing transitive closure engine =='
+
+        cursor.execute(get_pg_tc(links_table_name, links_table_input_field, links_table_output_field,
                                  closure_table_name, closure_table_parent_field, closure_table_child_field))
 
         transaction.commit_unless_managed()
     elif "sqlite3" in settings.DATABASES['default']['ENGINE']:
-        print '== SQLite3 found, installing transitive closure engine =='        
+        print '== SQLite3 found, installing transitive closure engine =='
         # Use the new trigger without the support purge_list table
-        
+
         from django.db.backends.sqlite3.base import Database as DjDatabase
+
         sqlite_version = DjDatabase.sqlite_version_info
         sqlite_version_string = DjDatabase.sqlite_version
-        
+
         # Note: there are some problems with the new version of the triggers
         # This problem is not shown when the tests db.nodes are run
         # However, the execution of the test on the database (copy/paste in 
         # the shell) does not work. The old version does not show this problem.
         # I comment the new one until it's fixed.
-        
-#         # This is the first version that supports recursive triggers
-#         if sqlite_version < (3, 6, 18):
-#             new_sql_trigger = False
-#             print r'   ||  NOTE: using old version of SQLite triggers  ||'
-#             print r'   ||  because your sqlite version is too old:     ||'
-#             print r'   \\  {} //'.format(
-#                 (sqlite_version_string + ' (< 3.6.18)').ljust(43))
-#         else:
-#             new_sql_trigger = True
-#             print r'   ||  NOTE: using new version of SQLite triggers  ||'
-#             print r'   ||  because your sqlite version is sufficiently ||'
-#             print r'   \\  recent: {} //'.format(
-#                 (sqlite_version_string + ' (> 3.6.18)').ljust(35))
-        
+
+        #         # This is the first version that supports recursive triggers
+        #         if sqlite_version < (3, 6, 18):
+        #             new_sql_trigger = False
+        #             print r'   ||  NOTE: using old version of SQLite triggers  ||'
+        #             print r'   ||  because your sqlite version is too old:     ||'
+        #             print r'   \\  {} //'.format(
+        #                 (sqlite_version_string + ' (< 3.6.18)').ljust(43))
+        #         else:
+        #             new_sql_trigger = True
+        #             print r'   ||  NOTE: using new version of SQLite triggers  ||'
+        #             print r'   ||  because your sqlite version is sufficiently ||'
+        #             print r'   \\  recent: {} //'.format(
+        #                 (sqlite_version_string + ' (> 3.6.18)').ljust(35))
+
         cursor.execute("DROP TRIGGER IF EXISTS update_tc;")
-        cursor.execute(get_sqlite_tc_create_trigger_update(links_table_name, links_table_input_field, links_table_output_field, 
-                                                           closure_table_name, closure_table_parent_field, closure_table_child_field))
-#         if new_sql_trigger:
-#             # the 'new' triggers work only if recursive triggers are active
-#             # This is required for sqlite >= 3.6.18; it is the default
-#             # from sqlite >=3.7
-#             # NOTE: The default maximum trigger recursion depth is 1000.
-#             # Hopefully, it is ok...
-#             # To change, set the SQLITE_MAX_TRIGGER_DEPTH variable.
-#             cursor.execute("PRAGMA RECURSIVE_TRIGGERS=true;")
-#             
-#             cursor.execute("DROP TABLE IF EXISTS purge_list;")
-#                         
-#             cursor.execute("DROP TRIGGER IF EXISTS deleted_from;")
-#             cursor.execute(get_sqlite_tc_create_trigger_delete_NEW(links_table_name, links_table_input_field, links_table_output_field, 
-#                                                                    closure_table_name, closure_table_parent_field, closure_table_child_field))
-# 
-#             cursor.execute("DROP TRIGGER IF EXISTS purge_list.update_purgelist;")
-#             cursor.execute("DROP TRIGGER IF EXISTS path_delete_recursive;")
-#             cursor.execute(get_sqlite_tc_create_trigger_loop_NEW(links_table_name, links_table_input_field, links_table_output_field, 
-#                                                                  closure_table_name, closure_table_parent_field, closure_table_child_field))
-#             
-#             transaction.commit_unless_managed()
-#         else:
+        cursor.execute(
+            get_sqlite_tc_create_trigger_update(links_table_name, links_table_input_field, links_table_output_field,
+                                                closure_table_name, closure_table_parent_field,
+                                                closure_table_child_field))
+        #         if new_sql_trigger:
+        #             # the 'new' triggers work only if recursive triggers are active
+        #             # This is required for sqlite >= 3.6.18; it is the default
+        #             # from sqlite >=3.7
+        #             # NOTE: The default maximum trigger recursion depth is 1000.
+        #             # Hopefully, it is ok...
+        #             # To change, set the SQLITE_MAX_TRIGGER_DEPTH variable.
+        #             cursor.execute("PRAGMA RECURSIVE_TRIGGERS=true;")
+        #
+        #             cursor.execute("DROP TABLE IF EXISTS purge_list;")
+        #
+        #             cursor.execute("DROP TRIGGER IF EXISTS deleted_from;")
+        #             cursor.execute(get_sqlite_tc_create_trigger_delete_NEW(links_table_name, links_table_input_field, links_table_output_field,
+        #                                                                    closure_table_name, closure_table_parent_field, closure_table_child_field))
+        #
+        #             cursor.execute("DROP TRIGGER IF EXISTS purge_list.update_purgelist;")
+        #             cursor.execute("DROP TRIGGER IF EXISTS path_delete_recursive;")
+        #             cursor.execute(get_sqlite_tc_create_trigger_loop_NEW(links_table_name, links_table_input_field, links_table_output_field,
+        #                                                                  closure_table_name, closure_table_parent_field, closure_table_child_field))
+        #
+        #             transaction.commit_unless_managed()
+        #         else:
         cursor.execute("DROP TABLE IF EXISTS purge_list;")
-        cursor.execute(get_sqlite_tc_create_purgelist(links_table_name, links_table_input_field, links_table_output_field, 
-                                                      closure_table_name, closure_table_parent_field, closure_table_child_field))
-              
+        cursor.execute(
+            get_sqlite_tc_create_purgelist(links_table_name, links_table_input_field, links_table_output_field,
+                                           closure_table_name, closure_table_parent_field, closure_table_child_field))
+
         cursor.execute("DROP TRIGGER IF EXISTS deleted_from;")
-        cursor.execute(get_sqlite_tc_create_trigger_delete(links_table_name, links_table_input_field, links_table_output_field, 
-                                                           closure_table_name, closure_table_parent_field, closure_table_child_field))
-  
+        cursor.execute(
+            get_sqlite_tc_create_trigger_delete(links_table_name, links_table_input_field, links_table_output_field,
+                                                closure_table_name, closure_table_parent_field,
+                                                closure_table_child_field))
+
         cursor.execute("DROP TRIGGER IF EXISTS purge_list.update_purgelist;")
         cursor.execute("DROP TRIGGER IF EXISTS path_delete_recursive;")
-        cursor.execute(get_sqlite_tc_create_trigger_loop(links_table_name, links_table_input_field, links_table_output_field, 
-                                                         closure_table_name, closure_table_parent_field, closure_table_child_field))
-  
+        cursor.execute(
+            get_sqlite_tc_create_trigger_loop(links_table_name, links_table_input_field, links_table_output_field,
+                                              closure_table_name, closure_table_parent_field,
+                                              closure_table_child_field))
+
         transaction.commit_unless_managed()
     else:
         print '== No transitive closure installed =='
 
 ## dispatch_uid used to avoid to install twice the signal if this
 ## module is loaded twice (it happens e.g. when tests are run)
-from django.db.models.signals import post_migrate 
+from django.db.models.signals import post_migrate
 from django.apps import apps
-post_migrate.connect(install_tc, 
+
+post_migrate.connect(install_tc,
                      sender=apps.get_app_config('db'),
                      dispatch_uid="transitive_closure_post_migrate")

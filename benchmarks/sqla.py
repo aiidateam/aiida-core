@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from sqlalchemy import or_
+from sqlalchemy.orm import defer
 
 
 from aiida.backends import sqlalchemy as sa
@@ -76,7 +77,7 @@ def build_query_attr_only(filter_):
 
     return lambda: q.all()
 
-def get_farthest_cif():
+def get_farthest_cif(with_attr=False):
 
     nodes = ParameterData.query().with_entities('id')
     cif_type = CifData._query_type_string
@@ -99,9 +100,12 @@ def get_farthest_cif():
     res = (CifData.query(children__id__in=nodes, child_paths__id__in=q)
            .distinct().order_by(DbNode.ctime))
 
+    if not with_attr:
+           res = res.options(defer(DbNode.attributes), defer(DbNode.extras))
+
     return res.all()
 
-def get_closest_struc():
+def get_closest_struc(with_attr=False):
     nodes = ParameterData.query().with_entities('id')
     struc_type = StructureData._query_type_string
 
@@ -120,8 +124,14 @@ def get_closest_struc():
          .distinct().with_entities(DbPath.id)
          )
 
-    res = (StructureData.query(children__id__in=nodes,child_paths__id__in=q)
+    res = (StructureData.query()
+           .join(DbPath, DbNode.child_path)
+           .filter(DbPath.child_id.in_(nodes))
+           .filter(DbPath.id.in_(q))
            .distinct().order_by(DbNode.ctime))
+
+    if not with_attr:
+           res = res.options(defer(DbNode.attributes), defer(DbNode.extras))
 
     return res.all()
 
@@ -176,6 +186,10 @@ queries = {
     "paths": {
         "farthest_cif": get_farthest_cif,
         "closest_struc": get_closest_struc,
+    },
+    "paths_with_attr": {
+        "farthest_cif": lambda: get_farthest_cif(with_attr=True),
+        "closest_struc": lambda: get_closest_struc(with_attr=True),
     },
     "verdi": {
         "list_data": list_data_structure(),

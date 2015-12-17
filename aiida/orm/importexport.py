@@ -7,8 +7,8 @@ from aiida.common.utils import (export_shard_uuid, get_class_string,
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
 
 IMPORTGROUP_TYPE = 'aiida.import'
 
@@ -182,11 +182,16 @@ def extract_tree(infile, folder, silent=False):
         root = args['root']
         for f in files:
             fullpath = os.path.join(path,f)
-            if os.path.isfile(fullpath) == False:
-                continue
             relpath = os.path.relpath(fullpath,root)
+            if os.path.isdir(fullpath):
+                if os.path.dirname(relpath) != '':
+	            folder.get_subfolder(os.path.dirname(relpath)+os.sep,
+                                     create=True)
+            elif not os.path.isfile(fullpath):
+                continue
             if os.path.dirname(relpath) != '':
-                folder.get_subfolder(os.path.dirname(relpath)+os.sep,create=True)
+                folder.get_subfolder(os.path.dirname(relpath)+os.sep,
+                                     create=True)
             folder.insert_path(os.path.abspath(fullpath),relpath)
 
     os.path.walk(infile,add_files,{'folder': folder,'root': infile})

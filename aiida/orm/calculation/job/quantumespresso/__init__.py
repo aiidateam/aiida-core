@@ -17,8 +17,8 @@ from aiida.common.datastructures import CodeInfo
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Daniel Marchand, Gianluca Prandini, Giovanni Pizzi, Marco Gibertini, Martin Uhrin, Nicolas Mounet"
 
 
 class BasePwCpInputGenerator(object):
@@ -727,7 +727,8 @@ class BasePwCpInputGenerator(object):
         self.use_parent_folder(remotedata)
 
     def create_restart(self, force_restart=False, parent_folder_symlink=None,
-                       use_output_structure=False):
+                       use_output_structure=False,
+                       restart_from_beginning=False):
         """
         Function to restart a calculation that was not completed before 
         (like max walltime reached...) i.e. not to restart a really FAILED calculation.
@@ -737,15 +738,19 @@ class BasePwCpInputGenerator(object):
         c2.submit()
         
         :param bool force_restart: restart also if parent is not in FINISHED 
-        state (e.g. FAILED, IMPORTED, etc.). Default=False.
+           state (e.g. FAILED, IMPORTED, etc.). Default=False.
         :param bool parent_folder_symlink: if True, symlinks are used
-        instead of hard copies of the files. Default given by 
-        self._default_symlink_usage.
+           instead of hard copies of the files. Default given by 
+           self._default_symlink_usage.
         :param bool use_output_structure: if True, the output structure
-        of the restarted calculation is used if available, rather than its
-        input structure. Useful for nscf or bands calculations, but it
-        SHOULD NOT be used for the restart of a relaxation run.
-        Default=False.
+           of the restarted calculation is used if available, rather than its
+           input structure. Useful for nscf or bands calculations, but it
+           SHOULD NOT be used for the restart of a relaxation run.
+           Default=False.
+        :param bool restart_from_beginning: If set to True, creates a copy of
+           the parent calculation, without using the scratch for the restart.
+           Useful to restart calculations that have crashed on the cluster for
+           external reasons. Default=False
         """
         from aiida.common.datastructures import calc_states
 
@@ -763,10 +768,13 @@ class BasePwCpInputGenerator(object):
 
         calc_inp = self.get_inputs_dict()
 
-        old_inp_dict = calc_inp[self.get_linkname('parameters')].get_dict()
-        # add the restart flag
-        old_inp_dict['CONTROL']['restart_mode'] = 'restart'
-        inp_dict = ParameterData(dict=old_inp_dict)
+        if restart_from_beginning:
+            inp_dict = calc_inp[self.get_linkname('parameters')]
+        else: # case of restart without using the parent scratch
+            old_inp_dict = calc_inp[self.get_linkname('parameters')].get_dict()
+            # add the restart flag
+            old_inp_dict['CONTROL']['restart_mode'] = 'restart'
+            inp_dict = ParameterData(dict=old_inp_dict)
 
         remote_folders = self.get_outputs(type=RemoteData)
         if len(remote_folders) != 1:

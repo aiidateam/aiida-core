@@ -8,8 +8,8 @@ from aiida.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
 
 class FakeObject(object):
     """
@@ -126,7 +126,7 @@ class TestTcodDbExporter(AiidaTestCase):
                       'sha1': sha1, 'type': 'file'},
              {'name': 'save/2/', 'type': 'folder'}])
 
-    @unittest.skipIf(not has_ase() or not has_pyspglib(),
+    @unittest.skipIf(not has_ase() or not has_pyspglib() or not has_pycifrw(),
                      "Unable to import ase or pyspglib")
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
@@ -472,7 +472,7 @@ class TestTcodDbExporter(AiidaTestCase):
         function = '_get_aiida_structure_ase_inline'
         self.assertNotEqual(script.find(function), script.rfind(function))
 
-    @unittest.skipIf(not has_ase() or not has_pyspglib(),
+    @unittest.skipIf(not has_ase() or not has_pyspglib() or not has_pycifrw(),
                      "Unable to import ase or pyspglib")
     def test_symmetry_reduction(self):
         from aiida.orm.data.structure import StructureData

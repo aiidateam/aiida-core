@@ -4,16 +4,22 @@ Tests for specific subclasses of Data
 """
 from django.utils import unittest
 from aiida.orm import load_node
-from aiida.orm import Node
-from aiida.common.exceptions import \
-    ModificationNotAllowed, UniquenessError, ValidationError
+from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 from aiida.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
+
+def simplify(string):
+    """
+    Takes a string, strips spaces in each line and returns it
+    Useful to compare strings when different versions of a code give
+    different spaces.
+    """
+    return "\n".join(s.strip() for s in string.split())
 
 class TestCalcStatus(AiidaTestCase):
     """
@@ -385,8 +391,8 @@ Te2 0.00000 0.00000 0.79030 0.01912
         for line in lines:
             if not re.search('^#', line):
                 non_comments.append(line)
-        self.assertEquals("\n".join(non_comments),
-                          '''
+        self.assertEquals(simplify("\n".join(non_comments)),
+                          simplify('''
 data_0
 loop_
   _atom_site_label
@@ -401,7 +407,7 @@ loop_
    0.5
 
 _publ_section_title                     'Test CIF'
-''')
+'''))
 
         loops = {'_atom_site': ['_atom_site_label', '_atom_site_occupancy']}
         lines = pycifrw_from_cif(datablocks, loops).WriteOut().split('\n')
@@ -409,8 +415,8 @@ _publ_section_title                     'Test CIF'
         for line in lines:
             if not re.search('^#', line):
                 non_comments.append(line)
-        self.assertEquals("\n".join(non_comments),
-                          '''
+        self.assertEquals(simplify("\n".join(non_comments)),
+                          simplify('''
 data_0
 loop_
   _atom_site_label
@@ -420,7 +426,7 @@ loop_
    C  0.5
 
 _publ_section_title                     'Test CIF'
-''')
+'''))
 
     @unittest.skipIf(not has_ase() or not has_pycifrw(),
                      "Unable to import ase or pycifrw")
@@ -1342,9 +1348,8 @@ class TestStructureData(AiidaTestCase):
         b,sym = ase_refine_cell(a)
         sym.pop('rotations')
         sym.pop('translations')
-        self.assertEquals(b.cell.tolist(),[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
-        self.assertEquals(b.get_scaled_positions().tolist(),
-                          [[0,0,0]])
+        self.assertEquals(b.cell.tolist(),[[6.0606,0,0],[0,8.0956,0],[0,0,12.132]])
+        self.assertEquals(b.get_scaled_positions().tolist(),[[0,0,0]])
 
         a = ase.Atoms(cell=[10,10,10])
         a.append(ase.Atom('C',[5,5,5]))
@@ -1430,8 +1435,8 @@ class TestStructureData(AiidaTestCase):
         # Exception thrown if ase can't be found
         except ImportError:
             return
-        self.assertEquals(c._prepare_cif(),
-                          """#\#CIF1.1
+        self.assertEquals(simplify(c._prepare_cif()),
+                          simplify("""#\#CIF1.1
 ##########################################################################
 #               Crystallographic Information Format file
 #               Produced by PyCifRW module
@@ -1470,7 +1475,7 @@ _symmetry_space_group_name_H-M          'P 1'
 _symmetry_space_group_name_Hall         'P 1'
 _cell_formula_units_Z                   1
 _chemical_formula_sum                   'Ba2 Ti'
-""")
+"""))
 
 
 class TestStructureDataLock(AiidaTestCase):
@@ -1849,8 +1854,8 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         # roundtrip.
 
         pymatgen_struct_roundtrip = struct.get_pymatgen_structure()
-        dict1 = pymatgen_struct.to_dict
-        dict2 = pymatgen_struct_roundtrip.to_dict
+        dict1 = pymatgen_struct.as_dict()
+        dict2 = pymatgen_struct_roundtrip.as_dict()
 
         for i in dict1['sites']:
             i['abc'] = [round(j, 2) for j in i['abc']]

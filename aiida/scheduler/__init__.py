@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 from abc import ABCMeta, abstractmethod
 import aiida.common
 from aiida.common.utils import escape_for_bash
@@ -7,8 +8,8 @@ from aiida.scheduler.datastructures import JobTemplate
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Marco Dorigo, Martin Uhrin"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Gianluca Prandini, Giovanni Pizzi, Marco Dorigo, Martin Uhrin"
 
 
 def SchedulerFactory(module):
@@ -32,10 +33,10 @@ class SchedulerParsingError(SchedulerError):
 
 
 class Scheduler(object):
-    __metaclass__ = ABCMeta
     """
     Base class for all schedulers.
     """
+    __metaclass__ = ABCMeta
     _logger = aiida.common.aiidalogger.getChild('scheduler')
 
     # A list of features
@@ -65,12 +66,12 @@ class Scheduler(object):
         return existing_plugins(Scheduler, "aiida.scheduler.plugins")
 
     @classmethod
-    def get_short_doc(self):
+    def get_short_doc(cls):
         """
         Return the first non-empty line of the class docstring, if available
         """
         # Remove empty lines
-        docstring = self.__doc__
+        docstring = cls.__doc__
         if not docstring:
             return "No documentation available"
 
@@ -127,6 +128,7 @@ class Scheduler(object):
         """
         # TODO: understand if, in the future, we want to pass more
         # than one calculation, e.g. for job arrays.
+        # and from scheduler_requirements e.g. for OpenMP? or maybe
         # TODO: in the future: environment_variables [from calcinfo, possibly,
         #        and from scheduler_requirements e.g. for OpenMP? or maybe
         #        the openmp part is better managed in the scheduler_dependent
@@ -330,7 +332,7 @@ stderr:
         if as_dict:
             jobdict = {j.job_id: j for j in joblist}
             if None in jobdict:
-                raise SchedulerError("Found at least a job without jobid")
+                raise SchedulerError("Found at least one job without jobid")
             return jobdict
         else:
             return joblist

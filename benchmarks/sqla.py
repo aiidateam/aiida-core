@@ -109,7 +109,7 @@ def get_closest_struc():
              .filter(DbPath.child_id.in_(nodes))
              .join(DbNode, DbPath.parent)
              .filter(DbNode.type.like("%{}%".format(struc_type)))
-             .order_by(DbPath.depth.desc())
+             .order_by(DbPath.depth)
              .distinct()
              [0])[0]
 

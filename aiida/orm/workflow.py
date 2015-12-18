@@ -90,8 +90,21 @@ class Workflow(object):
         self._logger = logger.getChild(self.__class__.__name__)
 
         uuid = kwargs.pop('uuid', None)
+        dbworkflow = kwargs.pop('dbworkflow', None)
 
-        if uuid is not None:
+        if uuid is not None and dbworkflow is not None:
+            raise ValueError("You cannot pass both UUID and dbworkflow")
+        
+        if dbworkflow is not None:
+            self._to_be_stored = False
+            if kwargs:
+                raise ValueError("If you pass a dbworkflow, you cannot pass any further parameter")
+
+            self._dbworkflowinstance = dbworkflow
+            # self.logger.info("Workflow found in the database, now retrieved")
+            self._repo_folder = RepositoryFolder(section=self._section_name, uuid=dbworkflow.uuid)
+        
+        elif uuid is not None:
             self._to_be_stored = False
             if kwargs:
                 raise ValueError("If you pass a UUID, you cannot pass any further parameter")
@@ -1071,7 +1084,7 @@ class Workflow(object):
         for elem_name, elem in wf_mod.__dict__.iteritems():
 
             if module_class == elem_name:  #and issubclass(elem, Workflow):
-                return getattr(wf_mod, elem_name)(uuid=wf_db.uuid)
+                return getattr(wf_mod, elem_name)(dbworkflow=wf_db)
 
     @classmethod
     def get_subclass_from_pk(cls, pk):

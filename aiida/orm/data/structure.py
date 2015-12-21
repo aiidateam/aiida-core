@@ -5,7 +5,7 @@ functions to operate on them.
 """
 
 from aiida.orm import Data
-from aiida.common.utils import classproperty
+from aiida.common.utils import classproperty, xyz_parser_iterator
 from aiida.orm.calculation.inline import optional_inline
 import itertools
 import copy
@@ -14,8 +14,8 @@ import copy
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet, Riccardo Sabatini"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Leonid Kahle, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini, Tiziano Müller"
 
 _mass_threshold = 1.e-3
 # Threshold to check if the sum is one or not
@@ -902,6 +902,65 @@ class StructureData(Data):
             f.flush()
             return f.read()
 
+    def _parse_xyz(self, inputstring):
+        """
+        Read the structure from a string of format XYZ.
+        """
+
+        # idiom to get to the last block
+        atoms = None
+        for _, _, atoms in xyz_parser_iterator(inputstring):
+            pass
+
+        if atoms is None:
+            raise TypeError("The data does not contain any XYZ data")
+
+        self.clear_kinds()
+
+        for sym, position in atoms:
+            self.append_atom(symbols=sym, position=position)
+
+
+    def _adjust_default_cell(self, vacuum_factor = 1.0, vacuum_addition = 10.0, pbc = [False, False, False]):
+        """
+        If the structure was imported from an xyz file, it lacks a defined cell,
+        and the default cell is taken ([[1,0,0], [0,1,0], [0,0,1]]),
+        leading to an unphysical definition of the structure.
+        This method will adjust the cell
+        """
+        import numpy as np
+        from ase.visualize import view
+        from aiida.common.utils import get_extremas_from_positions
+
+
+
+        # First, set PBC
+        # All the checks are done in get_valid_pbc called by set_pbc, no need to check anything here
+        self.set_pbc(pbc)
+
+        #Calculating the minimal cell:
+        positions = np.array([site.position for site in self.sites])
+        position_min, position_max   = get_extremas_from_positions(positions)
+
+        # Translate the structure to the origin, such that the minimal values in each dimension 
+        # amount to (0,0,0)
+        positions   -=  position_min
+        for index, site in enumerate(self.get_attr('sites')):
+            site['position'] = list(positions[index])
+
+        # The orthorhombic cell that (just) accomodates the whole structure is now given by the 
+        # extremas of position in each dimension:
+        minimal_orthorhombic_cell_dimensions  =  np.array(get_extremas_from_positions(positions)[1])
+        minimal_orthorhombic_cell_dimensions  = np.dot(vacuum_factor, minimal_orthorhombic_cell_dimensions)
+        minimal_orthorhombic_cell_dimensions += vacuum_addition
+
+        # Transform the vector (a, b, c ) to [[a,0,0], [0,b,0], [0,0,c]]
+        newcell = np.diag(minimal_orthorhombic_cell_dimensions)
+        self.set_cell(newcell.tolist())
+
+
+
+
     def get_symbols_set(self):
         """
         Return a set containing the names of all elements involved in
@@ -1057,6 +1116,12 @@ class StructureData(Data):
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
         self._set_attr('kinds', self.get_attr('kinds', []) + [new_kind.get_raw()])
+        # Note, this is a dict (with integer keys) so it allows for empty
+        # spots!
+        if not hasattr(self, '_internal_kind_tags'):
+            self._internal_kind_tags = {}
+        self._internal_kind_tags[len(
+            self.get_attr('kinds'))-1] = kind._internal_tag
 
     def append_site(self, site):
         """
@@ -1139,8 +1204,14 @@ class StructureData(Data):
             # If the kind is identical to an existing one, I use the existing
             # one, otherwise I replace it
             exists_already = False
-            for existing_kind in _kinds:
-
+            for idx, existing_kind in enumerate(_kinds):
+                try:
+                    existing_kind._internal_tag = self._internal_kind_tags[idx]
+                except KeyError:
+                    # self._internal_kind_tags does not contain any info for
+                    # the kind in position idx: I don't have to add anything
+                    # then, and I continue
+                    pass
                 if (kind.compare_with(existing_kind)[0]):
                     kind = existing_kind
                     exists_already = True
@@ -1262,6 +1333,7 @@ class StructureData(Data):
                 "it has already been stored")
 
         self._set_attr('kinds', [])
+        self._internal_kind_tags = {}
         self.clear_sites()
 
     def clear_sites(self):
@@ -1728,6 +1800,7 @@ class Kind(object):
                 self.set_symbols_and_weights(oldkind.symbols, oldkind.weights)
                 self.mass = oldkind.mass
                 self.name = oldkind.name
+                self._internal_tag = oldkind._internal_tag
             except AttributeError:
                 raise ValueError("Error using the Kind object. Are you sure "
                                  "it is a Kind object? [Introspection says it is "

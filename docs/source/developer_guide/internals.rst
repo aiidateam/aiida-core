@@ -151,8 +151,6 @@ The input/output links of the node can be accessed by the following methods.
 
 - :py:meth:`~aiida.orm.node.Node.get_inputs_dict` returns a dictionary where the key is the label of the input link.
 
-- :py:meth:`~aiida.orm.node.Node.get_inputdata_dict` returns the inputs as dictionary
-
 - :py:meth:`~aiida.orm.node.Node.get_inputs` returns the list of input nodes
 
 - :py:meth:`~aiida.orm.node.Node.inp` returns a :py:meth:`~aiida.orm.node.NodeInputManager` object that can be used to access the node's parents.
@@ -251,7 +249,7 @@ Extras related methods
 ======================
 ``Extras`` are additional information that are added to the calculations. In contrast to ``files`` and ``attributes``, ``extras`` are information added by the user (user specific).
 
-- :py:meth:`~aiida.orm.node.Node.set_extra` and :py:meth:`~aiida.orm.node.Node.set_extra_exclusive` add an ``extra`` to the database. The second method adds it only if doesn't already exist. To add a more ``extras`` at once, :py:meth:`~aiida.orm.node.Node.set_extras` can be used.
+- :py:meth:`~aiida.orm.node.Node.set_extra` adds an ``extra`` to the database. To add a more ``extras`` at once, :py:meth:`~aiida.orm.node.Node.set_extras` can be used.
 
 - :py:meth:`~aiida.orm.node.Node.get_extra` and :py:meth:`~aiida.orm.node.Node.get_extras` return a specific ``extra`` or all the available ``extras`` respectively. :py:meth:`~aiida.orm.node.Node.extras` returns the keys of the ``extras``. :py:meth:`~aiida.orm.node.Node.iterextras` returns an iterator (returning key/value tuples) of the ``extras``.
 

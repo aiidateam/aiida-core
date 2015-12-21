@@ -6,11 +6,12 @@ from aiida.cmdline.baseclass import (
 from aiida.backends.utils import load_dbenv
 from aiida.common.exceptions import MultipleObjectsError
 from aiida.cmdline.commands.node import _Label, _Description
+from aiida.orm import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Leonid Kahle, Marco Gibertini, Martin Uhrin, Nicolas Mounet"
 
 
 class Data(VerdiCommandRouter):
@@ -263,9 +264,9 @@ class Visualizable(object):
             sys.exit(1)
 
         load_dbenv()
-        from aiida.orm.node import Node
+#        from aiida.orm.node import Node
 
-        n_list = [Node.get_subclass_from_pk(id) for id in data_id]
+        n_list = [load_node(id) for id in data_id]
 
         for n in n_list:
             try:
@@ -365,9 +366,9 @@ class Exportable(object):
             sys.exit(1)
 
         load_dbenv()
-        from aiida.orm.node import Node
+#        from aiida.orm.node import Node
 
-        n = Node.get_subclass_from_pk(data_id)
+        n = load_node(data_id)
 
         try:
             if not isinstance(n, self.dataclass):
@@ -542,8 +543,7 @@ class Depositable(object):
             sys.exit(1)
 
         load_dbenv()
-        from aiida.orm.node import Node
-        n = Node.get_subclass_from_pk(data_id)
+        n = load_node(data_id)
 
         try:
             if not isinstance(n,self.dataclass):
@@ -579,6 +579,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             'uploadfamily': (self.uploadfamily, self.complete_auto),
             'listfamilies': (self.listfamilies, self.complete_none),
             'import': (self.importfile, self.complete_none),
+            'exportfamily': (self.exportfamily, self.complete_auto)
         }
 
     def uploadfamily(self, *args):
@@ -648,9 +649,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         load_dbenv()
         from aiida.orm import DataFactory
 
-
         UpfData = DataFactory('upf')
-
         groups = UpfData.get_upf_groups(filter_elements=parsed_args.element)
 
         if groups:
@@ -683,6 +682,43 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
                                                        description_string)
         else:
             print "No valid UPF pseudopotential family found."
+
+    
+    def exportfamily(self, *args):
+        """
+        Export a pseudopotential family into a folder.
+        Call without parameters to get some help.
+        """
+        import os
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import DataFactory
+        load_dbenv()
+        
+        if not len(args) == 2:
+            print >> sys.stderr, ("After 'upf export' there should be two "
+                                  "arguments:")
+            print >> sys.stderr, ("folder, upf_family_name\n")
+            sys.exit(1)
+
+        folder = os.path.abspath(args[0])
+        group_name = args[1]
+        
+        UpfData = DataFactory('upf')
+        try:
+            group = UpfData.get_upf_group(group_name)
+        except NotExistent:
+            print >> sys.stderr, ("upf family {} not found".format(group_name))
+
+        for u in group.nodes:
+            dest_path = os.path.join(folder,u.filename)
+            if not os.path.isfile(dest_path):
+                with open(dest_path,'w') as dest:
+                    with u._get_folder_pathsubfolder.open(u.filename) as source:
+                        dest.write(source.read())
+            else:
+                print >> sys.stdout, ("File {} is already present in the "
+                                      "destination folder".format(u.filename))
+        
 
     def _import_upf(self, filename, **kwargs):
         """
@@ -953,7 +989,11 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
 
 
 class _Structure(VerdiCommandWithSubcommands,
-                 Listable, Visualizable, Exportable, Depositable):
+                 Listable, 
+                 Visualizable, 
+                 Exportable, 
+                 Importable,
+                 Depositable):
     """
     Visualize AiIDA structures
     """
@@ -971,6 +1011,7 @@ class _Structure(VerdiCommandWithSubcommands,
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_none),
             'deposit': (self.deposit, self.complete_none),
+            'import': (self.importfile, self.complete_none),
         }
 
     def query(self, args):
@@ -1199,7 +1240,7 @@ class _Structure(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         print node._exportstring('tcod',parameters=parameters,**kwargs)
 
     def _export_tcod_parameters(self, parser, **kwargs):
@@ -1227,6 +1268,63 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         print node._exportstring('xyz')
 
+    def _import_xyz_parameters(self, parser):
+        """
+        Adding some functionality to the parser to deal with importing files
+        """
+        # In order to deal with structures that do not have a cell defined:
+        # We can increase the size of the cell from the minimal cell
+        # The minimal cell is the cell the just accomodates the structure given, 
+        # defined by the minimum and maximum of position in each dimension
+        parser.add_argument('--vacuum-factor', type=float, default=1.0,
+                help = 'The factor by which the cell accomodating the structure should be increased, default: 1.0')
+        #To that increased cell, we can also add a "safety margin"
+        parser.add_argument('--vacuum-addition', type=float, default=10.0,
+                help = 'The distance to add to the unit cell after vacuum-factor was applied to expand in each dimension, default: 10.0')
+        parser.add_argument('--pbc', type=int, nargs = 3, default= [0,0,0],
+                help = """
+                Set periodic boundary conditions for each lattice direction,
+                0 for no periodicity, any other integer for periodicity""")
+        parser.add_argument('--view', action='store_true', default = False, help= 'View resulting structure using ASE')
+        parser.add_argument('--dont-store', action='store_true', default = False, help= 'Do not store the structure')
+
+    def _import_xyz(self, filename, **kwargs):
+        """
+        Imports an XYZ-file.
+        """
+        from os.path import abspath
+        vacuum_addition = kwargs.pop('vacuum_addition')
+        vacuum_factor = kwargs.pop('vacuum_factor')
+        pbc = [bool(i) for i in kwargs.pop('pbc')]
+        dont_store = kwargs.pop('dont_store')
+        view_in_ase = kwargs.pop('view')
+
+        print 'importing XYZ-structure from: \n  {}'.format(abspath(filename))
+        filepath =  abspath(filename)
+        with open(filepath) as f:
+            xyz_txt = f.read()
+        new_structure = self.dataclass()
+        try:
+            new_structure._parse_xyz(xyz_txt)
+            new_structure._adjust_default_cell( vacuum_addition = vacuum_addition,
+                                                vacuum_factor = vacuum_factor,
+                                                pbc = pbc)
+
+            if not dont_store:
+                new_structure.store()
+            if view_in_ase:
+                from ase.visualize import view
+                view(new_structure.get_ase())
+            print  (
+                    '  Succesfully imported structure {}, '
+                    '(PK = {})'.format(new_structure.get_formula(), new_structure.pk)
+                )
+
+        except ValueError as e:
+            print e
+
+
+
     def _deposit_tcod(self, node, parameter_data=None, **kwargs):
         """
         Deposition plugin for TCOD.
@@ -1236,7 +1334,7 @@ class _Structure(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self,parser,**kwargs):
@@ -1361,7 +1459,7 @@ class _Cif(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         print node._exportstring('tcod',parameters=parameters,**kwargs)
 
     def _export_tcod_parameters(self,parser,**kwargs):
@@ -1392,7 +1490,7 @@ class _Cif(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self, parser, **kwargs):
@@ -1504,7 +1602,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         print node._exportstring('tcod',
                                  parameters=parameters,
                                  **kwargs)
@@ -1540,7 +1638,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         if parameter_data is not None:
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
-            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+            parameters = load_node(parameter_data, parent_class=ParameterData)
         return deposit(node,parameters=parameters,**kwargs)
 
     def _deposit_tcod_parameters(self, parser, **kwargs):

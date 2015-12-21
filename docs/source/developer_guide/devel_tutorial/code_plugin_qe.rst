@@ -1,21 +1,15 @@
-Developer code plugin tutorial
-==============================
+Developer code plugin tutorial - Quantum Espresso
+=================================================
 
 .. toctree::
    :maxdepth: 2
 
-In this chapter we will give you a brief guide that will teach you how to write 
-a plugin to support a new code.
 
-Generally speaking, we expect that each code will have its own
-peculiarity, so that sometimes a new strategy for code plugin might be
-needed to be carefully thought.
-Anyway, we will show you how we implemented the plugin for Quantum
-Espresso, in order for you to be able to replicate the task for other
-codes.
-Therefore, it will be assumed that you have already tried to run an
-example of QE, and you know more or less how the AiiDA interface
-works.
+In this section we will focus on AiiDA's Quantum Espresso plugin that we are
+going to analyse and show how a physics oriented plugin is developed.
+It will be assumed that you have already tried to run an example of Quantum
+Espresso, and you know more or less how the AiiDA interface works. We hope
+that in the end you will be able to replicate the task for other codes.
 
 In fact, when writing your own plugin, keep in mind that you need to
 satisfy multiple users, and the interface needs to be simple (not the
@@ -27,24 +21,14 @@ code below). But always try to follow the Zen of Python:
  
  Readability counts.
 
-There will be two kinds of plugins, the input and the output. The
-former has the purpose to convert python object in text inputs that
-can be executed by external softwares. The latters will convert the
-text output of these softwares back into python dictionaries/objects
+As demonstrated in previous sections, there will be two kinds of plugins:
+the input and the output. The former has the purpose to convert python object
+in text inputs that can be executed by external software. The latter will
+convert the text output of these software back into python dictionaries/objects
 that can be put back in the database.
  
 InputPlugin
 -----------
-
-In abstract term, this plugin must contain these two pieces of information:
-
-  what are the input objects of the calculation
- 
-  how to convert the input object in an input file
-
-This is it, a minimal input plugin must have at least these two
-things.
-
 Create a new file, which has the same name as the class you are
 creating (in this way, it will be possible to load it with
 ``CalculationFactory``).
@@ -55,18 +39,12 @@ Step 1: inheritance
 
 First define the class::
 
-  class SubclassCalculation(JobCalculation):   
+  class SubclassCalculation(JobCalculation):
 
 (Substitute ``Subclass`` with the name of your plugin).
 Take care of inheriting the ``JobCalculation`` class, or the plugin will not work.
 
-.. note:: The base ``Calculation`` class should only be used as the abstract
-  base class. Any calculation that needs to run on a remote scheduler must
-  inherit from  :class:`~aiida.orm.calculation.job.JobCalculation`, that 
-  contains all the methods to run on a remote scheduler, get the calculation
-  state, copy files remotely and retrieve them, ...
-
-Now, you will likely need to define some variables that belong to 
+Now, you will likely need to define some variables that belong to
 ``SubclassCalculation``.
 In order to be sure that you don't lose any variables belonging to the 
 inherited class, every subclass of calculation needs to have a method which is 
@@ -199,7 +177,7 @@ What did we do?
   to specify a list of kinds that are associated with the same pseudopotential
   file (while in the example above only one kind string can be passed).
 
-   
+.. _qeplugin-prepare-input:
 
 Step 3: prepare a text input
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -556,77 +534,5 @@ A kind of template for writing such parser for the calculation class
             # The calculation state will be set to failed if successful=False,
             # to finished otherwise
             return successful, new_nodes_list
-
-
-Example
--------
-
-In this example, we are supporting a code that performs a summation of two 
-integers. 
-
-We try to imagine to create a calculation plugin that supports the code, 
-and that can be run using a script like :download:`this one <sum_test.py>`.
-
-First, we need to create an executable on the remote machine (might be as well 
-your localhost if you installed a scheduler).
-Therefore, put :download:`this script <sum_executable.py>` on your remote 
-computer and install it as a code in AiiDA.
-Such script take an input file as input on the command line, reads a JSON file 
-input and sums two keys that it finds in the JSON. 
-The output produced is another JSON file.
-
-Therefore, we create an input plugin for a ``SumCalculation``, which can be done
-with few lines as done in this file 
-:download:`aiida/orm/calculation/job/sum.py <sum_input.py>`.
-
-The test can now be run, but the calculation Node will only have a RemoteData 
-and a retrieved FolderData which are not querable. 
-So, we create a parser (:download:`aiida/parsers/plugins/sum.py <sum_parser.py>`)
-which will read the output files and will create a ParameterData in output.
-
-As you can see, with few lines we can support a new simple code.
-The most time consuming part in the development of a plugin is hidden for 
-simplicity in this example.
-For the input plugin, this consists in converting the input Nodes into some 
-files which are used by the calculation.
-For the parsers, the problem is opposite, and is to convert a text file produced 
-by the executable into AiiDA objects.
-Here we only have a dictionary in input and output, so that its conversion to a 
-from a JSON file can be done in one line, but in general, the difficulty of 
-these operations depend on the details of the code you want to support.
-
-Remember also that you can introduce new Data types to support new features or 
-just to have a simpler and more intuitive interface.
-For example, the code above is not optimal if you want to pass the result of two
-SumCalculation to a third one and sum their results (the name of the keys of the
-output dictionary differs from the input).
-A relatively simple exercise you can do before jumping to develop the support 
-for a serious code, try to create a new FloatData,
-which saves in the DB the value of a number::
-
-  class FloatData(Data):
-
-      @property
-      def value(self):
-          """
-          The value of the Float
-          """
-          return self.get_attr('number')
-        
-      @value.setter
-      def value(self,value):
-          """
-          Set the value of the Float
-          """
-          self._set_attr('number',value)
-
-Try to adapt the previous SumCalculation to acceps two FloatDatas as input and
-to produce an FloatData in output.
-Note that you can do this without changing the executable (a rather useless note
-in this example, but more interesting if you want to support a real code!). 
-
-
-
-
 
 

@@ -10,8 +10,8 @@ from aiida.backends.utils import load_dbenv
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 
 
@@ -31,7 +31,111 @@ class Group(VerdiCommandWithSubcommands):
             'list': (self.group_list, self.complete_none),
             'show': (self.group_show, self.complete_none),
             'description': (self.group_description, self.complete_none),
+            'create': (self.group_create, self.complete_none),
+            'delete': (self.group_delete, self.complete_none),
+            'addnodes': (self.group_addnodes, self.complete_none),
+            'removenodes': (self.group_removenodes, self.complete_none),
         }
+
+    def group_create(self, *args):
+        """
+        Create a new empty group.
+        """
+        load_dbenv()
+
+        import argparse
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import Group as G
+        from aiida.common.utils import str_timedelta
+        from django.utils import timezone
+        from aiida.orm.node import from_type_to_pluginclassname
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Create a new empty group.')
+        parser.add_argument('GROUPNAME', help="The name of the new group")
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        group_name = parsed_args.GROUPNAME
+
+        group, created = G.get_or_create(name=group_name)
+
+        if created:
+            print "Group created with PK = {} and name '{}'".format(
+                group.pk, group.name)
+        else:
+            print "Group '{}' already exists, PK = {}".format(
+                group.name, group.pk)
+
+
+    def group_delete(self, *args):
+        """
+        Delete an existing group.
+        """
+        load_dbenv()
+
+        import argparse
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import Group as G
+        from aiida.common.utils import str_timedelta
+        from django.utils import timezone
+        from aiida.orm.node import from_type_to_pluginclassname
+        from aiida.cmdline import wait_for_confirmation
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Delete an existing group.')
+        parser.add_argument('-f', '--force',
+                            dest='force', action='store_true',
+                            help="Force deletion of the group even if it "
+                            "is not empty. Note that this deletes only the "
+                            "group and not the nodes.")
+        parser.add_argument('GROUP', help="The name or PK of the group to delete")
+        parser.set_defaults(force=False)
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        group = parsed_args.GROUP
+        force = parsed_args.force
+        try:
+            group_pk = int(group)
+        except ValueError:
+            group_pk = None
+            group_name = group
+
+        if group_pk is not None:
+            try:
+                group = G(dbgroup=group_pk)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+        else:
+            try:
+                group = G.get_from_string(group_name)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+
+        group_pk = group.pk
+        group_name = group.name
+
+        num_nodes = len(group.nodes)
+        if num_nodes > 0 and not force:
+            print >> sys.stderr, ("Group '{}' is not empty (it contains {} "
+                "nodes). Pass the -f option if you really want to delete "
+                "it.".format(group_name, num_nodes))
+            sys.exit(1)
+
+        sys.stderr.write("Are you sure to kill the group with PK = {} ({})? "
+            "[Y/N] ".format(group_pk, group_name))
+        if not wait_for_confirmation():
+            sys.exit(0)
+
+        group.delete()
+        print "Group '{}' (PK={}) deleted.".format(group_name, group_pk)
 
     def group_show(self, *args):
         """
@@ -53,21 +157,46 @@ class Group(VerdiCommandWithSubcommands):
                             dest='raw', action='store_true',
                             help="Show only a space-separated list of PKs of "
                             "the calculations in the group")
-        parser.add_argument('PK',type=int, help="The PK of the group to show")
+        parser.add_argument('-u', '--uuid',
+                            dest='uuid', action='store_true',
+                            help="Show UUIDs together with PKs. Note: if the "
+                                 "--raw option is also passed, PKs are not "
+                                 "printed, but oly UUIDs.")
+        parser.add_argument('GROUP', help="The PK of the group to show")
         parser.set_defaults(raw=False)
+        parser.set_defaults(uuid=False)
 
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        group_pk = parsed_args.PK
+        group = parsed_args.GROUP
         try:
-            group = G(dbgroup=group_pk)
-        except NotExistent as e:
-            print >> sys.stderr, "Error: {}.".format(e.message)
-            sys.exit(1)
+            group_pk = int(group)
+        except ValueError:
+            group_pk = None
+            group_name = group
+
+        if group_pk is not None:
+            try:
+                group = G(dbgroup=group_pk)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+        else:
+            try:
+                group = G.get_from_string(group_name)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+
+        group_pk = group.pk
+        group_name = group.name
 
         if parsed_args.raw:
-            print " ".join(str(_.pk) for _ in group.nodes)
+            if parsed_args.uuid:
+                print " ".join(str(_.uuid) for _ in group.nodes)
+            else:
+                print " ".join(str(_.pk) for _ in group.nodes)
         else:
             type_string = group.type_string
             desc = group.description
@@ -79,12 +208,170 @@ class Group(VerdiCommandWithSubcommands):
             print "# Group description: {}".format(desc if desc else
                                                    "<no description>")
             print "# Nodes:"
+            uuid_string = ""
             for n in group.nodes:
-                print "* {} - {} - {}".format(
-                    n.pk,
+                if parsed_args.uuid:
+                    uuid_string = "{} - ".format(n.uuid)
+                print "* {}{} - {} - {}".format(
+                    uuid_string, n.pk,
                     from_type_to_pluginclassname(n.dbnode.type).rsplit(".", 1)[1],
                     str_timedelta(now - n.ctime, short=True,
                                   negative_to_zero=True))
+
+    def group_addnodes(self, *args):
+        """
+        Add nodes to a given group.
+        """
+        from aiida.orm.utils import load_node
+        from aiida.cmdline import wait_for_confirmation
+
+        load_dbenv()
+
+        import argparse
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import Group as G
+        from aiida.common.utils import str_timedelta
+        from django.utils import timezone
+        from aiida.orm.node import from_type_to_pluginclassname
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Add nodes to a given AiiDA group.')
+        parser.add_argument('-g', '--group',
+                            dest='group',
+                            required=True,
+                            help="The name or PK of the group you want to add "
+                            "a node to.")
+        parser.add_argument('nodes', nargs='+',
+                            help="The PK or UUID of the nodes to add")
+        parser.set_defaults(raw=False)
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        group = parsed_args.group
+        try:
+            group_pk = int(group)
+        except ValueError:
+            group_pk = None
+            group_name = group
+
+        if group_pk is not None:
+            try:
+                group = G(dbgroup=group_pk)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+        else:
+            try:
+                group = G.get_from_string(group_name)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+
+        group_pk = group.pk
+        group_name = group.name
+
+        nodes = []
+        for node in parsed_args.nodes:
+            try:
+                node = int(node)
+            except ValueError:
+                pass # I leave it as a string and let load_node complain
+                     # if it is not a UUID
+            try:
+                nodes.append(load_node(node))
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+
+
+        sys.stderr.write("Are you sure to add {} nodes the group with PK = {} "
+                         "({})? [Y/N] ".format(len(nodes), group_pk, group_name))
+        if not wait_for_confirmation():
+            sys.exit(0)
+
+        group.add_nodes(nodes)
+
+
+    def group_removenodes(self, *args):
+        """
+        Remove nodes from a given group.
+        """
+        from aiida.orm.utils import load_node
+        from aiida.cmdline import wait_for_confirmation
+
+        load_dbenv()
+
+        import argparse
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import Group as G
+        from aiida.common.utils import str_timedelta
+        from django.utils import timezone
+        from aiida.orm.node import from_type_to_pluginclassname
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Remove nodes from a given AiiDA group.')
+        parser.add_argument('-g', '--group',
+                            dest='group',
+                            required=True,
+                            help="The name or PK of the group you want to "
+                            "remove a node from.")
+        parser.add_argument('nodes', nargs='+',
+                            help="The PK or UUID of the nodes to remove. An "
+                            "error is raised if the node does not exist. "
+                            "No message is shown if the node does not belong "
+                            "to the group.")
+        parser.set_defaults(raw=False)
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        group = parsed_args.group
+        try:
+            group_pk = int(group)
+        except ValueError:
+            group_pk = None
+            group_name = group
+
+        if group_pk is not None:
+            try:
+                group = G(dbgroup=group_pk)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+        else:
+            try:
+                group = G.get_from_string(group_name)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+
+        group_pk = group.pk
+        group_name = group.name
+
+        nodes = []
+        for node in parsed_args.nodes:
+            try:
+                node = int(node)
+            except ValueError:
+                pass # I leave it as a string and let load_node complain
+                     # if it is not a UUID
+            try:
+                nodes.append(load_node(node))
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+
+        sys.stderr.write("Are you sure to remove {} nodes from the group "
+                         "with PK = {} "
+                         "({})? [Y/N] ".format(len(nodes), group_pk, group_name))
+        if not wait_for_confirmation():
+            sys.exit(0)
+
+        group.remove_nodes(nodes)
+
 
     def group_description(self, *args):
         """

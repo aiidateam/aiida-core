@@ -8,11 +8,12 @@ import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv
+from aiida.orm.utils import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 
 def cmdline_fill(attributes, store, print_header=True):
@@ -557,6 +558,7 @@ class Code(VerdiCommandWithSubcommands):
         Hide one or more codes from the verdi show command
         """
         import argparse
+        from aiida.orm.code import Code as OrmCode
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
                                          description='Hide codes from the verdi show command.')
@@ -569,7 +571,7 @@ class Code(VerdiCommandWithSubcommands):
         from aiida.orm.code import Code
 
         for pk in parsed_args.pks:
-            code = Code.get_subclass_from_pk(pk)
+            code = load_node(pk, parent_class=OrmCode)
             code._hide()
 
     def code_reveal(self, *args):
@@ -577,6 +579,7 @@ class Code(VerdiCommandWithSubcommands):
         Reveal (if it was hidden before) one or more codes from the verdi show command
         """
         import argparse
+        from aiida.orm.code import Code as OrmCode
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -589,7 +592,7 @@ class Code(VerdiCommandWithSubcommands):
         from aiida.orm.code import Code
 
         for pk in parsed_args.pks:
-            code = Code.get_subclass_from_pk(pk)
+            code = load_node(pk, parent_class=OrmCode)
             code._reveal()
 
     def code_list(self, *args):
@@ -663,8 +666,12 @@ class Code(VerdiCommandWithSubcommands):
                     owner_string = " ({})".format(useremail)
                 else:
                     owner_string = ""
-                print "* pk {} - {}@{}{}".format(
-                    pk, label, computername, owner_string)
+                if computername is None:
+                    computernamestring = ""
+                else:
+                    computernamestring = "@{}".format(computername)
+                print "* pk {} - {}{}{}".format(
+                    pk, label, computernamestring, owner_string)
         else:
             print "# No codes found matching the specified criteria."
 
@@ -766,7 +773,7 @@ class Code(VerdiCommandWithSubcommands):
             print "ERROR! A code with name {} could not be found".format(old_name)
             sys.exit(1)
 
-        suffix = '@{}'.format(code.computer.name)
+        suffix = '@{}'.format(code.get_computer().name)
         if new_name.endswith(suffix):
             new_name = new_name[:-len(suffix)]
 
@@ -774,10 +781,10 @@ class Code(VerdiCommandWithSubcommands):
             print >> sys.stderr, "ERROR! Do not put '@' symbols in the code name"
             sys.exit(1)
 
-        retrieved_old_name = '{}@{}'.format(code.label, code.computer.name)
+        retrieved_old_name = '{}@{}'.format(code.label, code.get_computer().name)
         # CHANGE HERE
         code.label = new_name
-        retrieved_new_name = '{}@{}'.format(code.label, code.computer.name)
+        retrieved_new_name = '{}@{}'.format(code.label, code.get_computer().name)
 
         print "Renamed code with ID={} from '{}' to '{}'".format(
             code.pk, retrieved_old_name, retrieved_new_name)
@@ -817,7 +824,7 @@ class Code(VerdiCommandWithSubcommands):
             # file_list = [ code._get_folder_pathsubfolder.get_abs_path(i)
             #    for i in code.get_folder_list() ]
         else:
-            set_params.computer = code.computer
+            set_params.computer = code.get_computer()
             set_params.remote_abs_path = code.get_remote_exec_path()
 
         set_params.prepend_text = code.get_prepend_text()
@@ -838,7 +845,7 @@ class Code(VerdiCommandWithSubcommands):
         if was_local_before:
             new_comment.append("local_executable: {}".format(code.get_local_executable()))
         else:
-            new_comment.append("computer: {}".format(code.computer))
+            new_comment.append("computer: {}".format(code.get_computer()))
             new_comment.append("remote_exec_path: {}".format(code.get_remote_exec_path()))
         new_comment.append("prepend_text: {}".format(code.get_prepend_text()))
         new_comment.append("append_text: {}".format(code.get_append_text()))

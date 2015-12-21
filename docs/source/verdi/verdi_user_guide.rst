@@ -169,6 +169,8 @@ Manages database data objects.
 
     * **import**: create or return (if already present) a database node,
       having the contents of a supplied file
+
+    * **exportfamily**: export a family of pseudopotential files into a folder
   
   * **structure**: handles the StructureData
   
@@ -245,6 +247,12 @@ See also ``verdi import`` to import this data on another database.
 +++++++++++++++
 
   *  **list**: list all the groups in the database.
+  *  **description**: show or change the description of a group
+  *  **show**: show the content of a group.
+  *  **create**: create a new empty group.
+  *  **delete**: delete an existing group (but not the nodes belonging to it).
+  *  **addnodes**: add nodes to a group.
+  *  **removenodes**: remove nodes from a group.
 
 
 .. _import:

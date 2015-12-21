@@ -3,13 +3,14 @@
 from aiida.orm.implementation import Node
 
 from aiida.orm.data import Data
+from aiida.orm.workflow import Workflow
 
 from aiida.common.pluginloader import BaseFactory
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Gianluca Prandini, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 
 def CalculationFactory(module, from_abstract=False):
@@ -46,38 +47,52 @@ def WorkflowFactory(module):
     return BaseFactory(module, Workflow, "aiida.workflows")
 
 
-def load_node(node_id=None, pk=None, uuid=None):
+def load_node(node_id=None, pk=None, uuid=None, parent_class=None):
     """
     Return an AiiDA node given PK or UUID.
 
     :param node_id: PK (integer) or UUID (string) or a node
     :param pk: PK of a node
     :param uuid: UUID of a node
+    :param parent_class: if specified, checks whether the node loaded is a
+        subclass of parent_class
     :return: an AiiDA node
-    :raises: ValueError if none or more than one of parameters is supplied
-        or type of node_id is neither string nor integer
+    :raise ValueError: if none or more than one of parameters is supplied
+        or type of node_id is neither string nor integer.
+    :raise NotExistent: if the parent_class is specified
+        and no matching Node is found.
     """
+    from aiida.common.exceptions import NotExistent
+
     if int(node_id is None) + int(pk is None) + int(uuid is None) == 3:
         raise ValueError("one of the parameters 'node_id', 'pk' and 'uuid' "
                          "has to be supplied")
     if int(node_id is None) + int(pk is None) + int(uuid is None) < 2:
         raise ValueError("only one of parameters 'node_id', 'pk' and 'uuid' "
                          "has to be supplied")
+    loaded_node = None
     if node_id is not None:
         if isinstance(node_id, str) or isinstance(node_id, unicode):
-            return Node.get_subclass_from_uuid(node_id)
+            loaded_node = Node.get_subclass_from_uuid(node_id)
         elif isinstance(node_id, int):
-            return Node.get_subclass_from_pk(node_id)
+            loaded_node = Node.get_subclass_from_pk(node_id)
         else:
             raise ValueError("'node_id' has to be either string, unicode or "
                              "integer, {} given".format(type(node_id)))
-    if pk is not None:
-        if not isinstance(pk, int) and not isinstance(pk, long):
-            raise ValueError("The 'pk' argument needs to be either an int or a long"
-                             " but it was {}".format(type(pk)))
-        return Node.get_subclass_from_pk(pk)
-    else:
-        return Node.get_subclass_from_uuid(uuid)
+    if loaded_node is None:
+        if pk is not None:
+            loaded_node = Node.get_subclass_from_pk(pk)
+        else:
+            loaded_node = Node.get_subclass_from_uuid(uuid)
+
+    if parent_class is not None:
+        if not issubclass(parent_class, Node):
+            raise ValueError("parent_class must be a subclass of Node")
+        if not isinstance(loaded_node, parent_class):
+            raise NotExistent('No node found as '
+                              'subclass of {}'.format(parent_class))
+
+    return loaded_node
 
 
 def load_workflow(wf_id=None, pk=None, uuid=None):
@@ -91,7 +106,6 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     :raises: ValueError if none or more than one of parameters is supplied
         or type of wf_id is neither string nor integer
     """
-    from aiida.orm.implementation import Workflow
     if int(wf_id is None) + int(pk is None) + int(uuid is None) == 3:
         raise ValueError("one of the parameters 'wf_id', 'pk' and 'uuid' "
                          "has to be supplied")

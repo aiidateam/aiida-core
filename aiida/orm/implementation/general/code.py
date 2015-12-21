@@ -9,8 +9,8 @@ from aiida.common.exceptions import (ValidationError, MissingPluginError)
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 
 class AbstractCode(Node):
@@ -78,8 +78,8 @@ class AbstractCode(Node):
         if self.is_local():
             computer_str = "repository"
         else:
-            if self.computer is not None:
-                computer_str = self.computer.name
+            if self.get_computer() is not None:
+                computer_str = self.get_computer().name
             else:
                 computer_str = "[unknown]"
 
@@ -127,11 +127,42 @@ class AbstractCode(Node):
         :raise MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
-        # if sep:
-        #     codes = cls.query(label=codename, dbcomputer__name=computername)
-        # else:
-        #     codes = cls.query(label=codename)
-        pass
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.orm.utils import load_node
+
+        try:
+            code_int = int(code_string)
+            try:
+                return load_node(code_int, parent_class=cls)
+            except NotExistent:
+                raise ValueError()  # Jump to the following section
+                # to check if a code with the given
+                # label exists.
+            except MultipleObjectsError:
+                raise MultipleObjectsError("More than one code in the DB "
+                                           "with pk='{}'!".format(code_string))
+        except ValueError:
+            # Before dying, try to see if the user passed a (unique) label.
+            # split with the leftmost '@' symbol (i.e. code names cannot
+            # contain '@' symbols, computer names can)
+            codename, sep, computername = code_string.partition('@')
+            if sep:
+                codes = cls.query(label=codename, dbcomputer__name=computername)
+            else:
+                codes = cls.query(label=codename)
+
+            if len(codes) == 0:
+                raise NotExistent("'{}' is not a valid code "
+                                  "ID or label.".format(code_string))
+            elif len(codes) > 1:
+                retstr = ("There are multiple codes with label '{}', having IDs: "
+                          "".format(code_string))
+                retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
+                retstr += ("Relabel them (using their ID), or refer to them "
+                           "with their ID.")
+                raise MultipleObjectsError(retstr)
+            else:
+                return codes[0]
 
     @classmethod
     @abstractmethod
@@ -267,7 +298,7 @@ class AbstractCode(Node):
         if self.is_local():
             raise ValueError("The code is local")
 
-        return self.computer
+        return self.get_computer()
 
     @abstractmethod
     def _set_local(self):

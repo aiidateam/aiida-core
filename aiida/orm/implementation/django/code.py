@@ -7,7 +7,6 @@ from django.db import transaction
 from aiida.orm.implementation.general.code import AbstractCode
 from aiida.orm.implementation import Computer
 from aiida.common.exceptions import NotExistent, MultipleObjectsError, InvalidOperation
-from aiida.backends.djsite.db.models import DbComputer
 
 
 class Code(AbstractCode):
@@ -100,6 +99,7 @@ class Code(AbstractCode):
               remote_exec_path is the absolute path of the main executable on
               remote computer.
         """
+        from aiida.backends.djsite.db.models import DbComputer
         if (not isinstance(remote_computer_exec, (list, tuple))
             or len(remote_computer_exec) != 2):
             raise ValueError("remote_computer_exec must be a list or tuple "
@@ -146,6 +146,7 @@ class Code(AbstractCode):
 
         TODO: add filters to mask the remote machines on which a local code can run.
         """
+        from aiida.backends.djsite.db.models import DbComputer
         if self.is_local():
             return True
         else:

@@ -7,8 +7,8 @@ from aiida.backends.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Andrius Merkys"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
 
 
 ### Here comparisons are defined #####################################
@@ -37,7 +37,7 @@ def _comparison_Equal(testclass, dbdata, comparisondata):
     """
     Compare two objects to see if they are equal
     """
-    testclass.assertEqual(len(dbdata), len(comparisondata['value']))
+    testclass.assertEqual(dbdata, comparisondata['value'])
 
 def _comparison_LengthEqual(testclass, dbdata, comparisondata):
     """
@@ -67,9 +67,9 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
 
     from aiida.common.folders import Folder
     from aiida.orm import JobCalculation
+    from aiida.orm.utils import load_node
     from aiida.orm.importexport import export_tree
-
-    c = JobCalculation.get_subclass_from_pk(pk)
+    c = load_node(pk, parent_class=JobCalculation)
     outfolder = "test_{}_{}".format(
         c.get_parser_name().replace('.', '_'),
         testname)
@@ -123,7 +123,8 @@ def read_test(outfolder):
     import json
 
     from aiida.common.exceptions import NotExistent
-    from aiida.orm import JobCalculation, load_node
+    from aiida.orm import JobCalculation
+    from aiida.orm.utils import load_node
     from aiida.orm.importexport import import_data
 
     imported = import_data(outfolder,

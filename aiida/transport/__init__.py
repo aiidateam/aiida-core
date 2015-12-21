@@ -7,8 +7,8 @@ import os, re, fnmatch, sys  # for glob commands
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA and 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Python Software Foundation. All rights reserved."
 __license__ = "MIT license, and Python license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 magic_check = re.compile('[*?[]')
 
@@ -48,6 +48,24 @@ class TransportInternalError(InternalError):
     """
     pass
 
+
+def copy_from_remote_to_remote(transportsource,transportdestination,
+                                  remotesource,remotedestination,**kwargs):
+    """
+    Copy files or folders from a remote computer to another remote computer.
+
+    :param transportsource: transport to be used for the source computer
+    :param transportdestination: transport to be used for the destination computer
+    :param str remotesource: path to the remote source directory / file
+    :param str remotedestination: path to the remote destination directory / file
+    :param kwargs: keyword parameters passed to the final put,
+        except for 'dereference' that is passed to the initial get
+
+    .. note:: it uses the method transportsource.copy_from_remote_to_remote
+    """
+    transportsource.copy_from_remote_to_remote(transportdestination,
+                                               remotesource,remotedestination,
+                                               **kwargs)
 
 class Transport(object):
     """
@@ -102,7 +120,7 @@ class Transport(object):
 
     def _set_logger_extra(self, logger_extra):
         """
-        Pass the data tha should be passed automatically to self.logger
+        Pass the data that should be passed automatically to self.logger
         as 'extra' keyword. This is typically useful if you pass data
         obtained using get_dblogger_extra in aiida.backends.djsite.utils, to automatically
         log also to the DbLog table.
@@ -248,6 +266,59 @@ class Transport(object):
         :raise IOError: if one of src or dst does not exist
         """
         raise NotImplementedError
+
+
+    def copy_from_remote_to_remote(self,transportdestination,
+                                      remotesource,remotedestination,**kwargs):
+        """
+        Copy files or folders from a remote computer to another remote computer.
+
+        :param transportdestination: transport to be used for the destination computer
+        :param str remotesource: path to the remote source directory / file
+        :param str remotedestination: path to the remote destination directory / file
+        :param kwargs: keyword parameters passed to the call to transportdestination.put,
+            except for 'dereference' that is passed to self.get
+
+        .. note:: the keyword 'dereference' SHOULD be set to False for the
+         final put (onto the destination), while it can be set to the
+         value given in kwargs for the get from the source. In that
+         way, a symbolic link would never be followed in the final
+         copy to the remote destination. That way we could avoid getting
+         unknown (potentially malicious) files into the destination computer.
+         HOWEVER, since dereference=False is currently NOT
+         supported by all plugins, we still force it to True for the final put.
+
+        .. note:: the supported keys in kwargs are callback, dereference,
+           overwrite and ignore_nonexisting.
+        """
+        from aiida.common.folders import SandboxFolder
+
+        kwargs_get = {'callback': None,
+                      'dereference': kwargs.pop('dereference',True),
+                      'overwrite': True,
+                      'ignore_nonexisting': False,
+                      }
+        # TODO: dereference should be set to False in the following, as soon as
+        # dereference=False is supported by all transport plugins
+        kwargs_put = {'callback': kwargs.pop('callback',None),
+                      'dereference': True,
+                      'overwrite': kwargs.pop('overwrite',True),
+                      'ignore_nonexisting': kwargs.pop('ignore_nonexisting',False),
+                      }
+
+        if kwargs:
+            self.logger.error("Unknown parameters passed to copy_from_remote_to_remote")
+
+        with SandboxFolder() as sandbox:
+            self.get(remotesource, sandbox.abspath, **kwargs_get)
+            # Then we scan the full sandbox directory with get_content_list,
+            # because copying directly from sandbox.abspath would not work
+            # to copy a single file into another single file, and copying
+            # from sandbox.get_abs_path('*') would not work for files
+            # beginning with a dot ('.').
+            for filename in sandbox.get_content_list():
+                transportdestination.put(os.path.join(sandbox.abspath,filename),
+                                         remotedestination,**kwargs_put)
 
 
     def _exec_command_internal(self, command, **kwargs):
@@ -440,8 +511,8 @@ class Transport(object):
         src must be an absolute path (dst not necessarily))
         Redirects to putfile and puttree.
 
-        :param str localpath: path to remote destination
-        :param str remotepath: absolute path to local source
+        :param str localpath: absolute path to local source
+        :param str remotepath: path to remote destination
         """
         raise NotImplementedError
 
@@ -451,8 +522,8 @@ class Transport(object):
         Put a file from local src to remote dst.
         src must be an absolute path (dst not necessarily))
 
-        :param str localpath: path to remote file
-        :param str remotepath: absolute path to local file
+        :param str localpath: absolute path to local file
+        :param str remotepath: path to remote file
         """
         raise NotImplementedError
 
@@ -462,8 +533,8 @@ class Transport(object):
         Put a folder recursively from local src to remote dst.
         src must be an absolute path (dst not necessarily))
 
-        :param str localpath: path to remote folder
-        :param str remotepath: absolute path to local folder
+        :param str localpath: absolute path to local folder
+        :param str remotepath: path to remote folder
         """
         raise NotImplementedError
 

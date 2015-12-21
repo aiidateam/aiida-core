@@ -88,7 +88,7 @@ need to specify the ID of the calculation you are interested in::
   ## pk must be a valid integer pk
   calc = load_node(pk)
   ## Alternatively, with the UUID (uuid must be a valid UUID string)
-  # calc = JobCalculation.get_subclass_from_uuid(uuid)
+  # calc = load_node(uuid)
   print "AiiDA state:", calc.get_state()  
   print "Last scheduler state seen by the AiiDA deamon:", calc.get_scheduler_state()
 
@@ -177,7 +177,7 @@ Here follows a brief documentation of their action.
   like the number of nodes, wall-time, ..., by passing a dictionary to 
   this method. The keys of this dictionary, i.e. the resources, depend 
   on the specific scheduler plugin that has to run them. Look at the 
-  documentation of the scheduler (type is given by: ``calc.computer.get_scheduler_type()``).
+  documentation of the scheduler (type is given by: ``calc.get_computer().get_scheduler_type()``).
 * ``c.set_withmpi``: True or False, if True (the default) it will 
   call the executable as a parallel run.
 

@@ -7,11 +7,12 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
 from aiida.common.exceptions import InternalError
+from aiida.orm.utils import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
 
 
 def applyfunct_len(value):
@@ -283,7 +284,7 @@ class Devel(VerdiCommandWithSubcommands):
             values_to_print = []
             in_found = True
             out_found = True
-            c = OrmCalculation.get_subclass_from_pk(job)
+            c = load_node(job, parent_class=OrmCalculation)
             try:
                 i = c.inp.parameters.get_dict()
             except AttributeError:
@@ -295,7 +296,8 @@ class Devel(VerdiCommandWithSubcommands):
                 out_found = False
                 o = {}
 
-            io = {'i': i, 'o': o, 'pk': job, 'label': c.label,
+            io = {'extras': c.get_extras(), 'attrs': c.get_attrs(),
+                  'i': i, 'o': o, 'pk': job, 'label': c.label,
                   'desc': c.description, 'state': c.get_state(),
                   'sched_state': c.get_scheduler_state(),
                   'owner': c.dbnode.user.email}
@@ -462,6 +464,7 @@ class Devel(VerdiCommandWithSubcommands):
     def run_tests(self, *args):
         import unittest
         from aiida.common.setup import get_property
+        from aiida.backends import settings
         from aiida.backends.djsite.settings import settings_profile
 
         db_test_list = []
@@ -497,7 +500,7 @@ class Devel(VerdiCommandWithSubcommands):
                     # DB test
                     for dbtest in v:
                         db_test_list.append(dbtest)
-        
+
         for test_folder in test_folders:
             print "v" * 75
             print ">>> Tests for module {} <<<".format(test_folder.ljust(50))
@@ -524,8 +527,8 @@ class Devel(VerdiCommandWithSubcommands):
                 profile_prefix = 'test_'
 
             profile = "{}{}".format(profile_prefix,
-                                    settings_profile.AIIDADB_PROFILE if
-                                    settings_profile.AIIDADB_PROFILE is not None else 'default')
+                                    settings.AIIDADB_PROFILE if
+                                    settings.AIIDADB_PROFILE is not None else 'default')
             settings_profile.aiida_test_list = db_test_list
 
             print "v" * 75

@@ -15,9 +15,8 @@ from aiida.orm.calculation import Calculation
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet," \
-                   "Martin Uhrin"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Gianluca Prandini, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 _input_subfolder = 'raw_input'
 
@@ -301,7 +300,7 @@ class AbstractJobCalculation(Calculation):
         like the number of nodes, cpus, ...
         This dictionary is scheduler-plugin dependent. Look at the documentation
         of the scheduler.
-        (scheduler type can be found with calc.computer.get_scheduler_type() )
+        (scheduler type can be found with calc.get_computer().get_scheduler_type() )
         """
         # Note: for the time being, resources are only validated during the
         # 'store' because here we are not sure that a Computer has been set
@@ -1083,6 +1082,7 @@ class AbstractJobCalculation(Calculation):
         from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, code_run_modes
         from aiida.orm.code import Code
+        from aiida.orm.utils import load_node
 
         computer = self.get_computer()
 
@@ -1206,7 +1206,7 @@ class AbstractJobCalculation(Calculation):
                 raise PluginInternalError("CalcInfo should have "
                                           "the information of the code "
                                           "to be launched")
-            this_code = Code.get_subclass_from_uuid(code_info.code_uuid)
+            this_code = load_node(code_info.code_uuid, parent_class=Code)
 
             this_withmpi = code_info.withmpi    # to decide better how to set the default
             if this_withmpi is None:

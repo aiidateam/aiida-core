@@ -7,7 +7,6 @@ from django.db import IntegrityError, transaction
 from django.core.exceptions import ObjectDoesNotExist
 
 from aiida.orm.implementation.general.computer import AbstractComputer
-from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
 
@@ -23,6 +22,7 @@ class Computer(AbstractComputer):
         return self._dbcomputer.pk
 
     def __init__(self, **kwargs):
+        from aiida.backends.djsite.db.models import DbComputer
         uuid = kwargs.pop('uuid', None)
         if uuid is not None:
             if kwargs:
@@ -65,6 +65,7 @@ class Computer(AbstractComputer):
 
     @classmethod
     def list_names(cls):
+        from aiida.backends.djsite.db.models import DbComputer
         return list(DbComputer.objects.filter().values_list('name', flat=True))
 
     @property
@@ -109,9 +110,11 @@ class Computer(AbstractComputer):
 
     @classmethod
     def get(cls, computer):
+        from aiida.backends.djsite.db.models import DbComputer
         return cls(dbcomputer=DbComputer.get_dbcomputer(computer))
 
     def copy(self):
+        from aiida.backends.djsite.db.models import DbComputer
         if self.to_be_stored:
             raise InvalidOperation("You can copy a computer only after having stored it")
         newdbcomputer = DbComputer.objects.get(pk=self.dbcomputer.pk)
@@ -232,6 +235,7 @@ class Computer(AbstractComputer):
         return self.dbcomputer.enabled
 
     def get_dbauthinfo(self, user):
+        from aiida.backends.djsite.db.models import DbAuthInfo
         try:
             return DbAuthInfo.objects.get(dbcomputer=self.dbcomputer,
                                           aiidauser=user)

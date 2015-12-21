@@ -10,8 +10,8 @@ from aiida.common.folders import SandboxFolder
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 
 
@@ -209,17 +209,6 @@ class AbstractNode(object):
         #       put in subfolders.
         #       In the future, fix it either to make a cache and to store the
         #       full dependency tree, or save also the path.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def computer(self):
-        """
-        Get the Computer associated to this node, or None if no computer
-        is associated.
-
-        :return: a computer object
         """
         pass
 
@@ -576,20 +565,6 @@ class AbstractNode(object):
         return new_outputs
 
 
-    def get_inputdata_dict(self, only_in_db=False):
-        """
-        Return a dictionary where the key is the label of the input link, and
-        the value is the input node. Includes only the data nodes, no
-        calculations or codes.
-
-        :return: a dictionary {label:object}
-        """
-
-        from aiida.orm.data import Data
-
-        return dict(self.get_inputs(type=Data, also_labels=True,
-                                    only_in_db=only_in_db))
-
     @abstractmethod
     def get_inputs(self, type=None, also_labels=False, only_in_db=False):
         """
@@ -701,33 +676,21 @@ class AbstractNode(object):
         pass
 
     @abstractmethod
-    def set_extra(self, key, value):
+    def set_extra(self, key, value, exclusive=False):
         """
         Immediately sets an extra of a calculation, in the DB!
-        No .store() to be called.
-        Can be used *only* after saving.
+        No .store() to be called. Can be used *only* after saving.
 
         :param string key: key name
         :param value: key value
+        :param exclusive: (default=False).
+            If exclusive is True, it raises a UniquenessError if an Extra with
+            the same name already exists in the DB (useful e.g. to "lock" a
+            node and avoid to run multiple times the same computation on it).
+
+        :raise UniquenessError: if extra already exists and exclusive is True.
         """
         pass
-
-    @abstractmethod
-    def set_extra_exclusive(self, key, value):
-        """
-        Immediately sets an extra of a calculation, in the DB!
-        No .store() to be called.
-        Can be used *only* after saving.
-        Moreover, it raises an UniquenessError if an Extra with the
-        same name already exists in the DB (useful e.g. to "lock" a
-        node and avoid to run multiple times the same computation on it).
-
-        :param string key: key name
-        :param value: key value
-        :raise UniquenessError: if the extra already exists.
-        """
-        pass
-
 
     def set_extras(self, the_dict):
         """
@@ -815,6 +778,13 @@ class AbstractNode(object):
 
         :param bool also_updatable: if False, does not iterate over
             attributes that are updatable
+        """
+        pass
+
+    @abstractmethod
+    def get_attrs(self):
+        """
+        Return a dictionary with all attributes of this node.
         """
         pass
 

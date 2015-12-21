@@ -6,13 +6,17 @@ import datetime
 from django.db.models import Q
 
 from aiida.orm.implementation.general.querytool import AbstractQueryTool
-from aiida.backends.djsite.db import models
+
+
 from aiida.orm.implementation.django.node import Node
+
 from aiida.utils.timezone import is_naive, make_aware, get_current_timezone
 
 
-# TODO SP: currently this is a basic copy paste, later on we should include the
-# work done during the Big Data project.
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
 class QueryTool(AbstractQueryTool):
@@ -77,6 +81,7 @@ class QueryTool(AbstractQueryTool):
         self._pks_in = [int(_) for _ in pk_list]
 
     def _get_query_object(self, order_by=None):
+        from aiida.backends.djsite.db import models
         """
         Internal method that returns the Django query object that
         has been generated.
@@ -142,6 +147,7 @@ class QueryTool(AbstractQueryTool):
         """
         Get the raw values of all the attributes of the queried nodes.
         """
+        from aiida.backends.djsite.db import models
         res = self._get_query_object()
         attrs = models.DbAttribute.objects.filter(
             dbnode__in=res).filter(key__in=self._attrs.keys()).values(
@@ -154,6 +160,7 @@ class QueryTool(AbstractQueryTool):
         Internal method to get the raw values of all the extras
         of the queried nodes.
         """
+        from aiida.backends.djsite.db import models
         res = self._get_query_object()
         extras = models.DbExtra.objects.filter(
             dbnode__in=res).filter(key__in=self._extras.keys()).values(
@@ -166,6 +173,7 @@ class QueryTool(AbstractQueryTool):
         Internal method to get the raw values of all the attributes
         of the queried nodes.
         """
+        from aiida.backends.djsite.db import models
         res = self._get_query_object()
         attrs = models.DbAttribute.objects.filter(
             dbnode__in=res).filter(key__in=self._attrs.keys()).values(
@@ -270,6 +278,7 @@ class QueryTool(AbstractQueryTool):
           whose 'energy' value is lower than zero, but only if 'energy'
           is in a ParameterData node).
         """
+        from aiida.backends.djsite.db import models
         return self._add_filter(key, filtername, value,
                                 dbtable=models.DbAttribute,
                                 negate=negate,
@@ -303,6 +312,7 @@ class QueryTool(AbstractQueryTool):
           whose 'energy' value is lower than zero, but only if 'energy'
           is in a ParameterData node).
         """
+        from aiida.backends.djsite.db import models
         return self._add_filter(key, filtername, value,
                                 dbtable=models.DbExtra,
                                 negate=negate,

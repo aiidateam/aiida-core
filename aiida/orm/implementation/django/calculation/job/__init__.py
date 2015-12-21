@@ -9,8 +9,6 @@ from aiida.common.utils import str_timedelta
 from aiida.common.datastructures import sort_states, calc_states
 from aiida.common.exceptions import ModificationNotAllowed, DbContentError
 
-from aiida.backends.djsite.db.models import DbCalcState, DbAuthInfo, DbAttribute
-from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
 from aiida.backends.djsite.utils import get_automatic_user
 
 from aiida.orm.group import Group
@@ -40,6 +38,7 @@ class JobCalculation(AbstractJobCalculation):
         """
 
         from aiida.common.datastructures import sort_states
+        from aiida.backends.djsite.db.models import DbCalcState
 
         if self._to_be_stored:
             raise ModificationNotAllowed("Cannot set the calculation state "
@@ -92,6 +91,7 @@ class JobCalculation(AbstractJobCalculation):
           return None. If from_attribute is False and no entry is found in the
           DB, return the "NOTFOUND" state.
         """
+        from aiida.backends.djsite.db.models import DbCalcState
         if from_attribute:
             return self.get_attr('state', None)
         else:
@@ -148,6 +148,8 @@ class JobCalculation(AbstractJobCalculation):
         """
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
+        from aiida.backends.djsite.db.models import DbAuthInfo, DbAttribute
+        from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
 
         if states:
             for state in states:

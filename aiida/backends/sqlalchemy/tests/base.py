@@ -26,7 +26,7 @@ Session = sessionmaker()
 class SqlAlchemyTests(unittest.TestCase):
 
     # Specify the need to drop the table at the beginning of a test case
-    drop_all = True
+    drop_all = False
 
     @classmethod
     def setUpClass(cls):

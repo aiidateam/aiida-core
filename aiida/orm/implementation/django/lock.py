@@ -6,13 +6,13 @@ from django.db import IntegrityError, transaction
 
 from aiida.orm.implementation.general.lock import AbstractLockManager, AbstractLock
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed, LockPresent)
-from aiida.backends.djsite.db.models import DbLock
 # TODO SP: to replace
 from aiida.utils import timezone
 
 
 class LockManager(AbstractLockManager):
     def aquire(self, key, timeout=3600, owner="None"):
+        from aiida.backends.djsite.db.models import DbLock
         try:
             sid = transaction.savepoint()
             dblock = DbLock.objects.create(key=key, timeout=timeout, owner=owner)
@@ -36,6 +36,7 @@ class LockManager(AbstractLockManager):
             raise InternalError("Something went wrong, try to keep on.")
 
     def clear_all(self):
+        from aiida.backends.djsite.db.models import DbLock
         try:
             sid = transaction.savepoint()
             DbLock.objects.all().delete()

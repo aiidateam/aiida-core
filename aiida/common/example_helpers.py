@@ -2,8 +2,8 @@
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
 def test_and_get_code(codename, expected_code_type, use_exceptions=False):
@@ -30,7 +30,7 @@ def test_and_get_code(codename, expected_code_type, use_exceptions=False):
         if code.get_input_plugin_name() != expected_code_type:
             raise ValueError
     except (NotExistent, ValueError):
-        valid_code_labels = ["{}@{}".format(c.label, c.computer.name) for c in Code.query(
+        valid_code_labels = ["{}@{}".format(c.label, c.get_computer().name) for c in Code.query(
             dbattributes__key="input_plugin",
             dbattributes__tval=expected_code_type)]
         if valid_code_labels:

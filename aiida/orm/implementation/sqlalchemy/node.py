@@ -142,13 +142,6 @@ class Node(AbstractNode):
 
         return q
 
-    @property
-    def computer(self):
-        if self.dbnode.dbcomputer is None:
-            return None
-        else:
-            return Computer(dbcomputer=self.dbnode.dbcomputer)
-
     def _update_db_label_field(self, field_value):
         from aiida.backends.sqlalchemy import session
         self.dbnode.label = field_value
@@ -356,8 +349,10 @@ class Node(AbstractNode):
                 else:
                     raise exception
 
-    def set_extra(self, key, value):
+    def set_extra(self, key, value, exclusive=False):
         # TODO SP: validate key
+        # TODO SP: handle exclusive (what to do in case the key already exist
+        # ?)
         if self._to_be_stored:
             raise ModificationNotAllowed(
                 "The extras of a node can be set only after "
@@ -365,11 +360,6 @@ class Node(AbstractNode):
 
         self.dbnode.set_extra(key, value)
         self._increment_version_number_db()
-
-    def set_extra_exclusive(self, key, value):
-        # TODO SP: handle exclusive (what to do in case the key already exist
-        # ?)
-        pass
 
     def get_extra(self, key, default=None):
         # TODO SP: in the Django implementation, if the node is not stored,
@@ -411,6 +401,9 @@ class Node(AbstractNode):
         for k, v in it_items:
             if also_updatable or not k in updatable_list:
                 yield (k, v)
+
+    def get_attrs(self):
+        return self.dbnode.attributes
 
     def attrs(self):
         if self._to_be_stored:

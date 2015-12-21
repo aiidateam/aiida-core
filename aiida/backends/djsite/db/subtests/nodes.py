@@ -3,14 +3,15 @@
 Tests for nodes, attributes and links
 """
 
+from aiida.orm.utils import load_node
 from aiida.orm.node import Node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.backends.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
 
 
 class TestTransitiveNoLoops(AiidaTestCase):
@@ -760,7 +761,7 @@ class TestNodeBasic(AiidaTestCase):
 
         a.store()
 
-        b = Node.get_subclass_from_uuid(a.uuid)
+        b = load_node(a.uuid)
         self.assertIsNone(a.get_attr('none'))
         self.assertEquals(self.boolval, b.get_attr('bool'))
         self.assertEquals(self.intval, b.get_attr('integer'))

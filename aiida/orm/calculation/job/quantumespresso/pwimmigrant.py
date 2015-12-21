@@ -19,8 +19,8 @@ from aiida.tools.codespecific.quantumespresso import pwinputparser
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
 class PwimmigrantCalculation(PwCalculation):
@@ -83,7 +83,7 @@ class PwimmigrantCalculation(PwCalculation):
             * a ``'settings'`` ParameterData node, if there are any fixed
               coordinates, or if the gamma kpoint is used;
 
-        and can be retrieved as a dictionary using the ``get_inputdata_dict()``
+        and can be retrieved as a dictionary using the ``get_inputs_dict()``
         method. *These input links are cached-links; nothing is stored by this
         method (including the calculation node itself).*
 
@@ -182,7 +182,7 @@ class PwimmigrantCalculation(PwCalculation):
             )
 
         # Check that open_transport is the correct transport type.
-        if type(open_transport) is not self.computer.get_transport_class():
+        if type(open_transport) is not self.get_computer().get_transport_class():
             raise InputValidationError(
                 "The transport passed as the `open_transport` parameter is "
                 "not the same transport type linked to the computer. Please "
@@ -355,7 +355,7 @@ class PwimmigrantCalculation(PwCalculation):
         # Manually add the remote working directory as a RemoteData output
         # node.
         self._set_state(calc_states.SUBMITTING)
-        remotedata = RemoteData(computer=self.computer,
+        remotedata = RemoteData(computer=self.get_computer(),
                                 remote_path=self._get_remote_workdir())
         remotedata._add_link_from(self, label='remote_folder')
         remotedata.store()
@@ -394,7 +394,7 @@ class PwimmigrantCalculation(PwCalculation):
             )
 
         # Check that open_transport is the correct transport type.
-        if type(open_transport) is not self.computer.get_transport_class():
+        if type(open_transport) is not self.get_computer().get_transport_class():
             raise InputValidationError(
                 "The transport passed as the `open_transport` parameter is "
                 "not the same transport type linked to the computer. Please "

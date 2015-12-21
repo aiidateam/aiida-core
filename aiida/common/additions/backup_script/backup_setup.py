@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import logging
@@ -12,13 +13,14 @@ from os.path import expanduser
 from aiida.backends.djsite.utils import load_dbenv
 
 # Needed initialization for Django
+
 load_dbenv()
 from backup import Backup
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Spyros Zoupanos"
+__version__ = "0.5.0"
+__contributors__ = "Giovanni Pizzi, Martin Uhrin, Spyros Zoupanos"
 
 
 class BackupSetup(object):

@@ -14,11 +14,15 @@ from aiida.common.datastructures import wf_states, wf_exit_call, calc_states
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.orm.implementation.django.calculation.job import JobCalculation
 
-from aiida.backends.djsite.db.models import DbWorkflow
 from aiida.backends.djsite.utils import get_automatic_user
 
 from aiida.common import aiidalogger
 from aiida.utils import timezone
+
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Marco Gibertini, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
 
 logger = aiidalogger.getChild('Workflow')
 
@@ -41,6 +45,7 @@ class Workflow(AbstractWorkflow):
                              the given uuid.
         """
 
+        from aiida.backends.djsite.db.models import DbWorkflow
         self._to_be_stored = True
 
         self._logger = logger.getChild(self.__class__.__name__)
@@ -545,6 +550,7 @@ class Workflow(AbstractWorkflow):
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
+        from aiida.backends.djsite.db.models import DbWorkflow
         try:
             dbworkflowinstance = DbWorkflow.objects.get(pk=pk)
             return cls.get_subclass_from_dbnode(dbworkflowinstance)
@@ -554,6 +560,7 @@ class Workflow(AbstractWorkflow):
 
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
+        from aiida.backends.djsite.db.models import DbWorkflow
         try:
 
             dbworkflowinstance = DbWorkflow.objects.get(uuid=uuid)
@@ -563,6 +570,7 @@ class Workflow(AbstractWorkflow):
             raise NotExistent("No entry with the UUID {} found".format(uuid))
 
 def kill_all():
+    from aiida.backends.djsite.db.models import DbWorkflow
     q_object = Q(user=get_automatic_user())
     q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
     w_list = DbWorkflow.objects.filter(q_object)
@@ -592,6 +600,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     # Note: pre_string becomes larger at each call of get_workflow_info on the
     #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
 
+    from aiida.backends.djsite.db.models import DbWorkflow
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")
 

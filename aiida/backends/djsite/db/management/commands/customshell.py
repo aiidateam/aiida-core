@@ -15,12 +15,14 @@ from django.core.management.base import NoArgsCommand
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA and Django Software Foundation and individual contributors. All rights reserved."
 __license__ = "MIT license, and Django license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 default_modules_list = [
     # ("aiida.backends.djsite.db.models","DbNode","DbNode"),
     ("aiida.orm.node", "Node", "Node"),
+    # ("aiida.djsite.db.models","DbNode","DbNode"),
+    ("aiida.orm.utils", "load_node", "load_node"),
     ("aiida.orm", "Calculation", "Calculation"),
     ("aiida.orm", "JobCalculation", "JobCalculation"),
     ("aiida.orm.code", "Code", "Code"),
@@ -30,7 +32,6 @@ default_modules_list = [
     ("aiida.orm", "WorkflowFactory", "WorkflowFactory"),
     ("aiida.orm.computer", "Computer", "Computer"),
     ("aiida.orm.group", "Group", "Group"),
-    ("aiida.orm", "load_node", "load_node"),
     ("aiida.orm.workflow", "Workflow", "Workflow"),
     ("aiida.orm", "load_workflow", "load_workflow"),
     ("aiida.backends.djsite.db", "models", "models"),

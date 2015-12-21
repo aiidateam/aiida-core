@@ -11,7 +11,6 @@ from aiida.orm.implementation.django.node import Node
 
 # TODO SP: abstract the user ?
 from aiida.backends.djsite.utils import get_automatic_user
-from aiida.backends.djsite.db.models import DbGroup, DbNode, DbAttribute
 
 from django.db import transaction, IntegrityError
 from django.db.models import Q
@@ -21,6 +20,7 @@ from django.core.exceptions import ObjectDoesNotExist
 class Group(AbstractGroup):
 
     def __init__(self, **kwargs):
+        from aiida.backends.djsite.db.models import DbGroup
         dbgroup = kwargs.pop('dbgroup', None)
 
         if dbgroup is not None:
@@ -117,6 +117,7 @@ class Group(AbstractGroup):
         return self
 
     def add_nodes(self, nodes):
+        from aiida.backends.djsite.db.models import DbNode
         if not self._is_stored:
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
@@ -173,6 +174,7 @@ class Group(AbstractGroup):
         return iterator(self.dbgroup.dbnodes.all())
 
     def remove_nodes(self, nodes):
+        from aiida.backends.djsite.db.models import DbNode
         if not self._is_stored:
             raise ModificationNotAllowed("Cannot remove nodes from a group "
                                          "before storing")
@@ -206,6 +208,7 @@ class Group(AbstractGroup):
     @classmethod
     def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
               user=None, node_attributes=None, past_days=None, **kwargs):
+        from aiida.backends.djsite.db.models import DbGroup, DbNode, DbAttribute
 
         # Analyze args and kwargs to create the query
         queryobject = Q()

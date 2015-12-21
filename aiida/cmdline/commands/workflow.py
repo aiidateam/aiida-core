@@ -2,12 +2,12 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
+from aiida.orm import load_workflow
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet, Riccardo Sabatini"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
 
 
 class Workflow(VerdiCommandWithSubcommands):
@@ -114,7 +114,7 @@ class Workflow(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         try:
-            w = Workflow.get_subclass_from_pk(pk)
+            w = load_workflow(pk)
         except NotExistent:
             print >> sys.stderr, "No workflow with PK={} found.".format(pk)
             sys.exit(1)
@@ -201,7 +201,7 @@ class Workflow(VerdiCommandWithSubcommands):
 
         for wf_pk in args:
             try:
-                wf = Workflow.get_subclass_from_pk(int(wf_pk))
+                wf = load_workflow(int(wf_pk))
             except ValueError:
                 print "*** {}: Not a valid PK".format(wf_pk)
                 continue

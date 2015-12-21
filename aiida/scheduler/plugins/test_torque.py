@@ -278,7 +278,7 @@ Job Id: 74164.mycluster
 	PBS_O_MAIL=/var/spool/mail/user3,PBS_O_QUEUE=P_share_queue,
 	PBS_O_HOST=mycluster.cluster
     comment = Job run at Mon Apr 22 at 07:17 on (b270:ncpus=16)+(b275:ncpus=16)
-	
+
     etime = Mon Apr 22 07:17:34 2013
     Submit_arguments = -W depend=afterany:74163 u-100-l-96.job
     project = _pbs_project_default
@@ -512,7 +512,7 @@ Job Id: 547637
     Checkpoint = u
     ctime = Fri Jun 19 14:00:43 2015
     Error_Path = server.domain:/path/to/error/file
-	
+
     Hold_Types = n
     Join_Path = oe
     Keep_Files = n
@@ -745,8 +745,8 @@ Unable to copy file 543984.E
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Marco Dorigo"
+__version__ = "0.5.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Mario Žic, Martin Uhrin, Snehal Waychal"
 
 
 class TestParserQstat(unittest.TestCase):
@@ -867,6 +867,7 @@ class TestParserQstat(unittest.TestCase):
 class TestSubmitScript(unittest.TestCase):
     def test_submit_script(self):
         """
+        Test to verify if scripts works fine with default options
         """
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, code_run_modes
@@ -887,7 +888,142 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-        self.assertTrue('#PBS -l nodes=1:ppn=1,walltime=24:00:00' 
+        self.assertTrue('#PBS -l nodes=1:ppn=1,walltime=24:00:00'
                         in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                         " < 'aiida.in'" in submit_script_text)
+
+    def test_submit_script_with_num_cores_per_machine(self):
+        """
+        Test to verify if script works fine if we specify only
+        num_cores_per_machine value.
+        """
+        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, code_run_modes
+
+        s = TorqueScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = s.create_job_resource(
+            num_machines=1,
+            num_mpiprocs_per_machine=1,
+            num_cores_per_machine=24
+        )
+        job_tmpl.uuid = str(uuid.uuid4())
+        job_tmpl.max_wallclock_seconds = 24 * 3600
+        code_info = CodeInfo()
+        code_info.cmdline_params = [
+            "mpirun", "-np", "23",
+            "pw.x", "-npool", "1"
+        ]
+        code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [code_info]
+        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+
+        submit_script_text = s.get_submit_script(job_tmpl)
+
+        self.assertTrue('#PBS -r n' in submit_script_text)
+        self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
+        self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00'
+                        in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" +
+                        " < 'aiida.in'" in submit_script_text)
+
+
+    def test_submit_script_with_num_cores_per_mpiproc(self):
+        """
+        Test to verify if scripts works fine if we pass only 
+        num_cores_per_mpiproc value
+        """
+        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, code_run_modes
+
+        s = TorqueScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = s.create_job_resource(
+            num_machines=1,
+            num_mpiprocs_per_machine=1,
+            num_cores_per_mpiproc=24
+        )
+        job_tmpl.uuid = str(uuid.uuid4())
+        job_tmpl.max_wallclock_seconds = 24 * 3600
+        code_info = CodeInfo()
+        code_info.cmdline_params = [
+            "mpirun", "-np", "23",
+            "pw.x", "-npool", "1"
+        ]
+        code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [code_info]
+        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+
+        submit_script_text = s.get_submit_script(job_tmpl)
+
+        self.assertTrue('#PBS -r n' in submit_script_text)
+        self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
+        self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00'
+                        in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" +
+                        " < 'aiida.in'" in submit_script_text)
+
+
+    def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):
+        """
+        Test to verify if scripts works fine if we pass both
+        num_cores_per_machine and num_cores_per_mpiproc correct values
+        It should pass in check:
+        res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
+        """
+        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, code_run_modes
+
+        s = TorqueScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = s.create_job_resource(
+            num_machines=1,
+            num_mpiprocs_per_machine=1,
+            num_cores_per_machine=24,
+            num_cores_per_mpiproc=24
+        )
+        job_tmpl.uuid = str(uuid.uuid4())
+        job_tmpl.max_wallclock_seconds = 24 * 3600
+        code_info = CodeInfo()
+        code_info.cmdline_params = [
+            "mpirun", "-np", "23",
+            "pw.x", "-npool", "1"
+        ]
+        code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [code_info]
+        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+
+        submit_script_text = s.get_submit_script(job_tmpl)
+
+        self.assertTrue('#PBS -r n' in submit_script_text)
+        self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
+        self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00'
+                        in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" +
+                        " < 'aiida.in'" in submit_script_text)
+
+
+    def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):
+        """
+        Test to verify if scripts works fine if we pass 
+        num_cores_per_machine and num_cores_per_mpiproc wrong values
+        It should fail in check:
+        res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
+        """
+        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, code_run_modes
+
+        s = TorqueScheduler()
+
+        job_tmpl = JobTemplate()
+        with self.assertRaises(ValueError):
+            job_tmpl.job_resource = s.create_job_resource(
+                num_machines=1,
+                num_mpiprocs_per_machine=1,
+                num_cores_per_machine=24,
+                num_cores_per_mpiproc=23
+            )

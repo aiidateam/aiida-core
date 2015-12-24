@@ -18,6 +18,9 @@ from aiida.backends.sqlalchemy.utils import load_dbenv, is_dbenv_loaded
 # Note that we can't use `DbAttribute.query` here because we didn't import it
 # in load_dbenv.
 class DbAttribute(Base):
+    """
+    DbAttribute table, use only for migration purposes.
+    """
     __tablename__ = "db_dbattribute"
 
     id = Column(Integer, primary_key=True)
@@ -35,6 +38,9 @@ class DbAttribute(Base):
     dbnode = relationship('DbNode', backref='old_attrs')
 
 class DbExtra(Base):
+    """
+    DbExtra table, use only for migration purposes.
+    """
     __tablename__ = "db_dbextra"
 
     id = Column(Integer, primary_key=True)
@@ -64,7 +70,6 @@ def attributes_to_dict(attr_list):
         try:
             tmp_d = select_from_key(a.key, d)
         except Exception:
-            # TODO SP: handle this correctly. At least log them
             print("Couldn't transfer attribute {} with key {} for dbnode {}"
                   .format(a.id, a.key, a.dbnode_id))
             error = True
@@ -120,6 +125,9 @@ def print_debug(debug, m):
         print(m)
 
 def create_columns(debug=False):
+    """
+    Create the `attributes` and `extras` JSONB columns for the db_dbnode table.
+    """
     table = 'db_dbnode'
     verify_stmt = "SELECT column_name FROM information_schema.columns WHERE table_name='{}' AND column_name='{}'"
 
@@ -135,6 +143,9 @@ def create_columns(debug=False):
 
 
 def migrate_extras(create_column=False, profile=None, group_size=1000, debug=False):
+    """
+    Migrate the DbExtra table into the extras column for db_dbnode.
+    """
     if not is_dbenv_loaded():
         load_dbenv(profile=profile)
     print_debug(debug, "Starting migration")
@@ -178,6 +189,9 @@ def migrate_extras(create_column=False, profile=None, group_size=1000, debug=Fal
 
 
 def migrate_attributes(create_column=False, profile=None, group_size=1000, debug=False):
+    """
+    Migrate the DbAttribute table into the attributes column of db_dbnode.
+    """
     if not is_dbenv_loaded():
         load_dbenv(profile=profile)
     print_debug(debug, "Starting migration")
@@ -207,12 +221,13 @@ def migrate_attributes(create_column=False, profile=None, group_size=1000, debug
                 node.attributes = attrs
                 sa.session.add(node)
 
+            # Remove the db_dbnode from sqlalchemy, to allow the GC to do its
+            # job.
             sa.session.flush()
             sa.session.expunge_all()
 
             del nodes
             gc.collect()
-
 
         if error:
             cont_s = raw_input("There has been some errors during the migration. Do you want to continue ? [y/N] ")

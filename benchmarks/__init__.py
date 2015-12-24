@@ -49,7 +49,11 @@ def time_it(f, n=10):
         res = f()
         end = time.time()
         times.append(end - start)
-    size = len(res)
+    try:
+        size = len(res)
+    except TypeError:
+        size = 1
+
 
     ret = {
         "length": size,

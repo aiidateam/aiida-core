@@ -9,7 +9,7 @@ from aiida.backends.djsite.db import models
 
 from aiida.common.utils import grouper
 
-from aiida.orm import DataFactory, CalculationFactory, Group
+from aiida.orm import DataFactory, CalculationFactory, Group, JobCalculation
 from aiida.orm.implementation.general.calculation.inline import InlineCalculation
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData

@@ -9,7 +9,7 @@ from aiida.backends.djsite.db import models
 
 from aiida.common.utils import grouper
 
-from aiida.orm import DataFactory, CalculationFactory
+from aiida.orm import DataFactory, CalculationFactory, Group
 from aiida.orm.implementation.general.calculation.inline import InlineCalculation
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
@@ -140,6 +140,35 @@ def list_data_structure(element=None, query_group_size=100):
 
     return f
 
+def mounet1():
+    pw_calc = Group.get(pk=1139193).nodes.next()
+    structure = pw_calc.out.output_structure
+    qstruc = StructureData.query(children__pk=structure.pk)
+    qic = InlineCalculation.query(inputs__in=qstruc).filter(
+        inputs__dbattributes__in=models.DbAttribute.objects.filter(
+            tval__endswith='alvarez')).distinct()
+    return qic.count()
+
+def mounet2():
+    StructureData = DataFactory('structure')
+    structure = load_node(2304207)
+    qstruc = StructureData.query(children__pk=structure.pk)
+    qattr = models.DbAttribute.objects.filter(
+        key='function_name', tval='lowdimfinder_inline', dbnode__inputs__in=qstruc
+    )
+    qic = InlineCalculation.query(
+        inputs__in=qstruc,
+        dbattributes__in=qattr
+    ).filter(
+        inputs__dbattributes__in=models.DbAttribute.objects.filter(
+            tval__endswith='alvarez')).distinct()
+    return qic.count()
+
+def mounet_daemon():
+    return JobCalculation.query(
+        dbattributes__key='state',dbattributes__tval='WITHSCHEDULER'
+    ).count()
+
 
 queries = {
     "attributes": {
@@ -161,6 +190,11 @@ queries = {
     },
     "verdi": {
         "list_element": list_data_structure(element="C"),
+    },
+    "mounet": {
+        "1": mounet1,
+        "2": mounet2,
+        "daemon": mounet_daemon
     }
 }
 

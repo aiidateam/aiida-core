@@ -561,3 +561,55 @@ def get_extremas_from_positions (positions):
     returns the minimum and maximum value for each dimension in the positions given
     """
     return zip(*[(min(values), max(values)) for values in  zip(* positions)])
+
+
+def get_fortfloat(key, txt, be_case_sensitive = True):
+    """
+    Matches a fortran compatible specification of a float behind a defined key in a string.
+    Receives:
+    :param key: The key to look for
+    :param txt: The string where to search for the key
+    :param be_case_sensitive: An optional boolean whether to search case-sensitive, defaults to ``True``
+    
+    If abc is a key, and f is a float, number, than this regex 
+    will match t and return f in the following cases:
+    *   charsbefore, abc = f, charsafter
+    *   charsbefore
+        abc = f
+        charsafter
+    *   charsbefore, abc = f
+        charsafter
+    and vice-versa.
+    If no float is matched, returns None
+
+    Exampes of matchable floats are:
+    *   0.1d2
+    *   0.D-3
+    *   .2e1
+    *   -0.23
+    *   23.
+    *   232
+    """
+    import re
+    pattern = """
+        [\n,]                       # key - value pair can be prepended by comma or start
+        [ \t]*                      # in a new line and some optional white space
+        {}                          # the key goes here
+        [ \t]*                      # Optional white space between key and equal sign
+        =                           # Equals, you can put [=:,] if you want more specifiers
+        [ \t]*                      # optional white space between specifier and float
+        (?P<float>                  # Universal float pattern
+            ( \d*[\.]\d+  |  \d+[\.]?\d* )
+            ([ E | D | e | d ] [+|-]? \d+)? 
+        )
+        [ \t]*[,\n,#]               # Can be followed by comma, end of line, or a comment
+        """.format(key)
+    REKEYS = re.X | re.M if be_case_sensitive else re.X | re.M | re.I
+    match = re.search(
+        pattern,
+        txt,
+        REKEYS)
+    if not match:
+        return None
+    else:
+        return float(match.group('float').replace('d','e').replace('D','e'))

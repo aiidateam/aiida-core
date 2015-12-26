@@ -678,7 +678,7 @@ class Workflow(object):
         """
         return not self.get_step(step_method) == None
 
-    #@classmethod
+    @classmethod
     def step(cls, fun):
         """
         This method is used as a decorator for workflow steps, and handles the method's execution, 

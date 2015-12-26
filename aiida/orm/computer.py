@@ -986,3 +986,122 @@ class Computer(object):
         else:
             return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname,
                                                        self.pk)
+    
+    @classmethod
+    def setup_and_configure(cls, **kwargs):
+        """
+        Use this method to programmatically install a new computer.
+        Note: this method at the moment only works for creating from scratch a
+        new computer. To delete, overwrite or modify them, use the command line 
+        utility instead (`verdi computer xxx`).
+        
+        Accept as parameters all those needed by a generic computer, typically: 
+        (name, description, hostname, transport_type, scheduler_type, 
+        workdir, mpirun_command, default_mpiprocs_per_machine, prepend_text, 
+        append_text, enabled_state) 
+        Among these, the first five keys are mandatory. Others have -) already a 
+        default value, that you can check with the command line utility; 
+        -) can change according to the transport scheduler, the full list can be
+        obtained by: SshOrLocalTransport().get_valid_auth_params()
+        
+        In addition to these parameters:
+        
+        :param user_email: configure the computer for the user with that email.
+           Only one user is supported at the moment. Default: default AiiDA user
+        :return computer: the newly created object Computer object.
+        """
+        from aiida.common.exceptions import ValidationError, NotExistent
+        from django.core.exceptions import ObjectDoesNotExist
+        from aiida.common.exceptions import NotExistent, ValidationError
+        from aiida.djsite.utils import get_automatic_user, get_configured_user_email
+        from aiida.djsite.db.models import DbAuthInfo, DbUser
+        import inspect
+        
+        # ============================================================
+        # SETUP STEP
+        # ============================================================
+        name = kwargs.pop('name',None)
+        if name is None:
+            raise ValueError("Must pass at least the name of the computer")    
+        
+        try:
+            computer = cls.get(name)
+            raise ValidationError("A computer called {} already exists."
+                             "Use 'verdi computer update' to update it, and be "
+                             "careful if you really want to modify a database "
+                             "entry!".format(name))
+        except NotExistent:
+            computer = cls(name=name)
+        
+        conf_keys = [ _[0] for _ in cls._conf_attributes if _[0]!='name']
+
+        default_values = { k:getattr(computer,'_get_{}_string'.format(k))() for k in conf_keys }
+        
+        setup_keys = [ [k,kwargs.pop(k,default_values[k]) ]for k in conf_keys ]
+        
+        for k,v in setup_keys:
+            getattr(computer,'_set_{}_string'.format(k))(v)
+
+        try:
+            computer.store()
+        except ValidationError as e:
+            raise ValidationError("Unable to store the computer: {}. Exiting...".format(e.message))
+
+        # ============================================================
+        # CONFIGURE STEP
+        # ============================================================
+
+        user_email = kwargs.pop('user_email', None)
+        if user_email is None:
+            user = get_automatic_user()
+        else:
+            try:
+                user = DbUser.objects.get(email=user_email)
+            except ObjectDoesNotExist:
+                raise ValidationError("No user with email '{}' in the "
+                                      "database.".format(user_email))
+
+        try:
+            authinfo = DbAuthInfo.objects.get(dbcomputer=computer.dbcomputer,
+                                              aiidauser=user)
+            old_authparams = authinfo.get_auth_params()
+        except ObjectDoesNotExist:
+            authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
+            old_authparams = {}
+
+        Transport = computer.get_transport_class()
+
+        valid_keys = Transport.get_valid_auth_params()
+
+        new_authparams = {}
+
+        for k in valid_keys:
+            converter_name = '_convert_{}_fromstring'.format(k)
+            try:
+                converter = dict(inspect.getmembers(
+                    Transport))[converter_name]
+            except KeyError:
+                raise KeyError("Internal error! No {} defined in Transport "
+                               "{}".format(converter_name, computer.get_transport_type()))
+                
+            suggester_name = '_get_{}_suggestion_string'.format(k)
+            try:
+                suggester = dict(inspect.getmembers(Transport))[suggester_name]
+                suggestion = suggester(computer)
+            except KeyError:
+                suggestion=''
+            
+            v = kwargs.pop(k,suggestion)
+            if v:
+                new_authparams[k] = converter(v)
+
+        authinfo.set_auth_params(new_authparams)
+        authinfo.save()
+        
+        if kwargs:
+            raise ValidationError("Computer {} has been stored. However, some "
+                                  "parameters were set, but not "
+                                  "recognized: {}".format(kwargs))
+        
+        return computer
+        

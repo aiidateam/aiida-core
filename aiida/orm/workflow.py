@@ -707,7 +707,7 @@ class Workflow(object):
         # Otherwise, when the method is addressed in a next() call this never gets called and only the 
         # attributes are added
         def wrapper(cls, *args, **kwargs):
-            print cls, args, kwargs
+#            print cls, args, kwargs
             # Store the workflow at the first step executed
             if cls._to_be_stored:
                 cls.store()

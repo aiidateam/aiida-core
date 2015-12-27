@@ -707,6 +707,7 @@ class Workflow(object):
         # Otherwise, when the method is addressed in a next() call this never gets called and only the 
         # attributes are added
         def wrapper(cls, *args, **kwargs):
+#            print cls, args, kwargs
             # Store the workflow at the first step executed
             if cls._to_be_stored:
                 cls.store()
@@ -753,11 +754,21 @@ class Workflow(object):
                         wrapped_method))
                 cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_state(wf_states.ERROR)
+                
+       #     print cls, args, kwargs
             return None
 
-        out = wrapper
+     #   import inspect
+     #   print inspect.getargspec(wrapper)
+        
+        #instance = wrapper
+        #wrapper = wrapper[0]
+#        out = wrapper[0]
         wrapper.is_wf_step = True
         wrapper.wf_step_name = fun.__name__
+
+     #   wrapper.calcs = CalculationStepManager(cls,fun.__name__)
+     #   wrapper.wfs = WorkflowStepManager(cls,fun.__name__)
 
         return wrapper
 
@@ -830,7 +841,6 @@ class Workflow(object):
         else:
             next_method_name = wf_exit_call
 
-        #logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid))
         method_step.set_nextcall(next_method_name)
         # 
         self.dbworkflowinstance.set_state(wf_states.RUNNING)
@@ -855,9 +865,6 @@ class Workflow(object):
             if node.pk is None:
                 raise AiidaException("Cannot add a calculation with "
                                      "unstored inputs")
-
-            #        if calc.pk is None:
-            #            raise AiiDAException("Cannot add an unstored calculation")
 
         curframe = inspect.currentframe()
         calframe = inspect.getouterframes(curframe, 2)
@@ -1011,7 +1018,6 @@ class Workflow(object):
           
         :return: a list of JobCalculation objects
         """
-        
         all_calcs = []
         for st in self.get_steps():
             all_calcs += [ c for c in st.get_calculations(state=calc_state) if isinstance(c,calc_class)]
@@ -1082,7 +1088,6 @@ class Workflow(object):
             raise InternalError("Unable to load the workflow module {}".format(module))
 
         for elem_name, elem in wf_mod.__dict__.iteritems():
-
             if module_class == elem_name:  #and issubclass(elem, Workflow):
                 return getattr(wf_mod, elem_name)(dbworkflow=wf_db)
 
@@ -1112,9 +1117,8 @@ class Workflow(object):
         :return: a Workflow subclass from the specific source code
         """
         from aiida.djsite.db.models import DbWorkflow
-
+        
         try:
-
             dbworkflowinstance = DbWorkflow.objects.get(uuid=uuid)
             return cls.get_subclass_from_dbnode(dbworkflowinstance)
 
@@ -1129,6 +1133,217 @@ class Workflow(object):
         """
         pass
 
+    @property
+    def out(self):
+        """
+        Traverse the graph of the database.
+        Returns a databaseobject, linked to the current node, by means of the linkname.
+        Example:
+        B = A.out.results: Returns the object B, with link from A to B, with linkname parameters
+        """
+        return WorkflowOutputManager(self)
+
+    @property
+    def inp(self):
+        """
+        Traverse the graph of the database.
+        Returns a databaseobject, linked to the current node, by means of the linkname.
+        Example:
+        B = A.inp.parameters: returns the object (B), with link from B to A, with linkname parameters
+        C= A.inp: returns an InputManager, an object that is meant to be accessed as the previous example
+        """
+        return WorkflowInputManager(self)
+    
+    def _build_a_dict(self, list_of_o, type='calculations'):
+        labels = []
+        for c in list_of_o:
+            fallback_label = "{}_pk_{}".format(type, c.pk)
+            this_label = c.label
+            if not this_label: # case of empty label (default behavior)
+                this_label = fallback_label
+            if this_label in labels and fallback_label in labels:
+                raise Exception("Why do you set the label of one node with the pk number of other nodes?")
+            if this_label in labels:
+                this_label = fallback_label
+            labels.append(this_label)
+        return { k:v for k,v in zip(labels,list_of_o) }
+    
+    def _get_step_calculations_dict(self, step_method):
+        """
+        Returns a dictionary of keys=calculation.label, value=calculation, of 
+        all the calculations added in a step.
+        """
+        calcs = self.get_step_calculations(step_method)
+        return self._build_a_dict(calcs, type='calculations')
+
+    def _get_step_workflows_dict(self, step_method):
+        """
+        Returns a dictionary of keys=workflow.label, value=workflow, of 
+        all the workflows added in a step.
+        """
+        calcs = self.get_step_calculations(step_method)
+        return self._build_a_dict(calcs, type='workflows')
+
+
+class BaseStepManager(object):
+    """
+    It is copied and pasted from the node, with some modifications
+    """
+    _target_class = None # either workflow or calculation
+    
+    def _get_it(self):
+        """
+        Returns the dictionary of the associated objects
+        """
+        print self._workflow
+        print self._step
+        print inspect.getargvalues(inspect.currentframe())
+        return getattr(self._workflow,'_get_step_{}s_dict'.format(self._target_class)
+                       )(self._step.__name__)
+    
+    def __init__(self, workflow, step):
+        """
+        :param node: the workflow object.
+        """
+        # Possibly add checks here
+        self._workflow = workflow
+        self._step = step
+
+    def __dir__(self):
+        """
+        Allow to list all valid output links
+        """
+        node_objects = self._get_it().keys()
+        return sorted(set(list(dir(type(self))) + list(node_objects)))
+
+    def __iter__(self):
+        node_objects = self._get_it().keys()
+        for k in node_objects:
+            yield k
+
+    def __getattr__(self, name):
+        """
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._get_it()[name]
+        except KeyError:
+            raise AttributeError("Workflow step {} does not have an attached {} labelled {}"
+                                 .format(self._step.__name__, 
+                                         _target_class.capitalize(), 
+                                         name))
+
+    def __getitem__(self, name):
+        """
+        interface to get to the parser results as a dictionary.
+
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._get_it()[name]
+        except KeyError:
+            raise KeyError("Workflow step {} does not have an attached {} "
+                           "labelled {}".format(self._step.name, 
+                                                _target_class.capitalize(), 
+                                                name))
+
+class CalculationStepManager(BaseStepManager):
+    _target_class = 'calculation'
+    
+class WorkflowStepManager(BaseStepManager):
+    _target_class = 'workflow'
+
+class WorkflowOutputManager(object):
+    """
+    It is copied and pasted from the node, with some modifications
+    """
+    def __init__(self, node):
+        """
+        :param node: the node object.
+        """
+        # Possibly add checks here
+        self._node = node
+
+    def __dir__(self):
+        """
+        Allow to list all valid output links
+        """
+        node_attributes = self._node.get_results().keys()
+        return sorted(set(list(dir(type(self))) + list(node_attributes)))
+
+    def __iter__(self):
+        node_attributes = self._node.get_results().keys()
+        for k in node_attributes:
+            yield k
+
+    def __getattr__(self, name):
+        """
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._node.get_results()[name]
+        except KeyError:
+            raise AttributeError("Workflow {} does not have a result called {}"
+                                 .format(self._node.pk, name))
+
+    def __getitem__(self, name):
+        """
+        interface to get to the parser results as a dictionary.
+
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._node.get_results()[name]
+        except KeyError:
+            raise KeyError("Workflow {} does not have a result called {}"
+                           .format(self._node.pk, name))
+
+class WorkflowInputManager(object):
+    """
+    To document, copied and modified from the Node case
+    """
+
+    def __init__(self, node):
+        """
+        :param node: the node object.
+        """
+        # Possibly add checks here
+        self._node = node
+
+    def __dir__(self):
+        """
+        Allow to list all valid input links
+        """
+        node_attributes = self._node.get_parameters().keys()
+        return sorted(set(list(dir(type(self))) + list(node_attributes)))
+
+    def __iter__(self):
+        node_attributes = self._node.get_parameters().keys()
+        for k in node_attributes:
+            yield k
+
+    def __getattr__(self, name):
+        """
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._node.get_parameters()[name]
+        except KeyError:
+            raise AttributeError("Workflow {} does not have an input called {}"
+                                 .format(self._node.pk, name))
+
+    def __getitem__(self, name):
+        """
+        interface to get to the parser results as a dictionary.
+
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._node.get_parameters()[name]
+        except KeyError:
+            raise KeyError("Workflow {} does not have an input called {}"
+                           .format(self._node.pk, name))
+    
 
 # def revive(self):
 #         

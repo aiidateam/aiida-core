@@ -503,6 +503,47 @@ class CodeInputValidationClass(object):
     #         self.prepend_text = code.get_prepend_text()
     #         self.append_text = code.get_append_text()
 
+    def set_and_validate_from_code(self, kwargs):
+        """
+        This method is used by the Code Orm, for the utility to setup a new code
+        from the verdi shell
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        # convert to string so I can use all the functionalities of the command line
+        kwargs = { k:str(v) for k,v in kwargs.iteritems() }
+        
+        start_var = [ _[0] for _ in self._conf_attributes_start ]
+        local_var = [ _[0] for _ in self._conf_attributes_local ]
+        remote_var = [ _[0] for _ in self._conf_attributes_remote ]
+        end_var = [ _[0] for _ in self._conf_attributes_end ]
+        
+        def internal_launch(self, x, kwargs):
+            default_values = { k:getattr(self,'_get_{}_string'.format(k))() for k in x }
+            setup_keys = [ [k,kwargs.pop(k,default_values[k]) ] for k in x ]
+#            for k,v in setup_keys:
+#                setattr(self,k,v)
+            [ getattr(self,'_set_{}_string'.format(k))(v) for k,v in setup_keys ]
+            
+            return kwargs
+                
+        kwargs = internal_launch(self, start_var, kwargs)
+            
+        if self.is_local:
+            kwargs = internal_launch(self, local_var, kwargs)
+        else:
+            print 'called remote', remote_var
+            kwargs = internal_launch(self, remote_var, kwargs)
+
+        kwargs = internal_launch(self, end_var, kwargs)
+        
+        print kwargs
+        
+        if kwargs:
+            raise ValidationError("Some parameters were not "
+                                  "recognized: {}".format(kwargs))
+        return self.create_code()
+
     def ask(self):
         cmdline_fill(self._conf_attributes_start,
                      store=self)

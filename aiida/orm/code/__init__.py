@@ -509,6 +509,18 @@ class Code(Node):
 
         return "\n".join(ret_lines)
 
+    @classmethod
+    def setup(cls, **kwargs):
+        #raise NotImplementedError
+        from aiida.cmdline.commands.code import CodeInputValidationClass
+        code = CodeInputValidationClass().set_and_validate_from_code(kwargs)
+
+        try:
+            code.store()
+        except ValidationError as e:
+            raise ValidationError("Unable to store the computer: {}.".format(e.message))        
+        return code
+
 
 def delete_code(code):
     """

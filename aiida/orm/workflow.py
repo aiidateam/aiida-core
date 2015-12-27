@@ -4,7 +4,8 @@ import importlib
 
 from django.core.exceptions import ObjectDoesNotExist
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
-                                     NotExistent, ValidationError, AiidaException)
+                                     NotExistent, ValidationError, 
+                                     AiidaException)
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.datastructures import wf_states, wf_exit_call
 
@@ -46,38 +47,42 @@ class WorkflowUnkillable(AiidaException):
 
 class Workflow(object):
     """
-    Base class to represent a workflow. This is the superclass of any workflow implementations,
-    and provides all the methods necessary to interact with the database.
+    Base class to represent a workflow. This is the superclass of any workflow 
+    implementations, and provides all the methods necessary to interact with the 
+    database.
     
-    The typical use case are workflow stored in the aiida.workflow packages, that are initiated
-    either by the user in the shell or by some scripts, and that are monitored by the aiida daemon.
+    The typical use case are workflow stored in the aiida.workflow packages, 
+    that are initiated either by the user in the shell or by some scripts, and 
+    that are monitored by the aiida daemon.
 
-    Workflow can have steps, and each step must contain some calculations to be executed. At the
-    end of the step's calculations the workflow is reloaded in memory and the next methods is called.
-    
-    .. todo: verify if there are other places (beside label and description) where
-      the _increment_version_number_db routine needs to be called to increase
-      the nodeversion after storing 
+    Workflow can have steps, and each step must contain some calculations to be 
+    executed. At the end of the step's calculations the workflow is reloaded in 
+    memory and the next methods is called.
     """
+    #TODO: verify if there are other places (beside label and description) where
+    #  the _increment_version_number_db routine needs to be called to increase
+    #  the nodeversion after storing
+     
     # Name to be used for the repository section
     _section_name = 'workflow'
 
-    # The name of the subfolder in which to put the files/directories added with add_path
+    # The name of the subfolder in which to put the files added with add_path
     _path_subfolder_name = 'path'
 
     def __init__(self, **kwargs):
         """
-        Initializes the Workflow super class, store the instance in the DB and in case
-        stores the starting parameters.
+        Initializes the Workflow super class, store the instance in the DB and 
+        in case stores the starting parameters.
 
-        If initialized with an uuid the Workflow is loaded from the DB, if not a new
-        workflow is generated and added to the DB following the stack frameworks. This
-        means that only modules inside aiida.workflows are allowed to implements
-        the workflow super calls and be stored. The caller names, modules and files are
-        retrieved from the stack.
+        If initialized with an uuid the Workflow is loaded from the DB, if not a 
+        new workflow is generated and added to the DB following the stack 
+        frameworks. This means that only modules inside aiida.workflows are 
+        allowed to implements the workflow super calls and be stored. The caller 
+        names, modules and files are retrieved from the stack.
 
         :param uuid: a string with the uuid of the object to be loaded.
-        :param params: a dictionary of storable objects to initialize the specific workflow
+        :param params: a dictionary of storable objects to initialize the 
+                       specific workflow
         :raise: NotExistent: if there is no entry of the desired workflow kind with
                              the given uuid.
         """
@@ -98,22 +103,24 @@ class Workflow(object):
         if dbworkflow is not None:
             self._to_be_stored = False
             if kwargs:
-                raise ValueError("If you pass a dbworkflow, you cannot pass any further parameter")
+                raise ValueError("If you pass a dbworkflow, you cannot pass any"
+                                 " further parameter")
 
             self._dbworkflowinstance = dbworkflow
-            # self.logger.info("Workflow found in the database, now retrieved")
-            self._repo_folder = RepositoryFolder(section=self._section_name, uuid=dbworkflow.uuid)
+            self._repo_folder = RepositoryFolder(section=self._section_name, 
+                                                 uuid=dbworkflow.uuid)
         
         elif uuid is not None:
             self._to_be_stored = False
             if kwargs:
-                raise ValueError("If you pass a UUID, you cannot pass any further parameter")
+                raise ValueError("If you pass a UUID, you cannot pass any "
+                                 "further parameter")
 
             try:
                 self._dbworkflowinstance = DbWorkflow.objects.get(uuid=uuid)
 
-                # self.logger.info("Workflow found in the database, now retrieved")
-                self._repo_folder = RepositoryFolder(section=self._section_name, uuid=self.uuid)
+                self._repo_folder = RepositoryFolder(section=self._section_name, 
+                                                     uuid=self.uuid)
 
             except ObjectDoesNotExist:
                 raise NotExistent("No entry with the UUID {} found".format(uuid))
@@ -124,26 +131,17 @@ class Workflow(object):
 
             stack = inspect.stack()
 
-            # cur_fr  = inspect.currentframe()
-            #call_fr = inspect.getouterframes(cur_fr, 2)
-
             # Get all the caller data
             caller_frame = stack[1][0]
             caller_file = stack[1][1]
             caller_funct = stack[1][3]
 
             caller_module = inspect.getmodule(caller_frame)
-            caller_module_class = caller_frame.f_locals.get('self', None).__class__
+            caller_module_class = caller_frame.f_locals.get('self', None
+                                                            ).__class__
 
             if not caller_funct == "__init__":
                 raise SystemError("A workflow must implement the __init__ class explicitly")
-
-            # Test if the launcher is another workflow
-
-            # print "caller_module", caller_module
-            # print "caller_module_class", caller_module_class
-            # print "caller_file", caller_file
-            # print "caller_funct", caller_funct
 
             # Accept only the aiida.workflows packages
             if caller_module == None or not caller_module.__name__.startswith("aiida.workflows"):
@@ -155,7 +153,8 @@ class Workflow(object):
             self.caller_funct = caller_funct
 
             self._temp_folder = SandboxFolder()
-            self.current_folder.insert_path(self.caller_file, self.caller_module_class)
+            self.current_folder.insert_path(self.caller_file, 
+                                            self.caller_module_class)
             # self.store()
 
             # Test if there are parameters as input
@@ -184,7 +183,6 @@ class Workflow(object):
             return "uuid: {} (unstored)".format(self.uuid)
         else:
             return "uuid: {} (pk: {})".format(self.uuid, self.pk)
-
 
     @property
     def dbworkflowinstance(self):
@@ -268,11 +266,10 @@ class Workflow(object):
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()
 
-
     def _increment_version_number_db(self):
         """
-        This function increments the version number in the DB.
-        This should be called every time you need to increment the version (e.g. on adding a
+        This function increments the version number in the DB. This should be 
+        called every time you need to increment the version (e.g. on adding a
         extra or attribute). 
         """
         from django.db.models import F
@@ -288,8 +285,8 @@ class Workflow(object):
 
         # This reload internally the node of self._dbworkflowinstance
         _ = self.dbworkflowinstance
-        # Note: I have to reload the ojbect. I don't do it here because it is done at every call
-        # to self.dbnode
+        # Note: I have to reload the ojbect. I don't do it here because it is 
+        # done at every call to self.dbnode
         # self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
 
     @property
@@ -373,19 +370,18 @@ class Workflow(object):
         if not os.path.isabs(src_abs):
             raise ValueError("The source path in add_path must be absolute")
         if os.path.isabs(dst_path):
-            raise ValueError("The destination path in add_path must be a filename without any subfolder")
+            raise ValueError("The destination path in add_path must be a "
+                             "filename without any subfolder")
         self._get_folder_pathsubfolder.insert_path(src_abs, dst_path)
 
     def get_abs_path(self, path, section=None):
-        """
-        TODO: For the moment works only for one kind of files, 'path' (internal files)
-        """
         if section is None:
             section = self._path_subfolder_name
 
         if os.path.isabs(path):
             raise ValueError("The path in get_abs_path must be relative")
-        return self.current_folder.get_subfolder(section, reset_limit=True).get_abs_path(path, check_existence=True)
+        return self.current_folder.get_subfolder(section, reset_limit=True
+                                                 ).get_abs_path(path, check_existence=True)
 
     @classmethod
     def query(cls, *args, **kwargs):
@@ -437,8 +433,10 @@ class Workflow(object):
         if hasattr(self, '_params'):
             self.dbworkflowinstance.add_parameters(self._params, force=False)
 
-        self._repo_folder = RepositoryFolder(section=self._section_name, uuid=self.uuid)
-        self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
+        self._repo_folder = RepositoryFolder(section=self._section_name, 
+                                             uuid=self.uuid)
+        self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, 
+                                             move=True, overwrite=True)
 
         self._temp_folder = None
         self._to_be_stored = False
@@ -462,8 +460,8 @@ class Workflow(object):
 
     def info(self):
         """
-        Returns an array with all the informations about the modules, file, class to locate
-        the workflow source code
+        Returns an array with all the informations about the modules, file, 
+        class to locate the workflow source code
         """
         return [self.dbworkflowinstance.module,
                 self.dbworkflowinstance.module_class,
@@ -474,10 +472,10 @@ class Workflow(object):
 
     def set_params(self, params, force=False):
         """
-        Adds parameters to the Workflow that are both stored and used every time
-        the workflow engine re-initialize the specific workflow to launch the new methods.  
+        Adds parameters to the Workflow that are both stored and used every 
+        time the workflow engine re-initialize the specific workflow to launch 
+        the new methods.  
         """
-
         def par_validate(params):
             the_params = {}
             for k, v in params.iteritems():
@@ -488,7 +486,8 @@ class Workflow(object):
                     the_params[k] = v
                 else:
                     raise ValidationError("Cannot store in the DB a parameter "
-                                          "which is not of type int, bool, float or str.")
+                                          "which is not of type int, bool, "
+                                          "float or str.")
             return the_params
 
         if self._to_be_stored:
@@ -535,8 +534,8 @@ class Workflow(object):
 
     def add_attributes(self, _params):
         """
-        Add a set of attributes to the Workflow. If another attribute is present with the same name it will
-        be overwritten.
+        Add a set of attributes to the Workflow. If another attribute is 
+        present with the same name it will be overwritten.
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
@@ -546,8 +545,8 @@ class Workflow(object):
 
     def add_attribute(self, _name, _value):
         """
-        Add one attributes to the Workflow. If another attribute is present with the same name it will
-        be overwritten.
+        Add one attributes to the Workflow. If another attribute is present with 
+        the same name it will be overwritten.
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
@@ -572,8 +571,8 @@ class Workflow(object):
 
     def add_results(self, _params):
         """
-        Add a set of results to the Workflow. If another result is present with the same name it will
-        be overwritten.
+        Add a set of results to the Workflow. If another result is present with 
+        the same name it will be overwritten.
         :param name: a string with the result name to store
         :param value: a storable object to store
         """
@@ -581,8 +580,8 @@ class Workflow(object):
 
     def add_result(self, _name, _value):
         """
-        Add one result to the Workflow. If another result is present with the same name it will
-        be overwritten.
+        Add one result to the Workflow. If another result is present with the 
+        same name it will be overwritten.
         :param name: a string with the result name to store
         :param value: a storable object to store
         """
@@ -646,28 +645,31 @@ class Workflow(object):
         else:
 
             if not getattr(step_method, "is_wf_step"):
-                raise AiidaException("Cannot get step calculations from a method not decorated as Workflow method")
+                raise AiidaException("Cannot get step calculations from a "
+                                     "method not decorated as Workflow method")
 
             step_method_name = step_method.wf_step_name
 
         if (step_method_name == wf_exit_call):
-            raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
+            raise InternalError("Cannot query a step with name {0}, "
+                                "reserved string".format(step_method_name))
 
         try:
-            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=get_automatic_user())
+            step = self.dbworkflowinstance.steps.get(name=step_method_name, 
+                                                     user=get_automatic_user())
             return step
         except ObjectDoesNotExist:
             return None
 
     def get_steps(self, state=None):
         """
-        Retrieves all the steps from a specific workflow Workflow with the possibility to limit the list
-        to a specific step's state.
+        Retrieves all the steps from a specific workflow Workflow with the 
+        possibility to limit the list to a specific step's state.
         :param state: a state from wf_states in aiida.common.datastructures
         :return: a list of DbWorkflowStep objects.
         """
         if state is None:
-            return self.dbworkflowinstance.steps.all().order_by('time')  #.values_list('name',flat=True)
+            return self.dbworkflowinstance.steps.all().order_by('time')
         else:
             return self.dbworkflowinstance.steps.filter(state=state).order_by('time')
 
@@ -681,19 +683,23 @@ class Workflow(object):
     @classmethod
     def step(cls, fun):
         """
-        This method is used as a decorator for workflow steps, and handles the method's execution, 
-        the state updates and the eventual errors.
+        This method is used as a decorator for workflow steps, and handles the 
+        method's execution, the state updates and the eventual errors.
         
-        The decorator generates a wrapper around the input function to execute, adding with the correct 
-        step name and a utility variable to make it distinguishable from non-step methods. 
+        The decorator generates a wrapper around the input function to execute, 
+        adding with the correct step name and a utility variable to make it 
+        distinguishable from non-step methods. 
         
-        When a step is launched, the wrapper tries to run the function in case of error the state of 
-        the workflow is moved to ERROR and the traceback is stored in the report. In general the input 
-        method is a step obtained from the Workflow object, and the decorator simply handles a controlled 
-        execution of the step allowing the code not to break in case of error in the step's source code.
+        When a step is launched, the wrapper tries to run the function in case 
+        of error the state of the workflow is moved to ERROR and the traceback 
+        is stored in the report. In general the input method is a step obtained 
+        from the Workflow object, and the decorator simply handles a controlled 
+        execution of the step allowing the code not to break in case of error 
+        in the step's source code.
           
-        The wrapper also tests not to run two times the same step, unless a Workflow is in ERROR state, in this
-        case all the calculations and subworkflows of the step are killed and a new execution is allowed.
+        The wrapper also tests not to run two times the same step, unless a 
+        Workflow is in ERROR state, in this case all the calculations and 
+        subworkflows of the step are killed and a new execution is allowed.
         
         :param fun: a methods to wrap, making it a Workflow step
         :raise: AiidaException: in case the workflow state doesn't allow the execution 
@@ -703,39 +709,40 @@ class Workflow(object):
 
         wrapped_method = fun.__name__
 
-        # This function gets called only if the method is launched with the execution brackets ()
-        # Otherwise, when the method is addressed in a next() call this never gets called and only the 
-        # attributes are added
-        def wrapper(cls, *args, **kwargs):
+        # This function gets called only if the method is launched with the 
+        # execution brackets (). Otherwise, when the method is addressed in a 
+        # next() call this never gets called and only the attributes are added
+        def wrapper(cls, *args, **kwargs):  # note that cls is in fact an instance!
 #            print cls, args, kwargs
             # Store the workflow at the first step executed
             if cls._to_be_stored:
                 cls.store()
 
-            if len(args) > 0:
-                raise AiidaException("A step method cannot have any argument, use add_attribute to the workflow")
+            if args or kwargs:
+                raise AiidaException("A step method cannot have any argument, "
+                                     "use add_attribute to the workflow")
 
             # If a method is launched and the step is RUNNING or INITIALIZED we should stop
-            if cls.has_step(wrapped_method) and \
-                    not (cls.get_step(wrapped_method).state == wf_states.ERROR or \
-                                     cls.get_step(wrapped_method).state == wf_states.SLEEP or \
-                                     cls.get_step(wrapped_method).nextcall == wf_default_call or \
-                                     cls.get_step(wrapped_method).nextcall == wrapped_method \
-                         #cls.has_step(wrapped_method) \
-                    ):
-                raise AiidaException(
-                    "The step {0} has already been initialized, cannot change this outside the parent workflow !".format(
-                        wrapped_method))
+            if ( cls.has_step(wrapped_method) and 
+                 not (cls.get_step(wrapped_method).state == wf_states.ERROR or 
+                      cls.get_step(wrapped_method).state == wf_states.SLEEP or 
+                      cls.get_step(wrapped_method).nextcall == wf_default_call or 
+                      cls.get_step(wrapped_method).nextcall == wrapped_method)):
+                raise AiidaException("The step {0} has already been initialized"
+                                     ", cannot change this outside the parent "
+                                     "workflow !".format(wrapped_method))
 
             # If a method is launched and the step is halted for ERROR, then clean the step and re-launch
-            if cls.has_step(wrapped_method) and \
-                    ( cls.get_step(wrapped_method).state == wf_states.ERROR or \
-                                  cls.get_step(wrapped_method).state == wf_states.SLEEP ):
+            if ( cls.has_step(wrapped_method) and 
+                 ( cls.get_step(wrapped_method).state == wf_states.ERROR or 
+                   cls.get_step(wrapped_method).state == wf_states.SLEEP ) ):
 
-                for w in cls.get_step(wrapped_method).get_sub_workflows(): w.kill()
+                for w in cls.get_step(wrapped_method).get_sub_workflows(): 
+                    w.kill()
                 cls.get_step(wrapped_method).remove_sub_workflows()
 
-                for c in cls.get_step(wrapped_method).get_calculations(): c.kill()
+                for c in cls.get_step(wrapped_method).get_calculations(): 
+                    c.kill()
                 cls.get_step(wrapped_method).remove_calculations()
 
                 #self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
@@ -749,40 +756,33 @@ class Workflow(object):
                 import sys, traceback
 
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                cls.append_to_report(
-                    "ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(
-                        wrapped_method))
+                cls.append_to_report("ERROR ! This workflow got an error in the"
+                                     " {0} method, we report down the stack "
+                                     "trace".format(wrapped_method))
                 cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_state(wf_states.ERROR)
-                
-       #     print cls, args, kwargs
-            return None
 
-     #   import inspect
-     #   print inspect.getargspec(wrapper)
-        
-        #instance = wrapper
-        #wrapper = wrapper[0]
-#        out = wrapper[0]
+            return None
         wrapper.is_wf_step = True
         wrapper.wf_step_name = fun.__name__
-
-     #   wrapper.calcs = CalculationStepManager(cls,fun.__name__)
-     #   wrapper.wfs = WorkflowStepManager(cls,fun.__name__)
 
         return wrapper
 
     def next(self, next_method):
         """
-        Adds the a new step to be called after the completion of the caller method's calculations and subworkflows.
+        Adds the a new step to be called after the completion of the caller 
+        method's calculations and subworkflows.
         
-        This method must be called inside a Workflow step, otherwise an error is thrown. The
-        code finds the caller method and stores in the database the input next_method as the next
-        method to be called. At this point no execution in made, only configuration updates in the database. 
+        This method must be called inside a Workflow step, otherwise an 
+        exception is raised. The code finds the caller method and stores in the 
+        database the input next_method as the next method to be called. At this 
+        point no execution in made, only configuration updates in the database. 
         
-        If during the execution of the caller method the user launched calculations or subworkflows, this 
-        method will add them to the database, making them available to the workflow manager to be launched.
-        In fact all the calculation and subworkflow submissions are lazy method, really executed by this call. 
+        If during the execution of the caller method the user launched 
+        calculations or subworkflows, this method will add them to the database, 
+        making them available to the workflow manager to be launched. In fact 
+        all the calculation and subworkflow submissions are lazy method, really 
+        executed by this call. 
         
         :param next_method: a Workflow step method to execute after the caller method
         :raise: AiidaException: in case the caller method cannot be found or validated  
@@ -803,7 +803,8 @@ class Workflow(object):
         # unaccessible. I comment these lines for this moment.
 
         #if md5 != md5_file(script_path):
-        #    raise ValidationError("Unable to load the original workflow module from {}, MD5 has changed".format(script_path))
+        #    raise ValidationError("Unable to load the original workflow module "
+        #                          "from {}, MD5 has changed".format(script_path))
 
         # ATTENTION: Do not move this code outside or encapsulate it in a function
         curframe = inspect.currentframe()
@@ -811,19 +812,23 @@ class Workflow(object):
         caller_method = calframe[1][3]
 
         if next_method is None:
-            raise AiidaException("The next method is None, probably you passed a method with parenthesis ??")
+            raise AiidaException("The next method is None, probably you passed "
+                                 "a method with parenthesis ??")
 
         if not self.has_step(caller_method):
-            raise AiidaException("The caller method is either not a step or has not been registered as one")
+            raise AiidaException("The caller method is either not a step or has"
+                                 " not been registered as one")
 
         if not next_method.__name__ == wf_exit_call:
             try:
                 is_wf_step = getattr(next_method, "is_wf_step", None)
             except AttributeError:
-                raise AiidaException("Cannot add as next call a method not decorated as Workflow method")
+                raise AiidaException("Cannot add as next call a method not "
+                                     "decorated as Workflow method")
 
         # Retrieve the caller method
-        method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=get_automatic_user())
+        method_step = self.dbworkflowinstance.steps.get(name=caller_method, 
+                                                        user=get_automatic_user())
 
         # Attach calculations
         if caller_method in self.attach_calc_lazy_storage:
@@ -848,17 +853,19 @@ class Workflow(object):
 
     def attach_calculation(self, calc):
         """
-        Adds a calculation to the caller step in the database. This is a lazy call, no
-        calculations will be launched until the ``next`` method gets called. For a step to be 
-        completed all the calculations linked have to be in RETRIEVED state, after which the next 
-        method gets called from the workflow manager.
+        Adds a calculation to the caller step in the database. This is a lazy 
+        call, no calculations will be launched until the ``next`` method gets 
+        called. For a step to be completed all the calculations linked have to 
+        be in RETRIEVED state, after which the next method gets called from the 
+        workflow manager.
         :param calc: a JobCalculation object
         :raise: AiidaException: in case the input is not of JobCalculation type
         """
         from aiida.orm import JobCalculation
         import inspect
 
-        if (not issubclass(calc.__class__, JobCalculation) and not isinstance(calc, JobCalculation)):
+        if (not issubclass(calc.__class__, JobCalculation) and 
+            not isinstance(calc, JobCalculation)):
             raise AiidaException("Cannot add a calculation not of type JobCalculation")
 
         for node in calc.get_inputs():
@@ -876,10 +883,10 @@ class Workflow(object):
 
     def attach_workflow(self, sub_wf):
         """
-        Adds a workflow to the caller step in the database. This is a lazy call, no
-        workflow will be started until the ``next`` method gets called. For a step to be 
-        completed all the workflows linked have to be in FINISHED state, after which the next 
-        method gets called from the workflow manager.
+        Adds a workflow to the caller step in the database. This is a lazy call, 
+        no workflow will be started until the ``next`` method gets called. For a 
+        step to be completed all the workflows linked have to be in FINISHED 
+        state, after which the next method gets called from the workflow manager.
         :param next_method: a Workflow object
         """
         import inspect
@@ -892,16 +899,44 @@ class Workflow(object):
             self.attach_subwf_lazy_storage[caller_funct] = []
         self.attach_subwf_lazy_storage[caller_funct].append(sub_wf)
 
+    def _get_step_dict(self, step_method, type='calculation'):
+        if type=='calculation':
+            calcs = self.get_step_calculations(step_method)
+            the_dict = self._build_a_dict(calcs, type='calculation')
+        elif type=='workflow':
+            calcs = self.get_step_workflows(step_method)
+            the_dict = self._build_a_dict(calcs, type='workflow')
+        else:
+            raise ValueError('Unexpected type')
+        return the_dict
+
+    def _build_a_dict(self, list_of_o, type='calculation'):
+        labels = []
+        for c in list_of_o:
+            fallback_label = "{}_pk_{}".format(type, c.pk)
+            this_label = c.label
+            if not this_label: # case of empty label (default behavior)
+                this_label = fallback_label
+            if this_label in labels and fallback_label in labels:
+                raise Exception("Why do you set the label of one node with the "
+                                "pk number of other nodes?")
+            if this_label in labels:
+                this_label = fallback_label
+            labels.append(this_label)
+        return { k:v for k,v in zip(labels,list_of_o) }
+    
     def get_step_calculations(self, step_method, calc_state=None):
         """
-        Retrieves all the calculations connected to a specific step in the database. If the step
-        is not existent it returns None, useful for simpler grammatic in the workflow definition.
+        Retrieves all the calculations connected to a specific step in the 
+        database. If the step is not existent it returns None, useful for 
+        simpler grammatic in the workflow definition.
         :param next_method: a Workflow step (decorated) method
         :param calc_state: a specific state to filter the calculations to retrieve
         :return: a list of JobCalculations objects
         """
         if not getattr(step_method, "is_wf_step"):
-            raise AiidaException("Cannot get step calculations from a method not decorated as Workflow method")
+            raise AiidaException("Cannot get step calculations from a method "
+                                 "not decorated as Workflow method")
 
         step_method_name = step_method.wf_step_name
 
@@ -913,12 +948,14 @@ class Workflow(object):
 
     def get_step_workflows(self, step_method):
         """
-        Retrieves all the workflows connected to a specific step in the database. If the step
-        is not existent it returns None, useful for simpler grammatic in the workflow definition.
+        Retrieves all the workflows connected to a specific step in the 
+        database. If the step is not existent it returns None, useful for 
+        simpler grammatic in the workflow definition.
         :param next_method: a Workflow step (decorated) method
         """
         if not getattr(step_method, "is_wf_step"):
-            raise AiidaException("Cannot get step calculations from a method not decorated as Workflow method")
+            raise AiidaException("Cannot get step calculations from a method "
+                                 "not decorated as Workflow method")
 
         step_method_name = step_method.wf_step_name
 
@@ -927,7 +964,8 @@ class Workflow(object):
 
     def kill_step_calculations(self, step):
         """
-        Calls the ``kill`` method for each Calculation linked to the step method passed as argument.
+        Calls the ``kill`` method for each Calculation linked to the step method 
+        passed as argument.
         :param step: a Workflow step (decorated) method
         """
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
@@ -1005,9 +1043,11 @@ class Workflow(object):
     
     def get_all_calcs(self,calc_class=JobCalculation,calc_state=None,depth=16):
         """
-        Get all calculations connected with this workflow and all its subworflows up to a given depth.
-        The list of calculations can be restricted to a given calculation type and state
-        :param calc_class: the calculation class to which the calculations should belong (default: JobCalculation)
+        Get all calculations connected with this workflow and all its 
+        subworflows up to a given depth. The list of calculations can be 
+        restricted to a given calculation type and state
+        :param calc_class: the calculation class to which the calculations 
+          should belong (default: JobCalculation)
         
         :param calc_state: a specific state to filter the calculations to retrieve
         
@@ -1020,15 +1060,19 @@ class Workflow(object):
         """
         all_calcs = []
         for st in self.get_steps():
-            all_calcs += [ c for c in st.get_calculations(state=calc_state) if isinstance(c,calc_class)]
+            all_calcs += [ c for c in st.get_calculations(state=calc_state) 
+                          if isinstance(c,calc_class)]
             if depth>0:
                 for subw in st.get_sub_workflows():
-                    all_calcs += subw.get_all_calcs(calc_state=calc_state,calc_class=calc_class,depth=depth-1)
+                    all_calcs += subw.get_all_calcs(calc_state=calc_state,
+                                                    calc_class=calc_class,
+                                                    depth=depth-1)
         return all_calcs
         
     def sleep(self):
         """
-        Changes the workflow state to SLEEP, only possible to call from a Workflow step decorated method.
+        Changes the workflow state to SLEEP, only possible to call from a 
+        Workflow step decorated method.
         """
         import inspect
         # ATTENTION: Do not move this code outside or encapsulate it in a function
@@ -1037,7 +1081,8 @@ class Workflow(object):
         caller_method = calframe[1][3]
 
         if not self.has_step(caller_method):
-            raise AiidaException("The caller method is either not a step or has not been registered as one")
+            raise AiidaException("The caller method is either not a step or has"
+                                 " not been registered as one")
 
         self.get_step(caller_method).set_state(wf_states.SLEEP)
 
@@ -1045,17 +1090,16 @@ class Workflow(object):
         """
         Return the Workflow report. 
         
-        :note: once, in case the workflow is a subworkflow of any other Workflow this method
-          calls the parent ``get_report`` method.
-          This is not the case anymore.
+        :note: once, in case the workflow is a subworkflow of any other Workflow 
+        this method calls the parent ``get_report`` method. This is not the case anymore.
         :return: a list of strings 
         """
         return self.dbworkflowinstance.report.splitlines()
 
     def clear_report(self):
         """
-        Wipe the Workflow report. In case the workflow is a subworflow of any other Workflow this method
-        calls the parent ``clear_report`` method.
+        Wipe the Workflow report. In case the workflow is a subworflow of any 
+        other Workflow this method calls the parent ``clear_report`` method.
         """
         if len(self.dbworkflowinstance.parent_workflow_step.all()) == 0:
             self.dbworkflowinstance.clear_report()
@@ -1066,17 +1110,17 @@ class Workflow(object):
         """
         Adds text to the Workflow report. 
         
-        :note: Once, in case the workflow is a subworkflow of any other Workflow this method
-         calls the parent ``append_to_report`` method; now instead this is not the 
-         case anymore
+        :note: Once, in case the workflow is a subworkflow of any other Workflow 
+        this method calls the parent ``append_to_report`` method; now instead 
+        this is not the case anymore
         """
         self.dbworkflowinstance.append_to_report(text)
 
     @classmethod
     def get_subclass_from_dbnode(cls, wf_db):
         """
-        Loads the workflow object and reaoads the python script in memory with the importlib library, the
-        main class is searched and then loaded.
+        Loads the workflow object and reaoads the python script in memory with 
+        the importlib library, the main class is searched and then loaded.
         :param wf_db: a specific DbWorkflowNode object representing the Workflow
         :return: a Workflow subclass from the specific source code
         """
@@ -1127,9 +1171,9 @@ class Workflow(object):
 
     def exit(self):
         """
-        This is the method to call in  ``next`` to finish the Workflow. When exit is the next method,
-        and no errors are found, the Workflow is set to FINISHED and removed from the execution manager
-        duties. 
+        This is the method to call in  ``next`` to finish the Workflow. When 
+        exit is the next method, and no errors are found, the Workflow is set 
+        to FINISHED and removed from the execution manager duties. 
         """
         pass
 
@@ -1137,9 +1181,10 @@ class Workflow(object):
     def out(self):
         """
         Traverse the graph of the database.
-        Returns a databaseobject, linked to the current node, by means of the linkname.
-        Example:
-        B = A.out.results: Returns the object B, with link from A to B, with linkname parameters
+        Returns a databaseobject, linked to the current node, by means of the 
+        linkname. Example:
+        B = A.out.results: Returns the object B, with link from A to B, with 
+        linkname parameters
         """
         return WorkflowOutputManager(self)
 
@@ -1147,12 +1192,26 @@ class Workflow(object):
     def inp(self):
         """
         Traverse the graph of the database.
-        Returns a databaseobject, linked to the current node, by means of the linkname.
-        Example:
-        B = A.inp.parameters: returns the object (B), with link from B to A, with linkname parameters
-        C= A.inp: returns an InputManager, an object that is meant to be accessed as the previous example
+        Returns a databaseobject, linked to the current node, by means of the 
+        linkname. Example:
+        B = A.inp.parameters: returns the object (B), with link from B to A, 
+        with linkname parameters C= A.inp: returns an InputManager, an object 
+        that is meant to be accessed as the previous example
         """
         return WorkflowInputManager(self)
+
+    @property
+    def manage(self):
+        """
+        This is a method which is used to access the Calculations and Workflows
+        that are linked with a workflow step.
+        Example: workflow.manage.step_1.calcs.calc_label  -> gives the 
+        calculation identified by a label 'calc_label' that has been launched in 
+        the step 'step_1' of the workflow 'work'.
+    
+        Analogous for attached workflows: workflow.manage.step_1.wfs.wf_label
+        """
+        return AllStepsManager(self)
     
     def _build_a_dict(self, list_of_o, type='calculations'):
         labels = []
@@ -1162,7 +1221,8 @@ class Workflow(object):
             if not this_label: # case of empty label (default behavior)
                 this_label = fallback_label
             if this_label in labels and fallback_label in labels:
-                raise Exception("Why do you set the label of one node with the pk number of other nodes?")
+                raise Exception("Why do you set the label of one node with the "
+                                "pk number of other nodes?")
             if this_label in labels:
                 this_label = fallback_label
             labels.append(this_label)
@@ -1195,19 +1255,17 @@ class BaseStepManager(object):
         """
         Returns the dictionary of the associated objects
         """
-        print self._workflow
-        print self._step
-        print inspect.getargvalues(inspect.currentframe())
-        return getattr(self._workflow,'_get_step_{}s_dict'.format(self._target_class)
-                       )(self._step.__name__)
+        return self._workflow._get_step_dict(self._step, 
+                                             type=self._target_class)
     
-    def __init__(self, workflow, step):
+    def __init__(self, workflow, step_name):
         """
         :param node: the workflow object.
         """
         # Possibly add checks here
         self._workflow = workflow
-        self._step = step
+        self._step_name = step_name
+        self._step = getattr(workflow,step_name)
 
     def __dir__(self):
         """
@@ -1228,10 +1286,10 @@ class BaseStepManager(object):
         try:
             return self._get_it()[name]
         except KeyError:
-            raise AttributeError("Workflow step {} does not have an attached {} labelled {}"
-                                 .format(self._step.__name__, 
-                                         _target_class.capitalize(), 
-                                         name))
+            raise AttributeError("Workflow step {} does not have an attached {}"
+                                 " labelled {}".format(self._step_name, 
+                                                       _target_class.capitalize(), 
+                                                       name))
 
     def __getitem__(self, name):
         """
@@ -1243,7 +1301,7 @@ class BaseStepManager(object):
             return self._get_it()[name]
         except KeyError:
             raise KeyError("Workflow step {} does not have an attached {} "
-                           "labelled {}".format(self._step.name, 
+                           "labelled {}".format(self._step_name, 
                                                 _target_class.capitalize(), 
                                                 name))
 
@@ -1252,6 +1310,68 @@ class CalculationStepManager(BaseStepManager):
     
 class WorkflowStepManager(BaseStepManager):
     _target_class = 'workflow'
+
+class StepManager(object):
+    def __init__(self, node, step_name):
+        """
+        :param node: the node object.
+        """
+        # Possibly add checks here
+        self._node = node
+        self._name = step_name
+        
+    @property
+    def calcs(self):
+        return CalculationStepManager(self._node, self._name)
+    
+    @property
+    def wfs(self):
+        return WorkflowStepManager(self._node, self._name)
+
+class AllStepsManager(object):
+    """
+    It is copied and pasted from the node, with some modifications
+    """
+    def __init__(self, node):
+        """
+        :param node: the node object.
+        """
+        # Possibly add checks here
+        self._node = node
+
+    def __dir__(self):
+        """
+        Allow to list all valid output links
+        """
+        node_attributes = [ _.name for _ in self._node.get_steps() ]
+        return sorted(set(list(dir(type(self))) + list(node_attributes)))
+
+    def __iter__(self):
+        node_attributes = [ _.name for _ in self._node.get_steps() ]
+        for k in node_attributes:
+            yield k
+
+    def __getattr__(self, name):
+        """
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return StepManager(self._node, name)
+        except KeyError:
+            raise AttributeError("Workflow {} does not have a step called {}"
+                                 .format(self._node.pk, name))
+
+    def __getitem__(self, name):
+        """
+        interface to get to the parser results as a dictionary.
+
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return StepManager(self._node, name)
+        except KeyError:
+            raise KeyError("Workflow {} does not have a result called {}"
+                           .format(self._node.pk, name))
 
 class WorkflowOutputManager(object):
     """
@@ -1343,34 +1463,6 @@ class WorkflowInputManager(object):
         except KeyError:
             raise KeyError("Workflow {} does not have an input called {}"
                            .format(self._node.pk, name))
-    
-
-# def revive(self):
-#         
-#         from aiida.common.utils import md5_file
-#         md5 = self.dbworkflowinstance.script_md5
-#         script_path = self.dbworkflowinstance.script_path
-#         
-#         md5_check = md5_file(script_path)
-#         
-#         # MD5 Check before revive
-#         if md5 != md5_check:
-#             logger.info("The script has changed, MD5 is now updated")
-#             self.dbworkflowinstance.set_script_md5(md5_check)
-#         
-#         # Clear all the erroneous steps
-#         err_steps    = self.get_steps(state=wf_states.ERROR)
-#         for s in err_steps:
-#             
-#             for w in s.get_sub_workflows(): w.kill()
-#             s.remove_sub_workflows()
-#             
-#             for c in s.get_calculations(): c.kill()
-#             s.remove_calculations()
-#             
-#             s.set_state(wf_states.INITIALIZED)
-#             
-#         self.set_state(wf_states.RUNNING)
 
 
 def kill_from_pk(pk, verbose=False):

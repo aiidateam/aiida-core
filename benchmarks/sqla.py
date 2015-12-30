@@ -10,7 +10,7 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.node import DbNode, DbPath, DbLink
 from aiida.backends.sqlalchemy.models.group import DbGroup
 
-from aiida.orm import DataFactory, CalculationFactory, Group, JobCalculation
+from aiida.orm import DataFactory, CalculationFactory, Group, JobCalculation, load_node
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.structure import StructureData

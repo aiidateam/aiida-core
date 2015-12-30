@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from functools import partial
+
 from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import defer, aliased
 

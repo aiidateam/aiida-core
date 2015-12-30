@@ -151,7 +151,7 @@ def mounet1(with_key_filter=False):
     # Because we can't reproduce a filter on the value only with a JSON table,
     # a fairer comparison would be with a filter on the key too.
     if with_key_filter:
-        attr_filters = attr_filters & (Q(key="radii_source") | Q(key="lowdim_dict.radii_source"))
+        attr_filters = attr_filters.filter(Q(key="radii_source") | Q(key="lowdim_dict.radii_source"))
 
     qic = InlineCalculation.query(inputs__in=qstruc).filter(
         inputs__dbattributes__in=attr_filters).distinct()
@@ -169,7 +169,7 @@ def mounet2(with_key_filter=False):
     attr_filters = models.DbAttribute.objects.filter(tval__endswith='alvarez')
 
     if with_key_filter:
-        attr_filters = attr_filters & (Q(key="radii_source") | Q(key="lowdim_dict.radii_source"))
+        attr_filters = attr_filters.filter(Q(key="radii_source") | Q(key="lowdim_dict.radii_source"))
 
     qic = InlineCalculation.query(
         inputs__in=qstruc,

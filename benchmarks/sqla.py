@@ -222,7 +222,7 @@ def mounet_daemon():
 def range_queries(percentage):
     return sa.session.query(DbNode.attributes["random"]).filter(
         DbNode.attributes["random"].cast(Float) < percentage
-    )
+    ).all()
 
 queries = {
     "attributes": {

@@ -3,8 +3,9 @@ from __future__ import absolute_import
 
 import copy
 
-from sqlalchemy import literal, aliased
+from sqlalchemy import literal
 from sqlalchemy.exc import SQLAlchemyError, ProgrammingError
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
 

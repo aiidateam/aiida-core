@@ -5,7 +5,6 @@ import copy
 
 from sqlalchemy import literal
 from sqlalchemy.exc import SQLAlchemyError, ProgrammingError
-from sqlalchemy.orm import aliased
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -119,12 +118,7 @@ class Node(AbstractNode):
 
     @classmethod
     def query(cls, *args, **kwargs):
-        # We alias the DbNode to be able to use it inside subquery. If we don't
-        # do this, we could have the outer and inner query referencing the same
-        # table.
-        al = aliased(DbNode)
-        query_cls = DbNode.aiida_query.with_entites(al)
-        q = django_filter(query_cls, **kwargs)
+        q = django_filter(DbNode.aiida_query, **kwargs)
         q = q.reset_joinpoint()
 
         if cls._plugin_type_string:
@@ -144,7 +138,7 @@ class Node(AbstractNode):
             pre, sep, _ = plug_type[:-1].rpartition('.')
             superclass_string = "".join([pre, sep])
 
-            q = q.filter(al.type.like("{}%".format(superclass_string)))
+            q = q.filter(DbNode.type.like("{}%".format(superclass_string)))
 
         return q
 

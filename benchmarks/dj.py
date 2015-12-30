@@ -2,6 +2,8 @@
 
 from collections import defaultdict
 
+from functools import partial
+
 
 from aiida.backends.profile import load_profile
 from aiida.backends.djsite.utils import load_dbenv
@@ -140,33 +142,45 @@ def list_data_structure(element=None, query_group_size=100):
 
     return f
 
-def mounet1():
+def mounet1(with_key_filter=False):
     pw_calc = Group.get(pk=1139193).nodes.next()
     structure = pw_calc.out.output_structure
     qstruc = StructureData.query(children__pk=structure.pk)
+    attr_filters = models.DbAttribute.objects.filter(tval__endswith='alvarez')
+
+    # Because we can't reproduce a filter on the value only with a JSON table,
+    # a fairer comparison would be with a filter on the key too.
+    if with_key_filter:
+        attr_filters = attr_filters & (Q(key="radii_source") | Q(key="lowdim_dict.radii_source"))
+
     qic = InlineCalculation.query(inputs__in=qstruc).filter(
-        inputs__dbattributes__in=models.DbAttribute.objects.filter(
-            tval__endswith='alvarez')).distinct()
+        inputs__dbattributes__in=attr_filters).distinct()
+
     return qic.count()
 
-def mounet2():
+def mounet2(with_key_filter=False):
     StructureData = DataFactory('structure')
     structure = load_node(2304207)
     qstruc = StructureData.query(children__pk=structure.pk)
     qattr = models.DbAttribute.objects.filter(
         key='function_name', tval='lowdimfinder_inline', dbnode__inputs__in=qstruc
     )
+
+    attr_filters = models.DbAttribute.objects.filter(tval__endswith='alvarez')
+
+    if with_key_filter:
+        attr_filters = attr_filters & (Q(key="radii_source") | Q(key="lowdim_dict.radii_source"))
+
     qic = InlineCalculation.query(
         inputs__in=qstruc,
         dbattributes__in=qattr
-    ).filter(
-        inputs__dbattributes__in=models.DbAttribute.objects.filter(
-            tval__endswith='alvarez')).distinct()
+    ).filter(inputs__dbattributes__in=attr_filters).distinct()
+
     return qic.count()
 
 def mounet_daemon():
     return JobCalculation.query(
-        dbattributes__key='state',dbattributes__tval='WITHSCHEDULER'
+        dbattributes__key='state', dbattributes__tval='WITHSCHEDULER'
     ).count()
 
 
@@ -193,7 +207,9 @@ queries = {
     },
     "mounet": {
         "1": mounet1,
+        "1_key_filter": partial(mounet1, with_key_filter=True),
         "2": mounet2,
+        "2_key_filter": partial(mounet2, with_key_filter=True),
         "daemon": mounet_daemon
     }
 }

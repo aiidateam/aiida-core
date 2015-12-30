@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import or_
-from sqlalchemy.orm import defer
+from sqlalchemy import or_, and_, func
+from sqlalchemy.orm import defer, aliased
 
 
 from aiida.backends import sqlalchemy as sa
-from aiida.backends.sqlalchemy.models.node import DbNode, DbPath
+from aiida.backends.sqlalchemy.models.node import DbNode, DbPath, DbLink
 from aiida.backends.sqlalchemy.models.group import DbGroup
 
-from aiida.orm import DataFactory, CalculationFactory
+from aiida.orm import DataFactory, CalculationFactory, Group, JobCalculation
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.structure import StructureData
@@ -170,6 +170,55 @@ def list_data_structure(element=None):
 
     return lambda: q.all()
 
+def mounet1():
+    pw_calc = Group.get(pk=1139193).nodes.next()
+    structure = pw_calc.out.output_structure
+    qstruc = StructureData.query(children__pk=structure.pk).with_entities(DbNode.id)
+    n_children = aliased(DbNode)
+    qic = (InlineCalculation.query()
+           .join(DbLink, DbNode.id == DbLink.output_id).filter(
+               DbLink.input_id.in_(qstruc)
+           )
+           .join(n_children, DbNode.inputs).filter(
+               or_(
+                   n_children.attributes["radii_source"].astext.like("%alvarez"),
+                   n_children.attributes[("lowdim_dict", "radii_source")].astext.like("%alvarez")
+               )
+           ).distinct()
+        )
+
+    return qic.with_entities(func.count(DbNode.id)).scalar()
+
+def mounet2():
+    StructureData = DataFactory('structure')
+    structure = load_node(2304207)
+    qstruc = StructureData.query(children__pk=structure.pk).with_entities(DbNode.id)
+
+    n_children = aliased(DbNode)
+    qic = (InlineCalculation.query()
+           .filter(
+               DbNode.attributes["function_name"].astext == "lowdimfinder_inline"
+           )
+           .join(DbLink, DbNode.id == DbLink.output_id).filter(
+               DbLink.input_id.in_(qstruc)
+           )
+           .join(n_children, DbNode.inputs).filter(
+               or_(
+                   n_children.attributes["radii_source"].astext.like("%alvarez"),
+                   n_children.attributes[("lowdim_dict", "radii_source")].astext.like("%alvarez")
+               )
+           ).distinct()
+        )
+
+    return qic.with_entities(func.count(DbNode.id)).scalar()
+
+def mounet_daemon():
+    return JobCalculation.query(
+        dbattributes__key='state', dbattributes__tval='WITHSCHEDULER'
+    ).with_entities(func.count(DbNode.id)).scalar()
+
+
+
 
 queries = {
     "attributes": {
@@ -190,12 +239,17 @@ queries = {
         "closest_struc": get_closest_struc,
     },
     "paths_with_attr": {
-        "farthest_cif": lambda: get_farthest_cif(with_attr=True),
-        "closest_struc": lambda: get_closest_struc(with_attr=True),
+        "farthest_cif": partial(get_farthest_cif, with_attr=True),
+        "closest_struc": partial(get_closest_struc, with_attr=True),
     },
     "verdi": {
         "list_data": list_data_structure(),
         "list_element": list_data_structure(element="C")
+    },
+    "mounet": {
+        "1": mounet1,
+        "2": mounet2,
+        "daemon": mounet_daemon
     }
 }
 

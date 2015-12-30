@@ -2,7 +2,7 @@
 
 from functools import partial
 
-from sqlalchemy import or_, and_, func
+from sqlalchemy import or_, and_, func, Float
 from sqlalchemy.orm import defer, aliased
 
 
@@ -135,7 +135,7 @@ def get_closest_struc(with_attr=False):
            .distinct().order_by(DbNode.ctime))
 
     if not with_attr:
-           res = res.options(defer(DbNode.attributes), defer(DbNode.extras))
+        res = res.options(defer(DbNode.attributes), defer(DbNode.extras))
 
     return res.all()
 
@@ -219,8 +219,10 @@ def mounet_daemon():
         dbattributes__key='state', dbattributes__tval='WITHSCHEDULER'
     ).with_entities(func.count(DbNode.id)).scalar()
 
-
-
+def range_queries(percentage):
+    return sa.session.query(DbNode.attributes["random"]).filter(
+        DbNode.attributes["random"].cast(Float) < percentage
+    )
 
 queries = {
     "attributes": {
@@ -255,3 +257,4 @@ queries = {
     }
 }
 
+queries["range"] = dict((i, partial(range_queries, i)) for i in xrange(1, 101))

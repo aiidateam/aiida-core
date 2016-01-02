@@ -204,6 +204,7 @@ queries = {
     },
     "verdi": {
         "list_element": list_data_structure(element="C"),
+        "list_data": list_data_structure(),
     },
     "mounet": {
         "1": mounet1,

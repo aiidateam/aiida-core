@@ -188,6 +188,34 @@ def complex_query_no_cte():
 
     return lambda: storeremotes.all()
 
+def complex_query_django_replicate():
+    RemoteData = DataFactory('remote')
+    PwCalculation = CalculationFactory('quantumespresso.pw')
+
+    pws = sa.session.query(DbNode.id).filter(
+        DbNode.type == PwCalculation._plugin_type_string
+    )
+
+    scratchremotes = sa.session.query(DbNode.id).filter(
+        DbNode.type == RemoteData._plugin_type_string
+    ).join(DbLink, DbNode.id == DbLink.output_id).filter(
+        DbLink.input_id.in_(pws)
+    )
+
+    inlines = sa.session.query(DbNode.id).filter(
+        DbNode.type == InlineCalculation._plugin_type_string
+    ).join(DbLink, DbNode.id == DbLink.output_id).filter(
+        DbLink.input_id.in_(scratchremotes)
+    )
+
+    storeremotes = sa.session.query(DbNode.uuid).filter(
+        DbNode.type == RemoteData._plugin_type_string
+    ).join(DbLink, DbNode.id == DbLink.output_id).filter(
+        DbLink.input_id.in_(inlines)
+    )
+
+    return lambda: storeremotes.all()
+
 def list_data_structure(element=None):
     q = (sa.session.query(DbNode.id, DbNode.attributes['kinds'], DbNode.attributes['sites'])
          .filter(DbNode.type.like("data.structure.%"),
@@ -265,7 +293,8 @@ queries = {
     },
     "complex": {
         "1": complex_query(),
-        "no_cte": complex_query_no_cte()
+        "no_cte": complex_query_no_cte(),
+        "django_replicate": complex_query_django_replicate()
     },
     "paths": {
         "farthest_cif": get_farthest_cif,

@@ -160,6 +160,34 @@ def complex_query():
 
     return lambda: storeremotes.all()
 
+def complex_query_no_cte():
+    RemoteData = DataFactory('remote')
+    PwCalculation = CalculationFactory('quantumespresso.pw')
+
+    pws = sa.session.query(DbNode.id).filter(
+        DbNode.type == PwCalculation._plugin_type_string
+    )
+
+    scratchremotes = sa.session.query(DbNode.id).filter(
+        DbNode.type == RemoteData._plugin_type_string
+    ).join(DbNode, DbNode.inputs, aliased=True).filter(
+        DbNode.id.in_(pws)
+    )
+
+    inlines = sa.session.query(DbNode.id).filter(
+        DbNode.type == InlineCalculation._plugin_type_string
+    ).join(DbNode, DbNode.inputs, aliased=True).filter(
+        DbNode.id.in_(scratchremotes)
+    )
+
+    storeremotes = sa.session.query(DbNode.uuid).filter(
+        DbNode.type == RemoteData._plugin_type_string
+    ).join(DbNode, DbNode.inputs, aliased=True).filter(
+        DbNode.id.in_(inlines)
+    )
+
+    return lambda: storeremotes.all()
+
 def list_data_structure(element=None):
     q = (sa.session.query(DbNode.id, DbNode.attributes['kinds'], DbNode.attributes['sites'])
          .filter(DbNode.type.like("data.structure.%"),
@@ -236,7 +264,8 @@ queries = {
         'cell': build_query_attr_only('cell'),
     },
     "complex": {
-        "1": complex_query()
+        "1": complex_query(),
+        "no_cte": complex_query_no_cte()
     },
     "paths": {
         "farthest_cif": get_farthest_cif,

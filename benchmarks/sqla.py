@@ -141,7 +141,7 @@ def farthest_cif_django(distinct=True):
     return res.all()
 
 
-def get_closest_struc(with_attr=False):
+def get_closest_struc(with_attr=False, distinct=True):
     nodes = ParameterData.query().with_entities('id')
     struc_type = StructureData._query_type_string
 
@@ -150,8 +150,12 @@ def get_closest_struc(with_attr=False):
              .join(DbNode, DbPath.parent)
              .filter(DbNode.type.like("%{}%".format(struc_type)))
              .order_by(DbPath.depth)
-             .distinct()
-             [0])[0]
+             .distinct())
+
+    if distinct:
+        depth = depth.distinct()
+
+    depth = depth[0][0]
 
     q = (DbPath.query.filter(DbPath.child_id.in_(nodes))
          .join(DbNode, DbPath.parent)
@@ -331,6 +335,7 @@ queries = {
     "paths": {
         "farthest_cif": get_farthest_cif,
         "closest_struc": get_closest_struc,
+        "closest_struc_no_distinct": partial(get_closest_struc, distinct=False),
         "farthest_cif_django": farthest_cif_django,
         "farthest_cif_django_no_distinct": partial(farthest_cif_django, distinct=False)
     },

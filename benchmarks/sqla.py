@@ -109,6 +109,35 @@ def get_farthest_cif(with_attr=False):
 
     return res.all()
 
+def farthest_cif_django():
+    nodes = ParameterData.query().with_entities('id')
+    cif_type = CifData._query_type_string
+
+    depth = (sa.session.query(DbPath.depth)
+             .filter(DbPath.child_id.in_(nodes))
+             .join(DbNode, DbPath.parent)
+             .filter(DbNode.type.like("%{}%".format(cif_type)))
+             .order_by(DbPath.depth.desc())
+             .distinct()
+             [0])[0]
+
+    q = (DbPath.query.filter(DbPath.child_id.in_(nodes))
+         .join(DbNode, DbPath.parent)
+         .filter(DbNode.type.like("%{}%".format(cif_type)))
+         .filter(DbPath.depth == depth)
+         .distinct().with_entities(DbPath.id)
+         )
+
+    res = (DbNode.query.filter(DbNode.type.like("%{}%".format(cif_type)))
+          .join(DbPath, DbPath.parent_id == DbNode.id)
+           .filter(DbPath.child_id.in_(nodes))
+           .filter(DbPath.id.in_(q))
+           .options(defer(DbNode.attributes), defer(DbNode.extras))
+           )
+
+    return res.all()
+
+
 def get_closest_struc(with_attr=False):
     nodes = ParameterData.query().with_entities('id')
     struc_type = StructureData._query_type_string
@@ -299,6 +328,7 @@ queries = {
     "paths": {
         "farthest_cif": get_farthest_cif,
         "closest_struc": get_closest_struc,
+        "farthest_cif_django": farthest_cif_django
     },
     "paths_with_attr": {
         "farthest_cif": partial(get_farthest_cif, with_attr=True),

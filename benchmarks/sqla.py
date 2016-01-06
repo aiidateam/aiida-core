@@ -109,7 +109,7 @@ def get_farthest_cif(with_attr=False):
 
     return res.all()
 
-def farthest_cif_django():
+def farthest_cif_django(distinct=True):
     nodes = ParameterData.query().with_entities('id')
     cif_type = CifData._query_type_string
 
@@ -117,9 +117,12 @@ def farthest_cif_django():
              .filter(DbPath.child_id.in_(nodes))
              .join(DbNode, DbPath.parent)
              .filter(DbNode.type.like("%{}%".format(cif_type)))
-             .order_by(DbPath.depth.desc())
-             .distinct()
-             [0])[0]
+             .order_by(DbPath.depth.desc()))
+
+    if distinct:
+        depth = depth.distinct()
+
+    depth = depth[0][0]
 
     q = (DbPath.query.filter(DbPath.child_id.in_(nodes))
          .join(DbNode, DbPath.parent)
@@ -328,7 +331,8 @@ queries = {
     "paths": {
         "farthest_cif": get_farthest_cif,
         "closest_struc": get_closest_struc,
-        "farthest_cif_django": farthest_cif_django
+        "farthest_cif_django": farthest_cif_django,
+        "farthest_cif_django_no_distinct": partial(farthest_cif_django, distinct=False)
     },
     "paths_with_attr": {
         "farthest_cif": partial(get_farthest_cif, with_attr=True),

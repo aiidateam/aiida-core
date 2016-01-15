@@ -163,8 +163,7 @@ def get_closest_struc(with_attr=False, distinct=True):
          .filter(DbPath.depth == depth)
          )
 
-    if distinct:
-        q = q.distinct()
+    q = q.distinct()
 
     q = q.with_entities(DbPath.id)
 
@@ -174,8 +173,7 @@ def get_closest_struc(with_attr=False, distinct=True):
            .filter(DbPath.id.in_(q))
           )
 
-    if distinct:
-        res = res.distinct()
+    res = res.distinct()
 
     res = res.order_by(DbNode.ctime)
 
@@ -205,8 +203,7 @@ def get_closest_struc_django(distinct=True):
          .filter(DbPath.depth == depth)
          )
 
-    if distinct:
-        q = q.distinct()
+    q = q.distinct()
 
     q = q.with_entities(DbPath.id)
 
@@ -216,8 +213,7 @@ def get_closest_struc_django(distinct=True):
            .filter(DbPath.id.in_(q))
           )
 
-    if distinct:
-        res = res.distinct()
+    res = res.distinct()
 
     res = res.order_by(DbNode.ctime)
 

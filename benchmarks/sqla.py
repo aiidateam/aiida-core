@@ -136,6 +136,7 @@ def farthest_cif_django(distinct=True):
            .filter(DbPath.child_id.in_(nodes))
            .filter(DbPath.id.in_(q))
            .options(defer(DbNode.attributes), defer(DbNode.extras))
+           .distinct()
            )
 
     return res.all()
@@ -148,7 +149,7 @@ def get_closest_struc(with_attr=False, distinct=True):
     depth = (sa.session.query(DbPath.depth)
              .filter(DbPath.child_id.in_(nodes))
              .join(DbNode, DbPath.parent)
-             .filter(DbNode.type.like("%{}%".format(struc_type)))
+             .filter(DbNode.type.like("{}%".format(struc_type)))
              .order_by(DbPath.depth))
 
     if distinct:
@@ -158,21 +159,73 @@ def get_closest_struc(with_attr=False, distinct=True):
 
     q = (DbPath.query.filter(DbPath.child_id.in_(nodes))
          .join(DbNode, DbPath.parent)
-         .filter(DbNode.type.like("%{}%".format(struc_type)))
+         .filter(DbNode.type.like("{}%".format(struc_type)))
          .filter(DbPath.depth == depth)
-         .distinct().with_entities(DbPath.id)
          )
+
+    if distinct:
+        q = q.distinct()
+
+    q = q.with_entities(DbPath.id)
 
     res = (StructureData.query()
            .join(DbPath, DbNode.child_paths)
            .filter(DbPath.child_id.in_(nodes))
            .filter(DbPath.id.in_(q))
-           .distinct().order_by(DbNode.ctime))
+          )
+
+    if distinct:
+        res = res.distinct()
+
+    res = res.order_by(DbNode.ctime)
 
     if not with_attr:
         res = res.options(defer(DbNode.attributes), defer(DbNode.extras))
 
     return res.all()
+
+def get_closest_struc_django(distinct=True):
+    nodes = ParameterData.query().with_entities('id')
+    struc_type = StructureData._query_type_string
+
+    depth = (sa.session.query(DbPath.depth)
+             .filter(DbPath.child_id.in_(nodes))
+             .join(DbNode, DbPath.parent)
+             .filter(DbNode.type.like("{}%".format(struc_type)))
+             .order_by(DbPath.depth))
+
+    if distinct:
+        depth = depth.distinct()
+
+    depth = depth[0][0]
+
+    q = (DbPath.query.filter(DbPath.child_id.in_(nodes))
+         .join(DbNode, DbPath.parent)
+         .filter(DbNode.type.like("{}%".format(struc_type)))
+         .filter(DbPath.depth == depth)
+         )
+
+    if distinct:
+        q = q.distinct()
+
+    q = q.with_entities(DbPath.id)
+
+    res = (StructureData.query()
+           .join(DbPath, DbNode.child_paths)
+           .filter(DbPath.child_id.in_(nodes))
+           .filter(DbPath.id.in_(q))
+          )
+
+    if distinct:
+        res = res.distinct()
+
+    res = res.order_by(DbNode.ctime)
+
+    if not with_attr:
+        res = res.options(defer(DbNode.attributes), defer(DbNode.extras))
+
+    return res.all()
+
 
 def complex_query():
     RemoteData = DataFactory('remote')

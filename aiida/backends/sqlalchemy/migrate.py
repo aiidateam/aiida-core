@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import math
-
+import sys
 import gc
 
 from sqlalchemy import ForeignKey
@@ -12,7 +12,7 @@ from sqlalchemy.sql.expression import func
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.utils import load_dbenv, is_dbenv_loaded
+from aiida.backends.profile import load_profile, is_profile_loaded
 
 
 # Note that we can't use `DbAttribute.query` here because we didn't import it
@@ -141,14 +141,20 @@ def create_columns(debug=False):
         print_debug(debug, "Creating extras column")
         sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN extras JSONB DEFAULT \'{}\'')
 
+def load_env(profile=None):
+    if not is_profile_loaded():
+        load_profile(profile)
+    from aiida.backends.sqlalchemy.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
+
 
 def migrate_extras(create_column=False, profile=None, group_size=1000, debug=False):
     """
     Migrate the DbExtra table into the extras column for db_dbnode.
     """
-    if not is_dbenv_loaded():
-        load_dbenv(profile=profile)
-    print_debug(debug, "Starting migration")
+    load_env(profile=profile)
+    print_debug(debug, "Starting migration of extras")
 
     with sa.session.begin(subtransactions=True):
         if create_column:
@@ -183,7 +189,7 @@ def migrate_extras(create_column=False, profile=None, group_size=1000, debug=Fal
             cont = cont_s.lower() == "y"
             if not cont:
                 sa.session.rollback()
-                return
+                sys.exit(-1)
 
     sa.session.commit()
 
@@ -192,9 +198,8 @@ def migrate_attributes(create_column=False, profile=None, group_size=1000, debug
     """
     Migrate the DbAttribute table into the attributes column of db_dbnode.
     """
-    if not is_dbenv_loaded():
-        load_dbenv(profile=profile)
-    print_debug(debug, "Starting migration")
+    load_env(profile=profile)
+    print_debug(debug, "Starting migration of attributes")
 
     with sa.session.begin(subtransactions=True):
         if create_column:
@@ -234,16 +239,15 @@ def migrate_attributes(create_column=False, profile=None, group_size=1000, debug
             cont = cont_s.lower() == "y"
             if not cont:
                 sa.session.rollback()
-                return
+                sys.exit(-1)
 
     sa.session.commit()
 
-def migrate_json_column():
+def migrate_json_column(profile=None):
     """
     Migrate the TEXT column containing JSON into JSON columns
     """
-    if not is_dbenv_loaded():
-        load_dbenv()
+    load_env(profile=profile)
 
     table_col = [
         ('db_dbauthinfo', 'metadata'),
@@ -261,3 +265,24 @@ def migrate_json_column():
 
 
     sa.session.commit()
+
+def create_gin_index():
+    """
+    Create the GIN index for the attributes column of db_dbnode.
+    """
+    sa.session.bind.execute("CREATE INDEX db_dbnode_attributes_idx ON db_dbnode USING gin(attributes)")
+
+def migrate(create_column=False, profile=None, group_size=1000, debug=False):
+    """
+    Migrate the attributes, extra, and some other columns to use JSONMigrate
+    the attributes, extra, and some other columns to use JSONB column type.
+    """
+    print("Starting complete migration. Be sure to backup your database before continuing,"
+          " and that no one else is using it.")
+    cont = raw_input("Do you want to continue ? [y/n]")
+    if cont.lower() != "y":
+        sys.exit(0)
+    migrate_attributes(create_column=create_column, profile=profile, group_size=group_size, debug=debug)
+    migrate_extras(create_column=create_column, profile=profile, group_size=group_size, debug=debug)
+    create_gin_index()
+    migrate_json_column(profile=profile)

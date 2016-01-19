@@ -21,7 +21,7 @@ from aiida.common.exceptions import (
     AiidaException, ConfigurationError, ProfileConfigurationError)
 from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
-from aiida.backends.djsite.settings import settings_profile
+from aiida.backends import settings as settings_profile
 
 
 

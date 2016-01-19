@@ -111,7 +111,7 @@ serverurl=unix:///{daemon_dir}/supervisord.sock
 ; Main AiiDA Daemon
 ;=======================================
 [program:aiida-daemon]
-command=python "{aiida_module_dir}/djsite/manage.py" --aiida-process=daemon celeryd --loglevel=INFO
+command=python "{aiida_module_dir}/backends/djsite/manage.py" --aiida-process=daemon celeryd --loglevel=INFO
 directory={daemon_dir}
 user={local_user}
 numprocs=1
@@ -127,7 +127,7 @@ process_name=%(process_num)s
 ; AiiDA Deamon BEAT - for scheduled tasks
 ; ==========================================
 [program:aiida-daemon-beat]
-command=python "{aiida_module_dir}/djsite/manage.py" --aiida-process=daemon celerybeat
+command=python "{aiida_module_dir}/backends/djsite/manage.py" --aiida-process=daemon celerybeat
 directory={daemon_dir}
 user={local_user}
 numprocs=1

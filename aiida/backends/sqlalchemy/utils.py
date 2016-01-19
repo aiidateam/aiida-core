@@ -4,6 +4,8 @@
 try:
     import ultrajson as json
     from functools import partial
+    # double_precision = 15, to replicate what PostgreSQL numerical type is
+    # using
     json_dumps = partial(json.dumps, double_precision=15)
     json_loads = partial(json.loads, precise_float=True)
 except ImportError:
@@ -48,7 +50,7 @@ def load_dbenv(process=None, profile=None, connection=None):
 
     # Those import are necessary for SQLAlchemy to correvtly detect the models
     # These should be on top of the file, but because of a circular import they need to be
-    # here...
+    # here.
     from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
     from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
     from aiida.backends.sqlalchemy.models.comment import DbComment
@@ -155,7 +157,12 @@ def loads_json(s):
 
 
 
+# XXX the code here isn't different from the one use in Django. We may be able
+# to refactor it in some way
 def install_tc(session):
+    """
+    Install the transitive closure table with SqlAlchemy.
+    """
     links_table_name = "db_dblink"
     links_table_input_field = "input_id"
     links_table_output_field = "output_id"
@@ -174,6 +181,9 @@ def get_pg_tc(links_table_name,
               closure_table_name,
               closure_table_parent_field,
               closure_table_child_field):
+    """
+    Return the transitive closure table template
+    """
     from string import Template
 
     pg_tc = Template("""

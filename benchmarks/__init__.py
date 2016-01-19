@@ -1,47 +1,5 @@
 # -*- coding: utf-8 -*-
 
-"""
-Regroup the benchmarks to run. Currently, we have four of them:
-    * `verdi data structure list -G ...`. List the datastructure from a list of
-    groups, and get the attributes `kinds` and `sites`, all of that ordered by
-    time.
-    * Three queries about attributes. The way it is described in the README, it
-    first get a list of nodes from the group, and then the attributes whoses
-    key starts with: `kinds`, `sites`, `cell`.
-    * get_closest_cif(nodes): get the closest parents for all the  nodes which is a
-    CifData node. The way it is done in the function:
-        - it first get from the DbPath table (and with joins) the depth of the
-        closest parent which contains the requested type.
-        - it then query all the parent at this depth
-        - and then get all the CifData node with a children in the list of the
-        requested node and who are a parent (<- not sure about this)
-    * get_farthest_struc(node): built in a similar way as get_closest_cif, but
-    with structure instead, and getting the farthest.
-
-The two last query could probably be optimized, and they don't include
-benchmarking JSON, so we will leave them for later.
-"""
-
-
-
-# Various queries to test. The first one is about querying attributes.
-# There is different ways to achieve it.
-# With JSON columns, it is quite straightforward. You simply obtain all the
-# nodes.
-# For the seperate table case, you can either do it with a JOIN, or with a
-# separated query. A variante of the last one is implemented in AiiDA for
-# retrieving the data structure nodes and their attributes, which is doing it
-# by batch of 100. That is, one query for the node, then for each group of 100
-# nodes, you get their attributes.
-# With separate columns, we also need to take into account the deserialisation
-# time. We should take care of computing this time.
-# Finally, we should also time (using \timing) the SQL request themselves, and
-# see how much overhead we have from both Django & SqlAlchemy.
-#
-# Once each of those query can easily be benchmarked (with protocol and such),
-# we should also try to benchmark the effect of some PostgreSQL parameters on
-# those query.
-
 import argparse
 import time
 import sys
@@ -91,7 +49,11 @@ def time_it(f, n=10):
         res = f()
         end = time.time()
         times.append(end - start)
-    size = len(res)
+    try:
+        size = len(res)
+    except TypeError:
+        size = 1
+
 
     ret = {
         "length": size,

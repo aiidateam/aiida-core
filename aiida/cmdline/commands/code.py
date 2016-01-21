@@ -307,8 +307,6 @@ class CodeInputValidationClass(object):
         Set the computer starting from a string.
         """
         from aiida.common.exceptions import ValidationError, NotExistent
-
-        load_dbenv()
         from aiida.orm import Computer as AiidaOrmComputer
 
         try:

@@ -10,9 +10,9 @@ if settings.BACKEND is None:
     load_profile()
 
 if settings.BACKEND == "sqlalchemy":
-    from aiida.backends.sqlalchemy.utils import get_automatic_user, load_dbenv
+    from aiida.backends.sqlalchemy.utils import get_automatic_user, load_dbenv, is_dbenv_loaded
 elif settings.BACKEND == "django":
-    from aiida.backends.djsite.utils import get_automatic_user, load_dbenv
+    from aiida.backends.djsite.utils import get_automatic_user, load_dbenv, is_dbenv_loaded
     from aiida.backends.djsite.cmdline import (
         get_group_list, get_workflow_list, get_log_messages
     )

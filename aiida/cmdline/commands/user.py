@@ -40,7 +40,7 @@ class User(VerdiCommandWithSubcommands):
 
     def user_configure(self, *args):
         from aiida.backends.djsite.settings import settings_profile
-        from aiida import is_dbenv_loaded
+        from aiida.backends.utils import is_dbenv_loaded
         if not is_dbenv_loaded():
             load_dbenv()
 

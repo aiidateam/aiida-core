@@ -1,1 +1,1 @@
-from aiida.orm.implementation import Code
+from aiida.orm.implementation import Code, delete_code

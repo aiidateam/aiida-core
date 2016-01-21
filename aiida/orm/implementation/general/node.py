@@ -1109,7 +1109,6 @@ class AbstractNode(object):
         if getattr(self, '_temp_folder', None) is not None:
             self._temp_folder.erase()
 
-    # TODO SP: see if this needs to be abstracted..
     @property
     def out(self):
         """
@@ -1149,8 +1148,6 @@ class AbstractNode(object):
         # use the transitive closure
         pass
 
-
-# TODO SP: abstract this
 
 class NodeOutputManager(object):
     """

@@ -7,7 +7,6 @@ from aiida.common.exceptions import ModificationNotAllowed
 
 def make_inline(func):
 
-    # TODO SP: abstract transaction
     def wrapped_function(*args, **kwargs):
         """
         This wrapper function is the actual function that is called.

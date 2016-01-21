@@ -6,7 +6,6 @@ from django.db import IntegrityError, transaction
 
 from aiida.orm.implementation.general.lock import AbstractLockManager, AbstractLock
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed, LockPresent)
-# TODO SP: to replace
 from aiida.utils import timezone
 
 

@@ -383,8 +383,6 @@ class Node(AbstractNode):
         return self.dbnode.extras
 
     def iterextras(self):
-        # TODO SP: kind of the same as for extras: do we generate a key each
-        # time ?
         return self.dbnode.extras.iteritems()
 
     def iterattrs(self, also_updatable=True):
@@ -395,8 +393,6 @@ class Node(AbstractNode):
         if self._to_be_stored:
             it_items = self._attrs_cache.iteritems()
         else:
-            # TODO SP: verify if a complex object (dict/list) is expected to be
-            # returned, or simply the key/val as in the DB
             it_items = self.dbnode.attributes.iteritems()
         for k, v in it_items:
             if also_updatable or not k in updatable_list:
@@ -542,7 +538,6 @@ class Node(AbstractNode):
                 session.commit()
             except SQLAlchemyError as e:
                 session.rollback()
-            # TODO SP: What to do if this fails ?
 
         return self
 
@@ -623,7 +618,6 @@ class Node(AbstractNode):
 
         from aiida.backends.sqlalchemy import session
         if with_transaction:
-            # TODO SP: same as for `store_all`, what to do if this fails ?
             try:
                 session.commit()
             except SQLAlchemyError as e:

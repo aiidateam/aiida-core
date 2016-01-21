@@ -46,10 +46,14 @@ class DbWorkflow(Base):
 
     report = Column(Text)
 
-    module = Column(Text)  # Blank = false
-    module_class = Column(Text)  # Blank = False
-    script_path = Column(Text)  # Blank = False
-    # TODO SP: restrict the size of this column, MD5 have a fixed size
+    # XXX the next three attributes have "blank=False", but can be null. It may
+    # be needed to add some validation for this, but only at commit time.
+    # To do so: see https://stackoverflow.com/questions/28228766/running-cleaning-validation-code-before-committing-in-sqlalchemy
+    module = Column(Text)
+    module_class = Column(Text)
+    script_path = Column(Text)
+
+    # XXX restrict the size of this column, MD5 have a fixed size
     script_md5 = Column(String(255)) # Blank = False.
 
     def __init__(self, *args, **kwargs):

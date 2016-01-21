@@ -604,7 +604,6 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")
 
-    # TODO SP: abstract this
     now = timezone.now()
 
     lines = []
@@ -650,7 +649,6 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                 subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
 
 
-        # TODO SP: abstract this
         # get all subworkflows for all steps
         wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk)  #.order_by('ctime')
         # dictionary mapping pks into workflows

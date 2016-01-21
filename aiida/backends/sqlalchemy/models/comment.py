@@ -13,13 +13,13 @@ class DbComment(Base):
 
     id = Column(Integer, primary_key=True)
 
-    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE"))
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
     dbnode = relationship('DbNode', backref='dbcomments')
 
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now)
 
-    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
     user = relationship("DbUser")
 
     content = Column(Text, nullable=True)

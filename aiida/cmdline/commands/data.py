@@ -576,6 +576,8 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.upf import UpfData
 
         self.dataclass = UpfData
@@ -1018,6 +1020,8 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         Perform the query
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
@@ -1402,7 +1406,8 @@ class _Cif(VerdiCommandWithSubcommands,
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         from django.db.models import Q
         from aiida.backends.utils import get_automatic_user
 

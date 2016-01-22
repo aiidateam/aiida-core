@@ -1,1 +1,2 @@
-from aiida.orm.implementation import Computer
+from aiida.orm.implementation import Computer, delete_computer
+

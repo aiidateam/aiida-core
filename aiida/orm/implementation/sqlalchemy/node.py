@@ -98,6 +98,8 @@ class Node(AbstractNode):
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
+        if not isinstance(pk, int):
+            raise ValueError("Incorrect type for int")
         try:
             node = cls.query(id=pk).one()
         except NoResultFound:

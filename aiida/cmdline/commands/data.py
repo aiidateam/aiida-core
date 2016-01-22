@@ -517,7 +517,6 @@ class Depositable(object):
         database = parsed_args.pop('database')
         data_id = parsed_args.pop('data_id')
 
-        load_dbenv()
         # Removing the keys, whose values are None
         for key in parsed_args.keys():
             if parsed_args[key] is None:

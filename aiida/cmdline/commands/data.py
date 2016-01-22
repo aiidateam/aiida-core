@@ -3,7 +3,7 @@ import sys
 
 from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
-from aiida.backends.utils import load_dbenv
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.exceptions import MultipleObjectsError
 from aiida.cmdline.commands.node import _Label, _Description
 from aiida.orm import load_node
@@ -97,7 +97,8 @@ class Listable(object):
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         from django.db.models import Q
         from aiida.backends.utils import get_automatic_user
 
@@ -516,6 +517,7 @@ class Depositable(object):
         database = parsed_args.pop('database')
         data_id = parsed_args.pop('data_id')
 
+        load_dbenv()
         # Removing the keys, whose values are None
         for key in parsed_args.keys():
             if parsed_args[key] is None:
@@ -1502,6 +1504,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        load_dbenv()
         from aiida.orm.data.array.trajectory import TrajectoryData
 
         self.dataclass = TrajectoryData

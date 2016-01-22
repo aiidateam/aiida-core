@@ -20,14 +20,6 @@ table_groups_nodes = Table(
     Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED"))
 )
 
-table_groups_users = Table(
-    'db_dbuser_groups',
-    Base.metadata,
-    Column('id', Integer, primary_key=True),
-    Column('dbuser_id', Integer, ForeignKey('db_dbuser.id', deferrable=True, initially="DEFERRED")),
-    Column('group_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED"))
-)
-
 class DbGroup(Base):
     __tablename__ = "db_dbgroup"
 

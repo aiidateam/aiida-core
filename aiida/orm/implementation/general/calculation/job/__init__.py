@@ -4,7 +4,6 @@ from abc import abstractmethod
 
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.orm.calculation import Calculation
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -21,7 +20,7 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Gianluca Prandini, Giovan
 _input_subfolder = 'raw_input'
 
 
-class AbstractJobCalculation(Calculation):
+class AbstractJobCalculation(object):
     """
     This class provides the definition of an AiiDA calculation that is run
     remotely on a job scheduler.

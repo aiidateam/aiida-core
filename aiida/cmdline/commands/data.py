@@ -264,6 +264,9 @@ class Visualizable(object):
             print "{}.".format(",".join(self.get_show_plugins()))
             sys.exit(1)
 
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         n_list = [load_node(id) for id in data_id]
 
         for n in n_list:
@@ -363,6 +366,9 @@ class Exportable(object):
             print "{}.".format(",".join(self.get_export_plugins()))
             sys.exit(1)
 
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         n = load_node(data_id)
 
         try:
@@ -451,6 +457,9 @@ class Importable(object):
             print "{}.".format(",".join(self.get_import_plugins()))
             sys.exit(1)
 
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         func(filename, **parsed_args)
 
 
@@ -536,6 +545,9 @@ class Depositable(object):
             print "{}.".format(",".join(self.get_deposit_plugins()))
             sys.exit(1)
 
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         n = load_node(data_id)
 
         try:
@@ -564,7 +576,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         """
         A dictionary with valid commands and functions to be called.
         """
-        load_dbenv()
         from aiida.orm.data.upf import UpfData
 
         self.dataclass = UpfData
@@ -992,7 +1003,6 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
-        load_dbenv()
         from aiida.orm.data.structure import StructureData
 
         self.dataclass = StructureData
@@ -1503,7 +1513,6 @@ class _Trajectory(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
-        load_dbenv()
         from aiida.orm.data.array.trajectory import TrajectoryData
 
         self.dataclass = TrajectoryData

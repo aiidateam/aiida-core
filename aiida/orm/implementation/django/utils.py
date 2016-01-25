@@ -3,7 +3,6 @@
 from aiida.orm.implementation.django.computer import Computer
 
 from aiida.common.exceptions import InvalidOperation
-from django.db.models.deletion import ProtectedError
 
 def delete_computer(computer):
     """
@@ -19,7 +18,10 @@ def delete_computer(computer):
         raise TypeError("computer must be an instance of "
                         "aiida.orm.computer.Computer")
 
-    # TODO SP: abstract the ProtectedError
+    # TODO: abstract the ProtectedError, to the corresponding one with
+    # SQLAlchemy. This will probably be a bit tedious because the error from
+    # SQLAlchemy don't expose the error.
+    from django.db.models.deletion import ProtectedError
     try:
         computer.dbcomputer.delete()
     except ProtectedError:

@@ -635,7 +635,11 @@ class AbstractWorkflow(object):
             except AttributeError:
                 raise AiidaException("Cannot add as next call a method not decorated as Workflow method")
 
-        # TODO SP: abstract this
+        # TODO SP: abstract this, this depends on the DB. The better would be
+        # to add a method to the DbWorkflow from SQLA and Django to get steps
+        # with particular filters, in order to avoid repetition of all the code
+        # arround
+
         # Retrieve the caller method
         method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=get_automatic_user())
 
@@ -771,7 +775,6 @@ class AbstractWorkflow(object):
         """
         if self.get_state() not in [wf_states.FINISHED, wf_states.ERROR]:
 
-            # TODO SP: abstract this
             # put in SLEEP state first
             self.dbworkflowinstance.set_state(wf_states.SLEEP)
 
@@ -809,7 +812,6 @@ class AbstractWorkflow(object):
                                         "try again later".format(self.pk, wf_states.SLEEP),
                                         error_message_list=error_messages)
             else:
-                # TODO SP: abstract this
                 self.dbworkflowinstance.set_state(wf_states.FINISHED)
         else:
             raise WorkflowUnkillable("Cannot kill a workflow in {} or {} state"
@@ -988,6 +990,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     # Note: pre_string becomes larger at each call of get_workflow_info on the
     #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
     # TODO SP: abstract the dependence on DbWorkflow
+
     from aiida.backends.djsite.db.models import DbWorkflow
 
     if tab_size < 2:

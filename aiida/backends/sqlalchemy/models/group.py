@@ -16,11 +16,10 @@ table_groups_nodes = Table(
     'db_dbgroup_dbnodes',
     Base.metadata,
     Column('id', Integer, primary_key=True),
-    Column('dbnode_id', Integer, ForeignKey('db_dbnode.id')),
-    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id'))
+    Column('dbnode_id', Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")),
+    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED"))
 )
 
-# TODO SP: add dbuser_groups table
 class DbGroup(Base):
     __tablename__ = "db_dbgroup"
 
@@ -34,7 +33,7 @@ class DbGroup(Base):
     time = Column(DateTime(timezone=True), default=timezone.now)
     description = Column(Text, nullable=True)
 
-    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE'))
+    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially="DEFERRED"))
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
     dbnodes = relationship('DbNode', secondary=table_groups_nodes,

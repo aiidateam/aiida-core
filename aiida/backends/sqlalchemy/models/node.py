@@ -23,8 +23,8 @@ class DbLink(Base):
     __tablename__ = "db_dblink"
 
     id = Column(Integer, primary_key=True)
-    input_id = Column(Integer, ForeignKey('db_dbnode.id'))
-    output_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE"))
+    input_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED"))
+    output_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
 
     input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
@@ -48,8 +48,8 @@ class DbPath(Base):
     __tablename__ = "db_dbpath"
 
     id = Column(Integer, primary_key=True)
-    parent_id = Column(Integer, ForeignKey('db_dbnode.id'))
-    child_id = Column(Integer, ForeignKey('db_dbnode.id'))
+    parent_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED"))
+    child_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED"))
 
     parent = relationship("DbNode", primaryjoin="DbPath.parent_id == DbNode.id",
                           backref="child_paths")
@@ -113,15 +113,14 @@ class DbNode(Base):
                                secondaryjoin="DbNode.id == DbPath.child_id",
                                backref="parents")
 
-    # TODO SP: prevent modification
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now)
 
-    dbcomputer_id = Column(Integer, ForeignKey('db_dbcomputer.id'),
+    dbcomputer_id = Column(Integer, ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED"),
                          nullable=True)
     dbcomputer = relationship('DbComputer', backref=backref('dbnodes', passive_deletes=True))
 
-    user_id = Column(Integer, ForeignKey('db_dbuser.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('db_dbuser.id', deferrable=True, initially="DEFERRED"), nullable=False)
     user = relationship('DbUser', backref='dbnodes')
 
     public = Column(Boolean, default=False)
@@ -140,7 +139,7 @@ class DbNode(Base):
         self.extras = {}
         super(DbNode, self).__init__(*args, **kwargs)
 
-    # TODO SP: repetition between django/sqlalchemy here.
+    # XXX repetition between django/sqlalchemy here.
     def get_aiida_class(self):
         """
         Return the corresponding aiida instance of class aiida.orm.Node or a

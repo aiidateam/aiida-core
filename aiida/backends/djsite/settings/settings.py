@@ -330,19 +330,19 @@ djcelery_tasks = {
 # that we added.
 CELERYBEAT_SCHEDULE = {
     djcelery_tasks['submitter']: {
-        'task': 'aiida.django.djsite.db.tasks.submitter',
+        'task': 'aiida.backends.djsite.db.tasks.submitter',
         'schedule': timedelta(seconds=30),
     },
     djcelery_tasks['updater']: {
-        'task': 'aiida.django.djsite.db.tasks.updater',
+        'task': 'aiida.backends.djsite.db.tasks.updater',
         'schedule': timedelta(seconds=30),
     },
     djcelery_tasks['retriever']: {
-        'task': 'aiida.django.djsite.db.tasks.retriever',
+        'task': 'aiida.backends.djsite.db.tasks.retriever',
         'schedule': timedelta(seconds=30),
     },
     djcelery_tasks['workflow']: {
-        'task': 'aiida.django.djsite.db.tasks.workflow_stepper',
+        'task': 'aiida.backends.djsite.db.tasks.workflow_stepper',
         'schedule': timedelta(seconds=5),
     },
 }

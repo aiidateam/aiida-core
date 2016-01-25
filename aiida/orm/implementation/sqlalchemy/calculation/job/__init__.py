@@ -18,13 +18,14 @@ from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.group import DbGroup
 
 from aiida.orm.implementation.sqlalchemy.utils import django_filter
+from aiida.orm.implementation.sqlalchemy.calculation import Calculation
 from aiida.orm.implementation.general.calculation.job import AbstractJobCalculation
 from aiida.orm.implementation.general.calculation import from_type_to_pluginclassname
 from aiida.orm.group import Group
 
 from aiida.utils import timezone
 
-class JobCalculation(AbstractJobCalculation):
+class JobCalculation(AbstractJobCalculation, Calculation):
 
     def _set_state(self, state):
         """

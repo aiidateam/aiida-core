@@ -16,7 +16,7 @@ class DbCalcState(Base):
 
     id = Column(Integer, primary_key=True)
 
-    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE"))
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
     dbnode = relationship('DbNode', backref=backref('dbstates', passive_deletes=True))
 
     state = Column(ChoiceType((_, _) for _ in calc_states), index=True)

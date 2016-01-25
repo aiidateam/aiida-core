@@ -50,13 +50,17 @@ class SqlAlchemyTests(unittest.TestCase):
 
         email = get_configured_user_email()
 
-        user = DbUser(email, "foo", "bar", "tests")
-        sa.session.add(user)
-        sa.session.commit()
-        sa.session.expire_all()
+        has_user = DbUser.query.filter(DbUser.email==email).first()
+        if not has_user:
+            user = DbUser(email, "foo", "bar", "tests")
+            sa.session.add(user)
+            sa.session.commit()
+            sa.session.expire_all()
 
-        computer = SqlAlchemyTests._create_computer()
-        computer.store()
+        has_computer = DbComputer.query.filter(DbComputer.hostname == 'localhost').first()
+        if not has_computer:
+            computer = SqlAlchemyTests._create_computer()
+            computer.store()
 
         session.close()
 

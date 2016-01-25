@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from aiida.orm.calculation import Calculation
+from aiida.orm.implementation.calculation import Calculation
 
 class InlineCalculation(Calculation):
     """
@@ -20,8 +20,6 @@ class InlineCalculation(Calculation):
         return self.get_attr('function_name', None)
 
 
-# TODO SP: defining it here is not needed, but is more for documentation
-# purposes
 def make_inline(func):
     """
     This make_inline wrapper/decorator takes a function with specific

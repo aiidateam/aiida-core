@@ -2832,7 +2832,7 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
     # Ok, I have a valid cell, so let's initialize a structuredata instance and set the cell
     # as attribute
     structuredata = StructureData()
-    structuredata._set_attr('cell', cell)
+    structuredata._set_attr('cell', cell.tolist())
 
     #################  KINDS ##########################
 
@@ -2846,14 +2846,12 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
             )
         name = match.group('tag')
         mass = match.group('mass')
-            
         structuredata.append_kind(Kind(
             name    = name,
             symbols = symbols,
             mass    = mass,
         ))
-        
-    
+
 
     ################## POSITIONS #######################
 
@@ -2870,18 +2868,20 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
                 ', '.join(valid_units)
             )
         )
+
     if atom_unit == 'crystal_sg':
         raise NotImplementedError(
             'crystal_sg is not implemented'
         )
     position_block      =   atom_block_match.group('positions')
+
     if not position_block:
         raise InputValidationError(
             'Could not read CARD POSITIONS'
         )
 
     symbols, positions  =   [],[]
-    
+
     temp_regex = re.compile(
         """
             (
@@ -2952,21 +2952,8 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
          )
         """, re.X
     )
-    for line in position_block.split('\n'):
-        #~ print line
-        try:
-            match = temp_regex.search(line)
-            print match.group('x'),
-            print match.group('y'),
-            print match.group('z'),
-            print 'extra', match.group('extra'),
-            print 'after', match.group('after')
-          
-        except Exception as e:
-            print 'None', e
-    print 
+
     for atom_match in pos_regex.finditer(position_block):
-        print atom_match.group(0)
         symbols.append(atom_match.group('sym'))
         try:
             positions.append(
@@ -2993,6 +2980,7 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
 
     ######### DEFINE SITES ######################
 
+    positions = positions.tolist()
     [structuredata.append_site(Site(
             kind_name = sym,
             position  = pos,

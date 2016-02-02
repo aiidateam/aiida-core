@@ -1,20 +1,13 @@
 # -*- coding: utf-8 -*-
-# import copy, os, sys, datetime
-# from inspect import isclass as inspect_isclass
+
+
 from sqlalchemy import and_, or_, not_, except_
 from sqlalchemy.orm import aliased
 
-
-from aiida.orm.implementation.general.querybuilder import (
+from querybuilder_base import (
     QueryBuilderBase, replacement_dict
 )
-
-# from aiida.orm import from_type_to_pluginclassname
-# from aiida.common import aiidalogger
-# from aiida.common.pluginloader import load_plugin
-# from aiida.common.exceptions import DbContentError, MissingPluginError
-
-
+from aiida.orm.implementation.django.node import Node as AiidaNode
 
 from dummy_model import (
     DbNode      as DummyNode,
@@ -33,16 +26,18 @@ class QueryBuilder(QueryBuilderBase):
     """
     The QueryBuilder for the Django backend and corresponding schema.
     In order to use SQLAlchemy's querying functionalities, 
-    a :func:`~aiida.orm.implementation.django.dummy_model`
+    a :func:`~aiida.backends.querybuild.dummy_model`
     was written which can create a session with the aiidadb and
     query the tables defined there.
     """
+
     def __init__(self, queryhelp, **kwargs):
         self.Link       = DummyLink
         self.Path       = DummyPath
         self.Node       = DummyNode
         self.Computer   = DummyComputer
         self.User       = DummyUser
+        self.AiidaNode  = AiidaNode
         super(QueryBuilder, self).__init__(queryhelp, **kwargs)
 
     def get_ormclass(self, ormclasstype):
@@ -54,7 +49,6 @@ class QueryBuilder(QueryBuilderBase):
     @staticmethod
     def get_session():
         return session
-
 
     def analyze_filter_spec(self, alias, filter_spec):
         expressions = []
@@ -101,66 +95,12 @@ class QueryBuilder(QueryBuilderBase):
         }
 
     def get_column(self, colname, alias):
-        """
-        Return the column for the projection, if the column name is specified.
-        """
+
         col =  super(QueryBuilder, self).get_column(colname, alias)
         return col
 
     @staticmethod
     def get_expr(operator, value, column, attr_key):
-        """
-        Applies a filter on the alias given.
-        Expects the alias of the ORM-class on which to filter, and filter_spec.
-        Filter_spec contains the specification on the filter.
-        Expects:
-        
-        -   ``operator``: The operator to apply. These can be:
-        
-            -  for any type: 
-                -   ==  (compare single value, eg: '==':5.0)
-                - in    (compare whether in list, eg: 'in':[5, 6, 34]
-            -  for floats and integers:
-                 - >
-                 - <
-                 - <=
-                 - >= 
-            -  for strings:
-                 - like  (case - sensitive)   (eg 'like':'node.calc.%'  will match node.calc.relax and node.calc.RELAX and node.calc. but node node.CALC.relax)
-                 - ilike (case - unsensitive) (will also match node.CaLc.relax)
-                    
-                on that topic:
-                The character % is a reserved special character in SQL, and acts as a wildcard.
-                If you specifically want to capture a ``%`` in the string name, use:
-                ``_%``
-            -  for arrays and dictionaries:
-                 - contains  (pass a list with all the items that the array should contain, or that should be among the keys, eg: 'contains': ['N', 'H'])
-                 - has_key   (pass an element that the list has to contain or that has to be a key, eg: 'has_key':'N')
-            -  for arrays only:
-                 - of_length  
-                 - longer
-                 - shorter
-            
-            All the above filters invoke a negation of the expression if preceded by ~
-            
-            - {'name':{'~in':['halle', 'lujah']}} # Name not 'halle' or 'lujah'
-            - {'id':{ '~==': 2}} # id is not 2
-
-            
-        - ``value``: The value for the right side of the expression, the value you want to compare with.
-        - ``db_bath``: The path leading to the value
-        - ``val_in_json``: Boolean, whether the value is in a json-column, requires type casting.
-
-
-            
-        TODO:
-        
-        -   implement redundant expressions for user-friendliness: 
-        
-            -   ~==: !=, not, ne 
-            -   ~in: nin, !in
-            -   ~like: unlike    
-        """
         if operator.startswith('~'):
             negation = True
             operator = operator.lstrip('~')
@@ -253,17 +193,13 @@ if __name__ == '__main__':
             StructureData,
             {
                 'class':PwCalculation,
-                'output_of':StructureData,
+                'ancestor_of':StructureData,
             },
-            {
-                'class':ParameterData,
-                'input_of':PwCalculation
-            }
+
         ],
         'project':{
             StructureData:['*'],
             PwCalculation:['*'],
-            #~ ParameterData:['*'],
         },
         'filters':{
             StructureData:{

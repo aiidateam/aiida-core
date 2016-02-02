@@ -12,6 +12,7 @@ if BACKEND == "sqlalchemy":
     from aiida.orm.implementation.sqlalchemy.workflow import Workflow, kill_all, get_workflow_info
     from aiida.orm.implementation.sqlalchemy.code import Code, delete_code
     from aiida.orm.implementation.sqlalchemy.utils import delete_computer
+    from aiida.backends.querybuild.querybuilder_sa import QueryBuilder
 elif BACKEND == "django":
     from aiida.orm.implementation.django.node import Node
     from aiida.orm.implementation.django.computer import Computer
@@ -21,3 +22,4 @@ elif BACKEND == "django":
     from aiida.orm.implementation.django.workflow import Workflow, kill_all, get_workflow_info
     from aiida.orm.implementation.django.code import Code, delete_code
     from aiida.orm.implementation.django.utils import delete_computer
+    from aiida.backends.querybuild.querybuilder_django import QueryBuilder

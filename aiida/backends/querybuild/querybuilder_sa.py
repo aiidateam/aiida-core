@@ -1,5 +1,8 @@
-from aiida.orm.implementation.general.querybuilder import (
-    QueryBuilderBase, flatten_list
+# -*- coding: utf-8 -*-
+
+from querybuilder_base import (
+    QueryBuilderBase,
+    flatten_list
 )
 
 

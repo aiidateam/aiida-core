@@ -4,10 +4,8 @@ from sqlalchemy.ext.declarative import declarative_base
 
 
 from sqlalchemy import (
-    Column,
+    Column,ForeignKey, UniqueConstraint,create_engine,
     Integer, String, DateTime, Float, Boolean, Text,
-    ForeignKey, UniqueConstraint,
-    create_engine,
 )
 
 from sqlalchemy.orm import (
@@ -19,7 +17,9 @@ from sqlalchemy.orm import (
 
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
-from aiida.orm.implementation.django.node import Node
+
+from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
+
 from aiida.common.setup import get_profile_config
 from aiida.backends import settings
 from aiida.backends.sqlalchemy.models.utils import uuid_func
@@ -31,7 +31,7 @@ from aiida.common.pluginloader import load_plugin
 
 Base = declarative_base()
 
-from aiida.backends.djsite.db.models import DbNode as DjangoNode
+
 
 class DbLink(Base):
     __tablename__ = "db_dblink"
@@ -109,7 +109,8 @@ class DbNode(Base):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        dbnode = DjangoNode(
+        from aiida.backends.djsite.db.models import DbNode as DjangoSchemaDbNode
+        dbnode = DjangoSchemaDbNode(
             id = self.id,
             type = self.type,
             uuid = self.uuid,
@@ -128,7 +129,7 @@ class DbNode(Base):
                                  "not valid: '{}'".format(self.pk, self.type))
 
         try:
-            PluginClass = load_plugin(Node, 'aiida.orm', pluginclassname)
+            PluginClass = load_plugin(DjangoAiidaNode, 'aiida.orm', pluginclassname)
         except MissingPluginError as e:
             raw_input(e)
             aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "

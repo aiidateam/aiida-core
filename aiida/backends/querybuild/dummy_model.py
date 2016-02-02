@@ -6,6 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import (
     Column,ForeignKey, UniqueConstraint,create_engine,
     Integer, String, DateTime, Float, Boolean, Text,
+    select, func, join, and_
 )
 
 from sqlalchemy.orm import (
@@ -13,6 +14,7 @@ from sqlalchemy.orm import (
     backref,
     column_property,
     sessionmaker,
+    foreign, mapper
 )
 
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -201,6 +203,51 @@ class DbUser(Base):
 
     last_login = Column(DateTime(timezone=True), default=timezone.now)
     date_joined = Column(DateTime(timezone=True), default=timezone.now)
+
+
+states = select(
+        [
+            DbCalcState.dbnode_id.label('dbnode_id'),
+            func.max(DbCalcState.time).label('lasttime'),
+        ]
+    ).group_by(DbCalcState.dbnode_id).alias()
+
+recent_states = select([
+        DbCalcState.id.label('id'),
+        DbCalcState.dbnode_id.label('dbnode_id'),
+        DbCalcState.state.label('state'),
+        states.c.lasttime.label('time')
+    ]).\
+    select_from(
+        join(
+            DbCalcState,
+            states,
+            and_(
+                DbCalcState.dbnode_id == states.c.dbnode_id,
+                DbCalcState.time == states.c.lasttime,
+            )
+        )
+    ).alias() # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
+
+
+state_mapper = mapper(
+    DbCalcState,
+    recent_states, 
+    primary_key= recent_states.c.dbnode_id,
+    non_primary=True, 
+)
+
+DbNode.state_instance = relationship(
+    state_mapper,
+    primaryjoin = recent_states.c.dbnode_id == foreign(DbNode.id),
+    viewonly=True,
+)
+
+DbNode.state = column_property(
+    select([recent_states.c.state]).
+    where(recent_states.c.dbnode_id == foreign(DbNode.id))
+)
+
 
 config = get_profile_config(settings.AIIDADB_PROFILE)
 engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"

@@ -1,51 +1,60 @@
 # -*- coding: utf-8 -*-
-import copy, os, sys, datetime
-from inspect import isclass as inspect_isclass
+# import copy, os, sys, datetime
+# from inspect import isclass as inspect_isclass
+from sqlalchemy import and_, or_, not_, except_
+from sqlalchemy.orm import aliased
 
-from dummy_model import *
-from aiida.orm import from_type_to_pluginclassname
+
 from aiida.orm.implementation.general.querybuilder import (
-    QueryBuilderBase, flatten_list, replacement_dict
+    QueryBuilderBase, replacement_dict
 )
 
+# from aiida.orm import from_type_to_pluginclassname
+# from aiida.common import aiidalogger
+# from aiida.common.pluginloader import load_plugin
+# from aiida.common.exceptions import DbContentError, MissingPluginError
 
-from aiida.common import aiidalogger
-from aiida.common.pluginloader import load_plugin
-from aiida.common.exceptions import DbContentError, MissingPluginError
 
-from aiida.orm import Node
+
+from dummy_model import (
+    DbNode      as DummyNode,
+    DbLink      as DummyLink,
+    DbAttribute as DummyAttribute,
+    DbCalcState as DummyState,
+    DbPath      as DummyPath,
+    DbUser      as DummyUser,
+    DbComputer  as DummyComputer,
+    session,
+)
+
 
 
 class QueryBuilder(QueryBuilderBase):
     """
-
+    The QueryBuilder for the Django backend and corresponding schema.
+    In order to use SQLAlchemy's querying functionalities, 
+    a :func:`~aiida.orm.implementation.django.dummy_model`
+    was written which can create a session with the aiidadb and
+    query the tables defined there.
     """
+    def __init__(self, queryhelp, **kwargs):
+        self.Link       = DummyLink
+        self.Path       = DummyPath
+        self.Node       = DummyNode
+        self.Computer   = DummyComputer
+        self.User       = DummyUser
+        super(QueryBuilder, self).__init__(queryhelp, **kwargs)
+
     def get_ormclass(self, ormclasstype):
-        return DbNode
+        """
+        Return the valid ormclass for the connections
+        """
+        return DummyNode
 
     @staticmethod
     def get_session():
         return session
 
-    def join_outputs(self, toconnectwith, alias):
-        link = aliased(DbLink)
-        self.que = self.que.join(link,  link.input_id  == toconnectwith.id)
-        self.que = self.que.join(alias, link.output_id == alias.id)
-
-    def join_inputs(self, toconnectwith, alias):
-        link = aliased(DbLink)
-        self.que = self.que.join(link,  link.output_id == toconnectwith.id)
-        self.que = self.que.join(alias, link.input_id  == alias.id)
-
-    def join_ancestors(self, toconnectwith, alias):
-        path = aliased(DbPath)
-        self.que = self.que.join(path,  path.parent_id == toconnectwith.id)
-        self.que = self.que.join(alias, path.child_id  == alias.id)
-
-    def join_descendants(self, toconnectwith, alias):
-        path = aliased(DbPath)
-        self.que = self.que.join(path,  path.child_id == toconnectwith.id)
-        self.que = self.que.join(alias, path.parent_id  == alias.id)
 
     def analyze_filter_spec(self, alias, filter_spec):
         expressions = []

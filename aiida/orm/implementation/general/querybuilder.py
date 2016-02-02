@@ -1,18 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from abc import abstractmethod
-import copy, os, sys, datetime
+import copy #, os, sys, datetime
 from inspect import isclass as inspect_isclass
 
-# MODEL
+from sqlalchemy.orm import aliased
 
-
-from sqlalchemy.orm import (
-    aliased
-)
-from aiida.orm import from_type_to_pluginclassname, Node
-from aiida.common.pluginloader import load_plugin
-from aiida.common.exceptions import DbContentError, MissingPluginError
+# from aiida.orm import from_type_to_pluginclassname, Node
+# from aiida.common.exceptions import DbContentError, MissingPluginError
 
 
 replacement_dict = dict(
@@ -23,29 +18,17 @@ replacement_dict = dict(
 )
 
 class QueryBuilderBase(object):
-    """
-    TODO: doc
-    """
-
     def __init__(self,  queryhelp, **kwargs):
         """
-        I expect the queryhelp here. 
-        The queryhelp is my API.
-        It is a list that tells me:
-        
-        *   what to join, 
-        *   what to project and
-        *   how to filter.
-        
-        The queryhelp is a dictionary. 
-        Currently, the following keys can be given:
-        
-        *   "path"
-        *   "projection"
-        *   "filters"
-        *   "limit"
+        :param queryhelp: The queryhelp is my API.
+            It is a dictionary that tells me:
 
-        The contain information about the path to be joined along, the items to be projected, and the filters to be applied.
+            *   what to join (the **path**)
+            *   what to project (key **project**)
+            *   how to filter   (key **filters**)
+
+        The contain information about the path to be joined along, 
+        the items to be projected, and the filters to be applied.
         Only the path is a necessary key.
 
         *   Specifying the path:
@@ -450,12 +433,7 @@ class QueryBuilderBase(object):
     @abstractmethod
     def analyze_filter_spec(*args):
         pass
-    @abstractmethod
-    def join_outputs(self, toconnectwith, alias):
-        pass
-    @abstractmethod
-    def join_inputs(self, toconnectwith, alias):
-        pass
+
     def join_slaves(self, toconnectwith, alias):
         raise NotImplementedError
         #~ call = aliased(Call)
@@ -467,12 +445,46 @@ class QueryBuilderBase(object):
         #~ call = aliased(Call)
         #~ self.que = self.que.join(call,  call.called_id == toconnectwith.id)
         #~ self.que = self.que.join(alias, call.caller_id == alias.id)
-    @abstractmethod
+    def join_outputs(self, toconnectwith, alias):
+        aliased_link = aliased(self.Link)
+        self.que = self.que.join(
+            aliased_link,
+            aliased_link.input_id  == toconnectwith.id
+        ).join(
+            alias,
+            aliased_link.output_id == alias.id
+        )
+
+    def join_inputs(self, toconnectwith, alias):
+        aliased_link = aliased(self.Link)
+        self.que = self.que.join(
+            aliased_link,
+            aliased_link.output_id == toconnectwith.id
+        ).join(
+            alias,
+            aliased_link.input_id  == alias.id
+        )
+
     def join_ancestors(self, toconnectwith, alias):
-        pass
-    @abstractmethod
+        aliased_path = aliased(self.aliased_path)
+        self.que = self.que.join(
+            aliased_path,
+            aliased_path.parent_id == toconnectwith.id
+        ).join(
+            alias,
+            aliased_path.child_id  == alias.id
+        )
+
     def join_descendants(self, toconnectwith, alias):
-        pass
+        aliased_path = aliased(Dummyaliased_path)
+        self.que = self.que.join(
+            aliased_path,
+            aliased_path.child_id == toconnectwith.id
+        ).join(
+            alias,
+            aliased_path.parent_id  == alias.id
+        )
+
 
     def _get_connecting_node(self, querydict, index):
         if [
@@ -649,20 +661,16 @@ class QueryBuilderBase(object):
                 projectable_spec = self.add_projectable_entity(projectable_spec, alias)
                 position_index += 1
                 self.label_to_projected_entity_dict[label][projectable_spec]  = position_index
-    
-    
+
         ##################### LIMIT #######################################
         if self.limit:
             self.que = self.que.limit(self.limit)
 
-
-
         #################### ORDER ##############################
         if self.order_by:
+            # TODO
             raise NotImplementedError
-        
         return self.que
-
 
     def _make_counterquery(self,calc_class, code_inst = None, session = None):
         input_alias_list = []
@@ -751,10 +759,19 @@ class QueryBuilderBase(object):
 
 
 def flatten_list ( value ):
-    """ Flattens a list or a tuple"""
-    if isinstance(value, list) or isinstance(value, tuple):
+    """
+    Flattens a list or a tuple
+    In [2]: flatten_list([[[[[4],3]],[3],['a',[3]]]])
+    Out[2]: [4, 3, 3, 'a', 3]
+
+    :param value: A value, whether iterable or not
+    :returns: a list of nesting level 1
+
+    """
+
+    if isinstance(value, (list, tuple)):
         return_list = []
         [[return_list.append(i) for i in flatten_list(item)] for item in value]
         return return_list
-    else:
-        return [value]
+
+    return [value]

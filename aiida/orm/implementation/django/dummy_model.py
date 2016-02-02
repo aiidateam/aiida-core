@@ -5,17 +5,16 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy import (
     Column,
-    Integer, String, DateTime, Float, Boolean,
-    ForeignKey, UniqueConstraint, 
-    create_engine, Boolean, text, Text,
-    or_, not_, and_, except_, except_all,
-    select, func
+    Integer, String, DateTime, Float, Boolean, Text,
+    ForeignKey, UniqueConstraint,
+    create_engine,
 )
 
 from sqlalchemy.orm import (
-    relationship, backref, column_property,
-    sessionmaker, with_polymorphic, aliased,
-    scoped_session, join, outerjoin, mapper, foreign
+    relationship,
+    backref,
+    column_property,
+    sessionmaker,
 )
 
 from sqlalchemy.dialects.postgresql import UUID, JSONB

@@ -780,6 +780,9 @@ class Computer(VerdiCommandWithSubcommands):
         """
         print "> Getting job list..."
         found_jobs = scheduler.getJobs(as_dict=True)
+        #For debug
+        #for jid, data in found_jobs.iteritems():
+        #    print jid, data['submission_time'], data['dispatch_time'], data['job_state']
         print "  `-> OK, {} jobs found in the queue.".format(len(found_jobs))
         return True
 

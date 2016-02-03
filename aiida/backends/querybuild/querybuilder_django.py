@@ -110,12 +110,12 @@ class QueryBuilder(QueryBuilderBase):
             mapped_class = column.prop.mapper.class_
             if isinstance(value, str):
                 mapped_entity = mapped_class.tval
+            elif isinstance(value, bool):
+                mapped_entity = mapped_class.bval
             elif isinstance(value, float):
                 mapped_entity = mapped_class.fval
             elif isinstance(value, int):
                 mapped_entity = mapped_class.ival
-            elif isinstance(value, bool):
-                mapped_entity = mapped_class.bval
             elif isinstance(value, dval):
                 mapped_entity = mapped_class.dval
             

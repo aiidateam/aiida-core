@@ -793,24 +793,49 @@ class QueryBuilderBase(object):
 
     def _make_counterquery(self,calc_class, code_inst = None, session = None):
         input_alias_list = []
+        #~ exclude_list = self.make_json_compatible(exclude_list)
+        #~ print exclude_list
         for node in self.path:
             label = node['label']
             if label not in  self.projection_dict_user.keys():
                 continue
+            #~ if label in exclude_list:
+                #~ continue
             assert flatten_list(self.projection_dict_user[label]) == ['*'], "Only '*' allowed for input spec"
             input_alias_list.append(aliased(self.alias_dict[label]))
-        counterquery =  session.query(calc_class)
+        
+        if issubclass(calc_class, self.Node):
+            orm_calc_class  = calc_class
+            type_spec = None
+        elif issubclass(calc_class, self.AiidaNode):
+            orm_calc_class  = self.Node
+            type_spec = calc_class._plugin_type_string
+        else:
+            raise Exception(
+                'You have given me {}\n'
+                'of type {}\n'
+                "and I don't know what to do with that"
+                ''.format(calc_class, type(calc_class))
+            )
+        counterquery =  self.get_session().query(orm_calc_class)
+        if type_spec:
+            counterquery = counterquery.filter(orm_calc_class.type == type_spec)
         for alias in input_alias_list:
-            link = aliased(DbLink)
+            link = aliased(self.Link)
             counterquery = counterquery.join(
                 link,
-                calc_class.id == link.output_id
+                orm_calc_class.id == link.output_id
             ).join(
                 alias,
                 alias.id == link.input_id)
             counterquery = counterquery.add_entity(alias)
         counterquery._entities.pop(0)
         return counterquery
+
+    def except_if_input_to(self, calc_class):
+        self.que = self.get_query()
+        self.que = self.que.except_(self._make_counterquery(calc_class))
+        return self
 
     def get_calculations_todo(self, calc_class):
         return self._build_query().except_(self._make_counterquery(calc_class)).all()

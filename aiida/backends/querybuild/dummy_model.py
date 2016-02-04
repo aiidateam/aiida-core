@@ -3,22 +3,17 @@
 from sqlalchemy.ext.declarative import declarative_base
 
 
-from sqlalchemy import (
+from sa_init import (
     Column,ForeignKey, UniqueConstraint,create_engine,
     Integer, String, DateTime, Float, Boolean, Text,
-    select, func, join, and_
-)
-
-from sqlalchemy.orm import (
+    select, func, join, and_, or_, not_, except_,
     relationship,
     backref,
     column_property,
     sessionmaker,
-    foreign, mapper
+    foreign, mapper, aliased,
+    UUID, JSONB
 )
-
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-
 
 from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
 

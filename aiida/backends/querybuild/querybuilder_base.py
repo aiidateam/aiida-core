@@ -13,8 +13,9 @@ adapted to the SQLAlchemy or Django schema.
 import copy
 from abc import abstractmethod
 from inspect import isclass as inspect_isclass
-from sqlalchemy.orm import aliased
+from sa_init import aliased
 
+from aiida.common.exceptions import InputValidationError
 
 replacement_dict = dict(
     float   = 'float', 
@@ -445,51 +446,52 @@ class QueryBuilderBase(object):
         Filter_spec contains the specification on the filter.
         Expects:
         
-        -   ``operator``: The operator to apply. These can be:
+        *   ``operator``: The operator to apply. These can be:
         
-            -  for any type: 
-                -   ==  (compare single value, eg: '==':5.0)
-                - in    (compare whether in list, eg: 'in':[5, 6, 34]
-            -  for floats and integers:
-                 - >
-                 - <
-                 - <=
-                 - >= 
-            -  for strings:
-                 - like  (case - sensitive)   (eg 'like':'node.calc.%'  will match node.calc.relax and node.calc.RELAX and node.calc. but node node.CALC.relax)
-                 - ilike (case - unsensitive) (will also match node.CaLc.relax)
+            *   for any type: 
+                *   ==  (compare single value, eg: '==':5.0)
+                *   in    (compare whether in list, eg: 'in':[5, 6, 34]
+            *  for floats and integers:
+                *   >
+                *   <
+                *   <=
+                *   >= 
+            *  for strings:
+                *   like  (case - sensitive), for example
+                    'like':'node.calc.%'  will match node.calc.relax and 
+                    node.calc.RELAX and node.calc. but
+                    not node.CALC.relax
+                *   ilike (case - unsensitive)
+                    will also match node.CaLc.relax in the above example
                     
-                on that topic:
-                The character % is a reserved special character in SQL, and acts as a wildcard.
-                If you specifically want to capture a ``%`` in the string name, use:
-                ``_%``
-            -  for arrays and dictionaries:
-                 - contains  (pass a list with all the items that the array should contain, or that should be among the keys, eg: 'contains': ['N', 'H'])
-                 - has_key   (pass an element that the list has to contain or that has to be a key, eg: 'has_key':'N')
-            -  for arrays only:
-                 - of_length  
-                 - longer
-                 - shorter
-            
+                .. note::
+                    The character % is a reserved special character in SQL,
+                    and acts as a wildcard. If you specifically
+                    want to capture a ``%`` in the string, use: ``_%``
+            *   for arrays and dictionaries (only for the
+                SQLAlchemy implementation):
+                *   contains: pass a list with all the items that
+                    the array should contain, or that should be among
+                    the keys, eg: 'contains': ['N', 'H'])
+                *   has_key: pass an element that the list has to contain
+                    or that has to be a key, eg: 'has_key':'N')
+            *  for arrays only (SQLAlchemy version):
+                *   of_length  
+                *   longer
+                *   shorter
+
             All the above filters invoke a negation of the expression if preceded by ~
-            
+
             - {'name':{'~in':['halle', 'lujah']}} # Name not 'halle' or 'lujah'
             - {'id':{ '~==': 2}} # id is not 2
 
-            
-        - ``value``: The value for the right side of the expression, the value you want to compare with.
-        - ``db_bath``: The path leading to the value
-        - ``val_in_json``: Boolean, whether the value is in a json-column, requires type casting.
+        - ``value``: The 
+            value for the right side of the expression,
+            the value you want to compare with.
+        - ``path``: The path leading to the value
+        - ``attr_key``: Boolean, whether the value is in a json-column,
+            or in an attribute like table.
 
-
-            
-        TODO:
-        
-        -   implement redundant expressions for user-friendliness: 
-        
-            -   ~==: !=, not, ne 
-            -   ~in: nin, !in
-            -   ~like: unlike    
         """
         pass
     @abstractmethod
@@ -701,28 +703,54 @@ class QueryBuilderBase(object):
         try:
             return getattr(alias, colname)
         except KeyError:
-            raise Exception('{} is not a column of {}'.format(colname, alias))
+            raise InputValidationError(
+                '{} is not a column of {}'.format(colname, alias)
+            )
         if isinstance(col, InstrumentedAttribute):
             return col 
-        raise Exception('{} is not a column'.format(colname))
+        raise InputValidationError(
+            '{} is not a column'.format(colname)
+        )
 
 
     def _build_query(self):
         """
         build the query and return a sqlalchemy.Query instance
         """
+
         ####################### ALIASING ####################
-        # First I need to alias everything, because I might be joining the same table multiple times,
-        #check also http://dself.ocs.sqlalchemy.org/en/rel_1_0/orm/query.html
-        ormclass_list = self.ormclass_list
-        label_list = self.label_list 
-        assert len(label_list) == len(set(label_list)), "Labels are not unique"
-        self.labels_location_dict = {label:index for index, label in enumerate(label_list)}
-        #Starting the query:
+        # First I need to alias everything,
+        # because I might be joining the same table multiple times,
+        # check also
+        # http://dself.ocs.sqlalchemy.org/en/rel_1_0/orm/query.html
+
+
+        if not len(self.label_list) == len(set(self.label_list)):
+            raise InputValidationError(
+                "Labels are not unique:\n"
+                "{}".format(self.label_list)
+            )
+
+
+        # self.labels_location_dict is a dictionary that 
+        # maps the label to its index in the list
+        # this is basically the mapping between the count
+        # of nodes traversed
+        # and the label used for that node 
+        self.labels_location_dict = {
+            label:index
+            for index, label
+            in enumerate(self.label_list)
+        }
+
+        #Starting the query by receiving a session
+        # Every subclass needs to have get_session and give me the
+        # right session
         self.que = self.get_session().query(self.alias_list[0])
 
 
-        ####################### JOINS ####################
+        ######################### JOINS ################################
+
         for index,  alias, querydict in  zip(
                 range(
                     len(self.alias_list)
@@ -733,18 +761,25 @@ class QueryBuilderBase(object):
             #looping through the queryhelp
             if index:
                 #There is nothing to join if that is the first table
-                toconnectwith, connection_func = self._get_connecting_node(querydict, index)
+                (
+                    toconnectwith,
+                    connection_func
+                ) = self._get_connecting_node(querydict, index)
                 connection_func(toconnectwith, alias)
 
+        ######################### FILTERS ##############################
 
-        ####################### FILTERS ####################
-        # print self.que.all(), 
         for label, filter_specs in self.filters.items():
             try:
                 alias = self.alias_dict[label]
             except KeyError:
-                raise KeyError(    ' You looked for label {} among the alias list\n'
-                                    'The labels I know are:\n{}'.format(label,self.alias_dict.keys()))
+                # TODO Check KeyError before?
+                raise InputValidationError(
+                    ' You looked for label {} among the alias list\n'
+                    'The labels I know are:\n{}'
+                    ''.format(label,self.alias_dict.keys())
+                )
+
             if not isinstance(filter_specs, (list, tuple)):
                 filter_specs = [filter_specs]
 
@@ -752,19 +787,24 @@ class QueryBuilderBase(object):
                 expr  =  self.analyze_filter_spec(alias, filter_spec)
                 self.que = self.que.filter(expr)
 
+        ######################### PROJECTIONS ##########################
+        # first clear the entities in the case the first item in the
+        # path was not meant to be projected
 
-
-        # PROJECTIONS:
-        # first clear the entities in the case the first item in the path was not meant to be projected
-
+        # attribute of Query instance storing entities to project:
         self.que._entities = []
+        # Will be later set to this list:
         entities = []
+        # Mapping between enitites and the label used/ given by user:
+        self.label_to_projected_entity_dict = {}
 
         if not self.projection_dict_user: 
+            # If user has not set projection,
             # I will simply project the last item specified!
+            # Don't change, path traversal querying
+            # relies on this behavior!
             self.projection_dict_user =  {self.label_list[-1]:'*'}
 
-        self.label_to_projected_entity_dict = {}
         position_index = -1
         for vertice in self.path:
             label = vertice['label']
@@ -781,20 +821,18 @@ class QueryBuilderBase(object):
                 position_index += 1
                 self.label_to_projected_entity_dict[label][projectable_spec]  = position_index
 
-        ##################### LIMIT #######################################
+        ######################### LIMIT ################################
         if self.limit:
             self.que = self.que.limit(self.limit)
 
-        #################### ORDER ##############################
+        ######################### ORDER ################################
         if self.order_by:
             # TODO
-            raise NotImplementedError
+            raise NotImplementedError('order_by is not implemented')
         return self.que
 
     def _make_counterquery(self,calc_class, code_inst = None, session = None):
         input_alias_list = []
-        #~ exclude_list = self.make_json_compatible(exclude_list)
-        #~ print exclude_list
         for node in self.path:
             label = node['label']
             if label not in  self.projection_dict_user.keys():
@@ -865,17 +903,39 @@ class QueryBuilderBase(object):
         }
 
     def first(self):
+        """
+        Returns the first item of the query result
+        """
         return self.get_query().first()
 
     def get_query(self):
+        """
+        Checks if query instance is
+        set as attribute of instance,
+        if not invokes :func:`~_build_query` 
+        """
         if hasattr(self, 'que'):
             return self.que
         return self._build_query()
 
     def all(self):
+        """
+        Returns all results
+        """
         return self.get_query().all()
 
     def get_results_dict(self):
+        """
+        Returns all results as a list of  dictionaries.
+        Also replaces ORM instances with their corresponding 
+        Aiida instance by calling get_aiida_class.
+        
+        Each item of the list corresponds to one row of a SQL-query.
+        Each key-pair value of that dictionary corresponds to
+        a label (eg 'id', 'label', 'attributes') and the corresponding
+        value.
+        '*' is the key for an ORMClass being returned.
+        """
         def get_result(res, pos):
             if hasattr(res,'__iter__'):
                 return res[pos]
@@ -910,12 +970,10 @@ def flatten_list ( value ):
 
     :param value: A value, whether iterable or not
     :returns: a list of nesting level 1
-
     """
 
     if isinstance(value, (list, tuple)):
         return_list = []
         [[return_list.append(i) for i in flatten_list(item)] for item in value]
         return return_list
-
     return [value]

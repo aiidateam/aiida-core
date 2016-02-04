@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
 
-from sqlalchemy import and_, or_, not_, except_
-from sqlalchemy.orm import aliased
+# SA querying functionalities
+
 
 from querybuilder_base import (
     QueryBuilderBase, replacement_dict
 )
-from aiida.orm.implementation.django.node import Node as AiidaNode
 
 from dummy_model import (
     DbNode      as DummyNode,
@@ -17,14 +16,16 @@ from dummy_model import (
     DbPath      as DummyPath,
     DbUser      as DummyUser,
     DbComputer  as DummyComputer,
-    session,
+    session, and_, or_, not_, except_, aliased,
+    DjangoAiidaNode
 )
 
 
 
 class QueryBuilder(QueryBuilderBase):
     """
-    The QueryBuilder for the Django backend and corresponding schema.
+    The QueryBuilder class for the Django backend
+    and corresponding schema.
     In order to use SQLAlchemy's querying functionalities, 
     a :func:`~aiida.backends.querybuild.dummy_model`
     was written which can create a session with the aiidadb and
@@ -37,7 +38,7 @@ class QueryBuilder(QueryBuilderBase):
         self.Node       = DummyNode
         self.Computer   = DummyComputer
         self.User       = DummyUser
-        self.AiidaNode  = AiidaNode
+        self.AiidaNode  = DjangoAiidaNode
         super(QueryBuilder, self).__init__(queryhelp, **kwargs)
 
     def get_ormclass(self, ormclasstype):
@@ -193,7 +194,7 @@ if __name__ == '__main__':
             StructureData,
             {
                 'class':PwCalculation,
-                'ancestor_of':StructureData,
+                'descendant_of':StructureData,
             },
 
         ],
@@ -206,10 +207,10 @@ if __name__ == '__main__':
                 'attributes.kinds.0.symbols.0':'Li',
             }
         },
-        'limit':4
+        'limit':4.,
+        'order_by':1
     }
-    
-    
+
     #~ raw_input(issubclass(StructureData, Node))
     res = QueryBuilder(qh).get_results_dict()
     print res

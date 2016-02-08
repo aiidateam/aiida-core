@@ -16,8 +16,10 @@ from dummy_model import (
     DbPath      as DummyPath,
     DbUser      as DummyUser,
     DbComputer  as DummyComputer,
+    DbGroup     as DummyGroup,
+    table_groups_nodes  as Dummy_table_groups_nodes,
     session, and_, or_, not_, except_, aliased,
-    DjangoAiidaNode
+    DjangoAiidaNode, DjangoAiidaGroup
 )
 
 
@@ -38,13 +40,19 @@ class QueryBuilder(QueryBuilderBase):
         self.Node       = DummyNode
         self.Computer   = DummyComputer
         self.User       = DummyUser
+        self.Group      = DummyGroup
+        self.table_groups_nodes = Dummy_table_groups_nodes
         self.AiidaNode  = DjangoAiidaNode
+        self.AiidaGroup  = DjangoAiidaGroup
+        
         super(QueryBuilder, self).__init__(queryhelp, **kwargs)
 
     def get_ormclass(self, ormclasstype):
         """
         Return the valid ormclass for the connections
         """
+        if ormclasstype == 'group':
+            return DummyGroup
         return DummyNode
 
     @staticmethod
@@ -186,29 +194,16 @@ if __name__ == '__main__':
     from aiida.orm.calculation.inline import InlineCalculation
     from aiida.orm.data.parameter import ParameterData
     from aiida.orm.data.structure import StructureData
+    from aiida.orm.data.upf import UpfData
+    from aiida.orm.group import Group
     from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
     # from aiida.orm.calculation.job.plugins.quantumespresso 
     qh = {
         'path':[
-
-            StructureData,
-            {
-                'class':PwCalculation,
-                'descendant_of':StructureData,
-            },
-
+            UpfData,
+            {'class': Group, 'group_of':UpfData}
         ],
-        'project':{
-            StructureData:['*'],
-            PwCalculation:['*'],
-        },
-        'filters':{
-            StructureData:{
-                'attributes.kinds.0.symbols.0':'Li',
-            }
-        },
         'limit':4.,
-        'order_by':1
     }
 
     #~ raw_input(issubclass(StructureData, Node))

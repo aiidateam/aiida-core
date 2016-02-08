@@ -2,7 +2,7 @@
 
 
 from sqlalchemy import (
-    Column,ForeignKey, UniqueConstraint,create_engine,
+    Column, Table, ForeignKey, UniqueConstraint,create_engine,
     Integer, String, DateTime, Float, Boolean, Text,
     select, func, join, and_, or_, not_, except_
 )

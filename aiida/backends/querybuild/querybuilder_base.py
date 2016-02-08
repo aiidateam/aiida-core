@@ -424,8 +424,8 @@ class QueryBuilderBase(object):
         # but shortening it will results in slower queries (like instead of =)
         # and ambiguouty when the class name is the same, but in different module...
         # How to solve that?
-
-        self.filters[label]['type'] = self.filters[label].get('type', {'like':'%{}%'.format(ormclass_type)})
+        if ormclass_type not in ['group']:
+            self.filters[label]['type'] = self.filters[label].get('type', {'like':'%{}%'.format(ormclass_type)})
         ormclass = self.get_ormclass(ormclass_type)
         self.ormclass_list.append(ormclass)
         alias = aliased(ormclass)
@@ -580,8 +580,40 @@ class QueryBuilderBase(object):
             entity_to_join,
             aliased_path.parent_id  == entity_to_join.id
         )
+    def _join_group_members_of(self, joined_entity, entity_to_join):
+        """
+        :param joined_entity: The (aliased) ORMclass that is a group in the database
+        :param entity_to_join: The (aliased) ORMClass that is a node and member of the group
 
+        **joined_entity** and **entity_to_join** are joined via the table_groups_nodes table.
+        from **joined_entity** as group to **enitity_to_join** as node.
+        (**enitity_to_join** is an *member_of* **joined_entity**)
+        """
+        aliased_group_nodes = aliased(self.table_groups_nodes)
+        self.que = self.que.join(
+            aliased_group_nodes,
+            aliased_group_nodes.dbgroup_id == joined_entity.id
+        ).join(
+            entity_to_join,
+            entity_to_join.id == aliased_group_nodes.dbnode_id
+        )
+    def _join_groups(self, joined_entity, entity_to_join):
+        """
+        :param joined_entity: The (aliased) node in the database
+        :param entity_to_join: The (aliased) Group
 
+        **joined_entity** and **entity_to_join** are joined via the table_groups_nodes table.
+        from **joined_entity** as node to **enitity_to_join** as group.
+        (**enitity_to_join** is an *group_of* **joined_entity**)
+        """
+        aliased_group_nodes = aliased(self.table_groups_nodes)
+        self.que = self.que.join(
+            aliased_group_nodes,
+            aliased_group_nodes.c.dbnode_id == joined_entity.id
+        ).join(
+            entity_to_join,
+            entity_to_join.id == aliased_group_nodes.c.dbgroup_id
+        )
     def _get_connecting_node(self, querydict, index):
         """
         :param querydict:
@@ -630,6 +662,15 @@ class QueryBuilderBase(object):
         elif 'ancestor_of' in querydict:
             func = self._join_ancestors
             val  = querydict['ancestor_of']
+        elif 'member_of' in querydict:
+            func = self._join_group_members_of
+            val  = querydict['member_of']
+        elif 'member_of' in querydict:
+            func = self._join_group_members_of
+            val  = querydict['member_of']
+        elif 'group_of' in querydict:
+            func = self._join_groups
+            val  = querydict['group_of']
         else:
             direction = querydict.get('direction', 1)
             if direction > 0:
@@ -682,8 +723,22 @@ class QueryBuilderBase(object):
                 inp[self.make_json_compatible(key)] = self.make_json_compatible(inp.pop(key))
         elif isinstance(inp, (list, tuple)):
             inp = [self.make_json_compatible(val) for val in inp]
-        elif inspect_isclass(inp) and issubclass(inp, self.AiidaNode):
-            return inp._plugin_type_string.strip('.').split('.')[-1]
+        elif inspect_isclass(inp):
+            if issubclass(inp, self.AiidaNode):
+                return inp._plugin_type_string.strip('.').split('.')[-1]
+            elif issubclass(inp, self.AiidaGroup):
+                return 'group'
+                return inp.type_string
+                from aiida.orm.implementation.general.group import get_group_type_mapping
+                key_to_cls_map  = get_group_type_mapping()
+                print key_to_cls_map
+                cls_to_key_map  = {v:k  for k,v in key_to_cls_map.items()}
+                print cls_to_key_map.keys(), key_to_cls_map.keys()
+                print inp
+                
+                return cls_to_key_map[inp]
+            else:
+                raise InputValidationError
         else:
             try:
                 inp = replacement_dict.get(inp, inp)

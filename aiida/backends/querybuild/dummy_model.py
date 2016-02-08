@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 
 from sa_init import (
-    Column,ForeignKey, UniqueConstraint,create_engine,
+    Column, Table, ForeignKey, UniqueConstraint,create_engine,
     Integer, String, DateTime, Float, Boolean, Text,
     select, func, join, and_, or_, not_, except_,
     relationship,
@@ -16,6 +16,7 @@ from sa_init import (
 )
 
 from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
+from aiida.orm.implementation.django.group import Group as DjangoAiidaGroup
 
 from aiida.common.setup import get_profile_config
 from aiida.backends import settings
@@ -224,7 +225,57 @@ recent_states = select([
         )
     ).alias() # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
 
+table_groups_nodes = Table(
+    'db_dbgroup_dbnodes',
+    Base.metadata,
+    Column('id', Integer, primary_key=True),
+    Column('dbnode_id', Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")),
+    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED"))
+)
 
+class DbGroup(Base):
+    __tablename__ = "db_dbgroup"
+
+    id = Column(Integer, primary_key=True)
+
+    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    name = Column(String(255), index=True)
+
+    type = Column(String(255), default="", index=True)
+
+    time = Column(DateTime(timezone=True), default=timezone.now)
+    description = Column(Text, nullable=True)
+
+    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially="DEFERRED"))
+    user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
+
+    dbnodes = relationship('DbNode', secondary=table_groups_nodes,
+                           backref="dbgroups", lazy='dynamic')
+
+    __table_args__ = (
+        UniqueConstraint('name', 'type'),
+    )
+
+    def __str__(self):
+        if self.type:
+            return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
+        else:
+            return '<DbGroup [user-defined] "{}">'.format(self.name)
+    def get_aiida_class(self):
+        
+        from aiida.backends.djsite.db.models import DbGroup as DjangoSchemaDbGroup
+        dbgroup = DjangoSchemaDbGroup(
+            id = self.id,
+            type = self.type,
+            uuid = self.uuid,
+            name = self.name,
+            time = self.time,
+            description  = self.description,
+            user_id = self.user_id,
+        )
+
+        return DjangoAiidaGroup(dbgroup = dbgroup)
+        
 state_mapper = mapper(
     DbCalcState,
     recent_states, 

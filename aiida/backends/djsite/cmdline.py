@@ -47,12 +47,9 @@ def get_workflow_list(pk_list=[], user=None, all_states=False, n_days_ago=None):
             t = timezone.now() - datetime.timedelta(days=n_days_ago)
             filters &= Q(ctime__gte=t)
 
-    workflows = (DbWorkflow.objects.filter(filters)
-                 .order_by('ctime')
-                 .select_related("parent_workflow_step__parent").all())
+    wf_list = DbWorkflow.objects.filter(filters).order_by('ctime')
 
-    return workflows
-
+    return wf_list
 
 def get_log_messages(obj):
     """

@@ -424,7 +424,7 @@ class QueryBuilderBase(object):
         # but shortening it will results in slower queries (like instead of =)
         # and ambiguouty when the class name is the same, but in different module...
         # How to solve that?
-        if ormclass_type not in ['group']:
+        if ormclass_type not in ['computer', 'group']:
             self.filters[label]['type'] = self.filters[label].get('type', {'like':'%{}%'.format(ormclass_type)})
         ormclass = self.get_ormclass(ormclass_type)
         self.ormclass_list.append(ormclass)
@@ -580,7 +580,7 @@ class QueryBuilderBase(object):
             entity_to_join,
             aliased_path.parent_id  == entity_to_join.id
         )
-    def _join_group_members_of(self, joined_entity, entity_to_join):
+    def _join_group_members(self, joined_entity, entity_to_join):
         """
         :param joined_entity: The (aliased) ORMclass that is a group in the database
         :param entity_to_join: The (aliased) ORMClass that is a node and member of the group
@@ -592,10 +592,10 @@ class QueryBuilderBase(object):
         aliased_group_nodes = aliased(self.table_groups_nodes)
         self.que = self.que.join(
             aliased_group_nodes,
-            aliased_group_nodes.dbgroup_id == joined_entity.id
+            aliased_group_nodes.c.dbgroup_id == joined_entity.id
         ).join(
             entity_to_join,
-            entity_to_join.id == aliased_group_nodes.dbnode_id
+            entity_to_join.id == aliased_group_nodes.c.dbnode_id
         )
     def _join_groups(self, joined_entity, entity_to_join):
         """
@@ -613,6 +613,11 @@ class QueryBuilderBase(object):
         ).join(
             entity_to_join,
             entity_to_join.id == aliased_group_nodes.c.dbgroup_id
+        )
+    def _join_computer_used(self, joined_entity, entity_to_join):
+        self.que = self.que.join(
+            entity_to_join,
+            entity_to_join.id == joined_entity.dbcomputer_id
         )
     def _get_connecting_node(self, querydict, index):
         """
@@ -634,44 +639,44 @@ class QueryBuilderBase(object):
         *   *master_of*
         *   *slave_of*
         """
-        if [
-            'input_of' in querydict,
-            'output_of' in querydict,
-            'slave_of' in querydict,
-            'master_of' in querydict,
-            'ancestor_of' in querydict,
-            'descendant_of' in querydict,
-            'direction' in querydict,
-            ].count(True) > 1:
-            raise Exception( 'Too many specification to join in {}'.format(querydict))
-        if 'input_of' in querydict:
-            func = self._join_inputs
-            val = querydict['input_of']
-        elif 'output_of' in querydict:
-            func = self._join_outputs
-            val = querydict['output_of']
-        elif 'slave_of' in querydict:
-            func = self._join_slaves
-            val  = querydict['slave_of']
-        elif 'master_of' in querydict:
-            func = self._join_masters
-            val  = querydict['master_of']
-        elif 'descendant_of' in querydict:
-            func = self._join_descendants
-            val  = querydict['descendant_of']
-        elif 'ancestor_of' in querydict:
-            func = self._join_ancestors
-            val  = querydict['ancestor_of']
-        elif 'member_of' in querydict:
-            func = self._join_group_members_of
-            val  = querydict['member_of']
-        elif 'member_of' in querydict:
-            func = self._join_group_members_of
-            val  = querydict['member_of']
-        elif 'group_of' in querydict:
-            func = self._join_groups
-            val  = querydict['group_of']
-        else:
+        specification_to_function_map = {
+            'input_of'  : self._join_inputs,
+            'output_of' : self._join_outputs,
+            'slave_of'  : self._join_slaves, # not implemented
+            'master_of' : self._join_masters,# not implemented
+            'ancestor_of': self._join_ancestors,
+            'descendant_of': self._join_descendants,
+            'direction' : None,
+            'group_of'  : self._join_groups,
+            'member_of' : self._join_group_members,
+            'used_by'   : self._join_computer_used,
+            
+        }
+        specification_to_function_map_keys = specification_to_function_map.keys()
+        allowed_keys = specification_to_function_map_keys + ['label','class']
+        valid_keys_list = [
+            (k in specification_to_function_map_keys)
+            for k in querydict.keys()
+        ]
+
+
+        # Check that it is not more than one specification:
+        if valid_keys_list.count(True) > 1:
+            raise InputValidationError( 'Too many specification to join in {}'.format(querydict))
+        # Check that there is no additional specification:
+        for key in querydict.keys():
+            if key not in allowed_keys:
+                raise InputValidationError(
+                    '\n   {} is not a valid key\n'
+                    '   Valid keys are:\n'
+                    '   {}'.format(key, allowed_keys)
+                )
+        val = None
+        for key, func in specification_to_function_map.items():
+            if key in querydict:
+                val = querydict[key]
+                break
+        if val is None or key == 'direction':
             direction = querydict.get('direction', 1)
             if direction > 0:
                 func = self._join_outputs
@@ -683,6 +688,37 @@ class QueryBuilderBase(object):
                 raise Exception(
                     "Direction 0 is not valid"
                 )
+
+
+        #~ if 'input_of' in querydict:
+            #~ func = self._join_inputs
+            #~ val = querydict['input_of']
+        #~ elif 'output_of' in querydict:
+            #~ func = self._join_outputs
+            #~ val = querydict['output_of']
+        #~ elif 'slave_of' in querydict:
+            #~ func = self._join_slaves
+            #~ val  = querydict['slave_of']
+        #~ elif 'master_of' in querydict:
+            #~ func = self._join_masters
+            #~ val  = querydict['master_of']
+        #~ elif 'descendant_of' in querydict:
+            #~ func = self._join_descendants
+            #~ val  = querydict['descendant_of']
+        #~ elif 'ancestor_of' in querydict:
+            #~ func = self._join_ancestors
+            #~ val  = querydict['ancestor_of']
+        #~ elif 'member_of' in querydict:
+            #~ func = self._join_group_members
+            #~ val  = querydict['member_of']
+        #~ elif 'member_of' in querydict:
+            #~ func = self._join_group_members_of
+            #~ val  = querydict['member_of']
+        #~ elif 'group_of' in querydict:
+            #~ func = self._join_groups
+            #~ val  = querydict['group_of']
+        #~ else:
+            
         if isinstance(val, int):
             return self.alias_list[val], func
         elif isinstance(val, str):

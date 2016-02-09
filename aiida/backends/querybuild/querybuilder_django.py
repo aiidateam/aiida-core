@@ -53,6 +53,8 @@ class QueryBuilder(QueryBuilderBase):
         """
         if ormclasstype == 'group':
             return DummyGroup
+        elif ormclasstype == 'computer':
+            return DummyComputer
         return DummyNode
 
     @staticmethod
@@ -200,9 +202,16 @@ if __name__ == '__main__':
     # from aiida.orm.calculation.job.plugins.quantumespresso 
     qh = {
         'path':[
-            UpfData,
-            {'class': Group, 'group_of':UpfData}
+            {'class': Group},
+            {'class': UpfData, 'member_of':Group},
+            PwCalculation,
+            {'class':'computer', 'used_by':PwCalculation}
         ],
+        'project':{
+            Group:'*',
+            UpfData:'*',
+            PwCalculation:'*'
+        },
         'limit':4.,
     }
 

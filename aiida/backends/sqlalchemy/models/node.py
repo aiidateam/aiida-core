@@ -29,7 +29,9 @@ class DbLink(Base):
     input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
 
+
     label = Column(String(255), index=True, nullable=False)
+    type = Column(String(255))
 
     __table_args__ = (
         UniqueConstraint('input_id', 'output_id'),

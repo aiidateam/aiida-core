@@ -194,6 +194,7 @@ class QueryBuilder(QueryBuilderBase):
         
 if __name__ == '__main__':
     from aiida.orm.calculation.inline import InlineCalculation
+    from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.data.parameter import ParameterData
     from aiida.orm.data.structure import StructureData
     from aiida.orm.data.upf import UpfData
@@ -202,20 +203,20 @@ if __name__ == '__main__':
     # from aiida.orm.calculation.job.plugins.quantumespresso 
     qh = {
         'path':[
-            {'class': Group},
-            {'class': UpfData, 'member_of':Group},
-            PwCalculation,
-            {'class':'computer', 'used_by':PwCalculation}
+            JobCalculation,
+            {'class':'computer', 'used_by':JobCalculation}
         ],
         'project':{
-            Group:'*',
-            UpfData:'*',
-            PwCalculation:'*'
+            'computer':'name',
+            JobCalculation: ['id', 'state', 'ctime', 'type']
         },
-        'limit':4.,
     }
 
     #~ raw_input(issubclass(StructureData, Node))
-    res = QueryBuilder(qh).get_results_dict()
+    qb = QueryBuilder(qh)
+    print qb.get_query()
+    print qb.get_dict()
+    res = qb.get_results_dict()
     print res
+    
 

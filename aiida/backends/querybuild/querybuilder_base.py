@@ -761,18 +761,9 @@ class QueryBuilderBase(object):
             inp = [self.make_json_compatible(val) for val in inp]
         elif inspect_isclass(inp):
             if issubclass(inp, self.AiidaNode):
-                return inp._plugin_type_string.strip('.').split('.')[-1]
+                return '.'.join(inp._plugin_type_string.strip('.').split('.')[:-1])
             elif issubclass(inp, self.AiidaGroup):
                 return 'group'
-                return inp.type_string
-                from aiida.orm.implementation.general.group import get_group_type_mapping
-                key_to_cls_map  = get_group_type_mapping()
-                print key_to_cls_map
-                cls_to_key_map  = {v:k  for k,v in key_to_cls_map.items()}
-                print cls_to_key_map.keys(), key_to_cls_map.keys()
-                print inp
-                
-                return cls_to_key_map[inp]
             else:
                 raise InputValidationError
         else:

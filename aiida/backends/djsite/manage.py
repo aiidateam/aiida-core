@@ -9,7 +9,8 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 if __name__ == "__main__":
     from django.core.management import execute_from_command_line
-    import aiida.backends.djsite.utils as utils
+    # import aiida.backends.djsite.utils as utils
+    import aiida.backends.utils as utils
 
     # Copy sys.argv
     actual_argv = sys.argv[:]

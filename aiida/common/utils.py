@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
+import datetime
 import os.path
 import string
+import sys
+
+from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
 
@@ -554,3 +558,95 @@ def get_extremas_from_positions (positions):
     returns the minimum and maximum value for each dimension in the positions given
     """
     return zip(*[(min(values), max(values)) for values in  zip(* positions)])
+
+
+def ask_question(self, question, reply_type, allow_none_as_answer):
+    """
+    Add description
+    :param self:
+    :param question:
+    :param reply_type:
+    :param allow_none_as_answer:
+    :return:
+    """
+    final_answer = None
+
+    while True:
+        answer = query_string(question, "")
+
+        # If the reply is empty
+        if not answer:
+            if not allow_none_as_answer:
+                continue
+        # Otherwise, try to parse it
+        else:
+            try:
+                if reply_type == int:
+                    final_answer = int(answer)
+                elif reply_type == datetime.datetime:
+                    final_answer = parse(answer)
+                else:
+                    raise ValueError
+            # If it is not parsable...
+            except ValueError:
+                sys.stdout.write("The given value could not be parsed. " +
+                                 "Type expected: {}\n".format(reply_type))
+                # If the timestamp could not have been parsed,
+                # ask again the same question.
+                continue
+
+        if self.query_yes_no("{} was parsed. Is it correct?"
+                             .format(final_answer), default="yes"):
+            break
+    return final_answer
+
+
+def query_yes_no(question, default="yes"):
+    """Ask a yes/no question via raw_input() and return their answer.
+
+    "question" is a string that is presented to the user.
+    "default" is the presumed answer if the user just hits <Enter>.
+        It must be "yes" (the default), "no" or None (meaning
+        an answer is required of the user).
+
+    The "answer" return value is True for "yes" or False for "no".
+    """
+    valid = {"yes": True, "y": True, "ye": True,
+             "no": False, "n": False}
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        choice = raw_input(question + prompt).lower()
+        if default is not None and not choice:
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' "
+                             "(or 'y' or 'n').\n")
+
+
+def query_string(question, default):
+    if default is None or not default:
+        prompt = ""
+    else:
+        prompt = " [{}]".format(default)
+
+    while True:
+        reply = raw_input(question + prompt)
+        if default is not None and not reply:
+            if not default:
+                return None
+            else:
+                return default
+        elif reply:
+            return reply
+        else:
+            sys.stdout.write("Please provide a non empty answer.\n")

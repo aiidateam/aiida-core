@@ -111,7 +111,8 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
+        from aiida.backends.djsite.utils import get_daemon_user, \
+            get_configured_user_email
 
         daemon_user = get_daemon_user()
         this_user = get_configured_user_email()

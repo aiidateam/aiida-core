@@ -7,7 +7,7 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
 from aiida.common.exceptions import InternalError
-from aiida.orm.utils import load_node
+# from aiida.orm.utils import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -163,6 +163,7 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.common.exceptions import AiidaException
         load_dbenv()
         from aiida.orm import JobCalculation as OrmCalculation
+        from aiida.orm.utils import load_node
 
 
         class InternalError(AiidaException):
@@ -193,12 +194,12 @@ class Devel(VerdiCommandWithSubcommands):
                     parent_dict_name = new_key
                 except KeyError as e:
                     raise InternalError(e, "Unable to find the key '%s' in '%s' %s" % (
-                    new_key, parent_dict_name, get_suggestions(new_key, parent_dict.keys())))
+                        new_key, parent_dict_name, get_suggestions(new_key, parent_dict.keys())))
                 except Exception as e:
                     if e.__class__ is not InternalError:
                         raise InternalError(e,
                                             "Error retrieving the key '%s' withing '%s', maybe '%s' is not a dict?" % (
-                                            the_keys[1], the_keys[0], the_keys[0]))
+                                                the_keys[1], the_keys[0], the_keys[0]))
                     else:
                         raise
             return parent_dict
@@ -219,7 +220,7 @@ class Devel(VerdiCommandWithSubcommands):
                     raise InternalError(e, "%s is not a valid integer (in %s)." % (idx, parent_name))
                 except IndexError as e:
                     raise InternalError(e, "Index %s is out of bounds, length of list %s is %s" % (
-                    index, parent_name, len(parent_data)))
+                        index, parent_name, len(parent_data)))
                 except Exception as e:
                     raise InternalError(e, "Invalid index! Maybe %s is not a list?" % parent_name)
             return parent_data

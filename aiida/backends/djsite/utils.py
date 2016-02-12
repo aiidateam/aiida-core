@@ -2,13 +2,12 @@
 
 import logging
 import os
+
 import django
 
-from aiida.utils.logger import get_dblogger_extra
-
 from aiida.backends import settings
-from aiida.backends.profile import load_profile, is_profile_loaded
-
+from aiida.backends.utils import is_dbenv_loaded
+from aiida.utils.logger import get_dblogger_extra
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -16,12 +15,12 @@ __version__ = "0.5.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
-def is_dbenv_loaded():
-    """
-    Return True of the dbenv was already loaded (with a call to load_dbenv),
-    False otherwise.
-    """
-    return settings.LOAD_DBENV_CALLED
+# def is_dbenv_loaded():
+#     """
+#     Return True of the dbenv was already loaded (with a call to load_dbenv),
+#     False otherwise.
+#     """
+#     return settings.LOAD_DBENV_CALLED
 
 def load_dbenv(process=None, profile=None):
     """
@@ -48,13 +47,12 @@ def _load_dbenv_noschemacheck(process, profile):
     This should ONLY be used internally, inside load_dbenv, and for schema
     migrations. DO NOT USE OTHERWISE!
     """
-
-    if is_dbenv_loaded():
-        raise InvalidOperation("You cannot call load_dbenv multiple times!")
-    settings.LOAD_DBENV_CALLED = True
-
-    if not is_profile_loaded():
-        load_profile(process, profile)
+    # if is_dbenv_loaded():
+    #     raise InvalidOperation("You cannot call load_dbenv multiple times!")
+    # settings.LOAD_DBENV_CALLED = True
+    #
+    # if not is_profile_loaded():
+    #     load_profile(process, profile)
 
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings.settings'
     django.setup()

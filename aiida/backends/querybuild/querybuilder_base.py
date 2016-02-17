@@ -975,10 +975,23 @@ class QueryBuilderBase(object):
         Returns the json-compatible list
         """
         return {
-            'path':self.path, 
-            'filters':self.filters,
-            'project':self.projection_dict_user
+            'path'      :   self.path, 
+            'filters'   :   self.filters,
+            'project'   :   self.projection_dict_user,
+            'limit'     :   self.limit,
+            'order_by'  :   self.order_by,
         }
+
+
+    def get_query(self):
+        """
+        Checks if query instance is
+        set as attribute of instance,
+        if not invokes :func:`QueryBuilderBase._build_query` 
+        """
+        if hasattr(self, 'que'):
+            return self.que
+        return self._build_query()
 
     def first(self):
         """
@@ -986,21 +999,11 @@ class QueryBuilderBase(object):
         """
         return self.get_query().first()
 
-    def get_query(self):
+    def distinct(self):
         """
-        Checks if query instance is
-        set as attribute of instance,
-        if not invokes :func:`~_build_query` 
+        Returns distinct results
         """
-        if hasattr(self, 'que'):
-            return self.que
-        return self._build_query()
-
-    def all(self):
-        """
-        Returns all results
-        """
-        return self.get_query().all()
+        return self.get_query().distinct()
 
     def all(self):
         """

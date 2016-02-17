@@ -31,6 +31,11 @@ DEFAULT_PROCESS = 'verdi'
 # The default umask for file creation under AIIDA_CONFIG_FOLDER
 DEFAULT_UMASK = 0077
 
+# Profile keys
+aiidadb_backend_key = "AIIDADB_BACKEND"
+
+# Profile values
+aiidadb_backend_value_django = "django"
 
 def backup_config():
     """
@@ -535,7 +540,7 @@ def create_configuration(profile='default'):
                 print "** Invalid email provided!"
 
         readline.set_startup_hook(lambda: readline.insert_text(
-            this_existing_confs.get('AIIDADB_ENGINE', 'sqlite3')))
+            this_existing_confs.get('AIIDADB_ENGINE', 'postgres')))
         this_new_confs['AIIDADB_ENGINE'] = raw_input('Database engine: ')
 
         if 'sqlite' in this_new_confs['AIIDADB_ENGINE']:
@@ -580,14 +585,25 @@ def create_configuration(profile='default'):
                 this_existing_confs.get('AIIDADB_PASS', 'aiida_password')))
             this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
 
-            possibilities = ['django']
+            possibilities = ['django', 'sqlalchemy']
             if len(possibilities) > 1:
-                this_new_confs['MIDDLEWARE'] = raw_input('Middleware (default: django): ')
-                if this_new_confs['MIDDLEWARE'] == '':
-                    this_new_confs['MIDDLEWARE'] = 'django'
-                if this_new_confs['MIDDLEWARE'] not in possibilities:
-                    raise ValueError('You need to chose a middleware in this list: {}.'
-                                    .format(', '.join(possibilities)))
+
+                aiida_backend = this_existing_confs.get('AIIDADB_BACKEND',
+                                                     'django')
+                readline.set_startup_hook(lambda: readline.insert_text(
+                    aiida_backend))
+
+                valid_aiida_backend = False
+                while not valid_aiida_backend:
+                    backend_ans = raw_input('AiiDA backend (available: {}): '
+                                            .format(', '.join(possibilities)))
+                    if backend_ans in possibilities:
+                        valid_aiida_backend = True
+                    else:
+                        print "* ERROR! Invalid backend inserted."
+                        print "*        The available middlewares are {}"\
+                            .format(', '.join(possibilities))
+                this_new_confs['AIIDADB_BACKEND'] = backend_ans
 
         elif 'mysql' in this_new_confs['AIIDADB_ENGINE']:
             this_new_confs['AIIDADB_ENGINE'] = 'mysql'

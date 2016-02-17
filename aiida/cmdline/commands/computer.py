@@ -2,7 +2,7 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.backends.utils import load_dbenv
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.exceptions import ValidationError
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -145,6 +145,8 @@ class Computer(VerdiCommandWithSubcommands):
         }
 
     def complete_computers(self, subargs_idx, subargs):
+        if not is_dbenv_loaded():
+            load_dbenv()
         computer_names = self.get_computer_names()
         return "\n".join(computer_names)
 
@@ -154,7 +156,8 @@ class Computer(VerdiCommandWithSubcommands):
         """
         import argparse
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.computer import Computer as AiiDAOrmComputer
         from aiida.backends.utils import get_automatic_user
 
@@ -281,7 +284,9 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Show information on a given computer
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.exceptions import NotExistent
 
         if len(args) != 1:
@@ -303,7 +308,9 @@ class Computer(VerdiCommandWithSubcommands):
         import argparse
         from aiida.common.exceptions import NotExistent
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.backends.djsite.db.models import DbNode
         from aiida.orm.computer import Computer
 
@@ -370,7 +377,8 @@ class Computer(VerdiCommandWithSubcommands):
                                   "argument.")
             sys.exit(1)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         from aiida.common.exceptions import NotExistent, ValidationError
         from aiida.orm.computer import Computer as AiidaOrmComputer
@@ -416,7 +424,9 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Rename a computer
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.exceptions import (
             NotExistent, UniquenessError, ValidationError)
 
@@ -457,7 +467,8 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Configure the authentication information for a given computer
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import readline
         import inspect
@@ -606,7 +617,9 @@ class Computer(VerdiCommandWithSubcommands):
         Does not delete the computer if there are calculations that are using
         it.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.exceptions import (
             NotExistent, InvalidOperation)
         from aiida.orm.computer import delete_computer
@@ -643,7 +656,9 @@ class Computer(VerdiCommandWithSubcommands):
         import argparse
         import traceback
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
         from aiida.backends.djsite.db.models import DbUser
@@ -862,7 +877,8 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Enable a computer.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
 
@@ -933,7 +949,8 @@ class Computer(VerdiCommandWithSubcommands):
         submit new calculations or check for the state of existing calculations.
         Useful, for instance, if you know that a computer is under maintenance.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
 

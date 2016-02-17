@@ -7,8 +7,6 @@ TODO: think if we want to allow to change path and prepend/append text.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.backends.utils import load_dbenv
-from aiida.orm.utils import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -524,6 +522,7 @@ class Code(VerdiCommandWithSubcommands):
     """
 
     def __init__(self):
+        from aiida.backends.utils import load_dbenv
         """
         A dictionary with valid commands and functions to be called.
         """
@@ -557,6 +556,7 @@ class Code(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.orm.code import Code as OrmCode
+        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
                                          description='Hide codes from the verdi show command.')
@@ -577,6 +577,7 @@ class Code(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.orm.code import Code as OrmCode
+        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),

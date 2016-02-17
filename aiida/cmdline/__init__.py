@@ -10,6 +10,33 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 execname = 'verdi'
 
 
+def delayed_load_node(*args, **kwargs):
+    """
+    Call the aiida.orm.load_node, but import the module only at the
+    first execution. This is needed in the command line, because an
+    import would "freeze" the imported modules to the BACKEND currently
+    set (and when 'verdi' starts to run, this has not been fixed yet).
+
+    :note: either import load_node AFTER the load_dbenv call, inside each
+      function, or if you want to import it only once for convenience reasons,
+      import this function::
+
+        from aiida.cmdline import delayed_load_node as load_node
+    """
+    from aiida.orm.utils import load_node as orig_load_node
+    return orig_load_node(*args, **kwargs)
+
+
+def delayed_load_workflow(*args, **kwargs):
+    """
+    Same as aiida.cmdline.delayed_load_node. This method is needed in the
+    command line in order not to "freeze" what is imported to a specific
+    backend.
+    """
+    from aiida.orm.utils import load_workflow as orig_load_workflow
+    return orig_load_workflow(*args, **kwargs)
+
+
 def wait_for_confirmation(valid_positive=["Y", "y"], valid_negative=["N", "n"],
                           print_to_stderr=True, catch_ctrl_c=True):
     """
@@ -100,8 +127,7 @@ def pass_to_django_manage(argv, profile=None):
     Call the corresponding django manage.py command
     """
     from aiida.backends.utils import load_dbenv
-    import django.core.management
-
     load_dbenv(profile=profile)
+
+    import django.core.management
     django.core.management.execute_from_command_line(argv)
-      

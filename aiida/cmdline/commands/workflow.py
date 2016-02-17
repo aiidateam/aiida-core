@@ -2,7 +2,6 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.orm import load_workflow
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -38,9 +37,10 @@ class Workflow(VerdiCommandWithSubcommands):
         """
         Return a list of workflows on screen
         """
-        from aiida.backends.utils import load_dbenv
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         from aiida.backends.utils import get_workflow_list, get_automatic_user
         from aiida.orm.workflow import get_workflow_info
@@ -80,28 +80,25 @@ class Workflow(VerdiCommandWithSubcommands):
                                       n_days_ago=parsed_args.past_days)
 
         for w in workflows:
-            if w.parent_workflow_step.parent not in workflows:
+            if not w.is_subworkflow():
                 print "\n".join(get_workflow_info(w, tab_size=tab_size,
                                                   short=parsed_args.short,
                                                   depth=parsed_args.depth))
-
         if not workflows:
             if parsed_args.all_states:
                 print "# No workflows found"
             else:
                 print "# No running workflows found"
 
-
     def print_report(self, *args):
         """
         Print the report of a workflow.
         """
         from aiida.backends.utils import load_dbenv
-        from aiida.common.exceptions import NotExistent
-
         load_dbenv()
 
-        from aiida.orm.workflow import Workflow
+        from aiida.orm.utils import load_workflow
+        from aiida.common.exceptions import NotExistent
 
         if len(args) != 1:
             print >> sys.stderr, "You have to pass a valid workflow PK as a parameter."
@@ -192,12 +189,11 @@ class Workflow(VerdiCommandWithSubcommands):
 
     def print_logshow(self, *args):
         from aiida.backends.utils import load_dbenv
-
         load_dbenv()
 
+        from aiida.orm.utils import load_workflow
         from aiida.backends.utils import get_log_messages
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.workflow import Workflow
 
         for wf_pk in args:
             try:

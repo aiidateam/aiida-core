@@ -42,8 +42,10 @@ def load_profile(process=None, profile=None):
         settings.AIIDADB_PROFILE = the_profile
 
     config = get_profile_config(settings.AIIDADB_PROFILE)
-    settings.BACKEND = config.get("AIIDADB_BACKEND", "django")
 
+    # Check if AIIDADB_BACKEND is set and if not error (with message)
+    # Migration script should put it in profile (config.json)
+    settings.BACKEND = config.get("AIIDADB_BACKEND", "django")
 
 def is_profile_loaded():
     """

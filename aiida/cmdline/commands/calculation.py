@@ -3,11 +3,10 @@ import sys
 import os
 import subprocess
 from aiida.backends.utils import load_dbenv
-from aiida.orm.utils import load_node
+from aiida.cmdline import delayed_load_node as load_node
 
 from aiida.backends.utils import load_dbenv
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands.node import _Label, _Description
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -27,6 +26,8 @@ class Calculation(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called:
         list.
         """
+        from aiida.cmdline.commands.node import _Label, _Description
+
         labeler = _Label('calculation')
         descriptioner = _Description('calculation')
 

@@ -19,9 +19,7 @@ __version__ = "0.5.0"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
 
 default_modules_list = [
-    # ("aiida.backends.djsite.db.models","DbNode","DbNode"),
-    ("aiida.orm.node", "Node", "Node"),
-    # ("aiida.djsite.db.models","DbNode","DbNode"),
+    ("aiida.orm", "Node", "Node"),
     ("aiida.orm.utils", "load_node", "load_node"),
     ("aiida.orm", "Calculation", "Calculation"),
     ("aiida.orm", "JobCalculation", "JobCalculation"),
@@ -56,11 +54,18 @@ class Command(NoArgsCommand):
 
     def get_start_namespace(self):
         """Load all default and custom modules"""
+        from aiida.backends.profile import load_profile, is_profile_loaded
+        from aiida.backends import settings
+        if not is_profile_loaded():
+            # load_profile(process, profile)
+            load_profile(profile=settings.AIIDADB_PROFILE)
+
         from aiida.common.setup import get_property
         user_ns = {}
         # load default modules
         for app_mod, model_name, alias in default_modules_list:
-            user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
+            user_ns[alias] = getattr(__import__(app_mod, {}, {},
+                                                model_name), model_name)
 
         # load custom modules
         custom_modules_list = [(str(e[0]),str(e[2])) for e in
@@ -70,8 +75,8 @@ class Command(NoArgsCommand):
 
         for app_mod, model_name in custom_modules_list:
             try:
-                user_ns[model_name] = getattr(__import__(app_mod, {}, {}, model_name),
-                                              model_name)
+                user_ns[model_name] = getattr(
+                    __import__(app_mod, {}, {}, model_name), model_name)
             except AttributeError:
                 # if the module does not exist, we ignore it
                 pass
@@ -115,7 +120,7 @@ class Command(NoArgsCommand):
         for ip in (self._ipython, self._ipython_pre_100, self._ipython_pre_011):
             try:
                 ip()
-            except ImportError:
+            except ImportError as ie:
                 pass
             else:
                 return

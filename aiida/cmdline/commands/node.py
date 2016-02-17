@@ -4,7 +4,8 @@ from aiida.cmdline.baseclass import (
     VerdiCommand, VerdiCommandRouter, VerdiCommandWithSubcommands)
 from aiida.backends.utils import load_dbenv
 from aiida.cmdline.baseclass import VerdiCommand
-from aiida.orm import load_node
+# from aiida.orm import load_node
+# from aiida.orm.utils import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -147,6 +148,7 @@ class _Repo(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.common.exceptions import NotExistent
+        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -188,6 +190,7 @@ class _Repo(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.common.exceptions import NotExistent
+        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -234,6 +237,7 @@ class _Show(VerdiCommand):
         """
         import argparse
         from aiida.common.exceptions import NotExistent
+        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -352,6 +356,7 @@ class _Label(VerdiCommandWithSubcommands):
         load_dbenv()
         import argparse
         from aiida.cmdline import wait_for_confirmation
+        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
                                          description="See/modify the labels of Nodes.")
@@ -447,6 +452,7 @@ class _Description(VerdiCommandWithSubcommands):
     def run(self, *args):
         load_dbenv()
         import argparse
+        from aiida.orm.utils import load_node
         from aiida.cmdline import wait_for_confirmation
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),

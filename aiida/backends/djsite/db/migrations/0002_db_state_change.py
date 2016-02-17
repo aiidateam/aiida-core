@@ -15,7 +15,8 @@ SCHEMA_VERSION = "1.0.2"
 
 def fix_calc_states(apps, schema_editor):
     from aiida.backends.djsite.db.models import DbCalcState
-    from aiida.orm import load_node
+    # from aiida.orm import load_node
+    from aiida.orm.utils import load_node
 
     # These states should never exist in the database but we'll play it safe
     # and deal with them if they do

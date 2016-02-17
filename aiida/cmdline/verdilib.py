@@ -39,7 +39,6 @@ from aiida.cmdline.commands.group import Group
 from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.profile import Profile
-from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.comment import Comment
 from aiida.cmdline import execname
@@ -312,7 +311,6 @@ class Install(VerdiCommand):
     """
 
     def run(self, *args):
-        from aiida.backends.utils import load_dbenv
         from aiida.common.setup import (create_base_dirs, create_configuration,
                                         set_default_profile, DEFAULT_UMASK)
 
@@ -362,6 +360,7 @@ class Install(VerdiCommand):
         # I create here the default user
         print "Loading new environment..."
         if only_user_config:
+            from aiida.backends.utils import load_dbenv
             # db environment has not been loaded in this case
             load_dbenv()
 

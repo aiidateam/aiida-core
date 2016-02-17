@@ -6,7 +6,7 @@ import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv
-from aiida.orm.utils import load_node
+# from aiida.orm.utils import load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -38,7 +38,9 @@ class Comment(VerdiCommandWithSubcommands):
         from aiida.backends.utils import get_automatic_user
 
         load_dbenv()
+
         from aiida.orm.node import Node as AiidaOrmNode
+        from aiida.orm.utils import load_node
         user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
@@ -80,6 +82,7 @@ class Comment(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.backends.utils import get_automatic_user
+        from aiida.orm.utils import load_node
 
         load_dbenv()
         from aiida.orm.node import Node as AiidaOrmNode
@@ -135,6 +138,7 @@ class Comment(VerdiCommandWithSubcommands):
 
         load_dbenv()
         from aiida.orm.node import Node as AiidaOrmNode
+        from aiida.orm.utils import load_node
         user = get_automatic_user()
         from aiida.backends.djsite.db.models import DbComment
 
@@ -198,6 +202,7 @@ class Comment(VerdiCommandWithSubcommands):
         from aiida.backends.utils import get_automatic_user
 
         load_dbenv()
+        from aiida.orm.utils import load_node
         from aiida.orm.node import Node as AiidaOrmNode
         user = get_automatic_user()
 

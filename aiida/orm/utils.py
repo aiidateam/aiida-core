@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from aiida.orm.implementation import Node
-
-from aiida.orm.data import Data
-from aiida.orm.workflow import Workflow
 
 from aiida.common.pluginloader import BaseFactory
 
@@ -36,6 +32,8 @@ def DataFactory(module):
     """
     Return a suitable Data subclass.
     """
+    from aiida.orm.data import Data
+
     return BaseFactory(module, Data, "aiida.orm.data")
 
 
@@ -43,7 +41,8 @@ def WorkflowFactory(module):
     """
     Return a suitable Workflow subclass.
     """
-    from aiida.orm.implementation import Workflow
+    from aiida.orm.workflow import Workflow
+
     return BaseFactory(module, Workflow, "aiida.workflows")
 
 
@@ -63,6 +62,11 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None):
         and no matching Node is found.
     """
     from aiida.common.exceptions import NotExistent
+    # This must be done inside here, because at import time the profile
+    # must have been already loaded. If you put it at the module level,
+    # the implementation is frozen to the default one at import time.
+    from aiida.orm.implementation import Node
+
 
     if int(node_id is None) + int(pk is None) + int(uuid is None) == 3:
         raise ValueError("one of the parameters 'node_id', 'pk' and 'uuid' "

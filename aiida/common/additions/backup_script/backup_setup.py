@@ -11,6 +11,7 @@ from aiida.common.setup import AIIDA_CONFIG_FOLDER
 from dateutil.parser import parse
 from os.path import expanduser
 from aiida.backends.djsite.utils import load_dbenv
+from aiida.common.utils import ask_question
 
 # Needed initialization for Django
 
@@ -20,7 +21,7 @@ from backup import Backup
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
-__contributors__ = "Giovanni Pizzi, Martin Uhrin, Spyros Zoupanos"
+__contributors__ = "Spyros Zoupanos, Giovanni Pizzi, Martin Uhrin"
 
 
 class BackupSetup(object):
@@ -51,93 +52,12 @@ class BackupSetup(object):
         # The logger of the backup script
         self._logger = logging.getLogger("aiida_backup_setup")
 
-    def query_yes_no(self, question, default="yes"):
-        """Ask a yes/no question via raw_input() and return their answer.
-    
-        "question" is a string that is presented to the user.
-        "default" is the presumed answer if the user just hits <Enter>.
-            It must be "yes" (the default), "no" or None (meaning
-            an answer is required of the user).
-    
-        The "answer" return value is True for "yes" or False for "no".
-        """
-        valid = {"yes": True, "y": True, "ye": True,
-                 "no": False, "n": False}
-        if default is None:
-            prompt = " [y/n] "
-        elif default == "yes":
-            prompt = " [Y/n] "
-        elif default == "no":
-            prompt = " [y/N] "
-        else:
-            raise ValueError("invalid default answer: '%s'" % default)
-    
-        while True:
-            choice = raw_input(question + prompt).lower()
-            if default is not None and not choice:
-                return valid[default]
-            elif choice in valid:
-                return valid[choice]
-            else:
-                sys.stdout.write("Please respond with 'yes' or 'no' "
-                                 "(or 'y' or 'n').\n")
-
-    @staticmethod
-    def query_string(question, default):
-        if default is None or not default:
-            prompt = ""
-        else:
-            prompt = " [{}]".format(default)
-        
-        while True:
-            reply = raw_input(question + prompt)
-            if default is not None and not reply:
-                if not default:
-                    return None
-                else:
-                    return default
-            elif reply:
-                return reply
-            else:
-                sys.stdout.write("Please provide a non empty answer.\n")
-
-    def ask_backup_question(self, question, reply_type, allow_none_as_answer):
-        final_answer = None
-        
-        while True:
-            answer = BackupSetup.query_string(question, "")
-            
-            # If the reply is empty
-            if not answer:
-                if not allow_none_as_answer:
-                    continue
-            # Otherwise, try to parse it    
-            else:
-                try:
-                    if reply_type == int:
-                        final_answer = int(answer)
-                    elif reply_type == datetime.datetime:
-                        final_answer = parse(answer)
-                    else:
-                        raise ValueError
-                # If it is not parsable...
-                except ValueError:
-                    sys.stdout.write("The given value could not be parsed. " +
-                                     "Type expected: {}\n".format(reply_type))
-                    # If the timestamp could not have been parsed,
-                    # ask again the same question.
-                    continue
-            
-            if self.query_yes_no("{} was parsed. Is it correct?"
-                                 .format(final_answer), default="yes"):
-                break
-        return final_answer
 
     def construct_backup_variables(self, file_backup_folder_abs):
         backup_variables = {}
 
         # Setting the oldest backup timestamp
-        oldest_object_bk = self.ask_backup_question(
+        oldest_object_bk = ask_question(
             "Please provide the oldest backup timestamp "
             "(e.g. 2014-07-18 13:54:53.688484+00:00). ",
             datetime.datetime, True)
@@ -153,11 +73,11 @@ class BackupSetup(object):
         
         # Setting the days_to_backup
         backup_variables[
-            Backup._days_to_backup_key] = self.ask_backup_question(
+            Backup._days_to_backup_key] = ask_question(
             "Please provide the number of days to backup.", int, True)
         
         # Setting the end date
-        end_date_of_backup_key = self.ask_backup_question(
+        end_date_of_backup_key = ask_question(
             "Please provide the end date of the backup " +
             "(e.g. 2014-07-18 13:54:53.688484+00:00).",
             datetime.datetime, True)
@@ -169,12 +89,12 @@ class BackupSetup(object):
                 
         # Setting the backup periodicity
         backup_variables[
-            Backup._periodicity_key] = self.ask_backup_question(
+            Backup._periodicity_key] = ask_question(
             "Please periodicity (in days).", int, False)
         
         # Setting the backup threshold
         backup_variables[
-            Backup._backup_length_threshold_key] = self.ask_backup_question(
+            Backup._backup_length_threshold_key] = ask_question(
             "Please provide the backup threshold (in hours).", int, False)
         
         return backup_variables

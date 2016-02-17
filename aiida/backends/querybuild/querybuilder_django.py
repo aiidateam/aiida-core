@@ -195,7 +195,6 @@ class QueryBuilder(QueryBuilderBase):
             (have returned by the query)
         
         """
-        print type(alias)
         #~ raw_input(projectable_spec)
         if projectable_spec == '*': # project the entity
             self.que = self.que.add_entity(alias)

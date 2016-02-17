@@ -1002,6 +1002,18 @@ class QueryBuilderBase(object):
         """
         return self.get_query().all()
 
+    def all(self):
+        """
+        Returns all results
+        """
+        return self.get_query().all()
+
+    def yield_per(self, count):
+        """
+        Yields *count* rows at a time
+        """
+        return self.get_query().yield_per(count)
+        
     def get_results_dict(self):
         """
         Returns all results as a list of  dictionaries.
@@ -1024,19 +1036,14 @@ class QueryBuilderBase(object):
                 return res.get_aiida_class()
             return res
 
-        all_results = self.get_query().all()
-
-        return_list = [
-            {
+        for this_result in self.yield_per(100):
+            yield {
                 label:{
                     key : get_aiida_res(get_result(this_result, position), key)
                     for key, position in val.items()
                 }
                 for label, val in self.label_to_projected_entity_dict.items()
             }
-            for this_result in all_results
-        ]
-        return return_list
 
 
 

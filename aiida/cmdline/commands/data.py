@@ -6,14 +6,14 @@ from aiida.cmdline.baseclass import (
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.exceptions import MultipleObjectsError
 from aiida.cmdline.commands.node import _Label, _Description
-from aiida.cmdline import delayed_load_node
-# from aiida.orm import load_node
-# from aiida.orm.utils import load_node
+from aiida.cmdline import delayed_load_node as load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Leonid Kahle, Marco Gibertini, Martin Uhrin, Nicolas Mounet"
+__contributors__ = ("Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, "
+                    "Leonid Kahle, Marco Gibertini, Martin Uhrin, "
+                    "Nicolas Mounet, Spyros Zoupanos")
 
 
 class Data(VerdiCommandRouter):
@@ -210,7 +210,6 @@ class Visualizable(object):
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _show_xxx() method.
         import argparse, os
-        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -316,7 +315,6 @@ class Exportable(object):
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _export_xxx() method.
         import argparse
-        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -552,7 +550,7 @@ class Depositable(object):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        n = delayed_load_node(data_id)
+        n = load_node(data_id)
 
         try:
             if not isinstance(n,self.dataclass):
@@ -747,6 +745,8 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.array.bands import BandsData
 
         self.dataclass = BandsData
@@ -764,7 +764,8 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
@@ -1009,6 +1010,8 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.structure import StructureData
 
         self.dataclass = StructureData
@@ -1244,7 +1247,6 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         Plugin for TCOD
         """
-        from aiida.orm.utils import load_node
 
         parameters = None
         if parameter_data is not None:
@@ -1340,7 +1342,6 @@ class _Structure(VerdiCommandWithSubcommands,
         Deposition plugin for TCOD.
         """
         from aiida.tools.dbexporters.tcod import deposit
-        from aiida.orm.utils import load_node
 
         parameters = None
         if parameter_data is not None:
@@ -1369,6 +1370,8 @@ class _Cif(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.cif import CifData
 
         self.dataclass = CifData
@@ -1468,8 +1471,6 @@ class _Cif(VerdiCommandWithSubcommands,
         """
         Plugin for TCOD
         """
-        from aiida.orm.utils import load_node
-
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1501,7 +1502,6 @@ class _Cif(VerdiCommandWithSubcommands,
         Deposition plugin for TCOD.
         """
         from aiida.tools.dbexporters.tcod import deposit
-        from aiida.orm.utils import load_node
 
         parameters = None
         if parameter_data is not None:
@@ -1530,6 +1530,8 @@ class _Trajectory(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.array.trajectory import TrajectoryData
 
         self.dataclass = TrajectoryData
@@ -1615,7 +1617,6 @@ class _Trajectory(VerdiCommandWithSubcommands,
         """
         Plugin for TCOD
         """
-        from aiida.orm.utils import load_node
 
         parameters = None
         if parameter_data is not None:
@@ -1653,7 +1654,6 @@ class _Trajectory(VerdiCommandWithSubcommands,
         Deposition plugin for TCOD.
         """
         from aiida.tools.dbexporters.tcod import deposit
-        from aiida.orm.utils import load_node
 
         parameters = None
         if parameter_data is not None:
@@ -1682,6 +1682,8 @@ class _Parameter(VerdiCommandWithSubcommands, Visualizable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.parameter import ParameterData
 
         self.dataclass = ParameterData
@@ -1710,6 +1712,9 @@ class _Array(VerdiCommandWithSubcommands, Visualizable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.orm.data.array import ArrayData
 
         self.dataclass = ArrayData

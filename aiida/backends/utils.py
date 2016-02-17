@@ -16,16 +16,16 @@ def is_dbenv_loaded():
 
 
 def load_dbenv(*args, **kwargs):
+    # ## Spyros debugging for trace
+    # import traceback
+    # # print(traceback.print_stack())
+    # traceback.print_stack()
+    # #############
+
     # check if profile is loaded
     if not is_profile_loaded():
-        # load_profile(process, profile)
         load_profile(profile=settings.AIIDADB_PROFILE)
 
-    # if not is_dbenv_loaded():
-    #     raise InvalidOperation("Dbenv should be loaded!")
-
-    # load profile
-    # move here logic from djsite.utils._load_dbenv_noschemacheck
     if is_dbenv_loaded():
         raise InvalidOperation("You cannot call load_dbenv multiple times!")
     settings.LOAD_DBENV_CALLED = True

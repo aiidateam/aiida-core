@@ -5,13 +5,14 @@ This allows to manage comments from command line.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.backends.utils import load_dbenv
-# from aiida.orm.utils import load_node
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.cmdline import delayed_load_node as load_node
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+__contributors__ = ("Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, "
+                    "Spyros Zoupanos")
 
 
 class Comment(VerdiCommandWithSubcommands):
@@ -37,10 +38,9 @@ class Comment(VerdiCommandWithSubcommands):
         import argparse
         from aiida.backends.utils import get_automatic_user
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
-        from aiida.orm.node import Node as AiidaOrmNode
-        from aiida.orm.utils import load_node
         user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
@@ -82,10 +82,9 @@ class Comment(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.backends.utils import get_automatic_user
-        from aiida.orm.utils import load_node
 
-        load_dbenv()
-        from aiida.orm.node import Node as AiidaOrmNode
+        if not is_dbenv_loaded():
+            load_dbenv()
         user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
@@ -136,9 +135,8 @@ class Comment(VerdiCommandWithSubcommands):
         from aiida.backends.utils import get_automatic_user
         from aiida.common.exceptions import ModificationNotAllowed
 
-        load_dbenv()
-        from aiida.orm.node import Node as AiidaOrmNode
-        from aiida.orm.utils import load_node
+        if not is_dbenv_loaded():
+            load_dbenv()
         user = get_automatic_user()
         from aiida.backends.djsite.db.models import DbComment
 
@@ -201,9 +199,8 @@ class Comment(VerdiCommandWithSubcommands):
         import argparse
         from aiida.backends.utils import get_automatic_user
 
-        load_dbenv()
-        from aiida.orm.utils import load_node
-        from aiida.orm.node import Node as AiidaOrmNode
+        if not is_dbenv_loaded():
+            load_dbenv()
         user = get_automatic_user()
 
         parser = argparse.ArgumentParser(

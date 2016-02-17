@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-
-
 from aiida.common.pluginloader import BaseFactory
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Gianluca Prandini, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__contributors__ = ("Andrea Cepellotti, Andrius Merkys, Gianluca Prandini, " \
+                    "Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, "
+                    "Spyros Zoupanos")
 
 
 def CalculationFactory(module, from_abstract=False):
@@ -110,6 +110,11 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     :raises: ValueError if none or more than one of parameters is supplied
         or type of wf_id is neither string nor integer
     """
+    # This must be done inside here, because at import time the profile
+    # must have been already loaded. If you put it at the module level,
+    # the implementation is frozen to the default one at import time.
+    from aiida.orm.implementation import Workflow
+
     if int(wf_id is None) + int(pk is None) + int(uuid is None) == 3:
         raise ValueError("one of the parameters 'wf_id', 'pk' and 'uuid' "
                          "has to be supplied")

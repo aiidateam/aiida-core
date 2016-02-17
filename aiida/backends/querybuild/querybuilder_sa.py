@@ -5,14 +5,10 @@ from querybuilder_base import (
     flatten_list
 )
 
-
-"""
-HEllo
-
-"""
 class QueryBuilder(QueryBuilderBase):
-    
-    
+    """
+    QueryBuilder to use with SQLAlchemy-backend and schema defined in backends.sqlalchemy.models
+    """    
     def analyze_filter_spec(self, alias, filter_spec):
         expressions = []
         for path_spec, filter_operation_dict in filter_spec.items():
@@ -48,58 +44,6 @@ class QueryBuilder(QueryBuilderBase):
                 ]
         return and_(*expressions)
     def get_expr(operator, value, db_path, val_in_json):
-        """
-        Applies a filter on the alias given.
-        Expects the alias of the ORM-class on which to filter, and filter_spec.
-        Filter_spec contains the specification on the filter.
-        Expects:
-        
-        -   ``operator``: The operator to apply. These can be:
-        
-            -  for any type: 
-                -   ==  (compare single value, eg: '==':5.0)
-                - in    (compare whether in list, eg: 'in':[5, 6, 34]
-            -  for floats and integers:
-                 - >
-                 - <
-                 - <=
-                 - >= 
-            -  for strings:
-                 - like  (case - sensitive)   (eg 'like':'node.calc.%'  will match node.calc.relax and node.calc.RELAX and node.calc. but node node.CALC.relax)
-                 - ilike (case - unsensitive) (will also match node.CaLc.relax)
-                    
-                on that topic:
-                The character % is a reserved special character in SQL, and acts as a wildcard.
-                If you specifically want to capture a ``%`` in the string name, use:
-                ``_%``
-            -  for arrays and dictionaries:
-                 - contains  (pass a list with all the items that the array should contain, or that should be among the keys, eg: 'contains': ['N', 'H'])
-                 - has_key   (pass an element that the list has to contain or that has to be a key, eg: 'has_key':'N')
-            -  for arrays only:
-                 - of_length  
-                 - longer
-                 - shorter
-            
-            All the above filters invoke a negation of the expression if preceded by ~
-            
-            - {'name':{'~in':['halle', 'lujah']}} # Name not 'halle' or 'lujah'
-            - {'id':{ '~==': 2}} # id is not 2
-
-            
-        - ``value``: The value for the right side of the expression, the value you want to compare with.
-        - ``db_bath``: The path leading to the value
-        - ``val_in_json``: Boolean, whether the value is in a json-column, requires type casting.
-
-
-            
-        TODO:
-        
-        -   implement redundant expressions for user-friendliness: 
-        
-            -   ~==: !=, not, ne 
-            -   ~in: nin, !in
-            -   ~like: unlike    
-        """
         def cast_according_to_type(path_in_json, value, val_in_json):
             if not val_in_json:
                 return path_in_json
@@ -119,13 +63,13 @@ class QueryBuilder(QueryBuilderBase):
                 return path_in_json.cast(TIMESTAMP)
             else:
                 raise Exception( ' Unknown type {}'.format(type(value)))
-            
-        
+
         if operator.startswith('~'):
             negation = True
             operator = operator.lstrip('~')
         else:
             negation = False
+
         if operator == '==':
             expr = cast_according_to_type(db_path, value, val_in_json) == value
         elif operator == '>':
@@ -195,12 +139,11 @@ class QueryBuilder(QueryBuilderBase):
             expr = or_(*or_expressions_for_this_path)
         else:
             raise Exception (' Unknown filter {}'.format(operator))
-        
         if negation:
-            #~ print type(not_(expr))
             return not_(expr)
-        else:
-            return expr
+        return expr
+
+
     def add_projectable_entity(self, projectable_spec, alias):
         if projectable_spec == '*': # 
             self.que = self.que.add_entity(alias)

@@ -5,10 +5,11 @@
 
 
 from querybuilder_base import (
-    QueryBuilderBase, replacement_dict
+    QueryBuilderBase, replacement_dict, datetime, InputValidationError
 )
 
 from dummy_model import (
+    # Tables:
     DbNode      as DummyNode,
     DbLink      as DummyLink,
     DbAttribute as DummyAttribute,
@@ -18,8 +19,9 @@ from dummy_model import (
     DbComputer  as DummyComputer,
     DbGroup     as DummyGroup,
     table_groups_nodes  as Dummy_table_groups_nodes,
-    session, and_, or_, not_, except_, aliased,
-    DjangoAiidaNode, DjangoAiidaGroup
+    and_, or_, not_, except_, aliased,      # Queryfuncs
+    DjangoAiidaNode, DjangoAiidaGroup,      # Aiida classes when using Django
+    session,                                # session with DB
 )
 
 
@@ -35,15 +37,15 @@ class QueryBuilder(QueryBuilderBase):
     """
 
     def __init__(self, queryhelp, **kwargs):
-        self.Link       = DummyLink
-        self.Path       = DummyPath
-        self.Node       = DummyNode
-        self.Computer   = DummyComputer
-        self.User       = DummyUser
-        self.Group      = DummyGroup
+        self.Link               = DummyLink
+        self.Path               = DummyPath
+        self.Node               = DummyNode
+        self.Computer           = DummyComputer
+        self.User               = DummyUser
+        self.Group              = DummyGroup
         self.table_groups_nodes = Dummy_table_groups_nodes
-        self.AiidaNode  = DjangoAiidaNode
-        self.AiidaGroup  = DjangoAiidaGroup
+        self.AiidaNode          = DjangoAiidaNode
+        self.AiidaGroup         = DjangoAiidaGroup
         
         super(QueryBuilder, self).__init__(queryhelp, **kwargs)
 
@@ -61,7 +63,84 @@ class QueryBuilder(QueryBuilderBase):
     def get_session():
         return session
 
+    @staticmethod
+    def get_expr(operator, value, column, attr_key):
+        """
+        :param operator:
+            A string representation of a valid operator,
+            '==', '<=', '<', '>' ,' >=', 'in', 'like'
+            or the negation of such (same string prepended with '~')
+        :param value:
+            The right part of the expression
+        :param column:
+            An instance of *sqlalchemy.orm.attributes.InstrumentedAttribute*.
+            Giving the left part of the expression
+        :param attr_key:
+            If I am looking at an attribute, than the attr_key is the key
+            to look for in db_dbattributes table.
+        
+        :returns:
+            An SQLAlchemy expression
+            (*sqlalchemy.sql.selectable.Exists*,
+            *sqlalchemy.sql.elements.BinaryExpression*, etc) 
+            that can be evaluated by a query intance.
+        """
+        
+        if operator.startswith('~'):
+            negation = True
+            operator = operator.lstrip('~')
+        else:
+            negation = False
+        if attr_key:
+            mapped_class = column.prop.mapper.class_
+            if isinstance(value, str):
+                mapped_entity = mapped_class.tval
+            elif isinstance(value, bool):
+                mapped_entity = mapped_class.bval
+            elif isinstance(value, float):
+                mapped_entity = mapped_class.fval
+            elif isinstance(value, int):
+                mapped_entity = mapped_class.ival
+            elif isinstance(value, datetime.datetime):
+                mapped_entity = mapped_class.dval
+            expr = column.any(
+                and_(
+                    mapped_class.key.like(attr_key),
+                    QueryBuilder.get_expr(operator, value, mapped_entity , None)
+                )
+            )
+        else:
+            if operator == '==':
+                expr = column == value
+            elif operator == '>':
+                expr = column > value 
+            elif operator == '<':
+                expr = column < value 
+            elif operator == '>=':
+                expr = column >= value 
+            elif operator == '<=':
+                expr = column <= value 
+            elif operator == 'like':
+                expr = column.like(value)
+            elif operator == 'ilike':
+                expr = column.like(value)
+            elif operator == 'in':
+                expr = column.in_(value)
+            else:
+                raise Exception('Unkown operator %s' % operator)
+        if negation:
+            return not_(expr)
+        return expr
+
     def analyze_filter_spec(self, alias, filter_spec):
+        """
+        Recurse through the filter specification and apply filter operations.
+        
+        :param alias: The alias of the ORM class the filter will be applied on
+        :param filter_spec: the specification as given by the queryhelp
+        
+        :returns: an instance of *sqlalchemy.sql.elements.BinaryExpression*.
+        """
         expressions = []
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in  ('and', 'or', '~or', '~and'):
@@ -105,118 +184,33 @@ class QueryBuilder(QueryBuilderBase):
             'project':self.projection_dict_user
         }
 
-    def get_column(self, colname, alias):
 
-        col =  super(QueryBuilder, self).get_column(colname, alias)
-        return col
-
-    @staticmethod
-    def get_expr(operator, value, column, attr_key):
-        if operator.startswith('~'):
-            negation = True
-            operator = operator.lstrip('~')
-        else:
-            negation = False
-        if attr_key:
-            mapped_class = column.prop.mapper.class_
-            if isinstance(value, str):
-                mapped_entity = mapped_class.tval
-            elif isinstance(value, bool):
-                mapped_entity = mapped_class.bval
-            elif isinstance(value, float):
-                mapped_entity = mapped_class.fval
-            elif isinstance(value, int):
-                mapped_entity = mapped_class.ival
-            elif isinstance(value, dval):
-                mapped_entity = mapped_class.dval
-            
-            expr = column.any(
-                and_(
-                    mapped_class.key.like(attr_key),
-                    QueryBuilder.get_expr(operator, value, mapped_entity , None)
-                )
-            )
-        else:
-            if operator == '==':
-                expr = column == value
-            elif operator == '>':
-                expr = column > value 
-            elif operator == '<':
-                expr = column < value 
-            elif operator == '>=':
-                expr = column >= value 
-            elif operator == '<=':
-                expr = column <= value 
-            elif operator == 'like':
-                expr = column.like(value)
-            elif operator == 'ilike':
-                expr = column.like(value)
-            elif operator == 'in':
-                expr = column.in_(value)
-            else:
-                raise Exception('Unkown operator %s' % operator)
-        if negation:
-            return not_(expr)
-        return expr
-
-    def add_projectable_entity(self, projectable_spec, alias):
+    def add_projectable_entity(self, alias, projectable_spec):
+        """
+        :param alias: 
+            A instance of *sqlalchemy.orm.util.AliasedClass*, alias for an ormclass
+        :param projectable_spec:
+            User specification of what to project.
+            Appends to query's entities what the user want to project
+            (have returned by the query)
+        
+        """
+        print type(alias)
+        #~ raw_input(projectable_spec)
         if projectable_spec == '*': # project the entity
             self.que = self.que.add_entity(alias)
         else:
-            if isinstance(projectable_spec, dict):
-                type_to_cast, = projectable_spec.values()
-                projectable_spec, = projectable_spec.keys()
-            column_name = projectable_spec.split('.')[0] 
-            attr_key    = projectable_spec.split('.')[1:]
-            if attr_key:
-                if type_to_cast in ('json', 'int', 'float', 'bool'):
-                    self.que = self.que.add_columns(
-                        get_column(
-                            column_name, alias
-                        )[json_path].cast(JSONB)
-                    )
-                elif type_to_cast == 'str':
-                    self.que = self.que.add_columns(
-                        get_column(
-                            column_name, alias
-                        )[json_path].astext
-                    )
-                else:
-                    raise Exception(
-                        "invalid type to cast {}".format(
-                            type_to_cast
-                        )
-                    )
-            else:
-                self.que =  self.que.add_columns(self.get_column(column_name, alias))
+            column_name = projectable_spec
+            if column_name == 'attributes':
+                raise InputValidationError(
+                    "\n\nI cannot project on Attribute table\n"
+                    "Please use the SA backend for that functionality"
+                )
+            elif '.' in column_name:
+                raise InputValidationError(
+                    "\n\n"
+                    "I cannot project on other entities\n"
+                    "Please use the SA backend for that functionality"
+                )
+            self.que =  self.que.add_columns(self.get_column(column_name, alias))
         return projectable_spec
-
-        
-if __name__ == '__main__':
-    from aiida.orm.calculation.inline import InlineCalculation
-    from aiida.orm.calculation.job import JobCalculation
-    from aiida.orm.data.parameter import ParameterData
-    from aiida.orm.data.structure import StructureData
-    from aiida.orm.data.upf import UpfData
-    from aiida.orm.group import Group
-    from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-    # from aiida.orm.calculation.job.plugins.quantumespresso 
-    qh = {
-        'path':[
-            JobCalculation,
-            {'class':'computer', 'used_by':JobCalculation}
-        ],
-        'project':{
-            'computer':'name',
-            JobCalculation: ['id', 'state', 'ctime', 'type']
-        },
-    }
-
-    #~ raw_input(issubclass(StructureData, Node))
-    qb = QueryBuilder(qh)
-    print qb.get_query()
-    print qb.get_dict()
-    res = qb.get_results_dict()
-    print res
-    
-

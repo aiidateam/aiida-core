@@ -4,18 +4,17 @@
 """
 The general functionalities that all querybuilders need to have
 are found in this module.
-:func:`QueryBuilderBase` is the Base class for QueryBuilder classes
-adapted to the SQLAlchemy or Django schema.
-
+:func:`QueryBuilderBase` is the Base class for QueryBuilder classes.
+Subclasses need to be written for *every* schema/backend implemented
+in backends.
 """
-
 
 import copy
 from abc import abstractmethod
 from inspect import isclass as inspect_isclass
 from sa_init import aliased
-
 from aiida.common.exceptions import InputValidationError
+import datetime
 
 replacement_dict = dict(
     float   = 'float', 
@@ -364,7 +363,7 @@ class QueryBuilderBase(object):
         self.path = []
         self.alias_dict = {}
         queryhelp = copy.deepcopy(queryhelp)
-        
+
         if not isinstance(queryhelp, dict):
             queryhelp = {
                 'path':queryhelp
@@ -372,18 +371,28 @@ class QueryBuilderBase(object):
 
         self.projection_dict_user = self.make_json_compatible(queryhelp.pop('project', {}))
         self.filters = self.make_json_compatible(queryhelp.pop('filters', {}))
-        # Confuse this myself, whether it's filter or filters
-        #self.filters = self.filters.update(make_json_compatible(queryhelp.pop('filter', {})))
+
         self.ormclass_list = []
         self.label_list = []
         self.alias_list = []
         self.alias_dict = {}
+
         if not isinstance(queryhelp['path'], (tuple, list)):
             queryhelp['path'] = [queryhelp['path']]
         for path_spec in queryhelp.pop('path'):
             self._add_to_path(path_spec)
         self.limit = queryhelp.pop('limit', False)
-        self.order_by = queryhelp.pop('order_by', False)
+        self.order_by =  self.make_json_compatible(queryhelp.pop('order_by', {}))
+
+        if queryhelp:
+            valid_keys = [
+                'path','filters', 'project', 'limit', 'order_by'
+            ]
+            raise InputValidationError(
+                "Received additional keywords: {}"
+                "\nwhich I cannot process"
+                "\nValid keywords are: {}".format(queryhelp.keys(), valid_keys)
+            )
 
     def _add_to_path(self, path_spec, autolabel =  False):
         """
@@ -416,6 +425,7 @@ class QueryBuilderBase(object):
         self.label_list.append(label)
         path_spec['label'] = label
         self.filters[label] = self.filters.get(label, {})
+
         # This way to attach the filter is not ideal
         # You have the type of the calculation being 
         #   a) the label
@@ -424,6 +434,7 @@ class QueryBuilderBase(object):
         # but shortening it will results in slower queries (like instead of =)
         # and ambiguouty when the class name is the same, but in different module...
         # How to solve that?
+
         if ormclass_type not in ['computer', 'group']:
             self.filters[label]['type'] = self.filters[label].get('type', {'like':'%{}%'.format(ormclass_type)})
         ormclass = self.get_ormclass(ormclass_type)
@@ -688,37 +699,6 @@ class QueryBuilderBase(object):
                 raise Exception(
                     "Direction 0 is not valid"
                 )
-
-
-        #~ if 'input_of' in querydict:
-            #~ func = self._join_inputs
-            #~ val = querydict['input_of']
-        #~ elif 'output_of' in querydict:
-            #~ func = self._join_outputs
-            #~ val = querydict['output_of']
-        #~ elif 'slave_of' in querydict:
-            #~ func = self._join_slaves
-            #~ val  = querydict['slave_of']
-        #~ elif 'master_of' in querydict:
-            #~ func = self._join_masters
-            #~ val  = querydict['master_of']
-        #~ elif 'descendant_of' in querydict:
-            #~ func = self._join_descendants
-            #~ val  = querydict['descendant_of']
-        #~ elif 'ancestor_of' in querydict:
-            #~ func = self._join_ancestors
-            #~ val  = querydict['ancestor_of']
-        #~ elif 'member_of' in querydict:
-            #~ func = self._join_group_members
-            #~ val  = querydict['member_of']
-        #~ elif 'member_of' in querydict:
-            #~ func = self._join_group_members_of
-            #~ val  = querydict['member_of']
-        #~ elif 'group_of' in querydict:
-            #~ func = self._join_groups
-            #~ val  = querydict['group_of']
-        #~ else:
-            
         if isinstance(val, int):
             return self.alias_list[val], func
         elif isinstance(val, str):
@@ -899,18 +879,34 @@ class QueryBuilderBase(object):
                 items_to_project = [items_to_project]
             self.label_to_projected_entity_dict[label] = {}
             for projectable_spec in items_to_project:
-                projectable_spec = self.add_projectable_entity(projectable_spec, alias)
+                projectable_spec = self.add_projectable_entity(alias, projectable_spec)
                 position_index += 1
                 self.label_to_projected_entity_dict[label][projectable_spec]  = position_index
+
+
+        ######################### ORDER ################################
+        if self.order_by:
+            if not isinstance(self.order_by, list):
+                self.order_by = [self.order_by]
+            for order_spec in self.order_by:
+                if not isinstance(order_spec, dict):
+                    raise InputValidationError(
+                        "Invalid input for order_by statement: {}\n"
+                        "I am expecting a dictionary ORMClass, [columns to sort]"
+                        "".format(order_spec)
+                    )
+                for key, val in order_spec.items():
+                    alias = self.alias_dict[key]
+                    if not isinstance(val, list):
+                        val = [val]
+                    for colname in val:
+                        self.que = self.que.order_by(self.get_column(colname, alias))
 
         ######################### LIMIT ################################
         if self.limit:
             self.que = self.que.limit(self.limit)
 
-        ######################### ORDER ################################
-        if self.order_by:
-            # TODO
-            raise NotImplementedError('order_by is not implemented')
+
         return self.que
 
     def _make_counterquery(self,calc_class, code_inst = None, session = None):

@@ -1,63 +1,88 @@
+# -*- coding: utf-8 -*-
+
+"""
+The dummy model encodes the model defined by django in backends.djsite
+using SQLAlchemy.
+This is done to query the database with more performant ORM of SA.
+"""
 
 
 from sqlalchemy.ext.declarative import declarative_base
-
-
 from sa_init import (
-    Column, Table, ForeignKey, UniqueConstraint,create_engine,
-    Integer, String, DateTime, Float, Boolean, Text,
-    select, func, join, and_, or_, not_, except_,
-    relationship,
-    backref,
-    column_property,
-    sessionmaker,
-    foreign, mapper, aliased,
-    UUID, JSONB
+    Column, Table, ForeignKey,
+    Integer, String, DateTime, Float, Boolean, Text,  # basic column types
+    UUID, JSONB,                                      # Fancy column types
+    UniqueConstraint,aliased,
+    select, func, join, and_, or_, not_, except_,     # join and filter ops
+    relationship, backref, column_property,           # Table to table relationsships
+    sessionmaker, create_engine,                      # connection
+    foreign, mapper,
 )
 
+# Aiida Django classes:
 from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
 from aiida.orm.implementation.django.group import Group as DjangoAiidaGroup
-
-from aiida.common.setup import get_profile_config
-from aiida.backends import settings
-from aiida.backends.sqlalchemy.models.utils import uuid_func
-from aiida.utils import timezone
-from aiida.common.exceptions import DbContentError, MissingPluginError
-
 from aiida.orm.implementation.calculation import from_type_to_pluginclassname
 from aiida.common.pluginloader import load_plugin
 
+
+# SETTINGS:
+from aiida.common.setup import get_profile_config
+from aiida.backends import settings
+
+#EXCEPTIONS
+from aiida.common.exceptions import DbContentError, MissingPluginError
+
+# MISC
+from aiida.backends.sqlalchemy.models.utils import uuid_func
+from aiida.utils import timezone
+
+
+
 Base = declarative_base()
-
-
 
 class DbLink(Base):
     __tablename__ = "db_dblink"
-
     id = Column(Integer, primary_key=True)
-    input_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED"))
-    output_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
-
+    input_id = Column(
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+    )
+    output_id = Column(
+        Integer,
+        ForeignKey(
+            'db_dbnode.id',
+            ondelete="CASCADE",
+            deferrable=True,
+            initially="DEFERRED"
+        )
+    )
     input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
-
     label = Column(String(255), index=True, nullable=False)
-
 
 class DbPath(Base):
     __tablename__ = "db_dbpath"
-
     id = Column(Integer, primary_key=True)
-    parent_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED"))
-    child_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED"))
-
-    parent = relationship("DbNode", primaryjoin="DbPath.parent_id == DbNode.id",
-                          backref="child_paths")
-    child = relationship("DbNode", primaryjoin="DbPath.child_id == DbNode.id",
-                         backref="parent_paths")
-
+    parent_id = Column(
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+    )
+    child_id = Column(
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+    )
+    parent = relationship(
+        "DbNode",
+        primaryjoin="DbPath.parent_id == DbNode.id",
+        backref="child_paths"
+    )
+    child = relationship(
+        "DbNode",
+        primaryjoin="DbPath.child_id == DbNode.id",
+        backref="parent_paths"
+    )
     depth = Column(Integer)
-
     entry_edge_id = Column(Integer)
     direct_edge_id = Column(Integer)
     exit_edge_id = Column(Integer)
@@ -67,19 +92,25 @@ class DbNode(Base):
     __tablename__ = "db_dbnode"
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
-
     type = Column(String(255), index=True)
     label = Column(String(255), index=True, nullable=True)
     description = Column(Text(), nullable=True)
-
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now)
-
-    dbcomputer_id = Column(Integer, ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED"),
-                         nullable=True)
-    dbcomputer = relationship('DbComputer', backref=backref('dbnodes', passive_deletes=True))
-
-    user_id = Column(Integer, ForeignKey('db_dbuser.id', deferrable=True, initially="DEFERRED"), nullable=False)
+    dbcomputer_id = Column(
+        Integer,
+        ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED"),
+        nullable=True
+    )
+    dbcomputer = relationship(
+        'DbComputer',
+        backref=backref('dbnodes', passive_deletes=True)
+    )
+    user_id = Column(
+        Integer,
+        ForeignKey('db_dbuser.id', deferrable=True, initially="DEFERRED"),
+        nullable=False
+    )
     user = relationship('DbUser', backref='dbnodes')
 
     public = Column(Boolean, default=False)
@@ -92,21 +123,41 @@ class DbNode(Base):
     )
 
 
-    outputs = relationship("DbNode", secondary="db_dblink",
-                           primaryjoin="DbNode.id == DbLink.input_id",
-                           secondaryjoin="DbNode.id == DbLink.output_id",
-                           backref=backref("inputs", passive_deletes=True),
-                           passive_deletes=True)
+    outputs = relationship(
+        "DbNode",
+        secondary       =   "db_dblink",
+        primaryjoin     =   "DbNode.id == DbLink.input_id",
+        secondaryjoin   =   "DbNode.id == DbLink.output_id",
+        backref         =   backref("inputs", passive_deletes=True),
+        passive_deletes =   True
+    )
 
-    children = relationship("DbNode", secondary="db_dbpath",
-                               primaryjoin="DbNode.id == DbPath.parent_id",
-                               secondaryjoin="DbNode.id == DbPath.child_id",
-                               backref="parents")
+    children = relationship(
+        "DbNode",
+        secondary       =   "db_dbpath",
+        primaryjoin     =   "DbNode.id == DbPath.parent_id",
+        secondaryjoin   =   "DbNode.id == DbPath.child_id",
+        backref         =   "parents"
+    )
     def get_aiida_class(self):
         """
-        Return the corresponding aiida instance of class aiida.orm.Node or a
-        appropriate subclass.
+        Return the corresponding instance of
+        :func:`~aiida.orm.implementation.django.node.Node`
+        or a subclass return by the plugin loader.
+        
+        .. todo:: 
+            The behavior is quite pathetic, creating a django DbNode instance
+            to instantiate the aiida instance.
+            These means that every time you load Aiida instances with 
+            the QueryBuilder when using Django as a backend, three instances
+            are instantiated for every Aiida instance you load!
+            Could be fixed by allowing DbNode from the dummy nodel to be passed
+            to AiidaNode's __init__.
+
+        :returns: An instance of the plugin class
         """
+        # I need to import the DbNode in the Django model,
+        # and instantiate an object that has the same attributes as self.
         from aiida.backends.djsite.db.models import DbNode as DjangoSchemaDbNode
         dbnode = DjangoSchemaDbNode(
             id = self.id,
@@ -120,36 +171,16 @@ class DbNode(Base):
             public = self.public,
             nodeversion = self.nodeversion
         )
-        try:
-            pluginclassname = from_type_to_pluginclassname(self.type)
-        except DbContentError:
-            raise DbContentError("The type name of node with pk= {} is "
-                                 "not valid: '{}'".format(self.pk, self.type))
+        return dbnode.get_aiida_class()
 
-        try:
-            PluginClass = load_plugin(DjangoAiidaNode, 'aiida.orm', pluginclassname)
-        except MissingPluginError as e:
-            raw_input(e)
-            aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "
-                              "will use base Node class".format(self.type, self.pk))
-            PluginClass = Node
-        #~ raw_input(PluginClass)
-        return PluginClass(dbnode=dbnode)
 
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
-
     id = Column(Integer, primary_key=True)
-
-
     dbnode = relationship('DbNode', backref=backref('dbstates', passive_deletes=True))
-
     state = Column(String(255))
-
     time = Column(DateTime(timezone=True), default=timezone.now)
-
     dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
-    
     __table_args__ = (
         UniqueConstraint('dbnode_id', 'state'),
     )
@@ -164,7 +195,6 @@ class DbAttribute(Base):
     fval = Column(Float, default=None, nullable=True)
     ival = Column(Integer, default=None, nullable=True)
     bval = Column(Boolean, default=None, nullable=True)
-    #~ dval = m.DateTimeField(default=None, null=True)
     dval = Column(DateTime, default=None, nullable = True)
 
 class DbComputer(Base):
@@ -200,30 +230,6 @@ class DbUser(Base):
     last_login = Column(DateTime(timezone=True), default=timezone.now)
     date_joined = Column(DateTime(timezone=True), default=timezone.now)
 
-
-states = select(
-        [
-            DbCalcState.dbnode_id.label('dbnode_id'),
-            func.max(DbCalcState.time).label('lasttime'),
-        ]
-    ).group_by(DbCalcState.dbnode_id).alias()
-
-recent_states = select([
-        DbCalcState.id.label('id'),
-        DbCalcState.dbnode_id.label('dbnode_id'),
-        DbCalcState.state.label('state'),
-        states.c.lasttime.label('time')
-    ]).\
-    select_from(
-        join(
-            DbCalcState,
-            states,
-            and_(
-                DbCalcState.dbnode_id == states.c.dbnode_id,
-                DbCalcState.time == states.c.lasttime,
-            )
-        )
-    ).alias() # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
 
 table_groups_nodes = Table(
     'db_dbgroup_dbnodes',
@@ -275,7 +281,33 @@ class DbGroup(Base):
         )
 
         return DjangoAiidaGroup(dbgroup = dbgroup)
-        
+
+
+
+states = select(
+        [
+            DbCalcState.dbnode_id.label('dbnode_id'),
+            func.max(DbCalcState.time).label('lasttime'),
+        ]
+    ).group_by(DbCalcState.dbnode_id).alias()
+
+recent_states = select([
+        DbCalcState.id.label('id'),
+        DbCalcState.dbnode_id.label('dbnode_id'),
+        DbCalcState.state.label('state'),
+        states.c.lasttime.label('time')
+    ]).\
+    select_from(
+        join(
+            DbCalcState,
+            states,
+            and_(
+                DbCalcState.dbnode_id == states.c.dbnode_id,
+                DbCalcState.time == states.c.lasttime,
+            )
+        )
+    ).alias() # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
+
 state_mapper = mapper(
     DbCalcState,
     recent_states, 

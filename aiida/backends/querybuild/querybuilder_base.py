@@ -14,6 +14,7 @@ from abc import abstractmethod
 from inspect import isclass as inspect_isclass
 from sa_init import aliased
 from aiida.common.exceptions import InputValidationError
+from aiida.common.utils import flatten_list
 import datetime
 
 replacement_dict = dict(
@@ -1171,38 +1172,44 @@ class QueryBuilderBase(object):
 
 
     def inputs(self, **kwargs):
+        """
+        Join to inputs of previous vertice in path.
+
+        :returns: self, the querybuilder instance
+        """
         join_to = self.label_list[-1]
         cls = kwargs.pop('cls', self.AiidaNode)
         self._add_to_path(cls = cls, input_of = join_to, autolabel = True, **kwargs)
         return self
     def outputs(self, **kwargs):
+        """
+        Join to outputs of previous vertice in path.
+
+        :returns: self, the querybuilder instance
+        """
         join_to = self.label_list[-1]
         cls = kwargs.pop('cls', self.AiidaNode)
         self._add_to_path(cls = cls, output_of = join_to, autolabel = True, **kwargs)
         return self
     def children(self, **kwargs):
+        """
+        Join to children/descendants of previous vertice in path.
+
+        :returns: self, the querybuilder instance
+        """
         join_to = self.label_list[-1]
         cls = kwargs.pop('cls', self.AiidaNode)
         self._add_to_path(cls = cls, descendant_of = join_to, autolabel = True, **kwargs)
         return self
     def parents(self, **kwargs):
+        """
+        Join to parents/ancestors of previous vertice in path.
+
+        :returns: self, the querybuilder instance
+        """
         join_to = self.label_list[-1]
         cls = kwargs.pop('cls', self.AiidaNode)
         self._add_to_path(cls = cls, ancestor_of = join_to, autolabel = True, **kwargs)
         return self
 
-def flatten_list ( value ):
-    """
-    Flattens a list or a tuple
-    In [2]: flatten_list([[[[[4],3]],[3],['a',[3]]]])
-    Out[2]: [4, 3, 3, 'a', 3]
 
-    :param value: A value, whether iterable or not
-    :returns: a list of nesting level 1
-    """
-
-    if isinstance(value, (list, tuple)):
-        return_list = []
-        [[return_list.append(i) for i in flatten_list(item)] for item in value]
-        return return_list
-    return [value]

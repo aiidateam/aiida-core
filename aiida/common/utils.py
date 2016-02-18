@@ -722,6 +722,23 @@ def query_string(question, default):
             sys.stdout.write("Please provide a non empty answer.\n")
 
 
+def flatten_list ( value ):
+    """
+    Flattens a list or a tuple
+    In [2]: flatten_list([[[[[4],3]],[3],['a',[3]]]])
+    Out[2]: [4, 3, 3, 'a', 3]
+
+    :param value: A value, whether iterable or not
+    :returns: a list of nesting level 1
+    """
+
+    if isinstance(value, (list, tuple)):
+        return_list = []
+        [[return_list.append(i) for i in flatten_list(item)] for item in value]
+        return return_list
+    return [value]
+
+
 class combomethod(object):
     """
     A decorator that wraps a function that can be both a classmethod or

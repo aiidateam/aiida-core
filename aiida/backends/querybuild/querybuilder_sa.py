@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from querybuilder_base import (
-    QueryBuilderBase,
-    flatten_list
-)
+from querybuilder_base import QueryBuilderBase
 
+raise NotImplementedError
 class QueryBuilder(QueryBuilderBase):
     """
     QueryBuilder to use with SQLAlchemy-backend and schema defined in backends.sqlalchemy.models

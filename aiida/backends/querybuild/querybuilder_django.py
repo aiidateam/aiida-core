@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
-
-# SA querying functionalities
-
-
 from querybuilder_base import (
-    QueryBuilderBase, replacement_dict, datetime, InputValidationError
+    QueryBuilderBase,
+    datetime,
+    InputValidationError
 )
 
 from dummy_model import (

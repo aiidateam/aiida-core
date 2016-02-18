@@ -7,6 +7,7 @@ import collections
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
 from aiida.common.folders import SandboxFolder
+from aiida.common.utils import combomethod
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -1147,6 +1148,48 @@ class AbstractNode(object):
         """
         # use the transitive closure
         pass
+
+    @classmethod
+    def _get_qb_instance(cls, **kwargs):
+        from aiida.orm import QueryBuilder, Node as AiidaNode
+        qb = QueryBuilder({'path':[]})
+        qb._add_to_path(cls, autolabel = True, **kwargs)
+        return qb, cls
+
+    def _join_path(self_or_cls, **kwargs):
+        from aiida.orm import Node as AiidaNode
+        
+        try:
+            join_specification = kwargs.pop('join_specification')
+        except KeyError:
+            raise InputValidationError(
+                "No join_specification provided"
+            )
+
+        isclass =  kwargs.pop('isclass')
+        if not isclass:
+            qb, me = self_or_cls._get_qb_instance(filters = {'id':self_or_cls.pk})
+        else:
+            qb, me = self_or_cls._get_qb_instance()
+
+        qb._add_to_path({'class':AiidaNode, join_specification :me}, autolabel = True, **kwargs)
+        return qb
+        
+    @combomethod
+    def inputs(self_or_cls, **kwargs):
+        return self_or_cls._join_path(join_specification = 'input_of', **kwargs)
+
+    @combomethod
+    def outputs(self_or_cls, **kwargs):
+        return self_or_cls._join_path(join_specification = 'output_of', **kwargs)
+
+    @combomethod
+    def children(self_or_cls, **kwargs):
+        return self_or_cls._join_path(join_specification = 'descendant_of', **kwargs)
+    
+    @combomethod
+    def parents(self_or_cls, **kwargs):
+        return self_or_cls._join_path(join_specification = 'ancestor_of', **kwargs)
 
 
 class NodeOutputManager(object):

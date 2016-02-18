@@ -49,7 +49,7 @@ class QueryBuilder(QueryBuilderBase):
         
         super(QueryBuilder, self).__init__(queryhelp, **kwargs)
 
-    def get_ormclass(self, ormclasstype):
+    def get_ormclass(self,cls, ormclasstype):
         """
         Return the valid ormclass for the connections
         """
@@ -85,14 +85,7 @@ class QueryBuilder(QueryBuilderBase):
             *sqlalchemy.sql.elements.BinaryExpression*, etc) 
             that can be evaluated by a query intance.
         """
-        
-        if operator.startswith('~'):
-            negation = True
-            operator = operator.lstrip('~')
-        else:
-            negation = False
-        if attr_key:
-            mapped_class = column.prop.mapper.class_
+        def get_mapped_entity(mapped_class, value):
             if isinstance(value, str):
                 mapped_entity = mapped_class.tval
             elif isinstance(value, bool):
@@ -103,10 +96,32 @@ class QueryBuilder(QueryBuilderBase):
                 mapped_entity = mapped_class.ival
             elif isinstance(value, datetime.datetime):
                 mapped_entity = mapped_class.dval
+            elif isinstance(value, (list, tuple)):
+                value_type_set = set([type(i) for i in value])
+                if len(value_type_set) > 1:
+                    raise InputValidationError( '{}  contains more than one type'.format(value))
+                elif len(value_type_set) == 0:
+                    raise InputValidationError('Given list is empty, cannot determine type')
+                else:
+                    mapped_entity = get_mapped_entity(mapped_class, value[0])
+            else:
+                raise InputValidationError(
+                    "I don't know what to do with value {}".format(value)
+                )
+            return mapped_entity
+                
+        if operator.startswith('~'):
+            negation = True
+            operator = operator.lstrip('~')
+        else:
+            negation = False
+        if attr_key:
+            mapped_class = column.prop.mapper.class_
+                
             expr = column.any(
                 and_(
                     mapped_class.key.like(attr_key),
-                    QueryBuilder.get_expr(operator, value, mapped_entity , None)
+                    QueryBuilder.get_expr(operator, value, get_mapped_entity(mapped_class, value) , None)
                 )
             )
         else:
@@ -173,16 +188,6 @@ class QueryBuilder(QueryBuilderBase):
                     in filter_operation_dict.items()
                 ]
         return and_(*expressions)
-
-    def get_dict(self):
-        """
-        Returns the json-compatible list
-        """
-        return {
-            'path':self.path, 
-            'filters':self.filters,
-            'project':self.projection_dict_user
-        }
 
 
     def add_projectable_entity(self, alias, projectable_spec):

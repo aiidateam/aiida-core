@@ -299,61 +299,51 @@ class QueryBuilderBase(object):
                         ]
                             
                     },
-                    'md':[
-                        {
-                            'state':{   
-                                'in':(
-                                    'computing', 
-                                    'parsing', 
-                                    'finished',
-                                    'new'
-                                )
-                            }
+                    'md':{
+                        'state':{   
+                            'in':(
+                                'computing', 
+                                'parsing', 
+                                'finished',
+                                'new'
+                            )
                         }
-                    ],
-                    StructureData:[
-                        {
-                            'or':[
-                                {
-                                    'attributes.cell.0.0':{
-                                        'or':[
-                                            {'<':3.0},
-                                            {'>':5., '<':7.}
-                                        ]
-                                    },
+                    },
+                    StructureData:{
+                        'or':[
+                            {
+                                'attributes.cell.0.0':{
+                                    'or':[
+                                        {'<':3.0},
+                                        {'>':5., '<':7.}
+                                    ]
                                 },
-                                {
-                                    'attributes.cell.1.1':{
-                                        'or':[
-                                            {'<':3.0},
-                                            {'>':5., '<':7.}
-                                        ]
-                                    },
+                            },
+                            {
+                                'attributes.cell.1.1':{
+                                    'or':[
+                                        {'<':3.0},
+                                        {'>':5., '<':7.}
+                                    ]
                                 },
-                                {
-                                    'attributes.cell.2.2':{
-                                        'or':[
-                                            {'<':3.0},
-                                            {'>':5., '<':7.}
-                                        ]
-                                    },
+                            },
+                            {
+                                'attributes.cell.2.2':{
+                                    'or':[
+                                        {'<':3.0},
+                                        {'>':5., '<':7.}
+                                    ]
                                 },
-                            ]
-                            
-                        },
-                        {
-                            'attributes.sites':{
-                                'of_length':4
-                            }
-                        },
-                        {
-                            'attributes.kinds':{
-                                'shorter':3,
-                                'has_key':'N',
-                            }
+                            },
+                        ],
+                        'attributes.sites':{
+                            'of_length':4
                         }
-                    ],
-                    
+                        'attributes.kinds':{
+                            'shorter':3,
+                            'has_key':'N',
+                        }
+                    }
                 }
             }
             
@@ -369,19 +359,42 @@ class QueryBuilderBase(object):
                 'path':queryhelp
             }
 
-        self.projection_dict_user = self.make_json_compatible(queryhelp.pop('project', {}))
-        self.filters = self.make_json_compatible(queryhelp.pop('filters', {}))
+        #~ self.projections = self.make_json_compatible(queryhelp.pop('project', {}))
 
+        #~ self.filters = self.make_json_compatible(queryhelp.pop('filters', {}))
+        
+        self.filters = {}
+        self.projections = {}
         self.ormclass_list = []
+
         self.label_list = []
+
         self.alias_list = []
+
         self.alias_dict = {}
 
         if not isinstance(queryhelp['path'], (tuple, list)):
             queryhelp['path'] = [queryhelp['path']]
+
         for path_spec in queryhelp.pop('path'):
-            self._add_to_path(path_spec)
+            try:
+                self._add_to_path(**path_spec)
+            except TypeError:
+                if isinstance(path_spec, basestring):
+                    self._add_to_path(type = path_spec)
+                else:
+                    self._add_to_path(path_spec)
+
+        
+
+        for key, val in queryhelp.pop('project', {}).items():
+            self._add_projection(key, val)
+        
+        for key,val in queryhelp.pop('filters', {}).items():
+            self._add_filter(key, val)
+        
         self.limit = queryhelp.pop('limit', False)
+
         self.order_by =  self.make_json_compatible(queryhelp.pop('order_by', {}))
 
         if queryhelp:
@@ -394,7 +407,12 @@ class QueryBuilderBase(object):
                 "\nValid keywords are: {}".format(queryhelp.keys(), valid_keys)
             )
 
-    def _add_to_path(self, path_spec, autolabel =  False):
+    def _add_to_path(self,
+        cls = None, type = None, label = None,
+        autolabel   =   False,
+        filters     =   None,
+        project     =   None
+    ):
         """
         Any iterative procedure to build the path of a graph query needs to
         invoke this method to append to the path.
@@ -402,15 +420,40 @@ class QueryBuilderBase(object):
         :param path_spec: The specification of what this node looks like
         :param autolabel: Whether to automatically search for a unique label, default to False
         """
-        path_spec = self.make_json_compatible(path_spec)
-        if isinstance(path_spec, dict):
-            assert 'class' in path_spec.keys(), 'You need to provide a key "class" with the value being an ORMClass or a unique type'
-        else:
-            path_spec = {'class': path_spec}
+        #~ path_spec = self.make_json_compatible(path_spec)
+        if cls and type:
+            raise InputValidationError(
+                "You cannot specify both a class ({}) and a type ({})"
+                "".format(cls, type)
+            )
+ 
+        if not (cls or type):
+            raise InputValidationError(
+                "You need to specify either a class or a type"
+            )
+        if cls:
+            if not inspect_isclass(cls):
+                raise InputValidationError(
+                    "{} was passed with kw 'cls', but is not a class"
+                    "\n".format(cls)
+                )
+            if issubclass(cls, self.AiidaNode):
+                type = cls._plugin_type_string
+                if label is None:
+                    label = cls._plugin_type_string.strip('.').split('.')[-1]
+            elif issubclass(cls, self.AiidaGroup):
+                type = 'group'
+            else:
+                raise InputValidationError(
+                    "I do not know what to do with {}"
+                    "\n".format(cls)
+                )
+        
 
-        ormclass_type =  path_spec['class']
-
-        if autolabel:
+        
+        if label:
+            label = label
+        elif autolabel:
             i = 1
             while True:
                 label = '{}_{}'.format(ormclass_type, i)
@@ -418,13 +461,33 @@ class QueryBuilderBase(object):
                     break
                 i  += 1
         else:
-            label = path_spec.get('label',ormclass_type)
+            label = type[:]
             if label in self.label_list:
-                raise Exception (' Label {} is not unique, choose different label'.format(label))
+                raise InputValidationError(
+                    ' Label {} is not unique, choose different label'
+                    '\n'.format(label)
+                )
 
         self.label_list.append(label)
-        path_spec['label'] = label
-        self.filters[label] = self.filters.get(label, {})
+
+        assert label not in self.filters, 'Why is label already a key in filters?'
+        self.filters[label] = {}
+        if filters is not None:
+            if not isinstance(filters, dict):
+                raise InputValidationError(
+                    "Filters have to be passed as dictionaries"
+                )
+            self.filters[label].update(filters)
+        
+        assert label not in self.projections, 'Why is label already a key in the projections?'
+        self.projections[label] = []
+
+        if project is not None:
+            if not isinstance(project, (tuple, list)):
+                raise InputValidationError(
+                    "Projected entities have to be passed as lists or tuples"
+                )
+            [self.projections[label].append(p) for p in project]
 
         # This way to attach the filter is not ideal
         # You have the type of the calculation being 
@@ -434,17 +497,28 @@ class QueryBuilderBase(object):
         # but shortening it will results in slower queries (like instead of =)
         # and ambiguouty when the class name is the same, but in different module...
         # How to solve that?
+        if type not in ['computer', 'group']:
+            self.filters[label].update(
+                dict(
+                    type = {
+                        'like':'{}%'.format(
+                            '.'.join(type.strip('.').split('.')[:-1])
+                        )
+                    }
+                )
+            )
 
-        if ormclass_type not in ['computer', 'group']:
-            self.filters[label]['type'] = self.filters[label].get('type', {'like':'%{}%'.format(ormclass_type)})
-        ormclass = self.get_ormclass(ormclass_type)
+        ormclass = self.get_ormclass(cls, type)
         self.ormclass_list.append(ormclass)
         alias = aliased(ormclass)
         self.alias_list.append(alias)
         self.alias_dict[label] = alias
-        self.path.append(path_spec)
+        self.path.append({'type':type, 'label':label})
         return label
-
+    def _add_filter(self, key, filter_spec):
+        if key in self.label_list:
+            self.filters[key].update(filter_spec)
+            return
     @staticmethod
     @abstractmethod
     def get_session():
@@ -505,21 +579,23 @@ class QueryBuilderBase(object):
 
         """
         pass
+
     @abstractmethod
     def analyze_filter_spec(*args):
         pass
 
     def _join_slaves(self, joined_entity, entity_to_join):
-        raise NotImplementedError
+        raise NotImplementedError("Master - slave relationships are not implemented")
         #~ call = aliased(Call)
         #~ self.que = self.que.join(call,  call.caller_id == joined_entity.id)
         #~ self.que = self.que.join(entity_to_join, call.called_id == entity_to_join.id)
 
     def _join_masters(self, joined_entity, entity_to_join):
-        raise NotImplementedError
+        raise NotImplementedError("Master - slave relationships are not implemented")
         #~ call = aliased(Call)
         #~ self.que = self.que.join(call,  call.called_id == joined_entity.id)
         #~ self.que = self.que.join(entity_to_join, call.caller_id == entity_to_join.id)
+
     def _join_outputs(self, joined_entity, entity_to_join):
         """
         :param joined_entity: The (aliased) ORMclass that is an input
@@ -664,7 +740,7 @@ class QueryBuilderBase(object):
             
         }
         specification_to_function_map_keys = specification_to_function_map.keys()
-        allowed_keys = specification_to_function_map_keys + ['label','class']
+        allowed_keys = specification_to_function_map_keys + ['label','cls', 'type']
         valid_keys_list = [
             (k in specification_to_function_map_keys)
             for k in querydict.keys()
@@ -707,11 +783,16 @@ class QueryBuilderBase(object):
                 val = self.labels_location_dict[val]
                 return self.alias_list[val], func
             except AttributeError:
-                raise Exception (   'List of types is not unique, '
-                                    'therefore you cannot specify types to determine node to connect with. '
-                                    'Give the position (integer) in the queryhelp')
+                raise Exception (   
+                    'List of types is not unique, '
+                    'therefore you cannot specify types to determine node to connect with. '
+                    'Give the position (integer) in the queryhelp'
+                )
             except KeyError:
-                raise Exception (   'Key {} is unknown to the types I know about:\n {}'.format(val, self.labels_location_dict.keys()))
+                raise Exception (
+                    'Key {} is unknown to the types I know about:\n'
+                    '{}'.format(val, self.labels_location_dict.keys())
+                )
             
         raise Exception('Unrecognized connection specification {}'.format(val))
 
@@ -841,13 +922,7 @@ class QueryBuilderBase(object):
                     'The labels I know are:\n{}'
                     ''.format(label,self.alias_dict.keys())
                 )
-
-            if not isinstance(filter_specs, (list, tuple)):
-                filter_specs = [filter_specs]
-
-            for filter_spec in filter_specs:
-                expr  =  self.analyze_filter_spec(alias, filter_spec)
-                self.que = self.que.filter(expr)
+            self.que = self.que.filter(self.analyze_filter_spec(alias, filter_specs))
 
         ######################### PROJECTIONS ##########################
         # first clear the entities in the case the first item in the
@@ -860,17 +935,17 @@ class QueryBuilderBase(object):
         # Mapping between enitites and the label used/ given by user:
         self.label_to_projected_entity_dict = {}
 
-        if not self.projection_dict_user: 
+        if not any(self.projections.values()): 
             # If user has not set projection,
             # I will simply project the last item specified!
             # Don't change, path traversal querying
             # relies on this behavior!
-            self.projection_dict_user =  {self.label_list[-1]:'*'}
+            self.projections.update({self.label_list[-1]:'*'})
 
         position_index = -1
         for vertice in self.path:
             label = vertice['label']
-            items_to_project = self.projection_dict_user.get(label, [])
+            items_to_project = self.projections.get(label, [])
             if not items_to_project:
                 continue
             alias = self.alias_dict[label]
@@ -913,11 +988,11 @@ class QueryBuilderBase(object):
         input_alias_list = []
         for node in self.path:
             label = node['label']
-            if label not in  self.projection_dict_user.keys():
+            if label not in  self.projections.keys():
                 continue
             #~ if label in exclude_list:
                 #~ continue
-            assert flatten_list(self.projection_dict_user[label]) == ['*'], "Only '*' allowed for input spec"
+            assert flatten_list(self.projections[label]) == ['*'], "Only '*' allowed for input spec"
             input_alias_list.append(aliased(self.alias_dict[label]))
         
         if issubclass(calc_class, self.Node):
@@ -977,7 +1052,7 @@ class QueryBuilderBase(object):
         return {
             'path'      :   self.path, 
             'filters'   :   self.filters,
-            'project'   :   self.projection_dict_user,
+            'project'   :   self.projections,
             'limit'     :   self.limit,
             'order_by'  :   self.order_by,
         }

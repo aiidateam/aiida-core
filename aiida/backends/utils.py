@@ -16,12 +16,6 @@ def is_dbenv_loaded():
 
 
 def load_dbenv(*args, **kwargs):
-    # ## Spyros debugging for trace
-    # import traceback
-    # # print(traceback.print_stack())
-    # traceback.print_stack()
-    # #############
-
     # check if profile is loaded
     if not is_profile_loaded():
         load_profile(profile=settings.AIIDADB_PROFILE)

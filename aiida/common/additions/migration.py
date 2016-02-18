@@ -6,17 +6,32 @@ from aiida.common.setup import (aiidadb_backend_key,
                                 aiidadb_backend_value_django)
 from aiida.common.setup import (get_config, store_config, install_daemon_files)
 
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.5.0"
+__contributors__ = "Spyros Zoupanos"
+
 
 class Migration(object):
+    """
+    This class converts the configuration from the AiiDA version with one
+    backend (Django) as it is described in commit e048939 to the implementation
+    that supports DJango and SQLAlchemy.
+
+    It is assumed that it is already (correctly) defined the place that the
+    various configuration files are found in the aiida.common.setup.
+    """
 
     # Profile key
     _profiles_key = "profiles"
 
     def adding_backend(self):
+        """
+        Gets the main AiiDA configuration and searches if there is a backend
+        defined. If there isn't any then Django is added.
+        """
+        # Get the available configuration
         conf = get_config()
-        print("Configuration {}".format(conf))
-        print(type(conf).__name__)
-        print("{}".format(conf.keys()))
 
         # Identifying all the available profiles
         if self._profiles_key in conf.keys():
@@ -36,21 +51,18 @@ class Migration(object):
         # Returning the configuration
         return conf
 
-    def install_deamon_file(self):
-        pass
-
     def main_method(self):
+        # Get the AiiDA directory path
         aiida_directory = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+        # Construct the daemon directory path
         daemon_dir = os.path.join(aiida_directory, DAEMON_SUBDIR)
+        # Construct the log directory path
         log_dir = os.path.join(aiida_directory, LOG_DIR)
-
-        # We update the configuration if needed
+        # Update the configuration if needed
         confs = self.adding_backend()
-
-        # We store the configuration
+        # Store the configuration
         store_config(confs)
-
-        # We update the daemon directory
+        # Update the daemon directory
         install_daemon_files(aiida_directory, daemon_dir, log_dir,
                              getpass.getuser())
 

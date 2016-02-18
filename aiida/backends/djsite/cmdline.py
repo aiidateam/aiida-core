@@ -4,12 +4,12 @@
 import datetime
 import json
 
-
 from django.db.models import Q
 
 from aiida.common.datastructures import wf_states
 from aiida.utils import timezone
 from aiida.utils.logger import get_dblogger_extra
+
 
 def get_group_list(user, type_string, n_days_ago=None,
                    name_filters={}):
@@ -28,6 +28,7 @@ def get_group_list(user, type_string, n_days_ago=None,
         (str(g.pk), g.name, len(g.nodes), g.user.email.strip(), g.description)
         for g in groups
     ])
+
 
 def get_workflow_list(pk_list=[], user=None, all_states=False, n_days_ago=None):
     """
@@ -51,6 +52,7 @@ def get_workflow_list(pk_list=[], user=None, all_states=False, n_days_ago=None):
 
     return wf_list
 
+
 def get_log_messages(obj):
     """
     Get the log messages for the object.
@@ -66,6 +68,7 @@ def get_log_messages(obj):
         log.update({'metadata': json.loads(log['metadata'])})
 
     return log_messages
+
 
 def get_valid_job_calculation(user=None, pk_list=[], n_days_after=None,
                               n_days_before=None, computers=None):
@@ -131,5 +134,3 @@ def get_computers_work_dir(calculations, user):
         }
 
     return remotes
-
-

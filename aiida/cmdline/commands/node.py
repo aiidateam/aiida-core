@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 import sys
-from aiida.cmdline.baseclass import (
-    VerdiCommand, VerdiCommandRouter, VerdiCommandWithSubcommands)
-from aiida.backends.utils import load_dbenv
+
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommand
-# from aiida.orm import load_node
-# from aiida.orm.utils import load_node
+from aiida.cmdline.baseclass import (
+    VerdiCommandRouter, VerdiCommandWithSubcommands)
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
+__contributors__ = ("Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, "
+                    "Martin Uhrin, Spyros Zoupanos")
 
 
 def list_repo_files(node, path, color):
@@ -148,7 +149,6 @@ class _Repo(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -169,7 +169,8 @@ class _Repo(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         try:
             n = load_node(parsed_args.pk)
@@ -190,7 +191,6 @@ class _Repo(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -204,7 +204,8 @@ class _Repo(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         try:
             n = load_node(parsed_args.pk)
@@ -237,7 +238,6 @@ class _Show(VerdiCommand):
         """
         import argparse
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -269,8 +269,8 @@ class _Show(VerdiCommand):
         if parsed_args.indent or parsed_args.depth:
             indent = "    "
 
-        load_dbenv()
-        from aiida.orm import Node
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         for pk in parsed_args.pk:
             try:
@@ -353,10 +353,10 @@ class _Label(VerdiCommandWithSubcommands):
             raise ValueError("node_subclass not recognized")
 
     def run(self, *args):
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         import argparse
         from aiida.cmdline import wait_for_confirmation
-        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
                                          description="See/modify the labels of Nodes.")
@@ -450,9 +450,9 @@ class _Description(VerdiCommandWithSubcommands):
             raise ValueError("node_subclass not recognized")
 
     def run(self, *args):
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         import argparse
-        from aiida.orm.utils import load_node
         from aiida.cmdline import wait_for_confirmation
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),

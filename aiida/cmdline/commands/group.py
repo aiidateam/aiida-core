@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import sys
-import datetime
 import argparse
+import sys
 
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
-from aiida.backends.utils import load_dbenv
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
-
+__contributors__ = ("Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, "
+                    "Nicolas Mounet, Spyros Zoupanos")
 
 
 class Group(VerdiCommandWithSubcommands):
@@ -41,14 +39,11 @@ class Group(VerdiCommandWithSubcommands):
         """
         Create a new empty group.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
-        from aiida.common.exceptions import NotExistent
         from aiida.orm import Group as G
-        from aiida.common.utils import str_timedelta
-        from django.utils import timezone
-        from aiida.orm.node import from_type_to_pluginclassname
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -69,19 +64,16 @@ class Group(VerdiCommandWithSubcommands):
             print "Group '{}' already exists, PK = {}".format(
                 group.name, group.pk)
 
-
     def group_delete(self, *args):
         """
         Delete an existing group.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
         from aiida.common.exceptions import NotExistent
         from aiida.orm import Group as G
-        from aiida.common.utils import str_timedelta
-        from django.utils import timezone
-        from aiida.orm.node import from_type_to_pluginclassname
         from aiida.cmdline import wait_for_confirmation
 
         parser = argparse.ArgumentParser(
@@ -141,7 +133,8 @@ class Group(VerdiCommandWithSubcommands):
         """
         Show information on a given group. Pass the PK as a parameter.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
         from aiida.common.exceptions import NotExistent
@@ -222,17 +215,15 @@ class Group(VerdiCommandWithSubcommands):
         """
         Add nodes to a given group.
         """
-        from aiida.orm.utils import load_node
+        from aiida.cmdline import delayed_load_node as load_node
         from aiida.cmdline import wait_for_confirmation
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
         from aiida.common.exceptions import NotExistent
         from aiida.orm import Group as G
-        from aiida.common.utils import str_timedelta
-        from django.utils import timezone
-        from aiida.orm.node import from_type_to_pluginclassname
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -298,17 +289,15 @@ class Group(VerdiCommandWithSubcommands):
         """
         Remove nodes from a given group.
         """
-        from aiida.orm.utils import load_node
+        from aiida.cmdline import delayed_load_node as load_node
         from aiida.cmdline import wait_for_confirmation
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
         from aiida.common.exceptions import NotExistent
         from aiida.orm import Group as G
-        from aiida.common.utils import str_timedelta
-        from django.utils import timezone
-        from aiida.orm.node import from_type_to_pluginclassname
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -377,7 +366,8 @@ class Group(VerdiCommandWithSubcommands):
         """
         Edit the group description.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
         from aiida.orm import Group as G
@@ -410,11 +400,11 @@ class Group(VerdiCommandWithSubcommands):
         """
         Print a list of groups in the DB.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         from aiida.orm.group import get_group_type_mapping
         from aiida.backends.utils import get_automatic_user, get_group_list
-        from aiida.utils import timezone
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),

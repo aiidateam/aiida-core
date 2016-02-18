@@ -1,27 +1,22 @@
 # -*- coding: utf-8 -*-
 
+import importlib
 import inspect
 import logging
-import importlib
 
-
-from aiida.backends.utils import get_automatic_user
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowStep
-
-from aiida.common.datastructures import wf_states, wf_exit_call, calc_states
+from aiida.backends.utils import get_automatic_user
+from aiida.common import aiidalogger
+from aiida.common.datastructures import wf_states, wf_exit_call
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, ValidationError,
                                      AiidaException)
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.utils import md5_file, str_timedelta
-
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
-from aiida.orm.implementation.sqlalchemy.calculation.job import JobCalculation
 from aiida.orm.implementation.sqlalchemy.utils import django_filter
-
-from aiida.common import aiidalogger
 from aiida.utils import timezone
 from aiida.utils.logger import get_dblogger_extra
 
@@ -538,6 +533,7 @@ class Workflow(AbstractWorkflow):
 
         return cls.get_subclass_from_dbnode(dbworkflowinstance)
 
+
 def kill_all():
     w_list = DbWorkflow.query.filter(
         DbWorkflow.user == get_automatic_user(),
@@ -546,6 +542,22 @@ def kill_all():
 
     for w in w_list:
         Workflow.get_subclass_from_uuid(w.uuid).kill()
+
+
+def kill_from_pk(pk, verbose=False):
+    """
+    Kills a workflow without loading the class, useful when there was a problem
+    and the workflow definition module was changed/deleted (and the workflow
+    cannot be reloaded).
+
+    :param pk: the principal key (id) of the workflow to kill
+    :param verbose: True to print the pk of each subworkflow killed
+    """
+    try:
+        Workflow.get_subclass_from_pk(pk).kill(verbose=verbose)
+    except IndexError:
+        raise NotExistent("No workflow with pk= {} found.".format(pk))
+
 
 def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                       depth=16):

@@ -6,7 +6,8 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
+__contributors__ = ("Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, "
+                    "Nicolas Mounet, Riccardo Sabatini, Spyros Zoupanos")
 
 
 class Workflow(VerdiCommandWithSubcommands):
@@ -94,8 +95,9 @@ class Workflow(VerdiCommandWithSubcommands):
         """
         Print the report of a workflow.
         """
-        from aiida.backends.utils import load_dbenv
-        load_dbenv()
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         from aiida.orm.utils import load_workflow
         from aiida.common.exceptions import NotExistent
@@ -188,8 +190,9 @@ class Workflow(VerdiCommandWithSubcommands):
 
 
     def print_logshow(self, *args):
-        from aiida.backends.utils import load_dbenv
-        load_dbenv()
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         from aiida.orm.utils import load_workflow
         from aiida.backends.utils import get_log_messages

@@ -1,28 +1,27 @@
 # -*- coding: utf-8 -*-
 import importlib
 
-from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 
-from aiida.common.utils import md5_file, str_timedelta
-from aiida.common.folders import RepositoryFolder, SandboxFolder
+from aiida.backends.djsite.utils import get_automatic_user
+from aiida.common import aiidalogger
+from aiida.common.datastructures import wf_states, wf_exit_call, calc_states
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, ValidationError,
                                      AiidaException)
-from aiida.common.datastructures import wf_states, wf_exit_call, calc_states
-
-from aiida.orm.implementation.general.workflow import AbstractWorkflow
+from aiida.common.folders import RepositoryFolder, SandboxFolder
+from aiida.common.utils import md5_file, str_timedelta
 from aiida.orm.implementation.django.calculation.job import JobCalculation
-
-from aiida.backends.djsite.utils import get_automatic_user
-
-from aiida.common import aiidalogger
+from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Marco Gibertini, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
+__contributors__ = ("Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, "
+                    "Marco Gibertini, Martin Uhrin, Nicolas Mounet, "
+                    "Riccardo Sabatini, Spyros Zoupanos")
 
 logger = aiidalogger.getChild('Workflow')
 
@@ -195,7 +194,6 @@ class Workflow(AbstractWorkflow):
             with transaction.commit_on_success():
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()
-
 
     def _increment_version_number_db(self):
         """
@@ -577,6 +575,22 @@ def kill_all():
 
     for w in w_list:
         Workflow.get_subclass_from_uuid(w.uuid).kill()
+
+
+def kill_from_pk(pk, verbose=False):
+    """
+    Kills a workflow without loading the class, useful when there was a problem
+    and the workflow definition module was changed/deleted (and the workflow
+    cannot be reloaded).
+
+    :param pk: the principal key (id) of the workflow to kill
+    :param verbose: True to print the pk of each subworkflow killed
+    """
+    try:
+        Workflow.query(pk=pk)[0].kill(verbose=verbose)
+    except IndexError:
+        raise NotExistent("No workflow with pk= {} found.".format(pk))
+
 
 def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                       depth=16):

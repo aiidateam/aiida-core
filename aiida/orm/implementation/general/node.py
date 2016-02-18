@@ -1171,8 +1171,8 @@ class AbstractNode(object):
             qb, me = self_or_cls._get_qb_instance(filters = {'id':self_or_cls.pk})
         else:
             qb, me = self_or_cls._get_qb_instance()
-
-        qb._add_to_path({'class':AiidaNode, join_specification :me}, autolabel = True, **kwargs)
+        kwargs[join_specification] =  me
+        qb._add_to_path(cls = AiidaNode, autolabel = True, **kwargs)
         return qb
         
     @combomethod

@@ -326,18 +326,10 @@ DbNode.state = column_property(
     where(recent_states.c.dbnode_id == foreign(DbNode.id))
 )
 
+engine_url = (
+    "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+    "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+).format(**get_profile_config(settings.AIIDADB_PROFILE))
+session = sessionmaker(bind=create_engine(engine_url))()
 
-config = get_profile_config(settings.AIIDADB_PROFILE)
-engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-              "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
-engine = create_engine(engine_url)
-Session = sessionmaker(bind=engine)
 
-session = Session()
-
-#~ print session.query(DbAttribute.id, DbAttribute.ival).limit(3).all()
-#~ print session.query(DbComputer).all()
-#~ print session.query(DbUser).all()
-#~ attrs =  session.query(DbNode).filter(DbNode.attributes.any(DbAttribute.key.like('%kinds'))).first().attributes
-#~ for attr in attrs:
-    #~ print attr.key

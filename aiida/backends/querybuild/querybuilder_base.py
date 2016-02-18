@@ -31,6 +31,8 @@ class QueryBuilderBase(object):
     In here, general graph traversal functionalities are implemented,
     the specific type of node and link is dealt in subclasses.
     """
+    
+        
     def __init__(self,  queryhelp, **kwargs):
         """
         :param queryhelp: The queryhelp is my API.
@@ -349,37 +351,30 @@ class QueryBuilderBase(object):
             
             
         """
+        self.path = []          # A list storing the path being traversed by the query
+        self.label_list = []    # The list of unique labels
+        self.alias_list = []    # A list of unique aliases in same order as path
+        self.alias_dict = {}    # A dictionary label:alias of ormclass # redundant but makes life easier
+        self.filters = {}       # A dictionary label: filter specification for this alias
+        self.projections = {}   # A dictionary label: projections for this alias
+        self.cls_to_label_map = {} # A dictionary for classes passed to the label given to them
 
-        self.path = []
-        self.alias_dict = {}
+
         queryhelp = copy.deepcopy(queryhelp)
-
         if not isinstance(queryhelp, dict):
             queryhelp = {
                 'path':queryhelp
             }
 
-        #~ self.projections = self.make_json_compatible(queryhelp.pop('project', {}))
-
-        #~ self.filters = self.make_json_compatible(queryhelp.pop('filters', {}))
-        
-        self.filters = {}
-        self.projections = {}
-        self.ormclass_list = []
-
-        self.label_list = []
-
-        self.alias_list = []
-
-        self.alias_dict = {}
-
         if not isinstance(queryhelp['path'], (tuple, list)):
             queryhelp['path'] = [queryhelp['path']]
+
+
 
         for path_spec in queryhelp.pop('path'):
             try:
                 self._add_to_path(**path_spec)
-            except TypeError:
+            except TypeError as e:
                 if isinstance(path_spec, basestring):
                     self._add_to_path(type = path_spec)
                 else:
@@ -411,7 +406,8 @@ class QueryBuilderBase(object):
         cls = None, type = None, label = None,
         autolabel   =   False,
         filters     =   None,
-        project     =   None
+        project     =   None,
+        **kwargs
     ):
         """
         Any iterative procedure to build the path of a graph query needs to
@@ -423,40 +419,45 @@ class QueryBuilderBase(object):
         #~ path_spec = self.make_json_compatible(path_spec)
         if cls and type:
             raise InputValidationError(
-                "You cannot specify both a class ({}) and a type ({})"
+                "\n\n\n"
+                "You cannot specify both a \n"
+                "class ({})\n"
+                "and a type ({})\n\n"
                 "".format(cls, type)
             )
  
         if not (cls or type):
             raise InputValidationError(
-                "You need to specify either a class or a type"
+                "\n\n\nYou need to specify either a class or a type\n\n\n"
             )
+
         if cls:
             if not inspect_isclass(cls):
                 raise InputValidationError(
+                    "\n\n\n"
                     "{} was passed with kw 'cls', but is not a class"
-                    "\n".format(cls)
+                    "\n\n\n".format(cls)
                 )
             if issubclass(cls, self.AiidaNode):
-                type = cls._plugin_type_string
+                type = cls._plugin_type_string or 'node'
                 if label is None:
                     label = cls._plugin_type_string.strip('.').split('.')[-1]
             elif issubclass(cls, self.AiidaGroup):
                 type = 'group'
             else:
                 raise InputValidationError(
+                    "\n\n\n"
                     "I do not know what to do with {}"
-                    "\n".format(cls)
+                    "\n\n\n".format(cls)
                 )
         
-
         
         if label:
             label = label
         elif autolabel:
             i = 1
             while True:
-                label = '{}_{}'.format(ormclass_type, i)
+                label = '{}_{}'.format(type, i)
                 if label not in self.label_list:
                     break
                 i  += 1
@@ -464,11 +465,14 @@ class QueryBuilderBase(object):
             label = type[:]
             if label in self.label_list:
                 raise InputValidationError(
-                    ' Label {} is not unique, choose different label'
-                    '\n'.format(label)
+                    "\n\n\n"
+                    "Label {} is not unique, choose different label"
+                    "\n\n\n".format(label)
                 )
 
         self.label_list.append(label)
+        if cls and cls not in self.cls_to_label_map.keys():
+            self.cls_to_label_map[cls] = label # TODO check with duplicate classes
 
         assert label not in self.filters, 'Why is label already a key in filters?'
         self.filters[label] = {}
@@ -484,9 +488,7 @@ class QueryBuilderBase(object):
 
         if project is not None:
             if not isinstance(project, (tuple, list)):
-                raise InputValidationError(
-                    "Projected entities have to be passed as lists or tuples"
-                )
+                project = [project]
             [self.projections[label].append(p) for p in project]
 
         # This way to attach the filter is not ideal
@@ -498,27 +500,90 @@ class QueryBuilderBase(object):
         # and ambiguouty when the class name is the same, but in different module...
         # How to solve that?
         if type not in ['computer', 'group']:
-            self.filters[label].update(
-                dict(
-                    type = {
-                        'like':'{}%'.format(
-                            '.'.join(type.strip('.').split('.')[:-1])
-                        )
-                    }
+            _plugin_type_spec = '.'.join(type.strip('.').split('.')[:-1])
+            if _plugin_type_spec:
+                self.filters[label].update(
+                    dict(type = {'like':'{}%'.format(_plugin_type_spec)})
                 )
-            )
+            elif type == 'node':
+                pass
+            else:
+                raise InputValidationError(
+                    "\n\n\n"
+                    "Giving me type '{}'\n"
+                    "does not provide me with a filter on type"
+                    "".format(type)
+                )
+                
+
+
 
         ormclass = self.get_ormclass(cls, type)
-        self.ormclass_list.append(ormclass)
         alias = aliased(ormclass)
         self.alias_list.append(alias)
         self.alias_dict[label] = alias
-        self.path.append({'type':type, 'label':label})
+
+        specification_to_function_map_keys = self._get_function_map().keys()
+
+        joining_keyword, joining_value = None, None
+        
+        for k, v in kwargs.items():
+            if k not in specification_to_function_map_keys:
+                raise InputValidationError(
+                    "\n\n\n"
+                    "{} is not a valid keyword for joining specification\n"
+                    "Valid keywords are:\n"
+                    "{}\n\n\n".format(k, specification_to_function_map_keys)
+                )
+            elif joining_keyword:
+                raise InputValidationError( 
+                    "\n\n\n"
+                    "You already specified joining specification {}\n"
+                    "But you no also want to specify {}"
+                    "\n\n\n".format(joining_keyword, k)
+                )
+            else:
+                joining_keyword = k
+                if v in self.label_list:
+                    joining_value   = v
+                elif v in self.cls_to_label_map:
+                    joining_value = self.cls_to_label_map[v]
+                else:
+                    raise InputValidationError(
+                        "\n\n\n"
+                        "You told me to join {} with {}\n"
+                        "But it is not among my labels"
+                        "\n\n\n".format(label, v)
+                    )
+        if joining_keyword is None:
+            joining_keyword = 'direction'
+            joining_value   = 1 
+
+        self.path.append({'type':type, 'label':label, joining_keyword:joining_value})
         return label
+
     def _add_filter(self, key, filter_spec):
         if key in self.label_list:
             self.filters[key].update(filter_spec)
-            return
+        elif key in self.cls_to_label_map.keys():
+            self.filters[self.cls_to_label_map[key]].update(filter_spec)
+        else:
+            raise InputValidationError(
+                "\n\n\nCannot add filter specification\n"
+                "with key {}\n"
+                "to any known label".format(key)
+            )
+    def _add_projection(self, key, projection_spec):
+        if key in self.label_list:
+            self.projections[key] = projection_spec
+        elif key in self.cls_to_label_map.keys():
+            self.projections[self.cls_to_label_map[key]] = projection_spec
+        else:
+            raise InputValidationError(
+                "\n\n\nCannot add projection specification\n"
+                "with key {}\n"
+                "to any known label".format(key)
+            )
     @staticmethod
     @abstractmethod
     def get_session():
@@ -701,6 +766,22 @@ class QueryBuilderBase(object):
             entity_to_join,
             entity_to_join.id == aliased_group_nodes.c.dbgroup_id
         )
+    def _get_function_map(self):
+        d =   {
+            'input_of'  : self._join_inputs,
+            'output_of' : self._join_outputs,
+            'slave_of'  : self._join_slaves, # not implemented
+            'master_of' : self._join_masters,# not implemented
+            'ancestor_of': self._join_ancestors,
+            'descendant_of': self._join_descendants,
+            'direction' : None,
+            'group_of'  : self._join_groups,
+            'member_of' : self._join_group_members,
+            'used_by'   : self._join_computer_used,
+            
+        }
+        return d
+
     def _join_computer_used(self, joined_entity, entity_to_join):
         self.que = self.que.join(
             entity_to_join,
@@ -726,40 +807,9 @@ class QueryBuilderBase(object):
         *   *master_of*
         *   *slave_of*
         """
-        specification_to_function_map = {
-            'input_of'  : self._join_inputs,
-            'output_of' : self._join_outputs,
-            'slave_of'  : self._join_slaves, # not implemented
-            'master_of' : self._join_masters,# not implemented
-            'ancestor_of': self._join_ancestors,
-            'descendant_of': self._join_descendants,
-            'direction' : None,
-            'group_of'  : self._join_groups,
-            'member_of' : self._join_group_members,
-            'used_by'   : self._join_computer_used,
-            
-        }
-        specification_to_function_map_keys = specification_to_function_map.keys()
-        allowed_keys = specification_to_function_map_keys + ['label','cls', 'type']
-        valid_keys_list = [
-            (k in specification_to_function_map_keys)
-            for k in querydict.keys()
-        ]
 
-
-        # Check that it is not more than one specification:
-        if valid_keys_list.count(True) > 1:
-            raise InputValidationError( 'Too many specification to join in {}'.format(querydict))
-        # Check that there is no additional specification:
-        for key in querydict.keys():
-            if key not in allowed_keys:
-                raise InputValidationError(
-                    '\n   {} is not a valid key\n'
-                    '   Valid keys are:\n'
-                    '   {}'.format(key, allowed_keys)
-                )
         val = None
-        for key, func in specification_to_function_map.items():
+        for key, func in self._get_function_map().items():
             if key in querydict:
                 val = querydict[key]
                 break
@@ -779,7 +829,6 @@ class QueryBuilderBase(object):
             return self.alias_list[val], func
         elif isinstance(val, str):
             try:
-                
                 val = self.labels_location_dict[val]
                 return self.alias_list[val], func
             except AttributeError:
@@ -895,9 +944,7 @@ class QueryBuilderBase(object):
         ######################### JOINS ################################
 
         for index,  alias, querydict in  zip(
-                range(
-                    len(self.alias_list)
-                ),
+                range(len(self.alias_list)),
                 self.alias_list,
                 self.path
             ):
@@ -905,8 +952,7 @@ class QueryBuilderBase(object):
             if index:
                 #There is nothing to join if that is the first table
                 (
-                    toconnectwith,
-                    connection_func
+                    toconnectwith, connection_func
                 ) = self._get_connecting_node(querydict, index)
                 connection_func(toconnectwith, alias)
 
@@ -1124,6 +1170,22 @@ class QueryBuilderBase(object):
             }
 
 
+    def inputs(self, **kwargs):
+        join_to = self.label_list[-1]
+        self._add_to_path(cls = self.AiidaNode, input_of = join_to, autolabel = True, **kwargs)
+        return self
+    def outputs(self, **kwargs):
+        join_to = self.label_list[-1]
+        self._add_to_path(cls = self.AiidaNode, output_of = join_to, autolabel = True, **kwargs)
+        return self
+    def children(self, **kwargs):
+        join_to = self.label_list[-1]
+        self._add_to_path(cls = self.AiidaNode, descendant_of = join_to, autolabel = True, **kwargs)
+        return self
+    def parents(self, **kwargs):
+        join_to = self.label_list[-1]
+        self._add_to_path(cls = self.AiidaNode, ancestor_of = join_to, autolabel = True, **kwargs)
+        return self
 
 def flatten_list ( value ):
     """

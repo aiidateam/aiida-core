@@ -25,6 +25,7 @@ def load_dbenv(*args, **kwargs):
     settings.LOAD_DBENV_CALLED = True
 
     if settings.BACKEND == "sqlalchemy":
+        # Maybe schema version should be also checked for SQLAlchemy version.
         from aiida.backends.sqlalchemy.utils \
             import load_dbenv as load_dbenv_sqlalchemy
         return load_dbenv_sqlalchemy(*args, **kwargs)
@@ -34,9 +35,6 @@ def load_dbenv(*args, **kwargs):
     else:
         raise ConfigurationError("Invalid settings.BACKEND: {}".format(
             settings.BACKEND))
-    ######################
-    # Check schema version
-    ######################
 
 
 def get_automatic_user():

@@ -37,6 +37,7 @@ aiidadb_backend_key = "AIIDADB_BACKEND"
 # Profile values
 aiidadb_backend_value_django = "django"
 
+
 def backup_config():
     """
     Backup the previous configuration file.

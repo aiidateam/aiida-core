@@ -4,7 +4,8 @@ import os
 from aiida.common.setup import (AIIDA_CONFIG_FOLDER, DAEMON_SUBDIR, LOG_DIR)
 from aiida.common.setup import (aiidadb_backend_key,
                                 aiidadb_backend_value_django)
-from aiida.common.setup import (get_config, store_config, install_daemon_files)
+from aiida.common.setup import (get_config, store_config, install_daemon_files,
+                                backup_config)
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -52,6 +53,8 @@ class Migration(object):
         return conf
 
     def main_method(self):
+        # Backup the previous config
+        backup_config()
         # Get the AiiDA directory path
         aiida_directory = os.path.expanduser(AIIDA_CONFIG_FOLDER)
         # Construct the daemon directory path

@@ -560,14 +560,67 @@ def get_extremas_from_positions (positions):
     return zip(*[(min(values), max(values)) for values in  zip(* positions)])
 
 
-def ask_question(self, question, reply_type, allow_none_as_answer):
+def get_fortfloat(key, txt, be_case_sensitive = True):
     """
-    Add description
-    :param self:
-    :param question:
-    :param reply_type:
-    :param allow_none_as_answer:
-    :return:
+    Matches a fortran compatible specification of a float behind a defined key in a string.
+    Receives:
+    :param key: The key to look for
+    :param txt: The string where to search for the key
+    :param be_case_sensitive: An optional boolean whether to search case-sensitive, defaults to ``True``
+
+    If abc is a key, and f is a float, number, than this regex
+    will match t and return f in the following cases:
+    *   charsbefore, abc = f, charsafter
+    *   charsbefore
+        abc = f
+        charsafter
+    *   charsbefore, abc = f
+        charsafter
+    and vice-versa.
+    If no float is matched, returns None
+
+    Exampes of matchable floats are:
+    *   0.1d2
+    *   0.D-3
+    *   .2e1
+    *   -0.23
+    *   23.
+    *   232
+    """
+    import re
+    pattern = """
+        [\n,]                       # key - value pair can be prepended by comma or start
+        [ \t]*                      # in a new line and some optional white space
+        {}                          # the key goes here
+        [ \t]*                      # Optional white space between key and equal sign
+        =                           # Equals, you can put [=:,] if you want more specifiers
+        [ \t]*                      # optional white space between specifier and float
+        (?P<float>                  # Universal float pattern
+            ( \d*[\.]\d+  |  \d+[\.]?\d* )
+            ([ E | D | e | d ] [+|-]? \d+)?
+        )
+        [ \t]*[,\n,#]               # Can be followed by comma, end of line, or a comment
+        """.format(key)
+    REKEYS = re.X | re.M if be_case_sensitive else re.X | re.M | re.I
+    match = re.search(
+        pattern,
+        txt,
+        REKEYS)
+    if not match:
+        return None
+    else:
+        return float(match.group('float').replace('d','e').replace('D','e'))
+
+
+def ask_question(question, reply_type, allow_none_as_answer):
+    """
+    This method asks a specific question, tries to parse the given reply
+    and then it verifies the parsed answer.
+    :param question: The question to be asked.
+    :param reply_type: The type of the expected answer (int, datetime etc). It
+    is needed for the parsing of the answer.
+    :param allow_none_as_answer: Allow empty answers?
+    :return: The parsed reply.
     """
     final_answer = None
 
@@ -595,7 +648,7 @@ def ask_question(self, question, reply_type, allow_none_as_answer):
                 # ask again the same question.
                 continue
 
-        if self.query_yes_no("{} was parsed. Is it correct?"
+        if query_yes_no("{} was parsed. Is it correct?"
                              .format(final_answer), default="yes"):
             break
     return final_answer
@@ -634,6 +687,22 @@ def query_yes_no(question, default="yes"):
 
 
 def query_string(question, default):
+    """
+    Asks a question (with the option to have a default, predefined answer,
+    and depending on the default answer and the answer of the user the
+    following options are available:
+    - If the user replies (with a non empty answer), then his answer is
+    returned.
+    - If the default answer is None then the user has to reply with a non-empty
+    answer.
+    - If the default answer is not None, then it is returned if the user gives
+    an empty answer. In the case of empty default answer and empty reply from
+    the user, None is returned.
+    :param question: The question that we want to ask the user.
+    :param default: The default answer (if there is any) to the question asked.
+    :return: The returned reply.
+    """
+
     if default is None or not default:
         prompt = ""
     else:
@@ -642,6 +711,7 @@ def query_string(question, default):
     while True:
         reply = raw_input(question + prompt)
         if default is not None and not reply:
+            # If the default answer is an empty string.
             if not default:
                 return None
             else:

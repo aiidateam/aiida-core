@@ -684,6 +684,7 @@ class combomethod(object):
     def __get__(self, obj=None, objtype=None):
         @functools.wraps(self.method)
         def _wrapper(*args, **kwargs):
+            kwargs.pop('isclass', None)
             if obj is not None:
                 return self.method(obj, *args, isclass = False, **kwargs)
             return self.method(objtype, *args, isclass = True,  **kwargs)

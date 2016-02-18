@@ -1155,7 +1155,7 @@ class AbstractNode(object):
         qb = QueryBuilder({'path':[]})
         qb._add_to_path(cls, autolabel = True, **kwargs)
         return qb, cls
-
+    @combomethod
     def _join_path(self_or_cls, **kwargs):
         from aiida.orm import Node as AiidaNode
         
@@ -1172,7 +1172,8 @@ class AbstractNode(object):
         else:
             qb, me = self_or_cls._get_qb_instance()
         kwargs[join_specification] =  me
-        qb._add_to_path(cls = AiidaNode, autolabel = True, **kwargs)
+        cls = kwargs.pop('cls', AiidaNode)
+        qb._add_to_path(cls = cls, autolabel = True, **kwargs)
         return qb
         
     @combomethod

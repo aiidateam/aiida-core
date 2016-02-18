@@ -1172,19 +1172,23 @@ class QueryBuilderBase(object):
 
     def inputs(self, **kwargs):
         join_to = self.label_list[-1]
-        self._add_to_path(cls = self.AiidaNode, input_of = join_to, autolabel = True, **kwargs)
+        cls = kwargs.pop('cls', self.AiidaNode)
+        self._add_to_path(cls = cls, input_of = join_to, autolabel = True, **kwargs)
         return self
     def outputs(self, **kwargs):
         join_to = self.label_list[-1]
-        self._add_to_path(cls = self.AiidaNode, output_of = join_to, autolabel = True, **kwargs)
+        cls = kwargs.pop('cls', self.AiidaNode)
+        self._add_to_path(cls = cls, output_of = join_to, autolabel = True, **kwargs)
         return self
     def children(self, **kwargs):
         join_to = self.label_list[-1]
-        self._add_to_path(cls = self.AiidaNode, descendant_of = join_to, autolabel = True, **kwargs)
+        cls = kwargs.pop('cls', self.AiidaNode)
+        self._add_to_path(cls = cls, descendant_of = join_to, autolabel = True, **kwargs)
         return self
     def parents(self, **kwargs):
         join_to = self.label_list[-1]
-        self._add_to_path(cls = self.AiidaNode, ancestor_of = join_to, autolabel = True, **kwargs)
+        cls = kwargs.pop('cls', self.AiidaNode)
+        self._add_to_path(cls = cls, ancestor_of = join_to, autolabel = True, **kwargs)
         return self
 
 def flatten_list ( value ):

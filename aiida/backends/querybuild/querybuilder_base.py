@@ -41,7 +41,7 @@ class QueryBuilderBase(object):
 
             *   what to join (key **path**)
             *   what to project (key **project**)
-            *   how to filter   (key **filters**)
+            *   how to filter (key **filters**)
 
         *   Specifying the path: Here, the user specifies the path along which to join tables.
             The value is a list, each list item being a vertice in your path.
@@ -49,8 +49,15 @@ class QueryBuilderBase(object):
             The first is to give the orm-class::
 
                 queryhelp = {
+                    'path':[Data]
+                }
+                
+                # or  (better)
+                
+                
+                queryhelp = {
                     'path':[
-                        {'class':Data}
+                        {'cls': Data}
                     ]
                 }
 
@@ -59,7 +66,7 @@ class QueryBuilderBase(object):
 
                 queryhelp = {
                     'path':[
-                        {'class':"data"}
+                        {'type':"data."}
                     ]
                 }
 
@@ -70,7 +77,7 @@ class QueryBuilderBase(object):
                 type every time a subclass of Node is given,
                 in above example this would results in::
 
-                    ...filter(DbNode.type.like("%data%"))...
+                    ...filter(DbNode.type.like("data%"))...
 
                 Make sure this is a unique way...
 
@@ -82,11 +89,11 @@ class QueryBuilderBase(object):
                 queryhelp = {
                     'path':[
                         {
-                            'class':Node,
+                            'cls':Node,
                             'label':'node_1'
-                        }
+                        },
                         {
-                            'class':"Node",
+                            'cls':Node
                             'label':'node_2'
                         }
                     ]
@@ -125,28 +132,46 @@ class QueryBuilderBase(object):
                 An absolute value of 1 joins one table above, a
                 value of 2 to the table defined 2 indices above.
                 The two following queryhelps yield the same  query::
-                  
-                    qh2 = {
+
+                    qh1 = {
                         'path':[
-                            {'class':PwCalculation}, 
-                            {'class':Trajectory}, 
                             {
-                                'class':ParameterData 
+                                'cls':PwCalculation
+                            }, 
+                            {
+                                'cls':Trajectory
+                            }, 
+                            {
+                                'cls':ParameterData,
                                 'direction':-2
                             }
                         ]
                     }
-                    
+
                     # returns same query as:
-                    
-                    qh3 = {
+
+                    qh2 = {
                         'path':[
-                            {'class':PwCalculation}, 
-                            {'class':Trajectory}, 
                             {
-                                'class':ParameterData,
+                                'cls':PwCalculation
+                            }, 
+                            {
+                                'cls':Trajectory
+                            }, 
+                            {
+                                'cls':ParameterData,
                                 'input_of':PwCalculation
                             }
+                        ]
+                    }
+
+                    # Shorter version:
+
+                    qh3 = {
+                        'path':[
+                            ParameterData,
+                            PwCalculation,
+                            Trajectory,
                         ]
                     }
 
@@ -154,7 +179,7 @@ class QueryBuilderBase(object):
             Determing which columns the query will return::
 
                 queryhelp = {
-                    'path':[{'class':Relax}],
+                    'path':[Relax],
                     'project':{
                         Relax:['state', 'id'],
                     }
@@ -165,12 +190,11 @@ class QueryBuilderBase(object):
 
                 queryhelp = {
                     'path':[
-                        {'class':Relax},
-                        {'class':StructureData}
-                        
-                        ],
+                        Relax,
+                        StructureData,
+                    ],
                     'project':{
-                        'node.calc.relax':['state', 'id'],
+                        'Relax':['state', 'id'],  # Yes you can put the type string here!
                         StructureData:['attributes.cell']
                     }
                 }
@@ -178,7 +202,7 @@ class QueryBuilderBase(object):
             Returns the state and the id of all instances of Relax and 
             the cells of all structures given that the structures are linked as output of a relax-calculation.
             The strings that you pass have to be name of the columns.
-            If you pass a star ('*') or ``True``, the query will return the instance of the ormclass.
+            If you pass a star ('*') , the query will return the instance of the AiidaClass.
 
         *   Filtering:
             What if I want not every structure, 
@@ -186,8 +210,8 @@ class QueryBuilderBase(object):
                 
                 queryhelp = {
                     'path':[
-                        {'class':Relax}, # Relaxation with structure as output
-                        {'class':StructureData}
+                        {'cls':Relax}, # Relaxation with structure as output
+                        {'cls':StructureData}
                     ],
                     'filters':{
                         StructureData:[
@@ -212,22 +236,21 @@ class QueryBuilderBase(object):
             If you want to get to the volume of the structure, stored in the attributes, you can specify::
                 
                 queryhelp = {
-                    'path':[{'class':Struc}],
+                    'path':[{'cls':StructureData}],  # or 'path':[StructureData]
                     'filters':{
                         'attributes.volume': {'<':6.0}
                     }
                 }
-            
+
             The above queryhelp would build a query that returns all structures with a volume below 6.0.
-            
+
             .. note:: A big advantage of SQLAlchemy is that it support the storing of jsons. 
                       It is convenient to dump the structure-data into a json and store that as a column.
                       The querytool needs to be told how to query the json.
-                      
-        
+
         Let's get to a really complex use-case,
         where we need to reconstruct a workflow:
-        
+
         #.  The MD-simulation with the parameters and structure that were used as input
         #.  The trajectory that was returned as an output
         #.  We are only interested in calculations that had a convergence threshold
@@ -236,32 +259,32 @@ class QueryBuilderBase(object):
         #.  The MD simulation has to be in state "parsing" or "finished"
         #.  We want the length of the trajectory
         #.  We filter for structures that:
-            
+
             *   Have any lattice vector smaller than 3.0 or between 5.0 and 7.0
             *   Contain Nitrogen
             *   Have 4 atoms
             *   Have less than 3 types of atoms (elements)
-                
+
         This would be the queryhelp::
-            
+
             queryhelp =  {
                 'path':[
-                    {'class':ParameterData}, 
+                    ParameterData,
                     {
                         'class':MD,
                         'label':'md'
                     },
-                    {'class':Trajectory}, 
+                    {'cls':Trajectory}, 
                     {
                         'class':StructureData, 
                         'input_of':'md'
                     },
                     {
-                        'class':Relax,
+                        'cls':Relax,
                         'input_of':StructureData
                     },
                     {
-                        'class':StructureData,
+                        'cls':StructureData,
                         'label':'struc2',
                         'input_of':Relax
                     }
@@ -349,8 +372,6 @@ class QueryBuilderBase(object):
                     }
                 }
             }
-            
-            
         """
         self.path = []          # A list storing the path being traversed by the query
         self.label_list = []    # The list of unique labels
@@ -370,8 +391,6 @@ class QueryBuilderBase(object):
         if not isinstance(queryhelp['path'], (tuple, list)):
             queryhelp['path'] = [queryhelp['path']]
 
-
-
         for path_spec in queryhelp.pop('path'):
             try:
                 self._add_to_path(**path_spec)
@@ -381,14 +400,12 @@ class QueryBuilderBase(object):
                 else:
                     self._add_to_path(path_spec)
 
-        
-
         for key, val in queryhelp.pop('project', {}).items():
             self._add_projection(key, val)
         
         for key,val in queryhelp.pop('filters', {}).items():
             self._add_filter(key, val)
-        
+
         self.limit = queryhelp.pop('limit', False)
 
         self.order_by =  self.make_json_compatible(queryhelp.pop('order_by', {}))
@@ -403,12 +420,13 @@ class QueryBuilderBase(object):
                 "\nValid keywords are: {}".format(queryhelp.keys(), valid_keys)
             )
 
-    def _add_to_path(self,
-        cls = None, type = None, label = None,
+    def _add_to_path(   self,
+        cls         =   None,
+        type        =   None,
+        label       =   None,
         autolabel   =   False,
         filters     =   None,
-        project     =   None,
-        **kwargs
+        project     =   None,  **kwargs
     ):
         """
         Any iterative procedure to build the path of a graph query needs to
@@ -451,8 +469,7 @@ class QueryBuilderBase(object):
                     "I do not know what to do with {}"
                     "\n\n\n".format(cls)
                 )
-        
-        
+
         if label:
             label = label
         elif autolabel:
@@ -515,8 +532,6 @@ class QueryBuilderBase(object):
                     "does not provide me with a filter on type"
                     "".format(type)
                 )
-                
-
 
 
         ormclass = self.get_ormclass(cls, type)
@@ -647,7 +662,15 @@ class QueryBuilderBase(object):
         pass
 
     @abstractmethod
-    def analyze_filter_spec(*args):
+    def analyze_filter_spec(self, alias, filter_spec):
+        """
+        Recurse through the filter specification and apply filter operations.
+        
+        :param alias: The alias of the ORM class the filter will be applied on
+        :param filter_spec: the specification as given by the queryhelp
+        
+        :returns: an instance of *sqlalchemy.sql.elements.BinaryExpression*.
+        """
         pass
 
     def _join_slaves(self, joined_entity, entity_to_join):
@@ -1079,22 +1102,12 @@ class QueryBuilderBase(object):
         return self._build_query().except_(self._make_counterquery(calc_class)).all()
 
 
-    def outputs_p(self, user_filter = []):
-        label = self._add_to_path({'class':'node', 'output_of':self.path[-1]['label']}, autolabel = True)
-        self.filters.update({label:user_filter})
-        return self
-        
-    def inputs_p(self, user_filter = []):
-        label = self._add_to_path({'class':'node', 'input_of':self.path[-1]['label']}, autolabel = True)
-        self.filters.update({label:user_filter})
-        return self
-
     def get_aliases(self):
         return self.alias_list
 
     def get_dict(self):
         """
-        Returns the json-compatible list
+        :returns: the json-compatible list of the input specifications (queryhelp)
         """
         return {
             'path'      :   self.path, 
@@ -1107,9 +1120,9 @@ class QueryBuilderBase(object):
 
     def get_query(self):
         """
-        Checks if query instance is
-        set as attribute of instance,
-        if not invokes :func:`QueryBuilderBase._build_query` 
+        Checks if query instance is set as attribute of instance,
+        if not invokes :func:`QueryBuilderBase._build_query`.
+        :returns: an instance of sqlalchemy.orm.Query
         """
         if hasattr(self, 'que'):
             return self.que
@@ -1117,39 +1130,42 @@ class QueryBuilderBase(object):
 
     def first(self):
         """
-        Returns the first item of the query result
+        Executes query asking, for one instance.
+        :returns: One row of results
         """
         return self.get_query().first()
 
     def distinct(self):
         """
-        Returns distinct results
+        Executes query asking for distinct rows.
+        :returns: distinct rows
         """
         return self.get_query().distinct()
 
     def all(self):
         """
-        Returns all results
+        Executes full query.
+        :returns: all rows
         """
         return self.get_query().all()
 
     def yield_per(self, count):
         """
         Yields *count* rows at a time
+        :returns: generator function
         """
         return self.get_query().yield_per(count)
         
     def get_results_dict(self):
         """
-        Returns all results as a list of  dictionaries.
-        Also replaces ORM instances with their corresponding 
-        Aiida instance by calling get_aiida_class.
-        
-        Each item of the list corresponds to one row of a SQL-query.
-        Each key-pair value of that dictionary corresponds to
-        a label (eg 'id', 'label', 'attributes') and the corresponding
-        value.
-        '*' is the key for an ORMClass being returned.
+        Calls :func:`QueryBuilderBase.yield_per` for the generator.
+        Loops through the results and constructur for each row a dictionary
+        of results of key, value pairs, where the key is a unique label
+        and the value the database entries.
+        Instances of an ORMclass are replaced with Aiidaclasses invoking
+        the DbNode.get_aiida_class method (key is '*').
+
+        :returns: a generator
         """
         def get_result(res, pos):
             if hasattr(res,'__iter__'):

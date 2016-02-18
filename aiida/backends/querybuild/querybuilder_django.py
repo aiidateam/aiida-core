@@ -146,14 +146,7 @@ class QueryBuilder(QueryBuilderBase):
         return expr
 
     def analyze_filter_spec(self, alias, filter_spec):
-        """
-        Recurse through the filter specification and apply filter operations.
-        
-        :param alias: The alias of the ORM class the filter will be applied on
-        :param filter_spec: the specification as given by the queryhelp
-        
-        :returns: an instance of *sqlalchemy.sql.elements.BinaryExpression*.
-        """
+
         expressions = []
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in  ('and', 'or', '~or', '~and'):

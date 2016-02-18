@@ -571,3 +571,15 @@ Updating from 0.4.1 to 0.5.0
   you need to change the CalcInfo returning also a CodeInfo, as specified
   :ref:`here<qeplugin-prepare-input>` and also accept a ``Code`` object 
   among the inputs (also described in the same page).
+
+Updating to the latest development version
+------------------------------------------
+This migration will update your AiiDa configuration files making them
+compatible with the latest AiiDA version.
+
+* Stop your daemon (using ``verdi daemon stop``).
+* Backup your configuration files that are in .aiida directory.
+* Execute the migration script (``python _your_aiida_folder_/aiida/common/additions/migration.py``).
+* Start again you daemon (using ``verdi daemon start``).
+
+

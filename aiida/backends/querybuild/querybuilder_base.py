@@ -887,7 +887,6 @@ class QueryBuilderBase(object):
         *   ``float`` --> "float"
         *   ``StructureData`` --> "StructureData"
         """
-        
         if isinstance(inp, dict):
             for key, val in inp.items():
                 inp[self.make_json_compatible(key)] = self.make_json_compatible(inp.pop(key))
@@ -928,18 +927,15 @@ class QueryBuilderBase(object):
             '{} is not a column'.format(colname)
         )
 
-
     def _build_query(self):
         """
         build the query and return a sqlalchemy.Query instance
         """
-
         ####################### ALIASING ####################
         # First I need to alias everything,
         # because I might be joining the same table multiple times,
         # check also
         # http://dself.ocs.sqlalchemy.org/en/rel_1_0/orm/query.html
-
 
         if not len(self.label_list) == len(set(self.label_list)):
             raise InputValidationError(
@@ -979,7 +975,6 @@ class QueryBuilderBase(object):
                     toconnectwith, connection_func
                 ) = self._get_connecting_node(querydict, index)
                 connection_func(toconnectwith, alias)
-
         ######################### FILTERS ##############################
 
         for label, filter_specs in self.filters.items():
@@ -997,7 +992,6 @@ class QueryBuilderBase(object):
         ######################### PROJECTIONS ##########################
         # first clear the entities in the case the first item in the
         # path was not meant to be projected
-
         # attribute of Query instance storing entities to project:
         self.que._entities = []
         # Will be later set to this list:
@@ -1028,7 +1022,6 @@ class QueryBuilderBase(object):
                 position_index += 1
                 self.label_to_projected_entity_dict[label][projectable_spec]  = position_index
 
-
         ######################### ORDER ################################
         if self.order_by:
             if not isinstance(self.order_by, list):
@@ -1051,7 +1044,7 @@ class QueryBuilderBase(object):
         if self.limit:
             self.que = self.que.limit(self.limit)
 
-
+        ######################### DONE #################################
         return self.que
 
     def _make_counterquery(self,calc_class, code_inst = None, session = None):
@@ -1101,7 +1094,6 @@ class QueryBuilderBase(object):
     def get_calculations_todo(self, calc_class):
         return self._build_query().except_(self._make_counterquery(calc_class)).all()
 
-
     def get_aliases(self):
         return self.alias_list
 
@@ -1116,7 +1108,6 @@ class QueryBuilderBase(object):
             'limit'     :   self.limit,
             'order_by'  :   self.order_by,
         }
-
 
     def get_query(self):
         """
@@ -1155,7 +1146,7 @@ class QueryBuilderBase(object):
         :returns: generator function
         """
         return self.get_query().yield_per(count)
-        
+
     def get_results_dict(self):
         """
         Calls :func:`QueryBuilderBase.yield_per` for the generator.
@@ -1186,7 +1177,6 @@ class QueryBuilderBase(object):
                 for label, val in self.label_to_projected_entity_dict.items()
             }
 
-
     def inputs(self, **kwargs):
         """
         Join to inputs of previous vertice in path.
@@ -1197,6 +1187,7 @@ class QueryBuilderBase(object):
         cls = kwargs.pop('cls', self.AiidaNode)
         self._add_to_path(cls = cls, input_of = join_to, autolabel = True, **kwargs)
         return self
+
     def outputs(self, **kwargs):
         """
         Join to outputs of previous vertice in path.
@@ -1207,6 +1198,7 @@ class QueryBuilderBase(object):
         cls = kwargs.pop('cls', self.AiidaNode)
         self._add_to_path(cls = cls, output_of = join_to, autolabel = True, **kwargs)
         return self
+
     def children(self, **kwargs):
         """
         Join to children/descendants of previous vertice in path.
@@ -1217,6 +1209,7 @@ class QueryBuilderBase(object):
         cls = kwargs.pop('cls', self.AiidaNode)
         self._add_to_path(cls = cls, descendant_of = join_to, autolabel = True, **kwargs)
         return self
+
     def parents(self, **kwargs):
         """
         Join to parents/ancestors of previous vertice in path.

@@ -15,23 +15,25 @@ def is_dbenv_loaded():
     return settings.LOAD_DBENV_CALLED
 
 
-def load_dbenv(*args, **kwargs):
-    # check if profile is loaded
-    if not is_profile_loaded():
-        load_profile(profile=settings.AIIDADB_PROFILE)
-
+def load_dbenv(process=None, profile=None, *args, **kwargs):
     if is_dbenv_loaded():
         raise InvalidOperation("You cannot call load_dbenv multiple times!")
     settings.LOAD_DBENV_CALLED = True
+
+    # This is going to set global variables in settings, including
+    # settings.BACKEND
+    load_profile(process=process, profile=profile)
 
     if settings.BACKEND == "sqlalchemy":
         # Maybe schema version should be also checked for SQLAlchemy version.
         from aiida.backends.sqlalchemy.utils \
             import load_dbenv as load_dbenv_sqlalchemy
-        return load_dbenv_sqlalchemy(*args, **kwargs)
+        return load_dbenv_sqlalchemy(
+            process=process, profile=profile, *args, **kwargs)
     elif settings.BACKEND == "django":
         from aiida.backends.djsite.utils import load_dbenv as load_dbenv_django
-        return load_dbenv_django(*args, **kwargs)
+        return load_dbenv_django(
+            process=process, profile=profile, *args, **kwargs)
     else:
         raise ConfigurationError("Invalid settings.BACKEND: {}".format(
             settings.BACKEND))

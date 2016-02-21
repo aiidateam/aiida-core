@@ -48,7 +48,7 @@ def load_dbenv(process=None, profile=None, connection=None):
 
     config = get_profile_config(settings.AIIDADB_PROFILE)
 
-    # Those import are necessary for SQLAlchemy to correvtly detect the models
+    # Those import are necessary for SQLAlchemy to correctly detect the models
     # These should be on top of the file, but because of a circular import they need to be
     # here.
     from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo

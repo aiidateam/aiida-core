@@ -7,7 +7,8 @@ from aiida.common.exceptions import InvalidOperation
 
 def load_profile(process=None, profile=None):
     """
-    Load the profile.
+    Load the profile. This function is called by load_dbenv and SHOULD NOT
+    be called by the user by hand.
     """
     if settings.LOAD_PROFILE_CALLED:
         raise InvalidOperation("You cannot call load_profile multiple times!")

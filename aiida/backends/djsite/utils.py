@@ -48,13 +48,9 @@ def _load_dbenv_noschemacheck(process, profile):
     This should ONLY be used internally, inside load_dbenv, and for schema
     migrations. DO NOT USE OTHERWISE!
     """
-    # if is_dbenv_loaded():
-    #     raise InvalidOperation("You cannot call load_dbenv multiple times!")
-    # settings.LOAD_DBENV_CALLED = True
-    #
-    # if not is_profile_loaded():
-    #     load_profile(process, profile)
-
+    # This function does not use process and profile because they are read
+    # from global variables (set before by load_profile) inside the
+    # djsite.settings.settings module.
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings.settings'
     django.setup()
 

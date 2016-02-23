@@ -2,11 +2,12 @@
 import os
 import tempfile
 import unittest
+import json
+import aiida
+
 from shutil import copyfile, rmtree
 
 from aiida.common.additions.migration import Migration
-# from aiida.common.setup import (DAEMON_SUBDIR,
-#                                 DAEMON_CONF_FILE, AIIDA_CONFIG_FOLDER)
 
 import aiida.common.setup as setup
 
@@ -19,13 +20,14 @@ __contributors__ = "Spyros Zoupanos"
 class MigrationTest(unittest.TestCase):
 
     _temp_dir_path_name = None
-    _aiida_main_config_dir_name = ".aiida"
-    # _aiida_daemon_dir_name = "daemon"
-    # _aiida_daemon_config_filename = "aiida_daemon.conf"
+    _aiida_main_config_dir_rel_path = ".aiida"
 
     _conf_files_rel_path = "test_migration_files"
     _original_files_rel_path = "original"
     _final_files_rel_path = "final"
+
+    _aiida_conf_dir_replace_str = "{AIIDA_CONF_DIR}"
+    _aiida_dir_replace_str = "{AIIDA_DIR}"
 
     def setUp(self):
         pass
@@ -46,7 +48,7 @@ class MigrationTest(unittest.TestCase):
 
         # Create an .aiida subfolder
         temp_aiida_subfolder = os.path.join(
-            temp_folder, self._aiida_main_config_dir_name)
+            temp_folder, self._aiida_main_config_dir_rel_path)
         os.makedirs(temp_aiida_subfolder)
 
         # Copy the main AiiDA configuration file to the temp folder
@@ -75,17 +77,33 @@ class MigrationTest(unittest.TestCase):
         mobj.perform_migration()
 
     def check_miration_res(self, aiida_folder_full_path, correct_files_dir):
-        # The path to the generated config.json
+        """
+        This method checks that the migration result is correct. More
+        specifically it checks that the generated config.json &
+        aiida_daemon.conf are the expected ones.
+        :param aiida_folder_full_path:
+        :param correct_files_dir:
+        :return:
+        """
+        # The path of the generated config.json
         tmp_config_json_path = os.path.join(
             aiida_folder_full_path, setup.CONFIG_FNAME)
         # The path to the correct config.json
         cor_config_json_path = os.path.join(
             correct_files_dir, setup.CONFIG_FNAME)
+        # Compare the two json files
+        json_res = json_files_equivalent(tmp_config_json_path, cor_config_json_path)
+        print("json_res {}".format(json_res))
 
-        res = read_file_and_return_string(tmp_config_json_path)
-        compare_text_files(tmp_config_json_path, cor_config_json_path)
+        # The path of the generated aiida_daemon.conf
+        tmp_daemon_conf_path = os.path.join(
+            aiida_folder_full_path, setup.DAEMON_SUBDIR,
+            setup.DAEMON_CONF_FILE)
+        # The path to the correct aiida_daemon.conf
+        cor_daemon_conf_path = os.path.join(
+            correct_files_dir, setup.DAEMON_CONF_FILE)
+        self.config_text_files_equal(tmp_daemon_conf_path, cor_daemon_conf_path, aiida_folder_full_path)
 
-        print("res: {}".format(res))
 
 
 
@@ -113,21 +131,54 @@ class MigrationTest(unittest.TestCase):
                     curr_dir_with_conf_files, self._final_files_rel_path))
 
             return
-            # import sys
-            # sys.exit()
 
             # Delete the temporary folder
             rmtree(temp_aiida_folder)
         pass
 
 
-def compare_text_files(input_file1_filename, input_file2_filename):
-    print("Comparing files {} {}".format(input_file1_filename, input_file2_filename))
-    with open(input_file1_filename, 'r') as file1:
-        with open(input_file2_filename, 'r') as file2:
-            same = set(file1).difference(file2)
-    print("same: {}". format(same))
+    def config_text_files_equal(self, generated_conf_path, original_conf_path, aiida_conf_dir):
+        #{AIIDA_DIR}
+        # print("Comparing files {} {}".format(input_file1_filename, input_file2_filename))
+        aiida_dir = os.path.split(os.path.abspath(aiida.__file__))[0]
+        from itertools import izip
+        with open(generated_conf_path, 'r') as generated_conf, open(original_conf_path, 'r') as original_conf:
+            for g_line, o_line in izip(generated_conf, original_conf):
+                if g_line != o_line.replace(self._aiida_conf_dir_replace_str, aiida_conf_dir).replace(self._aiida_dir_replace_str, aiida_dir):
+                    print("===========> lines not equal")
+                    print("g_lin: {}".format(g_line))
+                    print("o_li1: {}".format(o_line))
+                    print("o_li2: {}".format(o_line.replace(self._aiida_conf_dir_replace_str, aiida_conf_dir)))
+                    print os.path.split(os.path.abspath(aiida.__file__))[0]
+            # generated_conf_data = generated_conf.readlines()
+            # original_conf_data = original_conf.readlines()
+            # print generated_conf_data
+            # print original_conf_data
 
+
+
+            # data = f.readlines()
+            # same = set(generated_conf).intersection(file2)
+
+        # print("same: {}". format(same))
+
+
+def json_files_equivalent(input_file1_filename, input_file2_filename):
+    """
+    Checks that two json files are equivalent (contain the same key/value pairs
+    irrespective of their order.
+    :param input_file1_filename: The first json file.
+    :param input_file2_filename: The second json file.
+    :return: True if the two files are equivalent, false otherwise.
+    """
+    with open(input_file1_filename) as input_file1:
+        with open(input_file2_filename) as input_file2:
+            json1 = json.load(input_file1)
+            json2 = json.load(input_file2)
+            if ordered(json1) == ordered(json2):
+                return True
+            else:
+                return False
 
 def ordered(obj):
     if isinstance(obj, dict):

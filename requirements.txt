@@ -60,3 +60,7 @@ python-mimeparse==0.1.4
 ## ICSD tools
 #PyMySQL>=0.6.1
 
+# SQLAlchemy support
+SQLAlchemy==1.0.9
+SQLAlchemy-Utils==0.31.2
+ultrajson==1.35

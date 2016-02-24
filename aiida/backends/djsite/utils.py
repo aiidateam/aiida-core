@@ -16,13 +16,6 @@ __contributors__ = ("Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, "
                     "Spyros Zoupanos")
 
 
-# def is_dbenv_loaded():
-#     """
-#     Return True of the dbenv was already loaded (with a call to load_dbenv),
-#     False otherwise.
-#     """
-#     return settings.LOAD_DBENV_CALLED
-
 def load_dbenv(process=None, profile=None):
     """
     Load the database environment (Django) and perform some checks.

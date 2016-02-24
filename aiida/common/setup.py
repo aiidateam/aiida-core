@@ -588,7 +588,7 @@ def create_configuration(profile='default'):
 
             # possibilities = ['django', 'sqlalchemy']
             possibilities = ['django']
-            if len(possibilities) > 1:
+            if len(possibilities) > 0:
 
                 aiida_backend = this_existing_confs.get('AIIDADB_BACKEND',
                                                      'django')

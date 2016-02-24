@@ -34,7 +34,7 @@ class QueryBuilder(QueryBuilderBase):
     query the tables defined there.
     """
 
-    def __init__(self, queryhelp, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.Link               = DummyLink
         self.Path               = DummyPath
         self.Node               = DummyNode
@@ -45,7 +45,7 @@ class QueryBuilder(QueryBuilderBase):
         self.AiidaNode          = DjangoAiidaNode
         self.AiidaGroup         = DjangoAiidaGroup
         
-        super(QueryBuilder, self).__init__(queryhelp, **kwargs)
+        super(QueryBuilder, self).__init__(*args, **kwargs)
 
     def get_ormclass(self,cls, ormclasstype):
         """

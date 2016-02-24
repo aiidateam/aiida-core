@@ -49,8 +49,6 @@ class Migration(object):
         return conf
 
     def perform_migration(self):
-        print("AIIDA_CONFIG_FOLDER 1: {}".format(setup.AIIDA_CONFIG_FOLDER))
-
         # Backup the previous config
         setup.backup_config()
         # Get the AiiDA directory path

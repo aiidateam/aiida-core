@@ -586,7 +586,8 @@ def create_configuration(profile='default'):
                 this_existing_confs.get('AIIDADB_PASS', 'aiida_password')))
             this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
 
-            possibilities = ['django', 'sqlalchemy']
+            # possibilities = ['django', 'sqlalchemy']
+            possibilities = ['django']
             if len(possibilities) > 1:
 
                 aiida_backend = this_existing_confs.get('AIIDADB_BACKEND',

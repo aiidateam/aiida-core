@@ -17,6 +17,12 @@ from aiida.backends.profile import load_profile, is_profile_loaded
 
 # Note that we can't use `DbAttribute.query` here because we didn't import it
 # in load_dbenv.
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
 class DbAttribute(Base):
     """
     DbAttribute table, use only for migration purposes.

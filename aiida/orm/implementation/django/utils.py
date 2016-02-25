@@ -4,6 +4,11 @@ from aiida.orm.implementation.django.computer import Computer
 
 from aiida.common.exceptions import InvalidOperation
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
 def delete_computer(computer):
     """
     Delete a computer from the DB.

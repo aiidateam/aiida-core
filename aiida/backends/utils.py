@@ -7,6 +7,11 @@ from aiida.backends.profile import load_profile, is_profile_loaded
 from aiida.common.exceptions import ConfigurationError, InvalidOperation
 
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
 def is_dbenv_loaded():
     """
     Return True of the dbenv was already loaded (with a call to load_dbenv),

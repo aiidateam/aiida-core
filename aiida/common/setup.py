@@ -19,7 +19,7 @@ CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 
 DAEMON_SUBDIR = "daemon"
-LOG_DIR = "daemon/log"
+LOG_SUBDIR = "daemon/log"
 DAEMON_CONF_FILE = "aiida_daemon.conf"
 
 # The key inside the configuration file
@@ -36,6 +36,7 @@ aiidadb_backend_key = "AIIDADB_BACKEND"
 
 # Profile values
 aiidadb_backend_value_django = "django"
+
 
 def backup_config():
     """
@@ -327,7 +328,7 @@ def create_base_dirs():
     # For the daemon, to be hard-coded when ok
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_SUBDIR)
-    aiida_log_dir = os.path.join(aiida_dir, LOG_DIR)
+    aiida_log_dir = os.path.join(aiida_dir, LOG_SUBDIR)
     local_user = getpass.getuser()
 
     old_umask = os.umask(DEFAULT_UMASK)
@@ -585,7 +586,8 @@ def create_configuration(profile='default'):
                 this_existing_confs.get('AIIDADB_PASS', 'aiida_password')))
             this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
 
-            possibilities = ['django', 'sqlalchemy']
+            # possibilities = ['django', 'sqlalchemy']
+            possibilities = ['django']
             if len(possibilities) > 1:
 
                 aiida_backend = this_existing_confs.get('AIIDADB_BACKEND',

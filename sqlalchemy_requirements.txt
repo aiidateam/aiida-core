@@ -1,3 +1,0 @@
-SQLAlchemy==1.0.9
-SQLAlchemy-Utils==0.31.2
-ultrajson==1.35

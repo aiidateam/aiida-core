@@ -28,27 +28,21 @@ from aiida.backends import sqlalchemy, settings
 from aiida.backends.profile import (is_profile_loaded,
                                     load_profile)
 
-def is_dbenv_loaded():
-    """
-    Return if the environment has already been loaded or not.
-    """
-    return sqlalchemy.session is not None
+
+# def is_dbenv_loaded():
+#     """
+#     Return if the environment has already been loaded or not.
+#     """
+#     return sqlalchemy.session is not None
 
 
 def load_dbenv(process=None, profile=None, connection=None):
     """
     Load the SQLAlchemy database.
     """
-    if settings.LOAD_DBENV_CALLED:
-        raise InvalidOperation("You cannot call load_dbenv multiple times!")
-    settings.LOAD_DBENV_CALLED = True
-
-    if not is_profile_loaded():
-        load_profile(process, profile)
-
     config = get_profile_config(settings.AIIDADB_PROFILE)
 
-    # Those import are necessary for SQLAlchemy to correvtly detect the models
+    # Those import are necessary for SQLAlchemy to correctly detect the models
     # These should be on top of the file, but because of a circular import they need to be
     # here.
     from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo

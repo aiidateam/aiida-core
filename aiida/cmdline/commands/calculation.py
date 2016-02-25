@@ -52,6 +52,9 @@ class Calculation(VerdiCommandWithSubcommands):
         """
         Return the list of plugins of the JobCalculation subclass of Calculation
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.pluginloader import existing_plugins
         from aiida.orm.calculation.job import JobCalculation
 

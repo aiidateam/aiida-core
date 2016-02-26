@@ -11,7 +11,6 @@ __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For fu
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
-                    "Martin Uhrin, Spyros Zoupanos")
 
 
 def list_repo_files(node, path, color):

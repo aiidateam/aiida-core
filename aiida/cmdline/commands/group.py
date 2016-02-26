@@ -10,7 +10,6 @@ __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For fu
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
-                    "Nicolas Mounet, Spyros Zoupanos")
 
 
 class Group(VerdiCommandWithSubcommands):

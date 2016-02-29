@@ -19,3 +19,5 @@ Some of the most important changes included in this release are:
 - UltraJSON support.
 - requirements.txt now also include SQLAlchemy and its dependencies.
 - Recursive way of loading JSON for SQLAlchemy.
+- Improved way of accessing calculations & workflows attached to a workflow step.
+- Added methods to programmatically create new codes and computers.

@@ -571,3 +571,31 @@ Updating from 0.4.1 to 0.5.0
   you need to change the CalcInfo returning also a CodeInfo, as specified
   :ref:`here<qeplugin-prepare-input>` and also accept a ``Code`` object 
   among the inputs (also described in the same page).
+
+Updating from 0.5.0 to 0.6.0
+----------------------------
+This migration will update your AiiDA configuration files making them
+compatible with AiiDA version 0.6.0.
+
+.. note::
+  We performed a lot of changes to introduce in one of our following 
+  releases a second object-relational mapper (we will refer to it as 
+  back-end) for the management of the used DBMSs and more specifically 
+  of PostgreSQL.
+  
+  Even if most of the needed restructuring & code addition has been finished, 
+  a bit of more work is needed before we make the new back-end available. 
+
+
+To perform the update:
+
+* Stop your daemon (using ``verdi daemon stop``).
+* Backup your configuration files that are in .aiida directory.
+* Replace the aiida folder with the new one (either from the tar.gz or, 
+  if you are using git, by doing a ``git pull``). If you use the same 
+  folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
+  variables
+* Execute the migration script (``python _your_aiida_folder_/aiida/common/additions/migration.py``).
+* Start again you daemon (using ``verdi daemon start``).
+
+

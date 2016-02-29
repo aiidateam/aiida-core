@@ -4,10 +4,10 @@ import os
 from aiida.orm import Data
 from aiida.common.exceptions import ModificationNotAllowed
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 class FolderData(Data):
@@ -40,8 +40,8 @@ class FolderData(Data):
     def get_file_content(self, path):
         """
         Return the content of a path stored inside the folder as a string.
-        
-        :raise NotExistent: if the path does not exist. 
+
+        :raise NotExistent: if the path does not exist.
         """
         from aiida.common.exceptions import NotExistent
 
@@ -52,4 +52,4 @@ class FolderData(Data):
         except (OSError, IOError):
             raise NotExistent("Error reading the file '{}' inside node with "
                               "pk= {}, it probably does not exist?".format(path, self.pk))
-        
+

@@ -2,18 +2,17 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.orm import load_workflow
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 class Workflow(VerdiCommandWithSubcommands):
     """
     Manage the AiiDA worflow manager
-    
+
     Valid subcommands are:
     * list: list the running workflows running and their state. Pass a -h
     |        option for further help on valid options.
@@ -38,18 +37,15 @@ class Workflow(VerdiCommandWithSubcommands):
         """
         Return a list of workflows on screen
         """
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
+        from aiida.backends.utils import get_workflow_list, get_automatic_user
         from aiida.orm.workflow import get_workflow_info
-        from aiida.djsite.db.models import DbWorkflow
-        from aiida.common.datastructures import wf_states
-        from aiida.djsite.utils import get_automatic_user
 
-        from django.db.models import Q
-        from django.utils import timezone
-        import datetime, argparse
+        import argparse
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -78,46 +74,32 @@ class Workflow(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        if parsed_args.pks:
-            q_object = Q(pk__in=parsed_args.pks)
-        else:
-            q_object = Q(user=get_automatic_user())
-            if not parsed_args.all_states:
-                q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
-                q_object.add(~Q(state=wf_states.ERROR), Q.AND)
-            if parsed_args.past_days:
-                now = timezone.now()
-                n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
-                q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+        workflows = get_workflow_list(parsed_args.pks,
+                                      user=get_automatic_user(),
+                                      all_states=parsed_args.all_states,
+                                      n_days_ago=parsed_args.past_days)
 
-        wf_list = DbWorkflow.objects.filter(q_object).order_by('ctime')
-
-        # create dictionary of the form {pk: parent_workflow_pk}
-        parent_pks = dict(DbWorkflow.objects.filter(q_object).order_by(
-            'ctime').values_list('pk', 'parent_workflow_step__parent'))
-
-        for w in wf_list:
-            if parent_pks[w.pk] not in parent_pks.keys():
+        for w in workflows:
+            if not w.is_subworkflow():
                 print "\n".join(get_workflow_info(w, tab_size=tab_size,
                                                   short=parsed_args.short,
                                                   depth=parsed_args.depth))
-        if not wf_list:
+        if not workflows:
             if parsed_args.all_states:
                 print "# No workflows found"
             else:
                 print "# No running workflows found"
 
-
     def print_report(self, *args):
         """
         Print the report of a workflow.
         """
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        from aiida.orm.utils import load_workflow
         from aiida.common.exceptions import NotExistent
-
-        load_dbenv()
-
-        from aiida.orm.workflow import Workflow
 
         if len(args) != 1:
             print >> sys.stderr, "You have to pass a valid workflow PK as a parameter."
@@ -141,12 +123,12 @@ class Workflow(VerdiCommandWithSubcommands):
 
     def workflow_kill(self, *args):
         """
-        Kill a workflow. 
-        
+        Kill a workflow.
+
         Pass a list of workflow PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
 
         load_dbenv()
 
@@ -207,13 +189,13 @@ class Workflow(VerdiCommandWithSubcommands):
 
 
     def print_logshow(self, *args):
-        from aiida.common.exceptions import NotExistent
-        from aiida.orm.workflow import Workflow
-        from aiida.djsite.utils import get_log_messages
-        from aiida.common.datastructures import calc_states
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        if not is_dbenv_loaded():
+            load_dbenv()
 
-        load_dbenv()
+        from aiida.orm.utils import load_workflow
+        from aiida.backends.utils import get_log_messages
+        from aiida.common.exceptions import NotExistent
 
         for wf_pk in args:
             try:
@@ -245,5 +227,3 @@ class Workflow(VerdiCommandWithSubcommands):
                 # Print the message, with a few spaces in front of each line
                 print "\n".join(["|   {}".format(_)
                                  for _ in log['message'].splitlines()])
-
-    

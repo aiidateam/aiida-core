@@ -12,10 +12,10 @@ import copy
 
 # Threshold used to check if the mass of two different Site objects is the same.
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Leonid Kahle, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini, Tiziano Müller"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 _mass_threshold = 1.e-3
 # Threshold to check if the sum is one or not

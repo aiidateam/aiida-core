@@ -5,11 +5,12 @@ import datetime
 
 from backup import Backup
 from dateutil.parser import parse
+from aiida.common.utils import ask_question
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Giovanni Pizzi, Martin Uhrin"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 class UnitTests(unittest.TestCase):
@@ -105,28 +106,20 @@ class UnitTests(unittest.TestCase):
         self.seq = -1
         answers = ["", "3fd43", "1", "yes"]
         backup_setup.raw_input = lambda _: answers[self.array_counter()]
-        self.assertEqual(
-             self._backup_setup_inst.ask_backup_question("", int, False),
-             int(answers[2]))
+        self.assertEqual(ask_question("", int, False), int(answers[2]))
     
         # Test that a question that asks for a date is working correctly.
         # The behavior is similar to the above test.
         self.seq = -1
         answers = ["", "3fd43", "2015-07-28 20:48:53.197537+02:00", "yes"]
         backup_setup.raw_input = lambda _: answers[self.array_counter()]
-        self.assertEqual(
-             self._backup_setup_inst.ask_backup_question("",
-                                                         datetime.datetime,
-                                                         False),
-             parse(answers[2]))
+        self.assertEqual(("", datetime.datetime, False), parse(answers[2]))
     
         # Check that None is not allowed as answer
         question = ""
         answer = ""
         backup_setup.raw_input = lambda x: answer if x == question else "y"
-        self.assertEqual(
-             self._backup_setup_inst.ask_backup_question(question, int, True),
-             None)
+        self.assertEqual(ask_question(question, int, True), None)
         
     def test_construct_backup_variables(self):
         """

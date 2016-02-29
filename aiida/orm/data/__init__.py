@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-from aiida.orm import Node
+from aiida.common.exceptions import ValidationError
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+from aiida.orm.node import Node
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Tiziano Müller"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 '''
 Specifications of the Data class:
-AiiDA Data objects are subclasses of Node and should have 
+AiiDA Data objects are subclasses of Node and should have
 
 Multiple inheritance must be suppoted, i.e. Data should have methods for querying and
 be able to inherit other library objects such as ASE for structures.
@@ -92,11 +94,10 @@ class Data(Node):
     def _can_link_as_output(self, dest):
         """
         Raise a ValueError if a link from self to dest is not allowed.
-        
+
         An output of a data can only be a calculation
         """
-        from aiida.orm import Calculation
-
+        from aiida.orm.calculation import Calculation
         if not isinstance(dest, Calculation):
             raise ValueError("The output of a data node can only be a calculation")
 
@@ -213,16 +214,16 @@ class Data(Node):
     def convert(self, object_format=None, *args):
         """
         Convert the AiiDA StructureData into another python object
-        
+
         :param object_format: Specify the output format
         """
         if object_format is None:
             raise ValueError("object_format must be provided")
         if not isinstance(object_format, basestring):
             raise ValueError('object_format should be a string')
-        
+
         converters = self._get_converters()
-        
+
         try:
             func = converters[object_format]
         except KeyError:
@@ -237,7 +238,7 @@ class Data(Node):
                     object_format, self.__class__.__name__))
 
         return func(*args)
-        
+
     def _get_converters(self):
         """
         Get all implemented converter formats.
@@ -263,7 +264,6 @@ class Data(Node):
             the case of any CC-BY* license. If such requirement is too
             strict, one can remove/comment it out.
         """
-        from aiida.common.exceptions import ValidationError
 
         super(Data, self)._validate()
 

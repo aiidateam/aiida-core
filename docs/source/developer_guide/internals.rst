@@ -295,15 +295,15 @@ Store & deletion
 DbNode
 ++++++
 
-The :py:class:`~aiida.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.node.Node` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.node.Node` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.calculation.Calculation` and :py:class:`~aiida.orm.code.Code` use the :py:class:`~aiida.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
+The :py:class:`~aiida.backends.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.node.Node` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.node.Node` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.calculation.Calculation` and :py:class:`~aiida.orm.code.Code` use the :py:class:`~aiida.backends.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
 
-- :py:meth:`~aiida.djsite.db.models.DbNode.get_aiida_class` which returns the corresponding AiiDA class instance.
+- :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_aiida_class` which returns the corresponding AiiDA class instance.
 
-- :py:meth:`~aiida.djsite.db.models.DbNode.get_simple_name` which returns a string with the type of the class (by stripping the path before the class name).
+- :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_simple_name` which returns a string with the type of the class (by stripping the path before the class name).
 
-- :py:meth:`~aiida.djsite.db.models.DbNode.attributes` which returns the all the attributes of the specific node as a dictionary.
+- :py:meth:`~aiida.backends.djsite.db.models.DbNode.attributes` which returns the all the attributes of the specific node as a dictionary.
 
-- :py:meth:`~aiida.djsite.db.models.DbNode.extras` which returns all the extras of the specific node as a dictionary.
+- :py:meth:`~aiida.backends.djsite.db.models.DbNode.extras` which returns all the extras of the specific node as a dictionary.
 
 
 

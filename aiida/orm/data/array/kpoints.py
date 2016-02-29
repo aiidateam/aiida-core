@@ -520,4 +520,3 @@ class KpointsData(ArrayData):
         # note: kpoints is a list Nx3, matrix is 3x3.
         # hence, first transpose kpoints, then multiply, finally transpose it back
         return numpy.transpose(numpy.dot(matrix, numpy.transpose(kpoints)))
-    

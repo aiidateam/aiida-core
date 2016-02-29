@@ -1,10 +1,10 @@
 == v0.6.0 ==
 
-In this release we introduce a second object-relational mapper (we will refer to it as back-end) for the management of the used DBMSs and more specifically of PostgreSQL. SQLAlchemy and the latest version of PostgreSQL allows AiiDA to store JSON documents directly to the database and also to query them. Moreover the JSON query optimization is left to the database including also the use of the JSON specific indexes. There was major code restructuring to accommodate the new back-end resulting to abstracting many classes of the orm package of AiiDA.
+We performed a lot of changes to introduce in one of our following releases a second object-relational mapper (we will refer to it as back-end) for the management of the used DBMSs and more specifically of PostgreSQL. SQLAlchemy and the latest version of PostgreSQL allows AiiDA to store JSON documents directly to the database and also to query them. Moreover the JSON query optimization is left to the database including also the use of the JSON specific indexes. There was major code restructuring to accommodate the new back-end resulting to abstracting many classes of the orm package of AiiDA.
 
-Even if most of the needed restructuring has been finished, a bit of more work is needed. Therefore even in this version, Django is the only available back-end for the end user.
+Even if most of the needed restructuring & code addition has been finished, a bit of more work is needed. Therefore even in this version, Django is the only available back-end for the end user.
 
-However, the users have to update their AiiDA configuration files by executing the migration file that can be found at YOUR_AIIDA_DIR/aiida/common/additions/migration.py as the linux user that installed AiiDA in your system.
+However, the users have to update their AiiDA configuration files by executing the migration file that can be found at YOUR_AIIDA_DIR/aiida/common/additions/migration.py as the Linux user that installed AiiDA in your system.
 (e.g. python YOUR_AIIDA_DIR/aiida/common/additions/migration.py)
 
 Some of the most important changes included in this release are:

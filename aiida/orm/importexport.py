@@ -217,7 +217,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
     import CifFile
     from aiida.common.exceptions import ValidationError
     from aiida.common.utils import md5_file, sha1_file
-    from aiida.orm.data.cif import decode_textfield
+    from aiida.tools.dbexporters.tcod import decode_textfield
 
     values = CifFile.ReadCif(infile)
     values = values[values.keys()[0]] # taking the first datablock in CIF

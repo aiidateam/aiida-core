@@ -28,8 +28,8 @@ end.
 Version number
 ++++++++++++++
 
-The AiiDA version number is stored in both ``aiida/__init__.py`` and
-``setup.py``.  Make sure to update both when changing version number.
+The AiiDA version number is stored in ``aiida/__init__.py``.  Make sure to
+update this when changing version number.
 
 Inline calculations
 +++++++++++++++++++

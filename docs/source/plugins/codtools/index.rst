@@ -3,8 +3,9 @@ cod-tools
 
 Description
 ^^^^^^^^^^^
-**cod-tools** is an open-source collection of command line scripts for
-handling of `Crystallographic Information Framework (CIF) files`_. The
+**cod-tools** (`more info here`_) is an open-source collection of command 
+line scripts for
+handling of Crystallographic Information Framework `(CIF) files`_. The
 package is developed by the team of `Crystallography Open Database`_ (COD)
 developers. Detailed information for the usage of each individual script
 from the package can be obtained by invoking commands with ``--help`` and
@@ -13,7 +14,8 @@ from the package can be obtained by invoking commands with ``--help`` and
     cif_filter --help
     cif_filter --usage
 
-.. _Crystallographic Information Framework (CIF) files: http://www.iucr.org/resources/cif
+.. _more info here: http://wiki.crystallography.net/cod-tools
+.. _(CIF) files: http://www.iucr.org/resources/cif
 .. _Crystallography Open Database: http://www.crystallography.net
 
 * cif_cod_check

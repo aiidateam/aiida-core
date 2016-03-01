@@ -1656,7 +1656,7 @@ class DbWorkflow(m.Model):
         """
         from aiida.orm.workflow import Workflow
 
-        return Workflow.get_subclass_from_uuid(self.uuid)
+        return Workflow.get_subclass_from_dbnode(self)
 
     def set_state(self, _state):
         self.state = _state;

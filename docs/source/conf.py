@@ -241,6 +241,11 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()
+else:
+    # Back-end settings for readthedocs online documentation.
+    from aiida.backends import settings
+    settings.BACKEND = "django"
+    settings.AIIDADB_PROFILE = "default"
 
 
 # Note by Andrea Cepellotti:

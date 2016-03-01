@@ -9,7 +9,7 @@ that you already run in your AiiDA database, described below.
 Test folders
 ------------
 
-Each folder inside the path ``aiida/djsite/db/subtests/parser_tests``
+Each folder inside the path ``aiida.backends.djsite/db/subtests/parser_tests``
 constitutes a single test.
 The naming convention for folders is the following:
 
@@ -29,13 +29,13 @@ Creation of a test from an existing calculation
 -----------------------------------------------
 
 In order to create the folder, you can open ``verdi shell`` while being
-in the folder ``aiida/djsite/db/subtests/parser_tests``, import
+in the folder ``aiida.backends.djsite/db/subtests/parser_tests``, import
 the following function::
 
-  from aiida.djsite.db.subtests.parsers import output_test
+  from aiida.backends.djsite.db.subtests.parsers import output_test
 
 and then run it with the correct parameters. The documentation of the function
-can be found :py:func:`here<aiida.djsite.db.subtests.parsers.output_test>`.
+can be found :py:func:`here<aiida.backends.djsite.db.subtests.parsers.output_test>`.
 
 An example call could be::
 
@@ -106,13 +106,13 @@ JSON file inside the folder. The syntax is the following:
     }
 
 The list of valid comparisons is hardcoded inside the
-``aiida.djsite.db.subtests.parsers`` module;
+``aiida.backends.djsite.db.subtests.parsers`` module;
 if you need new comparison types, add them directly to the module.
 
 Running tests
 -------------
 
-Finally, in order to run all tests contained in the folder ``aiida/djsite/db/subtests/parser_tests``
+Finally, in order to run all tests contained in the folder ``aiida.backends.djsite/db/subtests/parser_tests``
 one can use the following ``verdi`` command::
 
   verdi devel tests db.parsers

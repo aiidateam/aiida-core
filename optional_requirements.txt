@@ -9,7 +9,7 @@
 ## sudo pip install --upgrade setuptools
 
 ## For postgreSQL
-psycopg2==2.6
+psycopg2==2.6.1
 
 ## For MySQL
 MySQL-python==1.2.5

@@ -12,16 +12,16 @@ from aiida.common.exceptions import ValidationError
 ## everytime I try to write on a.b.c I am actually writing on a copy
 ##    return AttributeDict(item) if type(item) == dict else item
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 class Enumerate(frozenset):
     def __getattr__(self, name):
         if name in self:
-            return name
+            return name.decode("utf-8")
         raise AttributeError("No attribute '{}' in Enumerate '{}'".format(
             name, self.__class__.__name__))
 
@@ -73,7 +73,7 @@ class AttributeDict(dict):
 
     def __setattr__(self, attr, value):
         """
-        Set a key as an attribute. 
+        Set a key as an attribute.
         """
         self[attr] = value
 
@@ -119,7 +119,7 @@ class AttributeDict(dict):
 class FixedFieldsAttributeDict(AttributeDict):
     """
     A dictionary with access to the keys as attributes, and with filtering
-    of valid attributes. 
+    of valid attributes.
     This is only the base class, without valid attributes;
     use a derived class to do the actual work.
     E.g.::
@@ -139,7 +139,7 @@ class FixedFieldsAttributeDict(AttributeDict):
 
     def __setitem__(self, item, value):
         """
-        Set a key as an attribute. 
+        Set a key as an attribute.
         """
         if item not in self._valid_fields:
             errmsg = "'{}' is not a valid key for object '{}'".format(
@@ -169,21 +169,21 @@ class DefaultFieldsAttributeDict(AttributeDict):
     A dictionary with access to the keys as attributes, and with an
     internal value storing the 'default' keys to be distinguished
     from extra fields.
-    
+
     Extra methods defaultkeys() and extrakeys() divide the set returned by
     keys() in default keys (i.e. those defined at definition time)
     and other keys.
     There is also a method get_default_fields() to return the internal list.
-    
+
     Moreover, for undefined default keys, it returns None instead of raising a
     KeyError/AttributeError exception.
 
-    Remember to define the _default_fields in a subclass!    
+    Remember to define the _default_fields in a subclass!
     E.g.::
-        
+
         class TestExample(DefaultFieldsAttributeDict):
             _default_fields = ('a','b','c')
-    
+
     When the validate() method is called, it calls in turn all validate_KEY
     methods, where KEY is one of the default keys.
     If the method is not present, the field is considered to be always valid.
@@ -199,18 +199,18 @@ class DefaultFieldsAttributeDict(AttributeDict):
         if value is None:
             return
 
-    .. todo:: 
+    .. todo::
         Decide behavior if I set to None a field.
         Current behavior, if
-        ``a`` is an instance and 'def_field' one of the default fields, that is 
+        ``a`` is an instance and 'def_field' one of the default fields, that is
         undefined, we get:
-        
+
         * ``a.get('def_field')``: None
         * ``a.get('def_field','whatever')``: 'whatever'
         * Note that ``a.defaultkeys()`` does NOT contain 'def_field'
 
         if we do ``a.def_field = None``, then the behavior becomes
- 
+
         * ``a.get('def_field')``: None
         * ``a.get('def_field','whatever')``: None
         * Note that ``a.defaultkeys()`` DOES contain 'def_field'

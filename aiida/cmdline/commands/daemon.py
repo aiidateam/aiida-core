@@ -5,17 +5,17 @@ import subprocess
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 def is_daemon_user():
     """
     Return True if the user is the current daemon user, False otherwise.
     """
-    from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+    from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
 
     daemon_user = get_daemon_user()
     this_user = get_configured_user_email()
@@ -26,7 +26,7 @@ def is_daemon_user():
 class Daemon(VerdiCommandWithSubcommands):
     """
     Manage the AiiDA daemon
-    
+
     This command allows to interact with the AiiDA daemon.
     Valid subcommands are:
 
@@ -50,7 +50,7 @@ class Daemon(VerdiCommandWithSubcommands):
         start, stop, status and restart.
         """
         from aiida.common import setup
-        from aiida import load_dbenv
+        from aiida.backends.utils import load_dbenv
 
         load_dbenv(process='daemon')
 
@@ -111,7 +111,8 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+        from aiida.backends.djsite.utils import get_daemon_user, \
+            get_configured_user_email
 
         daemon_user = get_daemon_user()
         this_user = get_configured_user_email()
@@ -149,7 +150,7 @@ class Daemon(VerdiCommandWithSubcommands):
     def kill_daemon(self):
         """
         This is the actual call that kills the daemon.
-        
+
         There are some print statements inside, but no sys.exit, so it is
         safe to be called from other parts of the code.
         """
@@ -176,12 +177,12 @@ class Daemon(VerdiCommandWithSubcommands):
     def daemon_stop(self, *args, **kwargs):
         """
         Stop the daemon.
-        
+
         :param wait_for_death: If True, also verifies that the process was already
             killed. It attempts at most ``max_retries`` times, with ``sleep_between_retries``
             seconds between one attempt and the following one (both variables are
             for the time being hardcoded in the function).
-            
+
         :return: None if ``wait_for_death`` is False. True/False if the process was
             actually dead or after all the retries it was still alive.
         """
@@ -238,9 +239,9 @@ class Daemon(VerdiCommandWithSubcommands):
         import supervisor.supervisorctl
         import xmlrpclib
 
-        from django.utils import timezone
+        from aiida.utils import timezone
 
-        from aiida.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.backends.djsite.db.tasks import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
 
         most_recent_timestamp = get_most_recent_daemon_timestamp()
@@ -327,7 +328,7 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+        from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
 
         daemon_user = get_daemon_user()
         this_user = get_configured_user_email()
@@ -363,16 +364,16 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from django.utils import timezone
+        from aiida.utils import timezone
 
         from django.core.exceptions import ObjectDoesNotExist
 
-        from aiida.djsite.db.models import DbUser
-        from aiida.djsite.utils import (
+        from aiida.backends.djsite.db.models import DbUser
+        from aiida.backends.djsite.utils import (
             get_configured_user_email,
             get_daemon_user, set_daemon_user)
 
-        from aiida.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.backends.djsite.db.tasks import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
 
         old_daemon_user = get_daemon_user()
@@ -431,7 +432,7 @@ class Daemon(VerdiCommandWithSubcommands):
 
     def _clean_sock_files(self):
         """
-        Tries to remove the supervisord.pid and .sock files from the .aiida/daemon 
+        Tries to remove the supervisord.pid and .sock files from the .aiida/daemon
         subfolder. This is typically needed when the computer is restarted with
         the daemon still on.
         """
@@ -440,14 +441,14 @@ class Daemon(VerdiCommandWithSubcommands):
         try:
             os.remove(self._get_sock_full_path())
         except OSError as e:
-            # Ignore if errno = errno.ENOENT (2): no file found 
+            # Ignore if errno = errno.ENOENT (2): no file found
             if e.errno != errno.ENOENT:  # No such file
                 raise
 
         try:
             os.remove(self._get_pid_full_path())
         except OSError as e:
-            # Ignore if errno = errno.ENOENT (2): no file found 
+            # Ignore if errno = errno.ENOENT (2): no file found
             if e.errno != errno.ENOENT:  # No such file
-                raise 
-        
+                raise
+

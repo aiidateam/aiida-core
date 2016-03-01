@@ -15,10 +15,9 @@ Directly querying in Django
 If you know how AiiDA stores the data internally in the database, you can 
 directly use Django to query the database (or even use directly SQL commands,
 if you really feel the urge to do so). Documentation on how queries work
-in Django can be found on the `official Django documentation 
-<https://docs.djangoproject.com/en/1.7/topics/db/queries/>`_. The models can be found in 
-:py:mod:`aiida.djsite.db.models` and are directly accessible as ``models``
-in the ``verdi shell`` or via ``verdi run``.
+in Django can be found on the `official Django documentation <https://docs.djangoproject.com/en/1.7/topics/db/queries/>`_. The models can be found in 
+:py:mod:`aiida.backends.djsite.db.models` and is directly accessible as ``models``
+in the ``verdi shell`` via ``verdi run``.
 
 
 Using the ``querytool``
@@ -134,7 +133,7 @@ this table is automatically updated to contain all the new available paths.
 With the aid of such a table, discovering if two nodes are connected or not
 becomes a matter of a single query. 
 This table is accessible using Django commands, and is called
-:py:class:`~aiida.djsite.db.models.DbPath`.
+:py:class:`~aiida.backends.djsite.db.models.DbPath`.
 
 Transitive closure *paths* contain a parent and a child. 
 Moreover, they also contain a ``depth``, giving how many nodes have to
@@ -150,11 +149,11 @@ recursively) discover which are the nodes that have been traversed.
 .. todo:: The description of the exact meaning of the three additional
   columns (``entry_edge_id``, ``direct_edge_id``, and ``exit_edge_id``,
   will be added soon; in the meatime, you can give a look to the
-  implementation of the :py:meth:`~aiida.djsite.db.models.DbPath.expand`
+  implementation of the :py:meth:`~aiida.backends.djsite.db.models.DbPath.expand`
   method).
 
 Finally, given a ``DbPath`` object, we provide a 
-:py:meth:`~aiida.djsite.db.models.DbPath.expand` method to get a list
+:py:meth:`~aiida.backends.djsite.db.models.DbPath.expand` method to get a list
 of all the nodes (in the correct order) that are traversed by
 the specific path. List elements are AiiDA nodes.
 

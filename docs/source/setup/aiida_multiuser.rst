@@ -118,14 +118,14 @@ Some notes:
 * Create a ``/etc/apache2/sites-available/wsgi-aiida`` file,
   with content::
 
-   Alias /static/awi /PATH_TO_AIIDA/aiida/djsite/awi/static/awi/
-   Alias /favicon.ico /PATH_TO_AIIDA/aiida/djsite/awi/static/favicon.ico
+   Alias /static/awi /PATH_TO_AIIDA/aiida.backends.djsite/awi/static/awi/
+   Alias /favicon.ico /PATH_TO_AIIDA/aiida.backends.djsite/awi/static/favicon.ico
  
-   WSGIScriptAlias / /PATH_TO_AIIDA/aiida/djsite/settings/wsgi.py
+   WSGIScriptAlias / /PATH_TO_AIIDA/aiida.backends.djsite/settings/wsgi.py
    WSGIPassAuthorization On
    WSGIPythonPath /PATH_TO_AIIDA/
  
-   <Directory /PATH_TO_AIIDA/aiida/djsite/settings>
+   <Directory /PATH_TO_AIIDA/aiida.backends.djsite/settings>
    <Files wsgi.py>
    Order deny,allow
    Allow from all
@@ -157,7 +157,7 @@ Some notes:
    If you want to serve AiiDA under a subfolder, e.g. ``http://SERVER/aiida``,
    then change the line containing ``WSGIScriptAlias`` with::
    
-     WSGIScriptAlias /aiida /PATH_TO_AIIDA/aiida/djsite/settings/wsgi.py 
+     WSGIScriptAlias /aiida /PATH_TO_AIIDA/aiida.backends.djsite/settings/wsgi.py
      
    **without any trailing slashes after '/aiida'**.
 

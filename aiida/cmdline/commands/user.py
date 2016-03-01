@@ -5,19 +5,18 @@ This allows to setup and configure a user from command line.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv
 
-
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 class User(VerdiCommandWithSubcommands):
     """
     List and configure new AiiDA users.
-    
+
     Allow to see the list of AiiDA users, their permissions, and to configure
     old and new users.
     """
@@ -34,20 +33,21 @@ class User(VerdiCommandWithSubcommands):
     def complete_emails(self, subargs_idx, subargs):
         load_dbenv()
 
-        from aiida.djsite.db import models
+        from aiida.backends.djsite.db import models
 
         emails = models.DbUser.objects.all().values_list('email', flat=True)
         return "\n".join(emails)
 
     def user_configure(self, *args):
-        from aiida.djsite.settings import settings_profile
-        from aiida import is_dbenv_loaded
+        from aiida.backends.djsite.settings import settings_profile
+        from aiida.backends.utils import is_dbenv_loaded
         if not is_dbenv_loaded():
             load_dbenv()
 
         import readline
         import getpass
-        from aiida.djsite.db import models
+
+        from aiida.backends.djsite.db import models
         from django.core.exceptions import ObjectDoesNotExist
 
         if len(args) != 1:
@@ -145,8 +145,8 @@ class User(VerdiCommandWithSubcommands):
     def user_list(self, *args):
         load_dbenv()
 
-        from aiida.djsite.db.models import DbUser
-        from aiida.djsite.utils import get_configured_user_email
+        from aiida.backends.djsite.db.models import DbUser
+        from aiida.backends.djsite.utils import get_configured_user_email
         from aiida.common.exceptions import ConfigurationError
 
         try:
@@ -222,4 +222,4 @@ class User(VerdiCommandWithSubcommands):
                 start_color, symbol,
                 bold_sequence, user.email, nobold_sequence,
                 full_name, institution_str, permissions_str, end_color)
-                
+

@@ -7,13 +7,11 @@ TODO: think if we want to allow to change path and prepend/append text.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida import load_dbenv
-from aiida.orm import load_node
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 def cmdline_fill(attributes, store, print_header=True):
@@ -112,16 +110,16 @@ class CodeInputValidationClass(object):
     A class with information for the validation of input text of Codes
     """
     # It is a list of tuples. Each tuple has three elements:
-    # 1. an internal name (used to find the 
+    # 1. an internal name (used to find the
     # _set_internalname_string, and get_internalname_string methods)
     # 2. a short human-readable name
     # 3. A long human-readable description
-    # 4. True if it is a multi-line input, False otherwise  
+    # 4. True if it is a multi-line input, False otherwise
     # IMPORTANT!
-    # for each entry, remember to define the 
+    # for each entry, remember to define the
     # _set_internalname_string and get_internalname_string methods.
     # Moreover, the _set_internalname_string method should also immediately
-    # validate the value. 
+    # validate the value.
     _conf_attributes_relabel = [
         ("label",
          "Label",
@@ -306,8 +304,8 @@ class CodeInputValidationClass(object):
         """
         Set the computer starting from a string.
         """
-        from aiida.orm import Computer as AiidaOrmComputer
         from aiida.common.exceptions import ValidationError, NotExistent
+        from aiida.orm import Computer as AiidaOrmComputer
 
         try:
             computer = AiidaOrmComputer.get(string)
@@ -503,6 +501,47 @@ class CodeInputValidationClass(object):
     #         self.prepend_text = code.get_prepend_text()
     #         self.append_text = code.get_append_text()
 
+    def set_and_validate_from_code(self, kwargs):
+        """
+        This method is used by the Code Orm, for the utility to setup a new code
+        from the verdi shell
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        # convert to string so I can use all the functionalities of the command line
+        kwargs = { k:str(v) for k,v in kwargs.iteritems() }
+        
+        start_var = [ _[0] for _ in self._conf_attributes_start ]
+        local_var = [ _[0] for _ in self._conf_attributes_local ]
+        remote_var = [ _[0] for _ in self._conf_attributes_remote ]
+        end_var = [ _[0] for _ in self._conf_attributes_end ]
+        
+        def internal_launch(self, x, kwargs):
+            default_values = { k:getattr(self,'_get_{}_string'.format(k))() for k in x }
+            setup_keys = [ [k,kwargs.pop(k,default_values[k]) ] for k in x ]
+#            for k,v in setup_keys:
+#                setattr(self,k,v)
+            [ getattr(self,'_set_{}_string'.format(k))(v) for k,v in setup_keys ]
+            
+            return kwargs
+                
+        kwargs = internal_launch(self, start_var, kwargs)
+            
+        if self.is_local:
+            kwargs = internal_launch(self, local_var, kwargs)
+        else:
+            print 'called remote', remote_var
+            kwargs = internal_launch(self, remote_var, kwargs)
+
+        kwargs = internal_launch(self, end_var, kwargs)
+        
+        print kwargs
+        
+        if kwargs:
+            raise ValidationError("Some parameters were not "
+                                  "recognized: {}".format(kwargs))
+        return self.create_code()
+
     def ask(self):
         cmdline_fill(self._conf_attributes_start,
                      store=self)
@@ -524,6 +563,7 @@ class Code(VerdiCommandWithSubcommands):
     """
 
     def __init__(self):
+        from aiida.backends.utils import load_dbenv
         """
         A dictionary with valid commands and functions to be called.
         """
@@ -557,6 +597,7 @@ class Code(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.orm.code import Code as OrmCode
+        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
                                          description='Hide codes from the verdi show command.')
@@ -565,6 +606,8 @@ class Code(VerdiCommandWithSubcommands):
                             help="The pk of the codes to hide",
         )
         parsed_args = parser.parse_args(args)
+        from aiida.orm.code import Code
+
         for pk in parsed_args.pks:
             code = load_node(pk, parent_class=OrmCode)
             code._hide()
@@ -575,6 +618,7 @@ class Code(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.orm.code import Code as OrmCode
+        from aiida.orm.utils import load_node
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -584,6 +628,8 @@ class Code(VerdiCommandWithSubcommands):
                             help="The pk of the codes to reveal",
         )
         parsed_args = parser.parse_args(args)
+        from aiida.orm.code import Code
+
         for pk in parsed_args.pks:
             code = load_node(pk, parent_class=OrmCode)
             code._reveal()
@@ -623,9 +669,9 @@ class Code(VerdiCommandWithSubcommands):
         all_users = parsed_args.all_users
         show_owner = parsed_args.show_owner
         reveal_filter = parsed_args.all_codes
-        
+
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         django_filter = Q()
         if not all_users:
@@ -648,7 +694,7 @@ class Code(VerdiCommandWithSubcommands):
             # same of the previous query
             django_reveal_filter = django_filter1 | django_filter2
             django_filter &= django_reveal_filter
-        
+
         existing_codes = self.get_code_data(django_filter)
 
         print "# List of configured codes:"
@@ -690,14 +736,15 @@ class Code(VerdiCommandWithSubcommands):
         """
         Get a Computer object with given identifier, that can either be
         the numeric ID (pk), or the label (if unique).
-        
+
         .. note:: If an string that can be converted to an integer is given,
             the numeric ID is verified first (therefore, is a code A with a
             label equal to the ID of another code B is present, code A cannot
             be referenced by label).
         """
-        from aiida.orm import Code as AiidaOrmCode
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
+
+        from aiida.orm import Code as AiidaOrmCode
 
         try:
             return AiidaOrmCode.get_from_string(code_id)
@@ -742,8 +789,9 @@ class Code(VerdiCommandWithSubcommands):
 
     def code_rename(self, *args):
         import argparse
-        from aiida.orm.code import Code
         from aiida.common.exceptions import NotExistent
+
+        from aiida.orm.code import Code
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -780,9 +828,8 @@ class Code(VerdiCommandWithSubcommands):
             code.pk, retrieved_old_name, retrieved_new_name)
 
     def code_update(self, *args):
-        import os, datetime
-        from aiida.djsite.utils import get_automatic_user
-        from aiida.common.exceptions import ModificationNotAllowed
+        import datetime
+        from aiida.backends.utils import get_automatic_user
 
         if len(args) != 1:
             print >> sys.stderr, ("after 'code update' there should be one "
@@ -871,7 +918,7 @@ class Code(VerdiCommandWithSubcommands):
                 print "[Enter] to continue, [Ctrl + C] to exit"
                 raw_input()
 
-                from aiida.djsite.db.models import DbAttribute
+                from aiida.backends.djsite.db.models import DbAttribute
 
                 DbAttribute.set_value_for_node(code.dbnode, 'remote_exec_path', set_params.remote_abs_path)
 
@@ -881,7 +928,7 @@ class Code(VerdiCommandWithSubcommands):
     def code_delete(self, *args):
         """
         Delete a code
-        
+
         Does not delete the code if there are calculations that are using it
         (i.e., if there are output links)
         """

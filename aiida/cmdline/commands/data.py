@@ -3,21 +3,21 @@ import sys
 
 from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.exceptions import MultipleObjectsError
 from aiida.cmdline.commands.node import _Label, _Description
-from aiida.orm import load_node
+from aiida.cmdline import delayed_load_node as load_node
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Leonid Kahle, Marco Gibertini, Martin Uhrin, Nicolas Mounet"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 class Data(VerdiCommandRouter):
     """
     Setup and manage data specific types
-    
+
     There is a list of subcommands for managing specific types of data.
     For instance, 'data upf' manages pseudopotentials in the UPF format.
     """
@@ -97,10 +97,10 @@ class Listable(object):
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
-        load_dbenv()
-        from aiida.orm import DataFactory
+        if not is_dbenv_loaded():
+            load_dbenv()
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         q_object = None
         if args.all_users is False:
@@ -125,7 +125,7 @@ class Listable(object):
         :param q_object: a query object
         :param args: a namespace with parsed command line parameters.
         """
-        from django.utils import timezone
+        from aiida.utils import timezone
         from django.db.models import Q
         import datetime
         if args.past_days is not None:
@@ -264,8 +264,8 @@ class Visualizable(object):
             print "{}.".format(",".join(self.get_show_plugins()))
             sys.exit(1)
 
-        load_dbenv()
-#        from aiida.orm.node import Node
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         n_list = [load_node(id) for id in data_id]
 
@@ -312,7 +312,7 @@ class Exportable(object):
         Export the data node to a given format.
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _export_xxx() method.
-        import argparse, os
+        import argparse
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -366,8 +366,8 @@ class Exportable(object):
             print "{}.".format(",".join(self.get_export_plugins()))
             sys.exit(1)
 
-        load_dbenv()
-#        from aiida.orm.node import Node
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         n = load_node(data_id)
 
@@ -404,7 +404,7 @@ class Importable(object):
         return {k: getattr(self, self.import_prefix + k) for k in valid_formats}
 
     def importfile(self, *args):
-        import argparse, os, sys
+        import argparse, sys
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -457,7 +457,9 @@ class Importable(object):
             print "{}.".format(",".join(self.get_import_plugins()))
             sys.exit(1)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         func(filename, **parsed_args)
 
 
@@ -543,7 +545,9 @@ class Depositable(object):
             print "{}.".format(",".join(self.get_deposit_plugins()))
             sys.exit(1)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         n = load_node(data_id)
 
         try:
@@ -559,7 +563,7 @@ class Depositable(object):
 
 
 # Note: this class should not be exposed directly in the main module,
-# otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
+# otherwise it becomes a command of 'verdi'. Instead, we want it to be a
 # subcommand of verdi data.
 class _Upf(VerdiCommandWithSubcommands, Importable):
     """
@@ -572,6 +576,8 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.upf import UpfData
 
         self.dataclass = UpfData
@@ -585,9 +591,9 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
     def uploadfamily(self, *args):
         """
         Upload a new pseudopotential family.
-        
+
         Returns the numbers of files found and the number of nodes uploaded.
-        
+
         Call without parameters to get some help.
         """
         import os.path
@@ -615,7 +621,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             print >> sys.stderr, 'Cannot find directory: ' + folder
             sys.exit(1)
 
-        load_dbenv()
         import aiida.orm.data.upf as upf
 
         files_found, files_uploaded = upf.upload_upf_family(folder, group_name,
@@ -632,8 +637,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         # key called element. As such, it is not well separated.
         import argparse
 
-        from aiida.orm.data.upf import UPFGROUP_TYPE
-
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='List AiiDA upf families.')
@@ -648,7 +651,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
         from aiida.orm import DataFactory
 
         UpfData = DataFactory('upf')
@@ -685,7 +687,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         else:
             print "No valid UPF pseudopotential family found."
 
-    
+
     def exportfamily(self, *args):
         """
         Export a pseudopotential family into a folder.
@@ -694,8 +696,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         import os
         from aiida.common.exceptions import NotExistent
         from aiida.orm import DataFactory
-        load_dbenv()
-        
+
         if not len(args) == 2:
             print >> sys.stderr, ("After 'upf export' there should be two "
                                   "arguments:")
@@ -704,7 +705,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
 
         folder = os.path.abspath(args[0])
         group_name = args[1]
-        
+
         UpfData = DataFactory('upf')
         try:
             group = UpfData.get_upf_group(group_name)
@@ -720,7 +721,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             else:
                 print >> sys.stdout, ("File {} is already present in the "
                                       "destination folder".format(u.filename))
-        
+
 
     def _import_upf(self, filename, **kwargs):
         """
@@ -742,6 +743,8 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.array.bands import BandsData
 
         self.dataclass = BandsData
@@ -759,17 +762,16 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
         from aiida.common.utils import grouper
-        from aiida.orm.data.structure import (get_formula, get_symbols_string,
-                                              has_vacancies)
-        from aiida.djsite.db import models
-        from aiida.orm import Node
-        from aiida.djsite.db.models import DbPath
+        from aiida.orm.data.structure import (get_formula, get_symbols_string)
+        from aiida.backends.djsite.db import models
+        from aiida.backends.djsite.db.models import DbPath
 
         query_group_size = 100  # we group the attribute query in chunks of this size
 
@@ -944,7 +946,7 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
 
     def _export_dat_blocks(self, node):
         """
-        Export a .dat file with one line per datapoint (kpt, energy), 
+        Export a .dat file with one line per datapoint (kpt, energy),
         with multiple bands separated in stanzas (i.e. having at least an empty
         newline inbetween).
         """
@@ -993,9 +995,9 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
 
 
 class _Structure(VerdiCommandWithSubcommands,
-                 Listable, 
-                 Visualizable, 
-                 Exportable, 
+                 Listable,
+                 Visualizable,
+                 Exportable,
                  Importable,
                  Depositable):
     """
@@ -1006,6 +1008,8 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.structure import StructureData
 
         self.dataclass = StructureData
@@ -1016,20 +1020,20 @@ class _Structure(VerdiCommandWithSubcommands,
             'deposit': (self.deposit, self.complete_none),
             'import': (self.importfile, self.complete_none),
         }
-        
+
     def query(self, args):
         """
         Perform the query
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
         from aiida.common.utils import grouper
-        from aiida.orm.data.structure import (get_formula, get_symbols_string,
-                                              has_vacancies)
-        from aiida.djsite.db import models
+        from aiida.orm.data.structure import (get_formula, get_symbols_string)
+        from aiida.backends.djsite.db import models
 
         query_group_size = 100  # we group the attribute query in chunks of this size
 
@@ -1169,7 +1173,7 @@ class _Structure(VerdiCommandWithSubcommands,
                     sys.exit(1)
                 else:
                     raise
-                
+
     def _show_ase(self,exec_name,structure_list):
         """
         Plugin to show the structure with the ASE visualizer
@@ -1177,10 +1181,10 @@ class _Structure(VerdiCommandWithSubcommands,
         try:
             from ase.visualize import view
             for structure in structure_list:
-                view(structure.get_ase()) 
+                view(structure.get_ase())
         except ImportError:
-            raise 
-    
+            raise
+
     def _show_vmd(self, exec_name, structure_list):
         """
         Plugin for vmd
@@ -1241,6 +1245,7 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         Plugin for TCOD
         """
+
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1279,7 +1284,7 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         # In order to deal with structures that do not have a cell defined:
         # We can increase the size of the cell from the minimal cell
-        # The minimal cell is the cell the just accomodates the structure given, 
+        # The minimal cell is the cell the just accomodates the structure given,
         # defined by the minimum and maximum of position in each dimension
         parser.add_argument('--vacuum-factor', type=float, default=1.0,
                 help = 'The factor by which the cell accomodating the structure should be increased, default: 1.0')
@@ -1335,6 +1340,7 @@ class _Structure(VerdiCommandWithSubcommands,
         Deposition plugin for TCOD.
         """
         from aiida.tools.dbexporters.tcod import deposit
+
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1362,6 +1368,8 @@ class _Cif(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.cif import CifData
 
         self.dataclass = CifData
@@ -1407,10 +1415,10 @@ class _Cif(VerdiCommandWithSubcommands,
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
-        load_dbenv()
-        from aiida.orm import DataFactory
+        if not is_dbenv_loaded():
+            load_dbenv()
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         q_object = None
         if args.all_users is False:
@@ -1492,6 +1500,7 @@ class _Cif(VerdiCommandWithSubcommands,
         Deposition plugin for TCOD.
         """
         from aiida.tools.dbexporters.tcod import deposit
+
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1519,6 +1528,8 @@ class _Trajectory(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.array.trajectory import TrajectoryData
 
         self.dataclass = TrajectoryData
@@ -1563,7 +1574,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
                             help="ID of the trajectory step. If none is "
                                  "supplied, all steps are exported.",
                             type=int, action='store')
-        
+
     def _show_xcrysden(self, exec_name, trajectory_list, **kwargs):
         """
         Plugin for xcrysden
@@ -1604,6 +1615,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         """
         Plugin for TCOD
         """
+
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1640,6 +1652,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         Deposition plugin for TCOD.
         """
         from aiida.tools.dbexporters.tcod import deposit
+
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1667,6 +1680,8 @@ class _Parameter(VerdiCommandWithSubcommands, Visualizable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.parameter import ParameterData
 
         self.dataclass = ParameterData
@@ -1695,6 +1710,9 @@ class _Array(VerdiCommandWithSubcommands, Visualizable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.orm.data.array import ArrayData
 
         self.dataclass = ArrayData

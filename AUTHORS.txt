@@ -1,0 +1,22 @@
+The members of the AiiDA team:
+Andrea Cepellotti
+Leonid Kahle
+Boris Kozinsky
+Nicola Marzari
+Andrius Merkys
+Nicolas Mounet
+Giovanni Pizzi
+Riccardo Sabatini
+Martin Uhrin
+Snehal Waychal
+Spyros Zoupanos
+
+
+We would also like to thank the following people for their contibution:
+Valentin Bersier
+Jocelyn Boullier
+Ivano Castelli
+Marco Dorigo
+Marco Gibertini
+Eric Hontz
+Phillippe Schwaller

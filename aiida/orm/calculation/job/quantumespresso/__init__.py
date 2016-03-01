@@ -15,10 +15,10 @@ from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.data.remote import RemoteData
 from aiida.common.datastructures import CodeInfo
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Daniel Marchand, Gianluca Prandini, Giovanni Pizzi, Marco Gibertini, Martin Uhrin, Nicolas Mounet"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 class BasePwCpInputGenerator(object):
@@ -47,10 +47,10 @@ class BasePwCpInputGenerator(object):
     # in restarts, will not copy but use symlinks
     _default_symlink_usage = True
 
-    # in restarts, it will copy from the parent the following 
+    # in restarts, it will copy from the parent the following
     _restart_copy_from = os.path.join(_OUTPUT_SUBFOLDER, '*')
 
-    # in restarts, it will copy the previous folder in the following one 
+    # in restarts, it will copy the previous folder in the following one
     _restart_copy_to = _OUTPUT_SUBFOLDER
 
     # Default verbosity; change in subclasses
@@ -146,7 +146,7 @@ class BasePwCpInputGenerator(object):
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
-        
+
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
         :param inputdict: a dictionary with the input nodes, as they would
@@ -225,7 +225,7 @@ class BasePwCpInputGenerator(object):
             code = inputdict.pop(self.get_linkname('code'))
         except KeyError:
             raise InputValidationError("No code specified for this calculation")
-        
+
         # Here, there should be no more parameters...
         if inputdict:
             raise InputValidationError("The following input data nodes are "
@@ -260,7 +260,7 @@ class BasePwCpInputGenerator(object):
             if len(blocked) >= 3:
                 defaultvalue = blocked[2]
             if nl in input_params:
-                # The following lines is meant to avoid putting in input the 
+                # The following lines is meant to avoid putting in input the
                 # parameters like celldm(*)
                 stripped_inparams = [re.sub("[(0-9)]", "", _)
                                      for _ in input_params[nl].keys()]
@@ -303,7 +303,7 @@ class BasePwCpInputGenerator(object):
         # Keep track of the filenames to avoid to overwrite files
         # I use a dictionary where the key is the pseudo PK and the value
         # is the filename I used. In this way, I also use the same filename
-        # if more than one kind uses the same pseudo. 
+        # if more than one kind uses the same pseudo.
         pseudo_filenames = {}
 
         # I keep track of the order of species
@@ -327,7 +327,7 @@ class BasePwCpInputGenerator(object):
                 filename = get_unique_filename(ps.filename,
                                                pseudo_filenames.values())
                 pseudo_filenames[ps.pk] = filename
-                # I add this pseudo file to the list of files to copy            
+                # I add this pseudo file to the list of files to copy
                 local_copy_list.append((ps.get_file_abs_path(),
                                         os.path.join(self._PSEUDO_SUBFOLDER,
                                                      filename)))
@@ -336,7 +336,7 @@ class BasePwCpInputGenerator(object):
                 kind.name.ljust(6), kind.mass, filename))
 
         # If present, add also the Van der Waals table to the pseudo dir
-        # Note that the name of the table is not checked but should be the 
+        # Note that the name of the table is not checked but should be the
         # one expected by QE.
         if vdw_table:
             local_copy_list.append(
@@ -521,7 +521,7 @@ class BasePwCpInputGenerator(object):
         with open(input_filename, 'w') as infile:
             for namelist_name in namelists_toprint:
                 infile.write("&{0}\n".format(namelist_name))
-                # namelist content; set to {} if not present, so that we leave an 
+                # namelist content; set to {} if not present, so that we leave an
                 # empty namelist
                 namelist = input_params.pop(namelist_name, {})
                 for k, v in sorted(namelist.iteritems()):
@@ -578,9 +578,9 @@ class BasePwCpInputGenerator(object):
         # Empty command line by default
         cmdline_params = settings_dict.pop('CMDLINE', [])
         #we commented calcinfo.stin_name and added it here in cmdline_params
-        #in this way the mpirun ... pw.x ... < aiida.in 
+        #in this way the mpirun ... pw.x ... < aiida.in
         #is replaced by mpirun ... pw.x ... -in aiida.in
-        # in the scheduler, _get_run_line, if cmdline_params is empty, it 
+        # in the scheduler, _get_run_line, if cmdline_params is empty, it
         # simply uses < calcinfo.stin_name
         calcinfo.cmdline_params = (list(cmdline_params)
                                    + ["-in", self._INPUT_FILE_NAME])
@@ -594,7 +594,7 @@ class BasePwCpInputGenerator(object):
         codeinfo.stdout_name = self._OUTPUT_FILE_NAME
         codeinfo.code_uuid = code.uuid
         calcinfo.codes_info = [codeinfo]
-        
+
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
         calcinfo.remote_symlink_list = remote_symlink_list
@@ -650,14 +650,14 @@ class BasePwCpInputGenerator(object):
     @classmethod
     def _get_linkname_pseudo(cls, kind):
         """
-        The name of the link used for the pseudo for kind 'kind'. 
+        The name of the link used for the pseudo for kind 'kind'.
         It appends the pseudo name to the pseudo_prefix, as returned by the
         _get_linkname_pseudo_prefix() method.
-        
+
         :note: if a list of strings is given, the elements are appended
           in the same order, separated by underscores
-        
-        :param kind: a string (or list of strings) for the atomic kind(s) for 
+
+        :param kind: a string (or list of strings) for the atomic kind(s) for
             which we want to get the link name
         """
         # If it is a list of strings, and not a single string: join them
@@ -676,9 +676,9 @@ class BasePwCpInputGenerator(object):
         """
         Set the pseudo to use for all atomic kinds, picking pseudos from the
         family with name family_name.
-        
+
         :note: The structure must already be set.
-        
+
         :param family_name: the name of the group containing the pseudos
         """
         from collections import defaultdict
@@ -730,17 +730,17 @@ class BasePwCpInputGenerator(object):
                        use_output_structure=False,
                        restart_from_beginning=False):
         """
-        Function to restart a calculation that was not completed before 
+        Function to restart a calculation that was not completed before
         (like max walltime reached...) i.e. not to restart a really FAILED calculation.
         Returns a calculation c2, with all links prepared but not stored in DB.
         To submit it simply:
         c2.store_all()
         c2.submit()
-        
-        :param bool force_restart: restart also if parent is not in FINISHED 
+
+        :param bool force_restart: restart also if parent is not in FINISHED
            state (e.g. FAILED, IMPORTED, etc.). Default=False.
         :param bool parent_folder_symlink: if True, symlinks are used
-           instead of hard copies of the files. Default given by 
+           instead of hard copies of the files. Default given by
            self._default_symlink_usage.
         :param bool use_output_structure: if True, the output structure
            of the restarted calculation is used if available, rather than its
@@ -839,18 +839,18 @@ def get_input_data_text(key, val, mapping=None):
     """
     Given a key and a value, return a string (possibly multiline for arrays)
     with the text to be added to the input file.
-    
+
     :param key: the flag name
     :param val: the flag value. If it is an array, a line for each element
             is produced, with variable indexing starting from 1.
             Each value is formatted using the conv_to_fortran function.
     :param mapping: Optional parameter, must be provided if val is a dictionary.
-            It maps each key of the 'val' dictionary to the corresponding 
-            list index. For instance, if ``key='magn'``, 
+            It maps each key of the 'val' dictionary to the corresponding
+            list index. For instance, if ``key='magn'``,
             ``val = {'Fe': 0.1, 'O': 0.2}`` and ``mapping = {'Fe': 2, 'O': 1}``,
             this function will return the two lines ``magn(1) = 0.2`` and
-            ``magn(2) = 0.1``. This parameter is ignored if 'val' 
-            is not a dictionary. 
+            ``magn(2) = 0.1``. This parameter is ignored if 'val'
+            is not a dictionary.
     """
     from aiida.common.utils import conv_to_fortran
     # I don't try to do iterator=iter(val) and catch TypeError because
@@ -862,7 +862,7 @@ def get_input_data_text(key, val, mapping=None):
                              "the 'mapping' parameter")
 
         # At difference with the case of a list, at the beginning list_of_strings
-        # is a list of 2-tuples where the first element is the idx, and the 
+        # is a list of 2-tuples where the first element is the idx, and the
         # second is the actual line. This is used at the end to resort everything.
         list_of_strings = []
         for elemk, itemval in val.iteritems():

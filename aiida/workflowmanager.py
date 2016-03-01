@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from django.contrib.auth.models import User
 
-from aiida.common.datastructures import calc_states
-from aiida.scheduler.datastructures import job_states
 from aiida.common import aiidalogger
 from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 logger = aiidalogger.getChild('workflowmanager')
 
@@ -27,24 +23,23 @@ def execute_steps():
     """
     This method loops on the RUNNING workflows and handled the execution of the steps until
     each workflow reaches an end (or gets stopped for errors).
-    
+
     In the loop for each RUNNING workflow the method loops also in each of its RUNNING steps,
     testing if all the calculation and subworkflows attached to the step are FINISHED. In this
-    case the step is set as FINISHED and the workflow is advanced to the step's next method present 
-    in the db with ``advance_workflow``, otherwise if any step's JobCalculation is found in NEW state 
-    the method will submit. If none of the previous conditions apply the step is flagged as 
-    ERROR and cannot proceed anymore, blocking the future execution of the step and, connected, 
-    the workflow. 
-      
+    case the step is set as FINISHED and the workflow is advanced to the step's next method present
+    in the db with ``advance_workflow``, otherwise if any step's JobCalculation is found in NEW state
+    the method will submit. If none of the previous conditions apply the step is flagged as
+    ERROR and cannot proceed anymore, blocking the future execution of the step and, connected,
+    the workflow.
+
     Finally, for each workflow the method tests if there are INITIALIZED steps to be launched,
     and in case reloads the workflow and execute the specific those steps. In case or error
     the step is flagged in ERROR state and the stack is reported in the workflow report.
     """
 
-    from aiida.djsite.utils import get_automatic_user
-    from aiida.djsite.db.models import DbWorkflow
+    from aiida.backends.utils import get_automatic_user
     from aiida.orm.workflow import Workflow
-    from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
+    from aiida.common.datastructures import wf_states
     from aiida.orm import JobCalculation
 
     logger.info("Querying the worflow DB")
@@ -126,12 +121,12 @@ def execute_steps():
 #         #
 #         initialized_steps    = w.get_steps(state=wf_states.INITIALIZED)
 #         for s in initialized_steps:
-#             
+#
 #             logger.info("[{0}] Found initialized step: {1}".format(w.uuid(),s.name))
-#             
+#
 #             got_any_error = False
 #             for s_calc in s.get_calculations(calc_states.NEW):
-#                     
+#
 #                 obj_calc = JobCalculation.get_subclass_from_uuid(uuid=s_calc.uuid)
 #                 try:
 #                     logger.info("[{0}] Step: {1} launching calculation {2}".format(w.uuid(),s.name, s_calc.uuid))
@@ -139,11 +134,11 @@ def execute_steps():
 #                 except:
 #                     logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.uuid(),s.name, s_calc.uuid))
 #                     got_any_error = True
-#             
+#
 #             if not got_any_error:
 #                 s.set_state(wf_states.RUNNING)
 #             else:
-#                 s.set_state(wf_states.ERROR)        
+#                 s.set_state(wf_states.ERROR)
 
 
 #         if len(w.get_steps(state=wf_states.RUNNING))==0 and \
@@ -156,26 +151,25 @@ def execute_steps():
 def advance_workflow(w_superclass, step):
     """
     The method tries to advance a step running its next method and handling possible errors.
-    
-    If the method to advance is the Workflow ``exit`` method and there are no more steps RUNNING or 
-    in ERROR state then the workflow is set to FINISHED, otherwise an error is added to the report 
-    and the Workflow is flagged as ERORR. 
-    
+
+    If the method to advance is the Workflow ``exit`` method and there are no more steps RUNNING or
+    in ERROR state then the workflow is set to FINISHED, otherwise an error is added to the report
+    and the Workflow is flagged as ERORR.
+
     If the method is the ``wf_default_call`` this means the step had no next, and possibly is part of
     a branching. In this case the Workflow is not advanced but the method returns True to let the other
     steps kick in.
-    
+
     Finally the methos tries to load the Workflow and execute the selected step, reporting the errors
     and the stack trace in the report in case of problems. Is no errors are reported the method returns
-    True, in all the other cases the Workflow is set to ERROR state and the method returns False. 
-    
+    True, in all the other cases the Workflow is set to ERROR state and the method returns False.
+
     :param w_superclass: Workflow object to advance
     :param step: DbWorkflowStep to execute
     :return: True if the step has been executed, False otherwise
     """
 
     from aiida.orm.workflow import Workflow
-    import sys, os
 
     if step.nextcall == wf_exit_call:
         logger.info("[{0}] Step: {1} has an exit call".format(w_superclass.uuid, step.name))
@@ -186,7 +180,7 @@ def advance_workflow(w_superclass, step):
         else:
             logger.error(
                 "[{0}] Step: {1} is NOT finished, stopping workflow with error".format(w_superclass.uuid, step.name))
-            w_superclass.append_to_report("""Step: {1} is NOT finished, some calculations or workflows 
+            w_superclass.append_to_report("""Step: {1} is NOT finished, some calculations or workflows
             are still running and there is a next call, stopping workflow with error""".format(step.name))
             w_superclass.set_state(wf_states.ERROR)
 

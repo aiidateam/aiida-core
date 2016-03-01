@@ -4,10 +4,10 @@ Functions to manage the global settings stored in the DB (in the DbSettings
 table.
 """
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 def set_global_setting(key, value, description=None):
@@ -15,7 +15,7 @@ def set_global_setting(key, value, description=None):
     Set a global setting in the DbSetting table (therefore, stored at the DB
     level).
     """
-    from aiida.djsite.db.models import DbSetting
+    from aiida.backends.djsite.db.models import DbSetting
 
     # Before storing, validate the key
     DbSetting.validate_key(key)
@@ -32,7 +32,7 @@ def del_global_setting(key):
     
     :raise KeyError: if the setting does not exist in the DB
     """
-    from aiida.djsite.db.models import DbSetting
+    from aiida.backends.djsite.db.models import DbSetting
     from django.core.exceptions import ObjectDoesNotExist
 
     try:
@@ -51,7 +51,7 @@ def get_global_setting(key):
     
     :raise KeyError: if the setting does not exist in the DB
     """
-    from aiida.djsite.db.models import DbSetting
+    from aiida.backends.djsite.db.models import DbSetting
     from django.core.exceptions import ObjectDoesNotExist
 
     try:
@@ -65,7 +65,7 @@ def get_global_setting_description(key):
     Return the description for the given setting variable, as stored in the
     DB, or raise a KeyError if the setting is not present in the DB.
     """
-    from aiida.djsite.db.models import DbSetting
+    from aiida.backends.djsite.db.models import DbSetting
     from django.core.exceptions import ObjectDoesNotExist
 
     try:

@@ -1,4 +1,4 @@
-aiida.djsite documentation
+aiida.backends.djsite documentation
 ==========================
 
 .. toctree::
@@ -7,7 +7,7 @@ aiida.djsite documentation
 Database schema
 ---------------
 
-.. automodule:: aiida.djsite.db.models
+.. automodule:: aiida.backends.djsite.db.models
    :members:
 
 

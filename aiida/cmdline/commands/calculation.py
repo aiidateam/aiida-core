@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
-import sys
 import os
-import subprocess
-from aiida import load_dbenv
-from aiida.orm import load_node
+import sys
 
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands.node import _Label, _Description
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 class Calculation(VerdiCommandWithSubcommands):
     """
     Query and interact with calculations
-    
+
     Different subcommands allow to list the running calculations, show the
     content of the input/output files, see the logs, etc.
     """
@@ -27,6 +25,8 @@ class Calculation(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called:
         list.
         """
+        from aiida.cmdline.commands.node import _Label, _Description
+
         labeler = _Label('calculation')
         descriptioner = _Description('calculation')
 
@@ -51,6 +51,9 @@ class Calculation(VerdiCommandWithSubcommands):
         """
         Return the list of plugins of the JobCalculation subclass of Calculation
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.pluginloader import existing_plugins
         from aiida.orm.calculation.job import JobCalculation
 
@@ -66,13 +69,13 @@ class Calculation(VerdiCommandWithSubcommands):
     def calculation_gotocomputer(self, *args):
         """
         Open a shell to the calc folder on the cluster
-        
+
         This command opens a ssh connection to the scratch folder on the remote
         computer on which the calculation is being/has been executed.
         """
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import JobCalculation
-        from aiida import load_dbenv
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         try:
             calc_id = args[0]
@@ -87,7 +90,7 @@ class Calculation(VerdiCommandWithSubcommands):
             is_pk = False
 
         print "Loading environment..."
-        load_dbenv()
+        from aiida.orm import JobCalculation
 
         try:
             if is_pk:
@@ -125,9 +128,11 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_list(self, *args):
         """
-        Return a list of calculations on screen. 
+        Return a list of calculations on screen.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.datastructures import calc_states
 
         import argparse
@@ -197,7 +202,6 @@ class Calculation(VerdiCommandWithSubcommands):
         """
         Print all or somoe data from the "res" output node.
         """
-        from aiida.orm.calculation.job import JobCalculation as OrmCalculation
         from aiida.common.exceptions import NotExistent
         from aiida.cmdline import print_dictionary
 
@@ -216,7 +220,8 @@ class Calculation(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         try:
             calc = load_node(int(parsed_args.PK))
@@ -244,10 +249,10 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import JobCalculation as OrmCalculation
-        from aiida.djsite.utils import get_log_messages
+        from aiida.backends.utils import get_log_messages
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         for calc_pk in args:
             try:
@@ -279,11 +284,11 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_logshow(self, *args):
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import JobCalculation as OrmCalculation
-        from aiida.djsite.utils import get_log_messages
+        from aiida.backends.utils import get_log_messages
         from aiida.common.datastructures import calc_states
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         for calc_pk in args:
             try:
@@ -334,14 +339,14 @@ class Calculation(VerdiCommandWithSubcommands):
                 print "\n".join(["|   {}".format(_)
                                  for _ in log['message'].splitlines()])
 
-
     def calculation_plugins(self, *args):
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.orm import CalculationFactory
         from aiida.orm.calculation.job import JobCalculation
         from aiida.common.pluginloader import existing_plugins
         from aiida.common.exceptions import MissingPluginError
-
-        load_dbenv()
 
         if args:
             for arg in args:
@@ -365,8 +370,8 @@ class Calculation(VerdiCommandWithSubcommands):
                                               'aiida.orm.calculation.job',
                                               suffix='Calculation'))
             if plugins:
-                print "## Pass as a further parameter one (or more) plugin names"
-                print "## to get more details on a given plugin."
+                print("## Pass as a further parameter one (or more) "
+                      "plugin names to get more details on a given plugin.")
                 for plugin in plugins:
                     print "* {}".format(plugin)
             else:
@@ -374,8 +379,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_inputcat(self, *args):
         """
-        Show an input file of a calculation node. 
-        
+        Show an input file of a calculation node.
+
         It shows the files in the raw_input subdirectory.
         Use the -h option for more help on the command line options.
         """
@@ -397,8 +402,8 @@ class Calculation(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
-        from aiida.orm import JobCalculation as OrmCalculation
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.common.pluginloader import get_class_typestring
 
         try:
@@ -431,11 +436,10 @@ class Calculation(VerdiCommandWithSubcommands):
             else:
                 raise
 
-
     def calculation_inputls(self, *args):
         """
-        Show the list of input files of a calculation node. 
-        
+        Show the list of input files of a calculation node.
+
         It shows the files in the raw_input subdirectory.
         Use the -h option for more help on the command line options.
         """
@@ -459,7 +463,8 @@ class Calculation(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         try:
             calc = load_node(parsed_args.calc)
@@ -476,8 +481,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_outputls(self, *args):
         """
-        Show the list of output files of a calculation node. 
-        
+        Show the list of output files of a calculation node.
+
         It lists the files in the 'path' subdirectory of the output node
         of files retrieved by the parser. Therefore, this will not work
         before files are retrieved by the daemon.
@@ -503,7 +508,8 @@ class Calculation(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         try:
             calc = load_node(parsed_args.calc)
@@ -528,8 +534,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_outputcat(self, *args):
         """
-        Show an output file of a calculation node. 
-        
+        Show an output file of a calculation node.
+
         It shows the files in the 'path' subdirectory of the output node
         of files retrieved by the parser. Therefore, this will not work
         before files are retrieved by the daemon.
@@ -552,8 +558,8 @@ class Calculation(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
-        from aiida.orm import JobCalculation as OrmCalculation
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.common.pluginloader import get_class_typestring
 
         try:
@@ -593,17 +599,15 @@ class Calculation(VerdiCommandWithSubcommands):
             else:
                 raise
 
-
     def calculation_kill(self, *args):
         """
-        Kill a calculation. 
-        
+        Kill a calculation.
+
         Pass a list of calculation PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
-        from aiida import load_dbenv
-
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.calculation.job import JobCalculation as Calc
@@ -631,7 +635,7 @@ class Calculation(VerdiCommandWithSubcommands):
         for calc_pk in parsed_args.calcs:
             try:
                 c = load_node(calc_pk, parent_class=Calc)
-                                
+
                 c.kill()  # Calc.kill(calc_pk)
                 counter += 1
             except NotExistent:
@@ -642,15 +646,14 @@ class Calculation(VerdiCommandWithSubcommands):
         print >> sys.stderr, "{} calculation{} killed.".format(counter,
                                                                "" if counter == 1 else "s")
 
-
     def calculation_cleanworkdir(self, *args):
         """
         Clean all the content of all the output remote folders of calculations,
-        passed as a list of pks, or identified by modification time. 
-        
-        If a list of calculation PKs is not passed through -c option, one of 
-        the option -p or -u has to be specified (if both are given, a logical 
-        AND is done between the 2 - you clean out calculations modified AFTER 
+        passed as a list of pks, or identified by modification time.
+
+        If a list of calculation PKs is not passed through -c option, one of
+        the option -p or -u has to be specified (if both are given, a logical
+        AND is done between the 2 - you clean out calculations modified AFTER
         [-p option] days from now but BEFORE [-o option] days from now).
         If you also pass the -f option, no confirmation will be asked.
         """
@@ -678,70 +681,42 @@ class Calculation(VerdiCommandWithSubcommands):
                                  "on this computer(s) only",
                             type=str, action='store')
 
-        load_dbenv()
-        import datetime
-        from django.db.models import Q
-        from django.utils import timezone
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.cmdline import wait_for_confirmation
-        from aiida.orm.calculation.job import JobCalculation
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
         from aiida.execmanager import get_authinfo
-        from aiida.djsite.db import models
-        from aiida.common.datastructures import calc_states
-        from aiida.orm import Computer
+        from aiida.backends.djsite.db import models
+        from aiida.backends.djsite.cmdline import get_valid_job_calculation
+        from aiida.orm.computer import Computer
 
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        # valid calculation states
-        valid_states = [calc_states.FINISHED, calc_states.RETRIEVALFAILED,
-                        calc_states.PARSINGFAILED, calc_states.FAILED]
-
         user = get_automatic_user()
 
-        q_object = Q(user=user)
-        q_state = models.DbAttribute.objects.filter(key='state',
-                                                    tval__in=valid_states)
-        # NOTE: IMPORTED state is not a dbattribute so won't be filtered out
-        # at this stage, but this case should be sorted out later when we try
-        # to access the remote_folder (if directory is not accessible, we skip)
+        if (parsed_args.pk is not None and
+            (parsed_args.past_days is not None) or
+            (parsed_args.older_than is not None)):
 
-        if parsed_args.pk is not None:
-            # list of pks is passed
-            if ((parsed_args.past_days is not None) or
-                    (parsed_args.older_than is not None)):
-                print >> sys.stderr, ("You cannot specify both a list of "
-                                      "calculation pks and the -p or -o "
-                                      "options")
-                sys.exit(0)
-            calc_list = JobCalculation.query(q_object,
-                                             pk__in=parsed_args.pk,
-                                             dbattributes__in=q_state).distinct().order_by('mtime')
+            print >> sys.stderr, ("You cannot specify both a list of "
+                                    "calculation pks and the -p or -o "
+                                    "options")
+            sys.exit(0)
 
-        else:
-            # calculations to be cleaned identified by modification time
-            now = timezone.now()
-            if ((parsed_args.past_days is None) and
-                    (parsed_args.older_than is None)):
-                print >> sys.stderr, ("Either a list of calculation pks or the "
-                                      "-p and/or -o options should be specified")
-                sys.exit(0)
+        if ((parsed_args.past_days is None) and
+                (parsed_args.older_than is None)):
+            print >> sys.stderr, ("Either a list of calculation pks or the "
+                                    "-p and/or -o options should be specified")
+            sys.exit(0)
 
-            if parsed_args.past_days is not None:
-                n_days_after = now - datetime.timedelta(
-                    days=parsed_args.past_days)
-                q_object.add(Q(mtime__gte=n_days_after), Q.AND)
-            if parsed_args.older_than is not None:
-                n_days_before = now - datetime.timedelta(
-                    days=parsed_args.older_than)
-                q_object.add(Q(mtime__lte=n_days_before), Q.AND)
-
-            if parsed_args.computers is not None:
-                q_object.add(Q(dbcomputer__name__in=parsed_args.computers), Q.AND)
-
-            # TODO: return directly a remote_folder list from the query
-            calc_list = JobCalculation.query(q_object,
-                                             dbattributes__in=q_state).distinct().order_by('mtime')
+        calc_list = get_valid_job_calculation(
+            user=user,
+            pk_list=parsed_args.pk,
+            n_days_after=parsed_args.past_days,
+            n_days_before=parsed_args.older_than,
+            computers=parsed_args.computers
+        )
 
         if not parsed_args.force:
             sys.stderr.write("Are you sure you want to clean the work directory? "
@@ -751,16 +726,14 @@ class Calculation(VerdiCommandWithSubcommands):
 
         # get the uuids of all calculations matching the filters
         calc_list_data = calc_list.values_list('pk', 'dbcomputer', 'uuid')
-        calc_pks = [_[0] for _ in calc_list_data]
-        dbcomp_pks = list(set([_[1] for _ in calc_list_data]))
+
         # also, get the pks of dbcomputers and the pks of dbattributes
         # (the remote_workdir path is in the dbattribute)
         # dbattrs_and_dbcomp_pks = [ (_[1],_[2]) for _ in calc_list_data ]
 
         # get all computers associated to the calc uuids above, and load them
-        q_object = Q(user=user)
-        dbcomputers = list(models.DbComputer.objects.filter(pk__in=dbcomp_pks).distinct())
-        computers = [Computer.get(_) for _ in dbcomputers]
+        dbcomputers = [ _[1] for _ in calc_list_data]
+        computers = [ Computer.get(_) for _ in dbcomputers ]
 
         # now build a dictionary with the info of folders to delete
         remotes = {}
@@ -776,8 +749,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
             # now get the paths of remote folder
             # look in the DbAttribute table,
-            # for Attribute which have a key called remote_workdir, 
-            # and the dbnode_id referring to the given calcs            
+            # for Attribute which have a key called remote_workdir,
+            # and the dbnode_id referring to the given calcs
             dbattrs = models.DbAttribute.objects.filter(dbnode_id__in=this_calc_pks,
                                                         key='remote_workdir')
 
@@ -807,6 +780,4 @@ class Calculation(VerdiCommandWithSubcommands):
                         print "Deleted work directories: {}".format(counter)
 
             print >> sys.stderr, "{} remote folder{} cleaned.".format(counter,
-                                                                      "" if counter == 1 else "s")
-            
-            
+                                                 "" if counter == 1 else "s")

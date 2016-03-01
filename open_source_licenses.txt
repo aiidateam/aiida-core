@@ -1,9 +1,9 @@
 The licenses for some open-source components used in AiiDA include:
 
 Django:
-  * aiida/djsite/settings/settings.py
-  * aiida/djsite/db/management/commands/customshell.py
-  * aiida/djsite/manage.py
+  * aiida.backends.djsite/settings/settings.py
+  * aiida.backends.djsite/db/management/commands/customshell.py
+  * aiida.backends.djsite/manage.py
 
 Python: 
   * aiida/transport/__init__.py

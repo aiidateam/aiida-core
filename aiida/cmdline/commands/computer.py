@@ -2,12 +2,13 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.common.exceptions import ValidationError
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 def prompt_for_computer_configuration(computer):
@@ -144,6 +145,8 @@ class Computer(VerdiCommandWithSubcommands):
         }
 
     def complete_computers(self, subargs_idx, subargs):
+        if not is_dbenv_loaded():
+            load_dbenv()
         computer_names = self.get_computer_names()
         return "\n".join(computer_names)
 
@@ -153,8 +156,10 @@ class Computer(VerdiCommandWithSubcommands):
         """
         import argparse
 
-        from aiida.orm import Computer as AiiDAOrmComputer
-        from aiida.djsite.utils import get_automatic_user
+        if not is_dbenv_loaded():
+            load_dbenv()
+        from aiida.orm.computer import Computer as AiiDAOrmComputer
+        from aiida.backends.utils import get_automatic_user
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -279,7 +284,9 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Show information on a given computer
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.exceptions import NotExistent
 
         if len(args) != 1:
@@ -300,10 +307,12 @@ class Computer(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.computer import Computer
 
-        load_dbenv()
-        from aiida.djsite.db.models import DbNode
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        from aiida.backends.djsite.db.models import DbNode
+        from aiida.orm.computer import Computer
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -361,18 +370,19 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Setup a new or existing computer
         """
-        import inspect
         import readline
-
-        from aiida.common.exceptions import NotExistent, ValidationError
-        from aiida.orm import Computer as AiidaOrmComputer
 
         if len(args) != 0:
             print >> sys.stderr, ("after 'computer setup' there cannot be any "
                                   "argument.")
             sys.exit(1)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        from aiida.common.exceptions import NotExistent, ValidationError
+        from aiida.orm.computer import Computer as AiidaOrmComputer
+
 
         print "At any prompt, type ? to get some help."
         print "---------------------------------------"
@@ -414,7 +424,9 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Rename a computer
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.exceptions import (
             NotExistent, UniquenessError, ValidationError)
 
@@ -455,7 +467,8 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Configure the authentication information for a given computer
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import readline
         import inspect
@@ -464,9 +477,9 @@ class Computer(VerdiCommandWithSubcommands):
 
         from aiida.common.exceptions import (
             NotExistent, ValidationError)
-        from aiida.djsite.utils import (
+        from aiida.backends.djsite.utils import (
             get_automatic_user, get_configured_user_email)
-        from aiida.djsite.db.models import DbAuthInfo, DbUser
+        from aiida.backends.djsite.db.models import DbAuthInfo, DbUser
 
         import argparse
 
@@ -600,11 +613,13 @@ class Computer(VerdiCommandWithSubcommands):
     def computer_delete(self, *args):
         """
         Configure the authentication information for a given computer
-        
+
         Does not delete the computer if there are calculations that are using
         it.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.exceptions import (
             NotExistent, InvalidOperation)
         from aiida.orm.computer import delete_computer
@@ -634,18 +649,20 @@ class Computer(VerdiCommandWithSubcommands):
     def computer_test(self, *args):
         """
         Test the connection to a computer.
-        
+
         It tries to connect, to get the list of calculations on the queue and
         to perform other tests.
         """
         import argparse
         import traceback
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db.models import DbUser
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.db.models import DbUser
+        from aiida.backends.utils import get_automatic_user
         from aiida.orm.computer import Computer as OrmComputer
 
         parser = argparse.ArgumentParser(
@@ -714,7 +731,7 @@ class Computer(VerdiCommandWithSubcommands):
         s = OrmComputer(dbcomputer=dbauthinfo.dbcomputer).get_scheduler()
         t = dbauthinfo.get_transport()
 
-        ## STARTING TESTS HERE        
+        ## STARTING TESTS HERE
         num_failures = 0
         num_tests = 0
 
@@ -769,9 +786,9 @@ class Computer(VerdiCommandWithSubcommands):
     def _computer_test_get_jobs(self, transport, scheduler, dbauthinfo):
         """
         Internal test to check if it is possible to check the queue state.
-        
+
         :note: exceptions could be raised
-        
+
         :param transport: an open transport
         :param scheduler: the corresponding scheduler class
         :param dbauthinfo: the dbauthinfo object (from which one can get
@@ -790,9 +807,9 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Internal test to check if it is possible to create a temporary file
         and then delete it in the work directory
-        
+
         :note: exceptions could be raised
-        
+
         :param transport: an open transport
         :param scheduler: the corresponding scheduler class
         :param dbauthinfo: the dbauthinfo object (from which one can get
@@ -863,13 +880,14 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Enable a computer.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
 
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db.models import DbUser
+        from aiida.backends.djsite.db.models import DbUser
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -929,18 +947,19 @@ class Computer(VerdiCommandWithSubcommands):
     def computer_disable(self, *args):
         """
         Disable a computer.
-        
+
         If a computer is disabled, AiiDA does not try to connect to it to
         submit new calculations or check for the state of existing calculations.
         Useful, for instance, if you know that a computer is under maintenance.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
 
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db.models import DbUser
+        from aiida.backends.djsite.db.models import DbUser
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -1000,19 +1019,18 @@ class Computer(VerdiCommandWithSubcommands):
     def get_computer_names(self):
         """
         Retrieve the list of computers in the DB.
-        
+
         ToDo: use an API or cache the results, sometime it is quite slow!
         """
-        from aiida.orm import Computer as AiidaOrmComputer
+        from aiida.orm.computer import Computer as AiidaOrmComputer
 
-        load_dbenv()
         return AiidaOrmComputer.list_names()
 
     def get_computer(self, name):
         """
         Get a Computer object with given name, or raise NotExistent
         """
-        from aiida.orm import Computer as AiidaOrmComputer
+        from aiida.orm.computer import Computer as AiidaOrmComputer
 
         return AiidaOrmComputer.get(name)
-    
+

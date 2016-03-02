@@ -13,6 +13,10 @@ from aiida.common.example_helpers import test_and_get_code
 
 from aiida.common.exceptions import NotExistent
 
+# If set to True, will ask AiiDA to run in serial mode (i.e., AiiDA will not
+# invoke the mpirun command in the submission script)
+run_in_serial_mode = False
+
 ################################################################
 
 UpfData = DataFactory('upf')
@@ -133,6 +137,8 @@ calc.set_max_wallclock_seconds(30 * 60)  # 30 min
 # Valid only for Slurm and PBS (using default values for the
 # number_cpus_per_machine), change for SGE-like schedulers 
 calc.set_resources({"num_machines": 1})
+if run_in_serial_mode:
+    calc.set_withmpi(False)
 ## Otherwise, to specify a given # of cpus per machine, uncomment the following:
 # calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 8})
 

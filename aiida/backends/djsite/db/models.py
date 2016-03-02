@@ -1149,9 +1149,21 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             stored in the Db table, correctly converted
             to the right type.
         """
-        dballsubvalues = cls.objects.filter(dbnode=dbnode).values_list('key',
-                                                                       'datatype', 'tval', 'fval',
-                                                                       'ival', 'bval', 'dval')
+        return cls.get_all_values_for_nodepk(dbnode.pk)
+
+
+    @classmethod
+    def get_all_values_for_nodepk(cls, dbnodepk):
+        """
+        Return a dictionary with all attributes for the dbnode with given PK.
+
+        :return: a dictionary where each key is a level-0 attribute
+            stored in the Db table, correctly converted
+            to the right type.
+        """
+        dballsubvalues = cls.objects.filter(dbnode__id=dbnodepk).values_list(
+            'key', 'datatype', 'tval', 'fval',
+            'ival', 'bval', 'dval')
 
         data = {_[0]: {
             "datatype": _[1],
@@ -1164,7 +1176,8 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
                 }
         try:
             return deserialize_attributes(data, sep=cls._sep,
-                                          original_class=cls, original_pk=dbnode.pk)
+                                          original_class=cls, 
+                                          original_pk=dbnodepk)
         except DeserializationException as e:
             exc = DbContentError(e.message)
             exc.original_exception = e

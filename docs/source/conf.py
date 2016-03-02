@@ -13,10 +13,6 @@
 
 import sys, os
 
-# Loading the profile. The backend should be fixed before compiling the
-# documentation.
-from aiida.backends.profile import load_profile
-load_profile()
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -240,6 +236,17 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
     except ImportError:
         # No sphinx_rtd_theme installed
         pass
+    # Loading the dbenv. The backend should be fixed before compiling the
+    # documentation.
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
+else:
+    # Back-end settings for readthedocs online documentation.
+    from aiida.backends import settings
+    settings.BACKEND = "django"
+    settings.AIIDADB_PROFILE = "default"
+
 
 # Note by Andrea Cepellotti:
 # Sphinx tries to load every module that is trying to document

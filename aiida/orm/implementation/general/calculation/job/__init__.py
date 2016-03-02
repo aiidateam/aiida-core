@@ -3,7 +3,7 @@
 from abc import abstractmethod
 
 from aiida.common.datastructures import calc_states
-from aiida.common.exceptions import ModificationNotAllowed
+from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -1545,13 +1545,20 @@ class CalculationResultManager(object):
         """
         :param calc: the calculation object.
         """
+        # Import parser base class
+        from aiida.parsers import Parser
+
         # Possibly add checks here
         self._calc = calc
-        ParserClass = calc.get_parserclass()
-        if ParserClass is None:
-            raise AttributeError("No output parser is attached to the calculation")
-        else:
-            self._parser = ParserClass(calc)
+        try:
+            ParserClass = calc.get_parserclass()
+            if ParserClass is None:
+                #raise AttributeError("No output parser is attached to the calculation")
+                self._parser = Parser(calc)
+            else:
+                self._parser = ParserClass(calc)
+        except MissingPluginError:
+            self._parser = Parser(calc) # Use base class
 
     def __dir__(self):
         """

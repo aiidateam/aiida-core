@@ -5,10 +5,10 @@ from aiida.backends.utils import load_dbenv
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 IMPORTGROUP_TYPE = 'aiida.import'
 
@@ -217,7 +217,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
     import CifFile
     from aiida.common.exceptions import ValidationError
     from aiida.common.utils import md5_file, sha1_file
-    from aiida.orm.data.cif import decode_textfield
+    from aiida.tools.dbexporters.tcod import decode_textfield
 
     values = CifFile.ReadCif(infile)
     values = values[values.keys()[0]] # taking the first datablock in CIF

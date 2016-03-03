@@ -21,6 +21,11 @@ from aiida.orm.data.structure import StructureData
 from django.db.models import Q
 
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
 def build_deserialized_dict(query_values):
     first_dict = defaultdict(dict)
     for e in query_values:

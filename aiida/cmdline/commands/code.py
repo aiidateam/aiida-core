@@ -8,10 +8,10 @@ import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 def cmdline_fill(attributes, store, print_header=True):
@@ -500,6 +500,47 @@ class CodeInputValidationClass(object):
     #             self.remote_abs_path = code.get_remote_exec_path()
     #         self.prepend_text = code.get_prepend_text()
     #         self.append_text = code.get_append_text()
+
+    def set_and_validate_from_code(self, kwargs):
+        """
+        This method is used by the Code Orm, for the utility to setup a new code
+        from the verdi shell
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        # convert to string so I can use all the functionalities of the command line
+        kwargs = { k:str(v) for k,v in kwargs.iteritems() }
+        
+        start_var = [ _[0] for _ in self._conf_attributes_start ]
+        local_var = [ _[0] for _ in self._conf_attributes_local ]
+        remote_var = [ _[0] for _ in self._conf_attributes_remote ]
+        end_var = [ _[0] for _ in self._conf_attributes_end ]
+        
+        def internal_launch(self, x, kwargs):
+            default_values = { k:getattr(self,'_get_{}_string'.format(k))() for k in x }
+            setup_keys = [ [k,kwargs.pop(k,default_values[k]) ] for k in x ]
+#            for k,v in setup_keys:
+#                setattr(self,k,v)
+            [ getattr(self,'_set_{}_string'.format(k))(v) for k,v in setup_keys ]
+            
+            return kwargs
+                
+        kwargs = internal_launch(self, start_var, kwargs)
+            
+        if self.is_local:
+            kwargs = internal_launch(self, local_var, kwargs)
+        else:
+            print 'called remote', remote_var
+            kwargs = internal_launch(self, remote_var, kwargs)
+
+        kwargs = internal_launch(self, end_var, kwargs)
+        
+        print kwargs
+        
+        if kwargs:
+            raise ValidationError("Some parameters were not "
+                                  "recognized: {}".format(kwargs))
+        return self.create_code()
 
     def ask(self):
         cmdline_fill(self._conf_attributes_start,

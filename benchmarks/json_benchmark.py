@@ -86,6 +86,11 @@ j = ('{"kinds":[{"symbols":["C"],"weights":[1.0],"mass":12.011,"name":"C"}],'
 
 import timeit
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
 if __name__ == "__main__":
     rec_res = timeit.timeit('loads_json_rec(j)', setup=setup, number=100000)
     ite_res = timeit.timeit('loads_json_ite(j)', setup=setup, number=100000)

@@ -1,56 +1,23 @@
+== v0.6.0 ==
 
+We performed a lot of changes to introduce in one of our following releases a second object-relational mapper (we will refer to it as back-end) for the management of the used DBMSs and more specifically of PostgreSQL. SQLAlchemy and the latest version of PostgreSQL allows AiiDA to store JSON documents directly to the database and also to query them. Moreover the JSON query optimization is left to the database including also the use of the JSON specific indexes. There was major code restructuring to accommodate the new back-end resulting to abstracting many classes of the orm package of AiiDA.
 
-== v0.5.0 ==
+Even if most of the needed restructuring & code addition has been finished, a bit of more work is needed. Therefore even in this version, Django is the only available back-end for the end user.
 
-General
+However, the users have to update their AiiDA configuration files by executing the migration file that can be found at YOUR_AIIDA_DIR/aiida/common/additions/migration.py as the Linux user that installed AiiDA in your system.
+(e.g. python YOUR_AIIDA_DIR/aiida/common/additions/migration.py)
 
-    Final paper published, ref: G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky, AiiDA: automated interactive infrastructure and database for computational science, Comp. Mat. Sci 111, 218-230 (2016)
-    Core, concrete, requirements kept in requirements.txt and optionals moved to optional_requirements.txt
-    Schema change to v1.0.2: got rid of calc_states.UNDETERMINED
-
-Import/export, backup and code interaction
-
-    [non-back-compatible] Now supporting multiple codes execution in the same submission script. Plugin interface changed, requires adaptation of the code plugins.
-    Added import support for XYZ files
-    Added support for van der Waals table in QE input
-    Restart QE calculations avoiding using scratch using copy of parent calc
-    Adding database importer for NNIN/C Pseudopotential Virtual Vault
-    Implemented conversion of pymatgen Molecule lists to AiiDA's TrajectoryData
-    Adding a converter from pymatgen Molecule to AiiDA StructureData
-    Queries now much faster when exporting
-    Added an option to export a zip file
-    Added backup scripts for efficient incremental backup of large AiiDA repositories
-
-API
-
-    Added the possibility to add any kind of Django query in Group.query
-    Added TCOD (Theoretical Crystallography Open Database) importer and exporter
-    Added option to sort by a field in the query tool
-    Implemented selection of data nodes and calculations by group
-    Added NWChem plugin
-    Change default behaviour of symbolic link copy in the transport plugins: "put"/"get" methods -> symbolic links are followed before copy; "copy" methods -> symbolic links are not followed (copied "as is").
-
-Schedulers
-
-    Explicit Torque support (some slightly different flags)
-    Improved PBSPro scheduler
-    Added new num_cores_per_machine and num_cores_per_mpiproc fields for pbs and torque schedulers (giving full support for MPI+OpenMP hybrid codes)
-    Direct scheduler added, allowing calculations to be run without batch system (i.e. directly call executable)
-
-verdi
-
-    Support for profiles added: it allows user to switch between database configurations using the 'verdi profile' command
-    Added 'verdi data structure import --file file.xyz' for importing XYZ
-    Added a 'verdi data upf exportfamily' command (to export an upf pseudopotential family into a folder)
-    Added new functionalities to the 'verdi group' command (show list of nodes, add and remove nodes from the command line)
-    Allowing verdi export command to take group PKs
-    Added ASE as a possible format for visualizing structures from command line
-    Added possibility to export trajectory data in xsf format
-    Added possibility to show trajectory data with xcrysden
-    Added filters on group name in 'verdi group list'
-    Added possibility to load custom modules in the verdi shell (additional property verdishell.modules created; can be set with verdi devel setproperty verdishell.modules)
-    Added 'verdi data array show' command, using 'json_date' serialization to display the contents of ArrayData
-    Added 'verdi data trajectory deposit' command line command
-    Added command options --computer and --code to 'verdi data * deposit'
-    Added a command line option '--all-users' for 'verdi data * list' to list objects, owned by all users
-
+Some of the most important changes included in this release are:
+- Back-end selection (Added backend selection). SQLAlchemy selection is disabled for the moment.
+- Migration scripts for the configuration files of AiiDA (SQLAlchemy support).
+- Enriched link description in the database (to enrich the provenance model).
+- Corrections for numpy array and cell. List will be used with cell.
+- Fixed backend import. Verdi commands load as late as possible the needed backend.
+- Abstraction of the basic AiiDA orm classes (like node, computer, data etc). This is needed to support different backends (e.g. Django and SQLAlchemy).
+- Fixes on the structure import from QE-input files.
+- SQLAlchemy & Django benchmarks.
+- UltraJSON support.
+- requirements.txt now also include SQLAlchemy and its dependencies.
+- Recursive way of loading JSON for SQLAlchemy.
+- Improved way of accessing calculations & workflows attached to a workflow step.
+- Added methods to programmatically create new codes and computers.

@@ -19,6 +19,11 @@ from aiida.orm.implementation.general.calculation import from_type_to_pluginclas
 from aiida.utils import timezone
 
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
 class JobCalculation(AbstractJobCalculation, Calculation):
 
     def _set_state(self, state):

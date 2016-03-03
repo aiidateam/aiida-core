@@ -5,6 +5,11 @@ from aiida.common.setup import (DEFAULT_PROCESS, get_default_profile,
                                 get_profile_config)
 from aiida.common.exceptions import InvalidOperation
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
 def load_profile(process=None, profile=None):
     """
     Load the profile. This function is called by load_dbenv and SHOULD NOT

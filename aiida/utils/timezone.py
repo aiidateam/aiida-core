@@ -9,6 +9,12 @@ from aiida import settings
 # All the timezone part here is taken from Django.
 # TODO SP: check license terms ?
 # TODO SP: docstring
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
 utc = pytz.utc
 
 

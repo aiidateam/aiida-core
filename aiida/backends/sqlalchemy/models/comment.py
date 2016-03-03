@@ -8,6 +8,11 @@ from sqlalchemy.types import Integer, DateTime, Text
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
 class DbComment(Base):
     __tablename__ = "db_dbcomment"
 

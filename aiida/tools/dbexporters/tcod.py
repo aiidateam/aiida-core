@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 from aiida.orm import DataFactory
 from aiida.orm.calculation.inline import optional_inline
 
 aiida_executable_name = '_aiidasubmit.sh'
+inline_executable_name = 'aiidainline.py'
 
 tcod_loops = {
     '_tcod_file': [
@@ -359,7 +360,7 @@ def _assert_same_parents(a, b):
 
 def _inline_to_standalone_script(calc):
     """
-    Create executable bash script for execution of inline script.
+    Create executable Python script for execution of inline script.
 
     .. note:: the output bash script may not always be correct, since it
         is simply formed from:
@@ -421,12 +422,20 @@ def _collect_calculation_data(calc):
     else:
         # Calculation is InlineCalculation
         import hashlib
-        script = _inline_to_standalone_script(calc)
+        python_script = _inline_to_standalone_script(calc)
+        files_in.append({
+            'name'    : inline_executable_name,
+            'contents': python_script,
+            'md5'     : hashlib.md5(python_script).hexdigest(),
+            'sha1'    : hashlib.sha1(python_script).hexdigest(),
+            'type'    : 'file',
+            })
+        shell_script = '#!/bin/bash\n\nverdi run {}\n'.format(inline_executable_name)
         files_in.append({
             'name'    : aiida_executable_name,
-            'contents': script,
-            'md5'     : hashlib.md5(script).hexdigest(),
-            'sha1'    : hashlib.sha1(script).hexdigest(),
+            'contents': shell_script,
+            'md5'     : hashlib.md5(shell_script).hexdigest(),
+            'sha1'    : hashlib.sha1(shell_script).hexdigest(),
             'type'    : 'file',
             })
 

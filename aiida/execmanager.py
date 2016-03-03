@@ -17,10 +17,10 @@ from aiida.common.exceptions import (
 from aiida.common import aiidalogger
 from aiida.orm import load_node
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Gianluca Prandini, Giovanni Pizzi, Marco Dorigo, Marco Gibertini, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 execlogger = aiidalogger.getChild('execmanager')
 

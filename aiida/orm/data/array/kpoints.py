@@ -7,10 +7,10 @@ in a Brillouin zone, and how to operate on them.
 from aiida.orm.data.array import ArrayData
 import numpy
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Daniel Marchand, Giovanni Pizzi, Martin Uhrin"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 class KpointsData(ArrayData):
@@ -520,4 +520,3 @@ class KpointsData(ArrayData):
         # note: kpoints is a list Nx3, matrix is 3x3.
         # hence, first transpose kpoints, then multiply, finally transpose it back
         return numpy.transpose(numpy.dot(matrix, numpy.transpose(kpoints)))
-    

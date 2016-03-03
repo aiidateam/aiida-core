@@ -6,11 +6,10 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = ("Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, "
-                    "Martin Uhrin, Nicolas Mounet, Spyros Zoupanos")
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 
 class Calculation(VerdiCommandWithSubcommands):

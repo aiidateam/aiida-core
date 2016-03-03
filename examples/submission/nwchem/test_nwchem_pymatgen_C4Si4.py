@@ -1,13 +1,15 @@
 #!/usr/bin/env runaiida
 # -*- coding: utf-8 -*-
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 import sys
 import os
+
+from ase import Atoms
 
 from aiida.common.example_helpers import test_and_get_code
 from aiida.common.exceptions import NotExistent
@@ -39,37 +41,67 @@ queue = None
 settings = None
 #####
 
-code = test_and_get_code(codename, expected_code_type='nwchem.basic')
-
-alat = 4. # angstrom
-cell = [[alat, 0., 0.,],
-        [0., alat, 0.,],
-        [0., 0., alat,],
-       ]
-
-# BaTiO3 cubic structure
-s = StructureData(cell=cell)
-s.append_atom(position=(0.,0.,0.),symbols=['O'])
-s.append_atom(position=(0., 1.43042809,-1.10715266),symbols=['H'])
-s.append_atom(position=(0.,-1.43042809,-1.10715266),symbols=['H'])
+code = test_and_get_code(codename, expected_code_type='nwchem.nwcpymatgen')
 
 calc = code.new_calc()
 calc.label = "Test NWChem"
 calc.description = "Test calculation with the NWChem SCF code"
 calc.set_max_wallclock_seconds(30*60) # 30 min
-# Valid only for Slurm and PBS (using default values for the
-# number_cpus_per_machine), change for SGE-like schedulers 
 calc.set_resources({"num_machines": 1})
-## Otherwise, to specify a given # of cpus per machine, uncomment the following:
-# calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 8})
-
-#calc.set_custom_scheduler_commands("#SBATCH --account=ch3")
 
 if queue is not None:
     calc.set_queue_name(queue)
 
-calc.use_structure(s)
-calc.use_parameters(ParameterData(dict={'add_cell': False}))
+parameters = ParameterData(dict={
+    'directives': [
+        ['set nwpw:minimizer', '2'],
+        ['set nwpw:psi_nolattice', '.true.'],
+        ['set includestress', '.true.']
+    ],
+    'geometry_options': [
+        'units',
+        'au',
+        'center',
+        'noautosym',
+        'noautoz',
+        'print'
+    ],
+    'memory_options': [],
+    'symmetry_options': [],
+    'tasks': [
+        {
+            'alternate_directives': {
+                'driver': {'clear': '', 'maxiter': 40},
+                'nwpw': {'ewald_ncut': 8, 'simulation_cell': '\n  ngrid 16 16 16\n end'}
+            },
+            'basis_set': {},
+            'charge': 0,
+            'operation': 'optimize',
+            'spin_multiplicity': None,
+            'theory': 'pspw',
+            'theory_directives': {},
+            'title': None
+        }
+    ],
+    'add_cell': True
+})
+
+a = Atoms(['Si', 'Si', 'Si' ,'Si', 'C', 'C', 'C', 'C'],
+          cell=[8.277, 8.277, 8.277])
+a.set_scaled_positions([
+    (-0.5, -0.5, -0.5),
+    (0.0, 0.0, -0.5),
+    (0.0, -0.5, 0.0),
+    (-0.5, 0.0, 0.0),
+    (-0.25, -0.25, -0.25),
+    (0.25 ,0.25 ,-0.25),
+    (0.25, -0.25, 0.25),
+    (-0.25 ,0.25 ,0.25),
+])
+struct = StructureData(ase=a)
+
+calc.use_structure(struct)
+calc.use_parameters(parameters)
 
 if submit_test:
     subfolder, script_filename = calc.submit_test()
@@ -86,4 +118,3 @@ else:
     calc.submit()
     print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
         calc.uuid,calc.dbnode.pk)
-

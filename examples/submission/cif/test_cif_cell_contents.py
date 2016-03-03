@@ -1,29 +1,27 @@
 #!/usr/bin/env runaiida
 # -*- coding: utf-8 -*-
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
+__version__ = "0.6.0"
+__authors__ = "The AiiDA team."
 
 import sys
 import os
 
-from aiida.common.exceptions import NotExistent
-
 from aiida.common.example_helpers import test_and_get_code
 
 ################################################################
-# Test for cif_filter script from cod-tools package.
+# Test for cif_cell_contents script from cod-tools package.
 # Input plugin: codtools
-# Accepted codes: cif_filter
+# Accepted codes: cif_cell_contents
 ################################################################
 
 CifData = DataFactory('cif')
 ParameterData = DataFactory('parameter')
 submit_test = None
 codename = None
-options = {"use-perl-parser": True}
+options = {}
 files = []
 
 sys.argv.pop(0)
@@ -49,7 +47,7 @@ while len(sys.argv) > 0:
     else:
         files.append(arg)
 
-code = test_and_get_code(codename, expected_code_type="codtools.ciffilter")
+code = test_and_get_code(codename, expected_code_type="codtools.cifcellcontents")
 
 cif = None
 if len(files) == 1:
@@ -61,8 +59,8 @@ parameters = ParameterData(dict=options)
 computer = Computer.get(Computer.list_names()[0])
 
 calc = code.new_calc()
-calc.label = "Test cod-tools cif_filter"
-calc.description = "Test calculation with the cod-tools cif_filter"
+calc.label = "Test cod-tools cif_cell_contents"
+calc.description = "Test calculation with the cod-tools cif_cell_contents"
 calc.set_max_wallclock_seconds(30 * 60)  # 30 min
 calc.set_resources({"num_machines": 1,
                     "num_mpiprocs_per_machine": 1})

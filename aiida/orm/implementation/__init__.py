@@ -1,7 +1,13 @@
+# -*- coding: utf-8 -*-
 
 from aiida.backends.settings import BACKEND
 from aiida.common.exceptions import ConfigurationError
 from aiida.orm.implementation.general.group import get_group_type_mapping
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
 
 if BACKEND == "sqlalchemy":
     from aiida.orm.implementation.sqlalchemy.node import Node

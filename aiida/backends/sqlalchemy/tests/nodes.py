@@ -21,6 +21,11 @@ from aiida.orm import (JobCalculation, CalculationFactory, Data, DataFactory,
 from aiida.utils import timezone
 
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
 class TestTransitive(SqlAlchemyTests):
 
     def test_loop_not_allowed(self):

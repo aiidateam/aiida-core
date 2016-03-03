@@ -43,6 +43,8 @@ class MigrationTest(unittest.TestCase):
     _aiida_conf_dir_replace_str = "{AIIDA_CONF_DIR}"
     # To be replaced by the AiiDA fodler
     _aiida_dir_replace_str = "{AIIDA_DIR}"
+    # To be replaced by the linux user under which AiiDA runs
+    _aiida_linux_user = "{AIIDA_LINUX_USR}"
 
     def prepare_the_temp_aiida_folder(self, given_conf_dir):
         """
@@ -164,16 +166,21 @@ class MigrationTest(unittest.TestCase):
         :param original_conf_path: The path to the original configuration file.
         :param aiida_conf_dir: The path to AiiDA configuration folder created
         for the test.
+        :param linux_user: The user under whose account the AiiDA runs..
         :return: True or False with the corresponding message (if needed).
         """
         aiida_dir = os.path.split(os.path.abspath(aiida.__file__))[0]
         from itertools import izip
-        with open(generated_conf_path, 'r') as generated_conf, open(original_conf_path, 'r') as original_conf:
+        import getpass
+        with open(generated_conf_path, 'r') as generated_conf, open(
+                original_conf_path, 'r') as original_conf:
             for g_line, o_line in izip(generated_conf, original_conf):
                 o_line_mod = o_line.replace(
                     self._aiida_conf_dir_replace_str,
-                    aiida_conf_dir).replace(self._aiida_dir_replace_str,
-                                            aiida_dir)
+                    aiida_conf_dir).replace(
+                    self._aiida_dir_replace_str,
+                    aiida_dir).replace(
+                    self._aiida_linux_user, getpass.getuser())
                 if g_line != o_line_mod:
                     messg = ("The following lines are not equal: \n({file1}): "
                              "{line1} \n({file2}): {line2}"

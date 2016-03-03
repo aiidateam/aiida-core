@@ -545,9 +545,43 @@ Further comments and troubleshooting
 Updating AiiDA from a previous version
 ++++++++++++++++++++++++++++++++++++++
 
+Updating from 0.5.0 to 0.6.0
+----------------------------
+This migration will update your AiiDA configuration files making them
+compatible with AiiDA version 0.6.0.
+
+.. note::
+  We performed a lot of changes to introduce in one of our following
+  releases a second object-relational mapper (we will refer to it as
+  back-end) for the management of the used DBMSs and more specifically
+  of PostgreSQL.
+
+  Even if most of the needed restructuring & code addition has been finished,
+  a bit of more work is needed before we make the new back-end available.
+
+.. note::
+  A few important points regarding the upgrade:
+
+  * Please try to checkout the latest version from the corresponding
+    development branch. Problems encountered are resolved and fixes are
+    pushed to the branch.
+  * If you encounter any problems and/or inconsistencies, delete any .pyc
+    files that may have remained from the previous version. E.g. If you are
+    in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``
+
+To perform the update:
+
+* Stop your daemon (using ``verdi daemon stop``).
+* Backup your configuration files that are in .aiida directory.
+* Replace the aiida folder with the new one (e.g. by doing a ``git pull``).
+  If you use the same folder name, you will not need to update the
+  ``PATH`` and ``PYTHONPATH`` variables.
+* Execute the migration script (``python _your_aiida_folder_/aiida/common/additions/migration.py``).
+* Start again you daemon (using ``verdi daemon start``).
+
+
 Updating from 0.4.1 to 0.5.0
 ----------------------------
-
 * Stop your daemon (using ``verdi daemon stop``)
 * Store your aiida source folder somewhere in case you did some 
   modifications to some files
@@ -572,30 +606,5 @@ Updating from 0.4.1 to 0.5.0
   :ref:`here<qeplugin-prepare-input>` and also accept a ``Code`` object 
   among the inputs (also described in the same page).
 
-Updating from 0.5.0 to 0.6.0
-----------------------------
-This migration will update your AiiDA configuration files making them
-compatible with AiiDA version 0.6.0.
-
-.. note::
-  We performed a lot of changes to introduce in one of our following 
-  releases a second object-relational mapper (we will refer to it as 
-  back-end) for the management of the used DBMSs and more specifically 
-  of PostgreSQL.
-  
-  Even if most of the needed restructuring & code addition has been finished, 
-  a bit of more work is needed before we make the new back-end available. 
-
-
-To perform the update:
-
-* Stop your daemon (using ``verdi daemon stop``).
-* Backup your configuration files that are in .aiida directory.
-* Replace the aiida folder with the new one (either from the tar.gz or, 
-  if you are using git, by doing a ``git pull``). If you use the same 
-  folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
-  variables
-* Execute the migration script (``python _your_aiida_folder_/aiida/common/additions/migration.py``).
-* Start again you daemon (using ``verdi daemon start``).
 
 

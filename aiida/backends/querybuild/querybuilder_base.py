@@ -444,11 +444,40 @@ class QueryBuilderBase(object):
             **kwargs
         ):
         """
-        Any iterative procedure to build the path of a graph query needs to
+        Any iterative procedure to build the path for a graph query needs to
         invoke this method to append to the path.
 
-        :param path_spec: The specification of what this node looks like
+        :param cls: The Aiidaclass that you want the node to belong to
+        :param type: The type of the class, if cls is not given
+        :param label: A unique label
+        :param filters: Filters to apply for this vertice
         :param autolabel: Whether to automatically search for a unique label, default to False
+
+        A small usage example how this can be invoked::
+
+            qb = QueryBuilder() # Instantiating empty querybuilder instance
+            qb.append(cls = StructureData) # First item is StructureData node
+            # Note that also qb.append(StructureData) would work.
+            qb.append(cls = PwCalculation, output_of = StructureData) # The
+            # next node in the path is a PwCalculation, with
+            # a structure joined as an input
+            # Note that qb.append(PwCalculation) would have worked as 
+            # well, since the default is to join to the previous node as 
+            # an output
+            qb.append(
+                cls = StructureData,
+                output_of = PwCalculation,
+                label = 'outputstructure',
+                filters = {
+                    'attributes.kinds':{
+                        'has_key':'N'
+                    }
+                }
+            ) # Joining a structure as output of a PwCalculation
+            # Note that label is necessary to avoid a duplicate label.
+
+        :returns: The label that will be given to this vertice.
+
         """
         #~ path_spec = self.make_json_compatible(path_spec)
         if cls and type:
@@ -1225,9 +1254,10 @@ class QueryBuilderBase(object):
     def get_results_dict(self):
         """
         Calls :func:`QueryBuilderBase.yield_per` for the generator.
-        Loops through the results and constructur for each row a dictionary
-        of results of key, value pairs, where the key is a unique label
-        and the value the database entries.
+        Loops through the results and constructs for each row a dictionary
+        of results.
+        In this dictionary (one for each row) the key is a unique label 
+        and the value the database entry.
         Instances of an ORMclass are replaced with Aiidaclasses invoking
         the DbNode.get_aiida_class method (key is '*').
 

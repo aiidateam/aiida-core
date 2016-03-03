@@ -2,11 +2,15 @@
 
 from querybuilder_base import QueryBuilderBase
 
-raise NotImplementedError
 class QueryBuilder(QueryBuilderBase):
     """
-    QueryBuilder to use with SQLAlchemy-backend and schema defined in backends.sqlalchemy.models
-    """    
+    QueryBuilder to use with SQLAlchemy-backend and 
+    schema defined in backends.sqlalchemy.models
+    """
+
+    def __init__(self, *args, **kwargs):
+        raise DeprecationWarning("The use of this class is still deprecated")
+
     def analyze_filter_spec(self, alias, filter_spec):
         expressions = []
         for path_spec, filter_operation_dict in filter_spec.items():
@@ -41,6 +45,7 @@ class QueryBuilder(QueryBuilderBase):
                     in filter_operation_dict.items()
                 ]
         return and_(*expressions)
+
     def get_expr(operator, value, db_path, val_in_json):
         def cast_according_to_type(path_in_json, value, val_in_json):
             if not val_in_json:
@@ -83,13 +88,11 @@ class QueryBuilder(QueryBuilderBase):
                 expr = db_path.astext.like(value)
             else:
                 expr = db_path.like(value)
-        
         elif operator == 'ilike':
             if val_in_json:
                 expr = db_path.astext.ilike(value)
             else:
                 expr = db_path.ilike(value)
-        
         elif operator == 'in':
             value_type_set = set([type(i) for i in value])
             if len(value_type_set) > 1:

@@ -1149,109 +1149,34 @@ class AbstractNode(object):
         # use the transitive closure
         pass
 
-    @classmethod
-    def _get_qb_instance(cls, **kwargs):
+    @combomethod
+    def querybuild(self_or_cls, **kwargs):
         """
         Instantiates and 
         :returns: a QueryBuilder instance.
 
-        The first item of the path will be this class (hence it is a classmethod).
-        Additional arguments to the querybuilder (filters, projection requests)
-        can be given as keyword arguments.
+        The QueryBuilder's path has one vertice so far, namely this class.
+        Additional parameters (e.g. filters or a label),
+        can be passes as keyword arguments.
+
+        :param label: Label to give
+        :param filters: filters to apply
+        :param project: projections
+
+        This class is a comboclass (see :func:`~aiida.common.utils.combomethod`)
+        therefore the method can be called as class or instance method.
+        If called as an instance method, adds a filter on the id.
         """
         from aiida.orm import QueryBuilder, Node as AiidaNode
-        qb = QueryBuilder({'path':[]}) # instantiate (empty) querybuilder instance
-        qb._add_to_path(cls, autolabel = True, **kwargs)   # First item of path is this class
-        return qb, cls
-    @combomethod
-    def _join_path(self_or_cls, **kwargs):
-        """
-        Hidden comboclass to facilitate querying in path-traversal manner.
-        A comboclass (see :func:`~aiida.common.utils.combomethod`)
-        is a method that can be called as class or instance method.
-
-        :param self_or_cls: self (if called as instance method) or cls if called as classmethod
-        """
-        from aiida.orm import Node as AiidaNode
-        try:
-            join_specification = kwargs.pop('join_specification')
-        except KeyError:
-            raise InputValidationError(
-                "No join_specification provided"
-            )
         isclass =  kwargs.pop('isclass')
-        if not isclass:
-            qb, me = self_or_cls._get_qb_instance(filters = {'id':self_or_cls.pk})
+        qb = QueryBuilder()
+        if isclass:
+            qb.append(self_or_cls, **kwargs)
         else:
-            qb, me = self_or_cls._get_qb_instance()
-        kwargs[join_specification] =  me
-        cls = kwargs.pop('cls', AiidaNode)
-        qb._add_to_path(cls = cls, autolabel = True, **kwargs)
+            filters = kwargs.pop('filters', {})
+            filters.update({'id':self_or_cls.pk})
+            qb.append(self_or_cls.__class__, filters = filters, **kwargs)
         return qb
-        
-    @combomethod
-    def inputs(self_or_cls, **kwargs):
-        """
-        Comboclass to return querybuilder instance that traverses to
-        the inputs of this node (class)
-
-        A combomethod (see :func:`~aiida.common.utils.combomethod`)
-        is a method that can be called as class or instance method.
-
-        In case it is called as a classmethod, a generic join between inputs
-        and outputs is returned through the QueryBuilder instance.
-        In case it is called as an instance method, the id/pk will serve
-        as a filter and only the inputs of this node will be joined.
-        """
-        return self_or_cls._join_path(join_specification = 'input_of', **kwargs)
-
-    @combomethod
-    def outputs(self_or_cls, **kwargs):
-        """
-        Comboclass to return querybuilder instance that traverses to
-        the outputs of this node (class).
-
-        A combomethod (see :func:`~aiida.common.utils.combomethod`)
-        is a method that can be called as class or instance method.
-
-        In case it is called as a classmethod, a generic join between inputs
-        and outputs is returned through the QueryBuilder instance.
-        In case it is called as an instance method, the id/pk will serve
-        as a filter and only the outputs of this node will be joined.
-        """
-        return self_or_cls._join_path(join_specification = 'output_of', **kwargs)
-
-    @combomethod
-    def children(self_or_cls, **kwargs):
-        """
-        Comboclass to return querybuilder instance that traverses to
-        the children/descendants of this node (class)
-
-        A combomethod (see :func:`~aiida.common.utils.combomethod`)
-        is a method that can be called as class or instance method.
-
-        In case it is called as a classmethod, a generic join between inputs
-        and outputs is returned through the QueryBuilder instance.
-        In case it is called as an instance method, the id/pk will serve
-        as a filter and only the descendants of this node will be joined.
-        """
-        return self_or_cls._join_path(join_specification = 'descendant_of', **kwargs)
-    
-    @combomethod
-    def parents(self_or_cls, **kwargs):
-        """
-        Comboclass to return querybuilder instance that traverses to
-        the parents/ancestors of this node (class)
-
-        A combomethod (see :func:`~aiida.common.utils.combomethod`)
-        is a method that can be called as class or instance method.
-
-        In case it is called as a classmethod, a generic join between inputs
-        and outputs is returned through the QueryBuilder instance.
-        In case it is called as an instance method, the id/pk will serve
-        as a filter and only the ancestors of this node will be joined.
-        """
-        return self_or_cls._join_path(join_specification = 'ancestor_of', **kwargs)
 
 
 class NodeOutputManager(object):

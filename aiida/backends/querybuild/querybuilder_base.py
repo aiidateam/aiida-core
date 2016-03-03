@@ -26,6 +26,7 @@ replacement_dict = dict(
 
 
 class QueryBuilderBase(object):
+
     """
     QueryBuilderBase is the base class for QueryBuilder classes,
     which are than adapted to the individual schema and ORM used.
@@ -36,342 +37,351 @@ class QueryBuilderBase(object):
         
     def __init__(self, *args, **kwargs):
         """
-        :param queryhelp: The queryhelp is my API.
+    Usage::
+
+        qb  =   Querybuilder(**queryhelp)
+
+    The queryhelp:The queryhelp is my API.
+            
             It is a dictionary that tells me:
 
             *   what to join (key **path**)
             *   what to project (key **project**)
             *   how to filter (key **filters**)
+            *   how many rows to return (key **limit**)
+            *   how to order the rows (key **order_by**)
 
-        *   Specifying the path: Here, the user specifies the path along which to join tables.
-            The value is a list, each list item being a vertice in your path.
-            You can define the vertice in two ways:
-            The first is to give the orm-class::
+    What do you have to specify when you want to query:
 
-                queryhelp = {
-                    'path':[Data]
-                }
-                
-                # or  (better)
-                
-                
-                queryhelp = {
-                    'path':[
-                        {'cls': Data}
-                    ]
-                }
+    *   Specifying the path:
+        Here, the user specifies the path along which to join tables as a list,
+        each list item being a vertice in your path.
+        You can define the vertice in two ways:
+        The first is to give the Aiida-class::
 
-            The second is to give the polymorphic identity
-            of this class, in our case stored in type::
+            queryhelp = {
+                'path':[Data]
+            }
 
-                queryhelp = {
-                    'path':[
-                        {'type':"data."}
-                    ]
-                }
+            # or  (better)
 
-            .. note:: 
-                In Aiida, polymorphism is not strictly enforced, but
-                achieved with *type* specification in a column.
-                Type-discrimination is achieved by attaching a filter on the
-                type every time a subclass of Node is given,
-                in above example this would results in::
+            queryhelp = {
+                'path':[
+                    {'cls': Data}
+                ]
+            }
 
-                    ...filter(DbNode.type.like("data%"))...
+        The second is to give the polymorphic identity
+        of this class, in our case stored in type::
 
-                Make sure this is a unique way...
+            queryhelp = {
+                'path':[
+                    {'type':"data."}
+                ]
+            }
 
-            Each node has to have a unique label.
-            The label is chosen to be equal to the type of the class.
-            This will not work user chooses the same class twice.
-            In this case he has to provide a label::
-            
-                queryhelp = {
+        .. note:: 
+            In Aiida, polymorphism is not strictly enforced, but
+            achieved with *type* specification in a column.
+            Type-discrimination is achieved by attaching a filter on the
+            type every time a subclass of Node is given,
+            in above example this would results in::
+
+                ...filter(DbNode.type.like("data%"))...
+
+        Each node has to have a unique label.
+        If not given, the label is chosen to be equal to the type of the class.
+        This will not work if the user chooses the same class twice.
+        In this case he has to provide a label::
+
+            queryhelp = {
+                'path':[
+                    {
+                        'cls':Node,
+                        'label':'node_1'
+                    },
+                    {
+                        'cls':Node
+                        'label':'node_2'
+                    }
+                ]
+            }
+
+        There also hast to be some information on the edges, in order to join correctly.
+        There are several redundant ways this can be done:
+
+        *   You can specify that this node is an input or output of another node 
+            preceding the current one in the list.
+            That other node can be specified by an integer or the class or type.
+            The following examples are all valid joining instructions, 
+            assuming there is a structure defined at index 2 of the path with label "struc1"::
+
+                edge_specification = queryhelp['path'][3]
+                edge_specification['output_of'] = 2
+                edge_specification['output_of'] = StructureData
+                edge_specification['output_of'] = 'struc1'
+                edge_specification['input_of']  = 2
+                edge_specification['input_of']  = StructureData
+                edge_specification['input_of']  = 'struc1'
+
+        *   queryhelp_item['direction'] = integer
+
+            If any of the above specs ("input_of", "output_of") 
+            were not specified, the key "direction" is looked for.
+            Directions are defined as distances in the tree. 
+            1 is defined as one step down the tree along a link.
+            This means that 1 joins the node specified in this dictionary
+            to the node specified on list-item before **as an output**.
+            Direction defaults to 1, which is why, if nothing is specified,
+            this node is joined to the previous one as an output by default.
+            A minus sign reverse the direction of the link.
+            The absolute value of the direction defines the table to join to
+            with respect to your own position in the list.
+            An absolute value of 1 joins one table above, a
+            value of 2 to the table defined 2 indices above.
+            The two following queryhelps yield the same  query::
+
+                qh1 = {
                     'path':[
                         {
-                            'cls':Node,
-                            'label':'node_1'
-                        },
+                            'cls':PwCalculation
+                        }, 
                         {
-                            'cls':Node
-                            'label':'node_2'
+                            'cls':Trajectory
+                        }, 
+                        {
+                            'cls':ParameterData,
+                            'direction':-2
                         }
                     ]
                 }
 
-            There also hast to be some information on the edges, in order to join correctly.
-            There are several redundant ways this can be done:
+                # returns same query as:
 
-            *   You can specify that this node is an input or output of another node 
-                preceding the current one in the list.
-                That other node can be specified by an integer or the class or type.
-                The following examples are all valid joining instructions, 
-                assuming there is a structure defined at index 2 of the path with label "struc1"::
-
-                    edge_specification = queryhelp['path'][3]
-                    edge_specification['output_of'] = 2
-                    edge_specification['output_of'] = StructureData
-                    edge_specification['output_of'] = 'struc1'
-                    edge_specification['input_of']  = 2
-                    edge_specification['input_of']  = StructureData
-                    edge_specification['input_of']  = 'struc1'
-
-            *   queryhelp_item['direction'] = integer
-
-                If any of the above specs ("input_of", "output_of") 
-                were not specified, the key "direction" is looked for.
-                Directions are defined as distances in the tree. 
-                1 is defined as one step down the tree along a link.
-                This means that 1 joins the node specified in this dictionary
-                to the node specified on list-item before **as an output**.
-                Direction defaults to 1, which is why, if nothing is specified,
-                this node is joined to the previous one as an output by default.
-                A minus sign reverse the direction of the link.
-                The absolute value of the direction defines the table to join to
-                with respect to your own position in the list.
-                An absolute value of 1 joins one table above, a
-                value of 2 to the table defined 2 indices above.
-                The two following queryhelps yield the same  query::
-
-                    qh1 = {
-                        'path':[
-                            {
-                                'cls':PwCalculation
-                            }, 
-                            {
-                                'cls':Trajectory
-                            }, 
-                            {
-                                'cls':ParameterData,
-                                'direction':-2
-                            }
-                        ]
-                    }
-
-                    # returns same query as:
-
-                    qh2 = {
-                        'path':[
-                            {
-                                'cls':PwCalculation
-                            }, 
-                            {
-                                'cls':Trajectory
-                            }, 
-                            {
-                                'cls':ParameterData,
-                                'input_of':PwCalculation
-                            }
-                        ]
-                    }
-
-                    # Shorter version:
-
-                    qh3 = {
-                        'path':[
-                            ParameterData,
-                            PwCalculation,
-                            Trajectory,
-                        ]
-                    }
-
-        *   Projecting: 
-            Determing which columns the query will return::
-
-                queryhelp = {
-                    'path':[Relax],
-                    'project':{
-                        Relax:['state', 'id'],
-                    }
-                }
-
-            If you are using JSONB columns,
-            you can also project a value stored inside the json::
-
-                queryhelp = {
+                qh2 = {
                     'path':[
-                        Relax,
-                        StructureData,
-                    ],
-                    'project':{
-                        'Relax':['state', 'id'],  # Yes you can put the type string here!
-                        StructureData:['attributes.cell']
-                    }
+                        {
+                            'cls':PwCalculation
+                        }, 
+                        {
+                            'cls':Trajectory
+                        }, 
+                        {
+                            'cls':ParameterData,
+                            'input_of':PwCalculation
+                        }
+                    ]
                 }
 
-            Returns the state and the id of all instances of Relax and 
-            the cells of all structures given that the structures are linked as output of a relax-calculation.
-            The strings that you pass have to be name of the columns.
-            If you pass a star ('*') , the query will return the instance of the AiidaClass.
+                # Shorter version:
 
-        *   Filtering:
-            What if I want not every structure, 
-            but only the ones that were added after a certain time `t` and have an id higher than 50::
-                
-                queryhelp = {
+                qh3 = {
                     'path':[
-                        {'cls':Relax}, # Relaxation with structure as output
-                        {'cls':StructureData}
-                    ],
-                    'filters':{
-                        StructureData:[
-                            {
-                                'time':{'>': t},
-                                'id':{'>': 50}
-                            }
-                        ]
-                    }
+                        ParameterData,
+                        PwCalculation,
+                        Trajectory,
+                    ]
                 }
 
-            With the key 'filters', we instruct the querytool to build filters and attach them to the query.
-            Filters are passed as dictionaries.
-            In each key, value, the key is presents the column-name (as a string) to filter on.
-            The value is another dictionary, where the operator is a key and the value is the 
-            value to check against.
-            
-            .. note:: This follows the MongoDB-syntax and is necessary to deal with "and" and "or"-clauses
-            
-            But what if the user wants to filter by key-value pairs defined inside the structure?
-            In that case, simply specify the path with the dot (`.`) being a separator.
-            If you want to get to the volume of the structure, stored in the attributes, you can specify::
-                
-                queryhelp = {
-                    'path':[{'cls':StructureData}],  # or 'path':[StructureData]
-                    'filters':{
-                        'attributes.volume': {'<':6.0}
-                    }
+    *   Project: Determing which columns the query will return::
+
+            queryhelp = {
+                'path':[Relax],
+                'project':{
+                    Relax:['state', 'id'],
                 }
+            }
 
-            The above queryhelp would build a query that returns all structures with a volume below 6.0.
+        If you are using JSONB columns,
+        you can also project a value stored inside the json::
 
-            .. note:: A big advantage of SQLAlchemy is that it support the storing of jsons. 
-                      It is convenient to dump the structure-data into a json and store that as a column.
-                      The querytool needs to be told how to query the json.
-
-        Let's get to a really complex use-case,
-        where we need to reconstruct a workflow:
-
-        #.  The MD-simulation with the parameters and structure that were used as input
-        #.  The trajectory that was returned as an output
-        #.  We are only interested in calculations that had a convergence threshold
-            smaller than 1e-5 and cutoff larger 60 (quantities stored in the parameters)
-        #.  In the parameters, we only want to load the temperature
-        #.  The MD simulation has to be in state "parsing" or "finished"
-        #.  We want the length of the trajectory
-        #.  We filter for structures that:
-
-            *   Have any lattice vector smaller than 3.0 or between 5.0 and 7.0
-            *   Contain Nitrogen
-            *   Have 4 atoms
-            *   Have less than 3 types of atoms (elements)
-
-        This would be the queryhelp::
-
-            queryhelp =  {
+            queryhelp = {
                 'path':[
-                    ParameterData,
-                    {
-                        'class':MD,
-                        'label':'md'
-                    },
-                    {'cls':Trajectory}, 
-                    {
-                        'class':StructureData, 
-                        'input_of':'md'
-                    },
-                    {
-                        'cls':Relax,
-                        'input_of':StructureData
-                    },
-                    {
-                        'cls':StructureData,
-                        'label':'struc2',
-                        'input_of':Relax
-                    }
+                    Relax,
+                    StructureData,
                 ],
                 'project':{
-                    ParameterData:'attributes.IONS.tempw',
-                    'md':['id', 'time'], 
-                    Trajectory:[
-                        'id', 
-                        'attributes.length'
-                    ],  
-                    StructureData:[
-                        'id',
-                        'name', 
-                        'attributes.sites',
-                        'attributes.cell'
-                    ], 
-                    'struc2':[
-                        'id',
-                        'name', 
-                        'attributes.sites',
-                        'attributes.cell'
-                    ],
-                },
+                    'Relax':['state', 'id'],  # Yes you can put the type string here!
+                    StructureData:['attributes.cell']
+                }
+            }
+
+        Returns the state and the id of all instances of Relax and 
+        the cells of all structures given that the structures are linked as output of a relax-calculation.
+        The strings that you pass have to be name of the columns.
+        If you pass a star ('*') , the query will return the instance of the AiidaClass.
+
+    *   Filtering:
+        What if I want not every structure, 
+        but only the ones that were added after a certain time `t` and have an id higher than 50::
+            
+            queryhelp = {
+                'path':[
+                    {'cls':Relax}, # Relaxation with structure as output
+                    {'cls':StructureData}
+                ],
                 'filters':{
-                    Param:{   
-                        'and':[
-                            {
-                                'attributes.SYSTEM.econv':{
-                                    '<':1e-5
-                                }
-                            },
-                            {
-                                'attributes.SYSTEM.ecut':{
-                                    '>':60
-                                }
+                    StructureData:[
+                        {
+                            'time':{'>': t},
+                            'id':{'>': 50}
+                        }
+                    ]
+                }
+            }
+
+        With the key 'filters', we instruct the querytool to build filters and attach them to the query.
+        Filters are passed as dictionaries.
+        In each key, value, the key is presents the column-name (as a string) to filter on.
+        The value is another dictionary, where the operator is a key and the value is the 
+        value to check against.
+        
+        .. note:: This follows the MongoDB-syntax and is necessary to deal with "and" and "or"-clauses
+        
+        But what if the user wants to filter by key-value pairs defined inside the structure?
+        In that case, simply specify the path with the dot (`.`) being a separator.
+        If you want to get to the volume of the structure, stored in the attributes, you can specify::
+            
+            queryhelp = {
+                'path':[{'cls':StructureData}],  # or 'path':[StructureData]
+                'filters':{
+                    'attributes.volume': {'<':6.0}
+                }
+            }
+
+        The above queryhelp would build a query that returns all structures with a volume below 6.0.
+
+        .. note:: A big advantage of SQLAlchemy is that it support the storing of jsons. 
+                  It is convenient to dump the structure-data into a json and store that as a column.
+                  The querytool needs to be told how to query the json.
+
+    Let's get to a really complex use-case,
+    where we need to reconstruct a workflow:
+
+    #.  The MD-simulation with the parameters and structure that were used as input
+    #.  The trajectory that was returned as an output
+    #.  We are only interested in calculations that had a convergence threshold
+        smaller than 1e-5 and cutoff larger 60 (quantities stored in the parameters)
+    #.  In the parameters, we only want to load the temperature
+    #.  The MD simulation has to be in state "parsing" or "finished"
+    #.  We want the length of the trajectory
+    #.  We filter for structures that:
+
+        *   Have any lattice vector smaller than 3.0 or between 5.0 and 7.0
+        *   Contain Nitrogen
+        *   Have 4 atoms
+        *   Have less than 3 types of atoms (elements)
+
+    This would be the queryhelp::
+
+        queryhelp =  {
+            'path':[
+                ParameterData,
+                {
+                    'cls':MD,
+                    'label':'md'
+                },
+                {
+                    'cls':Trajectory
+                }, 
+                {
+                    'cls':StructureData, 
+                    'input_of':'md'
+                },
+                {
+                    'cls':Relax,
+                    'input_of':StructureData
+                },
+                {
+                    'cls':StructureData,
+                    'label':'struc2',
+                    'input_of':Relax
+                }
+            ],
+            'project':{
+                ParameterData:'attributes.IONS.tempw',
+                'md':['id', 'time'], 
+                Trajectory:[
+                    'id', 
+                    'attributes.length'
+                ],  
+                StructureData:[
+                    'id',
+                    'name', 
+                    'attributes.sites',
+                    'attributes.cell'
+                ], 
+                'struc2':[
+                    'id',
+                    'name', 
+                    'attributes.sites',
+                    'attributes.cell'
+                ],
+            },
+            'filters':{
+                Param:{
+                    'and':[
+                        {
+                            'attributes.SYSTEM.econv':{
+                                '<':1e-5
                             }
+                        },
+                        {
+                            'attributes.SYSTEM.ecut':{
+                                '>':60
+                            }
+                        }
+                    ]
+                        
+                },
+                'md':{
+                    'state':{   
+                        'in':[
+                            'computing', 
+                            'parsing', 
+                            'finished',
+                            'new'
                         ]
-                            
+                    }
+                },
+                StructureData:{
+                    'or':[
+                        {
+                            'attributes.cell.0.0':{
+                                'or':[
+                                    {'<':3.0},
+                                    {'>':5., '<':7.}
+                                ]
+                            },
+                        },
+                        {
+                            'attributes.cell.1.1':{
+                                'or':[
+                                    {'<':3.0},
+                                    {'>':5., '<':7.}
+                                ]
+                            },
+                        },
+                        {
+                            'attributes.cell.2.2':{
+                                'or':[
+                                    {'<':3.0},
+                                    {'>':5., '<':7.}
+                                ]
+                            },
+                        },
+                    ],
+                    'attributes.sites':{
+                        'of_length':4
                     },
-                    'md':{
-                        'state':{   
-                            'in':(
-                                'computing', 
-                                'parsing', 
-                                'finished',
-                                'new'
-                            )
-                        }
-                    },
-                    StructureData:{
-                        'or':[
-                            {
-                                'attributes.cell.0.0':{
-                                    'or':[
-                                        {'<':3.0},
-                                        {'>':5., '<':7.}
-                                    ]
-                                },
-                            },
-                            {
-                                'attributes.cell.1.1':{
-                                    'or':[
-                                        {'<':3.0},
-                                        {'>':5., '<':7.}
-                                    ]
-                                },
-                            },
-                            {
-                                'attributes.cell.2.2':{
-                                    'or':[
-                                        {'<':3.0},
-                                        {'>':5., '<':7.}
-                                    ]
-                                },
-                            },
-                        ],
-                        'attributes.sites':{
-                            'of_length':4
-                        }
-                        'attributes.kinds':{
-                            'shorter':3,
-                            'has_key':'N',
-                        }
+                    'attributes.kinds':{
+                        'shorter':3,
+                        'has_key':'N',
                     }
                 }
             }
+        }
+
         """
         self.path = []          # A list storing the path being traversed by the query
         self.label_list = []    # The list of unique labels
@@ -651,52 +661,75 @@ class QueryBuilderBase(object):
         Filter_spec contains the specification on the filter.
         Expects:
         
-        *   ``operator``: The operator to apply. These can be:
-        
-            *   for any type: 
-                *   ==  (compare single value, eg: '==':5.0)
-                *   in    (compare whether in list, eg: 'in':[5, 6, 34]
-            *  for floats and integers:
-                *   >
-                *   <
-                *   <=
-                *   >= 
-            *  for strings:
-                *   like  (case - sensitive), for example
-                    'like':'node.calc.%'  will match node.calc.relax and 
-                    node.calc.RELAX and node.calc. but
-                    not node.CALC.relax
-                *   ilike (case - unsensitive)
-                    will also match node.CaLc.relax in the above example
-                    
-                .. note::
-                    The character % is a reserved special character in SQL,
-                    and acts as a wildcard. If you specifically
-                    want to capture a ``%`` in the string, use: ``_%``
-            *   for arrays and dictionaries (only for the
-                SQLAlchemy implementation):
-                *   contains: pass a list with all the items that
-                    the array should contain, or that should be among
-                    the keys, eg: 'contains': ['N', 'H'])
-                *   has_key: pass an element that the list has to contain
-                    or that has to be a key, eg: 'has_key':'N')
-            *  for arrays only (SQLAlchemy version):
-                *   of_length  
-                *   longer
-                *   shorter
-
-            All the above filters invoke a negation of the expression if preceded by ~
-
-            - {'name':{'~in':['halle', 'lujah']}} # Name not 'halle' or 'lujah'
-            - {'id':{ '~==': 2}} # id is not 2
-
-        - ``value``: The 
+        :param operator: The operator to apply, see below for further details
+        :param value: The 
             value for the right side of the expression,
             the value you want to compare with.
-        - ``path``: The path leading to the value
-        - ``attr_key``: Boolean, whether the value is in a json-column,
+
+        :param path: The path leading to the value
+
+        :param attr_key: Boolean, whether the value is in a json-column,
             or in an attribute like table.
 
+
+        Implemented and valid operators:
+
+        *   for any type: 
+            *   ==  (compare single value, eg: '==':5.0)
+            *   in    (compare whether in list, eg: 'in':[5, 6, 34]
+        *  for floats and integers:
+            *   >
+            *   <
+            *   <=
+            *   >= 
+        *  for strings:
+            *   like  (case - sensitive), for example
+                'like':'node.calc.%'  will match node.calc.relax and 
+                node.calc.RELAX and node.calc. but
+                not node.CALC.relax
+            *   ilike (case - unsensitive)
+                will also match node.CaLc.relax in the above example
+                
+            .. note::
+                The character % is a reserved special character in SQL,
+                and acts as a wildcard. If you specifically
+                want to capture a ``%`` in the string, use: ``_%``
+
+        *   for arrays and dictionaries (only for the
+            SQLAlchemy implementation):
+
+            *   contains: pass a list with all the items that
+                the array should contain, or that should be among
+                the keys, eg: 'contains': ['N', 'H'])
+            *   has_key: pass an element that the list has to contain
+                or that has to be a key, eg: 'has_key':'N')
+
+        *  for arrays only (SQLAlchemy version):
+            *   of_length  
+            *   longer
+            *   shorter
+
+        All the above filters invoke a negation of the
+        expression if preceded by **~**::
+
+            # first example:
+            filter_spec = {
+                'name' : {
+                    '~in':[
+                        'halle',
+                        'lujah'
+                    ]
+                } # Name not 'halle' or 'lujah'
+            }
+
+            # second example:
+            filter_spec =  {
+                'id' : { 
+                    '~==': 2
+                }
+            } # id is not 2
+
+        
         """
         pass
 
@@ -1181,8 +1214,11 @@ class QueryBuilderBase(object):
 
     def yield_per(self, count):
         """
+        :param count: Number of rows to yield per step
+        
         Yields *count* rows at a time
-        :returns: generator function
+
+        :returns: a generator
         """
         return self.get_query().yield_per(count)
 

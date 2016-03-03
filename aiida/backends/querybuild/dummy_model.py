@@ -20,10 +20,9 @@ from sa_init import (
 )
 
 # Aiida Django classes:
-from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
-from aiida.orm.implementation.django.group import Group as DjangoAiidaGroup
-from aiida.orm.implementation.calculation import from_type_to_pluginclassname
-from aiida.common.pluginloader import load_plugin
+#from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
+#from aiida.orm.implementation.calculation import from_type_to_pluginclassname
+#from aiida.common.pluginloader import load_plugin
 
 
 # SETTINGS:
@@ -268,7 +267,7 @@ class DbGroup(Base):
         else:
             return '<DbGroup [user-defined] "{}">'.format(self.name)
     def get_aiida_class(self):
-        
+        from aiida.orm.implementation.django.group import Group as DjangoAiidaGroup        
         from aiida.backends.djsite.db.models import DbGroup as DjangoSchemaDbGroup
         dbgroup = DjangoSchemaDbGroup(
             id = self.id,

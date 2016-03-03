@@ -3,7 +3,7 @@ import datetime
 import os.path
 import string
 import sys
-
+import functools
 from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
@@ -720,3 +720,59 @@ def query_string(question, default):
             return reply
         else:
             sys.stdout.write("Please provide a non empty answer.\n")
+
+
+def flatten_list ( value ):
+    """
+    Flattens a list or a tuple
+    In [2]: flatten_list([[[[[4],3]],[3],['a',[3]]]])
+    Out[2]: [4, 3, 3, 'a', 3]
+
+    :param value: A value, whether iterable or not
+    :returns: a list of nesting level 1
+    """
+
+    if isinstance(value, (list, tuple)):
+        return_list = []
+        [[return_list.append(i) for i in flatten_list(item)] for item in value]
+        return return_list
+    return [value]
+
+
+class combomethod(object):
+    """
+    A decorator that wraps a function that can be both a classmethod or
+    instancemethod and behaves accordingly::
+        
+        class A():
+
+            @combomethod
+            def do(self, **kwargs):
+                isclass = kwargs.get('isclass')
+                if isclass:
+                    print "I am a class", self
+                else:
+                    print "I am an instance", self
+    
+        A.do()
+        A().do()
+    
+        >>> I am a class __main__.A
+        >>> I am an instance <__main__.A instance at 0x7f2efb116e60>
+    
+    Attention: For ease of handling, pass keyword **isclass** 
+    equal to True if this was called as a classmethod and False if this
+    was called as an instance.
+    The argument self is therefore ambiguous!
+    """
+    def __init__(self, method):
+        self.method = method
+
+    def __get__(self, obj=None, objtype=None):
+        @functools.wraps(self.method)
+        def _wrapper(*args, **kwargs):
+            kwargs.pop('isclass', None)
+            if obj is not None:
+                return self.method(obj, *args, isclass = False, **kwargs)
+            return self.method(objtype, *args, isclass = True,  **kwargs)
+        return _wrapper

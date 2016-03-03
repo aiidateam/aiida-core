@@ -23,6 +23,7 @@ User's guide
    ../verdi/comments
    ../database/dbusage
    ../querying/index
+   ../querying/querybuilder
    ../workflow/index
    ../dbimporters/index
    ../dbexporters/index

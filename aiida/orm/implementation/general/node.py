@@ -7,6 +7,7 @@ import collections
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
 from aiida.common.folders import SandboxFolder
+from aiida.common.utils import combomethod
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -1147,6 +1148,35 @@ class AbstractNode(object):
         """
         # use the transitive closure
         pass
+
+    @combomethod
+    def querybuild(self_or_cls, **kwargs):
+        """
+        Instantiates and 
+        :returns: a QueryBuilder instance.
+
+        The QueryBuilder's path has one vertice so far, namely this class.
+        Additional parameters (e.g. filters or a label),
+        can be passes as keyword arguments.
+
+        :param label: Label to give
+        :param filters: filters to apply
+        :param project: projections
+
+        This class is a comboclass (see :func:`~aiida.common.utils.combomethod`)
+        therefore the method can be called as class or instance method.
+        If called as an instance method, adds a filter on the id.
+        """
+        from aiida.orm import QueryBuilder, Node as AiidaNode
+        isclass =  kwargs.pop('isclass')
+        qb = QueryBuilder()
+        if isclass:
+            qb.append(self_or_cls, **kwargs)
+        else:
+            filters = kwargs.pop('filters', {})
+            filters.update({'id':self_or_cls.pk})
+            qb.append(self_or_cls.__class__, filters = filters, **kwargs)
+        return qb
 
 
 class NodeOutputManager(object):

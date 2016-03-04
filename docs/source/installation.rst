@@ -568,6 +568,10 @@ compatible with AiiDA version 0.6.0.
   * If you encounter any problems and/or inconsistencies, delete any .pyc
     files that may have remained from the previous version. E.g. If you are
     in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``
+  * The requirements file has changed. Please be sure that you have installed
+    all the needed requirements. This can be done by executing:
+    ``pip install --user -U -r requirements.txt``
+
 
 To perform the update:
 

@@ -571,6 +571,10 @@ compatible with AiiDA version 0.6.0.
   * The requirements file has changed. Please be sure that you have installed
     all the needed requirements. This can be done by executing:
     ``pip install --user -U -r requirements.txt``
+  * Currently you can not import data (``verdi import``) that you have exported
+    (``verdi export``) with a previous version of AiiDA. A conversion script or
+    a new version of ``verdi import`` that will be backward compatible will
+    be provided the next days.
 
 
 To perform the update:

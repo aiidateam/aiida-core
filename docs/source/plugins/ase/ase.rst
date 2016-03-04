@@ -89,7 +89,7 @@ the ``verdi run`` command.
 This is a minimal script that uses GPAW and a plane-wave basis to compute the 
 total energy of a structure.
 Note that for a serial calculation, it is necessary to run the 
-``calculation.set_with_mpi(False)`` method.
+``calculation.set_withmpi(False)`` method.
 Note also, that by default, only the total energy of the structure is computed 
 and retrieved.
 
@@ -108,7 +108,7 @@ executed before or after the call to the calculators.
 
 Lastly, :download:`this script <test_gpaw_parallel.py>` is an example of how to 
 run GPAW parallel. Essentially, nothing has to be changed in input, except that 
-there is no need to call the method ``calculation.set_with_mpi(False)``.
+there is no need to call the method ``calculation.set_withmpi(False)``.
 
 
 

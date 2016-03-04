@@ -248,11 +248,12 @@ class Visualizable(object):
                 parsed_args.pop(key)
 
         if format is None:
-            print "Default format is not defined, please specify.\n" + \
-                  "Valid formats are:"
+            print >> sys.stderr, (
+                "Default format is not defined, please specify.\n" 
+                  "Valid formats are:")
             for i in self.get_show_plugins().keys():
-                print "  {}".format(i)
-            sys.exit(0)
+                print >> sys.stderr, "  {}".format(i)
+            sys.exit(1)
 
         # I can give in input the whole path to executable
         code_name = os.path.split(format)[-1]
@@ -260,8 +261,9 @@ class Visualizable(object):
         try:
             func = self.get_show_plugins()[code_name]
         except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_show_plugins()))
+            print >> sys.stderr, "Not implemented; implemented plugins are:"
+            print >> sys.stderr, "{}.".format(
+                ",".join(self.get_show_plugins()))
             sys.exit(1)
 
         if not is_dbenv_loaded():
@@ -272,7 +274,7 @@ class Visualizable(object):
         for n in n_list:
             try:
                 if not isinstance(n, self.dataclass):
-                    print("Node {} is of class {} instead "
+                    print >> sys.stderr, ("Node {} is of class {} instead "
                           "of {}".format(n, type(n), self.dataclass))
                     sys.exit(1)
             except AttributeError:
@@ -281,8 +283,9 @@ class Visualizable(object):
         try:
             func(format, n_list, **parsed_args)
         except MultipleObjectsError:
-            print("Visualization of multiple objects is not implemented "
-                  "for '{}'".format(format))
+            print >> sys.stderr, (
+                "Visualization of multiple objects is not implemented "
+                "for '{}'".format(format))
             sys.exit(1)
 
 
@@ -353,17 +356,19 @@ class Exportable(object):
                 parsed_args.pop(key)
 
         if format is None:
-            print "Default format is not defined, please specify.\n" + \
-                  "Valid formats are:"
+            print >> sys.stderr, (
+                "Default format is not defined, please specify.\n" 
+                  "Valid formats are:")
             for i in self.get_export_plugins().keys():
-                print "  {}".format(i)
-            sys.exit(0)
+                print >> sys.stderr, "  {}".format(i)
+            sys.exit(1)
 
         try:
             func = self.get_export_plugins()[format]
         except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_export_plugins()))
+            print >> sys.stderr, "Not implemented; implemented plugins are:"
+            print >> sys.stderr, "{}.".format(
+                ",".join(self.get_export_plugins()))
             sys.exit(1)
 
         if not is_dbenv_loaded():
@@ -373,7 +378,7 @@ class Exportable(object):
 
         try:
             if not isinstance(n, self.dataclass):
-                print("Node {} is of class {} instead "
+                print >> sys.stderr, ("Node {} is of class {} instead "
                       "of {}".format(n, type(n), self.dataclass))
                 sys.exit(1)
         except AttributeError:
@@ -441,11 +446,12 @@ class Importable(object):
         filename = parsed_args.pop('file')
 
         if format is None:
-            print "Default format is not defined, please specify.\n" + \
-                  "Valid formats are:"
+            print >> sys.stderr, (
+                "Default format is not defined, please specify.\n" 
+                  "Valid formats are:")
             for i in self.get_import_plugins().keys():
-                print "  {}".format(i)
-            sys.exit(0)
+                print >> sys.stderr, "  {}".format(i)
+            sys.exit(1)
 
         if not filename:
             filename = "/dev/stdin"
@@ -453,8 +459,9 @@ class Importable(object):
         try:
             func = self.get_import_plugins()[format]
         except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_import_plugins()))
+            print >> sys.stderr, "Not implemented; implemented plugins are:"
+            print >> sys.stderr, "{}.".format(
+                ",".join(self.get_import_plugins()))
             sys.exit(1)
 
         if not is_dbenv_loaded():
@@ -532,17 +539,19 @@ class Depositable(object):
                 parsed_args.pop(key)
 
         if database is None:
-            print "Default database is not defined, please specify.\n" + \
-                  "Valid databases are:"
+            print >> sys.stderr, (
+                "Default database is not defined, please specify.\n"
+                  "Valid databases are:")
             for i in self.get_deposit_plugins().keys():
-                print "  {}".format(i)
-            sys.exit(0)
+                print >> sys.stderr, "  {}".format(i)
+            sys.exit(1)
 
         try:
             func = self.get_deposit_plugins()[database]
         except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_deposit_plugins()))
+            print >> sys.stderr, "Not implemented; implemented plugins are:"
+            print >> sys.stderr, "{}.".format(
+                ",".join(self.get_deposit_plugins()))
             sys.exit(1)
 
         if not is_dbenv_loaded():
@@ -552,7 +561,7 @@ class Depositable(object):
 
         try:
             if not isinstance(n,self.dataclass):
-                print("Node {} is of class {} instead "
+                print >> sys.stderr, ("Node {} is of class {} instead "
                       "of {}".format(n,type(n),self.dataclass))
                 sys.exit(1)
         except AttributeError:

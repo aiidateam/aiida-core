@@ -496,6 +496,7 @@ def create_configuration(profile='default'):
     :param database: create the configuration file
     """
     import readline
+    from aiida.backends import settings
     from aiida.common.exceptions import ConfigurationError
     # BE CAREFUL: THIS IS THE DJANGO VALIDATIONERROR
     from django.core.exceptions import ValidationError as DjangoValidationError
@@ -646,7 +647,8 @@ def create_configuration(profile='default'):
         # it should change in the future to add the possibility of having a
         # remote repository. Atm, I act as only a local repo is possible
         existing_repo = this_existing_confs.get('AIIDADB_REPOSITORY_URI',
-                                                os.path.join(aiida_dir, "repository/"))
+            os.path.join(aiida_dir, "repository-{}/".format(
+                    settings.AIIDADB_PROFILE)))
         default_protocol = 'file://'
         if existing_repo.startswith(default_protocol):
             existing_repo = existing_repo[len(default_protocol):]

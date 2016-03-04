@@ -263,7 +263,10 @@ class CodDbImporter(DbImporter):
         """
         Connects to the MySQL database for performing searches.
         """
-        import MySQLdb
+        try:
+            import MySQLdb
+        except ImportError:
+            import pymysql as MySQLdb
 
         self._db = MySQLdb.connect(host=self._db_parameters['host'],
                                    user=self._db_parameters['user'],

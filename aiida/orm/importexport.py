@@ -287,7 +287,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
 
 
     # This is the export version expected by this function
-    expected_export_version = '0.1'
+    expected_export_version = '0.2'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1004,7 +1004,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
     if not silent:
         print "STARTING EXPORT..."
 
-    EXPORT_VERSION = '0.1'
+    EXPORT_VERSION = '0.2'
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 

@@ -325,10 +325,24 @@ DbNode.state = column_property(
     where(recent_states.c.dbnode_id == foreign(DbNode.id))
 )
 
-engine_url = (
-    "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-    "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-).format(**get_profile_config(settings.AIIDADB_PROFILE))
+engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
+if engine == "sqlite3":
+    engine_url = (
+        "sqlite:///{AIIDADB_NAME}"
+        ).format(**get_profile_config(settings.AIIDADB_PROFILE))
+elif engine.startswith("mysql"):
+    engine_url = (
+        "mysql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+        "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+        ).format(**get_profile_config(settings.AIIDADB_PROFILE))
+elif engine.startswith("postgre"):
+    engine_url = (
+        "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+        "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+        ).format(**get_profile_config(settings.AIIDADB_PROFILE))
+else: 
+    raise ConfigurationError("Unknown DB engine: {}".format(
+            engine))
 session = sessionmaker(bind=create_engine(engine_url))()
 
 

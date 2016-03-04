@@ -61,6 +61,6 @@ python-mimeparse==0.1.4
 #PyMySQL>=0.6.1
 
 # SQLAlchemy support
-SQLAlchemy==1.0.9
+SQLAlchemy==1.0.12
 SQLAlchemy-Utils==0.31.2
 ultrajson==1.35

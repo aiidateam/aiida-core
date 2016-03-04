@@ -1167,7 +1167,8 @@ class AbstractNode(object):
         therefore the method can be called as class or instance method.
         If called as an instance method, adds a filter on the id.
         """
-        from aiida.orm import QueryBuilder, Node as AiidaNode
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node as AiidaNode
         isclass =  kwargs.pop('isclass')
         qb = QueryBuilder()
         if isclass:

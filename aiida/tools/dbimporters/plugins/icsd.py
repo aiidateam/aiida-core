@@ -609,7 +609,10 @@ class IcsdSearchResults(DbSearchResults):
         """
         Connect to the MySQL database for performing searches.
         """
-        import MySQLdb
+        try:
+            import MySQLdb
+        except ImportError:
+            import pymysql as MySQLdb
 
         self.db = MySQLdb.connect(host=self.db_parameters['host'],
                                   user=self.db_parameters['user'],

@@ -9,8 +9,6 @@ __authors__ = "The AiiDA team."
 
 if __name__ == "__main__":
     from django.core.management import execute_from_command_line
-    # import aiida.backends.djsite.utils as utils
-    import aiida.backends.utils as utils
 
     # Copy sys.argv
     actual_argv = sys.argv[:]
@@ -44,9 +42,28 @@ if __name__ == "__main__":
             actual_argv = [actual_argv[0]] + actual_argv[2:]
 
     if actual_argv[1] == 'migrate':
-        utils._load_dbenv_noschemacheck(process=process_name,
-           profile=profile_name)
+        # Perform the same loading procedure as the normal load_dbenv does
+        from aiida.backends import settings
+        settings.LOAD_DBENV_CALLED = True
+        # We load the needed profile.
+        # This is going to set global variables in settings, including
+        # settings.BACKEND
+        from aiida.backends.profile import load_profile
+        load_profile(process=process_name, profile=profile_name)
+        from aiida.backends.profile import BACKEND_DJANGO
+        if settings.BACKEND != BACKEND_DJANGO:
+            from aiida.common.exceptions import InvalidOperation
+            raise InvalidOperation("A Django migration procedure is initiated "
+                                   "but a different backend is used!")
+        # We load the Django specific _load_dbenv_noschemacheck
+        # When there will be a need for SQLAlchemy for a schema migration,
+        # we may abstract thw _load_dbenv_noschemacheck and make a common
+        # one for both backends
+        from aiida.backends.djsite.utils import _load_dbenv_noschemacheck
+        _load_dbenv_noschemacheck(process=process_name, profile=profile_name)
     else:
-        utils.load_dbenv(process=process_name, profile=profile_name)
+        # Load the general load_dbenv.
+        from aiida.backends.utils import load_dbenv
+        load_dbenv(process=process_name, profile=profile_name)
 
     execute_from_command_line(actual_argv)

@@ -10,6 +10,11 @@ __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
+# Possible choices for backend
+BACKEND_DJANGO = "django"
+BACKEND_SQLA = "sqlalchemy"
+
+
 def load_profile(process=None, profile=None):
     """
     Load the profile. This function is called by load_dbenv and SHOULD NOT
@@ -51,7 +56,7 @@ def load_profile(process=None, profile=None):
 
     # Check if AIIDADB_BACKEND is set and if not error (with message)
     # Migration script should put it in profile (config.json)
-    settings.BACKEND = config.get("AIIDADB_BACKEND", "django")
+    settings.BACKEND = config.get("AIIDADB_BACKEND", BACKEND_DJANGO)
 
 def is_profile_loaded():
     """

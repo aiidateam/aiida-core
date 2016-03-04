@@ -3,7 +3,7 @@
 from __future__ import absolute_import
 
 from aiida.backends import settings
-from aiida.backends.profile import load_profile, is_profile_loaded
+from aiida.backends.profile import load_profile
 from aiida.common.exceptions import ConfigurationError, InvalidOperation
 
 

@@ -41,13 +41,12 @@ setup(
     # for a useful dicussion
     install_requires=[
         'django', 'django_extensions', 'pytz', 'django-celery',
-        'celery', 'kombu', 'billiard', 'amqp', 'anyjson', 'six', 'supervisor',
+        'celery', 'kombu', 'billiard', 'anyjson', 'six', 'supervisor',
         'meld3', 'paramiko', 'ecdsa', 'pycrypto', 'numpy', 'django-tastypie',
-        'python-dateutil', 'python-mimeparse',
+        'python-dateutil', 'python-mimeparse', 'plum'
         ],
     packages=find_packages(),
     scripts=[os.path.join(bin_folder, f) for f in os.listdir(bin_folder)
              if not os.path.isdir(os.path.join(bin_folder, f))],
     long_description=open(os.path.join(aiida_folder, 'README.rst')).read(),
 )
-

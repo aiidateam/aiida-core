@@ -15,20 +15,22 @@ __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
 db_test_list = {
-    'generic': 'aiida.backends.djsite.db.subtests.generic',
-    'nodes': 'aiida.backends.djsite.db.subtests.nodes',
-    'nwchem': 'aiida.backends.djsite.db.subtests.nwchem',
-    'dataclasses': 'aiida.backends.djsite.db.subtests.dataclasses',
-    'qepw': 'aiida.backends.djsite.db.subtests.quantumespressopw',
-    'codtools': 'aiida.backends.djsite.db.subtests.codtools',
-    'dbimporters': 'aiida.backends.djsite.db.subtests.dbimporters',
-    'export_and_import': 'aiida.backends.djsite.db.subtests.export_and_import',
-    'migrations': 'aiida.backends.djsite.db.subtests.migrations',
-    'parsers': 'aiida.backends.djsite.db.subtests.parsers',
-    'qepwinputparser': 'aiida.backends.djsite.db.subtests.pwinputparser',
-    'qepwimmigrant': 'aiida.backends.djsite.db.subtests.quantumespressopwimmigrant',
-    'tcodexporter': 'aiida.backends.djsite.db.subtests.tcodexporter',
-    'workflows': 'aiida.backends.djsite.db.subtests.workflows',
+    'generic': ['aiida.backends.djsite.db.subtests.generic'],
+    'nodes': ['aiida.backends.djsite.db.subtests.nodes'],
+    'nwchem': ['aiida.backends.djsite.db.subtests.nwchem'],
+    'dataclasses': ['aiida.backends.djsite.db.subtests.dataclasses'],
+    'qepw': ['aiida.backends.djsite.db.subtests.quantumespressopw'],
+    'codtools': ['aiida.backends.djsite.db.subtests.codtools'],
+    'dbimporters': ['aiida.backends.djsite.db.subtests.dbimporters'],
+    'export_and_import': ['aiida.backends.djsite.db.subtests.export_and_import'],
+    'migrations': ['aiida.backends.djsite.db.subtests.migrations'],
+    'parsers': ['aiida.backends.djsite.db.subtests.parsers'],
+    'qepwinputparser': ['aiida.backends.djsite.db.subtests.pwinputparser'],
+    'qepwimmigrant': ['aiida.backends.djsite.db.subtests.quantumespressopwimmigrant'],
+    'tcodexporter': ['aiida.backends.djsite.db.subtests.tcodexporter'],
+    'workflows': ['aiida.backends.djsite.db.subtests.workflows'],
+    'backup': ['aiida.backends.djsite.db.subtests.backup_script',
+               'aiida.backends.djsite.db.subtests.backup_setup_script'],
 }
 
 

@@ -8,6 +8,9 @@ from dateutil.parser import parse
 
 # Import needed for Django initialization
 from aiida.backends.djsite.utils import load_dbenv
+from aiida.common.additions.backup_script import backup
+
+from aiida.backends.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -15,7 +18,7 @@ __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
 
-class UnitTests(unittest.TestCase):
+class TestBackupScript(AiidaTestCase):
 
     _json_test_input_1 = '{"backup_length_threshold": 2, "periodicity": 2,' + \
         ' "oldest_object_backedup": "2014-07-18 13:54:53.688484+00:00", ' + \
@@ -50,9 +53,9 @@ class UnitTests(unittest.TestCase):
         '"backup_dir": "/scratch/./aiida_user////backup//"}'
 
     def setUp(self):
+        super(AiidaTestCase, self).setUp()
         load_dbenv()
-        import backup
-        
+
         self._backup_setup_inst = backup.Backup("", 2)
 
     def tearDown(self):
@@ -174,7 +177,7 @@ class UnitTests(unittest.TestCase):
         In the parsed JSON string, the endDateOfBackup & daysToBackuplimit
         are set which should lead to an exception.
         """
-        from backup import BackupError
+        from aiida.common.additions.backup_script.backup import BackupError
         
         backup_variables = json.loads(self._json_test_input_5)
         self._backup_setup_inst._ignore_backup_dir_existence_check = True
@@ -188,11 +191,9 @@ class UnitTests(unittest.TestCase):
         This method tests the correct deserialization / serialization of the 
         variables that should be stored in a file.
         """
-        
         for input_string in (self._json_test_input_1, self._json_test_input_2,
                              self._json_test_input_3, self._json_test_input_4):
             
-            import backup
             backup_inst = backup.Backup("", 2)
             
             input_variables = json.loads(input_string)
@@ -237,6 +238,3 @@ class UnitTests(unittest.TestCase):
             self._backup_setup_inst._backup_dir,
             "/scratch/aiida_user/backup",
             "_backup_setup_inst destination directory is not normalized as expected.")
-
-if __name__ == "__main__":
-    unittest.main()

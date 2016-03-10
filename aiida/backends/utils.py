@@ -12,6 +12,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
+
 def is_dbenv_loaded():
     """
     Return True of the dbenv was already loaded (with a call to load_dbenv),

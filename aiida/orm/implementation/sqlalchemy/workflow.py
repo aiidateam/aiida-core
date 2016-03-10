@@ -549,21 +549,6 @@ def kill_all():
         Workflow.get_subclass_from_uuid(w.uuid).kill()
 
 
-def kill_from_pk(pk, verbose=False):
-    """
-    Kills a workflow without loading the class, useful when there was a problem
-    and the workflow definition module was changed/deleted (and the workflow
-    cannot be reloaded).
-
-    :param pk: the principal key (id) of the workflow to kill
-    :param verbose: True to print the pk of each subworkflow killed
-    """
-    try:
-        Workflow.get_subclass_from_pk(pk).kill(verbose=verbose)
-    except IndexError:
-        raise NotExistent("No workflow with pk= {} found.".format(pk))
-
-
 def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                       depth=16):
     """

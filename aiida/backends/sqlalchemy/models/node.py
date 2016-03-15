@@ -225,6 +225,10 @@ class DbNode(Base):
 
         del d[key]
 
+    @property
+    def pk(self):
+        return self.id
+
     def __str__(self):
         simplename = self.get_simple_name(invalid_result="Unknown")
         # node pk + type

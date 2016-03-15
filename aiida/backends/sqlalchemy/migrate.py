@@ -147,15 +147,21 @@ def create_columns(debug=False):
         print_debug(debug, "Creating extras column")
         sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN extras JSONB DEFAULT \'{}\'')
 
+    linktype = sa.session.execute(verify_stmt.format('db_dblink', 'type'))
+    if not linktype.scalar():
+        print_debug(debug, "Creating link type column")
+        sa.session.execute('ALTER TABLE db_dblink ADD COLUMN type varchar(255)')
+
 def load_env(profile=None):
     if not is_profile_loaded():
         load_profile(profile)
+    # Getting import errors here, why is that?
     from aiida.backends.sqlalchemy.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()
 
 
-def migrate_extras(create_column=False, profile=None, group_size=1000, debug=False):
+def migrate_extras(create_column=False, profile=None, group_size=1000, debug=False, delete_table = False):
     """
     Migrate the DbExtra table into the extras column for db_dbnode.
     """
@@ -196,11 +202,12 @@ def migrate_extras(create_column=False, profile=None, group_size=1000, debug=Fal
             if not cont:
                 sa.session.rollback()
                 sys.exit(-1)
-
+        if delete_table:
+            sa.session.execute('DROP TABLE db_dbextra')
     sa.session.commit()
 
 
-def migrate_attributes(create_column=False, profile=None, group_size=1000, debug=False):
+def migrate_attributes(create_column=False, profile=None, group_size=1000, debug=False, delete_table = False):
     """
     Migrate the DbAttribute table into the attributes column of db_dbnode.
     """
@@ -246,7 +253,8 @@ def migrate_attributes(create_column=False, profile=None, group_size=1000, debug
             if not cont:
                 sa.session.rollback()
                 sys.exit(-1)
-
+        if delete_table:
+            sa.session.execute('DROP TABLE db_dbattribute')
     sa.session.commit()
 
 def migrate_json_column(profile=None):
@@ -278,7 +286,7 @@ def create_gin_index():
     """
     sa.session.bind.execute("CREATE INDEX db_dbnode_attributes_idx ON db_dbnode USING gin(attributes)")
 
-def migrate(create_column=False, profile=None, group_size=1000, debug=False):
+def migrate(create_column=False, profile=None, group_size=1000, debug=False, delete_table = False):
     """
     Migrate the attributes, extra, and some other columns to use JSONMigrate
     the attributes, extra, and some other columns to use JSONB column type.
@@ -288,7 +296,7 @@ def migrate(create_column=False, profile=None, group_size=1000, debug=False):
     cont = raw_input("Do you want to continue ? [y/n]")
     if cont.lower() != "y":
         sys.exit(0)
-    migrate_attributes(create_column=create_column, profile=profile, group_size=group_size, debug=debug)
-    migrate_extras(create_column=create_column, profile=profile, group_size=group_size, debug=debug)
+    migrate_attributes(create_column=create_column, profile=profile, group_size=group_size, debug=debug, delete_table = delete_table)
+    migrate_extras(create_column=create_column, profile=profile, group_size=group_size, debug=debug, delete_table = delete_table)
     create_gin_index()
     migrate_json_column(profile=profile)

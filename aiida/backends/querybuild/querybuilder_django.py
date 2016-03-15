@@ -387,15 +387,7 @@ class QueryBuilder(QueryBuilderBase):
         
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
-    def get_ormclass(self,cls, ormclasstype):
-        """
-        Return the valid ormclass for the connections
-        """
-        if ormclasstype == 'group':
-            return DummyGroup
-        elif ormclasstype == 'computer':
-            return DummyComputer
-        return DummyNode
+
 
     @staticmethod
     def get_session():

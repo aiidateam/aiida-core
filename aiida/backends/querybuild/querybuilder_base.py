@@ -433,6 +433,15 @@ class QueryBuilderBase(object):
                 "\nwhich I cannot process"
                 "\nValid keywords are: {}".format(kwargs.keys(), valid_keys)
             )
+    def get_ormclass(self,cls, ormclasstype):
+        """
+        Return the valid ormclass for the connections
+        """
+        if ormclasstype == 'group':
+            return self.Group
+        elif ormclasstype == 'computer':
+            return self.Computer
+        return self.Node
 
     def append(   self,
             cls         =   None,
@@ -1022,11 +1031,6 @@ class QueryBuilderBase(object):
             raise InputValidationError(
                 '{} is not a column of {}'.format(colname, alias)
             )
-        if isinstance(col, InstrumentedAttribute):
-            return col 
-        raise InputValidationError(
-            '{} is not a column'.format(colname)
-        )
 
     def _build_query(self):
         """

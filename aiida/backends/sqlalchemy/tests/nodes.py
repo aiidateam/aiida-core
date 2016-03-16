@@ -867,7 +867,7 @@ class TestNodeBasic(SqlAlchemyTests):
 
     @unittest.skip("Settings not implemented yet")
     def test_settings_methods(self):
-        from aiida.common.globalsettings import (
+        from aiida.backends.djsite.globalsettings import (
             get_global_setting_description, get_global_setting,
             set_global_setting, del_global_setting)
 

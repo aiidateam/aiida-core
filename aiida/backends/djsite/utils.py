@@ -125,7 +125,7 @@ def get_daemon_user():
     or the default AiiDA user in case no explicit configuration is found
     in the DbSetting table.
     """
-    from aiida.common.globalsettings import get_global_setting
+    from aiida.backends.djsite.globalsettings import get_global_setting
     from aiida.common.setup import DEFAULT_AIIDA_USER
 
     try:
@@ -138,7 +138,7 @@ def set_daemon_user(user_email):
     """
     Set the username (email) of the user that is allowed to run the daemon.
     """
-    from aiida.common.globalsettings import set_global_setting
+    from aiida.backends.djsite.globalsettings import set_global_setting
 
     set_global_setting('daemon|user', user_email,
                        description="The only user that is allowed to run the "
@@ -195,7 +195,7 @@ def get_db_schema_version():
     Get the current schema version stored in the DB. Return None if
     it is not stored.
     """
-    from aiida.common.globalsettings import get_global_setting
+    from aiida.backends.djsite.globalsettings import get_global_setting
 
     try:
         return get_global_setting('db|schemaversion')
@@ -208,7 +208,7 @@ def set_db_schema_version(version):
     Set the schema version stored in the DB. Use only if you know what
     you are doing.
     """
-    from aiida.common.globalsettings import set_global_setting
+    from aiida.backends.djsite.globalsettings import set_global_setting
 
     return set_global_setting('db|schemaversion', version, description=
     "The version of the schema used in this "

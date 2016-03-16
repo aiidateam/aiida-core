@@ -92,6 +92,22 @@ def get_automatic_user():
             email))
     return _aiida_autouser_cache
 
+
+def get_daemon_user():
+    """
+    Return the username (email) of the user that should run the daemon,
+    or the default AiiDA user in case no explicit configuration is found
+    in the DbSetting table.
+    """
+    from aiida.backends.sqlalchemy.globalsettings import get_global_setting
+    from aiida.common.setup import DEFAULT_AIIDA_USER
+
+    try:
+        return get_global_setting('daemon|user')
+    except KeyError:
+        return DEFAULT_AIIDA_USER
+
+
 def get_configured_user_email():
     """
     Return the email (that is used as the username) configured during the

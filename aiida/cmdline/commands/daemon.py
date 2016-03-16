@@ -112,11 +112,20 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.backends.djsite.utils import get_daemon_user, \
-            get_configured_user_email
+        from aiida.backends.settings import BACKEND
+        from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+        from aiida.common.utils import get_configured_user_email
 
-        daemon_user = get_daemon_user()
+        if BACKEND == BACKEND_DJANGO:
+            from aiida.backends.djsite.utils import get_daemon_user as get_daemon_user_dj
+            daemon_user = get_daemon_user_dj()
+        elif BACKEND == BACKEND_SQLA:
+            from aiida.backends.sqlalchemy.utils import get_daemon_user as get_daemon_user_sqla
+            daemon_user = get_daemon_user_sqla()
+
+
         this_user = get_configured_user_email()
+
 
         if daemon_user != this_user:
             print "You are not the daemon user! I will not start the daemon."
@@ -274,7 +283,6 @@ class Daemon(VerdiCommandWithSubcommands):
                 raise
         except Exception as e:
             import socket
-
             if isinstance(e, socket.error):
                 print "Could not reach the daemon, I got a socket.error: "
                 print "  -> [Errno {}] {}".format(e.errno, e.strerror)
@@ -371,10 +379,8 @@ class Daemon(VerdiCommandWithSubcommands):
         from django.core.exceptions import ObjectDoesNotExist
 
         from aiida.backends.djsite.db.models import DbUser
-        from aiida.backends.djsite.utils import (
-            get_configured_user_email,
-            get_daemon_user, set_daemon_user)
-
+        from aiida.backends.djsite.utils import get_daemon_user, set_daemon_user
+        from aiida.common.utils import get_configured_user_email
         from aiida.backends.djsite.db.tasks import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
 

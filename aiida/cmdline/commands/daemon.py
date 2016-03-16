@@ -15,7 +15,8 @@ def is_daemon_user():
     """
     Return True if the user is the current daemon user, False otherwise.
     """
-    from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
+    from aiida.backends.djsite.utils import get_daemon_user
+    from aiida.common.utils import get_configured_user_email
 
     daemon_user = get_daemon_user()
     this_user = get_configured_user_email()
@@ -328,7 +329,8 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
+        from aiida.backends.djsite.utils import get_daemon_user
+        from aiida.common.utils import get_configured_user_email
 
         daemon_user = get_daemon_user()
         this_user = get_configured_user_email()

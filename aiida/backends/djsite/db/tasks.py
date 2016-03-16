@@ -117,8 +117,8 @@ class SingleTask(celery.Task):
     lock = None
 
     def __call__(self, *args, **kwargs):
-        from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
-
+        from aiida.backends.djsite.utils import get_daemon_user
+        from aiida.common.utils import get_configured_user_email
         daemon_user = get_daemon_user()
         this_user = get_configured_user_email()
 

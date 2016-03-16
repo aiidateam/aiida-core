@@ -146,7 +146,7 @@ class User(VerdiCommandWithSubcommands):
         load_dbenv()
 
         from aiida.backends.djsite.db.models import DbUser
-        from aiida.backends.djsite.utils import get_configured_user_email
+        from aiida.common.utils import get_configured_user_email
         from aiida.common.exceptions import ConfigurationError
 
         try:

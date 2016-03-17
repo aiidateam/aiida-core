@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
-import unittest
 import datetime
+import importlib
 import json
+import shutil
+import sys
+import tempfile
 
-# Import needed for date parsing
 from dateutil.parser import parse
 
-# Import needed for Django initialization
-from aiida.backends.djsite.utils import load_dbenv
-from aiida.common.additions.backup_script import backup
-
 from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.djsite.utils import load_dbenv
+from aiida.common import utils
+from aiida.common.additions.backup_script import backup
+from aiida.common.additions.backup_script import backup_setup
+from aiida.orm.node import Node
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -18,7 +21,7 @@ __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
 
-class TestBackupScript(AiidaTestCase):
+class TestBackupScriptUnit(AiidaTestCase):
 
     _json_test_input_1 = '{"backup_length_threshold": 2, "periodicity": 2,' + \
         ' "oldest_object_backedup": "2014-07-18 13:54:53.688484+00:00", ' + \
@@ -237,4 +240,106 @@ class TestBackupScript(AiidaTestCase):
         self.assertEqual(
             self._backup_setup_inst._backup_dir,
             "/scratch/aiida_user/backup",
-            "_backup_setup_inst destination directory is not normalized as expected.")
+            "_backup_setup_inst destination directory is "
+            "not normalized as expected.")
+
+
+class TestBackupScriptIntegration(AiidaTestCase):
+
+    _aiida_rel_path = ".aiida"
+    _backup_rel_path = "backup"
+    _repo_rel_path = "repository"
+
+    _bs_instance = backup_setup.BackupSetup()
+
+    def test_integration(self):
+        # Fill in the repository with data
+        self.fill_repo()
+        try:
+            # Create a temp folder where the backup files will be placed
+            # and the backup will be stored
+            temp_folder = tempfile.mkdtemp()
+            # Create the backup scripts
+            backup_full_path = self.create_backup_scripts(temp_folder)
+
+            # Put the backup folder in the path
+            sys.path.append(backup_full_path)
+            # Import the backup script - this action will also run it
+            # It is assumed that the backup script ends with .py
+            importlib.import_module(self._bs_instance._script_filename[:-3])
+
+            # Check the backup
+            from aiida import settings
+            from filecmp import dircmp
+            import os
+            from aiida.common.utils import are_dir_trees_equal
+            source_dir = os.path.join(settings.REPOSITORY_PATH,
+                                      self._repo_rel_path)
+            dest_dir = os.path.join(backup_full_path,
+                                    self._bs_instance._file_backup_folder_rel,
+                                    self._repo_rel_path)
+            self.assertTrue(are_dir_trees_equal(source_dir, dest_dir),
+                            "The backed-up repository has differences "
+                            "to the original one.")
+        finally:
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
+    def fill_repo(self):
+        from aiida.orm import JobCalculation, CalculationFactory, Data, DataFactory
+
+        extra_name = self.__class__.__name__ + "/test_with_subclasses"
+        calc_params = {
+            'computer': self.computer,
+            'resources': {'num_machines': 1,
+                          'num_mpiprocs_per_machine': 1}
+        }
+
+        TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
+        ParameterData = DataFactory('parameter')
+
+        a1 = JobCalculation(**calc_params).store()
+        # To query only these nodes later
+        a1.set_extra(extra_name, True)
+        a2 = TemplateReplacerCalc(**calc_params).store()
+        # To query only these nodes later
+        a2.set_extra(extra_name, True)
+        a3 = Data().store()
+        a3.set_extra(extra_name, True)
+        a4 = ParameterData(dict={'a': 'b'}).store()
+        a4.set_extra(extra_name, True)
+        a5 = Node().store()
+        a5.set_extra(extra_name, True)
+        # I don't set the extras, just to be sure that the filtering works
+        # The filtering is needed because other tests will put stuff int he DB
+        a6 = JobCalculation(**calc_params)
+        a6.store()
+        a7 = Node()
+        a7.store()
+
+    def create_backup_scripts(self, tmp_folder):
+        backup_full_path = "{}/{}/{}/".format(tmp_folder, self._aiida_rel_path,
+                                              self._backup_rel_path)
+        # The predefined answers for the setup script
+        ac = utils.ArrayCounter()
+        answers = [backup_full_path,   # the backup folder path
+                   "",                  # should the folder be created?
+                   "",                  # destination folder of the backup
+                   "",                  # should the folder be created?
+                   "n",                 # print config explanation?
+                   "",                  # configure the backup conf file now?
+                   "", # start date of backup?
+                   "",                  # is it correct?
+                   "",                  # days to backup?
+                   "",                  # is it correct?
+                   "", # end date of backup
+                   "",                  # is it correct?
+                   "1",                 # periodicity
+                   "",                  # is it correct?
+                   "0",                 # threshold?
+                   ""]                  # is it correct?
+        utils.raw_input = lambda _: answers[ac.array_counter()]
+
+        # Run the setup script
+        self._bs_instance.run()
+
+        return backup_full_path

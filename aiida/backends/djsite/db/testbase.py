@@ -3,6 +3,9 @@
 Base class for AiiDA tests
 """
 from django.utils import unittest
+import shutil
+import tempfile
+import os
 
 # Add a new entry here if you add a file with tests under aiida.backends.djsite.db.subtests
 # The key is the name to use in the 'verdi test' command (e.g., a key 'generic'
@@ -48,7 +51,7 @@ class AiidaTestCase(unittest.TestCase):
         from aiida.orm.computer import Computer
         from aiida.backends.djsite.utils import get_configured_user_email
 
-        # I create the user only once:
+        # We create the user only once:
         # Otherwise, get_automatic_user() will fail when the
         # user is recreated because it caches the user!
         # In any case, store it in cls.user though
@@ -67,6 +70,18 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        from aiida.settings import REPOSITORY_PATH
+        from aiida.common.setup import TEMP_TEST_REPO_PREFIX
+        from aiida.common.exceptions import InvalidOperation
+        if not REPOSITORY_PATH.startswith(
+                os.path.join("/", tempfile.gettempprefix(),
+                             TEMP_TEST_REPO_PREFIX)):
+            raise InvalidOperation("Be careful. The repository for the tests "
+                                   "is not a test repository. I will not "
+                                   "empty the database and I will not delete "
+                                   "the repository. Repository path: "
+                                   "{}".format(REPOSITORY_PATH))
+
         from aiida.backends.djsite.db.models import DbComputer
 
         # I first delete the workflows
@@ -103,3 +118,7 @@ class AiidaTestCase(unittest.TestCase):
         from aiida.backends.djsite.db.models import DbLog
 
         DbLog.objects.all().delete()
+
+        # I clean the test repository
+        shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
+        os.makedirs(REPOSITORY_PATH)

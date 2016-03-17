@@ -29,6 +29,7 @@ db_test_list = {
     'qepwimmigrant': ['aiida.backends.djsite.db.subtests.quantumespressopwimmigrant'],
     'tcodexporter': ['aiida.backends.djsite.db.subtests.tcodexporter'],
     'workflows': ['aiida.backends.djsite.db.subtests.workflows'],
+    'query': ['aiida.backends.djsite.db.subtests.query'],
     'backup': ['aiida.backends.djsite.db.subtests.backup_script',
                'aiida.backends.djsite.db.subtests.backup_setup_script'],
 }

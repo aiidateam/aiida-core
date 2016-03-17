@@ -1,45 +1,30 @@
 from aiida.backends.djsite.db.testbase import AiidaTestCase
-from aiida.orm import CalculationFactory, DataFactory
-from aiida.orm.calculation.inline import InlineCalculation
-from aiida.backends.querybuild.querybuilder_django import QueryBuilder
-from aiida.orm.computer import Computer
+#~ from aiida.orm import CalculationFactory, DataFactory
+#~ from aiida.orm.calculation.inline import InlineCalculation
+#~ from aiida.backends.querybuild.querybuilder_django import QueryBuilder
+#~ from aiida.orm.computer import Computer
+#~ 
+#~ from aiida.orm import Node
 
-from aiida.orm import Node
-
-StructureData  = DataFactory('structure')
-ParameterData  = DataFactory('parameter')
-KpointsData    = DataFactory('array.kpoints')
-TrajectoryData = DataFactory('array.trajectory')
-QECalc         = CalculationFactory('quantumespresso.pw')
 
 #~ newcomputer.store()
-from time import sleep
+#from time import sleep
 
 class TestQueryBuilder(AiidaTestCase):
-    def test_simple_query(self):
+    def test_query_django(self):
         """
         Testing a simple query
         """
-        struc1  = StructureData()
-        param1  = ParameterData()
-        param2  = ParameterData()
-        qecalc1 = QECalc(computer = self.computer)
-        traj1   = TrajectoryData()
+        from aiida.backends.querybuild.querybuilder_django import QueryBuilder
+        from aiida.backends.querybuild.dummy_model import DbNode, DbLink, session
 
-        qecalc1.use_structure(struc1)
-        qecalc1.use_parameters(param1)
-        qecalc1.set_resources({'num_mpiprocs_per_machine':1,'num_machines':1})
-        qecalc1.store_all()
-
-        print Node.query().all()
+        n0 = DbNode(label = 'hello')
+        n1 = DbNode(label = 'bye')
+        n2 = DbNode(label = 'retried')
+        n3 = DbNode(label = 'HeLLo')
         
-        queryhelp  = {
-            'path':[
-                StructureData,
-                QECalc
-            ]
-        }
-        raw_input()
+        
+        return
 
         print list(QueryBuilder(**queryhelp).get_results_dict())
         

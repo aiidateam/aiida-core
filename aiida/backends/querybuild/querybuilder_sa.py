@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from querybuilder_base import QueryBuilderBase
+from sa_init import and_, or_
+
+from aiida.backends.sqlalchemy import session as sa_session
+from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
+from aiida.backends.sqlalchemy.models.computer import DbComputer
+from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
+from aiida.backends.sqlalchemy.models.user import DbUser
+
+
+
 
 class QueryBuilder(QueryBuilderBase):
     """
@@ -9,8 +19,22 @@ class QueryBuilder(QueryBuilderBase):
     """
 
     def __init__(self, *args, **kwargs):
-        raise DeprecationWarning("The use of this class is still deprecated")
+        from aiida.orm.implementation.sqlalchemy.node import Node as AiidaNode
+        from aiida.orm.implementation.sqlalchemy.group import Group as AiidaGroup
+        self.Link               = DbLink
+        self.Path               = DbPath
+        self.Node               = DbNode
+        self.Computer           = DbComputer
+        self.User               = DbUser
+        self.Group              = DbGroup
+        self.table_groups_nodes = table_groups_nodes
+        self.AiidaNode          = AiidaNode
+        self.AiidaGroup         = AiidaGroup
+        super(QueryBuilder, self).__init__(*args, **kwargs)
 
+        # raise DeprecationWarning("The use of this class is still deprecated")
+    def get_session(self):
+        return sa_session
     def analyze_filter_spec(self, alias, filter_spec):
         expressions = []
         for path_spec, filter_operation_dict in filter_spec.items():
@@ -37,7 +61,7 @@ class QueryBuilder(QueryBuilderBase):
                     filter_operation_dict = {'==':filter_operation_dict}
                 [
                     expressions.append(
-                        get_expr(
+                        self.get_expr(
                             operator, value, db_path, val_in_json
                         )
                     ) 
@@ -46,6 +70,7 @@ class QueryBuilder(QueryBuilderBase):
                 ]
         return and_(*expressions)
 
+    @staticmethod
     def get_expr(operator, value, db_path, val_in_json):
         def cast_according_to_type(path_in_json, value, val_in_json):
             if not val_in_json:
@@ -145,27 +170,28 @@ class QueryBuilder(QueryBuilderBase):
         return expr
 
 
-    def add_projectable_entity(self, projectable_spec, alias):
+    def add_projectable_entity(self, alias, projectable_spec):
         if projectable_spec == '*': # 
             self.que = self.que.add_entity(alias)
+            
         else:
-            if isinstance(path_to_value, dict):
-                type_to_cast, = path_to_value.values()
-                path_to_value, = path_to_value.keys()
+            if isinstance(projectable_spec, dict):
+                type_to_cast, = projectable_spec.values()
+                path_to_value, = projectable_spec.keys()
             else:
                 type_to_cast = 'json'
-            column_name = path_to_value.split('.')[0] 
-            json_path = path_to_value.split('.')[1:]
+            column_name = projectable_spec.split('.')[0] 
+            json_path = projectable_spec.split('.')[1:]
             if json_path:
                 if type_to_cast in ('json', 'int', 'float', 'bool'):
                     self.que = self.que.add_columns(
-                        get_column(
+                        self.get_column(
                             column_name, alias
                         )[json_path].cast(JSONB)
                     )
                 elif type_to_cast == 'str':
                     self.que = self.que.add_columns(
-                        get_column(
+                        self.get_column(
                             column_name, alias
                         )[json_path].astext
                     )
@@ -176,5 +202,6 @@ class QueryBuilder(QueryBuilderBase):
                         )
                     )
             else:
-                self.que =  self.que.add_columns(get_column(column_name, alias))
+                self.que =  self.que.add_columns(self.get_column(column_name, alias))
+        return projectable_spec
 

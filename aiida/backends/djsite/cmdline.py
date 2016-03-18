@@ -48,7 +48,7 @@ def get_workflow_list(pk_list=[], user=None, all_states=False, n_days_ago=None):
         filters = Q(user=user)
 
         if not all_states:
-            filters &= Q(state=wf_states.FINISHED) & Q(state=wf_states.ERROR)
+            filters &= ~Q(state=wf_states.FINISHED) & ~Q(state=wf_states.ERROR)
         if n_days_ago:
             t = timezone.now() - datetime.timedelta(days=n_days_ago)
             filters &= Q(ctime__gte=t)

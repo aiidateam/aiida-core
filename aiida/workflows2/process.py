@@ -8,6 +8,8 @@ class Process(plum.process.Process):
     __metaclass__ = ABCMeta
 
     def _on_process_starting(self, inputs):
+        super(Process, self)._on_process_starting(inputs)
+
         # Link and store the retrospective provenance for this process
         calc = self._create_db_record()
         for name, input in inputs.iteritems():
@@ -16,22 +18,23 @@ class Process(plum.process.Process):
         calc.store()
         self._current_calc = calc
 
-    def _on_process_finished(self, outputs):
+    def _on_process_finished(self, retval):
+        super(Process, self)._on_process_finished(retval)
+        self._current_calc = None
+
+    def _on_output_emitted(self, output_port, value):
         from aiida.common.exceptions import ModificationNotAllowed
+        super(Process, self)._on_process_finished(output_port, value)
 
-        # Check the output values
-        for name, output in outputs.iteritems():
-            if output._is_stored:
-                raise ModificationNotAllowed(
-                    "One of the values (for key '{}') of the "
-                    "dictionary returned by the wrapped function "
-                    "is already stored! Note that this node (and "
-                    "any other side effect of the function) are "
-                    "not going to be undone!".format(name))
+        if value._is_stored:
+            raise ModificationNotAllowed(
+                "The output {} from process is already stored!"
+                "Note that this node (and any other side effect"
+                "of the function) are not going to be undone!".
+                    format(output_port))
 
-        # Connect the outputs to the calculation that created them
-        for name, output in outputs:
-            output._add_link_from(self._current_calc, name)
+        value.store()
+        value._add_link_from(self._current_calc, output_port)
 
     @staticmethod
     def _create_db_record(self):
@@ -69,4 +72,6 @@ class FunctionProcess(Process):
         args = []
         for arg in self._func_args:
             args.append(kwargs.pop(arg))
-        return {self._output_name: self._func(*args)}
+        outs = self._func(*args)
+        for name, value in outs.iteritems():
+            self.out(name, value)

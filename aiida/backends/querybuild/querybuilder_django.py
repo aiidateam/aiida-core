@@ -468,7 +468,7 @@ class QueryBuilder(QueryBuilderBase):
             elif operator == 'like':
                 expr = column.like(value)
             elif operator == 'ilike':
-                expr = column.like(value)
+                expr = column.ilike(value)
             elif operator == 'in':
                 expr = column.in_(value)
             else:
@@ -541,3 +541,19 @@ class QueryBuilder(QueryBuilderBase):
                 )
             self.que =  self.que.add_columns(self.get_column(column_name, alias))
         return projectable_spec
+
+
+    def _execute_with_django(self):
+        """
+        Does not work because of the params 
+        """
+        from django.db import connection
+        cursor = connection.cursor()
+        #~ sql_query = str(self.que)
+        c = self.que.statement.compile()
+        sql_query_txt = str(c)
+        params = c.params
+        
+        cursor.execute(sql_query_txt, params)
+        res = cursor.fetchall()
+        return res

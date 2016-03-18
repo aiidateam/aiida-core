@@ -126,8 +126,9 @@ def pass_to_django_manage(argv, profile=None):
     """
     Call the corresponding django manage.py command
     """
-    from aiida.backends.utils import load_dbenv
-    load_dbenv(profile=profile)
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv(profile=profile)
 
     import django.core.management
     django.core.management.execute_from_command_line(argv)

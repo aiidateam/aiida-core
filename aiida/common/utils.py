@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 import datetime
+import filecmp
+import functools
 import os.path
 import string
 import sys
-import functools
+
 from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
@@ -659,6 +661,8 @@ def ask_question(question, reply_type, allow_none_as_answer):
             try:
                 if reply_type == int:
                     final_answer = int(answer)
+                elif reply_type == float:
+                    final_answer = float(answer)
                 elif reply_type == datetime.datetime:
                     final_answer = parse(answer)
                 else:
@@ -799,3 +803,46 @@ class combomethod(object):
                 return self.method(obj, *args, isclass = False, **kwargs)
             return self.method(objtype, *args, isclass = True,  **kwargs)
         return _wrapper
+
+
+class ArrayCounter(object):
+    """
+    A counter & a method that increments it and returns its value.
+    It is used in various tests.
+    """
+    seq = None
+
+    def __init__(self):
+        self.seq = -1
+
+    def array_counter(self):
+        self.seq += 1
+        return self.seq
+
+
+def are_dir_trees_equal(dir1, dir2):
+    """
+    Compare two directories recursively. Files in each directory are
+    assumed to be equal if their names and contents are equal.
+
+    @param dir1: First directory path
+    @param dir2: Second directory path
+
+    @return: True if the directory trees are the same and
+        there were no errors while accessing the directories or files,
+        False otherwise.
+    """
+    dirs_cmp = filecmp.dircmp(dir1, dir2)
+    if (len(dirs_cmp.left_only) > 0 or len(dirs_cmp.right_only) > 0 or
+                len(dirs_cmp.funny_files) > 0):
+        return False
+    (_, mismatch, errors) = filecmp.cmpfiles(
+        dir1, dir2, dirs_cmp.common_files, shallow=False)
+    if len(mismatch) > 0 or len(errors) > 0:
+        return False
+    for common_dir in dirs_cmp.common_dirs:
+        new_dir1 = os.path.join(dir1, common_dir)
+        new_dir2 = os.path.join(dir2, common_dir)
+        if not are_dir_trees_equal(new_dir1, new_dir2):
+            return False
+    return True

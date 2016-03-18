@@ -51,7 +51,6 @@ class BackupSetup(object):
         # The logger of the backup script
         self._logger = logging.getLogger("aiida_backup_setup")
 
-
     def construct_backup_variables(self, file_backup_folder_abs):
         backup_variables = {}
 

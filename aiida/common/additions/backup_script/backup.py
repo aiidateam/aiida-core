@@ -289,7 +289,7 @@ class Backup(object):
                 self._backup_length_threshold:
             self._logger.info("Backup (timestamp) length is below "
                               "the given threshold. Backup finished")
-            return None
+            return -1, None
 
         # Construct the queries & query sets
         query_sets = [DbNode.objects.filter(
@@ -302,7 +302,11 @@ class Backup(object):
         # Set the new start of the backup
         self._oldest_object_bk = backup_end_for_this_round
 
-        return query_sets
+        # Check if threshold is 0
+        if self._backup_length_threshold == datetime.timedelta(hours=0):
+            return -2, query_sets
+
+        return 0, query_sets
 
     def _backup_needed_files(self, query_sets):
         from aiida.backends.djsite.settings.settings import REPOSITORY_PATH
@@ -396,6 +400,7 @@ class Backup(object):
                          "Problem setting permissions to directory " +
                          "{}.".format(os.path.join(self._backup_dir,
                                                    tempRelPath)))
+                self._logger.warning(os.path.join(repository_path, tempRelPath))
                 self._logger.warning("More information: " +
                                      "{} (Error no: {})".format(e.strerror,
                                                                 e.errno))
@@ -428,10 +433,14 @@ class Backup(object):
         while True:
             self._read_backup_info_from_file(self._backup_info_filepath)
             item_sets_to_backup = self._find_files_to_backup()
-            if item_sets_to_backup is None:
+            if item_sets_to_backup[0] == -1:
                 break
-            self._backup_needed_files(item_sets_to_backup)
+            self._backup_needed_files(item_sets_to_backup[1])
             self._store_backup_info(self._backup_info_filepath)
+            if item_sets_to_backup[0] == -2:
+                self._logger.info("Threshold is 0. "
+                                  "Backed up one round and exiting.")
+                break
 
 
 class BackupError(Exception):

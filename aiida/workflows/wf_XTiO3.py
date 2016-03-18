@@ -248,7 +248,3 @@ def Murnaghan_fit(e, v):
     p0 = [e0, b0, bP, v0]
 
     return optimize.leastsq(residuals, p0, args=(e, v))
-    
-      
-    
-    

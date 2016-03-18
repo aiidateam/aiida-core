@@ -5,6 +5,7 @@ Do not delete, otherwise 'verdi developertest' will stop to work.
 """
 
 from aiida.orm import Calculation
+import aiida.workflows2.util as util
 from aiida.workflows2.process import FunctionProcess
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -70,9 +71,8 @@ def aiidise(func):
 
         # Run the wrapped function
         retval = util.to_db_type(func(*native_args, **native_kwargs))
-        outputs = util.Outputs({'result': retval})
 
-        _store_outputs(calc, outputs)
+        retval._add_link_from(calc, 'result')
 
         return retval
 

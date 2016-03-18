@@ -53,53 +53,6 @@ def to_native_type(data):
         raise ValueError("Cannot convert from database to native type")
 
 
-class EventHelper(object):
-    def __init__(self, listener_type):
-        assert(listener_type is not None)
-        self._listener_type = listener_type
-        self._listeners = []
-
-    def add_listener(self, listener):
-        assert(isinstance(listener, self._listeners))
-        self._listeners.append(listener)
-
-    def remove_listener(self, listener):
-        self._listeners.append(listener)
-
-    @property
-    def listeners(self):
-        return self._listeners
-
-
-class Sink(object):
-    def __init__(self, type):
-        self._type = type
-        self._current_value = None
-
-    def __str__(self):
-        return "({}){}".format(self._type, self._current_value)
-
-    def push(self, value):
-        if value is None:
-            raise ValueError("Cannot fill a sink with None")
-        if self._type is not None and not isinstance(value, self._type):
-            raise TypeError(
-                "Sink expects values of type {}".format(self._type))
-
-        self._current_value = value
-
-    def pop(self):
-        if not self.is_filled():
-            raise RuntimeError("Sink has no value")
-
-        val = self._current_value
-        self._current_value = None
-        return val
-
-    def is_filled(self):
-        return self._current_value is not None
-
-
 def save_calc(calc, func, inputs=None):
     # Add data input nodes as links
     if inputs:

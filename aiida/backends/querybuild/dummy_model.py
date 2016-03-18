@@ -119,6 +119,7 @@ class DbNode(Base):
     attributes = relationship(
         'DbAttribute',
         uselist = True,
+        backref='dbnode'
     )
 
 
@@ -195,6 +196,8 @@ class DbAttribute(Base):
     ival = Column(Integer, default=None, nullable=True)
     bval = Column(Boolean, default=None, nullable=True)
     dval = Column(DateTime, default=None, nullable = True)
+    #~ dbnode = relationship("DbNode")
+
 
 class DbComputer(Base):
     __tablename__ = "db_dbcomputer"

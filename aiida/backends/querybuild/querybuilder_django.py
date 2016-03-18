@@ -468,7 +468,7 @@ class QueryBuilder(QueryBuilderBase):
             elif operator == 'like':
                 expr = column.like(value)
             elif operator == 'ilike':
-                expr = column.like(value)
+                expr = column.ilike(value)
             elif operator == 'in':
                 expr = column.in_(value)
             else:

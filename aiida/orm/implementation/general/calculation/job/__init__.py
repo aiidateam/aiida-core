@@ -2,8 +2,14 @@
 
 from abc import abstractmethod
 
+
+from aiida.utils import timezone
+from aiida.common.utils import str_timedelta
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
+from aiida.backends.utils import get_automatic_user
+
+from aiida.orm.implementation.general.calculation import from_type_to_pluginclassname
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -766,9 +772,11 @@ class AbstractJobCalculation(object):
 
     @classmethod
     @abstractmethod
-    def _list_calculations(cls, states=None, past_days=None, group=None,
-                           group_pk=None, all_users=False, pks=[],
-                           relative_ctime=True):
+    def _list_calculations(
+            cls, states=None, past_days=None, group=None,
+            group_pk=None, all_users=False, pks=[],
+            relative_ctime=True, with_scheduler_state=False
+        ):
         """
         Return a string with a description of the AiiDA calculations.
 
@@ -800,7 +808,155 @@ class AbstractJobCalculation(object):
 
         :return: a string with description of calculations.
         """
-        pass
+        def pretty_print(str_matrix):
+            colwidths = [max([len(i) for i in column]) for column in zip(*str_matrix)]
+            for row in str_matrix:
+                print(
+                    ' | '.join([
+                        '{:{width}}'.format(rowitem, width=colwidths[colindex])
+                        for colindex, rowitem
+                        in enumerate(row)
+                    ])
+                )
+            
+        
+        from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import JobCalculation
+        from itertools import islice
+
+        now = timezone.now()
+
+
+        # Let's check the states:
+        if states:
+            for state in states:
+                if state not in calc_states:
+                    return "Invalid state provided: {}.".format(state)
+
+        # ge the last daemon check:
+        try:
+            last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
+        except ValueError:
+            last_check_string = ("# Last daemon state_updater check: "
+                                 "(Error while retrieving the information)")
+        else:
+            if last_daemon_check is None:
+                last_check_string = "# Last daemon state_updater check: (Never)"
+            else:
+                last_check_string = ("# Last daemon state_updater check: "
+                                     "{} ({})".format(
+                    str_timedelta(now - last_daemon_check, negative_to_zero=True),
+                    timezone.localtime(last_daemon_check).strftime("at %H:%M:%S on %Y-%m-%d")))
+        print last_check_string
+
+
+        calculation_filters = {}
+
+        # filter for calculation pks:
+        if pks:
+            calculation_filters['id'] = {'in':pks}
+
+        # filter for states:
+        if states:
+            calculation_filters['state'] = {'in':states}
+
+        # Filter on the users, if not all users
+        if not all_users:
+            user_id = get_automatic_user().id
+            calculation_filters['user_id'] = {'==':user_id}
+
+        # Filter on the group, either name or by pks
+        if group:
+            group_filters = {'name':{'like':'%{}%'.format(group)}}
+        elif group_pk:
+            group_filters = {'id':{'==':group_pk}}
+        else:
+            group_filters = None
+
+        if with_scheduler_state:
+            calculation_projections = [
+                    'id', 'state', 'ctime', 'type', '*'
+                ]
+            calc_list_data = [[
+                '# Pk', 'State', 'Creation',
+                'Sched. state', 
+                'Computer', 'Type'
+            ]]
+        else:
+            calculation_projections = [
+                    'id', 'state', 'ctime', 'type'
+                ]
+            calc_list_data = [[
+                '# Pk', 'State', 'Creation',
+                #'Sched. state', 
+                'Computer', 'Type'
+            ]]
+
+        qb = QueryBuilder()
+        qb.append(
+                JobCalculation,
+                filters=calculation_filters,
+                project=calculation_projections,
+                label='calculation'
+        )
+        if group_filters is not None:
+            qb.append("group", filters=group_filters)
+        qb.append(
+                type="computer",
+                computer_of='calculation',
+                project=['name'],
+                label='computer'
+            )
+
+        # Don't think it is necessary to order
+        #qb.order_by({'calculation':['ctime']})
+
+        results_generator = qb.get_results_dict()
+
+        while True:
+            try:
+                for i in range(100):
+                    res = results_generator.next()
+                    ctime = res['calculation']['ctime']
+                    if relative_ctime:
+                        calc_ctime = str_timedelta(
+                                now - ctime,
+                                negative_to_zero=True,
+                                max_num_fields=1
+                            )
+                    else:
+                        calc_ctime = " ".join([
+                                timezone.localtime(ctime).isoformat().split('T')[0],
+                                timezone.localtime(ctime).isoformat().split('T')[1].split('.')[
+                                                   0].rsplit(":", 1)[0]])
+                    
+                    if with_scheduler_state:
+                        calc_list_data.append([
+                            str(res['calculation']['id']),
+                            res['calculation']['state'],
+                            calc_ctime,
+                            res['calculation']['*'].get_attr('scheduler_state'),
+                            res['computer']['name'],
+                            from_type_to_pluginclassname(
+                                    res['calculation']['type']
+                            ).rsplit(".", 1)[0].lstrip('calculation.job.')
+                        ])
+                    else:
+                        calc_list_data.append([
+                            str(res['calculation']['id']),
+                            res['calculation']['state'],
+                            calc_ctime,
+                            res['computer']['name'],
+                            from_type_to_pluginclassname(
+                                    res['calculation']['type']
+                            ).rsplit(".", 1)[0].lstrip('calculation.job.')
+                        ])
+                pretty_print(calc_list_data)
+                calc_list_data = []
+            except StopIteration:
+                pretty_print(calc_list_data)
+                break
 
     @classmethod
     def _get_all_with_state(cls, state, computer=None, user=None,

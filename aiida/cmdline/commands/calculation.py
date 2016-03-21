@@ -175,6 +175,9 @@ class Calculation(VerdiCommandWithSubcommands):
         parser.add_argument('-t', '--absolute-time',
                             dest='relative_ctime', action='store_false',
                             help="Print the absolute creation time, rather than the relative creation time")
+        parser.add_argument('-k', '--with-scheduler-state',
+                            action='store_true',
+                            help='Print the scheduler state (slow)')
         parser.set_defaults(relative_ctime=True)
 
         args = list(args)
@@ -187,7 +190,19 @@ class Calculation(VerdiCommandWithSubcommands):
             parsed_args.states = None
 
         try:
-            print C._list_calculations(states=parsed_args.states,
+            C._list_calculations(
+                    states=parsed_args.states,
+                    past_days=parsed_args.past_days,
+                    pks=parsed_args.pks,
+                    all_users=parsed_args.all_users,
+                    group=parsed_args.group,
+                    group_pk=parsed_args.group_pk,
+                    relative_ctime=parsed_args.relative_ctime,
+                    with_scheduler_state=parsed_args.with_scheduler_state,
+            )
+            print
+            return
+            print C._list_calculations_old(states=parsed_args.states,
                                        past_days=parsed_args.past_days,
                                        pks=parsed_args.pks,
                                        all_users=parsed_args.all_users,

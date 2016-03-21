@@ -118,7 +118,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                     return most_recent_state
 
     @classmethod
-    def _list_calculations(cls, states=None, past_days=None, group=None,
+    def _list_calculations_old(cls, states=None, past_days=None, group=None,
                            group_pk=None, all_users=False, pks=[],
                            relative_ctime=True):
         """

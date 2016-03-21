@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship, backref, Query
+from sqlalchemy import ForeignKey, select, func, join, and_
+from sqlalchemy.orm import (
+        relationship, backref, Query, mapper,
+        foreign, column_property,
+    )
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
@@ -9,6 +12,7 @@ from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
 # Or maybe rely on sqlalchemy-utils UUID type
 from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy_utils.types.choice import ChoiceType
 
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQuery
@@ -17,7 +21,7 @@ from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.common import aiidalogger
 from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
-
+from aiida.common.datastructures import calc_states
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -236,3 +240,62 @@ class DbNode(Base):
             return "{} node [{}]: {}".format(simplename, self.pk, self.label)
         else:
             return "{} node [{}]".format(simplename, self.pk)
+
+class DbCalcState(Base):
+    __tablename__ = "db_dbcalcstate"
+
+    id = Column(Integer, primary_key=True)
+
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+    dbnode = relationship('DbNode', backref=backref('dbstates', passive_deletes=True))
+
+    state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
+
+    time = Column(DateTime(timezone=True), default=timezone.now)
+
+    __table_args__ = (
+        UniqueConstraint('dbnode_id', 'state'),
+    )
+
+
+states = select(
+        [
+            DbCalcState.dbnode_id.label('dbnode_id'),
+            func.max(DbCalcState.time).label('lasttime'),
+        ]
+    ).group_by(DbCalcState.dbnode_id).alias()
+
+recent_states = select([
+        DbCalcState.id.label('id'),
+        DbCalcState.dbnode_id.label('dbnode_id'),
+        DbCalcState.state.label('state'),
+        states.c.lasttime.label('time')
+    ]).\
+    select_from(
+        join(
+            DbCalcState,
+            states,
+            and_(
+                DbCalcState.dbnode_id == states.c.dbnode_id,
+                DbCalcState.time == states.c.lasttime,
+            )
+        )
+    ).alias() # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
+
+state_mapper = mapper(
+    DbCalcState,
+    recent_states, 
+    primary_key= recent_states.c.dbnode_id,
+    non_primary=True, 
+)
+
+DbNode.state_instance = relationship(
+    state_mapper,
+    primaryjoin = recent_states.c.dbnode_id == foreign(DbNode.id),
+    viewonly=True,
+)
+
+DbNode.state = column_property(
+    select([recent_states.c.state]).
+    where(recent_states.c.dbnode_id == foreign(DbNode.id))
+)

@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from querybuilder_base import QueryBuilderBase
-from sa_init import and_, or_
+from sa_init import (
+        and_, or_, not_, except_,
+        aliased, Integer, Float, Boolean, JSONB
+    )
 
 from aiida.backends.sqlalchemy import session as sa_session
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
@@ -75,14 +78,13 @@ class QueryBuilder(QueryBuilderBase):
         def cast_according_to_type(path_in_json, value, val_in_json):
             if not val_in_json:
                 return path_in_json
-            
+            elif isinstance(value, bool):
+                return path_in_json.cast(Boolean)
             elif isinstance(value, int):
                 return path_in_json.cast(Integer)
-            
             elif isinstance(value, float):
                 return path_in_json.cast(Float)
-            
-            elif isinstance(value, (list, tuple, dict, bool)) or value is None:
+            elif isinstance(value, (list, tuple, dict)) or value is None:
                 return path_in_json.cast(JSONB) # BOOLEANS?
             elif isinstance(value, str):
                 return path_in_json.astext

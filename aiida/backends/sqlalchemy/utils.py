@@ -51,13 +51,14 @@ def load_dbenv(process=None, profile=None, connection=None):
     # These should be on top of the file, but because of a circular import they need to be
     # here.
     from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-    from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
+    # from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
     from aiida.backends.sqlalchemy.models.comment import DbComment
     from aiida.backends.sqlalchemy.models.computer import DbComputer
     from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes #, table_groups_users
     from aiida.backends.sqlalchemy.models.lock import DbLock
     from aiida.backends.sqlalchemy.models.log import DbLog
-    from aiida.backends.sqlalchemy.models.node import DbLink, DbNode, DbPath
+    from aiida.backends.sqlalchemy.models.node import (
+            DbLink, DbNode, DbPath, DbCalcState)
     from aiida.backends.sqlalchemy.models.user import DbUser
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
 

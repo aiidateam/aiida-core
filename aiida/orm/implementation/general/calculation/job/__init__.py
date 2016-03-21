@@ -771,7 +771,6 @@ class AbstractJobCalculation(object):
             return None
 
     @classmethod
-    @abstractmethod
     def _list_calculations(
             cls, states=None, past_days=None, group=None,
             group_pk=None, all_users=False, pks=[],
@@ -822,7 +821,6 @@ class AbstractJobCalculation(object):
         
         from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm import JobCalculation
         from itertools import islice
 
         now = timezone.now()
@@ -895,7 +893,7 @@ class AbstractJobCalculation(object):
 
         qb = QueryBuilder()
         qb.append(
-                JobCalculation,
+                cls,
                 filters=calculation_filters,
                 project=calculation_projections,
                 label='calculation'

@@ -40,6 +40,23 @@ from aiida.backends.profile import (is_profile_loaded,
 #     """
 #     return sqlalchemy.session is not None
 
+def get_session(config):
+    """
+    :param config: the configuration for the set profile
+
+    :returns: A sqlalchemy session (connection to DB)
+    """
+    engine_url = (
+            "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+            "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+        ).format(**config)
+    engine = create_engine(engine_url,
+                           json_serializer=dumps_json,
+                           json_deserializer=loads_json)
+    Session = sessionmaker(bind=engine)
+    return Session()
+
+
 
 def load_dbenv(process=None, profile=None, connection=None):
     """
@@ -63,13 +80,7 @@ def load_dbenv(process=None, profile=None, connection=None):
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
 
     if not connection:
-        engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-                      "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
-        engine = create_engine(engine_url,
-                               json_serializer=dumps_json,
-                               json_deserializer=loads_json)
-        Session = sessionmaker(bind=engine)
-        sqlalchemy.session = Session()
+        sqlalchemy.session = get_session(config)
     else:
         Session = sessionmaker()
         sqlalchemy.session = Session(bind=connection)

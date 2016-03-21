@@ -251,7 +251,7 @@ class Daemon(VerdiCommandWithSubcommands):
 
         from aiida.utils import timezone
 
-        from aiida.backends.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.daemon.timestamps import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
 
         most_recent_timestamp = get_most_recent_daemon_timestamp()
@@ -293,9 +293,9 @@ class Daemon(VerdiCommandWithSubcommands):
             return
 
         if running_processes:
-            print "## Found {} processes running:".format(len(running_processes))
+            print "## Found {} process{} running:".format(len(running_processes), '' if len(running_processes)==1 else 'es')
             for process in running_processes:
-                print "* {:<22} {:<10} {}".format(
+                print "   * {:<22} {:<10} {}".format(
                     "{}[{}]".format(process['group'], process['name']),
                     process['statename'], process['description'])
         else:
@@ -318,7 +318,7 @@ class Daemon(VerdiCommandWithSubcommands):
 
         try:
             process = subprocess.Popen(
-                "supervisorctl -c {} tail -f aiida-daemon:0".format(
+                "supervisorctl -c {} tail -f aiida-daemon".format(
                     self.conffile_full_path),
                 shell=True)  # , stdout=subprocess.PIPE)
             process.wait()

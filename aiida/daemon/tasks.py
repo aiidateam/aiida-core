@@ -61,32 +61,35 @@ priority=1000
 
 """
 
-import celery
-from datetime import timedelta
+from celery import Celery
 from celery.task import periodic_task
+
+from datetime import timedelta
+
+from aiida.backends import settings
+from aiida.backends.utils import load_dbenv
+load_dbenv(process="daemon")
+
+
 
 from aiida.common.setup import get_profile_config
 from aiida.common.exceptions import ConfigurationError
 
-from aiida.backends import settings
-from aiida.backends.profile import BACKEND_SQLA
-from aiida.backends.utils import load_dbenv
-load_dbenv()
 
-DAEMON_CHECK_INTERVALS_SUBMIT  = 30
-DAEMON_CHECK_INTERVALS_RETRIEVE  = 30
+#~ from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+
+from aiida.daemon.timestamps import set_daemon_timestamp
 
 
-if settings.BACKEND != BACKEND_SQLA:
-    raise ConfigurationError(
-            "\n"
-            "   Backend is set to {}\n"
-            "   But I can only work with sqlalchemy\n"
-            "".format(settings.BACKEND)
-    )
+
+
+DAEMON_INTERVALS_SUBMIT = 30
+DAEMON_INTERVALS_RETRIEVE = 30
+DAEMON_INTERVALS_UPDATE = 30
+DAEMON_INTERVALS_WFSTEP = 30
+
+
 config = get_profile_config(settings.AIIDADB_PROFILE)
-
-
 
 engine = config["AIIDADB_ENGINE"]
 
@@ -110,46 +113,72 @@ else:
             engine))
 
 
-app = celery.Celery('tasks', broker=broker)
-
-
+app = Celery('tasks', broker=broker)
 
 # the tasks as taken from the djsite.db.tasks, same tasks and same functionalities
 # will now of course fail because set_daemon_timestep has not be implementd for SA
 
-@periodic_task(run_every=timedelta(seconds=config.get("DAEMON_CHECK_INTERVALS_SUBMIT", DAEMON_CHECK_INTERVALS_SUBMIT)))
+@periodic_task(
+        run_every=timedelta(
+                seconds=config.get(
+                        "DAEMON_INTERVALS_SUBMIT",
+                        DAEMON_INTERVALS_SUBMIT
+                )
+        )
+)
 def submitter():
-    from aiida.execmanager import submit_jobs
-
+    from aiida.daemon.execmanager import submit_jobs
+    print "aiida.daemon.tasks.submitter:  Checking for calculations to submit"
     set_daemon_timestamp(task_name='submitter', when='start')
     submit_jobs()
     set_daemon_timestamp(task_name='submitter', when='stop')
 
-
-@periodic_task(run_every=timedelta(seconds=config.get("DAEMON_CHECK_INTERVALS_RETRIEVE", DAEMON_CHECK_INTERVALS_RETRIEVE)))
-def updater():
-    from aiida.execmanager import update_jobs
-
-    set_daemon_timestamp(task_name='updater', when='start')
-    update_jobs()
-    set_daemon_timestamp(task_name='updater', when='stop')
-
-
-@periodic_task(run_every=timedelta(seconds=config.get("DAEMON_CHECK_INTERVALS_RETRIEVE", DAEMON_CHECK_INTERVALS_RETRIEVE)))
-def retriever():
-    from aiida.execmanager import retrieve_jobs
-
-    set_daemon_timestamp(task_name='retriever', when='start')
-    retrieve_jobs()
-    set_daemon_timestamp(task_name='retriever', when='stop')
-
-
-@periodic_task(run_every=timedelta(seconds=config.get("DAEMON_CHECK_INTERVALS_RETRIEVE", DAEMON_CHECK_INTERVALS_RETRIEVE)))
-def workflow_stepper():
-    from aiida.workflowmanager import daemon_main_loop
-
-    set_daemon_timestamp(task_name='workflow', when='start')
-    daemon_main_loop()
-    set_daemon_timestamp(task_name='workflow', when='stop')
+#~ 
+#~ @periodic_task(
+        #~ run_every=timedelta(
+                #~ seconds=config.get(
+                        #~ "DAEMON_INTERVALS_UPDATE",
+                        #~ DAEMON_INTERVALS_UPDATE
+                #~ )
+        #~ )
+#~ )
+#~ def updater():
+    #~ from aiida.daemon.execmanager import update_jobs
+    #~ print "aiida.daemon.tasks.update:  Checking for calculations to update"
+    #~ set_daemon_timestamp(task_name='updater', when='start')
+    #~ update_jobs()
+    #~ set_daemon_timestamp(task_name='updater', when='stop')
+#~ 
+#~ 
+#~ @periodic_task(
+        #~ run_every=timedelta(
+                #~ seconds=config.get(
+                        #~ "DAEMON_INTERVALS_RETRIEVE",
+                        #~ DAEMON_INTERVALS_RETRIEVE
+                #~ )
+        #~ )
+#~ )
+#~ def retriever():
+    #~ from aiida.daemon.execmanager import retrieve_jobs
+    #~ print "aiida.daemon.tasks.retrieve:  Checking for calculations to retrieve"
+    #~ set_daemon_timestamp(task_name='retriever', when='start')
+    #~ retrieve_jobs()
+    #~ set_daemon_timestamp(task_name='retriever', when='stop')
+#~ 
+#~ 
+#~ @periodic_task(
+        #~ run_every=timedelta(
+                #~ seconds=config.get(
+                        #~ "DAEMON_INTERVALS_WFSTEP",
+                        #~ DAEMON_INTERVALS_WFSTEP
+                #~ )
+        #~ )
+#~ )
+#~ def workflow_stepper():
+    #~ from aiida.daemon.workflowmanager import daemon_main_loop
+    #~ print "aiida.daemon.tasks.workflowmanager:  Checking for workflows to manage"
+    #~ set_daemon_timestamp(task_name='workflow', when='start')
+    #~ daemon_main_loop()
+    #~ set_daemon_timestamp(task_name='workflow', when='stop')
     
-    
+    #~ 

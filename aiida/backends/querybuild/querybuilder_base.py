@@ -456,8 +456,10 @@ This would be the queryhelp::
         for key, val in kwargs.pop('filters', {}).items():
             self._add_filter(key, val)
 
+        self._limit = False
         self.limit(kwargs.pop('limit', False))
 
+        self._order_by = {}
         self.order_by(kwargs.pop('order_by', {}))
 
         if kwargs:
@@ -740,15 +742,15 @@ This would be the queryhelp::
 
         joining_keyword, joining_value = None, None
 
-        for k, v in kwargs.items():
-            if k not in spec_to_function_map:
+        for key, val in kwargs.items():
+            if key not in spec_to_function_map:
                 raise InputValidationError(
                         "\n\n\n"
                         "{} is not a valid keyword "
                         "for joining specification\n"
                         "Valid keywords are:\n"
                         "{}\n\n\n".format(
-                                k,
+                                key,
                                 spec_to_function_map+[
                                     'cls', 'type', 'label',
                                     'autolabel', 'filters', 'project'
@@ -763,10 +765,10 @@ This would be the queryhelp::
                         "\n\n\n".format(joining_keyword, k)
                     )
             else:
-                joining_keyword = k
-                if v in self.label_list:
-                    joining_value = v
-                elif v in self.cls_to_label_map:
+                joining_keyword = key
+                if val in self.label_list:
+                    joining_value = val
+                elif val in self.cls_to_label_map:
                     joining_value = self.cls_to_label_map[v]
                 else:
                     raise InputValidationError(
@@ -847,14 +849,31 @@ This would be the queryhelp::
         Set the entity to order by
 
         :param order_by:
-            a dictionary of key, value pairs
-            that specify what to order by
+            This is a list of items, where each item is a dictionary specifies
+            what to sort for an entity
 
-        Keys represent valid labels of entities (tables),
+        In each dictionary in that list,
+        keys represent valid labels of entities (tables),
         values are list of columns
         """
-        # TODO: Checks
-        self._order_by = self.make_json_compatible(order_by)
+        if not isinstance(order_by, (list, tuple)):
+            order_by = [order_by]
+        for order_spec in order_by:
+            if not isinstance(order_spec, dict):
+                    raise InputValidationError(
+                        "Invalid input for order_by statement: {}\n"
+                        "I am expecting a dictionary ORMClass,"
+                        "[columns to sort]"
+                        "".format(order_spec)
+                    )
+            for key,val in order_spec.items():
+                if key not in self.alias_dict:
+                    raise InputValidationError(
+                        "This key is unknown to me: {}".format(key)
+                    )
+                if not isinstance(val, (tuple, list)):
+                    order_spec[key] = [val]
+        self._order_by = order_by
         return self
 
     def _add_projection(self, key, projection_spec):
@@ -1107,6 +1126,24 @@ This would be the queryhelp::
                 entity_to_join,
                 entity_to_join.id == joined_entity.user_id
             )
+
+    def _join_to_computer_used(self, joined_entity, entity_to_join):
+        self.que = self.que.join(
+                entity_to_join,
+                entity_to_join.id == joined_entity.dbcomputer_id
+        )
+
+    def _join_computer(self, joined_entity, entity_to_join):
+        """
+        :param joined_entity: An entity that can use a computer (eg a node)
+        :param entity: aliased dbcomputer entity
+        
+        
+        """
+        self.que = self.que.join(
+                entity_to_join,
+                joined_entity.dbcomputer_id == entity_to_join.id
+        )
     def _get_function_map(self):
         d = {
                 'input_of'  : self._join_inputs,
@@ -1118,16 +1155,11 @@ This would be the queryhelp::
                 'direction' : None,
                 'group_of'  : self._join_groups,
                 'member_of' : self._join_group_members,
-                'runs_on'   : self._join_computer_used,
+                'runs_on'   : self._join_to_computer_used,
+                'computer_of':self._join_computer,
                 'used_by'   : self._join_users,
         }
         return d
-
-    def _join_computer_used(self, joined_entity, entity_to_join):
-        self.que = self.que.join(
-                entity_to_join,
-                entity_to_join.id == joined_entity.dbcomputer_id
-        )
     def _get_connecting_node(self, querydict, index):
         """
         :param querydict:
@@ -1346,25 +1378,15 @@ This would be the queryhelp::
                     ] = position_index
 
         ######################### ORDER ################################
-        if self._order_by:
-            if not isinstance(self.order_by, list):
-                self.order_by = [self.order_by]
-            for order_spec in self.order_by:
-                if not isinstance(order_spec, dict):
-                    raise InputValidationError(
-                        "Invalid input for order_by statement: {}\n"
-                        "I am expecting a dictionary ORMClass,"
-                        "[columns to sort]"
-                        "".format(order_spec)
-                    )
-                for key, val in order_spec.items():
-                    alias = self.alias_dict[key]
-                    if not isinstance(val, list):
-                        val = [val]
-                    for colname in val:
-                        self.que = self.que.order_by(
-                                self.get_column(colname, alias)
-                            )
+        for order_spec in self._order_by:
+            for key, val in order_spec.items():
+                alias = self.alias_dict[key]
+                if not isinstance(val, list):
+                    val = [val]
+                for colname in val:
+                    self.que = self.que.order_by(
+                            self.get_column(colname, alias)
+                        )
 
         ######################### LIMIT ################################
         if self._limit:
@@ -1503,7 +1525,6 @@ This would be the queryhelp::
                 return res.get_aiida_class()
             else:
                 return res
-
         for this_result in self.yield_per(100):
             yield {
                 label:{

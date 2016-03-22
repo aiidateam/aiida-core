@@ -890,11 +890,11 @@ This would be the queryhelp::
 
     @staticmethod
     @abstractmethod
-    def get_session():
+    def _get_session():
         pass
 
     @abstractmethod
-    def get_expr(*args):
+    def _get_expr(*args):
         """
         Applies a filter on the alias given.
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -972,7 +972,7 @@ This would be the queryhelp::
         pass
 
     @abstractmethod
-    def analyze_filter_spec(self, alias, filter_spec):
+    def _analyze_filter_spec(self, alias, filter_spec):
         """
         Recurse through the filter specification and apply filter operations.
 
@@ -1302,9 +1302,9 @@ This would be the queryhelp::
         }
 
         #Starting the query by receiving a session
-        # Every subclass needs to have get_session and give me the
+        # Every subclass needs to have _get_session and give me the
         # right session
-        self.que = self.get_session().query(self.alias_list[0])
+        self.que = self._get_session().query(self.alias_list[0])
 
 
         ######################### JOINS ################################
@@ -1334,7 +1334,7 @@ This would be the queryhelp::
                     ''.format(label, self.alias_dict.keys())
                 )
             self.que = self.que.filter(
-                    self.analyze_filter_spec(alias, filter_specs)
+                    self._analyze_filter_spec(alias, filter_specs)
                 )
 
         ######################### PROJECTIONS ##########################
@@ -1420,7 +1420,7 @@ This would be the queryhelp::
                 "and I don't know what to do with that"
                 ''.format(calc_class, type(calc_class))
             )
-        counterquery = self.get_session().query(orm_calc_class)
+        counterquery = self._get_session().query(orm_calc_class)
         if type_spec:
             counterquery = counterquery.filter(orm_calc_class.type == type_spec)
         for alias in input_alias_list:
@@ -1435,7 +1435,7 @@ This would be the queryhelp::
         counterquery._entities.pop(0)
         return counterquery
 
-    def except_if_input_to(self, calc_class):
+    def _except_if_input_to(self, calc_class):
         self.que = self.get_query()
         self.que = self.que.except_(self._make_counterquery(calc_class))
         return self
@@ -1448,12 +1448,13 @@ This would be the queryhelp::
     def get_aliases(self):
         return self.alias_list
 
-    def get_dict(self):
+    def get_queryhelp(self):
         """
         :returns:
             the json-compatible list of the
             input specifications (queryhelp)
         """
+        raise DeprecationWarning
         return {
             'path'      :   self.path,
             'filters'   :   self.filters,
@@ -1502,6 +1503,21 @@ This would be the queryhelp::
         :returns: a generator
         """
         return self.get_query().yield_per(count)
+    
+    def _get_aiida_res(self, res, key):
+        """
+        Some instance returned by ORM (django or SA) need to be converted
+        to Aiida instances (eg nodes)
+
+        :param res: the result returned by the query
+        :param key: the key that this entry would be return with
+
+        :returns: an aiida-compatible instance
+        """
+        if key == '*' and isinstance(res, (self.Group, self.Node)):
+            return res.get_aiida_class()
+        else:
+            return res
 
     def get_results_dict(self):
         """
@@ -1520,15 +1536,11 @@ This would be the queryhelp::
                 return res[pos]
             else:
                 return res
-        def get_aiida_res(res, key):
-            if key == '*' and isinstance(res, (self.Group, self.Node)):
-                return res.get_aiida_class()
-            else:
-                return res
+
         for this_result in self.yield_per(100):
             yield {
                 label:{
-                    key : get_aiida_res(get_result(this_result, position), key)
+                    key : self._get_aiida_res(get_result(this_result, position), key)
                     for key, position in val.items()
                 }
                 for label, val in self.label_to_projected_entity_dict.items()

@@ -390,11 +390,11 @@ class QueryBuilder(QueryBuilderBase):
 
 
     @staticmethod
-    def get_session():
+    def _get_session():
         return session
 
-    @staticmethod
-    def get_expr(operator, value, column, attr_key):
+    @classmethod
+    def _get_expr(cls, operator, value, column, attr_key):
         """
         :param operator:
             A string representation of a valid operator,
@@ -447,11 +447,14 @@ class QueryBuilder(QueryBuilderBase):
             negation = False
         if attr_key:
             mapped_class = column.prop.mapper.class_
-                
             expr = column.any(
                 and_(
                     mapped_class.key.like(attr_key),
-                    QueryBuilder.get_expr(operator, value, get_mapped_entity(mapped_class, value) , None)
+                    cls._get_expr(
+                            operator, value,
+                            get_mapped_entity(mapped_class, value),
+                            None
+                        )
                 )
             )
         else:
@@ -471,19 +474,46 @@ class QueryBuilder(QueryBuilderBase):
                 expr = column.ilike(value)
             elif operator == 'in':
                 expr = column.in_(value)
+            elif operator == 'and':
+                and_expressions_for_this_path = []
+                for filter_operation_dict in value:
+                    for newoperator, newvalue in filter_operation_dict.items():
+                        and_expressions_for_this_path.append(
+                                cls._get_expr(
+                                        newoperator, newvalue,
+                                        column, attr_key
+                                    )
+                            )
+                expr = and_(*and_expressions_for_this_path)
+            elif operator == 'or':
+                or_expressions_for_this_path = []
+                for filter_operation_dict in value:
+                    # Attention: Multiple expression inside
+                    # one direction are joint by and!
+                    # Default will and should always be kept AND
+                    or_expressions_for_this_path.append(and_(*[
+                            cls._get_expr(
+                                newoperator, newvalue,
+                                column, attr_key
+                            )
+                            for newoperator, newvalue
+                            in filter_operation_dict.items()
+                        ]
+                    ))
+                expr = or_(*or_expressions_for_this_path)
             else:
                 raise Exception('Unkown operator %s' % operator)
         if negation:
             return not_(expr)
         return expr
 
-    def analyze_filter_spec(self, alias, filter_spec):
+    def _analyze_filter_spec(self, alias, filter_spec):
 
         expressions = []
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in  ('and', 'or', '~or', '~and'):
                 subexpressions = [
-                    analyze_filter_spec(alias, sub_filter_spec)
+                    _analyze_filter_spec(alias, sub_filter_spec)
                     for sub_filter_spec in filter_operation_dict
                 ]
                 if path_spec == 'and':
@@ -503,7 +533,7 @@ class QueryBuilder(QueryBuilderBase):
                     filter_operation_dict = {'==':filter_operation_dict}
                 [
                     expressions.append(
-                        self.get_expr(
+                        self._get_expr(
                             operator, value, column, attr_key
                         )
                     ) 

@@ -17,6 +17,8 @@ from aiida.common.exceptions import (
 from aiida.common import aiidalogger
 from aiida.orm import load_node
 
+from aiida.backends import settings
+from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
@@ -176,23 +178,35 @@ def update_running_calcs_status(authinfo):
 
 
 def get_authinfo(computer, aiidauser):
-    from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
+    if settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
 
-    try:
-        authinfo = DbAuthInfo.objects.get(
-            # converts from name, Computer or DbComputer instance to
-            # a DbComputer instance
-            dbcomputer=DbComputer.get_dbcomputer(computer),
-            aiidauser=aiidauser)
-    except ObjectDoesNotExist:
-        raise AuthenticationError(
-            "The aiida user {} is not configured to use computer {}".format(
-                aiidauser.email, computer.name))
-    except MultipleObjectsReturned:
-        raise ConfigurationError(
-            "The aiida user {} is configured more than once to use "
-            "computer {}! Only one configuration is allowed".format(
-                aiidauser.email, computer.name))
+        try:
+            authinfo = DbAuthInfo.objects.get(
+                # converts from name, Computer or DbComputer instance to
+                # a DbComputer instance
+                dbcomputer=DbComputer.get_dbcomputer(computer),
+                aiidauser=aiidauser)
+        except ObjectDoesNotExist:
+            raise AuthenticationError(
+                "The aiida user {} is not configured to use computer {}".format(
+                    aiidauser.email, computer.name))
+        except MultipleObjectsReturned:
+            raise ConfigurationError(
+                "The aiida user {} is configured more than once to use "
+                "computer {}! Only one configuration is allowed".format(
+                    aiidauser.email, computer.name))
+    elif settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+        from aiida.backends.sqlalchemy import session
+        authinfo = session.query(DbAuthInfo).filter_by(
+                dbcomputer_id=computer.id,
+                aiidauser_id=aiidauser.id,
+                
+                ).one()
+
+    else:
+        raise Exception("unknown backend {}".format(settings.BACKEND))
     return authinfo
 
 
@@ -274,23 +288,33 @@ def submit_jobs():
     Submit all jobs in the TOSUBMIT state.
     """
     from aiida.orm import JobCalculation, Computer
-    from aiida.backends.djsite.db.models import DbComputer, DbUser
     from aiida.utils.logger import get_dblogger_extra
 
-
-    # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
         JobCalculation._get_all_with_state(
             state=calc_states.TOSUBMIT,
-            only_computer_user_pairs=True)
+            only_computer_user_pairs=True,
+            only_enabled=True)
     )
 
-    for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        if not Computer(dbcomputer=dbcomputer).is_enabled():
-            continue
-        aiidauser = DbUser.objects.get(id=aiidauser_id)
+    if settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.db.models import DbComputer, DbUser
+    elif settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.models.computer import DbComputer
+        from aiida.backends.sqlalchemy.models.user import DbUser
+        from aiida.backends.sqlalchemy import session
 
+    # I create a unique set of pairs (computer, aiidauser)
+
+    for dbcomputer_id, aiidauser_id in computers_users_to_check:
+        print dbcomputer_id, aiidauser_id
+
+        if settings.BACKEND == BACKEND_DJANGO:
+            aiidauser = DbUser.objects.get(id=aiidauser_id)
+            dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
+        else:
+            aiidauser = session.query(DbUser).get(aiidauser_id)
+            dbcomputer = session.query(DbComputer).get(dbcomputer_id)
         execlogger.debug("({},{}) pair to submit".format(
             aiidauser.email, dbcomputer.name))
 
@@ -298,6 +322,7 @@ def submit_jobs():
             try:
                 authinfo = get_authinfo(dbcomputer, aiidauser)
             except AuthenticationError:
+                # TODO!!
                 # Put each calculation in the SUBMISSIONFAILED state because
                 # I do not have AuthInfo to submit them
                 calcs_to_inquire = JobCalculation._get_all_with_state(
@@ -323,13 +348,14 @@ def submit_jobs():
             submitted_calcs = submit_jobs_with_authinfo(authinfo)
         except Exception as e:
             import traceback
-
+            
             msg = ("Error while submitting jobs "
                    "for aiidauser={} on computer={}, "
                    "error type is {}, traceback: {}".format(
                 aiidauser.email,
                 dbcomputer.name,
                 e.__class__.__name__, traceback.format_exc()))
+            print msg
             execlogger.error(msg)
             # Continue with next computer
             continue

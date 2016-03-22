@@ -15,14 +15,10 @@ def set_global_setting(key, value, description=None):
     Set a global setting in the DbSetting table (therefore, stored at the DB
     level).
     """
-    raise NotImplementedError
-    # from aiida.backends.djsite.db.models import DbSetting
-
-    # Before storing, validate the key
-    # DbSetting.validate_key(key)
-
+    #~ raise NotImplementedError
+    from aiida.backends.sqlalchemy.models.settings import DbSetting
     # This also saves in the DB    
-    # DbSetting.set_value(key, value, other_attribs={"description": description})
+    DbSetting.set_value(key, value, other_attribs={"description": description})
 
 
 def del_global_setting(key):

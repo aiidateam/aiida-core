@@ -2,13 +2,14 @@
 from sqlalchemy import Column
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text, Float
 from aiida.backends.sqlalchemy.models.base import Base
+from sqlalchemy.schema import UniqueConstraint
 from aiida.utils import timezone
-
+import sys
 
 
 class DbSetting(Base):
     __tablename__ = "db_dbsetting"
-
+    __table_args__ = (UniqueConstraint('key'),)
     id = Column(Integer, primary_key=True)
 
     key = Column(String(255), index = True, nullable = False)
@@ -115,15 +116,12 @@ class DbSetting(Base):
 
         cls.validate_key(key)
 
-        try:
-            if with_transaction:
-                sid = transaction.savepoint()
 
+        try:
             # create_value returns a list of nodes to store
             to_store = cls.create_value(key, value,
                                         subspecifier_value=subspecifier_value,
                                         other_attribs=other_attribs)
-
             if to_store:
                 if not stop_if_existing:
                     # Delete the olf values if stop_if_existing is False,
@@ -138,27 +136,25 @@ class DbSetting(Base):
                     ## there is the risk that trailing pieces remain
                     ## so in general it is good to recursively clean
                     ## all sub-items.
-                    cls.del_value(key,
-                                  subspecifier_value=subspecifier_value)
-                cls.objects.bulk_create(to_store)
-
-            if with_transaction:
-                transaction.savepoint_commit(sid)
+                    cls.del_value(
+                            key, subspecifier_value=subspecifier_value
+                        )
+                
+                session.add_all(to_store)
+                session.commit()
         except BaseException as e:  # All exceptions including CTRL+C, ...
-            from django.db.utils import IntegrityError
-            from aiida.common.exceptions import UniquenessError
-
-            if with_transaction:
-                transaction.savepoint_rollback(sid)
-            if isinstance(e, IntegrityError) and stop_if_existing:
-                raise UniquenessError("Impossible to create the required "
-                                      "entry "
-                                      "in table '{}', "
-                                      "another entry already exists and the creation would "
-                                      "violate an uniqueness constraint.\nFurther details: "
-                                      "{}".format(
-                    cls.__name__, e.message))
-            raise
+            import traceback
+            print '1', e.__doc__
+            print '2', sys.exc_info()
+            print '3', sys.exc_info()[0]
+            print '4', sys.exc_info()[1]
+            print '5', sys.exc_info()[2], 
+            print 'Sorry I mean line...',
+            print traceback.tb_lineno(sys.exc_info()[2])
+            ex_type, ex, tb = sys.exc_info()
+            print '6', traceback.print_tb(tb)
+            session.rollback()
+            raise Exception(e)
 
     @classmethod
     def create_value(cls, key, value, subspecifier_value=None,
@@ -451,7 +447,7 @@ class DbSetting(Base):
           Must be the value of the subspecifier (e.g., the dbnode) for classes
           that define it (e.g. DbAttribute and DbExtra)
         """
-        from django.db.models import Q
+        from aiida.backends.sqlalchemy import session
 
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:
@@ -467,11 +463,20 @@ class DbSetting(Base):
             subspecifiers_dict = {cls._subspecifier_field_name:
                                       subspecifier_value}
 
-        query = Q(key__startswith="{parentkey}{sep}".format(
-            parentkey=key, sep=cls._sep),
-            **subspecifiers_dict)
+        que  = session.query(cls).filter_by(**subspecifiers_dict)
 
-        if not only_children:
-            query.add(Q(key=key, **subspecifiers_dict), Q.OR)
-
-        cls.objects.filter(query).delete()
+        if only_children:
+            que = que.filter(
+                cls.key.like("{parentkey}{sep}%".format(
+                        parentkey=key, sep=cls._sep
+                    ))
+                )
+        else:
+            que = session.query(cls).filter(
+                cls.key.like("{parentkey}%".format(
+                        parentkey=key, sep=cls._sep
+                    )),
+                )
+        for item in que.all():
+            session.delete(item)
+        session.flush()

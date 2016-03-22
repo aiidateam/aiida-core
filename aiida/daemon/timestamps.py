@@ -29,21 +29,33 @@ def get_most_recent_daemon_timestamp():
     """
     import datetime
     # I go low-level here
-    from aiida.backends.djsite.db.models import DbSetting
+    if settings.BACKEND==BACKEND_DJANGO:
+        from aiida.backends.djsite.db.models import DbSetting
+        daemon_timestamps = DbSetting.objects.filter(key__startswith='daemon|task_')
+        timestamps = []
+        for timestamp_setting in daemon_timestamps:
+            timestamp = timestamp_setting.getvalue()
+            if isinstance(timestamp, datetime.datetime):
+                timestamps.append(timestamp)
 
-    daemon_timestamps = DbSetting.objects.filter(key__startswith='daemon|task_')
-    timestamps = []
-    for timestamp_setting in daemon_timestamps:
-        timestamp = timestamp_setting.getvalue()
-        if isinstance(timestamp, datetime.datetime):
-            timestamps.append(timestamp)
+        if timestamps:
+            # The most recent timestamp
 
-    if timestamps:
-        # The most recent timestamp
+            return max(timestamps)
+        else:
+            return None
 
-        return max(timestamps)
-    else:
-        return None
+    elif settings.BACKEND==BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        from aiida.backends.sqlalchemy import session
+        from sqlalchemy import func
+        maxtimestamp, = session.query(
+                func.max(DbSetting.dval)
+            ).filter(
+                DbSetting.key.like("daemon|task%")
+            ).first()
+        return maxtimestamp
+
 
 
 

@@ -64,9 +64,10 @@ class Daemon(VerdiCommandWithSubcommands):
             'configureuser': (self.configure_user, self.complete_none),
         }
 
+        conffilename = setup.DAEMON_CONF_FILE.replace('.conf', '_new.conf')
         self.conffile_full_path = os.path.expanduser(os.path.join(
             setup.AIIDA_CONFIG_FOLDER,
-            setup.DAEMON_SUBDIR, setup.DAEMON_CONF_FILE))
+            setup.DAEMON_SUBDIR, conffilename))
 
 
     def _get_pid_full_path(self):

@@ -234,18 +234,17 @@ class QueryBuilder(QueryBuilderBase):
         return projectable_spec
 
 
-    def _get_aiida_res(self, res, key):
+    def _get_aiida_res(self, res):
         """
         Some instance returned by ORM (django or SA) need to be converted
         to Aiida instances (eg nodes). Choice (sqlalchemy_utils)
         will return their value
 
         :param res: the result returned by the query
-        :param key: the key that this entry would be return with
 
         :returns: an aiida-compatible instance
         """
-        if key == '*' and isinstance(res, (self.Group, self.Node)):
+        if isinstance(res, (self.Group, self.Node)):
             return res.get_aiida_class()
         elif isinstance(res, Choice):
             return res.value

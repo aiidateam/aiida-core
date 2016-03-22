@@ -1084,9 +1084,12 @@ class AbstractJobCalculation(object):
         elif isinstance(computer, Computer):
             calcfilter.update({'dbcomputer_id':{'==':computer.pk}})
         else:
-            raise Exception(
-                "{} is not a valid computer".format(computer)
-            )
+            try:
+                calcfilter.update({'dbcomputer_id':{'==':computer.id}})
+            except AttributeError as e:
+                raise Exception(
+                    "{} is not a valid computer\n{}".format(computer, e)
+                )
 
         if user is None:
             pass
@@ -1107,11 +1110,11 @@ class AbstractJobCalculation(object):
                     project=['dbcomputer_id', 'user_id'],
                     runs_on='computer'
                 )
-            res = qb.distinct().all()
+            returnresult = qb.distinct().all()
         else:
-            qb.append(cls, filters=calcfilter)
-            res = qb.get_results_dict()
-        return res
+            qb.append(cls, filters=calcfilter, project=['*'], runs_on='computer')
+            returnresult = qb.all()
+        return returnresult
 
 
 

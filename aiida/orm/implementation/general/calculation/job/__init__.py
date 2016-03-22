@@ -800,7 +800,8 @@ class AbstractJobCalculation(object):
     def _list_calculations(
             cls, states=None, past_days=None, group=None,
             group_pk=None, all_users=False, pks=[],
-            relative_ctime=True, with_scheduler_state=False
+            relative_ctime=True, with_scheduler_state=False,
+            order_by=None, limit=None
         ):
         """
         Return a string with a description of the AiiDA calculations.
@@ -854,8 +855,9 @@ class AbstractJobCalculation(object):
                     ])
                 )
 
-        from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
+
         from aiida.orm.querybuilder import QueryBuilder
+        from django.core.exceptions import ImproperlyConfigured
 
 
         now = timezone.now()
@@ -865,14 +867,33 @@ class AbstractJobCalculation(object):
             for state in states:
                 if state not in calc_states:
                     return "Invalid state provided: {}.".format(state)
-
+        #Let's check if there is something to order_by:
+        valid_order_parameters = (None, 'id', 'ctime')
+        if order_by not in valid_order_parameters:
+            raise Exception(
+                "invalid order by parameter {}\n"
+                "valid parameters are:\n"
+                "".format(order_by, valid_order_parameters)
+            )
+        # Limit:
+        if not(limit is None or isinstance(limit, int)):
+            raise Exception(
+                "Limit (set to {}) has to be an integer or None".format(limit)
+            )
         # get the last daemon check:
         try:
+            from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
             last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
         except ValueError:
             last_check_string = (
                     "# Last daemon state_updater check: "
                     "(Error while retrieving the information)"
+            )
+        except ImproperlyConfigured:
+            # get_last_daemon_timestamp cannot be imported
+            # when using SQLA because it is sqla specific
+            last_check_string = (
+                    "# Cannot run state_update, django method"
             )
         else:
             if last_daemon_check is None:
@@ -926,6 +947,8 @@ class AbstractJobCalculation(object):
             else:
                 group_filters = None
 
+            
+
         if with_scheduler_state:
             calculation_projections = [
                     'id', 'state', 'ctime', 'type', '*'
@@ -961,6 +984,13 @@ class AbstractJobCalculation(object):
                 label='computer'
             )
 
+        # ORDER
+        if order_by is not None:
+            qb.order_by({'calculation':[order_by]})
+
+        # LIMIT
+        if limit is not None:
+            qb.limit(limit)
         # I have removed order_by since it slows query down
         # qb.order_by({'calculation':['ctime']})
 

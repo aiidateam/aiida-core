@@ -175,9 +175,16 @@ class Calculation(VerdiCommandWithSubcommands):
         parser.add_argument('-t', '--absolute-time',
                             dest='relative_ctime', action='store_false',
                             help="Print the absolute creation time, rather than the relative creation time")
-        parser.add_argument('-k', '--with-scheduler-state',
+        parser.add_argument('-w', '--with-scheduler-state',
                             action='store_true',
                             help='Print the scheduler state (slow)')
+        parser.add_argument('-l', '--limit',
+                            type=int,
+                            default=None,
+                            help='set a limit to the number of rows returned')
+        parser.add_argument('-o', '--order-by',
+                            choices=['id', 'ctime'], default=None,
+                            help='order the results')
         parser.set_defaults(relative_ctime=True)
 
         args = list(args)
@@ -199,6 +206,8 @@ class Calculation(VerdiCommandWithSubcommands):
                     group_pk=parsed_args.group_pk,
                     relative_ctime=parsed_args.relative_ctime,
                     with_scheduler_state=parsed_args.with_scheduler_state,
+                    order_by=parsed_args.order_by,
+                    limit=parsed_args.limit
             )
             print
             return

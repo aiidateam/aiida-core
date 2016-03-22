@@ -171,17 +171,16 @@ class Computer(AbstractComputer):
             self.dbcomputer.save()
 
     def get_transport_params(self):
-        try:
-            return json.loads(self.dbcomputer.transport_params)
-        except ValueError:
-            raise DbContentError(
-                "Error while reading transport_params for computer {}".format(
-                    self.hostname))
+        """
+        Return transport params stored in dbcomputer instance
+        """
+        return self.dbcomputer.transport_params
 
     def set_transport_params(self, val):
         # if self.to_be_stored:
         try:
-            self.dbcomputer.transport_params = json.dumps(val)
+            json.dumps(val) # Check if json compatible
+            self.dbcomputer.transport_params = val
         except ValueError:
             raise ValueError("The set of transport_params are not JSON-able")
         if not self.to_be_stored:

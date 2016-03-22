@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from abc import abstractmethod
-
+import datetime
 
 from aiida.utils import timezone
 from aiida.common.utils import str_timedelta
@@ -9,7 +9,9 @@ from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.backends.utils import get_automatic_user
 
-from aiida.orm.implementation.general.calculation import from_type_to_pluginclassname
+from aiida.orm.implementation.general.calculation import (
+    from_type_to_pluginclassname
+)
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -49,10 +51,12 @@ class AbstractJobCalculation(object):
         # Set default for the link to the retrieved folder (after calc is done)
         self._linkname_retrieved = 'retrieved'
 
-        self._updatable_attributes = ('state', 'job_id', 'scheduler_state',
-                                      'scheduler_lastchecktime',
-                                      'last_jobinfo', 'remote_workdir', 'retrieve_list',
-                                      'retrieve_singlefile_list')
+        self._updatable_attributes = (
+                'state', 'job_id', 'scheduler_state',
+                'scheduler_lastchecktime',
+                'last_jobinfo', 'remote_workdir', 'retrieve_list',
+                'retrieve_singlefile_list'
+        )
 
         # Files in which the scheduler output and error will be stored.
         # If they are identical, outputs will be joined.
@@ -118,9 +122,11 @@ class AbstractJobCalculation(object):
         try:
             _ = self.get_parserclass()
         except MissingPluginError:
-            raise ValidationError("No valid plugin found for the parser '{}'. "
-                                  "Set the parser to None if you do not need an automatic "
-                                  "parser.".format(self.get_parser_name()))
+            raise ValidationError(
+                    "No valid plugin found for the parser '{}'. "
+                    "Set the parser to None if you do not need an automatic "
+                    "parser.".format(self.get_parser_name())
+                )
 
         computer = self.get_computer()
         s = computer.get_scheduler()
@@ -132,7 +138,9 @@ class AbstractJobCalculation(object):
 
         if not isinstance(self.get_withmpi(), bool):
             raise ValidationError(
-                "withmpi property must be boolean! It in instead {}".format(str(type(self.get_withmpi()))))
+                    "withmpi property must be boolean! It in instead {}"
+                    "".format(str(type(self.get_withmpi())))
+            )
 
 
     def _can_link_as_output(self, dest):
@@ -222,7 +230,8 @@ class AbstractJobCalculation(object):
 
     def get_import_sys_environment(self):
         """
-        To check if it's loading the system environment on the submission script.
+        To check if it's loading the system environment
+        on the submission script.
 
         :return: a boolean. If True the system environment will be load.
         """
@@ -243,9 +252,11 @@ class AbstractJobCalculation(object):
 
         for k, v in env_vars_dict.iteritems():
             if not isinstance(k, basestring) or not isinstance(v, basestring):
-                raise ValueError("Both the keys and the values of the "
-                                 "dictionary passed to set_environment_variables must be "
-                                 "strings.")
+                raise ValueError(
+                    "Both the keys and the values of the "
+                    "dictionary passed to set_environment_variables must be "
+                    "strings."
+                )
 
         return self._set_attr('custom_environment_variables', env_vars_dict)
 
@@ -305,7 +316,8 @@ class AbstractJobCalculation(object):
         like the number of nodes, cpus, ...
         This dictionary is scheduler-plugin dependent. Look at the documentation
         of the scheduler.
-        (scheduler type can be found with calc.get_computer().get_scheduler_type() )
+        (scheduler type can be found with
+        calc.get_computer().get_scheduler_type() )
         """
         # Note: for the time being, resources are only validated during the
         # 'store' because here we are not sure that a Computer has been set
@@ -516,7 +528,7 @@ class AbstractJobCalculation(object):
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed(
                 "Can remove an input link to a calculation only if it is in one "
-                "of the following states: {}, it is instead {}".format(
+                "of the following states:\n   {}\n it is instead {}".format(
                     valid_states, self.get_state()))
 
         return super(AbstractJobCalculation, self)._remove_link_from(label)
@@ -595,8 +607,13 @@ class AbstractJobCalculation(object):
         :return: a boolean
         """
         return self.get_state() in [
-            calc_states.TOSUBMIT, calc_states.SUBMITTING, calc_states.WITHSCHEDULER,
-            calc_states.COMPUTED, calc_states.RETRIEVING, calc_states.PARSING]
+                calc_states.TOSUBMIT,
+                calc_states.SUBMITTING,
+                calc_states.WITHSCHEDULER,
+                calc_states.COMPUTED,
+                calc_states.RETRIEVING,
+                calc_states.PARSING
+            ]
 
     def has_finished_ok(self):
         """
@@ -628,7 +645,8 @@ class AbstractJobCalculation(object):
 
     def _get_remote_workdir(self):
         """
-        Get the path to the remote (on cluster) scratch folder of the calculation.
+        Get the path to the remote (on cluster) scratch
+        folder of the calculation.
 
         :return: a string with the remote path
         """
@@ -644,7 +662,8 @@ class AbstractJobCalculation(object):
 
         # accept format of: [ 'remotename',
         #                     ['remotepath','localpath',0] ]
-        # where the last number is used to decide the localname, see CalcInfo or execmanager
+        # where the last number is used
+        # to decide the localname, see CalcInfo or execmanager
 
         if not (isinstance(retrieve_list, (tuple, list))):
             raise ValueError("You should pass a list/tuple")
@@ -652,14 +671,18 @@ class AbstractJobCalculation(object):
             if not isinstance(item, basestring):
                 if (not (isinstance(item, (tuple, list))) or
                             len(item) != 3):
-                    raise ValueError("You should pass a list containing either "
-                                     "strings or lists/tuples")
+                    raise ValueError(
+                        "You should pass a list containing either "
+                        "strings or lists/tuples"
+                    )
                 if (not (isinstance(item[0], basestring)) or
                         not (isinstance(item[1], basestring)) or
                         not (isinstance(item[2], int))):
-                    raise ValueError("You have to pass a list (or tuple) of "
-                                     "lists, with remotepath(string), "
-                                     "localpath(string) and depth (integer)")
+                    raise ValueError(
+                        "You have to pass a list (or tuple) of "
+                        "lists, with remotepath(string), "
+                        "localpath(string) and depth (integer)"
+                    )
 
         self._set_attr('retrieve_list', retrieve_list)
 
@@ -709,9 +732,11 @@ class AbstractJobCalculation(object):
         Always set as a string
         """
         if self.get_state() != calc_states.SUBMITTING:
-            raise ModificationNotAllowed("Cannot set the job id if you are not "
-                                         "submitting the calculation (current state is "
-                                         "{})".format(self.get_state()))
+            raise ModificationNotAllowed(
+                    "Cannot set the job id if you are not "
+                    "submitting the calculation (current state is "
+                    "{})".format(self.get_state())
+                )
 
         return self._set_attr('job_id', unicode(job_id))
 
@@ -755,7 +780,8 @@ class AbstractJobCalculation(object):
 
     def _get_last_jobinfo(self):
         """
-        Get the last information asked to the scheduler about the status of the job.
+        Get the last information asked to the scheduler
+        about the status of the job.
 
         :return: a JobInfo object (that closely resembles a dictionary) or None.
         """
@@ -807,24 +833,32 @@ class AbstractJobCalculation(object):
 
         :return: a string with description of calculations.
         """
-        def pretty_print(str_matrix):
-            colwidths = [max([len(i) for i in column]) for column in zip(*str_matrix)]
+        def pretty_print(str_matrix, sep = ' | '):
+            """
+            Prints a table nicely,
+            by measuring the columnwidth in advance
+            """
+            # Get maximum length of item in a column:
+            colwidths = [
+                    max(map(len, column))
+                    for column
+                    in zip(*str_matrix)
+                ]
+            # now print each line:
             for row in str_matrix:
                 print(
-                    ' | '.join([
+                    sep.join([
                         '{:{width}}'.format(rowitem, width=colwidths[colindex])
                         for colindex, rowitem
                         in enumerate(row)
                     ])
                 )
-            
-        
+
         from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
         from aiida.orm.querybuilder import QueryBuilder
-        from itertools import islice
+
 
         now = timezone.now()
-
 
         # Let's check the states:
         if states:
@@ -832,45 +866,65 @@ class AbstractJobCalculation(object):
                 if state not in calc_states:
                     return "Invalid state provided: {}.".format(state)
 
-        # ge the last daemon check:
+        # get the last daemon check:
         try:
             last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
         except ValueError:
-            last_check_string = ("# Last daemon state_updater check: "
-                                 "(Error while retrieving the information)")
+            last_check_string = (
+                    "# Last daemon state_updater check: "
+                    "(Error while retrieving the information)"
+            )
         else:
             if last_daemon_check is None:
-                last_check_string = "# Last daemon state_updater check: (Never)"
+                last_check_string = (
+                    "# Last daemon state_updater check: (Never)"
+                )
             else:
-                last_check_string = ("# Last daemon state_updater check: "
-                                     "{} ({})".format(
-                    str_timedelta(now - last_daemon_check, negative_to_zero=True),
-                    timezone.localtime(last_daemon_check).strftime("at %H:%M:%S on %Y-%m-%d")))
+                last_check_string = (
+                    "# Last daemon state_updater check: "
+                    "{} ({})".format(
+                        str_timedelta(
+                            now - last_daemon_check,
+                            negative_to_zero=True
+                        ),
+                        timezone.localtime(
+                            last_daemon_check
+                        ).strftime("at %H:%M:%S on %Y-%m-%d")
+                    )
+                )
         print last_check_string
-
 
         calculation_filters = {}
 
         # filter for calculation pks:
         if pks:
             calculation_filters['id'] = {'in':pks}
-
-        # filter for states:
-        if states:
-            calculation_filters['state'] = {'in':states}
-
-        # Filter on the users, if not all users
-        if not all_users:
-            user_id = get_automatic_user().id
-            calculation_filters['user_id'] = {'==':user_id}
-
-        # Filter on the group, either name or by pks
-        if group:
-            group_filters = {'name':{'like':'%{}%'.format(group)}}
-        elif group_pk:
-            group_filters = {'id':{'==':group_pk}}
         else:
-            group_filters = None
+            # The wanted behavior:
+            # You know what you're looking for and specify pks,
+            # Otherwise the other filters apply.
+            # Open question: Is that the best way?
+
+            # filter for states:
+            if states:
+                calculation_filters['state'] = {'in':states}
+
+            # Filter on the users, if not all users
+            if not all_users:
+                user_id = get_automatic_user().id
+                calculation_filters['user_id'] = {'==':user_id}
+
+            if past_days is not None:
+                n_days_ago = now - datetime.timedelta(days=past_days)
+                calculation_filters['ctime'] = {'>':n_days_ago}
+
+            # Filter on the group, either name or by pks
+            if group:
+                group_filters = {'name':{'like':'%{}%'.format(group)}}
+            elif group_pk:
+                group_filters = {'id':{'==':group_pk}}
+            else:
+                group_filters = None
 
         if with_scheduler_state:
             calculation_projections = [
@@ -907,11 +961,12 @@ class AbstractJobCalculation(object):
                 label='computer'
             )
 
-        # Don't think it is necessary to order
-        #qb.order_by({'calculation':['ctime']})
+        # I have removed order_by since it slows query down
+        # qb.order_by({'calculation':['ctime']})
 
         results_generator = qb.get_results_dict()
 
+        # Make the string to return
         while True:
             try:
                 for i in range(100):
@@ -925,10 +980,9 @@ class AbstractJobCalculation(object):
                             )
                     else:
                         calc_ctime = " ".join([
-                                timezone.localtime(ctime).isoformat().split('T')[0],
-                                timezone.localtime(ctime).isoformat().split('T')[1].split('.')[
-                                                   0].rsplit(":", 1)[0]])
-                    
+                            timezone.localtime(ctime).isoformat().split('T')[0],
+                            timezone.localtime(ctime).isoformat().split('T')[
+                                1].split('.')[0].rsplit(":", 1)[0]])
                     if with_scheduler_state:
                         calc_list_data.append([
                             str(res['calculation']['id']),

@@ -133,39 +133,39 @@ def submitter():
     submit_jobs()
     set_daemon_timestamp(task_name='submitter', when='stop')
 
-#~ 
-#~ @periodic_task(
-        #~ run_every=timedelta(
-                #~ seconds=config.get(
-                        #~ "DAEMON_INTERVALS_UPDATE",
-                        #~ DAEMON_INTERVALS_UPDATE
-                #~ )
-        #~ )
-#~ )
-#~ def updater():
-    #~ from aiida.daemon.execmanager import update_jobs
-    #~ print "aiida.daemon.tasks.update:  Checking for calculations to update"
-    #~ set_daemon_timestamp(task_name='updater', when='start')
-    #~ update_jobs()
-    #~ set_daemon_timestamp(task_name='updater', when='stop')
-#~ 
-#~ 
-#~ @periodic_task(
-        #~ run_every=timedelta(
-                #~ seconds=config.get(
-                        #~ "DAEMON_INTERVALS_RETRIEVE",
-                        #~ DAEMON_INTERVALS_RETRIEVE
-                #~ )
-        #~ )
-#~ )
-#~ def retriever():
-    #~ from aiida.daemon.execmanager import retrieve_jobs
-    #~ print "aiida.daemon.tasks.retrieve:  Checking for calculations to retrieve"
-    #~ set_daemon_timestamp(task_name='retriever', when='start')
-    #~ retrieve_jobs()
-    #~ set_daemon_timestamp(task_name='retriever', when='stop')
-#~ 
-#~ 
+
+@periodic_task(
+        run_every=timedelta(
+                seconds=config.get(
+                        "DAEMON_INTERVALS_UPDATE",
+                        DAEMON_INTERVALS_UPDATE
+                )
+        )
+)
+def updater():
+    from aiida.daemon.execmanager import update_jobs
+    print "aiida.daemon.tasks.update:  Checking for calculations to update"
+    set_daemon_timestamp(task_name='updater', when='start')
+    update_jobs()
+    set_daemon_timestamp(task_name='updater', when='stop')
+
+
+@periodic_task(
+        run_every=timedelta(
+                seconds=config.get(
+                        "DAEMON_INTERVALS_RETRIEVE",
+                        DAEMON_INTERVALS_RETRIEVE
+                )
+        )
+)
+def retriever():
+    from aiida.daemon.execmanager import retrieve_jobs
+    print "aiida.daemon.tasks.retrieve:  Checking for calculations to retrieve"
+    set_daemon_timestamp(task_name='retriever', when='start')
+    retrieve_jobs()
+    set_daemon_timestamp(task_name='retriever', when='stop')
+
+
 #~ @periodic_task(
         #~ run_every=timedelta(
                 #~ seconds=config.get(
@@ -180,5 +180,3 @@ def submitter():
     #~ set_daemon_timestamp(task_name='workflow', when='start')
     #~ daemon_main_loop()
     #~ set_daemon_timestamp(task_name='workflow', when='stop')
-    
-    #~ 

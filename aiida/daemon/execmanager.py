@@ -212,20 +212,29 @@ def get_authinfo(computer, aiidauser):
 
 def retrieve_jobs():
     from aiida.orm import JobCalculation, Computer
-    from aiida.backends.djsite.db.models import DbComputer, DbUser
+
+    if settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.db.models import DbComputer, DbUser
+    elif settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.models.computer import DbComputer
+        from aiida.backends.sqlalchemy.models.user import DbUser
+        from aiida.backends.sqlalchemy import session
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
         JobCalculation._get_all_with_state(
             state=calc_states.COMPUTED,
-            only_computer_user_pairs=True)
+            only_computer_user_pairs=True,
+            only_enabled=True)
     )
 
     for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        if not Computer(dbcomputer=dbcomputer).is_enabled():
-            continue
-        aiidauser = DbUser.objects.get(id=aiidauser_id)
+        if settings.BACKEND == BACKEND_DJANGO:
+            aiidauser = DbUser.objects.get(id=aiidauser_id)
+            dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
+        else:
+            aiidauser = session.query(DbUser).get(aiidauser_id)
+            dbcomputer = session.query(DbComputer).get(dbcomputer_id)
 
         execlogger.debug("({},{}) pair to check".format(
             aiidauser.email, dbcomputer.name))
@@ -250,20 +259,29 @@ def update_jobs():
     calls an update for each set of pairs (machine, aiidauser)
     """
     from aiida.orm import JobCalculation, Computer
-    from aiida.backends.djsite.db.models import DbComputer, DbUser
+    if settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.db.models import DbComputer, DbUser
+    elif settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.models.computer import DbComputer
+        from aiida.backends.sqlalchemy.models.user import DbUser
+        from aiida.backends.sqlalchemy import session
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
         JobCalculation._get_all_with_state(
             state=calc_states.WITHSCHEDULER,
-            only_computer_user_pairs=True)
+            only_computer_user_pairs=True,
+            only_enabled=True
+        )
     )
 
     for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        if not Computer(dbcomputer=dbcomputer).is_enabled():
-            continue
-        aiidauser = DbUser.objects.get(id=aiidauser_id)
+        if settings.BACKEND == BACKEND_DJANGO:
+            aiidauser = DbUser.objects.get(id=aiidauser_id)
+            dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
+        else:
+            aiidauser = session.query(DbUser).get(aiidauser_id)
+            dbcomputer = session.query(DbComputer).get(dbcomputer_id)
 
         execlogger.debug("({},{}) pair to check".format(
             aiidauser.email, dbcomputer.name))
@@ -290,12 +308,6 @@ def submit_jobs():
     from aiida.orm import JobCalculation, Computer
     from aiida.utils.logger import get_dblogger_extra
 
-    computers_users_to_check = set(
-        JobCalculation._get_all_with_state(
-            state=calc_states.TOSUBMIT,
-            only_computer_user_pairs=True,
-            only_enabled=True)
-    )
 
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.db.models import DbComputer, DbUser
@@ -304,10 +316,17 @@ def submit_jobs():
         from aiida.backends.sqlalchemy.models.user import DbUser
         from aiida.backends.sqlalchemy import session
 
+    computers_users_to_check = set(
+        JobCalculation._get_all_with_state(
+            state=calc_states.TOSUBMIT,
+            only_computer_user_pairs=True,
+            only_enabled=True)
+    )
+
     # I create a unique set of pairs (computer, aiidauser)
 
     for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        print dbcomputer_id, aiidauser_id
+
 
         if settings.BACKEND == BACKEND_DJANGO:
             aiidauser = DbUser.objects.get(id=aiidauser_id)

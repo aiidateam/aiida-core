@@ -1488,12 +1488,27 @@ This would be the queryhelp::
         """
         return self.get_query().distinct()
 
+    def _all(self):
+        return self.get_query().all()
+
     def all(self):
         """
         Executes full query.
         :returns: all rows
         """
-        return self.get_query().all()
+
+        ormresults = self._all()
+        
+        print ormresults
+        try:
+            returnlist = [
+                    map(self._get_aiida_res, resultsrow)
+                    for resultsrow
+                    in ormresults
+            ]
+        except TypeError:
+            returnlist = map(self._get_aiida_res, ormresults)
+        return returnlist
 
     def yield_per(self, count):
         """
@@ -1505,7 +1520,7 @@ This would be the queryhelp::
         """
         return self.get_query().yield_per(count)
     
-    def _get_aiida_res(self, res, key):
+    def _get_aiida_res(self, res):
         """
         Some instance returned by ORM (django or SA) need to be converted
         to Aiida instances (eg nodes)
@@ -1515,7 +1530,7 @@ This would be the queryhelp::
 
         :returns: an aiida-compatible instance
         """
-        if key == '*' and isinstance(res, (self.Group, self.Node)):
+        if isinstance(res, (self.Group, self.Node)):
             return res.get_aiida_class()
         else:
             return res
@@ -1541,7 +1556,7 @@ This would be the queryhelp::
         for this_result in self.yield_per(100):
             yield {
                 label:{
-                    key : self._get_aiida_res(get_result(this_result, position), key)
+                    key : self._get_aiida_res(get_result(this_result, position))
                     for key, position in val.items()
                 }
                 for label, val in self.label_to_projected_entity_dict.items()

@@ -1130,7 +1130,7 @@ This would be the queryhelp::
     def _join_to_computer_used(self, joined_entity, entity_to_join):
         self.que = self.que.join(
                 entity_to_join,
-                entity_to_join.id == joined_entity.dbcomputer_id
+                entity_to_join.dbcomputer_id == joined_entity.id
         )
 
     def _join_computer(self, joined_entity, entity_to_join):
@@ -1144,6 +1144,7 @@ This would be the queryhelp::
                 entity_to_join,
                 joined_entity.dbcomputer_id == entity_to_join.id
         )
+
     def _get_function_map(self):
         d = {
                 'input_of'  : self._join_inputs,

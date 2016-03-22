@@ -889,7 +889,7 @@ class AbstractJobCalculation(object):
                     "# Last daemon state_updater check: "
                     "(Error while retrieving the information)"
             )
-        except ImproperlyConfigured:
+        except (ImproperlyConfigured, ImportError):
             # get_last_daemon_timestamp cannot be imported
             # when using SQLA because it is sqla specific
             last_check_string = (
@@ -1042,7 +1042,7 @@ class AbstractJobCalculation(object):
 
     @classmethod
     def _get_all_with_state(cls, state, computer=None, user=None,
-                            only_computer_user_pairs=False):
+                            only_computer_user_pairs=False, only_enabled=True):
         """
         Filter all calculations with a given state.
 
@@ -1069,30 +1069,51 @@ class AbstractJobCalculation(object):
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
         from aiida.orm.computer import Computer
+        from aiida.orm.querybuilder import QueryBuilder
 
         if state not in calc_states:
             cls.logger.warning("querying for calculation state='{}', but it "
                                "is not a valid calculation state".format(state))
 
-        kwargs = {}
-        if computer is not None:
-            # I convert it from various type of inputs
-            # (string, DbComputer, Computer)
-            # to a DbComputer type
-            kwargs['dbcomputer'] = Computer.get(computer).dbcomputer
-        if user is not None:
-            kwargs['user'] = user
-
-        queryresults = cls.query(
-            dbattributes__key='state',
-            dbattributes__tval=state,
-            **kwargs)
-
-        if only_computer_user_pairs:
-            return queryresults.values_list(
-                'dbcomputer__id', 'user__id')
+        calcfilter = {'state':{'==':state}}
+        if computer is None:
+            pass
+        elif isinstance(computer, int):
+            # An ID was provided
+            calcfilter.update({'dbcomputer_id':{'==':computer}})
+        elif isinstance(computer, Computer):
+            calcfilter.update({'dbcomputer_id':{'==':computer.pk}})
         else:
-            return queryresults
+            raise Exception(
+                "{} is not a valid computer".format(computer)
+            )
+
+        if user is None:
+            pass
+        elif isinstance(user, int):
+            calcfilter.update({'user_id':{'==':user}})
+        else:
+            try:
+                calcfilter.update({'user_id':{'==':int(user.id)}})
+                # Is that safe?
+            except:
+                raise Exception("{} is not a valid user".format(user))
+
+        qb = QueryBuilder()
+        qb.append(type="computer", label='computer', filters={"enabled":{'==':True}})
+        if only_computer_user_pairs:
+            qb.append(
+                    cls, filters=calcfilter,
+                    project=['dbcomputer_id', 'user_id'],
+                    runs_on='computer'
+                )
+            res = qb.distinct().all()
+        else:
+            qb.append(cls, filters=calcfilter)
+            res = qb.get_results_dict()
+        return res
+
+
 
 
     def _prepare_for_submission(self, tempfolder, inputdict):

@@ -4,6 +4,7 @@ import json
 
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, Text
+from sqlalchemy.orm import relationship
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -37,6 +38,10 @@ class DbComputer(Base):
     transport_params = Column(JSONB)
     _metadata = Column('metadata', JSONB)
 
+    dbnodes_q = relationship(
+            'DbNode',
+            lazy='dynamic'
+        )
     def __init__(self, *args, **kwargs):
         self.enabled = True
         self._metadata = {}

@@ -2,7 +2,7 @@
 
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, DateTime
-
+from sqlalchemy.orm import relationship
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 
@@ -29,6 +29,10 @@ class DbUser(Base):
     date_joined = Column(DateTime(timezone=True), default=timezone.now)
 
     is_active = True
+    dbnodes_q = relationship(
+            'DbNode',
+            lazy='dynamic'
+        )
 
     # XXX is it safe to set name and institution to an empty string ?
     def __init__(self, email, first_name="", last_name="", institution="", **kwargs):

@@ -18,6 +18,10 @@ class Process(plum.process.Process):
         # Link and store the retrospective provenance for this process
         calc = self._create_db_record()
         for name, input in inputs.iteritems():
+            # TODO: Need to have a discussion to see if we should automatically
+            # store unstored inputs.  My feeling is yes.
+            if not input._is_stored:
+                input.store()
             calc._add_link_from(input, name)
 
         calc.store()
@@ -27,22 +31,20 @@ class Process(plum.process.Process):
         super(Process, self)._on_process_finished(retval)
         self._current_calc = None
 
-    def _on_output_emitted(self, output_port, value):
-        from aiida.common.exceptions import ModificationNotAllowed
-        super(Process, self)._on_process_finished(output_port, value)
+    def _on_output_emitted(self, output_port, value, dynamic):
+        super(Process, self)._on_output_emitted(output_port, value, dynamic)
 
-        if value._is_stored:
-            raise ModificationNotAllowed(
-                "The output {} from process is already stored!"
-                "Note that this node (and any other side effect"
-                "of the function) are not going to be undone!".
-                    format(output_port))
+        if not value._is_stored:
+            value.store()
 
-        value.store()
-        value._add_link_from(self._current_calc, output_port)
+        # If this isn't true then the function is just returning an existing
+        # node directly.  If we ever have 'return' links an else statement
+        # woudl be the place to create it
+        if len(value.get_inputs()) == 0:
+            value._add_link_from(self._current_calc, output_port)
 
     @staticmethod
-    def _create_db_record(self):
+    def _create_db_record():
         from aiida.orm.calculation import Calculation
         calc = Calculation()
         return calc
@@ -50,7 +52,7 @@ class Process(plum.process.Process):
 
 class FunctionProcess(Process):
     @staticmethod
-    def build(func, output_name="value"):
+    def build(func, **kwargs):
         import inspect
 
         args, varargs, keywords, defaults = inspect.getargspec(func)
@@ -61,14 +63,15 @@ class FunctionProcess(Process):
                     spec.add_input(args[i], default=defaults[i])
                 else:
                     spec.add_input(args[i])
-
-            spec.add_output(output_name)
+            for k, v in kwargs.iteritems():
+                spec.add_input(k)
+            # We don't know what a function will return so keep it dynamic
+            spec.add_dynamic_output()
 
         return type(func.__name__, (FunctionProcess,),
-                    {'_func': func,
+                    {'_func': staticmethod(func),
                      '_init': staticmethod(init),
-                     '_func_args': args,
-                     '_output_name': output_name})
+                     '_func_args': args})
 
     def __init__(self):
         super(FunctionProcess, self).__init__()
@@ -79,4 +82,4 @@ class FunctionProcess(Process):
             args.append(kwargs.pop(arg))
         outs = self._func(*args)
         for name, value in outs.iteritems():
-            self.out(name, value)
+            self._out(name, value)

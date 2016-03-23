@@ -3,9 +3,9 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-#from aiida.workflows2.wf import aiidise
-#from aiida.workflows2.util import to_db_type
-from plum.process import Process, FunctionProcess
+from aiida.workflows2.wf import aiidise, wf
+from aiida.workflows2.util import to_db_type
+from plum.process import Process
 from plum.workflow import Workflow
 
 
@@ -17,6 +17,21 @@ def multiply(a, b):
     return a * b
 
 
+@wf
+def add_wf(a, b):
+    return {'value': to_db_type(a.value + b.value)}
+
+
+@wf
+def muliply_wf(a, b):
+    return {'value': to_db_type(a.value * b.value)}
+
+
+@wf
+def add_multiply_wf(a, b, c):
+    return muliply_wf(add_wf(a, b)['value'], c)
+
+
 class Add(Process):
     @staticmethod
     def _init(spec):
@@ -25,7 +40,7 @@ class Add(Process):
         spec.add_output('value')
 
     def _run(self, a, b):
-        return {'value': a + b}
+        self._out('value', to_db_type(a.value + b.value))
 
 
 class Mul(Process):
@@ -36,59 +51,33 @@ class Mul(Process):
         spec.add_output('value')
 
     def _run(self, a, b):
-        return {'value': a * b}
+        self._out('value', to_db_type(a.value * b.value))
 
-
-AddFun = FunctionProcess.build(add)
 
 class MulAdd(Workflow):
     @staticmethod
     def _init(spec):
-        spec.add_input('e', default=0)
-        spec.add_input('f', default=0)
-        spec.add_input('g', default=0)
-        spec.add_output('value')
-
         spec.add_process(Mul)
         spec.add_process(Add)
-        spec.link(':e', 'Add:a')
-        spec.link(':f', 'Add:b')
-        spec.link(':g', 'Mul:a')
+
+        spec.expose_inputs('Add')
+        spec.expose_outputs('Mul')
+        spec.add_input('c')
+
+        spec.link(':c', 'Mul:a')
         spec.link('Add:value', 'Mul:b')
-        spec.link('Mul:value', ':value')
-
-
-# class MulAddWithFun(Workflow):
-#     @staticmethod
-#     def _init(spec):
-#         spec.add_input('e', default='0')
-#         spec.add_input('f', default='0')
-#         spec.add_input('g', default='0')
-#         spec.add_output('value')
-#
-#         spec.add_process(Mul)
-#         spec.add_process(AddFun)
-#         spec.link(':e', 'add:a')
-#         spec.link(':f', 'add:b')
-#         spec.link(':g', 'Mul:a')
-#         spec.link('add:value', 'Mul:b')
-#         spec.link('Mul:value', ':value')
-
 
 if __name__ == '__main__':
-    #load_dbenv()
 
     # aiida_add = aiidise(add)
     # aiida_multiply = aiidise(multiply)
     #
-    # two = to_db_type(2)
-    # three = to_db_type(3)
+    two = to_db_type(2)
+    three = to_db_type(3)
+    four = to_db_type(4)
 
-    mul_add = MulAdd.create()
-    #mul_add.bind('e', 2)
-    mul_add.bind('f', 3)
-    mul_add.bind('g', 4)
-    mul_add.run()
+    print(add_multiply_wf(two, three, four))
+    print(MulAdd.create()(a=two, b=three, c=four))
 
     # mul_add = MulAddWithFun.create()
     # mul_add.bind('e', 2)

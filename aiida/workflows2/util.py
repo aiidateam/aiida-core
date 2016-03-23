@@ -4,9 +4,8 @@
 This file provides very simple workflows for testing purposes.
 Do not delete, otherwise 'verdi developertest' will stop to work.
 """
-from aiida_custom.orm import Data
-from aiida_custom.orm.data.simple import SimpleData
-from collections import Mapping
+from aiida.orm import Data
+from aiida.orm.data.simple import SimpleData
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"

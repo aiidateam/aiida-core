@@ -7,6 +7,7 @@ Do not delete, otherwise 'verdi developertest' will stop to work.
 from aiida.orm import Calculation
 import aiida.workflows2.util as util
 from aiida.workflows2.process import FunctionProcess
+import threading
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -22,15 +23,15 @@ def wf(func):
         """
         This wrapper function is the actual function that is called.
         """
-        FuncProc = FunctionProcess.build(func)
-        for k, v in kwargs.iteritems():
-            FuncProc.spec().add_input(k)
+        # Build up the Process representing this function
+        FuncProc = FunctionProcess.build(func, **kwargs)
 
+        # Use thread-local storage for the stack
         try:
-            stack = func._wf_stack
+            stack = threading.local()._wf_stack
         except AttributeError:
-            stack = []
-            func._wf_stack = stack
+            threading.local()._wf_stack = []
+            stack = threading.local()._wf_stack
 
         if stack:
             # TODO: This is where a call link would go from prent to this fn
@@ -39,16 +40,18 @@ def wf(func):
         stack.append(func)
         # Run the wrapped function
         proc = FuncProc.create()
+
         # Bind the input values to the input ports
         for k, v in dict(
                 itertools.chain(
-                    itertools.izip(inspect.getargspec(func)[0], args), kwargs)):
+                    itertools.izip(inspect.getargspec(func)[0], args),
+                    kwargs)).iteritems():
             proc.bind(k, v)
 
-        outs = proc.run()
+        proc.run()
 
         stack.pop()
-        return outs
+        return proc.get_last_outputs()
 
     return wrapped_function
 

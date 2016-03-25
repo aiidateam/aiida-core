@@ -1,5 +1,5 @@
-
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
 if not is_dbenv_loaded():
     load_dbenv()
 
@@ -67,15 +67,21 @@ class MulAdd(Workflow):
         spec.link(':c', 'Mul:a')
         spec.link('Add:value', 'Mul:b')
 
+
 if __name__ == '__main__':
     two = to_db_type(2)
     three = to_db_type(3)
     four = to_db_type(4)
 
-    print(add_multiply_wf(two, three, four)['value'].value)
+    print "WORKFUNCTION:"
 
+    simpledata = add_multiply_wf(two, three, four)['value']
+    print "output pk:", simpledata.pk
+    print "output value:", simpledata.value
+
+    print "PROCESS:"
     wf = MulAdd.create()
     wf(a=two, b=three, c=four)
-    print(wf.get_last_outputs()['value'].value)
-
-
+    simpledata = wf.get_last_outputs()['value']
+    print "output pk:", simpledata.pk
+    print "output value:", simpledata.value

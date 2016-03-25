@@ -32,13 +32,13 @@ def to_db_type(value):
     if isinstance(value, Data):
         return value
     elif isinstance(value, bool):
-        return SimpleData(bool, value)
+        return SimpleData(typevalue=(bool, value))
     elif isinstance(value, (int, long)):
-        return SimpleData(int, value)
+        return SimpleData(typevalue=(int, value))
     elif isinstance(value, float):
-        return SimpleData(float, value)
+        return SimpleData(typevalue=(float, value))
     elif isinstance(value, basestring):
-        return SimpleData(type(value), value)
+        return SimpleData(typevalue=(type(value), value))
     else:
         raise ValueError("Cannot convert value to database type")
 

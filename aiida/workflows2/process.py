@@ -4,6 +4,7 @@ from abc import ABCMeta
 import plum.process
 import inspect
 from threading import local
+import aiida.workflows2.active_factory as active_factory
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -41,13 +42,18 @@ class Process(plum.process.Process):
     """
     __metaclass__ = ABCMeta
 
+    def __init__(self):
+        super(Process, self).__init__()
+        self._active_process = None
+        self._current_calc = None
+
     def run(self):
         with ProcessStack(self) as stack:
             if len(stack) > 1:
                 # TODO: This is where a call link would go from prent to this fn
                 pass
-
             super(Process, self).run()
+        self._current_calc = None
 
     def _on_process_starting(self, inputs):
         """
@@ -55,6 +61,9 @@ class Process(plum.process.Process):
         :param inputs: A dictionary of inputs for each input port
         """
         super(Process, self)._on_process_starting(inputs)
+
+        self._active_process = active_factory.create_process_record(self)
+        self._active_process.save()
 
         # Link and store the retrospective provenance for this process
         calc = self._create_db_record()
@@ -68,13 +77,17 @@ class Process(plum.process.Process):
         calc.store()
         self._current_calc = calc
 
+    def _on_process_finishing(self):
+        super(Process, self)._on_process_finishing()
+        self._active_process.delete()
+        self._active_process = None
+
     def _on_process_finished(self, retval):
         """
         The process finished with a return value
         :param retval: The return value from the process (can be None)
         """
         super(Process, self)._on_process_finished(retval)
-        self._current_calc = None
 
     def _on_output_emitted(self, output_port, value, dynamic):
         """
@@ -91,7 +104,7 @@ class Process(plum.process.Process):
 
         # If this isn't true then the function is just returning an existing
         # node directly.  If we ever have 'return' links an else statement
-        # woudl be the place to create it
+        # would be the place to create it
         if len(value.get_inputs()) == 0:
             value._add_link_from(self._current_calc, output_port)
 

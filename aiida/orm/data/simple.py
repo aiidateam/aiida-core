@@ -8,10 +8,10 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uh
 
 
 class SimpleData(Data):
-    def __init__(self, type, value):
+    def __init__(self, _type, value):
         super(SimpleData, self).__init__()
 
-        self.type = type
+        self._type = _type
         if value:
             self.value = value
 
@@ -21,4 +21,4 @@ class SimpleData(Data):
 
     @value.setter
     def value(self, value):
-        self._set_attr('value', self.type(value))
+        self._set_attr('value', self._type(value))

@@ -22,7 +22,7 @@ _TYPE_MAPPING = {
 
 def get_db_type(native_type):
     if issubclass(native_type, Data):
-        return type
+        return native_type
     if native_type in _TYPE_MAPPING:
         return _TYPE_MAPPING[native_type]
     return None
@@ -31,14 +31,14 @@ def get_db_type(native_type):
 def to_db_type(value):
     if isinstance(value, Data):
         return value
-    elif isinstance(value, int):
+    elif isinstance(value, bool):
+        return SimpleData(bool, value)
+    elif isinstance(value, (int, long)):
         return SimpleData(int, value)
     elif isinstance(value, float):
         return SimpleData(float, value)
-    elif isinstance(value, bool):
-        return SimpleData(bool, value)
-    elif isinstance(value, str):
-        return SimpleData(str, value)
+    elif isinstance(value, basestring):
+        return SimpleData(type(value), value)
     else:
         raise ValueError("Cannot convert value to database type")
 

@@ -16,9 +16,6 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
 def wf(func):
-    import inspect
-    import itertools
-
     def wrapped_function(*args, **kwargs):
         """
         This wrapper function is the actual function that is called.
@@ -26,31 +23,9 @@ def wf(func):
         # Build up the Process representing this function
         FuncProc = FunctionProcess.build(func, **kwargs)
 
-        # Use thread-local storage for the stack
-        try:
-            stack = threading.local()._wf_stack
-        except AttributeError:
-            threading.local()._wf_stack = []
-            stack = threading.local()._wf_stack
-
-        if stack:
-            # TODO: This is where a call link would go from prent to this fn
-            pass
-
-        stack.append(func)
-        # Run the wrapped function
+        # Create and run the wrapped function
         proc = FuncProc.create()
-
-        # Bind the input values to the input ports
-        for k, v in dict(
-                itertools.chain(
-                    itertools.izip(inspect.getargspec(func)[0], args),
-                    kwargs)).iteritems():
-            proc.bind(k, v)
-
-        proc.run()
-
-        stack.pop()
+        proc(*args, **kwargs)
         return proc.get_last_outputs()
 
     return wrapped_function

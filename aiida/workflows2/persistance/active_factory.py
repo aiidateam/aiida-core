@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from aiida.workflows2.active_records import ActiveProcessRecord,\
-    ActiveWorkflowRecord, ActiveProcessStatus
+from aiida.workflows2.persistance.active_process import ActiveProcessRecord,\
+    ActiveProcessStatus
+import aiida.workflows2.persistance.file_store as file_store
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -10,10 +11,13 @@ __authors__ = "The AiiDA team."
 
 
 class InMemoryActiveProcess(ActiveProcessRecord):
-    def __init__(self, process):
+    _num_processes = 0
+
+    def __init__(self, process, parent_id=None):
         import getpass
 
-        self._id = 0
+        self._id = self.generate_id()
+        self._parent_id = parent_id
         self._process_class = process.__class__
         self._status = ActiveProcessStatus.RUNNING
         self._inputs = process.bound_inputs
@@ -22,6 +26,10 @@ class InMemoryActiveProcess(ActiveProcessRecord):
     @property
     def id(self):
         return self._id
+
+    @property
+    def parent_id(self):
+        return self._parent_id
 
     @property
     def process_class(self):
@@ -46,13 +54,18 @@ class InMemoryActiveProcess(ActiveProcessRecord):
         pass
 
 
-class InMemoryActiveWorkflow(InMemoryActiveProcess, ActiveWorkflowRecord):
-    pass
+def create_process_record(process, inputs, id, parent_id=None):
+    return file_store.FileActiveProcess(
+        process.__class__.__name__,
+        {label: inp.uuid for label, inp in inputs.iteritems()},
+        id, parent_id)
+
+#
+# def create_workflow_record(process, inputs):
+#     return file_store.FileActiveWorkflow(
+#         process.__class__,
+#         {label: inp.uuid for label, inp in inputs.iteritems()})
 
 
-def create_process_record(process):
-    return InMemoryActiveProcess(process)
-
-
-def create_workflow_record(process):
-    return InMemoryActiveWorkflow(process)
+def load_all_process_records():
+    return file_store.FileActiveProcess.load_all()

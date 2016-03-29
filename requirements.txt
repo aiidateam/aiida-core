@@ -51,5 +51,5 @@ SQLAlchemy-Utils==0.31.2
 ultrajson==1.35
 
 # For workflows
-enum34=1.1.2
-git+https://bitbucket.org/muhrin/plum.git@dev#egg=plum
+enum34==1.1.2
+git+https://bitbucket.org/muhrin/plum.git@b6a942f322a8485ed29e4315250678d0799d0f53#egg=plum

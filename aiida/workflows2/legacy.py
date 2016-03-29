@@ -21,7 +21,7 @@ class LegacyJobCalculation(Process):
 
         return type(calc_class.__name__, (LegacyJobCalculation,),
                     {'_init': staticmethod(_init),
-                     '_calc_class': calc_class)
+                     '_calc_class': calc_class})
 
     def __init__(self):
         super(LegacyJobCalculation, self).__init__()

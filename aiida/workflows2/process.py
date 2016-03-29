@@ -1,38 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from abc import ABCMeta
-import plum.process
 import inspect
-from threading import local
-import aiida.workflows2.active_factory as active_factory
+
+import plum.process
+
+import aiida.workflows2.util as util
+from aiida.workflows2.execution_engine import TrackingExecutionEngine
+from abc import ABCMeta
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
-
-
-class ProcessStack(object):
-    # Use thread-local storage for the stack
-    _thread_local = local()
-
-    def __init__(self, process):
-        self._process = process
-
-    def __enter__(self):
-        self.stack.append(self._process)
-        return self.stack
-
-    def __exit__(self, type, value, traceback):
-        self.stack.pop()
-
-    @property
-    def stack(self):
-        try:
-            return self._thread_local.wf_stack
-        except AttributeError:
-            self._thread_local.wf_stack = []
-            return self._thread_local.wf_stack
 
 
 class Process(plum.process.Process):
@@ -44,26 +23,36 @@ class Process(plum.process.Process):
 
     def __init__(self):
         super(Process, self).__init__()
-        self._active_process = None
         self._current_calc = None
 
-    def run(self):
-        with ProcessStack(self) as stack:
+    def run(self, exec_engine=None):
+        with util.ProcessStack(self) as stack:
             if len(stack) > 1:
-                # TODO: This is where a call link would go from prent to this fn
-                pass
-            super(Process, self).run()
+                # TODO: This is where a call link would go from parent to this fn
+                if not exec_engine:
+                    exec_engine = stack[-2]._get_exec_engine().push(self)
+
+            super(Process, self).run(exec_engine)
         self._current_calc = None
+
+    def load(self, record):
+        assert(record.process_class == cls.__name__)
+        assert(not self._current_calc)
+
+        # TODO:
+        # 1. Get the node retrospective node this corresponds to
+        # 2. If the status isn't complete then bind the inputs to the
+        # input ports
+
+    @classmethod
+    def _create_default_exec_engine(cls):
+        return TrackingExecutionEngine()
 
     def _on_process_starting(self, inputs):
         """
         The process is starting with the given inputs
         :param inputs: A dictionary of inputs for each input port
         """
-        super(Process, self)._on_process_starting(inputs)
-
-        self._active_process = active_factory.create_process_record(self)
-        self._active_process.save()
 
         # Link and store the retrospective provenance for this process
         calc = self._create_db_record()
@@ -77,17 +66,10 @@ class Process(plum.process.Process):
         calc.store()
         self._current_calc = calc
 
+        super(Process, self)._on_process_starting(inputs)
+
     def _on_process_finishing(self):
         super(Process, self)._on_process_finishing()
-        self._active_process.delete()
-        self._active_process = None
-
-    def _on_process_finished(self, retval):
-        """
-        The process finished with a return value
-        :param retval: The return value from the process (can be None)
-        """
-        super(Process, self)._on_process_finished(retval)
 
     def _on_output_emitted(self, output_port, value, dynamic):
         """

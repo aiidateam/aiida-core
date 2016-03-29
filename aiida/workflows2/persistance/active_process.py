@@ -23,11 +23,19 @@ class ActiveProcessRecord(object):
         pass
 
     @abstractproperty
+    def parent_id(self):
+        pass
+
+    @abstractproperty
     def process_class(self):
         pass
 
     @abstractproperty
     def status(self):
+        """
+        The status of the process.  Should be one of ActiveProcessStatus enums.
+        :return: The current status of the process.
+        """
         pass
 
     @abstractproperty
@@ -45,11 +53,4 @@ class ActiveProcessRecord(object):
     @abstractmethod
     def delete(self):
         pass
-
-
-class ActiveWorkflowRecord(ActiveProcessRecord):
-    __metaclass__ = ABCMeta
-
-    pass
-
 

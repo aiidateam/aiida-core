@@ -6,6 +6,7 @@ Do not delete, otherwise 'verdi developertest' will stop to work.
 """
 from aiida.orm import Data
 from aiida.orm.data.simple import SimpleData
+from threading import local
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -18,6 +19,29 @@ _TYPE_MAPPING = {
     bool: SimpleData,
     str: SimpleData
 }
+
+
+class ProcessStack(object):
+    # Use thread-local storage for the stack
+    _thread_local = local()
+
+    def __init__(self, process):
+        self._process = process
+
+    def __enter__(self):
+        self.stack.append(self._process)
+        return self.stack
+
+    def __exit__(self, type, value, traceback):
+        self.stack.pop()
+
+    @property
+    def stack(self):
+        try:
+            return self._thread_local.wf_stack
+        except AttributeError:
+            self._thread_local.wf_stack = []
+            return self._thread_local.wf_stack
 
 
 def get_db_type(native_type):

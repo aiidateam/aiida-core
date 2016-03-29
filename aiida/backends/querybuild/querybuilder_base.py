@@ -769,13 +769,13 @@ This would be the queryhelp::
                 if val in self.label_list:
                     joining_value = val
                 elif val in self.cls_to_label_map:
-                    joining_value = self.cls_to_label_map[v]
+                    joining_value = self.cls_to_label_map[val]
                 else:
                     raise InputValidationError(
                             "\n\n\n"
                             "You told me to join {} with {}\n"
                             "But it is not among my labels"
-                            "\n\n\n".format(label, v)
+                            "\n\n\n".format(label, val)
                         )
         # the default is just a direction keyword and value 1
         # meaning that this vertice is linked to the previous

@@ -20,7 +20,7 @@ def pretty_print(str_matrix, sep = ' | '):
     for row in str_matrix:
         print(
             sep.join([
-                '{:{width}}'.format(rowitem, width=colwidths[colindex])
+                '{:{width}}'.format(rowitem, width=colwidths[colindex] or 1)
                 for colindex, rowitem
                 in enumerate(row)
             ])

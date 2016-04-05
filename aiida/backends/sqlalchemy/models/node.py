@@ -88,7 +88,8 @@ class DbNode(Base):
             "DbNode", secondary="db_dbpath",
             primaryjoin="DbNode.id == DbPath.parent_id",
             secondaryjoin="DbNode.id == DbPath.child_id",
-            backref="parents"
+            backref=backref("parents", passive_deletes=True),
+            passive_deletes=True,
         )
 
     # Appender-query, so one can query the results:
@@ -113,8 +114,9 @@ class DbNode(Base):
             "DbNode", secondary="db_dbpath",
             primaryjoin="DbNode.id == DbPath.parent_id",
             secondaryjoin="DbNode.id == DbPath.child_id",
-            backref=backref("parents_q", lazy='dynamic'),
-            lazy='dynamic'
+            backref=backref("parents_q", lazy='dynamic', passive_deletes=True),
+            lazy='dynamic',
+            passive_deletes=True
         )
 
     # XXX repetition between django/sqlalchemy here.

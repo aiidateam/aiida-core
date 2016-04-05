@@ -769,13 +769,13 @@ This would be the queryhelp::
                 if val in self.label_list:
                     joining_value = val
                 elif val in self.cls_to_label_map:
-                    joining_value = self.cls_to_label_map[v]
+                    joining_value = self.cls_to_label_map[val]
                 else:
                     raise InputValidationError(
                             "\n\n\n"
                             "You told me to join {} with {}\n"
                             "But it is not among my labels"
-                            "\n\n\n".format(label, v)
+                            "\n\n\n".format(label, val)
                         )
         # the default is just a direction keyword and value 1
         # meaning that this vertice is linked to the previous
@@ -1396,55 +1396,55 @@ This would be the queryhelp::
         ######################### DONE #################################
         return self.que
 
-    def _make_counterquery(self, calc_class, code_inst=None, session=None):
-        input_alias_list = []
-        for node in self.path:
-            label = node['label']
-            if label not in self.projections.keys():
-                continue
-            assert(
-                    flatten_list(self.projections[label]) == ['*'],
-                    "Only '*' allowed for input spec"
+    def except_if_input_to(self, calc_class):
+        """
+        Makes counterquery based on the own path, only selecting
+        entries that have been input to *calc_class*
+
+        :param calc_class: The calculation class to check against
+
+        :returns: self
+        """
+        def build_counterquery(calc_class):
+            if issubclass(calc_class, self.Node):
+                orm_calc_class = calc_class
+                type_spec = None
+            elif issubclass(calc_class, self.AiidaNode):
+                orm_calc_class = self.Node
+                type_spec = calc_class._plugin_type_string
+            else:
+                raise Exception(
+                    'You have given me {}\n'
+                    'of type {}\n'
+                    "and I don't know what to do with that"
+                    ''.format(calc_class, type(calc_class))
                 )
-            input_alias_list.append(aliased(self.alias_dict[label]))
 
-        if issubclass(calc_class, self.Node):
-            orm_calc_class = calc_class
-            type_spec = None
-        elif issubclass(calc_class, self.AiidaNode):
-            orm_calc_class = self.Node
-            type_spec = calc_class._plugin_type_string
-        else:
-            raise Exception(
-                'You have given me {}\n'
-                'of type {}\n'
-                "and I don't know what to do with that"
-                ''.format(calc_class, type(calc_class))
-            )
-        counterquery = self._get_session().query(orm_calc_class)
-        if type_spec:
-            counterquery = counterquery.filter(orm_calc_class.type == type_spec)
-        for alias in input_alias_list:
-            link = aliased(self.Link)
-            counterquery = counterquery.join(
-                link,
-                orm_calc_class.id == link.output_id
-            ).join(
-                alias,
-                alias.id == link.input_id)
-            counterquery = counterquery.add_entity(alias)
-        counterquery._entities.pop(0)
-        return counterquery
+            input_alias_list = []
+            for node in self.path:
+                label = node['label']
+                if '*' in self.projections[label]:
+                    input_alias_list.append(aliased(self.alias_dict[label]))
 
-    def _except_if_input_to(self, calc_class):
+            counterquery = self._get_session().query(orm_calc_class)
+            if type_spec:
+                counterquery = counterquery.filter(orm_calc_class.type == type_spec)
+            for alias in input_alias_list:
+                print alias
+                link = aliased(self.Link)
+                counterquery = counterquery.join(
+                    link,
+                    orm_calc_class.id == link.output_id
+                ).join(
+                    alias,
+                    alias.id == link.input_id)
+                counterquery = counterquery.add_entity(alias)
+            counterquery._entities.pop(0)
+            return counterquery
         self.que = self.get_query()
-        self.que = self.que.except_(self._make_counterquery(calc_class))
+        self.que = self.que.except_(build_counterquery(calc_class))
         return self
 
-    def get_calculations_todo(self, calc_class):
-        return self._build_query().except_(
-                self._make_counterquery(calc_class)
-            ).all()
 
     def get_aliases(self):
         return self.alias_list

@@ -834,30 +834,12 @@ class AbstractJobCalculation(object):
 
         :return: a string with description of calculations.
         """
-        def pretty_print(str_matrix, sep = ' | '):
-            """
-            Prints a table nicely,
-            by measuring the columnwidth in advance
-            """
-            # Get maximum length of item in a column:
-            colwidths = [
-                    max(map(len, column))
-                    for column
-                    in zip(*str_matrix)
-                ]
-            # now print each line:
-            for row in str_matrix:
-                print(
-                    sep.join([
-                        '{:{width}}'.format(rowitem, width=colwidths[colindex])
-                        for colindex, rowitem
-                        in enumerate(row)
-                    ])
-                )
+
 
 
         from aiida.orm.querybuilder import QueryBuilder
         from django.core.exceptions import ImproperlyConfigured
+        from aiida.common.custom_io import pretty_print
 
 
         now = timezone.now()

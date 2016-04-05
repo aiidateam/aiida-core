@@ -856,8 +856,13 @@ This would be the queryhelp::
         keys represent valid labels of entities (tables),
         values are list of columns
         """
+
+        self._order_by = []
+
         if not isinstance(order_by, (list, tuple)):
             order_by = [order_by]
+
+
         for order_spec in order_by:
             if not isinstance(order_spec, dict):
                     raise InputValidationError(
@@ -866,14 +871,23 @@ This would be the queryhelp::
                         "[columns to sort]"
                         "".format(order_spec)
                     )
+            _order_spec = {}
             for key,val in order_spec.items():
-                if key not in self.alias_dict:
-                    raise InputValidationError(
-                        "This key is unknown to me: {}".format(key)
-                    )
                 if not isinstance(val, (tuple, list)):
-                    order_spec[key] = [val]
-        self._order_by = order_by
+                    val = [val]
+
+                if key in self.label_list:
+                    _order_spec[key] = val
+                elif key in self.cls_to_label_map.keys():
+                    _order_spec[self.cls_to_label_map[key]] = val
+                else:
+                    raise InputValidationError(
+                        "\n\n\nCannot add filter specification\n"
+                        "with key {}\n"
+                        "to any known label".format(key)
+                    )
+            self._order_by.append(_order_spec)
+
         return self
 
     def _add_projection(self, key, projection_spec):

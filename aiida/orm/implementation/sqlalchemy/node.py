@@ -717,8 +717,10 @@ class Node(AbstractNode):
 
     @property
     def has_children(self):
-        return session.query(literal(True)).filter(
-            self.dbnode.child_paths.exists()).scalar() or False
+        #~ from aiida.backends.sqlalchemy.model.node import DbNode
+        return self.dbnode.outputs_q.all()
+        #~ return session.query(literal(True)).filter(
+            #~ self.dbnode.child_paths.exists()).scalar() or False
 
     @property
     def has_parents(self):

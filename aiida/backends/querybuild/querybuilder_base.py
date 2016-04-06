@@ -1131,14 +1131,23 @@ This would be the queryhelp::
                 entity_to_join,
                 entity_to_join.id == aliased_group_nodes.c.dbgroup_id
         )
-    def _join_users(self, joined_entity, entity_to_join):
+    def _join_user(self, joined_entity, entity_to_join):
+        """
+        :param joined_entity: the user
+        :param entity_to_join: the dbnode that joins to that user
+        """
+        self.que = self.que.join(
+                entity_to_join,
+                entity_to_join.id == joined_entity.user_id
+            )
+    def _join_node_to_user(self, joined_entity, entity_to_join):
         """
         :param joined_entity: the (aliased) node or group in the DB
         :param entity_to_join: the user you want to join with
         """
         self.que = self.que.join(
                 entity_to_join,
-                entity_to_join.id == joined_entity.user_id
+                entity_to_join.user_id == joined_entity.id
             )
 
     def _join_to_computer_used(self, joined_entity, entity_to_join):
@@ -1172,7 +1181,8 @@ This would be the queryhelp::
                 'member_of' : self._join_group_members,
                 'runs_on'   : self._join_to_computer_used,
                 'computer_of':self._join_computer,
-                'used_by'   : self._join_users,
+                'used_by'   : self._join_node_to_user,
+                'user_of'   : self._join_user,
         }
         return d
     def _get_connecting_node(self, querydict, index):

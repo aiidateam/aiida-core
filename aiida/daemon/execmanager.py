@@ -44,10 +44,11 @@ def update_running_calcs_status(authinfo):
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida JobCalculation objects
-    calcs_to_inquire = JobCalculation._get_all_with_state(
+    calcs_to_inquire = list(JobCalculation._get_all_with_state(
         state=calc_states.WITHSCHEDULER,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
+    )
 
     # NOTE: no further check is done that machine and
     # aiidauser are correct for each calc in calcs
@@ -396,10 +397,10 @@ def submit_jobs_with_authinfo(authinfo):
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida JobCalculation objects
-    calcs_to_inquire = JobCalculation._get_all_with_state(
+    calcs_to_inquire = list(JobCalculation._get_all_with_state(
         state=calc_states.TOSUBMIT,
         computer=authinfo.dbcomputer,
-        user=authinfo.aiidauser)
+        user=authinfo.aiidauser))
 
     # I avoid to open an ssh connection if there are
     # no calcs with state WITHSCHEDULER
@@ -710,11 +711,11 @@ def retrieve_computed_for_authinfo(authinfo):
     if not authinfo.enabled:
         return
 
-    calcs_to_retrieve = JobCalculation._get_all_with_state(
+    calcs_to_retrieve = list(JobCalculation._get_all_with_state(
         state=calc_states.COMPUTED,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
-
+    )
     retrieved = []
 
     # I avoid to open an ssh connection if there are no

@@ -1368,7 +1368,7 @@ This would be the queryhelp::
             # Don't change, path traversal querying
             # relies on this behavior!
             self.projections.update({self.label_list[-1]:'*'})
-
+        self.nr_of_projections = 0
         position_index = -1
         for vertice in self.path:
             label = vertice['label']
@@ -1386,6 +1386,7 @@ This would be the queryhelp::
                         projectable_spec
                 )
                 position_index += 1
+                self.nr_of_projections += 1
                 self.label_to_projected_entity_dict[
                         label
                     ][
@@ -1510,19 +1511,14 @@ This would be the queryhelp::
         Executes full query.
         :returns: all rows
         """
+        results = self.yield_per(100)
 
-        ormresults = self._all()
-        
-        print ormresults
-        try:
-            returnlist = [
-                    map(self._get_aiida_res, resultsrow)
-                    for resultsrow
-                    in ormresults
-            ]
-        except TypeError:
-            returnlist = map(self._get_aiida_res, ormresults)
-        return returnlist
+        if self.nr_of_projections > 1:
+            for res in results:
+                yield map(self._get_aiida_res, res)
+        else:
+            for res in results:
+                yield self._get_aiida_res(res)
 
     def yield_per(self, count):
         """

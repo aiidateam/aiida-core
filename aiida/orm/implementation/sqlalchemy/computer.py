@@ -72,7 +72,9 @@ class Computer(AbstractComputer):
 
     @classmethod
     def list_names(cls):
-        return list(DbComputer.objects.filter().values_list('name', flat=True))
+        from aiida.backends.sqlalchemy import session
+        return session.query(DbComputer.name).all()
+
 
     @property
     def full_text_info(self):

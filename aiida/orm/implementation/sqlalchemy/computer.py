@@ -235,8 +235,9 @@ class Computer(AbstractComputer):
         return self.dbcomputer.enabled
 
     def get_dbauthinfo(self, user):
-        info = DbAuthInfo.query.filter_by(dbcomputer=self.dbcomputer,
-                                          aiidauser=user.first())
+        info = DbAuthInfo.query.filter_by(
+                dbcomputer=self.dbcomputer,
+                aiidauser=user).first()
         if not info:
             raise NotExistent("The user '{}' is not configured for "
                               "computer '{}'".format(

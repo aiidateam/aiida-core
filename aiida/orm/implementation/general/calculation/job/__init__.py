@@ -996,11 +996,15 @@ class AbstractJobCalculation(object):
                             timezone.localtime(ctime).isoformat().split('T')[
                                 1].split('.')[0].rsplit(":", 1)[0]])
                     if with_scheduler_state:
+                        try:
+                            scheduler_state = res['calculation']['*'].get_attr('scheduler_state')
+                        except Exception:
+                            scheduler_state = 'Unknown'
+                            
                         calc_list_data.append([
                             str(res['calculation']['id']),
                             res['calculation']['state'],
-                            calc_ctime,
-                            res['calculation']['*'].get_attr('scheduler_state'),
+                            calc_ctime, scheduler_state,
                             res['computer']['name'],
                             from_type_to_pluginclassname(
                                     res['calculation']['type']

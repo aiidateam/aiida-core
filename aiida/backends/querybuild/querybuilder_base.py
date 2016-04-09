@@ -856,8 +856,13 @@ This would be the queryhelp::
         keys represent valid labels of entities (tables),
         values are list of columns
         """
+
+        self._order_by = []
+
         if not isinstance(order_by, (list, tuple)):
             order_by = [order_by]
+
+
         for order_spec in order_by:
             if not isinstance(order_spec, dict):
                     raise InputValidationError(
@@ -866,14 +871,23 @@ This would be the queryhelp::
                         "[columns to sort]"
                         "".format(order_spec)
                     )
+            _order_spec = {}
             for key,val in order_spec.items():
-                if key not in self.alias_dict:
-                    raise InputValidationError(
-                        "This key is unknown to me: {}".format(key)
-                    )
                 if not isinstance(val, (tuple, list)):
-                    order_spec[key] = [val]
-        self._order_by = order_by
+                    val = [val]
+
+                if key in self.label_list:
+                    _order_spec[key] = val
+                elif key in self.cls_to_label_map.keys():
+                    _order_spec[self.cls_to_label_map[key]] = val
+                else:
+                    raise InputValidationError(
+                        "\n\n\nCannot add filter specification\n"
+                        "with key {}\n"
+                        "to any known label".format(key)
+                    )
+            self._order_by.append(_order_spec)
+
         return self
 
     def _add_projection(self, key, projection_spec):
@@ -1117,14 +1131,23 @@ This would be the queryhelp::
                 entity_to_join,
                 entity_to_join.id == aliased_group_nodes.c.dbgroup_id
         )
-    def _join_users(self, joined_entity, entity_to_join):
+    def _join_user(self, joined_entity, entity_to_join):
+        """
+        :param joined_entity: the user
+        :param entity_to_join: the dbnode that joins to that user
+        """
+        self.que = self.que.join(
+                entity_to_join,
+                entity_to_join.id == joined_entity.user_id
+            )
+    def _join_node_to_user(self, joined_entity, entity_to_join):
         """
         :param joined_entity: the (aliased) node or group in the DB
         :param entity_to_join: the user you want to join with
         """
         self.que = self.que.join(
                 entity_to_join,
-                entity_to_join.id == joined_entity.user_id
+                entity_to_join.user_id == joined_entity.id
             )
 
     def _join_to_computer_used(self, joined_entity, entity_to_join):
@@ -1158,7 +1181,8 @@ This would be the queryhelp::
                 'member_of' : self._join_group_members,
                 'runs_on'   : self._join_to_computer_used,
                 'computer_of':self._join_computer,
-                'used_by'   : self._join_users,
+                'used_by'   : self._join_node_to_user,
+                'user_of'   : self._join_user,
         }
         return d
     def _get_connecting_node(self, querydict, index):
@@ -1354,7 +1378,7 @@ This would be the queryhelp::
             # Don't change, path traversal querying
             # relies on this behavior!
             self.projections.update({self.label_list[-1]:'*'})
-
+        self.nr_of_projections = 0
         position_index = -1
         for vertice in self.path:
             label = vertice['label']
@@ -1372,6 +1396,7 @@ This would be the queryhelp::
                         projectable_spec
                 )
                 position_index += 1
+                self.nr_of_projections += 1
                 self.label_to_projected_entity_dict[
                         label
                     ][
@@ -1496,19 +1521,14 @@ This would be the queryhelp::
         Executes full query.
         :returns: all rows
         """
+        results = self.yield_per(100)
 
-        ormresults = self._all()
-        
-        print ormresults
-        try:
-            returnlist = [
-                    map(self._get_aiida_res, resultsrow)
-                    for resultsrow
-                    in ormresults
-            ]
-        except TypeError:
-            returnlist = map(self._get_aiida_res, ormresults)
-        return returnlist
+        if self.nr_of_projections > 1:
+            for res in results:
+                yield map(self._get_aiida_res, res)
+        else:
+            for res in results:
+                yield self._get_aiida_res(res)
 
     def yield_per(self, count):
         """

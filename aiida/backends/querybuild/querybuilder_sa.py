@@ -46,7 +46,7 @@ class QueryBuilder(QueryBuilderBase):
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in  ('and', 'or', '~or', '~and'):
                 subexpressions = [
-                    _analyze_filter_spec(alias, sub_filter_spec)
+                    self._analyze_filter_spec(alias, sub_filter_spec)
                     for sub_filter_spec in filter_operation_dict
                 ]
                 if path_spec == 'and':

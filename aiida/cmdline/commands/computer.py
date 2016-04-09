@@ -148,6 +148,7 @@ class Computer(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
         computer_names = self.get_computer_names()
+        print computer_names
         return "\n".join(computer_names)
 
     def computer_list(self, *args):
@@ -477,9 +478,10 @@ class Computer(VerdiCommandWithSubcommands):
 
         from aiida.common.exceptions import (
             NotExistent, ValidationError)
-        from aiida.backends.djsite.utils import (
+        from aiida.backends.utils import (
             get_automatic_user, get_configured_user_email)
-        from aiida.backends.djsite.db.models import DbAuthInfo, DbUser
+        from aiida.backends.settings import BACKEND
+        from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
         import argparse
 
@@ -498,33 +500,60 @@ class Computer(VerdiCommandWithSubcommands):
         user_email = parsed_args.user
         computername = parsed_args.computer
 
+
         try:
             computer = self.get_computer(name=computername)
         except NotExistent:
             print >> sys.stderr, "No computer exists with name '{}'".format(
                 computername)
             sys.exit(1)
-
         if user_email is None:
             user = get_automatic_user()
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            from aiida.orm.querybuilder import QueryBuilder
+            qb = QueryBuilder()
+            qb.append(type="user", filters={'email':user_email})
+            user = qb.first()
+            if user is None:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
 
-        try:
-            authinfo = DbAuthInfo.objects.get(
-                dbcomputer=computer.dbcomputer,
-                aiidauser=user)
+        if BACKEND == BACKEND_DJANGO:
+            from aiida.backends.djsite.db.models import DbAuthInfo
 
-            old_authparams = authinfo.get_auth_params()
-        except ObjectDoesNotExist:
-            authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
-            old_authparams = {}
+            try:
+                authinfo = DbAuthInfo.objects.get(
+                    dbcomputer=computer.dbcomputer,
+                    aiidauser=user)
 
+                old_authparams = authinfo.get_auth_params()
+            except ObjectDoesNotExist:
+                authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
+                old_authparams = {}
+
+        elif BACKEND==BACKEND_SQLA:
+            from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+            from aiida.backends.sqlalchemy import session
+
+
+            authinfo = session.query(DbAuthInfo).filter(
+                    DbAuthInfo.dbcomputer==computer.dbcomputer
+                ).filter(
+                    DbAuthInfo.aiidauser==user
+                ).first()
+            if authinfo is None:
+                authinfo = DbAuthInfo(
+                        dbcomputer=computer.dbcomputer,
+                        aiidauser=user
+                    )
+                old_authparams = {}
+            else:
+                old_authparams = authinfo.get_auth_params()
+        else:
+            raise Exception(
+                    "Unknown backend {}".format(BACKEND)
+                )
         Transport = computer.get_transport_class()
 
         print ("Configuring computer '{}' for the AiiDA user '{}'".format(
@@ -1022,9 +1051,13 @@ class Computer(VerdiCommandWithSubcommands):
 
         ToDo: use an API or cache the results, sometime it is quite slow!
         """
-        from aiida.orm.computer import Computer as AiidaOrmComputer
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(type='computer', project=['name'])
+        return zip(*qb._all())[0]
+        #~ from aiida.orm.computer import Computer as AiidaOrmComputer
 
-        return AiidaOrmComputer.list_names()
+        #~ return AiidaOrmComputer.list_names()
 
     def get_computer(self, name):
         """

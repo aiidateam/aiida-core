@@ -72,7 +72,9 @@ class Computer(AbstractComputer):
 
     @classmethod
     def list_names(cls):
-        return list(DbComputer.objects.filter().values_list('name', flat=True))
+        from aiida.backends.sqlalchemy import session
+        return session.query(DbComputer.name).all()
+
 
     @property
     def full_text_info(self):
@@ -233,8 +235,9 @@ class Computer(AbstractComputer):
         return self.dbcomputer.enabled
 
     def get_dbauthinfo(self, user):
-        info = DbAuthInfo.query.filter_by(dbcomputer=self.dbcomputer,
-                                          aiidauser=user.first())
+        info = DbAuthInfo.query.filter_by(
+                dbcomputer=self.dbcomputer,
+                aiidauser=user).first()
         if not info:
             raise NotExistent("The user '{}' is not configured for "
                               "computer '{}'".format(

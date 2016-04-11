@@ -88,7 +88,7 @@ If you need to change the database schema follow these steps:
 
      LATEST_MIGRATION = '0003_my_db_update'
 
-   This let's AiiDA get the version number from your migration and check sure the
+   This let's AiiDA get the version number from your migration and make sure the
    database and the code are in sync.
 6. Migrate your database to the new version, (again from ``aiida/backends/djsite``),
    run::

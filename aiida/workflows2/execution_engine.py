@@ -60,7 +60,7 @@ class TrackingExecutionEngine(plum.execution_engine.ExecutionEngine, ProcessList
         # TODO: Change status to starting
         pass
 
-    def on_process_finishing(self, process):
+    def on_process_finialising(self, process):
         self._remove_process(process)
     ###################################################
 

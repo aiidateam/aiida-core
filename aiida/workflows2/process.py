@@ -15,12 +15,25 @@ __version__ = "0.6.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
+class ProcessSpec(plum.process.ProcessSpec):
+    def __init__(self):
+        self._fastforwardable = False
+
+    def is_fastforwardable(self):
+        return self._fastforwardable
+
+    def fastforwardable(self):
+        self._fastforwardable = True
+
+
 class Process(plum.process.Process):
     """
     This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
     """
     __metaclass__ = ABCMeta
+
+    _spec_type = ProcessSpec
 
     @staticmethod
     def from_record(record):
@@ -50,12 +63,21 @@ class Process(plum.process.Process):
                 if not exec_engine:
                     exec_engine = stack[-2]._get_exec_engine().push(self)
 
-            super(Process, self).run(inputs, exec_engine)
+            # Create the calculation node for the process (unstored)
+            calc = self._create_db_record()
+            assert(not calc._is_stored)
+
+            if self._can_fast_forward(calc, inputs):
+                self._fast_forward()
+            else:
+                self._current_calc = calc
+                super(Process, self).run(inputs, exec_engine)
 
     @classmethod
     def _create_default_exec_engine(cls):
         return TrackingExecutionEngine()
 
+    # Messages #####################################################
     def _on_process_starting(self, inputs):
         """
         The process is starting with the given inputs
@@ -63,25 +85,23 @@ class Process(plum.process.Process):
         """
 
         # Link and store the retrospective provenance for this process
-        calc = self._create_db_record()
         for name, input in inputs.iteritems():
             # TODO: Need to have a discussion to see if we should automatically
             # store unstored inputs.  My feeling is yes.
             if not input._is_stored:
                 input.store()
-            calc._add_link_from(input, name)
-
-        calc.store()
-        self._current_calc = calc
+            self._current_calc._add_link_from(input, name)
+        self._current_calc.store()
 
         super(Process, self)._on_process_starting(inputs)
 
-    def _on_process_finishing(self):
+    def _on_process_finialising(self):
         self._current_calc = None
 
     def _on_output_emitted(self, output_port, value, dynamic):
         """
         The process has emitted a value on the given output port.
+
         :param output_port: The output port name the value was emitted on
         :param value: The value emitted
         :param dynamic: Was the output port a dynamic one (i.e. not known
@@ -93,10 +113,13 @@ class Process(plum.process.Process):
             value.store()
 
         # If this isn't true then the function is just returning an existing
-        # node directly.  If we ever have 'return' links an else statement
-        # would be the place to create it
+        # node directly.
         if len(value.get_inputs()) == 0:
             value._add_link_from(self._current_calc, output_port)
+        else:
+            # TODO: This is where 'return' links would go
+            pass
+    #################################################################
 
     def _create_db_record(self):
         """
@@ -107,6 +130,14 @@ class Process(plum.process.Process):
         from aiida.orm.calculation import Calculation
         calc = Calculation()
         return calc
+
+    def _can_fast_forward(self, calc_node, inputs):
+        return False
+
+    def _fast_forward(self):
+        node = None  # Here we should find the old node
+        for k, v in node.get_output_dict():
+            self._out(k, v)
 
     def _load_from_stored_state(self, state_storage):
         pass

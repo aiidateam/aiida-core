@@ -22,7 +22,6 @@ __authors__ = "The AiiDA team."
 
 
 class Node(AbstractNode):
-
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
         from aiida.backends.djsite.db.models import DbNode
@@ -55,13 +54,11 @@ class Node(AbstractNode):
 
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbNode
-        self._to_be_stored = False
+        super(Node, self).__init__()
+
         self._temp_folder = None
 
         dbnode = kwargs.pop('dbnode', None)
-
-        # Empty cache of input links in any case
-        self._inputlinks_cache = {}
 
         # Set the internal parameters
         # Can be redefined in the subclasses
@@ -106,7 +103,6 @@ class Node(AbstractNode):
 
             self._to_be_stored = True
 
-
             # As creating the temp folder may require some time on slow
             # filesystems, we defer its creation
             self._temp_folder = None
@@ -127,7 +123,6 @@ class Node(AbstractNode):
             if not cls._plugin_type_string.endswith('.'):
                 raise InternalError("The plugin type string does not "
                                     "finish with a dot??")
-
 
             # If it is 'calculation.Calculation.', we want to filter
             # for things that start with 'calculation.' and so on
@@ -645,7 +640,6 @@ class Node(AbstractNode):
                     "source node is not stored. Either store it first, "
                     "or call _store_input_links with the store_parents "
                     "parameter set to True".format(link))
-
 
     def _store_cached_input_links(self, with_transaction=True):
         """

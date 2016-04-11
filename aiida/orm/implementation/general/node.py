@@ -15,7 +15,6 @@ __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
 
-
 class AbstractNode(object):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -80,7 +79,6 @@ class AbstractNode(object):
     # The name of the subfolder in which to put the files/directories
     # added with add_path
     _path_subfolder_name = 'path'
-
 
     # A tuple with attributes that can be updated even after
     # the call of the store() method
@@ -162,7 +160,9 @@ class AbstractNode(object):
           loaded from the database.
           (It is not possible to assign a uuid to a new Node.)
         """
-        pass
+        self._to_be_stored = True
+        # Empty cache of input links in any case
+        self._inputlinks_cache = {}
 
     @property
     def _is_stored(self):
@@ -288,7 +288,6 @@ class AbstractNode(object):
                                  "callable!".format(k))
             method(v)
 
-
     @property
     def label(self):
         """
@@ -392,7 +391,6 @@ class AbstractNode(object):
             raise UniquenessError("A link from node with UUID={} and "
                                   "the current node (UUID={}) already exists!".format(
                 src.uuid, self.uuid))
-
 
         # If both are stored, write directly on the DB
         if not self._to_be_stored and not src._to_be_stored:
@@ -564,7 +562,6 @@ class AbstractNode(object):
                 new_outputs[irreducible_linkname + "_{}".format(i.pk)] = i
 
         return new_outputs
-
 
     @abstractmethod
     def get_inputs(self, type=None, also_labels=False, only_in_db=False):
@@ -1152,7 +1149,7 @@ class AbstractNode(object):
     @combomethod
     def querybuild(self_or_cls, **kwargs):
         """
-        Instantiates and 
+        Instantiates and
         :returns: a QueryBuilder instance.
 
         The QueryBuilder's path has one vertice so far, namely this class.
@@ -1169,14 +1166,14 @@ class AbstractNode(object):
         """
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node as AiidaNode
-        isclass =  kwargs.pop('isclass')
+        isclass = kwargs.pop('isclass')
         qb = QueryBuilder()
         if isclass:
             qb.append(self_or_cls, **kwargs)
         else:
             filters = kwargs.pop('filters', {})
-            filters.update({'id':self_or_cls.pk})
-            qb.append(self_or_cls.__class__, filters = filters, **kwargs)
+            filters.update({'id': self_or_cls.pk})
+            qb.append(self_or_cls.__class__, filters=filters, **kwargs)
         return qb
 
 
@@ -1273,6 +1270,7 @@ class NodeInputManager(object):
             raise KeyError("Node {} does not have an input with link {}"
                            .format(self._node.pk, name))
 
+
 class AttributeManager(object):
     """
     An object used internally to return the attributes as a dictionary.
@@ -1328,4 +1326,3 @@ class AttributeManager(object):
             return self._node.get_attr(name)
         except AttributeError as e:
             raise KeyError(e.message)
-

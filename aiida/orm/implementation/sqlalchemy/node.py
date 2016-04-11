@@ -8,7 +8,6 @@ from sqlalchemy.exc import SQLAlchemyError, ProgrammingError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
 
-
 from aiida.backends.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
 from aiida.backends.sqlalchemy.models.comment import DbComment
@@ -28,22 +27,19 @@ from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
 
 import aiida.orm.autogroup
 
-
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
-class Node(AbstractNode):
 
+class Node(AbstractNode):
     def __init__(self, **kwargs):
-        self._to_be_stored = False
+        super(Node, self).__init__()
+
         self._temp_folder = None
 
         dbnode = kwargs.pop('dbnode', None)
-
-        # Empty cache of input links in any case
-        self._inputlinks_cache = {}
 
         # Set the internal parameters
         # Can be redefined in the subclasses
@@ -122,7 +118,6 @@ class Node(AbstractNode):
         else:
             return self._dbnode.id
 
-
     @classmethod
     def query(cls, *args, **kwargs):
         q = django_filter(DbNode.aiida_query, **kwargs)
@@ -132,7 +127,6 @@ class Node(AbstractNode):
             if not cls._plugin_type_string.endswith('.'):
                 raise InternalError("The plugin type string does not "
                                     "finish with a dot??")
-
 
             # If it is 'calculation.Calculation.', we want to filter
             # for things that start with 'calculation.' and so on
@@ -206,8 +200,8 @@ class Node(AbstractNode):
         # I am linking src->self; a loop would be created if a DbPath exists
         # already in the TC table from self to src
         c = session.query(literal(True)).filter(DbPath.query
-                          .filter_by(parent_id=self.dbnode.id, child_id=src.dbnode.id)
-                          .exists()).scalar()
+                                                .filter_by(parent_id=self.dbnode.id, child_id=src.dbnode.id)
+                                                .exists()).scalar()
         if c:
             raise ValueError(
                 "The link you are attempting to create would generate a loop")
@@ -257,7 +251,7 @@ class Node(AbstractNode):
     def get_inputs(self, type=None, also_labels=False, only_in_db=False):
         inputs_list = [(i.label, i.input.get_aiida_class()) for i in
                        DbLink.query.filter_by(output=self.dbnode)
-                       .distinct().all()]
+                           .distinct().all()]
 
         if not only_in_db:
             # Needed for the check
@@ -304,7 +298,6 @@ class Node(AbstractNode):
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
 
-
     def _set_attr(self, key, value):
         if self._to_be_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
@@ -329,7 +322,7 @@ class Node(AbstractNode):
                 self._increment_version_number_db()
             else:
                 raise ModificationNotAllowed("Cannot delete an attribute after "
-                                                "saving a node")
+                                             "saving a node")
 
     def get_attr(self, key, *args):
         exception = AttributeError("Attribute '{}' does not exist".format(key))
@@ -430,12 +423,12 @@ class Node(AbstractNode):
         comments = self._get_dbcomments(pk)
 
         return [{
-            "id": c.id,
-            "user__email": c.user.email,
-            "ctime": c.ctime,
-            "mtime": c.mtime,
-            "content": c.content
-        } for c in comments ]
+                    "id": c.id,
+                    "user__email": c.user.email,
+                    "ctime": c.ctime,
+                    "mtime": c.mtime,
+                    "content": c.content
+                } for c in comments]
 
     def _get_dbcomments(self, pk=None, with_user=False):
         comments = DbComment.query.filter_by(dbnode=self._dbnode)
@@ -581,7 +574,6 @@ class Node(AbstractNode):
                     "or call _store_input_links with the store_parents "
                     "parameter set to True".format(link))
 
-
     def _store_cached_input_links(self, with_transaction=True):
         """
         Store all input links that are in the local cache, transferring them
@@ -629,7 +621,6 @@ class Node(AbstractNode):
                 session.commit()
             except SQLAlchemyError as e:
                 session.rollback()
-
 
     def store(self, with_transaction=True):
         """

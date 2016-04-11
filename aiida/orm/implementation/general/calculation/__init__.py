@@ -3,6 +3,7 @@
 import collections
 
 from aiida.common.utils import classproperty
+from aiida.common.exceptions import DbContentError
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -22,6 +23,7 @@ def from_type_to_pluginclassname(typestr):
         raise DbContentError("The type name '{}' is not valid!".format(
             typestr))
     return typestr[:-1]  # Strip final dot
+
 
 def _parse_single_arg(function_name, additional_parameter,
                       args, kwargs):
@@ -276,12 +278,12 @@ class AbstractCalculation(object):
         return super(AbstractCalculation, self)._add_link_from(src, label)
 
     def _replace_link_from(self, src, label):
-        '''
+        """
         Replace a link.
 
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link.
-        '''
+        """
         from aiida.orm.data import Data
         from aiida.orm.code import Code
 
@@ -299,5 +301,3 @@ class AbstractCalculation(object):
         from aiida.orm.code import Code
         return dict(self.get_inputs(type=Code, also_labels=True)).get(
             self._use_methods['code']['linkname'], None)
-
-

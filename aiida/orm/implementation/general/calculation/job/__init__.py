@@ -36,8 +36,6 @@ class AbstractJobCalculation(object):
           call super()._init_internal_params() as the first thing
           in your inherited function.
         """
-        super(AbstractJobCalculation, self)._init_internal_params()
-
         # By default, no output parser
         self._default_parser = None
         # Set default for the link to the retrieved folder (after calc is done)
@@ -127,7 +125,6 @@ class AbstractJobCalculation(object):
         if not isinstance(self.get_withmpi(), bool):
             raise ValidationError(
                 "withmpi property must be boolean! It in instead {}".format(str(type(self.get_withmpi()))))
-
 
     def _can_link_as_output(self, dest):
         """
@@ -515,7 +512,6 @@ class AbstractJobCalculation(object):
 
         return super(AbstractJobCalculation, self)._remove_link_from(label)
 
-
     @abstractmethod
     def _set_state(self, state):
         """
@@ -570,7 +566,6 @@ class AbstractJobCalculation(object):
             return 'IMPORTED/{}'.format(attribute_state)
         else:
             return state
-
 
     def _is_new(self):
         """
@@ -856,7 +851,6 @@ class AbstractJobCalculation(object):
         else:
             return queryresults
 
-
     def _prepare_for_submission(self, tempfolder, inputdict):
         """
         This is the routine to be called when you want to create
@@ -1055,7 +1049,6 @@ class AbstractJobCalculation(object):
             self.logger.warning("Calculation {} killed by the user "
                                 "(it was {})".format(self.pk, calc_states.WITHSCHEDULER))
 
-
     def _presubmit(self, folder, use_unstored_links=False):
         """
         Prepares the calculation folder with all inputs, ready to be copied to the cluster
@@ -1090,7 +1083,7 @@ class AbstractJobCalculation(object):
         else:
             inputdict = self.get_inputs_dict(only_in_db=True)
 
-        codes = [ _ for _ in inputdict.itervalues() if isinstance(_,Code) ]
+        codes = [_ for _ in inputdict.itervalues() if isinstance(_, Code)]
 
         calcinfo = self._prepare_for_submission(folder, inputdict)
         s = computer.get_scheduler()
@@ -1174,30 +1167,30 @@ class AbstractJobCalculation(object):
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
-        extra_mpirun_params = self.get_mpirun_extra_params() # this is the same for all codes in the same calc
+        extra_mpirun_params = self.get_mpirun_extra_params()  # this is the same for all codes in the same calc
 
         ########################################################################
-#         if self.get_withmpi():
-#             job_tmpl.argv = (mpi_args + extra_mpirun_params +
-#                              [code.get_execname()] +
-#                              (calcinfo.cmdline_params if
-#                               calcinfo.cmdline_params is not None else []))
-#         else:
-#             job_tmpl.argv = [code.get_execname()] + (
-#                 calcinfo.cmdline_params if
-#                 calcinfo.cmdline_params is not None else [])
-#         job_tmpl.stdin_name = calcinfo.stdin_name
-#         job_tmpl.stdout_name = calcinfo.stdout_name
+        #         if self.get_withmpi():
+        #             job_tmpl.argv = (mpi_args + extra_mpirun_params +
+        #                              [code.get_execname()] +
+        #                              (calcinfo.cmdline_params if
+        #                               calcinfo.cmdline_params is not None else []))
+        #         else:
+        #             job_tmpl.argv = [code.get_execname()] + (
+        #                 calcinfo.cmdline_params if
+        #                 calcinfo.cmdline_params is not None else [])
+        #         job_tmpl.stdin_name = calcinfo.stdin_name
+        #         job_tmpl.stdout_name = calcinfo.stdout_name
 
         # set the codes_info
-        if not isinstance(calcinfo.codes_info,(list,tuple)):
+        if not isinstance(calcinfo.codes_info, (list, tuple)):
             raise PluginInternalError("codes_info passed to CalcInfo must be a "
                                       "list of CalcInfo objects")
 
         codes_info = []
         for code_info in calcinfo.codes_info:
 
-            if not isinstance(code_info,CodeInfo):
+            if not isinstance(code_info, CodeInfo):
                 raise PluginInternalError("Invalid codes_info, must be a list "
                                           "of CodeInfo objects")
 
@@ -1207,9 +1200,9 @@ class AbstractJobCalculation(object):
                                           "to be launched")
             this_code = load_node(code_info.code_uuid, parent_class=Code)
 
-            this_withmpi = code_info.withmpi    # to decide better how to set the default
+            this_withmpi = code_info.withmpi  # to decide better how to set the default
             if this_withmpi is None:
-                if len(calcinfo.codes_info)>1:
+                if len(calcinfo.codes_info) > 1:
                     raise PluginInternalError("For more than one code, it is "
                                               "necessary to set withmpi in "
                                               "codes_info")
@@ -1233,12 +1226,12 @@ class AbstractJobCalculation(object):
             # overwrite the old cmdline_params and add codename and mpirun stuff
             code_info.cmdline_params = this_argv
 
-            codes_info.append( code_info )
+            codes_info.append(code_info)
         job_tmpl.codes_info = codes_info
 
         # set the codes execution mode
 
-        if len(codes)>1:
+        if len(codes) > 1:
             try:
                 job_tmpl.codes_run_mode = calcinfo.codes_run_mode
             except KeyError:
@@ -1325,7 +1318,6 @@ class AbstractJobCalculation(object):
                                           "is absolute! ({})".format(this_pk, dest_rel_path))
 
         return calcinfo, script_filename
-
 
     @property
     def res(self):
@@ -1553,12 +1545,12 @@ class CalculationResultManager(object):
         try:
             ParserClass = calc.get_parserclass()
             if ParserClass is None:
-                #raise AttributeError("No output parser is attached to the calculation")
+                # raise AttributeError("No output parser is attached to the calculation")
                 self._parser = Parser(calc)
             else:
                 self._parser = ParserClass(calc)
         except MissingPluginError:
-            self._parser = Parser(calc) # Use base class
+            self._parser = Parser(calc)  # Use base class
 
     def __dir__(self):
         """
@@ -1614,7 +1606,6 @@ class CalculationResultManager(object):
             raise KeyError("Parser '{}' did not provide a result '{}'"
                            .format(self._parser.__class__.__name__, name))
 
-
 #
 # class CalculationFileManager(object):
 #     """
@@ -1650,4 +1641,3 @@ class CalculationResultManager(object):
 #     def list(self,name='.'):
 #         folder = self._get_folder()
 #         return folder.get_folder_list(name)
-

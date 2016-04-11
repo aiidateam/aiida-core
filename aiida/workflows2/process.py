@@ -17,6 +17,7 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 class ProcessSpec(plum.process.ProcessSpec):
     def __init__(self):
+        super(ProcessSpec, self).__init__()
         self._fastforwardable = False
 
     def is_fastforwardable(self):
@@ -127,8 +128,8 @@ class Process(plum.process.Process):
         this process.
         :return:
         """
-        from aiida.orm.calculation import Calculation
-        calc = Calculation()
+        from aiida.orm.calculation.process import ProcessCalculation
+        calc = ProcessCalculation()
         return calc
 
     def _can_fast_forward(self, calc_node, inputs):
@@ -218,8 +219,7 @@ class FunctionProcess(Process):
             self._out(name, value)
 
     def _create_db_record(self):
-        from aiida.orm.calculation import Calculation
-        calc = Calculation()
+        calc = super(FunctionProcess, self)._create_db_record()
         self._add_source_info(calc)
         return calc
 

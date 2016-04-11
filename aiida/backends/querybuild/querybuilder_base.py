@@ -34,6 +34,7 @@ class QueryBuilderBase(object):
     the specific type of node and link is dealt in subclasses.
     """
     NODE_TYPE = 'node.Node'
+    LINK_PREFIX = '<>'
 
     def __init__(self, *args, **kwargs):
         """
@@ -403,7 +404,7 @@ This would be the queryhelp::
         self.label_list = []
 
         # A list of unique aliases in same order as path
-        self.alias_list = []
+        self.aliased_path = []
 
         # A dictionary label:alias of ormclass
         # redundant but makes life easier
@@ -670,6 +671,12 @@ This would be the queryhelp::
         ######################## LABEL #################################
         # Let's get a label
         if label:
+            if label.startswith(self.LINK_PREFIX):
+                raise InputValidationError(
+                    "You cannot start a label with {}\n"
+                    "since this is used as prefix to\n"
+                    "the link-label"
+                )
             label = label
         elif autolabel:
             label = self._get_autolabel(ormclasstype)
@@ -731,7 +738,7 @@ This would be the queryhelp::
 
         ######################## ALIASING ##############################
         alias = aliased(ormclass)
-        self.alias_list.append(alias)
+        self.aliased_path.append(alias)
         self.alias_dict[label] = alias
 
 
@@ -784,19 +791,37 @@ This would be the queryhelp::
             joining_keyword = 'direction'
             joining_value = 1
 
-        ############# MAKING THE PATH #################################
+        ############################# LINKS ####################################
+        # See if this requires a link:
+        if joining_keyword in ('input_of', 'output_of', 'direction'):
+            # Ok, so here we are joining one node to another, as input or output
+            # This means that the user might want to query by label or project
+            # on a label column.
+            # Since the label of this vertice is unique the label, e.g. 'calc1'
+            # the label '<>calc1' will also be unique if '<>' is a protected
+            # substring.
+            linklabel = self.LINK_PREFIX + label
+            self.alias_dict[linklabel] = aliased(self.Link)
+            self.filters[linklabel] = {}
+            #~ self.label_list.append(linklabel)
+        else:
+            linklabel = None
+            
+
+        ################### EXTENDING THE PATH #################################
 
         self.path.append(
                 {
                     'type':type,
                     'label':label,
-                    joining_keyword:joining_value
+                    joining_keyword:joining_value,
+                    'linklabel':linklabel
                 }
             )
         return self
 
     def _add_filter(self, key, filter_spec):
-        if key in self.label_list:
+        if key in self.alias_dict.keys():
             self.filters[key].update(filter_spec)
         elif key in self.cls_to_label_map.keys():
             self.filters[self.cls_to_label_map[key]].update(filter_spec)
@@ -891,7 +916,7 @@ This would be the queryhelp::
         return self
 
     def _add_projection(self, key, projection_spec):
-        if key in self.label_list:
+        if key in self.alias_dict.keys():
             self.projections[key] = projection_spec
         elif key in self.cls_to_label_map.keys():
             self.projections[self.cls_to_label_map[key]] = projection_spec
@@ -1019,7 +1044,7 @@ This would be the queryhelp::
                 #~ call.caller_id == entity_to_join.id
             #~ )
 
-    def _join_outputs(self, joined_entity, entity_to_join):
+    def _join_outputs(self, joined_entity, entity_to_join, aliased_link):
         """
         :param joined_entity: The (aliased) ORMclass that is an input
         :param entity_to_join: The (aliased) ORMClass that is an output.
@@ -1028,7 +1053,7 @@ This would be the queryhelp::
         from **joined_entity** as input to **enitity_to_join** as output
         (**enitity_to_join** is an *output_of* **joined_entity**)
         """
-        aliased_link = aliased(self.Link)
+        #~ aliased_link = aliased(self.Link)
         self.que = self.que.join(
                 aliased_link,
                 aliased_link.input_id == joined_entity.id
@@ -1037,7 +1062,7 @@ This would be the queryhelp::
                 aliased_link.output_id == entity_to_join.id
         )
 
-    def _join_inputs(self, joined_entity, entity_to_join):
+    def _join_inputs(self, joined_entity, entity_to_join, aliased_link):
         """
         :param joined_entity: The (aliased) ORMclass that is an output
         :param entity_to_join: The (aliased) ORMClass that is an input.
@@ -1199,6 +1224,12 @@ This would be the queryhelp::
         *   *descendant_of*
         *   *ancestor_of*
         *   *direction*
+        *   *group_of*
+        *   *member_of*
+        *   *runs_on*
+        *   *computer_of*
+        *   *used_by*
+        *   *user_of*
 
         Future:
 
@@ -1222,11 +1253,11 @@ This would be the queryhelp::
             else:
                 raise Exception("Direction 0 is not valid")
         if isinstance(val, int):
-            return self.alias_list[val], func
+            return self.aliased_path[val], func
         elif isinstance(val, str):
             try:
                 val = self.labels_location_dict[val]
-                return self.alias_list[val], func
+                return self.aliased_path[val], func
             except AttributeError:
                 raise InputValidationError(
                     'List of types is not unique,\n'
@@ -1303,11 +1334,6 @@ This would be the queryhelp::
         """
         build the query and return a sqlalchemy.Query instance
         """
-        ####################### ALIASING ####################
-        # First I need to alias everything,
-        # because I might be joining the same table multiple times,
-        # check also
-        # http://dself.ocs.sqlalchemy.org/en/rel_1_0/orm/query.html
 
         if not len(self.label_list) == len(set(self.label_list)):
             raise InputValidationError(
@@ -1329,23 +1355,26 @@ This would be the queryhelp::
         #Starting the query by receiving a session
         # Every subclass needs to have _get_session and give me the
         # right session
-        self.que = self._get_session().query(self.alias_list[0])
-
+        firstalias = self.alias_dict[self.path[0]['label']]
+        self.que = self._get_session().query(firstalias)
 
         ######################### JOINS ################################
 
-        for index, alias, querydict in  zip(
-                range(len(self.alias_list)),
-                self.alias_list,
-                self.path
-            ):
+        for index, querydict in  enumerate(self.path[1:], start=1):
+            alias = self.alias_dict[querydict['label']]
             #looping through the queryhelp
-            if index:
+            #~ if index:
                 #There is nothing to join if that is the first table
-                (
-                    toconnectwith, connection_func
-                ) = self._get_connecting_node(querydict, index)
+            toconnectwith, connection_func = self._get_connecting_node(
+                    querydict, index
+                )
+            linklabel = querydict.get('linklabel', None)
+            if linklabel is None:
                 connection_func(toconnectwith, alias)
+            else:
+                link = self.alias_dict[linklabel]
+                connection_func(toconnectwith, alias, link)
+
         ######################### FILTERS ##############################
 
         for label, filter_specs in self.filters.items():
@@ -1399,6 +1428,31 @@ This would be the queryhelp::
                 self.nr_of_projections += 1
                 self.label_to_projected_entity_dict[
                         label
+                    ][
+                        projectable_spec
+                    ] = position_index
+        ##################### LINK-PROJECTIONS #########################
+        for vertice in self.path:
+            linklabel = vertice.get('linklabel', None)
+            if linklabel is None:
+                continue
+            items_to_project = self.projections.get(linklabel, [])
+            if not items_to_project:
+                continue
+            alias = self.alias_dict[linklabel]
+            #~ raw_input(alias)
+            if not isinstance(items_to_project, (list, tuple)):
+                items_to_project = [items_to_project]
+            self.label_to_projected_entity_dict[linklabel] = {}
+            for projectable_spec in items_to_project:
+                projectable_spec = self.add_projectable_entity(
+                        alias,
+                        projectable_spec
+                )
+                position_index += 1
+                self.nr_of_projections += 1
+                self.label_to_projected_entity_dict[
+                        linklabel
                     ][
                         projectable_spec
                     ] = position_index
@@ -1472,7 +1526,7 @@ This would be the queryhelp::
 
 
     def get_aliases(self):
-        return self.alias_list
+        return self.aliased_path
 
     def get_queryhelp(self):
         """

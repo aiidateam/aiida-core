@@ -7,6 +7,7 @@ Do not delete, otherwise 'verdi developertest' will stop to work.
 from aiida.orm import Data
 from aiida.orm.data.simple import SimpleData
 from threading import local
+import importlib
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -105,3 +106,16 @@ def _add_source_info(calc, func):
     calc._set_attr("first_line_source_code", first_line)
     calc._set_attr("source_file", source)
     calc._set_attr("function_name", function_name)
+
+
+def load_class(classstring):
+    """
+    Load a class from a string
+    """
+    class_data = classstring.split(".")
+    module_path = ".".join(class_data[:-1])
+    class_name = class_data[-1]
+
+    module = importlib.import_module(module_path)
+    # Finally, we retrieve the Class
+    return getattr(module, class_name)

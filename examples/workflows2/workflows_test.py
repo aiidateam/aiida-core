@@ -34,10 +34,10 @@ def add_multiply_wf(a, b, c):
 
 class Add(Process):
     @staticmethod
-    def _init(spec):
-        spec.add_input('a', default=0)
-        spec.add_input('b', default=0)
-        spec.add_output('value')
+    def _define(spec):
+        spec.input('a', default=0)
+        spec.input('b', default=0)
+        spec.output('value')
 
     def _run(self, a, b):
         self._out('value', to_db_type(a.value + b.value))
@@ -45,10 +45,10 @@ class Add(Process):
 
 class Mul(Process):
     @staticmethod
-    def _init(spec):
-        spec.add_input('a', default=1)
-        spec.add_input('b', default=1)
-        spec.add_output('value')
+    def _define(spec):
+        spec.input('a', default=1)
+        spec.input('b', default=1)
+        spec.output('value')
 
     def _run(self, a, b):
         self._out('value', to_db_type(a.value * b.value))
@@ -56,13 +56,13 @@ class Mul(Process):
 
 class MulAdd(Workflow):
     @staticmethod
-    def _init(spec):
-        spec.add_process(Mul)
-        spec.add_process(Add)
+    def _define(spec):
+        spec.process(Mul)
+        spec.process(Add)
 
-        spec.expose_inputs('Add')
-        spec.expose_outputs('Mul')
-        spec.add_input('c')
+        spec.exposed_inputs('Add')
+        spec.exposed_outputs('Mul')
+        spec.input('c')
 
         spec.link(':c', 'Mul:a')
         spec.link('Add:value', 'Mul:b')

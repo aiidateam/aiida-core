@@ -6,6 +6,7 @@ import plum.process
 
 import aiida.workflows2.util as util
 from aiida.workflows2.execution_engine import TrackingExecutionEngine
+from aiida.workflows2.util import load_class
 from abc import ABCMeta
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -21,28 +22,35 @@ class Process(plum.process.Process):
     """
     __metaclass__ = ABCMeta
 
+    @staticmethod
+    def from_record(record):
+        if record.process_class == Process.__class__.__name__:
+            process_class = Process.__class__
+        else:
+            process_class = load_class(record.process_class)
+        proc = process_class.create()
+        proc._load_from_record(record)
+        return proc
+
     def __init__(self):
         super(Process, self).__init__()
         self._current_calc = None
+        self._state_storage = None
 
-    def run(self, exec_engine=None):
+    def execute(self, inputs, exec_engine, state_storage):
+        # TODO: Put state storage in a with(..)
+        self._state_storage = state_storage
+        self.run(inputs, exec_engine)
+        self._state_storage = None
+
+    def run(self, inputs=None, exec_engine=None):
         with util.ProcessStack(self) as stack:
             if len(stack) > 1:
                 # TODO: This is where a call link would go from parent to this fn
                 if not exec_engine:
                     exec_engine = stack[-2]._get_exec_engine().push(self)
 
-            super(Process, self).run(exec_engine)
-        self._current_calc = None
-
-    def load(self, record):
-        assert(record.process_class == cls.__name__)
-        assert(not self._current_calc)
-
-        # TODO:
-        # 1. Get the node retrospective node this corresponds to
-        # 2. If the status isn't complete then bind the inputs to the
-        # input ports
+            super(Process, self).run(inputs, exec_engine)
 
     @classmethod
     def _create_default_exec_engine(cls):
@@ -69,7 +77,7 @@ class Process(plum.process.Process):
         super(Process, self)._on_process_starting(inputs)
 
     def _on_process_finishing(self):
-        super(Process, self)._on_process_finishing()
+        self._current_calc = None
 
     def _on_output_emitted(self, output_port, value, dynamic):
         """
@@ -100,6 +108,9 @@ class Process(plum.process.Process):
         calc = Calculation()
         return calc
 
+    def _load_from_stored_state(self, state_storage):
+        pass
+
 
 class FunctionProcess(Process):
     _func_args = None
@@ -128,21 +139,21 @@ class FunctionProcess(Process):
 
         args, varargs, keywords, defaults = inspect.getargspec(func)
 
-        def init(spec):
+        def _define(spec):
             for i in range(len(args)):
                 default = None
                 if defaults and len(defaults) - len(args) + i >= 0:
                     default = defaults[i]
-                spec.add_input(args[i], default=default)
+                spec.input(args[i], default=default)
 
             for k, v in kwargs.iteritems():
-                spec.add_input(k)
+                spec.input(k)
             # We don't know what a function will return so keep it dynamic
-            spec.add_dynamic_output()
+            spec.dynamic_output()
 
         return type(func.__name__, (FunctionProcess,),
                     {'_func': staticmethod(func),
-                     '_init': staticmethod(init),
+                     '_define': staticmethod(_define),
                      '_func_args': args})
 
     def __init__(self):
@@ -159,11 +170,13 @@ class FunctionProcess(Process):
         :return:
         """
         assert(len(args) == len(self._func_args))
-        # Bind all the non-keyword arguments as inputs
+        inputs = kwargs
+        # Add all the non-keyword arguments as inputs
+        # TODO: Check that we're nto overwriting kwargs with args
         for name, value in zip(self._func_args, args):
-            self.bind(name, value)
+            inputs[name] = value
         # Now get the superclass to deal with the keyword args and run
-        return super(FunctionProcess, self).__call__(**kwargs)
+        return super(FunctionProcess, self).__call__(**inputs)
 
     def _run(self, **kwargs):
         args = []

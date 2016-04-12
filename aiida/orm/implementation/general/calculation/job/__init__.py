@@ -1027,8 +1027,12 @@ class AbstractJobCalculation(object):
                 break
 
     @classmethod
-    def _get_all_with_state(cls, state, computer=None, user=None,
-                            only_computer_user_pairs=False, only_enabled=True):
+    def _get_all_with_state(
+            cls, state, computer=None, user=None,
+            only_computer_user_pairs=False,
+            only_enabled=True,
+            limit=False
+        ):
         """
         Filter all calculations with a given state.
 
@@ -1049,6 +1053,7 @@ class AbstractJobCalculation(object):
                 in the format
                 ('dbcomputer__id', 'user__id')
                 [where the IDs are the IDs of the respective tables]
+        :param int limit: Limit the number of rows returned
 
         :return: a list of calculation objects matching the filters.
         """
@@ -1099,6 +1104,8 @@ class AbstractJobCalculation(object):
             returnresult = qb.distinct().all()
         else:
             qb.append(cls, filters=calcfilter, project=['*'], runs_on='computer')
+            if limit:
+                qb.limit(limit)
             returnresult = qb.all()
         return returnresult
 

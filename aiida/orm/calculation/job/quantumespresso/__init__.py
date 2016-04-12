@@ -2,7 +2,6 @@
 import os
 
 from aiida.common.exceptions import InputValidationError
-from aiida.orm import DataFactory
 from aiida.common.datastructures import CalcInfo
 from aiida.orm.data.upf import get_pseudos_from_structure
 from aiida.common.utils import classproperty
@@ -14,6 +13,7 @@ from aiida.orm.data.upf import UpfData
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.data.remote import RemoteData
 from aiida.common.datastructures import CodeInfo
+from aiida.common.links import LinkType
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -821,7 +821,7 @@ class BasePwCpInputGenerator(object):
         # set links for pseudos
         for linkname, input_node in self.get_inputs_dict().iteritems():
             if isinstance(input_node, UpfData):
-                c2._add_link_from(input_node, label=linkname)
+                c2.add_link_from(input_node, label=linkname)
 
         # Add also the vdw table, if the parent had one
         try:

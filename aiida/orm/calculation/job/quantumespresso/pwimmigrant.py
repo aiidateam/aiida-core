@@ -14,6 +14,7 @@ from aiida.common.folders import SandboxFolder
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import (FeatureNotAvailable, InvalidOperation,
                                      InputValidationError)
+from aiida.common.links import LinkType
 from aiida.tools.codespecific.quantumespresso import pwinputparser
 
 
@@ -357,7 +358,8 @@ class PwimmigrantCalculation(PwCalculation):
         self._set_state(calc_states.SUBMITTING)
         remotedata = RemoteData(computer=self.get_computer(),
                                 remote_path=self._get_remote_workdir())
-        remotedata._add_link_from(self, label='remote_folder')
+        remotedata.add_link_from(self, label='remote_folder',
+                                 link_type=LinkType.CREATE)
         remotedata.store()
 
     def prepare_for_retrieval_and_parsing(self, open_transport):

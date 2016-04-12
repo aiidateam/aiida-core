@@ -8,6 +8,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
 from aiida.common.folders import SandboxFolder
 from aiida.common.utils import combomethod
+from aiida.common.links import LinkType
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -362,19 +363,18 @@ class AbstractNode(object):
         """
         return len(self._inputlinks_cache) != 0
 
-    def _add_link_from(self, src, label=None):
+    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
         :note: In subclasses, change only this. Moreover, remember to call
            the super() method in order to properly use the caching logic!
-        :note: There is no _add_link_to, in order to avoid that someone
-           redefines that method and forgets about using the caching mechanism.
-           Given that it is not restrictive, always use the _add_link_from!
 
         :param src: the source object
         :param str label: the name of the label to set the link from src.
                     Default = None.
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
         """
         # Check that the label does not already exist
 
@@ -384,21 +384,26 @@ class AbstractNode(object):
         if label in self._inputlinks_cache:
             raise UniquenessError("Input link with name '{}' already present "
                                   "in the internal cache".format(label))
+
         # See if I am pointing to already saved nodes and I am already
         # linking to a given node
-        if src.uuid in [_.uuid for _ in
-                        self._inputlinks_cache.values()]:
-            raise UniquenessError("A link from node with UUID={} and "
-                                  "the current node (UUID={}) already exists!".format(
-                src.uuid, self.uuid))
+        if src.uuid in [_[0].uuid for _ in self._inputlinks_cache.values()]:
+            raise UniquenessError(
+                "A link from node with UUID={} and "
+                "the current node (UUID={}) already exists!".format(
+                    src.uuid, self.uuid))
+
+        # Check if the source allows output links from this node
+        # (will raise ValueError if this is not the case)
+        src._linking_as_output(self, link_type)
 
         # If both are stored, write directly on the DB
-        if not self._to_be_stored and not src._to_be_stored:
-            self._add_dblink_from(src, label)
+        if self._is_stored and src._is_stored:
+            self._add_dblink_from(src, label, link_type)
         else:  # at least one is not stored: add to the internal cache
-            self._add_cachelink_from(src, label)
+            self._add_cachelink_from(src, label, link_type)
 
-    def _add_cachelink_from(self, src, label):
+    def _add_cachelink_from(self, src, label, link_type):
         """
         Add a link in the cache.
         """
@@ -414,9 +419,9 @@ class AbstractNode(object):
             raise UniquenessError("Input link with name '{}' already present "
                                   "in the internal cache")
 
-        self._inputlinks_cache[label] = src
+        self._inputlinks_cache[label] = (src, link_type)
 
-    def _replace_link_from(self, src, label):
+    def _replace_link_from(self, src, label, link_type=LinkType.UNSPECIFIED):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
@@ -427,8 +432,8 @@ class AbstractNode(object):
         :param str label: the name of the label to set the link from src.
         """
         # If both are stored, write directly on the DB
-        if not self._to_be_stored and not src._to_be_stored:
-            self._replace_dblink_from(src, label)
+        if self._is_stored and src._is_stored:
+            self._replace_dblink_from(src, label, link_type)
             # If the link was in the local cache, remove it
             # (this could happen if I first store the output node, then
             # the input node.
@@ -441,13 +446,14 @@ class AbstractNode(object):
             # linking to a given node
             # It is similar to the 'add' method, but if I am replacing the
             # same node, I will not complain (k!=label)
-            if src.uuid in [v.uuid for k, v in
+            if src.uuid in [v[0].uuid for k, v in
                             self._inputlinks_cache.iteritems() if k != label]:
-                raise UniquenessError("A link from node with UUID={} and "
-                                      "the current node (UUID={}) already exists!".format(
-                    src.uuid, self.uuid))
+                raise UniquenessError(
+                    "A link from node with UUID={} and "
+                    "the current node (UUID={}) already exists!".format(
+                        src.uuid, self.uuid))
 
-            self._inputlinks_cache[label] = src
+            self._add_cachelink_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         """
@@ -458,6 +464,8 @@ class AbstractNode(object):
         :note: No error is raised if the link does not exist.
 
         :param str label: the name of the label to set the link from src.
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
         """
         # Try to remove from the local cache, no problem if none is present
         try:
@@ -470,16 +478,18 @@ class AbstractNode(object):
             self._remove_dblink_from(label)
 
     @abstractmethod
-    def _replace_dblink_from(self, src, label):
+    def _replace_dblink_from(self, src, label, link_type):
         """
-        Replace an input link with the given label, or simply creates it
-        if it does not exist.
+        Replace an input link with the given label and type, or simply creates
+        it if it does not exist.
 
         :note: this function should not be called directly; it acts directly on
             the database.
 
         :param str src: the source object.
         :param str label: the label of the link from src to the current Node
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
         """
         pass
 
@@ -494,11 +504,13 @@ class AbstractNode(object):
         :note: No checks are done to verify that the link actually exists.
 
         :param str label: the label of the link from src to the current Node
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
         """
         pass
 
     @abstractmethod
-    def _add_dblink_from(self, src, label=None):
+    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
@@ -512,7 +524,7 @@ class AbstractNode(object):
         """
         pass
 
-    def _can_link_as_output(self, dest):
+    def _linking_as_output(self, dest, link_type):
         """
         Raise a ValueError if a link from self to dest is not allowed.
         Implement in subclasses.

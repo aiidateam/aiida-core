@@ -6,6 +6,7 @@ from abc import abstractmethod
 from aiida.orm.implementation import Node
 
 from aiida.common.exceptions import (ValidationError, MissingPluginError)
+from aiida.common.links import LinkType
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -202,11 +203,10 @@ class AbstractCode(Node):
             if not self.get_remote_exec_path():
                 raise ValidationError("You did not specify a remote executable")
 
-
-    def _add_link_from(self, src, label=None):
+    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         raise ValueError("A code node cannot have any input nodes")
 
-    def _can_link_as_output(self, dest):
+    def _linking_as_output(self, dest, link_type):
         """
         Raise a ValueError if a link from self to dest is not allowed.
 
@@ -217,7 +217,7 @@ class AbstractCode(Node):
         if not isinstance(dest, Calculation):
             raise ValueError("The output of a code node can only be a calculation")
 
-        return super(AbstractCode, self)._can_link_as_output(dest)
+        return super(AbstractCode, self)._linking_as_output(dest, link_type)
 
     def set_prepend_text(self, code):
         """
@@ -440,14 +440,14 @@ class AbstractCode(Node):
 
     @classmethod
     def setup(cls, **kwargs):
-        #raise NotImplementedError
+        # raise NotImplementedError
         from aiida.cmdline.commands.code import CodeInputValidationClass
         code = CodeInputValidationClass().set_and_validate_from_code(kwargs)
 
         try:
             code.store()
         except ValidationError as e:
-            raise ValidationError("Unable to store the computer: {}.".format(e.message))        
+            raise ValidationError("Unable to store the computer: {}.".format(e.message))
         return code
 
 
@@ -464,5 +464,3 @@ def delete_code(code):
     computer.delete().
     """
     raise NotImplementedError
-
-

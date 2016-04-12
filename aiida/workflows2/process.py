@@ -7,6 +7,8 @@ import plum.process
 import aiida.workflows2.util as util
 from aiida.workflows2.execution_engine import TrackingExecutionEngine
 from aiida.workflows2.util import load_class
+from aiida.common.links import LinkType
+from aiida.utils.calculation import add_source_info
 from abc import ABCMeta
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -59,14 +61,16 @@ class Process(plum.process.Process):
 
     def run(self, inputs=None, exec_engine=None):
         with util.ProcessStack(self) as stack:
-            if len(stack) > 1:
-                # TODO: This is where a call link would go from parent to this fn
-                if not exec_engine:
-                    exec_engine = stack[-2]._get_exec_engine().push(self)
-
             # Create the calculation node for the process (unstored)
             calc = self._create_db_record()
             assert(not calc._is_stored)
+
+            if len(stack) > 1:
+                # TODO: Call links need to work properly with fast-forwarding
+                calc.add_link_from(stack[-1]._current_calc, "CALL", LinkType.CALL)
+
+                if not exec_engine:
+                    exec_engine = stack[-2]._get_exec_engine().push(self)
 
             if self._can_fast_forward(calc, inputs):
                 self._fast_forward()
@@ -91,7 +95,7 @@ class Process(plum.process.Process):
             # store unstored inputs.  My feeling is yes.
             if not input._is_stored:
                 input.store()
-            self._current_calc._add_link_from(input, name)
+            self._current_calc.add_link_from(input, name)
         self._current_calc.store()
 
         super(Process, self)._on_process_starting(inputs)
@@ -110,16 +114,13 @@ class Process(plum.process.Process):
         """
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
 
-        if not value._is_stored:
-            value.store()
-
-        # If this isn't true then the function is just returning an existing
-        # node directly.
-        if len(value.get_inputs()) == 0:
-            value._add_link_from(self._current_calc, output_port)
+        if value._is_stored():
+            link_type = LinkType.RETURN
         else:
-            # TODO: This is where 'return' links would go
-            pass
+            value.store()
+            link_type = LinkType.CREATE
+
+        value.add_link_from(self._current_calc, output_port, link_type)
     #################################################################
 
     def _create_db_record(self):
@@ -220,31 +221,5 @@ class FunctionProcess(Process):
 
     def _create_db_record(self):
         calc = super(FunctionProcess, self)._create_db_record()
-        self._add_source_info(calc)
+        add_source_info(calc, self._func)
         return calc
-
-    def _add_source_info(self, calc):
-        """
-        Add information about the source code to the calculation node.
-
-        Note: if you pass a lambda function, the name will be <lambda>; moreover
-        if you define a function f, and then do "h=f", h.__name__ will
-        still return 'f'!
-        :param calc: The calculation node to populate with information
-        """
-
-        function_name = self._func.__name__
-
-        # Try to get the source code
-        source_code, first_line = inspect.getsourcelines(self._func)
-        try:
-            with open(inspect.getsourcefile(self._func)) as f:
-                source = f.read()
-        except IOError:
-            source = None
-
-        calc._set_attr("source_code", "".join(source_code))
-        calc._set_attr("first_line_source_code", first_line)
-        calc._set_attr("source_file", source)
-        calc._set_attr("function_name", function_name)
-

@@ -172,17 +172,12 @@ class Node(AbstractNode):
         session.delete(link)
         session.commit()
 
-    def _add_dblink_from(self, src, label=None):
+    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.backends.sqlalchemy import session
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
-
-        # Check if the source allows output links from this node
-        # (will raise ValueError if
-        # this is not the case)
-        src._can_link_as_output(self)
 
         if self._to_be_stored:
             raise ModificationNotAllowed(
@@ -227,26 +222,26 @@ class Node(AbstractNode):
                                         " adds of links "
                                         "to the same nodes! Are you really doing that??")
                 try:
-                    link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
-                                  label="link_{}".format(autolabel_idx))
-                    session.add(link)
-                    session.commit()
+                    self._do_create_link(src, "link_{}".format(autolabel_idx), link_type)
                     break
-                except SQLAlchemyError as e:
-                    session.rollback()
+                except UniquenessError:
                     # Retry loop until you find a new loop
                     autolabel_idx += 1
         else:
-            try:
-                link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
-                              label=label)
-                session.add(link)
-                session.commit()
-            except SQLAlchemyError as e:
-                session.rollback()
-                raise UniquenessError("There is already a link with the same "
-                                      "name (raw message was {})"
-                                      "".format(e))
+            self._do_create_link(src, label, link_type)
+
+    def _do_create_link(self, src, label, link_type):
+        from aiida.backends.sqlalchemy import session
+        try:
+            link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
+                          label=label, type=link_type.value)
+            session.add(link)
+            session.commit()
+        except SQLAlchemyError as e:
+            session.rollback()
+            raise UniquenessError("There is already a link with the same "
+                                  "name (raw message was {})"
+                                  "".format(e))
 
     def get_inputs(self, type=None, also_labels=False, only_in_db=False):
         inputs_list = [(i.label, i.input.get_aiida_class()) for i in
@@ -605,15 +600,14 @@ class Node(AbstractNode):
         # stored
         links_to_store = list(self._inputlinks_cache.keys())
 
-        for link in links_to_store:
-            self._add_dblink_from(self._inputlinks_cache[link], link)
+        for label in links_to_store:
+            self._add_dblink_from(self._inputlinks_cache[label][0], label)
         # If everything went smoothly, clear the entries from the cache.
         # I do it here because I delete them all at once if no error
         # occurred; otherwise, links will not be stored and I
         # should not delete them from the cache (but then an exception
         # would have been raised, and the following lines are not executed)
-        for link in links_to_store:
-            del self._inputlinks_cache[link]
+        self._inputlinks_cache.clear()
 
         from aiida.backends.sqlalchemy import session
         if with_transaction:

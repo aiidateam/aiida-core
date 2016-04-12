@@ -125,7 +125,7 @@ def tosubmit_to_withscheduler(calc, trans_pool, logger):
         _prepare_remote_files(calcinfo, calc, transport, logger, logger_extra)
 
         remotedata = RemoteData(computer=computer, remote_path=calcdir)
-        remotedata._add_link_from(calc, label='remote_folder')
+        remotedata.add_link_from(calc, label='remote_folder')
         remotedata.store()
 
         job_id = s.submit_from_script(calcdir, script_filename)

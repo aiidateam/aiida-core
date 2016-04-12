@@ -31,7 +31,7 @@ class TestPort(AiidaTestCase):
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
 
-        calc._add_link_from(sd)
+        calc.add_link_from(sd)
 
         pks = [sd.pk, calc.pk]
 

@@ -4,6 +4,7 @@ from abc import abstractmethod
 
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
+from aiida.common.links import LinkType
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -126,7 +127,7 @@ class AbstractJobCalculation(object):
             raise ValidationError(
                 "withmpi property must be boolean! It in instead {}".format(str(type(self.get_withmpi()))))
 
-    def _can_link_as_output(self, dest):
+    def _linking_as_output(self, dest, link_type):
         """
         An output of a JobCalculation can only be set
         when the calculation is in the SUBMITTING or RETRIEVING or
@@ -152,7 +153,7 @@ class AbstractJobCalculation(object):
                 "of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._can_link_as_output(dest)
+        return super(AbstractJobCalculation, self)._linking_as_output(dest, link_type)
 
     def _store_raw_input_folder(self, folder_path):
         """
@@ -456,8 +457,8 @@ class AbstractJobCalculation(object):
 
         self._set_attr("mpirun_extra_params", list(extra_params))
 
-    def _add_link_from(self, src, label=None):
-        '''
+    def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
+        """
         Add a link with a code as destination. Add the additional
         contraint that this is only possible if the calculation
         is in state NEW.
@@ -467,7 +468,9 @@ class AbstractJobCalculation(object):
 
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link. Default=None
-        '''
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
+        """
         valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:
@@ -476,16 +479,16 @@ class AbstractJobCalculation(object):
                 "one of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._add_link_from(src, label)
+        return super(AbstractJobCalculation, self).add_link_from(src, label, link_type)
 
-    def _replace_link_from(self, src, label):
-        '''
+    def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
+        """
         Replace a link. Add the additional constratint that this is
         only possible if the calculation is in state NEW.
 
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link.
-        '''
+        """
         valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:
@@ -494,7 +497,7 @@ class AbstractJobCalculation(object):
                 "one of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._replace_link_from(src, label)
+        return super(AbstractJobCalculation, self)._replace_link_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         '''

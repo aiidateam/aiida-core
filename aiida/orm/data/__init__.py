@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from aiida.common.exceptions import ValidationError
 
 from aiida.orm.node import Node
+from aiida.common.links import LinkType
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -80,7 +80,7 @@ class Data(Node):
         """
         self.source = source
 
-    def _add_link_from(self, src, label=None):
+    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.orm.calculation import Calculation
 
         if len(self.get_inputs()) > 0:
@@ -89,9 +89,9 @@ class Data(Node):
         if not isinstance(src, Calculation):
             raise ValueError("Links entering a data object can only be of type calculation")
 
-        return super(Data, self)._add_link_from(src, label)
+        return super(Data, self).add_link_from(src, label, link_type)
 
-    def _can_link_as_output(self, dest):
+    def _linking_as_output(self, dest, link_type):
         """
         Raise a ValueError if a link from self to dest is not allowed.
 
@@ -101,7 +101,7 @@ class Data(Node):
         if not isinstance(dest, Calculation):
             raise ValueError("The output of a data node can only be a calculation")
 
-        return super(Data, self)._can_link_as_output(dest)
+        return super(Data, self)._linking_as_output(dest, link_type)
 
     def _exportstring(self, fileformat, **kwargs):
         """

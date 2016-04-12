@@ -251,10 +251,10 @@ class DbNode(m.Model):
 
 @python_2_unicode_compatible
 class DbLink(m.Model):
-    '''
+    """
     Direct connection between two dbnodes. The label is identifying the
     link type.
-    '''
+    """
     # If I delete an output, delete also the link; if I delete an input, stop
     # NOTE: this will in most cases render a DbNode.objects.filter(...).delete()
     # call unusable because some nodes will be inputs; Nodes will have to
@@ -275,8 +275,9 @@ class DbLink(m.Model):
         # if the input is a 'data' and I want to add it more than
         # once to different calculations, the different links must be
         # allowed to have the same name. For calculations, it is the
-        # rensponsibility of the output plugin to avoid to have many
+        # responsibility of the output plugin to avoid to have many
         # times the same name.
+        # TODO: Update this with the new type column
         unique_together = (("input", "output"),
                            ("output", "label"),
                            )

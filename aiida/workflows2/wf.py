@@ -31,27 +31,27 @@ def wf(func):
     return wrapped_function
 
 
-def aiidise(func):
-    import inspect
-    import itertools
-
-    def wrapped_function(*args, **kwargs):
-        in_dict = dict(
-            itertools.chain(
-                itertools.izip(inspect.getargspec(func)[0], args), kwargs))
-
-        native_args = [util.to_native_type(arg) for arg in args]
-        native_kwargs = {k: util.to_native_type(v) for k, v in kwargs.iteritems()}
-
-        # Create the calculation (unstored)
-        calc = Calculation()
-        util.save_calc(calc, func, in_dict)
-
-        # Run the wrapped function
-        retval = util.to_db_type(func(*native_args, **native_kwargs))
-
-        retval._add_link_from(calc, 'result')
-
-        return retval
-
-    return wrapped_function
+# def aiidise(func):
+#     import inspect
+#     import itertools
+#
+#     def wrapped_function(*args, **kwargs):
+#         in_dict = dict(
+#             itertools.chain(
+#                 itertools.izip(inspect.getargspec(func)[0], args), kwargs))
+#
+#         native_args = [util.to_native_type(arg) for arg in args]
+#         native_kwargs = {k: util.to_native_type(v) for k, v in kwargs.iteritems()}
+#
+#         # Create the calculation (unstored)
+#         calc = Calculation()
+#         util.save_calc(calc, func, in_dict)
+#
+#         # Run the wrapped function
+#         retval = util.to_db_type(func(*native_args, **native_kwargs))
+#
+#         retval.add_link_from(calc, 'result')
+#
+#         return retval
+#
+#     return wrapped_function

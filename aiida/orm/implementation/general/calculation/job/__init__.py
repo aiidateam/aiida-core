@@ -1030,8 +1030,7 @@ class AbstractJobCalculation(object):
     def _get_all_with_state(
             cls, state, computer=None, user=None,
             only_computer_user_pairs=False,
-            only_enabled=True,
-            limit=False
+            only_enabled=True, limit=None
         ):
         """
         Filter all calculations with a given state.
@@ -1104,7 +1103,7 @@ class AbstractJobCalculation(object):
             returnresult = qb.distinct().all()
         else:
             qb.append(cls, filters=calcfilter, project=['*'], runs_on='computer')
-            if limit:
+            if limit is not None:
                 qb.limit(limit)
             returnresult = qb.all()
         return returnresult

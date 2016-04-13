@@ -46,7 +46,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
         from aiida.common.datastructures import sort_states
         from aiida.backends.djsite.db.models import DbCalcState
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("Cannot set the calculation state "
                                          "before storing")
 
@@ -101,7 +101,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
         if from_attribute:
             return self.get_attr('state', None)
         else:
-            if self._to_be_stored:
+            if not self.is_stored:
                 return calc_states.NEW
             else:
                 this_calc_states = DbCalcState.objects.filter(

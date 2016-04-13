@@ -19,6 +19,7 @@ from aiida.common.folders import RepositoryFolder
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError,
                                      ValidationError)
+from aiida.common.link import LinkType
 
 from aiida.orm.implementation.general.node import AbstractNode
 from aiida.orm.implementation.sqlalchemy.computer import Computer
@@ -157,14 +158,14 @@ class Node(AbstractNode):
             self._dbnode.save(commit=False)
             self._increment_version_number_db()
 
-    def _replace_dblink_from(self, src, label):
+    def _replace_dblink_from(self, src, label, link_type):
         from aiida.backends.sqlalchemy import session
         try:
             self._add_dblink_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             self._remove_dblink_from(label)
-            self._add_dblink_from(src, label)
+            self._add_dblink_from(src, label, link_type)
 
     def _remove_dblink_from(self, label):
         from aiida.backends.sqlalchemy import session
@@ -550,7 +551,7 @@ class Node(AbstractNode):
                 "unstored (node {} is stored, instead)".format(self.id))
 
         for link in self._inputlinks_cache:
-            if self._inputlinks_cache[link]._to_be_stored:
+            if not self._inputlinks_cache[link].is_stored:
                 self._inputlinks_cache[link].store(with_transaction=False)
 
     def _check_are_parents_stored(self):
@@ -562,7 +563,7 @@ class Node(AbstractNode):
         """
         # Preliminary check to verify that inputs are stored already
         for link in self._inputlinks_cache:
-            if self._inputlinks_cache[link]._to_be_stored:
+            if not self._inputlinks_cache[link].is_stored:
                 raise ModificationNotAllowed(
                     "Cannot store the input link '{}' because the "
                     "source node is not stored. Either store it first, "
@@ -601,7 +602,8 @@ class Node(AbstractNode):
         links_to_store = list(self._inputlinks_cache.keys())
 
         for label in links_to_store:
-            self._add_dblink_from(self._inputlinks_cache[label][0], label)
+            src, link_type = self._inputlinks_cache[label]
+            self._add_dblink_from(src, label, link_type)
         # If everything went smoothly, clear the entries from the cache.
         # I do it here because I delete them all at once if no error
         # occurred; otherwise, links will not be stored and I

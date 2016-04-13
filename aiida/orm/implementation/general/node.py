@@ -173,7 +173,7 @@ class AbstractNode(object):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def __str__(self):
-        if self._to_be_stored:
+        if not self.is_stored:
             return "uuid: {} (unstored)".format(self.uuid)
         else:
             return "uuid: {} (pk: {})".format(self.uuid, self.pk)
@@ -474,7 +474,7 @@ class AbstractNode(object):
             pass
 
         # If both are stored, remove also from the DB
-        if not self._to_be_stored:
+        if self.is_stored:
             self._remove_dblink_from(label)
 
     @abstractmethod
@@ -930,7 +930,7 @@ class AbstractNode(object):
 
         :return: the RepositoryFolder object.
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             return self._get_temp_folder()
         else:
             return self._repository_folder
@@ -974,7 +974,7 @@ class AbstractNode(object):
 
         :param str path: relative path to file/directory.
         """
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot delete a path after storing the node")
 
@@ -997,7 +997,7 @@ class AbstractNode(object):
             meaning of a extras file. Decide also how to store. If in two
             separate subfolders, remember to reset the limit.
         """
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot insert a path after storing the node")
 

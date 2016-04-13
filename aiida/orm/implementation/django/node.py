@@ -617,7 +617,7 @@ class Node(AbstractNode):
 
         for label in self._inputlinks_cache:
             parent = self._inputlinks_cache[label][0]
-            if parent._to_be_stored:
+            if not parent.is_stored:
                 parent.store(with_transaction=False)
 
     def _check_are_parents_stored(self):
@@ -629,7 +629,7 @@ class Node(AbstractNode):
         """
         # Preliminary check to verify that inputs are stored already
         for label in self._inputlinks_cache:
-            if self._inputlinks_cache[label][0]._to_be_stored:
+            if not self._inputlinks_cache[label][0].is_stored:
                 raise ModificationNotAllowed(
                     "Cannot store the input link '{}' because the "
                     "source node is not stored. Either store it first, "
@@ -676,7 +676,8 @@ class Node(AbstractNode):
             links_to_store = list(self._inputlinks_cache.keys())
 
             for label in links_to_store:
-                self._add_dblink_from(self._inputlinks_cache[label][0], label)
+                src, link_type = self._inputlinks_cache[label]
+                self._add_dblink_from(src, label, link_type)
             # If everything went smoothly, clear the entries from the cache.
             # I do it here because I delete them all at once if no error
             # occurred; otherwise, links will not be stored and I

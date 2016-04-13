@@ -101,8 +101,8 @@ class TestQueryBuilder(AiidaTestCase):
                 dbnode=n0
             )
 
-        l1 = DbLink(input=n0, output=n1, label='random')
-        l2 = DbLink(input=n1, output=n2, label='random')
+        l1 = DbLink(input=n0, output=n1, label='random_1')
+        l2 = DbLink(input=n1, output=n2, label='random_2')
 
         session.add_all([n0,n1,n2,l1,l2])
         session.flush() # This is not writing to the DB
@@ -154,4 +154,23 @@ class TestQueryBuilder(AiidaTestCase):
 
         qh['filters']['n1']['label'] = {'like':'%FoO'} # Case sensitive
         qb3 = QueryBuilder(**qh)
-        self.assertEqual(len(qb3.all()), 0)
+        self.assertEqual(len(list(qb3.all())), 0)
+
+        qh = {
+                'path':[
+                    {
+                        'cls':Node,
+                        'label':'n1'
+                    },
+                    {
+                        'cls':Node,
+                        'label':'n2',
+                        'output_of':'n1'
+                    }
+                ],
+                'filters':{
+                    '<>n2':{label:{'like':'%_2'}}
+                }
+            }
+        qb = QueryBuilder(**qh)
+        self.assertEqual(len(list(qb.all())), 1)

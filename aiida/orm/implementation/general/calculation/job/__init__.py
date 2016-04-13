@@ -834,30 +834,12 @@ class AbstractJobCalculation(object):
 
         :return: a string with description of calculations.
         """
-        def pretty_print(str_matrix, sep = ' | '):
-            """
-            Prints a table nicely,
-            by measuring the columnwidth in advance
-            """
-            # Get maximum length of item in a column:
-            colwidths = [
-                    max(map(len, column))
-                    for column
-                    in zip(*str_matrix)
-                ]
-            # now print each line:
-            for row in str_matrix:
-                print(
-                    sep.join([
-                        '{:{width}}'.format(rowitem, width=colwidths[colindex])
-                        for colindex, rowitem
-                        in enumerate(row)
-                    ])
-                )
+
 
 
         from aiida.orm.querybuilder import QueryBuilder
         from django.core.exceptions import ImproperlyConfigured
+        from aiida.common.custom_io import pretty_print
 
 
         now = timezone.now()
@@ -1014,11 +996,15 @@ class AbstractJobCalculation(object):
                             timezone.localtime(ctime).isoformat().split('T')[
                                 1].split('.')[0].rsplit(":", 1)[0]])
                     if with_scheduler_state:
+                        try:
+                            scheduler_state = res['calculation']['*'].get_attr('scheduler_state')
+                        except Exception:
+                            scheduler_state = 'Unknown'
+                            
                         calc_list_data.append([
                             str(res['calculation']['id']),
                             res['calculation']['state'],
-                            calc_ctime,
-                            res['calculation']['*'].get_attr('scheduler_state'),
+                            calc_ctime, scheduler_state,
                             res['computer']['name'],
                             from_type_to_pluginclassname(
                                     res['calculation']['type']
@@ -1041,8 +1027,11 @@ class AbstractJobCalculation(object):
                 break
 
     @classmethod
-    def _get_all_with_state(cls, state, computer=None, user=None,
-                            only_computer_user_pairs=False, only_enabled=True):
+    def _get_all_with_state(
+            cls, state, computer=None, user=None,
+            only_computer_user_pairs=False,
+            only_enabled=True, limit=None
+        ):
         """
         Filter all calculations with a given state.
 
@@ -1063,6 +1052,7 @@ class AbstractJobCalculation(object):
                 in the format
                 ('dbcomputer__id', 'user__id')
                 [where the IDs are the IDs of the respective tables]
+        :param int limit: Limit the number of rows returned
 
         :return: a list of calculation objects matching the filters.
         """
@@ -1113,6 +1103,8 @@ class AbstractJobCalculation(object):
             returnresult = qb.distinct().all()
         else:
             qb.append(cls, filters=calcfilter, project=['*'], runs_on='computer')
+            if limit is not None:
+                qb.limit(limit)
             returnresult = qb.all()
         return returnresult
 

@@ -89,3 +89,14 @@ def get_log_messages(*args, **kwargs):
         return get_log_messages_dj(*args, **kwargs)
     else:
         raise ValueError("This method doesn't exist for this backend")
+
+
+def get_configured_user_email(*args, **kwargs):
+    if settings.BACKEND == "sqlalchemy":
+        from aiida.backends.sqlalchemy.utils import get_configured_user_email
+        return get_configured_user_email(*args,**kwargs)
+    elif settings.BACKEND == "django":
+        from aiida.backends.djsite.utils import get_configured_user_email
+        return get_configured_user_email(*args,**kwargs)
+    else:
+        raise ValueError("This method doesn't exist for this backend")

@@ -34,6 +34,7 @@ class QueryBuilderBase(object):
     the specific type of node and link is dealt in subclasses.
     """
     NODE_TYPE = 'node.Node'
+    LINK_PREFIX = '<>'
 
     def __init__(self, *args, **kwargs):
         """
@@ -403,7 +404,7 @@ This would be the queryhelp::
         self.label_list = []
 
         # A list of unique aliases in same order as path
-        self.alias_list = []
+        self.aliased_path = []
 
         # A dictionary label:alias of ormclass
         # redundant but makes life easier
@@ -670,6 +671,12 @@ This would be the queryhelp::
         ######################## LABEL #################################
         # Let's get a label
         if label:
+            if label.startswith(self.LINK_PREFIX):
+                raise InputValidationError(
+                    "You cannot start a label with {}\n"
+                    "since this is used as prefix to\n"
+                    "the link-label"
+                )
             label = label
         elif autolabel:
             label = self._get_autolabel(ormclasstype)
@@ -731,7 +738,7 @@ This would be the queryhelp::
 
         ######################## ALIASING ##############################
         alias = aliased(ormclass)
-        self.alias_list.append(alias)
+        self.aliased_path.append(alias)
         self.alias_dict[label] = alias
 
 
@@ -769,13 +776,13 @@ This would be the queryhelp::
                 if val in self.label_list:
                     joining_value = val
                 elif val in self.cls_to_label_map:
-                    joining_value = self.cls_to_label_map[v]
+                    joining_value = self.cls_to_label_map[val]
                 else:
                     raise InputValidationError(
                             "\n\n\n"
                             "You told me to join {} with {}\n"
                             "But it is not among my labels"
-                            "\n\n\n".format(label, v)
+                            "\n\n\n".format(label, val)
                         )
         # the default is just a direction keyword and value 1
         # meaning that this vertice is linked to the previous
@@ -784,19 +791,37 @@ This would be the queryhelp::
             joining_keyword = 'direction'
             joining_value = 1
 
-        ############# MAKING THE PATH #################################
+        ############################# LINKS ####################################
+        # See if this requires a link:
+        if joining_keyword in ('input_of', 'output_of', 'direction'):
+            # Ok, so here we are joining one node to another, as input or output
+            # This means that the user might want to query by label or project
+            # on a label column.
+            # Since the label of this vertice is unique the label, e.g. 'calc1'
+            # the label '<>calc1' will also be unique if '<>' is a protected
+            # substring.
+            linklabel = self.LINK_PREFIX + label
+            self.alias_dict[linklabel] = aliased(self.Link)
+            self.filters[linklabel] = {}
+            #~ self.label_list.append(linklabel)
+        else:
+            linklabel = None
+            
+
+        ################### EXTENDING THE PATH #################################
 
         self.path.append(
                 {
                     'type':type,
                     'label':label,
-                    joining_keyword:joining_value
+                    joining_keyword:joining_value,
+                    'linklabel':linklabel
                 }
             )
         return self
 
     def _add_filter(self, key, filter_spec):
-        if key in self.label_list:
+        if key in self.alias_dict.keys():
             self.filters[key].update(filter_spec)
         elif key in self.cls_to_label_map.keys():
             self.filters[self.cls_to_label_map[key]].update(filter_spec)
@@ -856,8 +881,13 @@ This would be the queryhelp::
         keys represent valid labels of entities (tables),
         values are list of columns
         """
+
+        self._order_by = []
+
         if not isinstance(order_by, (list, tuple)):
             order_by = [order_by]
+
+
         for order_spec in order_by:
             if not isinstance(order_spec, dict):
                     raise InputValidationError(
@@ -866,18 +896,27 @@ This would be the queryhelp::
                         "[columns to sort]"
                         "".format(order_spec)
                     )
+            _order_spec = {}
             for key,val in order_spec.items():
-                if key not in self.alias_dict:
-                    raise InputValidationError(
-                        "This key is unknown to me: {}".format(key)
-                    )
                 if not isinstance(val, (tuple, list)):
-                    order_spec[key] = [val]
-        self._order_by = order_by
+                    val = [val]
+
+                if key in self.label_list:
+                    _order_spec[key] = val
+                elif key in self.cls_to_label_map.keys():
+                    _order_spec[self.cls_to_label_map[key]] = val
+                else:
+                    raise InputValidationError(
+                        "\n\n\nCannot add filter specification\n"
+                        "with key {}\n"
+                        "to any known label".format(key)
+                    )
+            self._order_by.append(_order_spec)
+
         return self
 
     def _add_projection(self, key, projection_spec):
-        if key in self.label_list:
+        if key in self.alias_dict.keys():
             self.projections[key] = projection_spec
         elif key in self.cls_to_label_map.keys():
             self.projections[self.cls_to_label_map[key]] = projection_spec
@@ -1005,7 +1044,7 @@ This would be the queryhelp::
                 #~ call.caller_id == entity_to_join.id
             #~ )
 
-    def _join_outputs(self, joined_entity, entity_to_join):
+    def _join_outputs(self, joined_entity, entity_to_join, aliased_link):
         """
         :param joined_entity: The (aliased) ORMclass that is an input
         :param entity_to_join: The (aliased) ORMClass that is an output.
@@ -1014,7 +1053,7 @@ This would be the queryhelp::
         from **joined_entity** as input to **enitity_to_join** as output
         (**enitity_to_join** is an *output_of* **joined_entity**)
         """
-        aliased_link = aliased(self.Link)
+        #~ aliased_link = aliased(self.Link)
         self.que = self.que.join(
                 aliased_link,
                 aliased_link.input_id == joined_entity.id
@@ -1023,7 +1062,7 @@ This would be the queryhelp::
                 aliased_link.output_id == entity_to_join.id
         )
 
-    def _join_inputs(self, joined_entity, entity_to_join):
+    def _join_inputs(self, joined_entity, entity_to_join, aliased_link):
         """
         :param joined_entity: The (aliased) ORMclass that is an output
         :param entity_to_join: The (aliased) ORMClass that is an input.
@@ -1117,14 +1156,23 @@ This would be the queryhelp::
                 entity_to_join,
                 entity_to_join.id == aliased_group_nodes.c.dbgroup_id
         )
-    def _join_users(self, joined_entity, entity_to_join):
+    def _join_user(self, joined_entity, entity_to_join):
+        """
+        :param joined_entity: the user
+        :param entity_to_join: the dbnode that joins to that user
+        """
+        self.que = self.que.join(
+                entity_to_join,
+                entity_to_join.id == joined_entity.user_id
+            )
+    def _join_node_to_user(self, joined_entity, entity_to_join):
         """
         :param joined_entity: the (aliased) node or group in the DB
         :param entity_to_join: the user you want to join with
         """
         self.que = self.que.join(
                 entity_to_join,
-                entity_to_join.id == joined_entity.user_id
+                entity_to_join.user_id == joined_entity.id
             )
 
     def _join_to_computer_used(self, joined_entity, entity_to_join):
@@ -1158,7 +1206,8 @@ This would be the queryhelp::
                 'member_of' : self._join_group_members,
                 'runs_on'   : self._join_to_computer_used,
                 'computer_of':self._join_computer,
-                'used_by'   : self._join_users,
+                'used_by'   : self._join_node_to_user,
+                'user_of'   : self._join_user,
         }
         return d
     def _get_connecting_node(self, querydict, index):
@@ -1175,6 +1224,12 @@ This would be the queryhelp::
         *   *descendant_of*
         *   *ancestor_of*
         *   *direction*
+        *   *group_of*
+        *   *member_of*
+        *   *runs_on*
+        *   *computer_of*
+        *   *used_by*
+        *   *user_of*
 
         Future:
 
@@ -1198,11 +1253,11 @@ This would be the queryhelp::
             else:
                 raise Exception("Direction 0 is not valid")
         if isinstance(val, int):
-            return self.alias_list[val], func
+            return self.aliased_path[val], func
         elif isinstance(val, str):
             try:
                 val = self.labels_location_dict[val]
-                return self.alias_list[val], func
+                return self.aliased_path[val], func
             except AttributeError:
                 raise InputValidationError(
                     'List of types is not unique,\n'
@@ -1279,11 +1334,6 @@ This would be the queryhelp::
         """
         build the query and return a sqlalchemy.Query instance
         """
-        ####################### ALIASING ####################
-        # First I need to alias everything,
-        # because I might be joining the same table multiple times,
-        # check also
-        # http://dself.ocs.sqlalchemy.org/en/rel_1_0/orm/query.html
 
         if not len(self.label_list) == len(set(self.label_list)):
             raise InputValidationError(
@@ -1305,23 +1355,26 @@ This would be the queryhelp::
         #Starting the query by receiving a session
         # Every subclass needs to have _get_session and give me the
         # right session
-        self.que = self._get_session().query(self.alias_list[0])
-
+        firstalias = self.alias_dict[self.path[0]['label']]
+        self.que = self._get_session().query(firstalias)
 
         ######################### JOINS ################################
 
-        for index, alias, querydict in  zip(
-                range(len(self.alias_list)),
-                self.alias_list,
-                self.path
-            ):
+        for index, querydict in  enumerate(self.path[1:], start=1):
+            alias = self.alias_dict[querydict['label']]
             #looping through the queryhelp
-            if index:
+            #~ if index:
                 #There is nothing to join if that is the first table
-                (
-                    toconnectwith, connection_func
-                ) = self._get_connecting_node(querydict, index)
+            toconnectwith, connection_func = self._get_connecting_node(
+                    querydict, index
+                )
+            linklabel = querydict.get('linklabel', None)
+            if linklabel is None:
                 connection_func(toconnectwith, alias)
+            else:
+                link = self.alias_dict[linklabel]
+                connection_func(toconnectwith, alias, link)
+
         ######################### FILTERS ##############################
 
         for label, filter_specs in self.filters.items():
@@ -1354,7 +1407,7 @@ This would be the queryhelp::
             # Don't change, path traversal querying
             # relies on this behavior!
             self.projections.update({self.label_list[-1]:'*'})
-
+        self.nr_of_projections = 0
         position_index = -1
         for vertice in self.path:
             label = vertice['label']
@@ -1372,8 +1425,34 @@ This would be the queryhelp::
                         projectable_spec
                 )
                 position_index += 1
+                self.nr_of_projections += 1
                 self.label_to_projected_entity_dict[
                         label
+                    ][
+                        projectable_spec
+                    ] = position_index
+        ##################### LINK-PROJECTIONS #########################
+        for vertice in self.path:
+            linklabel = vertice.get('linklabel', None)
+            if linklabel is None:
+                continue
+            items_to_project = self.projections.get(linklabel, [])
+            if not items_to_project:
+                continue
+            alias = self.alias_dict[linklabel]
+            #~ raw_input(alias)
+            if not isinstance(items_to_project, (list, tuple)):
+                items_to_project = [items_to_project]
+            self.label_to_projected_entity_dict[linklabel] = {}
+            for projectable_spec in items_to_project:
+                projectable_spec = self.add_projectable_entity(
+                        alias,
+                        projectable_spec
+                )
+                position_index += 1
+                self.nr_of_projections += 1
+                self.label_to_projected_entity_dict[
+                        linklabel
                     ][
                         projectable_spec
                     ] = position_index
@@ -1396,58 +1475,58 @@ This would be the queryhelp::
         ######################### DONE #################################
         return self.que
 
-    def _make_counterquery(self, calc_class, code_inst=None, session=None):
-        input_alias_list = []
-        for node in self.path:
-            label = node['label']
-            if label not in self.projections.keys():
-                continue
-            assert(
-                    flatten_list(self.projections[label]) == ['*'],
-                    "Only '*' allowed for input spec"
+    def except_if_input_to(self, calc_class):
+        """
+        Makes counterquery based on the own path, only selecting
+        entries that have been input to *calc_class*
+
+        :param calc_class: The calculation class to check against
+
+        :returns: self
+        """
+        def build_counterquery(calc_class):
+            if issubclass(calc_class, self.Node):
+                orm_calc_class = calc_class
+                type_spec = None
+            elif issubclass(calc_class, self.AiidaNode):
+                orm_calc_class = self.Node
+                type_spec = calc_class._plugin_type_string
+            else:
+                raise Exception(
+                    'You have given me {}\n'
+                    'of type {}\n'
+                    "and I don't know what to do with that"
+                    ''.format(calc_class, type(calc_class))
                 )
-            input_alias_list.append(aliased(self.alias_dict[label]))
 
-        if issubclass(calc_class, self.Node):
-            orm_calc_class = calc_class
-            type_spec = None
-        elif issubclass(calc_class, self.AiidaNode):
-            orm_calc_class = self.Node
-            type_spec = calc_class._plugin_type_string
-        else:
-            raise Exception(
-                'You have given me {}\n'
-                'of type {}\n'
-                "and I don't know what to do with that"
-                ''.format(calc_class, type(calc_class))
-            )
-        counterquery = self._get_session().query(orm_calc_class)
-        if type_spec:
-            counterquery = counterquery.filter(orm_calc_class.type == type_spec)
-        for alias in input_alias_list:
-            link = aliased(self.Link)
-            counterquery = counterquery.join(
-                link,
-                orm_calc_class.id == link.output_id
-            ).join(
-                alias,
-                alias.id == link.input_id)
-            counterquery = counterquery.add_entity(alias)
-        counterquery._entities.pop(0)
-        return counterquery
+            input_alias_list = []
+            for node in self.path:
+                label = node['label']
+                if '*' in self.projections[label]:
+                    input_alias_list.append(aliased(self.alias_dict[label]))
 
-    def _except_if_input_to(self, calc_class):
+            counterquery = self._get_session().query(orm_calc_class)
+            if type_spec:
+                counterquery = counterquery.filter(orm_calc_class.type == type_spec)
+            for alias in input_alias_list:
+                print alias
+                link = aliased(self.Link)
+                counterquery = counterquery.join(
+                    link,
+                    orm_calc_class.id == link.output_id
+                ).join(
+                    alias,
+                    alias.id == link.input_id)
+                counterquery = counterquery.add_entity(alias)
+            counterquery._entities.pop(0)
+            return counterquery
         self.que = self.get_query()
-        self.que = self.que.except_(self._make_counterquery(calc_class))
+        self.que = self.que.except_(build_counterquery(calc_class))
         return self
 
-    def get_calculations_todo(self, calc_class):
-        return self._build_query().except_(
-                self._make_counterquery(calc_class)
-            ).all()
 
     def get_aliases(self):
-        return self.alias_list
+        return self.aliased_path
 
     def get_queryhelp(self):
         """
@@ -1496,19 +1575,14 @@ This would be the queryhelp::
         Executes full query.
         :returns: all rows
         """
+        results = self.yield_per(100)
 
-        ormresults = self._all()
-        
-        print ormresults
-        try:
-            returnlist = [
-                    map(self._get_aiida_res, resultsrow)
-                    for resultsrow
-                    in ormresults
-            ]
-        except TypeError:
-            returnlist = map(self._get_aiida_res, ormresults)
-        return returnlist
+        if self.nr_of_projections > 1:
+            for res in results:
+                yield map(self._get_aiida_res, res)
+        else:
+            for res in results:
+                yield self._get_aiida_res(res)
 
     def yield_per(self, count):
         """

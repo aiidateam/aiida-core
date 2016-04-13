@@ -82,39 +82,26 @@ class JobCalculation(AbstractJobCalculation, Calculation):
         """
         Get the state of the calculation.
 
-        .. note:: this method returns the NOTFOUND state if no state
-          is found in the DB.
+        .. note:: this method returns the None if no state is found
 
-        .. note:: the 'most recent' state is obtained using the logic in the
-          ``aiida.common.datastructures.sort_states`` function.
-
-        .. todo:: Understand if the state returned when no state entry is found
-          in the DB is the best choice.
 
         :param from_attribute: if set to True, read it from the attributes
           (the attribute is also set with set_state, unless the state is set
           to IMPORTED; in this way we can also see the state before storing).
 
-        :return: a string. If from_attribute is True and no attribute is found,
-          return None. If from_attribute is False and no entry is found in the
-          DB, return the "NOTFOUND" state.
+        :return: a string, if a state is found or *None*
         """
         if from_attribute:
-            return self.get_attr('state', None)
+            state_to_return = self.get_attr('state', None)
         else:
             if self._to_be_stored:
-                return calc_states.NEW
+                state_to_return = calc_states.NEW
             else:
-                this_calc_states = [c.state.code for c in DbCalcState.query.filter_by(
-                    dbnode=self.dbnode).with_entities(DbCalcState.state)]
-                if not this_calc_states:
-                    return None
+                # In the sqlalchemy model, the state
+                most_recent_state = self._dbnode.state
+                if most_recent_state:
+                    state_to_return = most_recent_state.value
                 else:
-                    try:
-                        most_recent_state = sort_states(this_calc_states)[0]
-                    except ValueError as e:
-                        raise DbContentError("Error in the content of the "
-                                             "DbCalcState table ({})".format(e.message))
-
-                    return most_recent_state
+                    state_to_return = None
+        return state_to_return
 

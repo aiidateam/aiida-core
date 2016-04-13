@@ -61,7 +61,7 @@ class DbComputer(Base):
         from aiida.orm.computer import Computer
         if isinstance(computer, basestring):
             try:
-                dbcomputer = cls.query(name=computer).one()
+                dbcomputer = cls.session.query(cls).filter(cls.name==computer).one()
             except NoResultFound:
                 raise NotExistent("No computer found in the table of computers with "
                                   "the given name '{}'".format(computer))

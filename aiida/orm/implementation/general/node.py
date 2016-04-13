@@ -166,7 +166,7 @@ class AbstractNode(object):
         self._inputlinks_cache = {}
 
     @property
-    def _is_stored(self):
+    def is_stored(self):
         return not self._to_be_stored
 
     def __repr__(self):
@@ -398,7 +398,7 @@ class AbstractNode(object):
         src._linking_as_output(self, link_type)
 
         # If both are stored, write directly on the DB
-        if self._is_stored and src._is_stored:
+        if self.is_stored and src.is_stored:
             self._add_dblink_from(src, label, link_type)
         else:  # at least one is not stored: add to the internal cache
             self._add_cachelink_from(src, label, link_type)
@@ -432,7 +432,7 @@ class AbstractNode(object):
         :param str label: the name of the label to set the link from src.
         """
         # If both are stored, write directly on the DB
-        if self._is_stored and src._is_stored:
+        if self.is_stored and src.is_stored:
             self._replace_dblink_from(src, label, link_type)
             # If the link was in the local cache, remove it
             # (this could happen if I first store the output node, then

@@ -34,7 +34,7 @@ General purpose methods
 
 - :py:meth:`~aiida.orm.node.Node.ctime` and :py:meth:`~aiida.orm.node.Node.mtime` provide the creation and the modification time of the node.
 
-- :py:meth:`~aiida.orm.node.Node._is_stored` informs whether a node is already stored to the database.
+- :py:meth:`~aiida.orm.node.Node.is_stored` informs whether a node is already stored to the database.
 
 - :py:meth:`~aiida.orm.node.Node.query` queries the database by filtering for the results for similar nodes (if the used object is a subclass of :py:class:`~aiida.orm.node.Node`) or with no filtering if it is a :py:class:`~aiida.orm.node.Node` class. Note that for this check ``_plugin_type_string`` should be properly set.
 

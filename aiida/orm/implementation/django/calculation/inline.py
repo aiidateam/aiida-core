@@ -67,7 +67,7 @@ def make_inline(func):
                 raise TypeError("One of the values (for key '{}') of the "
                                 "dictionary returned by the wrapped function "
                                 "is not a Data node".format(k))
-            if v._is_stored:
+            if v.is_stored:
                 raise ModificationNotAllowed(
                     "One of the values (for key '{}') of the "
                     "dictionary returned by the wrapped function "

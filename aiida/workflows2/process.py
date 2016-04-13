@@ -63,7 +63,7 @@ class Process(plum.process.Process):
         with util.ProcessStack(self) as stack:
             # Create the calculation node for the process (unstored)
             calc = self._create_db_record()
-            assert(not calc._is_stored)
+            assert(not calc.is_stored)
 
             if len(stack) > 1:
                 # TODO: Call links need to work properly with fast-forwarding
@@ -93,7 +93,7 @@ class Process(plum.process.Process):
         for name, input in inputs.iteritems():
             # TODO: Need to have a discussion to see if we should automatically
             # store unstored inputs.  My feeling is yes.
-            if not input._is_stored:
+            if not input.is_stored:
                 input.store()
             self._current_calc.add_link_from(input, name)
         self._current_calc.store()
@@ -114,7 +114,7 @@ class Process(plum.process.Process):
         """
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
 
-        if value._is_stored():
+        if value.is_stored():
             link_type = LinkType.RETURN
         else:
             value.store()

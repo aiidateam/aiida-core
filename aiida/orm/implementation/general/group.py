@@ -4,11 +4,11 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 
 from aiida.common.exceptions import UniquenessError, NotExistent, MultipleObjectsError
 
-
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
+
 
 def get_group_type_mapping():
     """
@@ -28,11 +28,11 @@ def get_group_type_mapping():
             'import': IMPORTGROUP_TYPE,
             'autogroup.run': VERDIAUTOGROUP_TYPE}
 
+
 class AbstractGroup(object):
     """
     An AiiDA ORM implementation of group of nodes.
     """
-
 
     __metaclass__ = ABCMeta
 
@@ -74,7 +74,6 @@ class AbstractGroup(object):
         :return: the description of the group as a string
         """
         pass
-
 
     @abstractproperty
     def type_string(self):
@@ -141,7 +140,7 @@ class AbstractGroup(object):
         pass
 
     @abstractproperty
-    def _is_stored(self):
+    def is_stored(self):
         """
         :return: True if the respective DbNode has been already saved in the
           DB, False otherwise
@@ -189,10 +188,9 @@ class AbstractGroup(object):
         """
         pass
 
-
     @classmethod
     @abstractmethod
-    def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
+    def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
               user=None, node_attributes=None, past_days=None, **kwargs):
         """
         Query for groups.
@@ -242,7 +240,6 @@ class AbstractGroup(object):
             raise MultipleObjectsError("More than one Group found -- "
                                        "I found {}".format(len(queryresults)))
 
-
     @classmethod
     def get_from_string(cls, string):
         """
@@ -266,14 +263,14 @@ class AbstractGroup(object):
             except KeyError:
                 msg = ("Invalid group type '{}'. Valid group types are: "
                        "{}".format(typestr, ",".join(sorted(
-                                get_group_type_mapping().keys()))))
+                    get_group_type_mapping().keys()))))
                 raise ValueError(msg)
         else:
             internal_type_string = ""
 
         try:
             group = cls.get(name=name,
-                              type_string=internal_type_string)
+                            type_string=internal_type_string)
             return group
         except NotExistent:
             if typestr:
@@ -285,7 +282,6 @@ class AbstractGroup(object):
                     "No user-defined group with name '{}' "
                     "found.".format(name))
             raise NotExistent(msg)
-
 
     def is_user_defined(self):
         """
@@ -310,4 +306,3 @@ class AbstractGroup(object):
         else:
             return '"{}" [user-defined], of user {}'.format(
                 self.name, self.user.email)
-

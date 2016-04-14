@@ -23,7 +23,10 @@ class TrackingExecutionEngine(plum.execution_engine.ExecutionEngine, ProcessList
             self._parent_process = parent_process
 
         def run(self, process, inputs):
-            self._exec_engine._submit(process, inputs, self._parent_process)
+            self._exec_engine._do_run(process, inputs, self._parent_process)
+
+        def submit(self, process, inputs):
+            return self._exec_engine._do_submit(process, inputs, self._parent_process)
 
     def __init__(self):
         self._records = {}
@@ -41,6 +44,9 @@ class TrackingExecutionEngine(plum.execution_engine.ExecutionEngine, ProcessList
         """
         process._submit(process, inputs, None)
 
+    def submit(self, process, inputs):
+        pass
+
     def push(self, process):
         return TrackingExecutionEngine.Delegate(self, process)
 
@@ -50,7 +56,12 @@ class TrackingExecutionEngine(plum.execution_engine.ExecutionEngine, ProcessList
                 return pid
         return None
 
-    def _submit(self, process, inputs, parent):
+    def _do_run(self, process, inputs, parent):
+        record = self._add_process(process, inputs, parent)
+        process.run(inputs, TrackingExecutionEngine.Delegate(self, process),
+                    record.instance_state)
+
+    def _do_submit(self, process, inputs, parent):
         record = self._add_process(process, inputs, parent)
         process.run(inputs, TrackingExecutionEngine.Delegate(self, process),
                     record.instance_state)

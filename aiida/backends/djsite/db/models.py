@@ -277,10 +277,8 @@ class DbLink(m.Model):
         # allowed to have the same name. For calculations, it is the
         # responsibility of the output plugin to avoid to have many
         # times the same name.
-        # TODO: Update this with the new type column
-        unique_together = (("input", "output"),
-                           ("output", "label"),
-                           )
+        #unique_together = ("output", "label")
+        pass
 
     def __str__(self):
         return "{} ({}) --> {} ({})".format(

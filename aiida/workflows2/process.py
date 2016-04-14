@@ -67,10 +67,11 @@ class Process(plum.process.Process):
 
             if len(stack) > 1:
                 # TODO: Call links need to work properly with fast-forwarding
-                calc.add_link_from(stack[-1]._current_calc, "CALL", LinkType.CALL)
+                #calc.add_link_from(stack[-1]._current_calc, "CALL", LinkType.CALL)
 
-                if not exec_engine:
-                    exec_engine = stack[-2]._get_exec_engine().push(self)
+                # if not exec_engine:
+                #     exec_engine = stack[-2]._get_exec_engine().push(self)
+                pass
 
             if self._can_fast_forward(calc, inputs):
                 self._fast_forward()
@@ -114,7 +115,7 @@ class Process(plum.process.Process):
         """
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
 
-        if value.is_stored():
+        if value.is_stored:
             link_type = LinkType.RETURN
         else:
             value.store()
@@ -188,6 +189,16 @@ class FunctionProcess(Process):
                     {'_func': staticmethod(func),
                      '_define': staticmethod(_define),
                      '_func_args': args})
+
+    @classmethod
+    def args_to_dict(cls, *args):
+        """
+        Create an input dictionary (i.e. label: value) from supplied args.
+        :param args: The values to use
+        :return: A label: value dictionary
+        """
+        assert(len(args) == len(cls._func_args))
+        return dict(zip(cls._func_args, args))
 
     def __init__(self):
         super(FunctionProcess, self).__init__()

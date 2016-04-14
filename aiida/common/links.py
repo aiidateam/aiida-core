@@ -13,3 +13,4 @@ class LinkType(Enum):
     RETURN = 'returnlink'
     INPUT = 'inputlink'
     OUTPUT = 'outputlink'
+    CALL = 'calllink'

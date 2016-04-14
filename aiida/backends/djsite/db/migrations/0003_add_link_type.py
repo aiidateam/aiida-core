@@ -82,5 +82,9 @@ class Migration(migrations.Migration):
             field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False),
             preserve_default=True,
         ),
+        migrations.AlterUniqueTogether(
+            name='dblink',
+            unique_together=set([]),
+        ),
         update_schema_version(SCHEMA_VERSION)
     ]

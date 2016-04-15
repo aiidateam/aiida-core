@@ -1553,12 +1553,25 @@ This would be the queryhelp::
             return self.que
         return self._build_query()
 
-    def first(self):
+    def _first(self):
         """
         Executes query asking, for one instance.
         :returns: One row of results
         """
         return self.get_query().first()
+
+    def first(self):
+        """
+        Executes query asking, for one instance.
+        :returns: One row of aiida results
+        """
+        res = self._first()
+
+        if self.nr_of_projections > 1:
+            return map(self._get_aiida_res, res) 
+        else:
+            return self._get_aiida_res(res)
+
 
     def distinct(self):
         """

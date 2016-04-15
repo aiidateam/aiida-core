@@ -14,6 +14,8 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.profile import load_profile, is_profile_loaded
 
+from aiida import load_dbenv, is_dbenv_loaded
+
 
 # Note that we can't use `DbAttribute.query` here because we didn't import it
 # in load_dbenv.
@@ -22,6 +24,7 @@ __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For fu
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
+
 
 class DbAttribute(Base):
     """
@@ -42,6 +45,7 @@ class DbAttribute(Base):
 
     dbnode_id = Column(Integer, ForeignKey('db_dbnode.id'), nullable=False)
     dbnode = relationship('DbNode', backref='old_attrs')
+
 
 class DbExtra(Base):
     """
@@ -110,6 +114,7 @@ def attributes_to_dict(attr_list):
 
     return (d, error)
 
+
 def select_from_key(key, d):
     """
     Return element of the dict to do the insertion on. If it is foo.1.bar, it
@@ -126,9 +131,11 @@ def select_from_key(key, d):
 
     return tmp_d
 
+
 def print_debug(debug, m):
     if debug:
         print(m)
+
 
 def create_columns(debug=False):
     """
@@ -152,20 +159,13 @@ def create_columns(debug=False):
         print_debug(debug, "Creating link type column")
         sa.session.execute('ALTER TABLE db_dblink ADD COLUMN type varchar(255)')
 
-def load_env(profile=None):
-    if not is_profile_loaded():
-        load_profile(profile)
-    # Getting import errors here, why is that?
-    from aiida.backends.sqlalchemy.utils import load_dbenv, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv()
-
 
 def migrate_extras(create_column=False, profile=None, group_size=1000, debug=False, delete_table = False):
     """
     Migrate the DbExtra table into the extras column for db_dbnode.
     """
-    load_env(profile=profile)
+    if not is_dbenv_loaded():
+        load_dbenv(profile=profile)
     print_debug(debug, "Starting migration of extras")
 
     with sa.session.begin(subtransactions=True):
@@ -211,7 +211,8 @@ def migrate_attributes(create_column=False, profile=None, group_size=1000, debug
     """
     Migrate the DbAttribute table into the attributes column of db_dbnode.
     """
-    load_env(profile=profile)
+    if not is_dbenv_loaded():
+        load_dbenv(profile=profile)
     print_debug(debug, "Starting migration of attributes")
 
     with sa.session.begin(subtransactions=True):
@@ -257,11 +258,13 @@ def migrate_attributes(create_column=False, profile=None, group_size=1000, debug
             sa.session.execute('DROP TABLE db_dbattribute')
     sa.session.commit()
 
+
 def migrate_json_column(profile=None):
     """
     Migrate the TEXT column containing JSON into JSON columns
     """
-    load_env(profile=profile)
+    if not is_dbenv_loaded():
+        load_dbenv(profile=profile)
 
     table_col = [
         ('db_dbauthinfo', 'metadata'),
@@ -280,11 +283,13 @@ def migrate_json_column(profile=None):
 
     sa.session.commit()
 
+
 def create_gin_index():
     """
     Create the GIN index for the attributes column of db_dbnode.
     """
     sa.session.bind.execute("CREATE INDEX db_dbnode_attributes_idx ON db_dbnode USING gin(attributes)")
+
 
 def migrate(create_column=False, profile=None, group_size=1000, debug=False, delete_table = False):
     """

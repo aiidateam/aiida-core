@@ -23,7 +23,7 @@ Once a calculation has been submitted to AiiDA, everything else will be
 managed by AiiDA: the inputs will be checked to verify
 that they are consistent. If the inputs are complete, the input
 files will be prepared, sent on cluster, and a job will be
-submitted. The AiiDA daemon with then monitor the scheduler, and after
+submitted. The AiiDA daemon will then monitor the scheduler, and after
 execution the outputs automatically retrieved and parsed.
 
 During these phases, it is useful to be able to check and verify the state of

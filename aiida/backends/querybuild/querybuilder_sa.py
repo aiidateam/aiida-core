@@ -3,7 +3,7 @@
 from querybuilder_base import QueryBuilderBase
 from sa_init import (
         and_, or_, not_, except_,
-        aliased, Integer, Float, Boolean, JSONB
+        aliased, Integer, Float, Boolean, JSONB, jsonb_array_length
     )
 
 from sqlalchemy_utils.types.choice import Choice

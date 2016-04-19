@@ -32,7 +32,8 @@ class BasePwCpInputGenerator(object):
     _OUTPUT_FILE_NAME = 'aiida.out'
     _DATAFILE_XML_BASENAME = 'data-file.xml'
     _DATAFILE_XML = 'undefined.xml'
-
+    _ENVIRON_INPUT_FILE_NAME = 'environ.in'
+    
     ## NOTE!! DO NOT UPDATE lists and dictionaries defined here,
     ## they will be changed for all classes of the current run!
 
@@ -536,6 +537,23 @@ class BasePwCpInputGenerator(object):
             infile.write(cell_parameters_card)
             #TODO: write CONSTRAINTS
             #TODO: write OCCUPATIONS
+
+        # Check if specific inputs for the ENVIRON module where specified
+        if 'ENVIRON' in input_params:
+            # We first add the environ flag to the command-line options (if not already present)
+            try:
+                if '-environ' not in settings_dict['CMDLINE']:
+                    settings_dict['CMDLINE'].append('-environ')
+            except KeyError:
+                settings_dict['CMDLINE'] = ['-environ']
+            # The ENVIRON namelist is saved in a separate file
+            namelist = input_params.pop('ENVIRON')
+            environ_input_filename = tempfolder.get_abs_path(self._ENVIRON_INPUT_FILE_NAME)
+            with open(environ_input_filename,'w') as environ_infile:
+                environ_infile.write("&ENVIRON\n")
+                for k,v in sorted(namelist.iteritems()):
+                    environ_infile.write(get_input_data_text(k, v, mapping=mapping_species))
+                environ_infile.write("/\n")
 
         if input_params:
             raise InputValidationError(

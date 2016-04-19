@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import inspect
-
 import plum.process
+import plum.persistence.persistence_mixin
 
 import aiida.workflows2.util as util
-from aiida.workflows2.execution_engine import TrackingExecutionEngine
-from aiida.workflows2.util import load_class
+from aiida.workflows2.persistance.active_factory import create_process_record
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from abc import ABCMeta
@@ -29,7 +27,8 @@ class ProcessSpec(plum.process.ProcessSpec):
         self._fastforwardable = True
 
 
-class Process(plum.process.Process):
+class Process(plum.persistence.persistence_mixin.PersistenceMixin,
+              plum.process.Process):
     """
     This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
@@ -38,50 +37,33 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    @staticmethod
-    def from_record(record):
-        if record.process_class == Process.__class__.__name__:
-            process_class = Process.__class__
-        else:
-            process_class = load_class(record.process_class)
-        proc = process_class.create()
-        proc._load_from_record(record)
-        return proc
-
     def __init__(self):
         super(Process, self).__init__()
         self._current_calc = None
-        self._state_storage = None
-
-    def execute(self, inputs, exec_engine, state_storage):
-        # TODO: Put state storage in a with(..)
-        self._state_storage = state_storage
-        self.run(inputs, exec_engine)
-        self._state_storage = None
+        self._process_record = None
+        self._parent = None
 
     def run(self, inputs=None, exec_engine=None):
-        with util.ProcessStack(self) as stack:
-            # Create the calculation node for the process (unstored)
-            calc = self._create_db_record()
-            assert(not calc.is_stored)
+        with util.ProcessStack.push(self):
 
-            if len(stack) > 1:
-                # TODO: Call links need to work properly with fast-forwarding
-                #calc.add_link_from(stack[-1]._current_calc, "CALL", LinkType.CALL)
-
-                # if not exec_engine:
-                #     exec_engine = stack[-2]._get_exec_engine().push(self)
-                pass
-
-            if self._can_fast_forward(calc, inputs):
+            if self._can_fast_forward(inputs):
                 self._fast_forward()
             else:
-                self._current_calc = calc
                 super(Process, self).run(inputs, exec_engine)
 
-    @classmethod
-    def _create_default_exec_engine(cls):
-        return TrackingExecutionEngine()
+    @property
+    def current_calculation_node(self):
+        return self._current_calc
+
+    def _continue_from(self, record, exec_engine=None):
+        """
+        Continue using the state saved in a process record.
+
+        :param record: The record to continue using.
+        """
+        # A generic process can't be continued mid way so just run again using
+        # the same inputs
+        self._run(**record.inputs)
 
     # Messages #####################################################
     def _on_process_starting(self, inputs):
@@ -89,19 +71,15 @@ class Process(plum.process.Process):
         The process is starting with the given inputs
         :param inputs: A dictionary of inputs for each input port
         """
-
-        # Link and store the retrospective provenance for this process
-        for name, input in inputs.iteritems():
-            # TODO: Need to have a discussion to see if we should automatically
-            # store unstored inputs.  My feeling is yes.
-            if not input.is_stored:
-                input.store()
-            self._current_calc.add_link_from(input, name)
-        self._current_calc.store()
-
+        self._setup_db_record(inputs)
         super(Process, self)._on_process_starting(inputs)
 
-    def _on_process_finialising(self):
+    def _on_process_continuing(self, record):
+        super(Process, self)._on_process_continuing(record)
+        self._setup_db_record(record.inputs)
+
+    def _on_process_finalising(self):
+        super(Process, self)._on_process_finalising()
         self._current_calc = None
 
     def _on_output_emitted(self, output_port, value, dynamic):
@@ -134,7 +112,27 @@ class Process(plum.process.Process):
         calc = ProcessCalculation()
         return calc
 
-    def _can_fast_forward(self, calc_node, inputs):
+    def _setup_db_record(self, inputs):
+        # Link and store the retrospective provenance for this process
+        calc = self._create_db_record()  # (unstored)
+        assert (not calc.is_stored)
+        for name, input in inputs.iteritems():
+            if not input.is_stored:
+                input.store()
+                # If the input isn't stored then assume our parent created it
+                if self._parent:
+                    input.add_link_from(self._parent._current_calc, "CREATE",
+                                        link_type=LinkType.CREATE)
+
+            calc.add_link_from(input, name)
+
+        if self._parent:
+            calc.add_link_from(self._parent._current_calc, "CALL", LinkType.CALL)
+
+        self._current_calc = calc
+        self._current_calc.store()
+
+    def _can_fast_forward(self, inputs):
         return False
 
     def _fast_forward(self):
@@ -142,8 +140,16 @@ class Process(plum.process.Process):
         for k, v in node.get_output_dict():
             self._out(k, v)
 
-    def _load_from_stored_state(self, state_storage):
-        pass
+    def _create_process_record(self, inputs):
+        assert(not self._process_record)
+
+        if self._parent:
+            return self._parent._create_child_record(self, inputs)
+        else:
+            return create_process_record(self, inputs)
+
+    def _create_child_record(self, child, inputs):
+        return self._process_record.create_child(child, inputs)
 
 
 class FunctionProcess(Process):

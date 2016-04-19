@@ -376,6 +376,8 @@ class AbstractNode(object):
         :param link_type: The type of link, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
+        assert src, "You must provide a valid Node to link"
+
         # Check that the label does not already exist
 
         # This can happen also if both nodes are stored, e.g. if one first

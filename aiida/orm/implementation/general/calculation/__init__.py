@@ -254,9 +254,17 @@ class AbstractCalculation(object):
         :raise: ValueError if a link from self to dest is not allowed.
         """
         from aiida.orm.data import Data
-        if not isinstance(dest, Data):
+
+        if link_type is LinkType.CREATE or link_type is LinkType.RETURN:
+            if not isinstance(dest, Data):
+                raise ValueError(
+                    "The output of a calculation node can only be a data node")
+        elif link_type is LinkType.CALL:
+            if not isinstance(dest, AbstractCalculation):
+                raise ValueError("Call links can only link two calculations.")
+        else:
             raise ValueError(
-                "The output of a calculation node can only be a data node")
+                "Calculation cannot have links of type {} as output".format(link_type))
 
         return super(AbstractCalculation, self)._linking_as_output(dest, link_type)
 
@@ -275,12 +283,17 @@ class AbstractCalculation(object):
         from aiida.orm.data import Data
         from aiida.orm.code import Code
 
-        if not isinstance(src, (Data, Code)):
-            raise ValueError("Nodes entering in calculation can only be of "
-                             "type data or code")
-
-        if link_type is not LinkType.INPUT:
-            raise ValueError("Calculations can only take input links.")
+        if link_type is LinkType.INPUT:
+            if not isinstance(src, (Data, Code)):
+                raise ValueError(
+                    "Nodes entering calculation as input link can only be of "
+                    "type data or code")
+        elif link_type is LinkType.CALL:
+            if not isinstance(src, AbstractCalculation):
+                raise ValueError("Call links can only link two calculations.")
+        else:
+            raise ValueError(
+                "Calculation cannot have links of type {} as input".format(link_type))
 
         return super(AbstractCalculation, self).add_link_from(src, label, link_type)
 

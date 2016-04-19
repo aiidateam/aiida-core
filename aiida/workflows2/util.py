@@ -26,15 +26,24 @@ class ProcessStack(object):
     # Use thread-local storage for the stack
     _thread_local = local()
 
+    @staticmethod
+    def push(process):
+        return ProcessStack(process)
+
     def __init__(self, process):
         self._process = process
 
     def __enter__(self):
         self.stack.append(self._process)
+        if len(self.stack) > 1:
+            self._process._parent = self.stack[-2]
+        else:
+            self._process._parent = None
         return self.stack
 
     def __exit__(self, type, value, traceback):
         self.stack.pop()
+        self._process._parent = None
 
     @property
     def stack(self):

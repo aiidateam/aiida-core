@@ -6,7 +6,7 @@ if not is_dbenv_loaded():
 from aiida.workflows2.persistance.active_factory import load_all_process_records
 from aiida.workflows2.process import Process
 from aiida.workflows2.workflow import Workflow
-from aiida.workflows2.util import to_db_type
+from aiida.workflows2.util import to_db_type, load_class
 
 
 class Add(Process):
@@ -58,4 +58,10 @@ if __name__ == '__main__':
     # ee.run(mul_add)
 
     active = load_all_process_records()
-    print(active)
+    record = active[0]
+    proc = load_class(record.process_class).create()
+    proc.continue_from(record)
+
+    simpledata = proc.get_last_outputs()['value']
+    print "output pk:", simpledata.pk
+    print "output value:", simpledata.value

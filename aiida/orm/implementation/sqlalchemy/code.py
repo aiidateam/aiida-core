@@ -182,9 +182,9 @@ def delete_code(code):
     existing_outputs = code.get_outputs()
 
     if len(existing_outputs) != 0:
-        raise InvalidOperation("Unable to delete the requested code because it "
-                               "has {} output links".format(
-            len(existing_outputs)))
+        raise InvalidOperation(
+            "Unable to delete the requested code because it "
+            "has {} output links".format(len(existing_outputs)))
     else:
         repo_folder = code._repository_folder
         with transaction.commit_on_success():

@@ -300,10 +300,13 @@ class CifEntry(DbEntry):
 
     def get_aiida_structure(self):
         """
-        Returns AiiDA-compatible structure, representing the crystal
-        structure from the CIF file.
+        :return: AiiDA structure corresponding to the CIF file.
         """
-        raise NotImplementedError("not implemented in base class")
+        from aiida.orm import DataFactory
+
+        S = DataFactory("structure")
+        aiida_structure = S(ase=self.get_ase_structure())
+        return aiida_structure
 
     def get_parsed_cif(self):
         """

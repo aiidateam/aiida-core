@@ -9,6 +9,7 @@ class Copy(Derive):
         return "<Include {0} -> {1}>".format(self.start, self.end)
     __mapper_args__ = {'polymorphic_identity': 'copy'}
 
+
 ############################# DATA SUBCLASSES ################################
 # data class containing parameters for a Quantum Espresso calculation
 # it does not include info on the cell itself, since that will be taken from
@@ -26,12 +27,14 @@ class QEOutput(Data):
         return "qeoutput({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'qeoutput'}
 
+
 # data class containing information about the result of a
 # stability analysis
 class StabOutput(Data):
     def __repr__(self):
         return "staboutput({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'data_staboutput'}
+
 
 # data class containing information about a specific structure
 # it allows to build a full cell for a given calculation
@@ -40,6 +43,7 @@ class Struc(Data):
         return "struc({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'data_struc'}
 
+
 # data class which acts as a container for different structures
 # representative of the same chemical composition
 class Material(Data):
@@ -47,11 +51,13 @@ class Material(Data):
         return "material({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'data_material'}
 
+
 # data class to store a MD trajectory
 class Traj(Data):
     def __repr__(self):
         return "traj({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'data_traj'}
+
 
 # data class used to store the path to the locations of raw files
 # i.e. input/output files for Quantum Espresso
@@ -60,12 +66,13 @@ class FileData(Data):
         return "file({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'data.file'}
 
+
 class ValueData(Data):
     def __init__(self, value):
         #self.value = value      # need to be careful of non-mapped attributes
         content = {'value': value}
-        content_hash = hashlib.sha224(str(content)).hexdigest()
-        super(ValueData, self).__init__(content=content, hash=content_hash )
+        hash = hashlib.sha224(str(content)).hexdigest()
+        super(ValueData, self).__init__(content=content, hash=hash )
 
     def __repr__(self):
         return "Value ({})".format(self.content['value'])
@@ -74,6 +81,7 @@ class ValueData(Data):
     @property
     def value(self):
         return self.content['value']
+
 
 class IntData(ValueData):
     def __init__(self, value):
@@ -85,6 +93,7 @@ class IntData(ValueData):
         return "Int ({})".format(self.content['value'])
     __mapper_args__ = {'polymorphic_identity': 'integer'}
 
+
 class FloatData(ValueData):
     def __init__(self, value):
         if isinstance(value, float):
@@ -94,6 +103,7 @@ class FloatData(ValueData):
     def __repr__(self):
         return "Float ({})".format(self.content['value'])
     __mapper_args__ = {'polymorphic_identity': 'float'}
+
 
 # TODO weak reference??
 class StringData(ValueData):
@@ -106,6 +116,7 @@ class StringData(ValueData):
         return "String ({})".format(self.content['value'])
     __mapper_args__ = {'polymorphic_identity': 'string'}
 
+
 class DictData(ValueData, dict):
     def __init__(self, value):
         if isinstance(value, dict):
@@ -115,6 +126,7 @@ class DictData(ValueData, dict):
     def __repr__(self):
         return "Dict ({})".format(self.content['value'])
     __mapper_args__ = {'polymorphic_identity': 'dict'}
+
 
 class ListData(ValueData, list):
     def __init__(self, value):
@@ -126,6 +138,7 @@ class ListData(ValueData, list):
         return "List ({})".format(self.content['value'])
     __mapper_args__ = {'polymorphic_identity': 'list'}
 
+
 # more general Parameter class: input instances for specific
 # programs should inherit from this one
 class Param(Data):
@@ -133,11 +146,13 @@ class Param(Data):
         return "Param ({})".format(self.content)
     __mapper_args__ = {'polymorphic_identity': 'param'}
 
+
 # data class which contains a set of Pseudo Potentials
 class PPSubset(Data):
     def __repr__(self):
         return "ppsubset({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'ppsubset'}
+
 
 # data class which contains a set of Outputs
 class OutSubset(Data):
@@ -145,11 +160,13 @@ class OutSubset(Data):
         return "outsubset({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'outsubset'}
 
+
 # data class to store information about a given Pseudo Potential
 class PseudoPot(Data):
     def __repr__(self):
         return "PseudoPot ({})".format(self.content)
     __mapper_args__ = {'polymorphic_identity': 'pseudopot'}
+
 
 # data class to represent a given parsing scheme used to parse
 # output files.
@@ -157,6 +174,7 @@ class ParserParam(Data):
     def __repr__(self):
         return "ParserParam ({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'parserparam'}
+
 
 # object returned by an observer calc, i.e. a calc that
 # periodically checks the output of another calc, killing
@@ -166,12 +184,14 @@ class Observed(Data):
         return "Observed ({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'observed'}
 
+
 # object containing instructions to generate a new Stucture
 # from an already existing one
 class ManipulateStruc(Data):
     def __repr__(self):
         return "ManipulateStruc ({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'manipulate'}
+
 
 # object containing instructions to run a job on a given machine
 # e.g., number of cores, processors, pools, queue, project name,
@@ -181,6 +201,7 @@ class Execution(Data):
         return "Execution ({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'execution'}
 
+
 # object containing instructions to filter results in the DB
 # according to some specified criteria: useful to select results
 # to be used as input for a given workflow, i.e. stability analysis
@@ -188,6 +209,7 @@ class FilterSpecs(Data):
     def __repr__(self):
         return "FilterSpecs ({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'filterspecs'}
+
 
 # object containing options for the stability analysis, i.e.,
 # if considering only lowest energy version of a given compound,
@@ -197,6 +219,7 @@ class StabilityOptions(Data):
     def __repr__(self):
         return "StabilityOptions ({})".format(self.name)
     __mapper_args__ = {'polymorphic_identity': 'stabilityoptions'}
+
 
 ####################### CODE and CALC #########################
 

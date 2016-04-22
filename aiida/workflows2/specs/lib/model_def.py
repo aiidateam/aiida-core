@@ -78,7 +78,7 @@ class Data(Base):
     __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': 'data'}
 
     def __init__(self, name=None, state=None, validity='New',
-        content=None, extra=None):
+                 content=None, extra=None, hash=None):
         self.name = name
         self.state = state
         self.validity = validity

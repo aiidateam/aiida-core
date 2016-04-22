@@ -84,7 +84,7 @@ def import_structures_from_QE_run(_calc, code_name=None, **qeoutputs):
 
 @threadit
 @workit_factory(code_type=Manipulator)
-def manipulate_struc(self, code_name=None, struc=None, transformation=None):
+def manipulate_struc(_calc, code_name=None, struc=None, transformation=None):
     """
     This function allows to generate a new structure by manipulating
     an already existing one. Manipulation includes randomizing atomic
@@ -130,7 +130,7 @@ def manipulate_struc(self, code_name=None, struc=None, transformation=None):
 
 @threadit
 @workit_factory(code_type=QEplugin)
-def create_QEInput_file(self, code_name=None, struc=None, qeinp=None, ppsubset=None):
+def create_QEInput_file(_calc, code_name=None, struc=None, qeinp=None, ppsubset=None):
     """
     This function takes as input a dict of DB objects (one Struc, one QEInput, one PP set)
     and creates a QE Input file object which contains the full qe file.
@@ -176,9 +176,10 @@ def create_QEInput_file(self, code_name=None, struc=None, qeinp=None, ppsubset=N
 
     return {'fileinp': fileinp}
 
+
 @threadit
 @workit_factory(code_type=QEplugin)
-def run_QE_calc(self, code_name=None, fileinp=None):
+def run_QE_calc(_calc, code_name=None, fileinp=None):
     """
     This function takes as input a QE input file DB object: it runs the calculation
     (locally or remotely), then returns a FileData object containing information
@@ -274,9 +275,10 @@ def run_QE_calc(self, code_name=None, fileinp=None):
 
     return {title: fileout}
 
+
 @threadit
 @workit_factory(code_type=QEparser)
-def parsing_QE_output(self, code_name=None, struc=None, ppsubset=None,
+def parsing_QE_output(_calc, code_name=None, struc=None, ppsubset=None,
     parser=None, observed=None):
     """
     This function takes as input a FileData object with the location of the output
@@ -335,9 +337,10 @@ def parsing_QE_output(self, code_name=None, struc=None, ppsubset=None,
 
     return {title: res}
 
+
 @threadit
 @workit_factory(code_type=QEplugin)
-def observeQE(self, code_name=None, fileinp=None):
+def observeQE(_calc, code_name=None, fileinp=None):
     """
     This function is a prototype for an observer calc for QE. It periodically checks
     the calculation output and stops it if something goes wrong according to
@@ -365,7 +368,7 @@ def observeQE(self, code_name=None, fileinp=None):
     # may lead to connection errors raised by saga
     while number_of_tries <= max_number_retries:
         try:
-            res = run_QE_calc(self, code_name='Quantum Espresso 5.1.2 Mac OS X 10.9',
+            res = run_QE_calc(_calc, code_name='Quantum Espresso 5.1.2 Mac OS X 10.9',
                 fileinp=fileinp)
         except:
             number_of_tries += 1
@@ -399,7 +402,7 @@ def observeQE(self, code_name=None, fileinp=None):
                 # checks on the file
                 print "Last 10 output lines:\n%s" % "".join(hh[-10:])
                 # assume one slave per observer
-                slave = self.slaves[0]
+                slave = _calc.slaves[0]
                 slave.kill_itself('gra2pal', '', 'local')
             else:
                 print "Waiting for output file to be created....."
@@ -420,7 +423,7 @@ def observeQE(self, code_name=None, fileinp=None):
 
 @threadit
 @workit_factory(code_type=QEplugin)
-def QE_workflow(self, code_name=None, struc=None,
+def QE_workflow(_calc, code_name=None, struc=None,
     qeinp=None, ppsubset=None, parser=None):
     """
     Example of workflow to run an energy calculation in Quantum Espresso. (AG)
@@ -430,18 +433,18 @@ def QE_workflow(self, code_name=None, struc=None,
 
     wf_check_input((struc, Struc), (qeinp, QEInput), (ppsubset, PPSubset), (parser, ParserParam))
 
-    res = w4(create_QEInput_file(self, struc=struc, qeinp=qeinp, ppsubset=ppsubset))
+    res = w4(create_QEInput_file(_calc, struc=struc, qeinp=qeinp, ppsubset=ppsubset))
 
     # not observed version
     #out = w4(run_QE_calc(self, code_name='Quantum Espresso 5.1.2 Mac OS X 10.9',
     #            fileinp=fileinp))
 
     # version with observer
-    qe_out = w4(observeQE(self, **res))
+    qe_out = w4(observeQE(_calc, **res))
 
     observed = qe_out['observed']
 
-    qe_out_parsed = w4(parsing_QE_output(self, 'Espresso wrapper by Zhongnan Xu',
+    qe_out_parsed = w4(parsing_QE_output(_calc, 'Espresso wrapper by Zhongnan Xu',
         struc=struc, ppsubset=ppsubset, parser=parser, observed=observed))
 
     # setting up direct links for easier queries

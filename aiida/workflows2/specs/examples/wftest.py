@@ -76,14 +76,14 @@ def firstcomp(self, c, d=IntData(8)):
     return {'first': IntData(6)}
 
 #session5 = Session()
-#c = Calc(name='start')
-#x = IntData(88)
+c = Calc(name='start')
+x = IntData(88)
 #session5.add_all([c, x])
 #session5.commit()
 
-#top_func(c, x=x)
-#res = w4(top_func(c, x=x))
-#print "result {0}".format(res)
+top_func(c, x=x)
+res = w4(top_func(c, x=x))
+print "result {0}".format(res)
 #for item in res:
 #    item.roots.append(x)
 #session5.commit()

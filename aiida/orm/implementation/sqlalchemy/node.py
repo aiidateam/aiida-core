@@ -430,7 +430,7 @@ class Node(AbstractNode):
         comments = self._get_dbcomments(pk)
 
         return [{
-            "id": c.id,
+            "pk": c.id,
             "user__email": c.user.email,
             "ctime": c.ctime,
             "mtime": c.mtime,

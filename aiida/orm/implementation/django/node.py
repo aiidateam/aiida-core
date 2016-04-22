@@ -487,9 +487,9 @@ class Node(AbstractNode):
             except TypeError:
                 if not isinstance(pk, int):
                     raise ValueError('pk must be an integer or a list of integers')
-            return list(DbComment.objects.filter(dbnode=self._dbnode, pk=pk
-                                                 ).order_by('pk').values('pk', 'user__email',
-                                                                         'ctime', 'mtime', 'content'))
+            return list(DbComment.objects.filter(
+                dbnode=self._dbnode, pk=pk).order_by('pk').values(
+                'pk', 'user__email', 'ctime', 'mtime', 'content'))
 
         return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
             'pk').values('pk', 'user__email', 'ctime', 'mtime', 'content'))

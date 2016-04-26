@@ -106,6 +106,7 @@ class Node(AbstractNode):
         if not isinstance(pk, int):
             raise ValueError("Incorrect type for int")
         try:
+            from aiida.backends.sqlalchemy import session
             node = cls.query(id=pk).one()
         except NoResultFound:
             # DataError is thrown when you pass a string instead of an int for

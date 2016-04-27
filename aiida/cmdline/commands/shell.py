@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+
 import os
 
 from aiida.cmdline.baseclass import VerdiCommand
@@ -37,36 +39,12 @@ class Shell(VerdiCommand):
 
     shells = ['ipython', 'bpython']
 
-    # shells = ['ipython', 'bpython']
-
-    # option_list = NoArgsCommand.option_list + (
-    #     make_option('--plain', action='store_true', dest='plain',
-    #                 help='Tells Django to use plain Python, not IPython or bpython.'),
-    #     make_option('--no-startup', action='store_true', dest='no_startup',
-    #                 help='When using plain Python, ignore the PYTHONSTARTUP environment variable and ~/.pythonrc.py script.'),
-    #     make_option('-i', '--interface', action='store', type='choice',
-    #                 choices=shells,
-    #                 dest='interface',
-    #                 help='Specify an interactive interpreter interface. Available options: "ipython" and "bpython"'),
-    #
-    # )
-    help = "Runs a Python interactive interpreter. Tries to use IPython or bpython, if one of them is available."
-    requires_system_checks = False
-
-    help = "Runs a Python interactive interpreter. Tries to use IPython or bpython, if one of them is available."
-    requires_system_checks = False
-
     def get_start_namespace(self):
         """Load all default and custom modules"""
         from aiida import load_dbenv, is_dbenv_loaded
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        from aiida.backends.profile import load_profile, is_profile_loaded
         from aiida.backends import settings
-        if not is_profile_loaded():
-            # load_profile(process, profile)
-            load_profile(profile=settings.AIIDADB_PROFILE)
+        if not is_dbenv_loaded():
+            load_dbenv(profile=settings.AIIDADB_PROFILE)
 
         from aiida.common.setup import get_property
         user_ns = {}
@@ -157,12 +135,6 @@ class Shell(VerdiCommand):
         raise ImportError
 
     def handle_noargs(self, *args):
-        print("==================+> {}".format(args))
-
-        use_plain = False
-        no_startup = False
-        interface = None
-
         import argparse
         parser = argparse.ArgumentParser(prog='verdi shell')
 

@@ -222,7 +222,7 @@ class FunctionProcess(Process):
         assert(len(args) == len(self._func_args))
         inputs = kwargs
         # Add all the non-keyword arguments as inputs
-        # TODO: Check that we're nto overwriting kwargs with args
+        # TODO: Check that we're not overwriting kwargs with args
         for name, value in zip(self._func_args, args):
             inputs[name] = value
         # Now get the superclass to deal with the keyword args and run

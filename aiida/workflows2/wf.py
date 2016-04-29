@@ -4,10 +4,8 @@ This file provides very simple workflows for testing purposes.
 Do not delete, otherwise 'verdi developertest' will stop to work.
 """
 
-from aiida.orm import Calculation
-import aiida.workflows2.util as util
 from aiida.workflows2.process import FunctionProcess
-from plum.parallel import MultithreadedExecutionEngine
+from aiida.workflows2.async import multithreaded_engine
 import functools
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -15,8 +13,6 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.5.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
-
-multithreaded_engine = MultithreadedExecutionEngine()
 
 
 def wf(func):
@@ -42,12 +38,9 @@ def wf(func):
             proc(*args, **kwargs)
             return proc.get_last_outputs()
 
+    wrapped_function._is_workfunction = True
     return wrapped_function
 
-
-def async(func, *args, **kwargs):
-    kwargs['__async'] = True
-    return func(*args, **kwargs)
 
 
 # def aiidise(func):

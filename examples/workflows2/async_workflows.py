@@ -4,6 +4,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 import aiida.workflows2.wf as wf
+from aiida.workflows2.async import async
 from aiida.workflows2.util import to_db_type
 from aiida.workflows2.process import Process
 from aiida.workflows2.workflow import Workflow
@@ -74,7 +75,7 @@ if __name__ == '__main__':
     four = to_db_type(4)
 
     print "WORKFUNCTION:"
-    simpledata = wf.async(add_multiply_wf, two, three, four).result()['value']
+    simpledata = async(add_multiply_wf, two, three, four).result()['value']
     print "output pk:", simpledata.pk
     print "output value:", simpledata.value
 

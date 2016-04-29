@@ -19,7 +19,7 @@ from aiida.common.folders import RepositoryFolder
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError,
                                      ValidationError)
-from aiida.common.link import LinkType
+from aiida.common.links import LinkType
 
 from aiida.orm.implementation.general.node import AbstractNode
 from aiida.orm.implementation.sqlalchemy.computer import Computer

@@ -83,9 +83,9 @@ class Data(Node):
     def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.orm.calculation import Calculation
 
-        # TODO: Data nodes can have only one CREATE link but multiple others
-        #if len(self.get_inputs()) > 0:
-        #    raise ValueError("At most one node can enter a data node")
+        if link_type is LinkType.CREATE and \
+           len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
+            raise ValueError("At most one CREATE node can enter a data node")
 
         if not isinstance(src, Calculation):
             raise ValueError("Links entering a data object can only be of type calculation")

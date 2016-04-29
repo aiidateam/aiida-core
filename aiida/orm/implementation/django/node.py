@@ -234,10 +234,15 @@ class Node(AbstractNode):
                                   "name (raw message was {})"
                                   "".format(e.message))
 
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False):
+    def get_inputs(self, type=None, also_labels=False, only_in_db=False,
+                   link_type=None):
         from aiida.backends.djsite.db.models import DbLink
+
+        link_filter = {'output': self.dbnode}
+        if link_type:
+            link_filter['type'] = link_type.value
         inputs_list = [(i.label, i.input.get_aiida_class()) for i in
-                       DbLink.objects.filter(output=self.dbnode).distinct()]
+                       DbLink.objects.filter(**link_filter).distinct()]
 
         if not only_in_db:
             # Needed for the check

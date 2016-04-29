@@ -578,7 +578,7 @@ class AbstractNode(object):
         return new_outputs
 
     @abstractmethod
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False):
+    def get_inputs(self, type=None, also_labels=False, only_in_db=False, link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
 
@@ -591,6 +591,8 @@ class AbstractNode(object):
         :param only_in_db: Return only the inputs that are in the database,
                 ignoring those that are in the local cache. Otherwise, return
                 all links.
+        :param link_type: Only get inputs of this link type, if None then
+                returns all inputs of all link types.
         """
         pass
 

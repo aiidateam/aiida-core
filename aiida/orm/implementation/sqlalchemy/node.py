@@ -244,7 +244,12 @@ class Node(AbstractNode):
                                   "name (raw message was {})"
                                   "".format(e))
 
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False):
+    def get_inputs(self, type=None, also_labels=False, only_in_db=False,
+                   link_type=None):
+
+        link_filter = {'output': self.dbnode}
+        if link_type:
+            link_filter['type'] = link_type.value
         inputs_list = [(i.label, i.input.get_aiida_class()) for i in
                        DbLink.query.filter_by(output=self.dbnode)
                            .distinct().all()]

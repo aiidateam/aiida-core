@@ -538,23 +538,6 @@ class BasePwCpInputGenerator(object):
             #TODO: write CONSTRAINTS
             #TODO: write OCCUPATIONS
 
-        # Check if specific inputs for the ENVIRON module where specified
-        if 'ENVIRON' in input_params:
-            # We first add the environ flag to the command-line options (if not already present)
-            try:
-                if '-environ' not in settings_dict['CMDLINE']:
-                    settings_dict['CMDLINE'].append('-environ')
-            except KeyError:
-                settings_dict['CMDLINE'] = ['-environ']
-            # The ENVIRON namelist is saved in a separate file
-            namelist = input_params.pop('ENVIRON')
-            environ_input_filename = tempfolder.get_abs_path(self._ENVIRON_INPUT_FILE_NAME)
-            with open(environ_input_filename,'w') as environ_infile:
-                environ_infile.write("&ENVIRON\n")
-                for k,v in sorted(namelist.iteritems()):
-                    environ_infile.write(get_input_data_text(k, v, mapping=mapping_species))
-                environ_infile.write("/\n")
-
         if input_params:
             raise InputValidationError(
                 "The following namelists are specified in input_params, but are "
@@ -589,6 +572,24 @@ class BasePwCpInputGenerator(object):
                              '{}.EXIT'.format(self._PREFIX))
             with open(exit_filename,'w') as f:
                 f.write('\n')
+
+        # Check if specific inputs for the ENVIRON module where specified
+        environ_namelist = settings_dict.pop('ENVIRON',None)
+        if environ_namelist is not None:
+            if not isinstance(environ_namelist, dict):
+                raise InputValidationError("ENVIRON namelist should be specified as a dictionary")
+            # We first add the environ flag to the command-line options (if not already present)
+            try:
+                if '-environ' not in settings_dict['CMDLINE']:
+                    settings_dict['CMDLINE'].append('-environ')
+            except KeyError:
+                settings_dict['CMDLINE'] = ['-environ']
+            environ_input_filename = tempfolder.get_abs_path(self._ENVIRON_INPUT_FILE_NAME)
+            with open(environ_input_filename,'w') as environ_infile:
+                environ_infile.write("&ENVIRON\n")
+                for k,v in sorted(environ_namelist.iteritems()):
+                    environ_infile.write(get_input_data_text(k, v, mapping=mapping_species))
+                environ_infile.write("/\n")
 
         calcinfo = CalcInfo()
 

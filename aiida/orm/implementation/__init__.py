@@ -17,8 +17,10 @@ if BACKEND == "sqlalchemy":
     # from aiida.orm.implementation.sqlalchemy.querytool import QueryTool
     from aiida.orm.implementation.sqlalchemy.workflow import Workflow, kill_all, get_workflow_info
     from aiida.orm.implementation.sqlalchemy.code import Code, delete_code
+    from aiida.orm.implementation.sqlalchemy.comment import Comment
     from aiida.orm.implementation.sqlalchemy.utils import delete_computer
     from aiida.backends.querybuild.querybuilder_sa import QueryBuilder
+    from aiida.backends.sqlalchemy import models
 elif BACKEND == "django":
     from aiida.orm.implementation.django.node import Node
     from aiida.orm.implementation.django.computer import Computer
@@ -27,8 +29,10 @@ elif BACKEND == "django":
     from aiida.orm.implementation.django.querytool import QueryTool
     from aiida.orm.implementation.django.workflow import Workflow, kill_all, get_workflow_info
     from aiida.orm.implementation.django.code import Code, delete_code
+    from aiida.orm.implementation.django.comment import Comment
     from aiida.orm.implementation.django.utils import delete_computer
     from aiida.backends.querybuild.querybuilder_django import QueryBuilder
+    from aiida.backends.djsite.db import models
 else:
     raise ConfigurationError("Invalid settings.BACKEND: {}".format(
             BACKEND))

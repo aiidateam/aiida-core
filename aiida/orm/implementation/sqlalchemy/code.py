@@ -60,10 +60,10 @@ class Code(AbstractCode):
             else:
                 codes = cls.query(label=codename)
 
-            if len(codes) == 0:
+            if codes.count() == 0:
                 raise NotExistent("'{}' is not a valid code "
                                   "ID or label.".format(code_string))
-            elif len(codes) > 1:
+            elif codes.count() > 1:
                 retstr = ("There are multiple codes with label '{}', having IDs: "
                           "".format(code_string))
                 retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
@@ -182,9 +182,9 @@ def delete_code(code):
     existing_outputs = code.get_outputs()
 
     if len(existing_outputs) != 0:
-        raise InvalidOperation("Unable to delete the requested code because it "
-                               "has {} output links".format(
-            len(existing_outputs)))
+        raise InvalidOperation(
+            "Unable to delete the requested code because it "
+            "has {} output links".format(len(existing_outputs)))
     else:
         repo_folder = code._repository_folder
         with transaction.commit_on_success():

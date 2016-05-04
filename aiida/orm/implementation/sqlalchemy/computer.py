@@ -80,7 +80,7 @@ class Computer(AbstractComputer):
     def full_text_info(self):
         ret_lines = []
         ret_lines.append("Computer name:     {}".format(self.name))
-        ret_lines.append(" * PK:             {}".format(self.id))
+        ret_lines.append(" * PK:             {}".format(self.pk))
         ret_lines.append(" * UUID:           {}".format(self.uuid))
         ret_lines.append(" * Description:    {}".format(self.description))
         ret_lines.append(" * Hostname:       {}".format(self.hostname))
@@ -95,9 +95,8 @@ class Computer(AbstractComputer):
         if def_cpus_machine is not None:
             ret_lines.append(" * Default number of cpus per machine: {}".format(
                 def_cpus_machine))
-
         ret_lines.append(" * Used by:        {} nodes".format(
-            len(self.dbcomputer.dbnodes.all())))
+            len(self.dbcomputer.dbnodes)))
 
         ret_lines.append(" * prepend text:")
 

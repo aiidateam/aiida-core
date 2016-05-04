@@ -94,6 +94,7 @@ _from_op = {
     'iendswith': lambda attr, val: attr.ilike('%{}'.format(val))
 }
 
+
 def django_filter(cls_query, **kwargs):
     # Pass the query object you want to use.
     # This also assume a AND between each arguments
@@ -193,6 +194,7 @@ def django_filter(cls_query, **kwargs):
             q = q.filter(cls.extras.has_key(tmp_extra["key"]))
 
     return q
+
 
 def apply_json_cast(attr, val):
     if isinstance(val, basestring):

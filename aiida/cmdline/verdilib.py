@@ -41,6 +41,7 @@ from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.profile import Profile
 from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.comment import Comment
+from aiida.cmdline.commands.shell import Shell
 from aiida.cmdline import execname
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
@@ -390,21 +391,6 @@ class Install(VerdiCommand):
         """
         No completion after 'verdi install'.
         """
-        print ""
-
-
-class Shell(VerdiCommand):
-    """
-    Run the interactive shell with the AiiDA environment loaded.
-
-    This command opens an ipython shell with the AiiDA environment loaded.
-    """
-
-    def run(self, *args):
-        pass_to_django_manage([execname, 'customshell'] + list(args))
-
-    def complete(self, subargs_idx, subargs):
-        # disable further completion
         print ""
 
 

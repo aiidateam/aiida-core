@@ -106,6 +106,7 @@ class Node(AbstractNode):
         if not isinstance(pk, int):
             raise ValueError("Incorrect type for int")
         try:
+            from aiida.backends.sqlalchemy import session
             node = cls.query(id=pk).one()
         except NoResultFound:
             # DataError is thrown when you pass a string instead of an int for
@@ -426,11 +427,26 @@ class Node(AbstractNode):
         session.add(comment)
         session.commit()
 
+    def get_comment_obj(self, id=None, user=None):
+        dbcomments_query = DbComment.query.filter_by(dbnode=self._dbnode)
+
+        if id is not None:
+            dbcomments_query = dbcomments_query.filter_by(id=id)
+        if user is not None:
+            dbcomments_query = dbcomments_query.filter_by(user=user)
+
+        dbcomments = dbcomments_query.all()
+        comments = []
+        from aiida.orm.implementation.sqlalchemy.comment import Comment
+        for dbcomment in dbcomments:
+            comments.append(Comment(dbcomment=dbcomment))
+        return comments
+
     def get_comments(self, pk=None):
         comments = self._get_dbcomments(pk)
 
         return [{
-            "id": c.id,
+            "pk": c.id,
             "user__email": c.user.email,
             "ctime": c.ctime,
             "mtime": c.mtime,

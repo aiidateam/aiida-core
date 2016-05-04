@@ -35,6 +35,7 @@ class QueryBuilderBase(object):
     """
     NODE_TYPE = 'node.Node'
     LINK_PREFIX = '<>'
+    VALID_PROJECTION_KEYS = ('func', 'cast')
 
     def __init__(self, *args, **kwargs):
         """
@@ -397,18 +398,19 @@ This would be the queryhelp::
         }
     }
         """
+        
         # A list storing the path being traversed by the query
         self.path = []
 
         # The list of unique labels
-        self.label_list = []
+        # self.label_list = []# not needed any more
 
         # A list of unique aliases in same order as path
         self.aliased_path = []
 
         # A dictionary label:alias of ormclass
         # redundant but makes life easier
-        self.alias_dict = {}
+        self.label_to_alias_map = {}
 
         # A dictionary label: filter specification for this alias
         self.filters = {}
@@ -449,7 +451,7 @@ This would be the queryhelp::
                     self.append(type=path_spec)
                 else:
                     # Or a class, let's try
-                    self.append(path_spec)
+                    self.append(cls=path_spec)
 
         for key, val in kwargs.pop('project', {}).items():
             self._add_projection(key, val)
@@ -563,9 +565,10 @@ This would be the queryhelp::
 
     def _get_autolabel(self, ormclasstype):
         baselabel = self._get_label(ormclasstype)
+        labels_used = self.label_to_alias_map.keys()
         for i in range(1, 100):
             label = '{}_{}'.format(baselabel, i)
-            if label not in self.label_list:
+            if label not in labels_used:
                 return label
 
 
@@ -670,6 +673,7 @@ This would be the queryhelp::
         ormclass, ormclasstype = self._get_ormclass(cls, type)
         ######################## LABEL #################################
         # Let's get a label
+        user_defined_label = False
         if label:
             if label.startswith(self.LINK_PREFIX):
                 raise InputValidationError(
@@ -678,20 +682,28 @@ This would be the queryhelp::
                     "the link-label"
                 )
             label = label
+            user_defined_label = True
         elif autolabel:
             label = self._get_autolabel(ormclasstype)
         else:
             label = self._get_label(ormclasstype)
         # Check if the label is not yet used:
-        if label in self.label_list:
-            raise InputValidationError(
-                "\n\n\n"
-                "This label ({}) is already in use\n"
-                "Choose a unique one or set autolabel to True"
-                "\n\n".format(label)
-            )
-        self.label_list.append(label)
-
+        if label in self.label_to_alias_map.keys():
+            if user_defined_label:
+                raise InputValidationError(
+                    "\n"
+                    "This label ({}) is already in use\n"
+                    "\n".format(label)
+                )
+            else:
+                raise InputValidationError(
+                    "\n"
+                    "You did not specify a label, so I am making one myself\n"
+                    "based on the class/type you gave me\n"
+                    "The label that I made ({}) is already in use\n"
+                    "please specify a label or set autolabel to true"
+                    "".format(label)
+                )
 
         ################ LABEL MAPPING #################################
         # Let's fill the cls_to_label_map so that one can specify
@@ -699,27 +711,33 @@ This would be the queryhelp::
         # First this only makes sense if a class was specified:
         if cls:
             if cls in self.cls_to_label_map.keys():
-                pass
                 # In this case, this class already stands for another
                 # label that was used before.
                 # This means that the first label will be the correct
                 # one. This is dangerous and maybe should be avoided in
                 # the future
+                pass
+
             else:
                 self.cls_to_label_map[cls] = label
             # TODO check with duplicate classes
 
+
+        ######################## ALIASING ##############################
+        alias = aliased(ormclass)
+        self.aliased_path.append(alias)
+        self.label_to_alias_map[label] = alias
+
+
+
         ################# FILTERS ######################################
 
-        self.filters[label] = {}
 
+
+        self.filters[label] = {}
         #if the user specified a filter, add it:
         if filters is not None:
-            if not isinstance(filters, dict):
-                raise InputValidationError(
-                        "Filters have to be passed as dictionaries"
-                    )
-            self.filters[label].update(filters)
+            self._add_filter(label, filters)
 
         # I have to add a filter on column type.
         # This so far only is necessary for AiidaNodes
@@ -731,15 +749,9 @@ This would be the queryhelp::
         self.projections[label] = []
 
         if project is not None:
-            if not isinstance(project, (tuple, list)):
-                project = [project]
-            [self.projections[label].append(p) for p in project]
+            self._add_projection(label, project)
 
 
-        ######################## ALIASING ##############################
-        alias = aliased(ormclass)
-        self.aliased_path.append(alias)
-        self.alias_dict[label] = alias
 
 
         ################## JOINING #####################################
@@ -773,17 +785,7 @@ This would be the queryhelp::
                     )
             else:
                 joining_keyword = key
-                if val in self.label_list:
-                    joining_value = val
-                elif val in self.cls_to_label_map:
-                    joining_value = self.cls_to_label_map[val]
-                else:
-                    raise InputValidationError(
-                            "\n\n\n"
-                            "You told me to join {} with {}\n"
-                            "But it is not among my labels"
-                            "\n\n\n".format(label, val)
-                        )
+                joining_value = self._get_label_from_specification(val)
         # the default is just a direction keyword and value 1
         # meaning that this vertice is linked to the previous
         # vertice as output
@@ -801,7 +803,7 @@ This would be the queryhelp::
             # the label '<>calc1' will also be unique if '<>' is a protected
             # substring.
             linklabel = self.LINK_PREFIX + label
-            self.alias_dict[linklabel] = aliased(self.Link)
+            self.label_to_alias_map[linklabel] = aliased(self.Link)
             self.filters[linklabel] = {}
             #~ self.label_list.append(linklabel)
         else:
@@ -820,18 +822,30 @@ This would be the queryhelp::
             )
         return self
 
-    def _add_filter(self, key, filter_spec):
-        if key in self.alias_dict.keys():
-            self.filters[key].update(filter_spec)
-        elif key in self.cls_to_label_map.keys():
-            self.filters[self.cls_to_label_map[key]].update(filter_spec)
-        else:
+    def _add_filter(self, labelspec, filter_spec):
+        """
+        Adding a filter to my filters.
+        
+        :param labelspec:
+            The label, which has to exist already as a key
+            in self.filters
+        :param dict filter_spec:
+            The specifications for the filter, has to be adictionary
+        """
+
+
+        if not isinstance(filter_spec, dict):
             raise InputValidationError(
-                "\n\n\nCannot add filter specification\n"
-                "with key {}\n"
-                "to any known label".format(key)
-            )
-    def _add_type_filter(self, label, ormclasstype, subclassing=True):
+                    "Filters have to be passed as dictionaries"
+                )
+
+        label = self._get_label_from_specification(labelspec)
+        self.filters[label].update(filter_spec)
+
+    def _add_type_filter(self, labelspec, ormclasstype, subclassing=True):
+
+        label = self._get_label_from_specification(labelspec)
+
         if subclassing:
             if ormclasstype == self.NODE_TYPE:
                 # User looking for every node, so I will put no filter
@@ -855,6 +869,70 @@ This would be the queryhelp::
                     'type', {}
                 )
             self.filters[label]['type'].update(node_type_flt)
+
+    def _add_projection(self, labelspec, projection_spec):
+        label = self._get_label_from_specification(labelspec)
+        _projections = []
+        if not isinstance(projection_spec, (list, tuple)):
+            projection_spec = [projection_spec]
+        for projection in projection_spec:
+            if isinstance(projection, dict):
+                _thisprojection = projection
+            elif isinstance(projection, basestring):
+                _thisprojection = {projection:{}}
+            else:
+                raise InputValidationError(
+                    "Cannot deal with projection specification {}\n"
+                    "".format(projection)
+                )
+            for p,spec in _thisprojection.items():
+                if not isinstance(spec, dict):
+                    raise InputValidationError(
+                        "\nThe value of a key-value pair in a projection\n"
+                        "has to be a dictionary\n"
+                        "You gave: {}\n"
+                        "".format(spec)
+                    )
+                
+                for key, val in spec.items():
+                    if key not in self.VALID_PROJECTION_KEYS:
+                        raise InputValidationError(
+                            "{} is not a valid key ({})".format(
+                                key, self._valid_projection_keys)
+                        )
+                        if not isinstance(val, basestring):
+                            raise InputValidationError(
+                                "{} has to be a string".format(val)
+                            )
+            _projections.append(_thisprojection)
+        self.projections[label] = _projections
+
+    def _get_label_from_specification(self, specification):
+        if isinstance(specification, basestring):
+            if specification in self.label_to_alias_map.keys():
+                label = specification
+            else:
+                raise InputValidationError(
+                        "Label {} is not among my known labels\n"
+                        "   My labels are: {}"
+                        "\n\n".format(
+                                specification, self.label_to_alias_map.keys()
+                            )
+                    )
+        else:
+            if specification in self.cls_to_label_map.keys():
+                label = self.cls_to_label_map[specification]
+            else:
+                raise InputValidationError(
+                    "\nYou specified as a class for which I have to find a label\n"
+                    "The classes that I can do this for are:{}\n"
+                    "The labels I have are: {}\n"
+                    "\n".format(
+                        specification, self.cls_to_label_map.keys(),
+                        self.label_to_alias_map.keys()
+                    )
+                )
+        return label
 
     def limit(self, limit):
         """
@@ -900,32 +978,12 @@ This would be the queryhelp::
             for key,val in order_spec.items():
                 if not isinstance(val, (tuple, list)):
                     val = [val]
+                label = self._get_label_from_specification(key)
+                _order_spec[label] = val
 
-                if key in self.label_list:
-                    _order_spec[key] = val
-                elif key in self.cls_to_label_map.keys():
-                    _order_spec[self.cls_to_label_map[key]] = val
-                else:
-                    raise InputValidationError(
-                        "\n\n\nCannot add filter specification\n"
-                        "with key {}\n"
-                        "to any known label".format(key)
-                    )
             self._order_by.append(_order_spec)
 
         return self
-
-    def _add_projection(self, key, projection_spec):
-        if key in self.alias_dict.keys():
-            self.projections[key] = projection_spec
-        elif key in self.cls_to_label_map.keys():
-            self.projections[self.cls_to_label_map[key]] = projection_spec
-        else:
-            raise InputValidationError(
-                "\n\n\nCannot add projection specification\n"
-                "with key {}\n"
-                "to any known label".format(key)
-            )
 
     @staticmethod
     @abstractmethod
@@ -1335,33 +1393,27 @@ This would be the queryhelp::
         build the query and return a sqlalchemy.Query instance
         """
 
-        if not len(self.label_list) == len(set(self.label_list)):
-            raise InputValidationError(
-                "Labels are not unique:\n"
-                "{}".format(self.label_list)
-            )
-
         # self.labels_location_dict is a dictionary that
         # maps the label to its index in the list
         # this is basically the mapping between the count
         # of nodes traversed
         # and the label used for that node
         self.labels_location_dict = {
-            label:index
-            for index, label
-            in enumerate(self.label_list)
+            path['label']:index
+            for index, path
+            in enumerate(self.path)
         }
 
         #Starting the query by receiving a session
         # Every subclass needs to have _get_session and give me the
         # right session
-        firstalias = self.alias_dict[self.path[0]['label']]
+        firstalias = self.label_to_alias_map[self.path[0]['label']]
         self.que = self._get_session().query(firstalias)
 
         ######################### JOINS ################################
 
         for index, querydict in  enumerate(self.path[1:], start=1):
-            alias = self.alias_dict[querydict['label']]
+            alias = self.label_to_alias_map[querydict['label']]
             #looping through the queryhelp
             #~ if index:
                 #There is nothing to join if that is the first table
@@ -1372,20 +1424,20 @@ This would be the queryhelp::
             if linklabel is None:
                 connection_func(toconnectwith, alias)
             else:
-                link = self.alias_dict[linklabel]
+                link = self.label_to_alias_map[linklabel]
                 connection_func(toconnectwith, alias, link)
 
         ######################### FILTERS ##############################
 
         for label, filter_specs in self.filters.items():
             try:
-                alias = self.alias_dict[label]
+                alias = self.label_to_alias_map[label]
             except KeyError:
                 # TODO Check KeyError before?
                 raise InputValidationError(
                     ' You looked for label {} among the alias list\n'
                     'The labels I know are:\n{}'
-                    ''.format(label, self.alias_dict.keys())
+                    ''.format(label, self.label_to_alias_map.keys())
                 )
             self.que = self.que.filter(
                     self._analyze_filter_spec(alias, filter_specs)
@@ -1395,7 +1447,7 @@ This would be the queryhelp::
         # first clear the entities in the case the first item in the
         # path was not meant to be projected
         # attribute of Query instance storing entities to project:
-        self.que._entities = []
+        
         # Will be later set to this list:
         entities = []
         # Mapping between enitites and the label used/ given by user:
@@ -1406,7 +1458,7 @@ This would be the queryhelp::
             # I will simply project the last item specified!
             # Don't change, path traversal querying
             # relies on this behavior!
-            self.projections.update({self.label_list[-1]:'*'})
+            self._add_projection(self.path[-1]['label'], '*')
         self.nr_of_projections = 0
         position_index = -1
         for vertice in self.path:
@@ -1414,23 +1466,21 @@ This would be the queryhelp::
             items_to_project = self.projections.get(label, [])
             if not items_to_project:
                 continue
-            alias = self.alias_dict[label]
-            #~ raw_input(alias)
-            if not isinstance(items_to_project, (list, tuple)):
-                items_to_project = [items_to_project]
+            alias = self.label_to_alias_map[label]
             self.label_to_projected_entity_dict[label] = {}
+
             for projectable_spec in items_to_project:
-                projectable_spec = self.add_projectable_entity(
-                        alias,
-                        projectable_spec
-                )
-                position_index += 1
-                self.nr_of_projections += 1
-                self.label_to_projected_entity_dict[
-                        label
-                    ][
-                        projectable_spec
-                    ] = position_index
+                for projectable_entity, extraspec in projectable_spec.items():
+                    self._add_projectable_entity(
+                            alias, projectable_entity, **extraspec
+                        )
+                    position_index += 1
+                    self.nr_of_projections += 1
+                    self.label_to_projected_entity_dict[label][
+                            projectable_entity
+                        ] = position_index
+
+
         ##################### LINK-PROJECTIONS #########################
         for vertice in self.path:
             linklabel = vertice.get('linklabel', None)
@@ -1439,7 +1489,7 @@ This would be the queryhelp::
             items_to_project = self.projections.get(linklabel, [])
             if not items_to_project:
                 continue
-            alias = self.alias_dict[linklabel]
+            alias = self.label_to_alias_map[linklabel]
             #~ raw_input(alias)
             if not isinstance(items_to_project, (list, tuple)):
                 items_to_project = [items_to_project]
@@ -1460,7 +1510,7 @@ This would be the queryhelp::
         ######################### ORDER ################################
         for order_spec in self._order_by:
             for key, val in order_spec.items():
-                alias = self.alias_dict[key]
+                alias = self.label_to_alias_map[key]
                 if not isinstance(val, list):
                     val = [val]
                 for colname in val:
@@ -1472,7 +1522,14 @@ This would be the queryhelp::
         if self._limit:
             self.que = self.que.limit(self._limit)
 
+
+        ################ LAST BUT NOT LEAST ############################
+        #pop the entity that I added to start the query
+        self.que._entities.pop(0)
+        
         ######################### DONE #################################
+        
+        
         return self.que
 
     def except_if_input_to(self, calc_class):
@@ -1503,7 +1560,7 @@ This would be the queryhelp::
             for node in self.path:
                 label = node['label']
                 if '*' in self.projections[label]:
-                    input_alias_list.append(aliased(self.alias_dict[label]))
+                    input_alias_list.append(aliased(self.label_to_alias_map[label]))
 
             counterquery = self._get_session().query(orm_calc_class)
             if type_spec:
@@ -1655,7 +1712,7 @@ This would be the queryhelp::
 
         :returns: self, the querybuilder instance
         """
-        join_to = self.label_list[-1]
+        join_to = self.path[-1]['label']
         cls = kwargs.pop('cls', self.AiidaNode)
         self.append(cls=cls, input_of=join_to, autolabel=True, **kwargs)
         return self
@@ -1666,7 +1723,7 @@ This would be the queryhelp::
 
         :returns: self, the querybuilder instance
         """
-        join_to = self.label_list[-1]
+        join_to = self.path[-1]['label']
         cls = kwargs.pop('cls', self.AiidaNode)
         self.append(cls=cls, output_of=join_to, autolabel=True, **kwargs)
         return self
@@ -1677,7 +1734,7 @@ This would be the queryhelp::
 
         :returns: self, the querybuilder instance
         """
-        join_to = self.label_list[-1]
+        join_to = self.path[-1]['label']
         cls = kwargs.pop('cls', self.AiidaNode)
         self.append(cls=cls, descendant_of=join_to, autolabel=True, **kwargs)
         return self
@@ -1688,7 +1745,7 @@ This would be the queryhelp::
 
         :returns: self, the querybuilder instance
         """
-        join_to = self.label_list[-1]
+        join_to = self.path[-1]['label']
         cls = kwargs.pop('cls', self.AiidaNode)
         self.append(cls=cls, ancestor_of=join_to, autolabel=True, **kwargs)
         return self

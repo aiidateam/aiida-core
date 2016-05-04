@@ -116,11 +116,9 @@ class DbNode(Base):
 
     nodeversion = Column(Integer, default=1)
     
-    attributes = relationship(
-        'DbAttribute',
-        uselist = True,
-        backref='dbnode'
-    )
+    attributes = relationship('DbAttribute', uselist=True, backref='dbnode')
+    extras = relationship('DbExtra', uselist=True, backref='dbnode')
+        
 
 
     outputs = relationship(
@@ -196,7 +194,18 @@ class DbAttribute(Base):
     ival = Column(Integer, default=None, nullable=True)
     bval = Column(Boolean, default=None, nullable=True)
     dval = Column(DateTime, default=None, nullable = True)
-    #~ dbnode = relationship("DbNode")
+    
+class DbExtra(Base):
+    __tablename__ = "db_dbextra"
+    id  = Column(Integer, primary_key = True)
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id'))
+    key = Column(String(255))
+    datatype = Column(String(10))
+    tval = Column(String, default='')
+    fval = Column(Float, default=None, nullable=True)
+    ival = Column(Integer, default=None, nullable=True)
+    bval = Column(Boolean, default=None, nullable=True)
+    dval = Column(DateTime, default=None, nullable = True)
 
 
 class DbComputer(Base):

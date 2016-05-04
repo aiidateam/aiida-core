@@ -6,22 +6,26 @@ from querybuilder_base import (
     InputValidationError
 )
 
-from dummy_model import (
+from aiida.backends.querybuild.dummy_model import (
     # Tables:
     DbNode      as DummyNode,
     DbLink      as DummyLink,
-    DbAttribute as DummyAttribute,
     DbCalcState as DummyState,
     DbPath      as DummyPath,
     DbUser      as DummyUser,
     DbComputer  as DummyComputer,
     DbGroup     as DummyGroup,
+    DbExtra     as DummyExtra,
+    DbAttribute as DummyAttribute,
     table_groups_nodes  as Dummy_table_groups_nodes,
-    and_, or_, not_, except_, aliased,      # Queryfuncs
-    session,                                # session with DB
+
+    session,                             # session with DB
 )
 
-
+from aiida.backends.querybuild.sa_init import (
+    and_, or_, not_, except_, aliased,      # Queryfuncs
+    func as sa_func
+)
 class QueryBuilder(QueryBuilderBase):
     """
     The QueryBuilder class for the Django backend,
@@ -542,48 +546,76 @@ class QueryBuilder(QueryBuilderBase):
                 ]
         return and_(*expressions)
 
-
-    def add_projectable_entity(self, alias, projectable_spec):
+    def _add_projectable_entity(self, alias, projectable_entity, cast='undefined', func=None):
         """
         :param alias: 
             A instance of *sqlalchemy.orm.util.AliasedClass*, alias for an ormclass
-        :param projectable_spec:
+        :param projectable_entity:
             User specification of what to project.
-            Appends to query's entities what the user want to project
+            Appends to query's entities what the user wants to project
             (have returned by the query)
         
         """
-        #~ raw_input(projectable_spec)
-        if projectable_spec == '*': # project the entity
+        column_name = projectable_entity.split('.')[0] 
+        attrpath = '.'.join(projectable_entity.split('.')[1:])
+        
+        
+        if column_name == '*':
+            if func is not None:
+                raise InputValidationError(
+                       
+                        "Very sorry, but functions on the aliased class\n"
+                        "(You specified '*')\n"
+                        "will not work!\n"
+                        "I suggest you apply functions on a column, e.g. ('id')\n"
+                    )
             self.que = self.que.add_entity(alias)
         else:
-            column_name = projectable_spec
-            if column_name == 'attributes':
-                raise InputValidationError(
-                    "\n\nI cannot project on Attribute table\n"
-                    "Please use the SA backend for that functionality"
-                )
-            elif '.' in column_name:
-                raise InputValidationError(
-                    "\n\n"
-                    "I cannot project on other entities\n"
-                    "Please use the SA backend for that functionality"
-                )
-            self.que =  self.que.add_columns(self.get_column(column_name, alias))
-        return projectable_spec
+            if attrpath:
+                if alias._aliased_insp.class_ == self.Node:
+                    if column_name == 'attributes':
+                        addalias = aliased(DummyAttribute)
+                    elif column_name == 'extras':
+                        addalias = aliased(DummyExtra)
+                else:
+                    NotImplementedError(
+                        "Other classes than Nodes are not implemented yet"
+                    )
+                self.que = self.que.join(
+                        addalias,
+                        addalias.dbnode_id == alias.id
+                    )
+                self.que = self.que.filter(addalias.key == attrpath)
 
+                if cast =='t':
+                    entity_to_project = self.get_column('tval', addalias)
+                elif cast == 'f':
+                    entity_to_project = self.get_column('fval', addalias)
+                elif cast == 'i':
+                    entity_to_project = self.get_column('ival', addalias)
+                elif cast == 'b':
+                    entity_to_project = self.get_column('bval', addalias)
+                elif cast == 'd':
+                    entity_to_project = self.get_column('dval', addalias)
+                else:
+                    raise InputValidationError(
+                            "Invalid type to cast {}".format(cast)
+                        )
+            else:
+                entity_to_project = self.get_column(column_name, alias)
 
-    def _execute_with_django(self):
-        """
-        Does not work because of the params 
-        """
-        from django.db import connection
-        cursor = connection.cursor()
-        #~ sql_query = str(self.que)
-        c = self.que.statement.compile()
-        sql_query_txt = str(c)
-        params = c.params
-        
-        cursor.execute(sql_query_txt, params)
-        res = cursor.fetchall()
-        return res
+            if func is None:
+                pass
+            elif func == 'max':
+                entity_to_project = sa_func.max(entity_to_project)
+            elif func == 'min':
+                entity_to_project = sa_func.max(entity_to_project)
+            elif func == 'count':
+                entity_to_project = sa_func.count(entity_to_project)
+            else:
+                raise InputValidationError(
+                        "\nInvalid function specification {}".format(func)
+                    )
+            
+            self.que =  self.que.add_columns(entity_to_project)
+

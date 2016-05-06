@@ -531,46 +531,35 @@ This would be the queryhelp::
             elif ormclasstype in ('node', self.NODE_TYPE):
                 ormclass = self.Node
                 ormclasstype = self.NODE_TYPE
-            else:
-                # This way to attach the filter is not ideal
-                # You have the type of the calculation being
-                #   a) the label
-                #   b) the filter on type
-                # A long type name as in Aiida makes a cumbersome label,
-                # but shortening it will results in slower queries
-                # (like instead of =)
-                # and ambiguouty when the class name is the same,
-                # but in different module...
-                # How to solve that?
-
-                raise DeprecationWarning(
-                    "The use of type='{}' is deprecated\n"
-                    "because there is no strict one to one correspondance\n"
-                    "between an aiida-class and the type"
-                    "".format(ormclasstype)
-                )
-                from aiida.orm import (
-                        DataFactory,
-                        CalculationFactory,
-                    )
-                from aiida.common.exceptions import MissingPluginError
-                try:
-                    cls = CalculationFactory(ormclasstype)
-                except MissingPluginError:
-                    cls = None
-                if not cls:
-                    try:
-                        cls = DataFactory(ormclasstype)
-                    except MissingPluginError:
-                        raise InputValidationError(
-                                "\n\nYou gave me type={}\n"
-                                "But there is no class that can be loaded\n"
-                                "as such\n"
-                                "Tried CalculationFactory and DataFactory"
-                                "\n".format(ormclasstype)
-                            )
-                ormclasstype = cls._plugin_type_string
+            elif ormclasstype.startswith('data') or ormclasstype.startswith('calculation'):
+                # Ok, here I am just going to trust the user that he provided the
+                # correct input to filter by type for specific nodes:
                 ormclass = self.Node
+                ormclasstype = ormclasstype
+            else:
+                # The user has specified a certain type that I cannot explicitly
+                # determine what it is
+                # Last resort is using the factories.
+                from aiida.orm import DataFactory, CalculationFactory
+                from aiida.common.exceptions import MissingPluginError
+
+                cls = None
+                for Factory in (DataFactory, CalculationFactory):
+                    try:
+                        cls = Factory(ormclasstype)
+                        ormclasstype = cls._plugin_type_string
+                        ormclass = self.Node
+                    except MissingPluginError:
+                        continue
+                
+                if cls is None:
+                    # Nothing was found using the factories!
+                    raise InputValidationError(
+                        "\n\nYou gave me type={}\n"
+                        "But there is no class that can be loaded\n"
+                        "as such using CalculationFactory and DataFactory"
+                        "\n".format(ormclasstype)
+                    )
         return ormclass, ormclasstype
 
     def _get_autolabel(self, ormclasstype):

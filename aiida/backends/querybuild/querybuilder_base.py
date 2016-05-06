@@ -4,7 +4,7 @@
 """
 The general functionalities that all querybuilders need to have
 are found in this module.
-:func:`QueryBuilderBase` is the Base class for QueryBuilder classes.
+:func:`AbstractQueryBuilder` is the abstract class for QueryBuilder classes.
 Subclasses need to be written for *every* schema/backend implemented
 in backends.
 """
@@ -25,12 +25,16 @@ replacement_dict = dict(
 )
 
 
-class QueryBuilderBase(object):
+class AbstractQueryBuilder(object):
     """
     QueryBuilderBase is the base class for QueryBuilder classes,
     which are than adapted to the individual schema and ORM used.
     In here, general graph traversal functionalities are implemented,
     the specific type of node and link is dealt in subclasses.
+    In order to load the correct subclass::
+
+        from aiida.orm.querybuilder import QueryBuilder
+
     """
 
     __metaclass__ = ABCMeta
@@ -42,6 +46,179 @@ class QueryBuilderBase(object):
 
     def __init__(self, *args, **kwargs):
         """
+Before jumping into the specifics, let's discuss what you should be clear about
+before writing a query:
+
+*   You should know which quantities you want to query for.
+    In database-speek, you need to tell the backend what to *project*.
+    You might only be interested in the label of a calculation and the pks of 
+    all its outputs.
+*   In many use-cases, you will query for relationships between entities that are
+    connected in a graph-like fashion, with links as edges and nodes as vertices.
+    You have to know how to describe a *path* between your entities.
+*   In almost all cases, you will be interested in a subset of all possible
+    entities that could be returned based on the joins between the entities of
+    your graph. In other ways, you need to have an idea of how to filter the
+    results.
+
+If you are clear about what you want and how you would get it,
+you will have to provide this information to QueryBuilder, who will build
+an SQL-query for you.
+There are possible APIs that you can use, and the have the exact same functionalities,
+it's up to you what to use:
+
+#.  The appender-method
+#.  Using the queryhelp 
+
+Let's first discuss the appender-method using some concrete examples.
+Suppose you are interested in all calculations in your database that are in 
+state 'FINISHED' and were created in the last *n* days::
+
+    from datetime import timedelta
+    from aiida.utils import timezone
+    now = timezone.now()
+    qb = QueryBuilder()    # An empty QueryBuilder instances
+    qb.append(
+        JobCalculation,  # I am appending a JobCalculation to the path
+        filters={            # Specifying the filters, such as
+            'state':{'==':'FINISHED'},   # the calculation has to have finished
+            'ctime':{'>': now - timedelta(days=n)}  # created in the last n days
+        },
+        project=['label']       # Only need the label of the calculations
+    )
+    resultgen = qb.all()     # Give me all results (returns a generator)
+    resultslist = list(resultgen) # Making it a list (of labels)
+
+.. note::
+    How to get the results back will be described later.
+    But in general, a generator is returned to speed up the process.
+
+Let's go through the above example.
+We have instantiated QueryBuilder instance.
+We appended to its path a JobCalculation (a remote calculation),
+and specified that we are only interested in  calculations 
+that have finished **and** that were created in the last *n* days.
+
+What if we want calculations that have finished **or** were created in the last
+*n* days::
+
+    qb = QueryBuilder()
+    qb.append(
+            JobCalculation,
+            filters={
+                'or':[
+                    {'state':{'==':'FINISHED'}},
+                    {'ctime':{'>': now - timedelta(days=n)}}
+                ]
+            },
+            project=['label']
+        )
+    print list(qb.all())
+
+If we'd have written *and* instead of *or*, we would have created the exact same
+query as in the first query, because *and* is the default behavior if
+you attach several filters.
+What if you want calculation in state 'FINISHED' or 'RETRIEVING'?
+This will be the next example. We will not filter by creation time,
+but have the time returned to as::
+
+    qb = QueryBuilder()
+    qb.append(
+            JobCalculation,
+            filters={
+                'state':{'in':['FINISHED', 'RETRIEVING']}
+            },
+            project=['label', 'ctime']
+        )
+    print list(qb.all())
+
+Got it? This was the query for a single node in the database.
+Let's make it more complicated by querying relationships in graph-like database.
+You are familiar with the :ref:`sec.quantumespresso` tutorial? Great, because this will be
+our usecase here.
+
+A common query is to query for calculations that were done on a certain structure (*mystructure*),
+that fulfill certain requirements, such as a cutoff above 30.0.
+In our case, we have a structure (an instance of StructureData) and an instance
+of ParameterData that are both inputs to a PwCalculation.
+You need to tell the QueryBuilder that::
+
+    qb = QueryBuilder()
+    qb.append(
+        StructureData,
+        filters={
+            'uuid':{'==':mystructure.uuid}
+        },
+        label='strucure'
+    )
+    qb.append(
+        PwCalculation,
+        output_of='strucure',
+        project='*',
+        label='calc'
+    )
+    qb.append(
+        ParameterData,
+        filters={
+            'attributes.SYSTEM.ecutwfc':{'>':30.0}
+        },
+        input_of='calc'
+    )
+    
+A few notes on the above examples:
+
+*   We specify a path in the graph by vertices of a path. We
+    need to tell the QueryBuilder how two vertices are connected.
+    This we do with keywords such as:
+
+    *   *input_of* if this node is the input of a node previously specified in
+        the path
+    *   *output_of* if this node is an output.
+*   The projection '*' returns an instance of an ORM-class
+*   You should provide a unique label for each vertice in the path, and 
+    refer to that label if you specify a relation between two nodes
+
+
+*Should* because you can omit a few specification to save some typing:
+
+*   The default edge specification, if no keyword is provided, is always
+    *output_of* the previous vertice.
+*   Equality filters ('==') can be shortened, as will be shown below.
+*   Labels are not necessary, you can simply use the class as a label.
+    This works as long as the same Aiida-class is not used again
+
+A shorter version of the previous example::
+
+    qb = QueryBuilder()
+    qb.append(StructureData,
+        filters={'uuid':mystructure.uuid},
+    )
+    qb.append(
+        PwCalculation,
+        project='*',
+    )
+    qb.append(
+        ParameterData,
+        filters={
+            'attributes.SYSTEM.ecutwfc':{'>':30.0}
+        },
+        input_of=PwCalculation
+    )
+    
+.. note:: 
+    A warning on filtering and projections in the attributes (or extras).
+    Here, the type of a data value is not predetermined.
+    But the QueryBuilder needs to know the type of the value stored in the database
+    to give the correct value.
+    In principle, the same value will be taken as the value to compair with.
+    But if for the above example the cutoff was stored as an integer in the database,
+    the above query will not return any results.
+    **Be consistent using the types**
+
+
+
+
+
 Usage::
 
     qb  =   Querybuilder(**queryhelp)

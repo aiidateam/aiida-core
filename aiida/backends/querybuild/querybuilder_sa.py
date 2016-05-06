@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from aiida.backends.querybuild.querybuilder_base import QueryBuilderBase
+from aiida.backends.querybuild.querybuilder_base import AbstractQueryBuilder
 from sa_init import (
         and_, or_, not_, except_, func as sa_func,
         aliased, Integer, Float, Boolean, JSONB, jsonb_array_length
@@ -17,7 +17,7 @@ from aiida.common.exceptions import InputValidationError
 
 
 
-class QueryBuilder(QueryBuilderBase):
+class QueryBuilder(AbstractQueryBuilder):
     """
     QueryBuilder to use with SQLAlchemy-backend and
     schema defined in backends.sqlalchemy.models

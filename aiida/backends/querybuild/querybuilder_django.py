@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from querybuilder_base import (
-    QueryBuilderBase,
+    AbstractQueryBuilder,
     datetime,
     InputValidationError
 )
@@ -26,7 +26,7 @@ from aiida.backends.querybuild.sa_init import (
     and_, or_, not_, except_, aliased,      # Queryfuncs
     func as sa_func
 )
-class QueryBuilder(QueryBuilderBase):
+class QueryBuilder(AbstractQueryBuilder):
 
     def __init__(self, *args, **kwargs):
         from aiida.orm.implementation.django.node import Node as AiidaNode
@@ -172,7 +172,7 @@ class QueryBuilder(QueryBuilderBase):
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in  ('and', 'or', '~or', '~and'):
                 subexpressions = [
-                    _analyze_filter_spec(alias, sub_filter_spec)
+                    self._analyze_filter_spec(alias, sub_filter_spec)
                     for sub_filter_spec in filter_operation_dict
                 ]
                 if path_spec == 'and':

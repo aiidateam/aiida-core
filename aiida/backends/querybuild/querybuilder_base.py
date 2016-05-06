@@ -36,7 +36,7 @@ class QueryBuilderBase(object):
     __metaclass__ = ABCMeta
 
     NODE_TYPE = 'node.Node'
-    LINK_PREFIX = '<>'
+    LINKLABEL_DEL = '--'
     VALID_PROJECTION_KEYS = ('func', 'cast')
 
 
@@ -593,6 +593,7 @@ This would be the queryhelp::
     def append(self, cls=None, type=None, label=None,
                 autolabel=False, filters=None,
                 project=None, subclassing=True,
+                linklabel=None,
                 **kwargs
         ):
         """
@@ -678,11 +679,11 @@ This would be the queryhelp::
         # Let's get a label
         user_defined_label = False
         if label:
-            if label.startswith(self.LINK_PREFIX):
+            if self.LINKLABEL_DEL in label:
                 raise InputValidationError(
-                    "You cannot start a label with {}\n"
-                    "since this is used as prefix to\n"
-                    "the link-label"
+                    "Label cannot contain {}\n"
+                    "since this is used as a delimiter for links"
+                    "".format(self.LINKLABEL_DEL)
                 )
             label = label
             user_defined_label = True
@@ -734,9 +735,6 @@ This would be the queryhelp::
 
 
         ################# FILTERS ######################################
-
-
-
         self.filters[label] = {}
         #if the user specified a filter, add it:
         if filters is not None:
@@ -798,31 +796,46 @@ This would be the queryhelp::
 
         ############################# LINKS ####################################
         # See if this requires a link:
-        if joining_keyword in ('input_of', 'output_of', 'direction'):
+        if joining_keyword in ('input_of', 'output_of', 'direction') and len(self.path)>0:
             # Ok, so here we are joining one node to another, as input or output
             # This means that the user might want to query by label or project
             # on a label column.
             # Since the label of this vertice is unique the label, e.g. 'calc1'
             # the label '<>calc1' will also be unique if '<>' is a protected
             # substring.
-            linklabel = self.LINK_PREFIX + label
-            self.label_to_alias_map[linklabel] = aliased(self.Link)
+            if linklabel is None:
+                if joining_keyword in ('input_of', 'output_of'):
+                    link_to_label = self._get_label(joining_value)
+                elif joining_keyword == 'direction':
+                    link_to_label = self.path[-abs(joining_value)]['label']
+                linklabel = link_to_label + self.LINKLABEL_DEL + label
+                reverse_linklabel = label + self.LINKLABEL_DEL + link_to_label
+            else:
+                reverse_linklabel = None
+            aliased_link = aliased(self.Link)
+            self.label_to_alias_map[linklabel] = aliased_link
             self.filters[linklabel] = {}
-            #~ self.label_list.append(linklabel)
-        else:
-            linklabel = None
+            self.projections[linklabel] = {}
+
+            if reverse_linklabel is not None:
+                self.label_to_alias_map[reverse_linklabel] = aliased_link
+                self.filters[reverse_linklabel] = {}
+                self.projections[reverse_linklabel] = {}
 
 
         ################### EXTENDING THE PATH #################################
 
-        self.path.append(
-                {
-                    'type':type,
-                    'label':label,
-                    joining_keyword:joining_value,
-                    'linklabel':linklabel
-                }
+
+        path_extension = dict(
+                type=type, label=label, joining_keyword=joining_keyword,
+                joining_value=joining_value
             )
+        if linklabel is not None:
+            path_extension.update(dict(linklabel=linklabel))
+            if reverse_linklabel is not None:
+                path_extension.update(dict(reverse_linklabel=reverse_linklabel))
+
+        self.path.append(path_extension)
         return self
 
     def _add_filter(self, labelspec, filter_spec):
@@ -909,6 +922,29 @@ This would be the queryhelp::
                             )
             _projections.append(_thisprojection)
         self.projections[label] = _projections
+
+    def _add_projectable_entities(self, label):
+
+
+        items_to_project = self.projections.get(label, [])
+
+        # Sort of spaghetti, but possible speedup
+        if not items_to_project:
+            return
+
+        alias = self.label_to_alias_map[label]
+        self.label_to_projected_entity_dict[label] = {}
+
+        for projectable_spec in items_to_project:
+            for projectable_entity, extraspec in projectable_spec.items():
+                self._add_projectable_entity(
+                        alias, projectable_entity, **extraspec
+                    )
+
+                self.label_to_projected_entity_dict[label][
+                        projectable_entity
+                    ] = self.nr_of_projections
+                self.nr_of_projections += 1
 
     def _get_label_from_specification(self, specification):
         if isinstance(specification, basestring):
@@ -1271,7 +1307,10 @@ This would be the queryhelp::
                 'user_of'   : self._join_user,
         }
         return d
-    def _get_connecting_node(self, querydict, index):
+    def _get_connecting_node(
+            self, index,
+            joining_keyword=None, joining_value=None, **kwargs
+        ):
         """
         :param querydict:
             A dictionary specifying how the current node
@@ -1298,43 +1337,27 @@ This would be the queryhelp::
         *   *slave_of*
         """
 
-        val = None
-        for key, func in self._get_function_map().items():
-            if key in querydict:
-                val = querydict[key]
-                break
-        if val is None or key == 'direction':
-            direction = querydict.get('direction', 1)
-            if direction > 0:
-                func = self._join_outputs
-                val = index  - direction
-            elif direction < 0:
-                func = self._join_inputs
-                val = index + direction
+        if joining_keyword == 'direction':
+            if joining_value > 0:
+                returnval = self.aliased_path[index-joining_value], self._join_outputs
+            elif joining_value < 0:
+                returnval = self.aliased_path[index+joining_value], self._join_inputs
             else:
                 raise Exception("Direction 0 is not valid")
-        if isinstance(val, int):
-            return self.aliased_path[val], func
-        elif isinstance(val, str):
-            try:
-                val = self.labels_location_dict[val]
-                return self.aliased_path[val], func
-            except AttributeError:
-                raise InputValidationError(
-                    'List of types is not unique,\n'
-                    'therefore you cannot specify types\n'
-                    'to determine node to connect with.\n'
-                    'Give the position (integer) in the queryhelp\n'
-                )
-            except KeyError:
-                raise InputValidationError(
-                    'Key {} is unknown to the types I know about:\n'
-                    '{}'.format(val, self.labels_location_dict.keys())
-                )
+        else:
+            func = self._get_function_map()[joining_keyword]
 
-        raise Exception(
-                'Unrecognized connection specification {}'.format(val)
-            )
+            if isinstance(joining_value, int):
+                returnval = (self.aliased_path[joining_value], func)
+            elif isinstance(joining_value, str):
+                try:
+                    returnval = self.label_to_alias_map[self._get_label(joining_value)], func
+                except KeyError:
+                    raise InputValidationError(
+                        'Key {} is unknown to the types I know about:\n'
+                        '{}'.format(val, self.label_to_alias_map.keys())
+                    )
+        return returnval
 
     def make_json_compatible(self, inp):
         """
@@ -1402,10 +1425,10 @@ This would be the queryhelp::
         # of nodes traversed
         # and the label used for that node
         self.labels_location_dict = {
-            path['label']:index
-            for index, path
-            in enumerate(self.path)
-        }
+                path['label']:index
+                for index, path
+                in enumerate(self.path)
+            }
 
         #Starting the query by receiving a session
         # Every subclass needs to have _get_session and give me the
@@ -1415,15 +1438,15 @@ This would be the queryhelp::
 
         ######################### JOINS ################################
 
-        for index, querydict in  enumerate(self.path[1:], start=1):
-            alias = self.label_to_alias_map[querydict['label']]
+        for index, verticespec in  enumerate(self.path[1:], start=1):
+            alias = self.label_to_alias_map[verticespec['label']]
             #looping through the queryhelp
             #~ if index:
                 #There is nothing to join if that is the first table
             toconnectwith, connection_func = self._get_connecting_node(
-                    querydict, index
+                    index, **verticespec
                 )
-            linklabel = querydict.get('linklabel', None)
+            linklabel = verticespec.get('linklabel', None)
             if linklabel is None:
                 connection_func(toconnectwith, alias)
             else:
@@ -1462,53 +1485,23 @@ This would be the queryhelp::
             # Don't change, path traversal querying
             # relies on this behavior!
             self._add_projection(self.path[-1]['label'], '*')
-        self.nr_of_projections = 0
-        position_index = -1
-        for vertice in self.path:
-            label = vertice['label']
-            items_to_project = self.projections.get(label, [])
-            if not items_to_project:
-                continue
-            alias = self.label_to_alias_map[label]
-            self.label_to_projected_entity_dict[label] = {}
 
-            for projectable_spec in items_to_project:
-                for projectable_entity, extraspec in projectable_spec.items():
-                    self._add_projectable_entity(
-                            alias, projectable_entity, **extraspec
-                        )
-                    position_index += 1
-                    self.nr_of_projections += 1
-                    self.label_to_projected_entity_dict[label][
-                            projectable_entity
-                        ] = position_index
+        self.nr_of_projections = 0
+
+        for vertice in self.path:
+            self._add_projectable_entities(vertice['label'])
 
 
         ##################### LINK-PROJECTIONS #########################
+
         for vertice in self.path:
             linklabel = vertice.get('linklabel', None)
-            if linklabel is None:
-                continue
-            items_to_project = self.projections.get(linklabel, [])
-            if not items_to_project:
-                continue
-            alias = self.label_to_alias_map[linklabel]
-            #~ raw_input(alias)
-            if not isinstance(items_to_project, (list, tuple)):
-                items_to_project = [items_to_project]
-            self.label_to_projected_entity_dict[linklabel] = {}
-            for projectable_spec in items_to_project:
-                projectable_spec = self.add_projectable_entity(
-                        alias,
-                        projectable_spec
-                )
-                position_index += 1
-                self.nr_of_projections += 1
-                self.label_to_projected_entity_dict[
-                        linklabel
-                    ][
-                        projectable_spec
-                    ] = position_index
+            if linklabel is not None:
+                self._add_projectable_entities(linklabel)
+
+            linklabel = vertice.get('reverse_linklabel', None)
+            if linklabel is not None:
+                self._add_projectable_entities(linklabel)
 
         ######################### ORDER ################################
         for order_spec in self._order_by:

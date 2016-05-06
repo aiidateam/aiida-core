@@ -1,5 +1,5 @@
 aiida.backends.djsite documentation
-==========================
+===================================
 
 .. toctree::
    :maxdepth: 2

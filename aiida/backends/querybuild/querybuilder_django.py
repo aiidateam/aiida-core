@@ -37,7 +37,7 @@ class QueryBuilder(QueryBuilderBase):
         qb  =   Querybuilder(**queryhelp)
 
     The queryhelp:The queryhelp is my API.
-            
+
             It is a dictionary that tells me:
 
             *   what to join (key **path**)
@@ -75,7 +75,7 @@ class QueryBuilder(QueryBuilderBase):
                 ]
             }
 
-        .. note:: 
+        .. note::
             In Aiida, polymorphism is not strictly enforced, but
             achieved with *type* specification in a column.
             Type-discrimination is achieved by attaching a filter on the
@@ -105,10 +105,10 @@ class QueryBuilder(QueryBuilderBase):
         There also hast to be some information on the edges, in order to join correctly.
         There are several redundant ways this can be done:
 
-        *   You can specify that this node is an input or output of another node 
+        *   You can specify that this node is an input or output of another node
             preceding the current one in the list.
             That other node can be specified by an integer or the class or type.
-            The following examples are all valid joining instructions, 
+            The following examples are all valid joining instructions,
             assuming there is a structure defined at index 2 of the path with label "struc1"::
 
                 edge_specification = queryhelp['path'][3]
@@ -121,9 +121,9 @@ class QueryBuilder(QueryBuilderBase):
 
         *   queryhelp_item['direction'] = integer
 
-            If any of the above specs ("input_of", "output_of") 
+            If any of the above specs ("input_of", "output_of")
             were not specified, the key "direction" is looked for.
-            Directions are defined as distances in the tree. 
+            Directions are defined as distances in the tree.
             1 is defined as one step down the tree along a link.
             This means that 1 joins the node specified in this dictionary
             to the node specified on list-item before **as an output**.
@@ -140,10 +140,10 @@ class QueryBuilder(QueryBuilderBase):
                     'path':[
                         {
                             'cls':PwCalculation
-                        }, 
+                        },
                         {
                             'cls':Trajectory
-                        }, 
+                        },
                         {
                             'cls':ParameterData,
                             'direction':-2
@@ -157,10 +157,10 @@ class QueryBuilder(QueryBuilderBase):
                     'path':[
                         {
                             'cls':PwCalculation
-                        }, 
+                        },
                         {
                             'cls':Trajectory
-                        }, 
+                        },
                         {
                             'cls':ParameterData,
                             'input_of':PwCalculation
@@ -201,15 +201,15 @@ class QueryBuilder(QueryBuilderBase):
                 }
             }
 
-        Returns the state and the id of all instances of Relax and 
+        Returns the state and the id of all instances of Relax and
         the cells of all structures given that the structures are linked as output of a relax-calculation.
         The strings that you pass have to be name of the columns.
         If you pass a star ('*') , the query will return the instance of the AiidaClass.
 
     *   Filtering:
-        What if I want not every structure, 
+        What if I want not every structure,
         but only the ones that were added after a certain time `t` and have an id higher than 50::
-            
+
             queryhelp = {
                 'path':[
                     {'cls':Relax}, # Relaxation with structure as output
@@ -228,15 +228,15 @@ class QueryBuilder(QueryBuilderBase):
         With the key 'filters', we instruct the querytool to build filters and attach them to the query.
         Filters are passed as dictionaries.
         In each key, value, the key is presents the column-name (as a string) to filter on.
-        The value is another dictionary, where the operator is a key and the value is the 
+        The value is another dictionary, where the operator is a key and the value is the
         value to check against.
-        
+
         .. note:: This follows the MongoDB-syntax and is necessary to deal with "and" and "or"-clauses
-        
+
         But what if the user wants to filter by key-value pairs defined inside the structure?
         In that case, simply specify the path with the dot (`.`) being a separator.
         If you want to get to the volume of the structure, stored in the attributes, you can specify::
-            
+
             queryhelp = {
                 'path':[{'cls':StructureData}],  # or 'path':[StructureData]
                 'filters':{
@@ -246,7 +246,7 @@ class QueryBuilder(QueryBuilderBase):
 
         The above queryhelp would build a query that returns all structures with a volume below 6.0.
 
-        .. note:: A big advantage of SQLAlchemy is that it support the storing of jsons. 
+        .. note:: A big advantage of SQLAlchemy is that it support the storing of jsons.
                   It is convenient to dump the structure-data into a json and store that as a column.
                   The querytool needs to be told how to query the json.
 
@@ -276,9 +276,9 @@ class QueryBuilder(QueryBuilderBase):
                     'class':MD,
                     'label':'md'
                 },
-                {'cls':Trajectory}, 
+                {'cls':Trajectory},
                 {
-                    'class':StructureData, 
+                    'class':StructureData,
                     'input_of':'md'
                 },
                 {
@@ -293,26 +293,26 @@ class QueryBuilder(QueryBuilderBase):
             ],
             'project':{
                 ParameterData:'attributes.IONS.tempw',
-                'md':['id', 'time'], 
+                'md':['id', 'time'],
                 Trajectory:[
-                    'id', 
+                    'id',
                     'attributes.length'
-                ],  
+                ],
                 StructureData:[
                     'id',
-                    'name', 
+                    'name',
                     'attributes.sites',
                     'attributes.cell'
-                ], 
+                ],
                 'struc2':[
                     'id',
-                    'name', 
+                    'name',
                     'attributes.sites',
                     'attributes.cell'
                 ],
             },
             'filters':{
-                Param:{   
+                Param:{
                     'and':[
                         {
                             'attributes.SYSTEM.econv':{
@@ -325,13 +325,13 @@ class QueryBuilder(QueryBuilderBase):
                             }
                         }
                     ]
-                        
+
                 },
                 'md':{
-                    'state':{   
+                    'state':{
                         'in':(
-                            'computing', 
-                            'parsing', 
+                            'computing',
+                            'parsing',
                             'finished',
                             'new'
                         )
@@ -376,7 +376,7 @@ class QueryBuilder(QueryBuilderBase):
         }
     """
 
-    def __init__(self, *args, **kwargs):        
+    def __init__(self, *args, **kwargs):
         from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
         from aiida.orm.implementation.django.group import Group as DjangoAiidaGroup
         self.Link               = DummyLink
@@ -388,7 +388,7 @@ class QueryBuilder(QueryBuilderBase):
         self.table_groups_nodes = Dummy_table_groups_nodes
         self.AiidaNode          = DjangoAiidaNode
         self.AiidaGroup         = DjangoAiidaGroup
-        
+
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
 
@@ -412,11 +412,11 @@ class QueryBuilder(QueryBuilderBase):
         :param attr_key:
             If I am looking at an attribute, than the attr_key is the key
             to look for in db_dbattributes table.
-        
+
         :returns:
             An SQLAlchemy expression
             (*sqlalchemy.sql.selectable.Exists*,
-            *sqlalchemy.sql.elements.BinaryExpression*, etc) 
+            *sqlalchemy.sql.elements.BinaryExpression*, etc)
             that can be evaluated by a query intance.
         """
         def get_mapped_entity(mapped_class, value):
@@ -443,7 +443,7 @@ class QueryBuilder(QueryBuilderBase):
                     "I don't know what to do with value {}".format(value)
                 )
             return mapped_entity
-                
+
         if operator.startswith('~'):
             negation = True
             operator = operator.lstrip('~')
@@ -465,13 +465,13 @@ class QueryBuilder(QueryBuilderBase):
             if operator == '==':
                 expr = column == value
             elif operator == '>':
-                expr = column > value 
+                expr = column > value
             elif operator == '<':
-                expr = column < value 
+                expr = column < value
             elif operator == '>=':
-                expr = column >= value 
+                expr = column >= value
             elif operator == '<=':
-                expr = column <= value 
+                expr = column <= value
             elif operator == 'like':
                 expr = column.like(value)
             elif operator == 'ilike':
@@ -540,30 +540,30 @@ class QueryBuilder(QueryBuilderBase):
                         self._get_expr(
                             operator, value, column, attr_key
                         )
-                    ) 
-                    for operator, value 
+                    )
+                    for operator, value
                     in filter_operation_dict.items()
                 ]
         return and_(*expressions)
 
     def _add_projectable_entity(self, alias, projectable_entity, cast='undefined', func=None):
         """
-        :param alias: 
+        :param alias:
             A instance of *sqlalchemy.orm.util.AliasedClass*, alias for an ormclass
         :param projectable_entity:
             User specification of what to project.
             Appends to query's entities what the user wants to project
             (have returned by the query)
-        
+
         """
-        column_name = projectable_entity.split('.')[0] 
+        column_name = projectable_entity.split('.')[0]
         attrpath = '.'.join(projectable_entity.split('.')[1:])
-        
-        
+
+
         if column_name == '*':
             if func is not None:
                 raise InputValidationError(
-                       
+
                         "Very sorry, but functions on the aliased class\n"
                         "(You specified '*')\n"
                         "will not work!\n"
@@ -616,6 +616,6 @@ class QueryBuilder(QueryBuilderBase):
                 raise InputValidationError(
                         "\nInvalid function specification {}".format(func)
                     )
-            
+
             self.que =  self.que.add_columns(entity_to_project)
 

@@ -10,7 +10,7 @@ in backends.
 """
 
 import copy
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 from inspect import isclass as inspect_isclass
 from sa_init import aliased
 from aiida.common.exceptions import InputValidationError
@@ -26,16 +26,19 @@ replacement_dict = dict(
 
 
 class QueryBuilderBase(object):
-
     """
     QueryBuilderBase is the base class for QueryBuilder classes,
     which are than adapted to the individual schema and ORM used.
     In here, general graph traversal functionalities are implemented,
     the specific type of node and link is dealt in subclasses.
     """
+
+    __metaclass__ = ABCMeta
+
     NODE_TYPE = 'node.Node'
     LINK_PREFIX = '<>'
     VALID_PROJECTION_KEYS = ('func', 'cast')
+
 
     def __init__(self, *args, **kwargs):
         """
@@ -398,7 +401,7 @@ This would be the queryhelp::
         }
     }
         """
-        
+
         # A list storing the path being traversed by the query
         self.path = []
 
@@ -808,7 +811,7 @@ This would be the queryhelp::
             #~ self.label_list.append(linklabel)
         else:
             linklabel = None
-            
+
 
         ################### EXTENDING THE PATH #################################
 
@@ -825,7 +828,7 @@ This would be the queryhelp::
     def _add_filter(self, labelspec, filter_spec):
         """
         Adding a filter to my filters.
-        
+
         :param labelspec:
             The label, which has to exist already as a key
             in self.filters
@@ -893,7 +896,7 @@ This would be the queryhelp::
                         "You gave: {}\n"
                         "".format(spec)
                     )
-                
+
                 for key, val in spec.items():
                     if key not in self.VALID_PROJECTION_KEYS:
                         raise InputValidationError(
@@ -1243,8 +1246,8 @@ This would be the queryhelp::
         """
         :param joined_entity: An entity that can use a computer (eg a node)
         :param entity: aliased dbcomputer entity
-        
-        
+
+
         """
         self.que = self.que.join(
                 entity_to_join,
@@ -1447,7 +1450,7 @@ This would be the queryhelp::
         # first clear the entities in the case the first item in the
         # path was not meant to be projected
         # attribute of Query instance storing entities to project:
-        
+
         # Will be later set to this list:
         entities = []
         # Mapping between enitites and the label used/ given by user:
@@ -1526,10 +1529,10 @@ This would be the queryhelp::
         ################ LAST BUT NOT LEAST ############################
         #pop the entity that I added to start the query
         self.que._entities.pop(0)
-        
+
         ######################### DONE #################################
-        
-        
+
+
         return self.que
 
     def except_if_input_to(self, calc_class):
@@ -1625,7 +1628,7 @@ This would be the queryhelp::
         res = self._first()
 
         if self.nr_of_projections > 1:
-            return map(self._get_aiida_res, res) 
+            return map(self._get_aiida_res, res)
         else:
             return self._get_aiida_res(res)
 
@@ -1663,7 +1666,7 @@ This would be the queryhelp::
         :returns: a generator
         """
         return self.get_query().yield_per(count)
-    
+
     def _get_aiida_res(self, res):
         """
         Some instance returned by ORM (django or SA) need to be converted

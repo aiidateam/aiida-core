@@ -2,7 +2,7 @@
 
 from aiida.backends.querybuild.querybuilder_base import QueryBuilderBase
 from sa_init import (
-        and_, or_, not_, except_, func,
+        and_, or_, not_, except_, func as sa_func,
         aliased, Integer, Float, Boolean, JSONB, jsonb_array_length
     )
 
@@ -19,7 +19,7 @@ from aiida.common.exceptions import InputValidationError
 
 class QueryBuilder(QueryBuilderBase):
     """
-    QueryBuilder to use with SQLAlchemy-backend and 
+    QueryBuilder to use with SQLAlchemy-backend and
     schema defined in backends.sqlalchemy.models
     """
 
@@ -59,7 +59,7 @@ class QueryBuilder(QueryBuilderBase):
                 elif path_spec == '~or':
                     expressions.append(not_(or_(*subexpressions)))
             else:
-                column_name = path_spec.split('.')[0] 
+                column_name = path_spec.split('.')[0]
                 column =  self.get_column(column_name, alias)
                 json_path = path_spec.split('.')[1:]
                 db_path = column[(json_path)] if json_path else column
@@ -71,8 +71,8 @@ class QueryBuilder(QueryBuilderBase):
                         self._get_expr(
                             operator, value, db_path, val_in_json
                         )
-                    ) 
-                    for operator, value 
+                    )
+                    for operator, value
                     in filter_operation_dict.items()
                 ]
         return and_(*expressions)
@@ -92,7 +92,7 @@ class QueryBuilder(QueryBuilderBase):
                 return path_in_json.cast(JSONB) # BOOLEANS?
             elif isinstance(value, str):
                 return path_in_json.astext
-                
+
             elif isinstance(value, datetime.datetime):
                 return path_in_json.cast(TIMESTAMP)
             else:
@@ -106,13 +106,13 @@ class QueryBuilder(QueryBuilderBase):
         if operator == '==':
             expr = cast_according_to_type(db_path, value, val_in_json) == value
         elif operator == '>':
-            expr = cast_according_to_type(db_path, value, val_in_json) > value 
+            expr = cast_according_to_type(db_path, value, val_in_json) > value
         elif operator == '<':
-            expr = cast_according_to_type(db_path, value, val_in_json) < value 
+            expr = cast_according_to_type(db_path, value, val_in_json) < value
         elif operator == '>=':
-            expr = cast_according_to_type(db_path, value, val_in_json) >= value 
+            expr = cast_according_to_type(db_path, value, val_in_json) >= value
         elif operator == '<=':
-            expr = cast_according_to_type(db_path, value, val_in_json) <= value 
+            expr = cast_according_to_type(db_path, value, val_in_json) <= value
         elif operator == 'like':
             if val_in_json:
                 expr = db_path.astext.like(value)
@@ -200,7 +200,7 @@ class QueryBuilder(QueryBuilderBase):
     def _add_projectable_entity(self, alias, projectable_entity, cast='j', func=None):
 
 
-        column_name = projectable_entity.split('.')[0] 
+        column_name = projectable_entity.split('.')[0]
         json_path = projectable_entity.split('.')[1:]
 
         if column_name == '*':
@@ -245,7 +245,7 @@ class QueryBuilder(QueryBuilderBase):
                         "\nInvalid function specification {}".format(func)
                     )
             self.que =  self.que.add_columns(entity_to_project)
-            
+
 
 
     def _get_aiida_res(self, res):

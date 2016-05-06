@@ -41,7 +41,6 @@ class DbComment(Base):
         )
     content = Column(Text, nullable=True)
 
-
     dbnode = relationship('DbNode', backref='dbcomments')
     user = relationship("DbUser")
 

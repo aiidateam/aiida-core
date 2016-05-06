@@ -26,6 +26,7 @@ class QueryBuilder(QueryBuilderBase):
     def __init__(self, *args, **kwargs):
         from aiida.orm.implementation.sqlalchemy.node import Node as AiidaNode
         from aiida.orm.implementation.sqlalchemy.group import Group as AiidaGroup
+        from aiida.orm.implementation.sqlalchemy.computer import Computer as AiidaComputer
         self.Link               = DbLink
         self.Path               = DbPath
         self.Node               = DbNode
@@ -35,6 +36,7 @@ class QueryBuilder(QueryBuilderBase):
         self.table_groups_nodes = table_groups_nodes
         self.AiidaNode          = AiidaNode
         self.AiidaGroup         = AiidaGroup
+        self.AiidaComputer      = AiidaComputer
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
 

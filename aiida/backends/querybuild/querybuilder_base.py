@@ -487,6 +487,7 @@ This would be the queryhelp::
 
         # If it is a class:
         if cls:
+            # Nodes:
             if issubclass(cls, self.Node):
                 # If something pass an ormclass node
                 # Users wouldn't do that, by why not...
@@ -495,17 +496,23 @@ This would be the queryhelp::
             elif issubclass(cls, self.AiidaNode):
                 ormclasstype = cls._plugin_type_string or self.NODE_TYPE
                 ormclass = self.Node
+            # Groups:
             elif issubclass(cls, self.Group):
                 ormclasstype = 'group'
                 ormclass = cls
             elif issubclass(cls, self.AiidaGroup):
                 ormclasstype = 'group'
                 ormclass = self.Group
-            elif issubclass(cls, self.User):
-                ormclasstype = 'user'
-                ormclass = cls
+            # Computers:
             elif issubclass(cls, self.Computer):
                 ormclasstype = 'computer'
+                ormclass = cls
+            elif issubclass(cls, self.AiidaComputer):
+                ormclasstype = 'computer'
+                ormclass = self.Computer
+
+            elif issubclass(cls, self.User):
+                ormclasstype = 'user'
                 ormclass = cls
             else:
                 raise InputValidationError(

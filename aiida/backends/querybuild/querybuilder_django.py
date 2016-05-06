@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
+
 from querybuilder_base import (
     AbstractQueryBuilder,
     datetime,
@@ -18,7 +20,6 @@ from aiida.backends.querybuild.dummy_model import (
     DbExtra     as DummyExtra,
     DbAttribute as DummyAttribute,
     table_groups_nodes  as Dummy_table_groups_nodes,
-
     session,                             # session with DB
 )
 
@@ -83,7 +84,7 @@ class QueryBuilder(AbstractQueryBuilder):
                 mapped_entity = mapped_class.fval
             elif isinstance(value, int):
                 mapped_entity = mapped_class.ival
-            elif isinstance(value, datetime.datetime):
+            elif isinstance(value, datetime):
                 mapped_entity = mapped_class.dval
             elif isinstance(value, (list, tuple)):
                 value_type_set = set([type(i) for i in value])

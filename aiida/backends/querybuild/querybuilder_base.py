@@ -15,14 +15,6 @@ from inspect import isclass as inspect_isclass
 from sa_init import aliased
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import flatten_list
-import datetime
-
-replacement_dict = dict(
-        float='float',
-        int='int',
-        JSONB='jsonb',
-        str='str'
-)
 
 
 class AbstractQueryBuilder(object):
@@ -34,7 +26,6 @@ class AbstractQueryBuilder(object):
     In order to load the correct subclass::
 
         from aiida.orm.querybuilder import QueryBuilder
-
     """
 
     __metaclass__ = ABCMeta
@@ -204,7 +195,7 @@ A shorter version of the previous example::
         },
         input_of=PwCalculation
     )
-    
+
 .. note:: 
     A warning on filtering and projections in the attributes (or extras).
     Here, the type of a data value is not predetermined.
@@ -213,25 +204,118 @@ A shorter version of the previous example::
     In principle, the same value will be taken as the value to compair with.
     But if for the above example the cutoff was stored as an integer in the database,
     the above query will not return any results.
-    **Be consistent using the types**
+    **Be consistent using types**.
+    When something could be a float, store a float, and if a value is meant to store a boolean,
+    store a boolean and not 0 and 1 (integers).
+
+Let's get to the projections.
+You already might have guessed that you provide the name of columns as a list of strings.
+If you want instances of the ORM-class, you specify '*'.
+Let's get the id  ``pk'' and the ORM-instances of all structures in the database::
+
+    qb = QueryBuilder()
+    qb.append(StructureData, project=['id', '*'])
+    print list(qb.all())
+
+This will return a list of result tuples, each one containing the pk and the corresponding 
+StructureData instance.
+The following reverses the order inside the sublists::
+
+    qb = QueryBuilder()
+    qb.append(StructureData, project=['*', 'id'])
+    print list(qb.all())
+
+What if you want to project a certain attributes.
+That is trickier! You again need to tell the QueryBuilder the type.
+Assuming you want to get the energies returned by all PwCalculation done in the last 3 days::
+
+    qb = QueryBuilder()
+    qb.append(
+            JobCalculation,
+            filters={'ctime':{'>': now - timedelta(days=3)}}
+        )
+    qb.append(
+            ParameterData,
+            project=[{'attributes.energy':{'cast':'f'}}],
+        )
+    print list(qb.all())
+
+You need to specify the type of the quantity, in that case a float:
+
+*   'f' for floats
+*   'i' for integers
+*   't' for texts (strings, characters)
+*   'b' for booelans
+*   'd' for dates
+
+So again, be consisted when storing values in the database.
+To sum up, a projection is technically a list of dictionaries.
+If you don't have to cast the type, because the value is not stored as an attribute (or extra),
+then the string is sufficient.
+If you don't care about the order (ensured by passing a list), you can also put values in
+one dictionary. Let's also get the units  of the energy::
+
+    qb = QueryBuilder()
+    qb.append(
+            JobCalculation,
+            filters={'ctime':{'>': now - timedelta(days=3)}}
+        )
+    qb.append(
+            ParameterData,
+            project={
+                'attributes.energy':{'cast':'f'},
+                'attributes.energy_units':{'cast':'t'},
+            }
+         )
+    print list(qb.all())
+
+
+You can do much more with projections! Let's get the maximum energy::
+
+    qb = QueryBuilder()
+    qb.append(
+            JobCalculation,
+            filters={'ctime':{'>': now - timedelta(days=3)}}
+        )
+    qb.append(
+            ParameterData,
+            project={
+                'attributes.energy':{'cast':'f', 'func':'max'},
+            }
+         )
+    print list(qb.all())
+
+The above query returns one row, the one with the maximum energy.
+Other functions implemented are:
+
+*   *min*: get the row with the minimum value
+*   *count*: return the number of rows
+
+To find out how many calculations resulted in energies above -5.0::
+
+    qb = QueryBuilder()
+    qb.append(
+            JobCalculation,
+            filters={'ctime':{'>': now - timedelta(days=3)}}
+            project={'id':{'func':'count'}}
+        )
+    qb.append(
+            ParameterData,
+            filters={
+                'attributes.energy':{'>':-5.0},
+            }
+         )
 
 
 
 
-
+All right, we said before there are two possibilities to tell the QueryBuilder what to do.
+The second uses one big dictionary that we can call the queryhelp in the following.
+It has the same functionalities as the appender method. But you could save this dictionary in a 
+JSON or in the database and use it over and over.
 Usage::
 
-    qb  =   Querybuilder(**queryhelp)
-
-The queryhelp:The queryhelp is my API.
-
-        It is a dictionary that tells me:
-
-        *   what to join (key **path**)
-        *   what to project (key **project**)
-        *   how to filter (key **filters**)
-        *   how many rows to return (key **limit**)
-        *   how to order the rows (key **order_by**)
+    qb = Querybuilder(**queryhelp)
 
 What do you have to specify when you want to query:
 
@@ -253,8 +337,7 @@ What do you have to specify when you want to query:
             ]
         }
 
-    The second is to give the polymorphic identity
-    of this class, in our case stored in type::
+    Another way is to give the polymorphic identity of this class, in our case stored in type::
 
         queryhelp = {
             'path':[
@@ -266,10 +349,7 @@ What do you have to specify when you want to query:
         In Aiida, polymorphism is not strictly enforced, but
         achieved with *type* specification in a column.
         Type-discrimination is achieved by attaching a filter on the
-        type every time a subclass of Node is given,
-        in above example this would results in::
-
-            ...filter(DbNode.type.like("data%"))...
+        type every time a subclass of Node is given.
 
     Each node has to have a unique label.
     If not given, the label is chosen to be equal to the type of the class.
@@ -386,20 +466,18 @@ What do you have to specify when you want to query:
                 StructureData,
             ],
             'project':{
-                'Relax':['state', 'id'], # Yes, type as string works!
-                StructureData:['attributes.cell']
+                Relax:['state', 'id'],
             }
         }
 
-    Returns the state and the id of all instances of Relax and
-    the cells of all structures given that
-    the structures are linked as output of a relax-calculation.
+    Returns the state and the id of all instances of Relax
+    where a structures is linked as output of a relax-calculation.
     The strings that you pass have to be name of the columns.
     If you pass a star ('*'),
     the query will return the instance of the AiidaClass.
 
 *   Filtering:
-    What if I want not every structure,
+    What if you want not every structure,
     but only the ones that were added
     after a certain time `t` and have an id higher than 50::
 
@@ -446,11 +524,12 @@ What do you have to specify when you want to query:
     The above queryhelp would build a query
     that returns all structures with a volume below 6.0.
 
-    .. note::   A big advantage of SQLAlchemy is that it support
-                the storage of jsons.
-                It is convenient to dump the structure-data
-                into a json and store that as a column.
-                The querytool needs to be told how to query the json.
+    .. note::   
+        A big advantage of SQLAlchemy is that it support
+        the storage of jsons.
+        It is convenient to dump the structure-data
+        into a json and store that as a column.
+        The querytool needs to be told how to query the json.
 
 Let's get to a really complex use-case,
 where we need to reconstruct a workflow:
@@ -475,7 +554,7 @@ This would be the queryhelp::
         'path':[
             ParameterData,
             {
-                'cls':MD,
+                'cls':PwCalculation,
                 'label':'md'
             },
             {
@@ -496,50 +575,22 @@ This would be the queryhelp::
             }
         ],
         'project':{
-            ParameterData:'attributes.IONS.tempw',
+            ParameterData:{'attributes.IONS.tempw':{'cast':'f'}},
             'md':['id', 'time'],
             Trajectory:[
                 'id',
-                'attributes.length'
+                {'attributes.length':{'cast':'i'}}
             ],
-            StructureData:[
-                'id',
-                'name',
-                'attributes.sites',
-                'attributes.cell'
-            ],
-            'struc2':[
-                'id',
-                'name',
-                'attributes.sites',
-                'attributes.cell'
-            ],
+            StructureData:'*',
+            'struc2':['*'] # equivalent, the two!
         },
         'filters':{
-            Param:{
-                'and':[
-                    {
-                        'attributes.SYSTEM.econv':{
-                            '<':1e-5
-                        }
-                    },
-                    {
-                        'attributes.SYSTEM.ecut':{
-                            '>':60
-                        }
-                    }
-                ]
+            ParameterData:{
+                'attributes.SYSTEM.econv':{'<':1e-5},
+                'attributes.SYSTEM.ecut':{'>':60},
             },
             'md':{
-                'state':{
-                    'in':[
-                        'computing',
-                        'parsing',
-                        'finished',
-                        'new'
-                    ]
-                }
-            },
+                'state':{'in':['PARSING', 'FINISHED']},
             StructureData:{
                 'or':[
                     {
@@ -567,7 +618,7 @@ This would be the queryhelp::
                         },
                     },
                 ],
-                'attributes.sites':{
+                'attributes.sites':{   
                     'of_length':4
                 },
                 'attributes.kinds':{

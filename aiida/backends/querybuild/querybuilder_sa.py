@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
+
 from aiida.backends.querybuild.querybuilder_base import AbstractQueryBuilder
 from sa_init import (
         and_, or_, not_, except_, func as sa_func,
@@ -39,8 +41,6 @@ class QueryBuilder(AbstractQueryBuilder):
         self.AiidaComputer      = AiidaComputer
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
-
-        # raise DeprecationWarning("The use of this class is still deprecated")
     def _get_session(self):
         return sa_session
 
@@ -94,11 +94,10 @@ class QueryBuilder(AbstractQueryBuilder):
                 return path_in_json.cast(JSONB) # BOOLEANS?
             elif isinstance(value, str):
                 return path_in_json.astext
-
-            elif isinstance(value, datetime.datetime):
+            elif isinstance(value, datetime):
                 return path_in_json.cast(TIMESTAMP)
             else:
-                raise Exception( ' Unknown type {}'.format(type(value)))
+                raise Exception('Unknown type {}'.format(type(value)))
 
         if operator.startswith('~'):
             negation = True

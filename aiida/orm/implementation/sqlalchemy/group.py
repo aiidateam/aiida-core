@@ -126,6 +126,7 @@ class Group(AbstractGroup):
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
         from aiida.orm.implementation.sqlalchemy.node import Node
+        from aiida.backends.sqlalchemy import session
 
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
@@ -154,9 +155,10 @@ class Group(AbstractGroup):
                 to_add = node
 
             if to_add not in self.dbgroup.dbnodes:
-                list_nodes.append(to_add)
-
-        self.dbgroup.dbnodes.extend(list_nodes)
+                #~ list_nodes.append(to_add)
+                self.dbgroup.dbnodes.append(to_add)
+        session.commit()
+        #~ self.dbgroup.dbnodes.extend(list_nodes)
 
     @property
     def nodes(self):

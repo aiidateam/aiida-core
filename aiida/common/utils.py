@@ -588,23 +588,25 @@ def get_extremas_from_positions (positions):
 def get_fortfloat(key, txt, be_case_sensitive = True):
     """
     Matches a fortran compatible specification of a float behind a defined key in a string.
-    Receives:
     :param key: The key to look for
     :param txt: The string where to search for the key
     :param be_case_sensitive: An optional boolean whether to search case-sensitive, defaults to ``True``
 
     If abc is a key, and f is a float, number, than this regex
     will match t and return f in the following cases:
+
     *   charsbefore, abc = f, charsafter
     *   charsbefore
         abc = f
         charsafter
     *   charsbefore, abc = f
         charsafter
+
     and vice-versa.
     If no float is matched, returns None
 
     Exampes of matchable floats are:
+
     *   0.1d2
     *   0.D-3
     *   .2e1

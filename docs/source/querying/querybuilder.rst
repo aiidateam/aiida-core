@@ -1,5 +1,5 @@
-QueryBuilder documentation and usage
-====================================
+Using the QueryBuilder
+======================
 
 .. toctree::
    :maxdepth: 2
@@ -13,8 +13,3 @@ with a Python interface and regardless of backend and schema used.
 .. automodule:: aiida.backends.querybuild.querybuilder_base
    :members:
    :special-members: __init__
-
-.. ~ .. automodule:: aiida.backends.querybuild.querybuilder_base.QueryBuilderBase
-.. ~    :members:
-.. ~    :special-members: __init__
-

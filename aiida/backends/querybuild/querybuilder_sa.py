@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from querybuilder_base import QueryBuilderBase
+from aiida.backends.querybuild.querybuilder_base import QueryBuilderBase
 from sa_init import (
-        and_, or_, not_, except_,
-        aliased, Integer, Float, Boolean, JSONB
+        and_, or_, not_, except_, func as sa_func,
+        aliased, Integer, Float, Boolean, JSONB, jsonb_array_length
     )
 
 from sqlalchemy_utils.types.choice import Choice
@@ -19,7 +19,7 @@ from aiida.common.exceptions import InputValidationError
 
 class QueryBuilder(QueryBuilderBase):
     """
-    QueryBuilder to use with SQLAlchemy-backend and 
+    QueryBuilder to use with SQLAlchemy-backend and
     schema defined in backends.sqlalchemy.models
     """
 
@@ -36,6 +36,7 @@ class QueryBuilder(QueryBuilderBase):
         self.AiidaNode          = AiidaNode
         self.AiidaGroup         = AiidaGroup
         super(QueryBuilder, self).__init__(*args, **kwargs)
+
 
         # raise DeprecationWarning("The use of this class is still deprecated")
     def _get_session(self):
@@ -58,7 +59,7 @@ class QueryBuilder(QueryBuilderBase):
                 elif path_spec == '~or':
                     expressions.append(not_(or_(*subexpressions)))
             else:
-                column_name = path_spec.split('.')[0] 
+                column_name = path_spec.split('.')[0]
                 column =  self.get_column(column_name, alias)
                 json_path = path_spec.split('.')[1:]
                 db_path = column[(json_path)] if json_path else column
@@ -70,8 +71,8 @@ class QueryBuilder(QueryBuilderBase):
                         self._get_expr(
                             operator, value, db_path, val_in_json
                         )
-                    ) 
-                    for operator, value 
+                    )
+                    for operator, value
                     in filter_operation_dict.items()
                 ]
         return and_(*expressions)
@@ -91,7 +92,7 @@ class QueryBuilder(QueryBuilderBase):
                 return path_in_json.cast(JSONB) # BOOLEANS?
             elif isinstance(value, str):
                 return path_in_json.astext
-                
+
             elif isinstance(value, datetime.datetime):
                 return path_in_json.cast(TIMESTAMP)
             else:
@@ -105,13 +106,13 @@ class QueryBuilder(QueryBuilderBase):
         if operator == '==':
             expr = cast_according_to_type(db_path, value, val_in_json) == value
         elif operator == '>':
-            expr = cast_according_to_type(db_path, value, val_in_json) > value 
+            expr = cast_according_to_type(db_path, value, val_in_json) > value
         elif operator == '<':
-            expr = cast_according_to_type(db_path, value, val_in_json) < value 
+            expr = cast_according_to_type(db_path, value, val_in_json) < value
         elif operator == '>=':
-            expr = cast_according_to_type(db_path, value, val_in_json) >= value 
+            expr = cast_according_to_type(db_path, value, val_in_json) >= value
         elif operator == '<=':
-            expr = cast_according_to_type(db_path, value, val_in_json) <= value 
+            expr = cast_according_to_type(db_path, value, val_in_json) <= value
         elif operator == 'like':
             if val_in_json:
                 expr = db_path.astext.like(value)
@@ -196,42 +197,55 @@ class QueryBuilder(QueryBuilderBase):
         return expr
 
 
-    def add_projectable_entity(self, alias, projectable_spec):
-        if projectable_spec == '*': # 
+    def _add_projectable_entity(self, alias, projectable_entity, cast='j', func=None):
+
+
+        column_name = projectable_entity.split('.')[0]
+        json_path = projectable_entity.split('.')[1:]
+
+        if column_name == '*':
+            if func is not None:
+                raise InputValidationError(
+                        "Very sorry, but functions on the aliased class\n"
+                        "(You specified '*')\n"
+                        "will not work!\n"
+                        "I suggest you apply functions on a column, e.g. ('id')\n"
+                    )
             self.que = self.que.add_entity(alias)
-            
         else:
-            if isinstance(projectable_spec, dict):
-                type_to_cast, = projectable_spec.values()
-                path_to_value, = projectable_spec.keys()
-            else:
-                type_to_cast = 'json'
-            column_name = projectable_spec.split('.')[0] 
-            json_path = projectable_spec.split('.')[1:]
+            column = self.get_column(column_name, alias)
             if json_path:
-                if type_to_cast in ('json', 'int', 'float', 'bool'):
-                    self.que = self.que.add_columns(
-                        self.get_column(
-                            column_name, alias
-                        )[json_path].cast(JSONB)
-                    )
-                elif type_to_cast == 'str':
-                    self.que = self.que.add_columns(
-                        self.get_column(
-                            column_name, alias
-                        )[json_path].astext
-                    )
+                if cast =='j':
+                    entity_to_project = column[json_path].cast(JSONB)
+                elif cast == 'f':
+                    entity_to_project = column[json_path].cast(Float)
+                elif cast == 'i':
+                    entity_to_project = column[json_path].cast(Integer)
+                elif cast == 'b':
+                    entity_to_project = column[json_path].cast(Boolean)
+                elif cast == 't':
+                    entity_to_project = column[json_path].astext
                 else:
-                    raise Exception(
-                        "invalid type to cast {}".format(
-                            type_to_cast
+                    raise InputValidationError(
+                            "Invalid type to cast {}".format(cast)
                         )
-                    )
             else:
-                self.que =  self.que.add_columns(
-                        self.get_column(column_name, alias)
+                entity_to_project = column
+
+            if func is None:
+                pass
+            elif func == 'max':
+                entity_to_project = sa_func.max(entity_to_project)
+            elif func == 'min':
+                entity_to_project = sa_func.max(entity_to_project)
+            elif func == 'count':
+                entity_to_project = sa_func.count(entity_to_project)
+            else:
+                raise InputValidationError(
+                        "\nInvalid function specification {}".format(func)
                     )
-        return projectable_spec
+            self.que =  self.que.add_columns(entity_to_project)
+
 
 
     def _get_aiida_res(self, res):

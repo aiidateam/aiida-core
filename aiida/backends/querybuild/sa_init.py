@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Imports used for the QueryBuilder.
-See 
+See
 :func:`querybuilder_base.QueryBuilderBase`,
 :func:`querybuilder_django.QueryBuilder`,
 :func:`querybuilder_sa.QueryBuilder`,

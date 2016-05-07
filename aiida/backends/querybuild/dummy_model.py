@@ -115,12 +115,10 @@ class DbNode(Base):
     public = Column(Boolean, default=False)
 
     nodeversion = Column(Integer, default=1)
-    
-    attributes = relationship(
-        'DbAttribute',
-        uselist = True,
-        backref='dbnode'
-    )
+
+    attributes = relationship('DbAttribute', uselist=True, backref='dbnode')
+    extras = relationship('DbExtra', uselist=True, backref='dbnode')
+
 
 
     outputs = relationship(
@@ -144,11 +142,11 @@ class DbNode(Base):
         Return the corresponding instance of
         :func:`~aiida.orm.implementation.django.node.Node`
         or a subclass return by the plugin loader.
-        
-        .. todo:: 
+
+        .. todo::
             The behavior is quite pathetic, creating a django DbNode instance
             to instantiate the aiida instance.
-            These means that every time you load Aiida instances with 
+            These means that every time you load Aiida instances with
             the QueryBuilder when using Django as a backend, three instances
             are instantiated for every Aiida instance you load!
             Could be fixed by allowing DbNode from the dummy nodel to be passed
@@ -196,7 +194,18 @@ class DbAttribute(Base):
     ival = Column(Integer, default=None, nullable=True)
     bval = Column(Boolean, default=None, nullable=True)
     dval = Column(DateTime, default=None, nullable = True)
-    #~ dbnode = relationship("DbNode")
+
+class DbExtra(Base):
+    __tablename__ = "db_dbextra"
+    id  = Column(Integer, primary_key = True)
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id'))
+    key = Column(String(255))
+    datatype = Column(String(10))
+    tval = Column(String, default='')
+    fval = Column(Float, default=None, nullable=True)
+    ival = Column(Integer, default=None, nullable=True)
+    bval = Column(Boolean, default=None, nullable=True)
+    dval = Column(DateTime, default=None, nullable = True)
 
 
 class DbComputer(Base):
@@ -270,7 +279,7 @@ class DbGroup(Base):
         else:
             return '<DbGroup [user-defined] "{}">'.format(self.name)
     def get_aiida_class(self):
-        from aiida.orm.implementation.django.group import Group as DjangoAiidaGroup        
+        from aiida.orm.implementation.django.group import Group as DjangoAiidaGroup
         from aiida.backends.djsite.db.models import DbGroup as DjangoSchemaDbGroup
         dbgroup = DjangoSchemaDbGroup(
             id = self.id,
@@ -312,9 +321,9 @@ recent_states = select([
 
 state_mapper = mapper(
     DbCalcState,
-    recent_states, 
+    recent_states,
     primary_key= recent_states.c.dbnode_id,
-    non_primary=True, 
+    non_primary=True,
 )
 
 DbNode.state_instance = relationship(
@@ -343,7 +352,7 @@ elif engine.startswith("postgre"):
         "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
         "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
         ).format(**get_profile_config(settings.AIIDADB_PROFILE))
-else: 
+else:
     raise ConfigurationError("Unknown DB engine: {}".format(
             engine))
 session = sessionmaker(bind=create_engine(engine_url))()

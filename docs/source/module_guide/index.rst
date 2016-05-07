@@ -12,7 +12,8 @@ Modules
    ../djsite/dev
    ../orm/dev
    ../parsers/dev
-   ../querying/dev
+   ../querying/querytool/dev
+   ../querying/querybuilder/dev
    ../dbimporters/dev
    ../dbexporters/dev
    ../tools/dev

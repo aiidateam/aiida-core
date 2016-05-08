@@ -27,7 +27,7 @@ class User(AbstractUser):
             if not isinstance(dbuser, DbUser):
                 raise ValueError("Expected a DbUser. Object of a different"
                                  "class was given as argument.")
-            self.dbuser = dbuser
+            self._dbuser = dbuser
 
         # If the email of a users is given then create a new User object with
         # this email.
@@ -38,117 +38,117 @@ class User(AbstractUser):
                 raise ValueError("When an email is passed as argument, no"
                                  "further arguments are accepted.")
             email = kwargs.pop('email')
-            self.dbuser = DbUser(email=email)
+            self._dbuser = DbUser(email=email)
 
         else:
             raise ValueError("Only dbuser & email are accepted as arguments")
 
     @property
     def pk(self):
-        return self.dbuser.id
+        return self._dbuser.id
 
     @property
     def id(self):
-        return self.dbuser.id
+        return self._dbuser.id
 
     @property
     def to_be_stored(self):
-        return self.dbuser.id is None
+        return self._dbuser.id is None
 
     def save(self):
         if not self.to_be_stored:
-            self.dbuser.save()
+            self._dbuser.save()
 
     def force_save(self):
-        self.dbuser.save()
+        self._dbuser.save()
 
     @property
     def email(self):
-        return self.dbuser.email
+        return self._dbuser.email
 
     @email.setter
     def email(self, val):
-        self.dbuser.email = val
+        self._dbuser.email = val
         if not self.to_be_stored:
-            self.dbuser.save()
+            self._dbuser.save()
 
     def _set_password(self, val):
-        self.dbuser.password = val
+        self._dbuser.password = val
         self.save()
 
     def _get_password(self):
-        return self.dbuser.password
+        return self._dbuser.password
 
     @property
     def is_superuser(self):
-        return self.dbuser.is_superuser
+        return self._dbuser.is_superuser
 
     @is_superuser.setter
     def is_superuser(self, val):
-        self.dbuser.is_superuser = val
+        self._dbuser.is_superuser = val
         self.save()
 
     @property
     def first_name(self):
-        return self.dbuser.first_name
+        return self._dbuser.first_name
 
     @first_name.setter
     def first_name(self, val):
-        self.dbuser.first_name = val
+        self._dbuser.first_name = val
         self.save()
 
     @property
     def last_name(self):
-        return self.dbuser.last_name
+        return self._dbuser.last_name
 
     @last_name.setter
     def last_name(self, val):
-        self.dbuser.last_name = val
+        self._dbuser.last_name = val
         self.save()
 
     @property
     def institution(self):
-        return self.dbuser.institution
+        return self._dbuser.institution
 
     @institution.setter
     def institution(self, val):
-        self.dbuser.institution = val
+        self._dbuser.institution = val
         self.save()
 
     @property
     def is_staff(self):
-        return self.dbuser.is_staff
+        return self._dbuser.is_staff
 
     @is_staff.setter
     def is_staff(self, val):
-        self.dbuser.is_staff = val
+        self._dbuser.is_staff = val
         self.save()
 
     @property
     def is_active(self):
-        return self.dbuser.is_active
+        return self._dbuser.is_active
 
     @is_active.setter
     def is_active(self, val):
-        self.dbuser.is_active = val
+        self._dbuser.is_active = val
         self.save()
 
     @property
     def last_login(self):
-        return self.dbuser.last_login
+        return self._dbuser.last_login
 
     @last_login.setter
     def last_login(self, val):
-        self.dbuser.last_login = val
+        self._dbuser.last_login = val
         self.save()
 
     @property
     def date_joined(self):
-        return self.dbuser.date_joined
+        return self._dbuser.date_joined
 
     @date_joined.setter
     def date_joined(self, val):
-        self.dbuser.date_joined = val
+        self._dbuser.date_joined = val
         self.save()
 
     @classmethod

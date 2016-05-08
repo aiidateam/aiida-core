@@ -230,6 +230,12 @@ class Computer(AbstractComputer):
         if not self.to_be_stored:
             self.dbcomputer.save()
 
+    def get_calculations_on_computer(self):
+        from aiida.backends.sqlalchemy.models.node import DbNode
+        return DbNode.query.filter(
+            DbNode.dbcomputer_id == self.dbcomputer.id,
+            DbNode.type.like("calculation%")).all()
+
     def is_enabled(self):
         return self.dbcomputer.enabled
 

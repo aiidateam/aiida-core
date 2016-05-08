@@ -236,6 +236,11 @@ class Computer(AbstractComputer):
         if not self.to_be_stored:
             self.dbcomputer.save()
 
+    def get_calculations_on_computer(self):
+        from aiida.backends.djsite.db.models import DbNode
+        return DbNode.objects.filter(dbcomputer__name=self.name,
+                                     type__startswith='calculation')
+
     def is_enabled(self):
         return self.dbcomputer.enabled
 

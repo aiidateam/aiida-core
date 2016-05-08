@@ -697,6 +697,10 @@ class AbstractComputer(object):
         pass
 
     @abstractmethod
+    def get_calculations_on_computer(self):
+        pass
+
+    @abstractmethod
     def is_enabled(self):
         pass
 

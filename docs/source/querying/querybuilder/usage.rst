@@ -1,5 +1,10 @@
 Using the QueryBuilder
-======================
+----------------------
+
+
+Introduction
+============
+
 
 .. toctree::
    :maxdepth: 2
@@ -30,6 +35,11 @@ it's up to you what to use:
 
 #.  The appender-method
 #.  Using the queryhelp 
+
+
+The appender method
+===================
+
 
 Let's first discuss the appender-method using some concrete examples.
 Suppose you are interested in all calculations in your database that are in 
@@ -93,7 +103,7 @@ but have the time returned to as::
         )
     print list(qb.all())
 
-Got it? This was the query for a single node in the database.
+This was the query for a single node in the database.
 Let's make it more complicated by querying relationships in graph-like database.
 You are familiar with the :ref:`sec.quantumespresso` tutorial? Great, because this will be
 our usecase here.
@@ -268,7 +278,7 @@ To find out how many calculations resulted in energies above -5.0::
     qb = QueryBuilder()
     qb.append(
             JobCalculation,
-            filters={'ctime':{'>': now - timedelta(days=3)}}
+            filters={'ctime':{'>': now - timedelta(days=3)}},
             project={'id':{'func':'count'}}
         )
     qb.append(
@@ -278,8 +288,32 @@ To find out how many calculations resulted in energies above -5.0::
             }
          )
 
+Another feature that had to be added are projections, filters and labels on
+the edges of the graphs, that is to say links between nodes.
+It works the same way, just that the keyword is preceeded by `link'.
+Let's take the above example, but put a filter on the label of the link,
+project the label and label::
 
-All right, we said before there are two possibilities to tell the QueryBuilder what to do.
+    qb = QueryBuilder()
+    qb.append(
+            JobCalculation,
+            filters={'ctime':{'>': now - timedelta(days=3)}},
+            project={'id':{'func':'count'}}
+        )
+    qb.append(
+            ParameterData,
+            filters={'attributes.energy':{'>':-5.0}},
+            linkfilters={'label':{'like':'output_%'}},
+            linkproject='label'
+         )
+
+
+
+
+The queryhelp
+=============
+
+As mentioned above, there are two possibilities to tell the QueryBuilder what to do.
 The second uses one big dictionary that we can call the queryhelp in the following.
 It has the same functionalities as the appender method. But you could save this dictionary in a 
 JSON or in the database and use it over and over.
@@ -334,7 +368,7 @@ What do you have to specify:
                     'label':'node_1'
                 },
                 {
-                    'cls':Node
+                    'cls':Node,
                     'label':'node_2'
                 }
             ]
@@ -458,12 +492,10 @@ What do you have to specify:
                 {'cls':StructureData}
             ],
             'filters':{
-                StructureData:[
-                    {
-                        'time':{'>': t},
-                        'id':{'>': 50}
-                    }
-                ]
+                StructureData:{
+                    'time':{'>': t},
+                    'id':{'>': 50}
+                }
             }
         }
 
@@ -524,21 +556,10 @@ This would be the queryhelp::
     queryhelp =  {
         'path':[
             ParameterData,
-            {
-                'cls':PwCalculation,
-                'label':'md'
-            },
-            {
-                'cls':Trajectory
-            },
-            {
-                'cls':StructureData,
-                'input_of':'md'
-            },
-            {
-                'cls':Relax,
-                'input_of':StructureData
-            },
+            {'cls':PwCalculation, 'label':'md'},
+            {'cls':Trajectory},
+            {'cls':StructureData, 'input_of':'md'},
+            {'cls':Relax, 'input_of':StructureData},
             {
                 'cls':StructureData,
                 'label':'struc2',
@@ -553,7 +574,7 @@ This would be the queryhelp::
                 {'attributes.length':{'cast':'i'}}
             ],
             StructureData:'*',
-            'struc2':['*'] # equivalent, the two!
+            'struc2':['*']    # equivalent, the two!
         },
         'filters':{
             ParameterData:{
@@ -562,6 +583,7 @@ This would be the queryhelp::
             },
             'md':{
                 'state':{'in':['PARSING', 'FINISHED']},
+            },
             StructureData:{
                 'or':[
                     {
@@ -600,3 +622,111 @@ This would be the queryhelp::
         }
     }
 
+
+If you want to include filters and projections on links between nodes, you
+will have to add these to filters and projections in the queryhelp.
+Let's take an example that we had and add a few filters on the link::
+
+    queryhelp = {
+        'path':[
+            {'cls':Relax, 'label':'relax'}, # Relaxation with structure as output
+            {'cls':StructureData, 'label':'structure'}
+        ],
+        'filters':{
+            'structure':{
+                'time':{'>': t},
+                'id':{'>': 50}
+            },
+            'relax--structure':{
+                'time':{'>': t},
+                'label':{'like':'output_%'},
+            }
+        },
+        'project':{
+            'relax--structure':['label'],
+            'structure':['label'],
+            'relax':['label', 'state'],
+        }
+    }
+
+Notice that the label for the link, by default, is the labels of the two connecting
+nodes delimited by two dashes '--'.
+The order does not matter, the following queryhelp would results in the same query::
+
+    queryhelp = {
+        'path':[
+            {'cls':Relax, 'label':'relax'},         # Relaxation with structure as output
+            {'cls':StructureData, 'label':'structure'}
+        ],
+        'filters':{
+            'structure':{
+                'time':{'>': t},
+                'id':{'>': 50}
+            },
+            'structure--relax':{                    # order does not matter!
+                'time':{'>': t},
+                'label':{'like':'output_%'},
+            }
+        },
+        'project':{
+            'relax--structure':['label'],           # order does not matter!
+            'structure':['label'],
+            'relax':['label', 'state'],
+        }
+    }
+
+If you dislike that way to label the link, you can choose the linklabel in the 
+path when definining the entity to join::
+
+    queryhelp = {
+        'path':[
+            {'cls':Relax, 'label':'relax'},         # Relaxation with structure as output
+            {
+                'cls':StructureData,
+                'label':'structure',
+                'linklabel':'ThisIsMyLinkLabel'     # Definining the linklabel
+            }
+        ],
+        'filters':{
+            'structure':{
+                'time':{'>': t},
+                'id':{'>': 50}
+            },
+            'ThisIsMyLinkLabel':{                  # Using this linklabel
+                'time':{'>': t},
+                'label':{'like':'output_%'},
+            }
+        },
+        'project':{
+            'ThisIsMyLinkLabel':['label'],
+            'structure':['label'],
+            'relax':['label', 'state'],
+        }
+    }
+
+
+Limiting the number of results
+==============================
+
+If you are interested in a defined number of rows,
+you can set a limit::
+
+    # A querybuilder instance qb
+    qb.limit(10) # Limiting the results to 10 rows.
+
+Ordering the results
+====================
+
+Ordering the results can be done very efficiently by the backend.
+Tell the QueryBuilder what to order.
+
+
+Returning the results
+=====================
+
+
+We assume we have a QueryBuilder instance that has a valid path and the 
+desired filters and projections, regardless whether this was done using the 
+appender method or the queryhelp.
+Now we want to get the results from the database!
+The QueryBuilder can also execute queries not just build them

@@ -14,15 +14,16 @@ from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.utils import get_automatic_user
 
-from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError)
+from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
+                                     NotExistent)
 
 from aiida.orm.implementation.general.group import AbstractGroup
-
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
+
 
 class Group(AbstractGroup):
 
@@ -224,7 +225,7 @@ class Group(AbstractGroup):
 
 
     @classmethod
-    def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
+    def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
               user=None, node_attributes=None, past_days=None, **kwargs):
         from aiida.orm.implementation.sqlalchemy.node import Node
 
@@ -249,7 +250,6 @@ class Group(AbstractGroup):
                                 "nodes for the query on Group is neither "
                                 "a Node nor a DbNode")
 
-
             # In the case of the Node orm from Sqlalchemy, there is an id
             # property on it.
             sub_query = (sa.session.query(table_groups_nodes).filter(
@@ -260,7 +260,7 @@ class Group(AbstractGroup):
             filters.append(sub_query)
         if user:
             if isinstance(user, basestring):
-                filters.append(DbGroup.user.has(email = user))
+                filters.append(DbGroup.user.has(email=user))
             else:
                 # This should be a DbUser
                 filters.append(DbGroup.user == user)
@@ -274,7 +274,6 @@ class Group(AbstractGroup):
                   .order_by(DbGroup.id).distinct().all())
 
         return [cls(dbgroup=g[0]) for g in groups]
-
 
     def delete(self):
         if self.pk is not None:

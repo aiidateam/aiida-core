@@ -198,6 +198,30 @@ class QueryBuilder(AbstractQueryBuilder):
         return expr
 
 
+    def _get_entity(self, alias, column_name, attrpath, cast='j', **kwargs):
+        column = self.get_column(column_name, alias)
+        json_path = attrpath
+        
+        if json_path:
+            if cast =='j':
+                entity = column[json_path].cast(JSONB)
+            elif cast == 'f':
+                entity = column[json_path].cast(Float)
+            elif cast == 'i':
+                entity = column[json_path].cast(Integer)
+            elif cast == 'b':
+                entity = column[json_path].cast(Boolean)
+            elif cast == 't':
+                entity = column[json_path].astext
+            else:
+                raise InputValidationError(
+                        "Invalid type to cast {}".format(cast)
+                    )
+        else:
+            entity = column
+        return entity
+        
+
     def _add_projectable_entity(self, alias, projectable_entity, cast='j', func=None):
 
 
@@ -214,25 +238,11 @@ class QueryBuilder(AbstractQueryBuilder):
                     )
             self.que = self.que.add_entity(alias)
         else:
-            column = self.get_column(column_name, alias)
-            if json_path:
-                if cast =='j':
-                    entity_to_project = column[json_path].cast(JSONB)
-                elif cast == 'f':
-                    entity_to_project = column[json_path].cast(Float)
-                elif cast == 'i':
-                    entity_to_project = column[json_path].cast(Integer)
-                elif cast == 'b':
-                    entity_to_project = column[json_path].cast(Boolean)
-                elif cast == 't':
-                    entity_to_project = column[json_path].astext
-                else:
-                    raise InputValidationError(
-                            "Invalid type to cast {}".format(cast)
-                        )
-            else:
-                entity_to_project = column
-
+            
+            entity_to_project = self._get_entity(
+                    alias, column_name, json_path,
+                    cast=cast
+                )
             if func is None:
                 pass
             elif func == 'max':

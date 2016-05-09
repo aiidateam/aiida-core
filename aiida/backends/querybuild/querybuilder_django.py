@@ -202,6 +202,41 @@ class QueryBuilder(AbstractQueryBuilder):
                 ]
         return and_(*expressions)
 
+    def _get_entity(self, alias, column_name, attrpath, cast='undefined', **kwargs):
+        if attrpath:
+            if alias._aliased_insp.class_ == self.Node:
+                if column_name == 'attributes':
+                    addalias = aliased(DummyAttribute)
+                elif column_name == 'extras':
+                    addalias = aliased(DummyExtra)
+            else:
+                NotImplementedError(
+                    "Other classes than Nodes are not implemented yet"
+                )
+            self.que = self.que.join(
+                    addalias,
+                    addalias.dbnode_id == alias.id
+                )
+            self.que = self.que.filter(addalias.key == attrpath)
+
+            if cast =='t':
+                entity = self.get_column('tval', addalias)
+            elif cast == 'f':
+                entity = self.get_column('fval', addalias)
+            elif cast == 'i':
+                entity = self.get_column('ival', addalias)
+            elif cast == 'b':
+                entity = self.get_column('bval', addalias)
+            elif cast == 'd':
+                entity = self.get_column('dval', addalias)
+            else:
+                raise InputValidationError(
+                        "Invalid type to cast {}".format(cast)
+                    )
+        else:
+            entity = self.get_column(column_name, alias)
+        return entity
+
     def _add_projectable_entity(self, alias, projectable_entity, cast='undefined', func=None):
         """
         :param alias:
@@ -227,39 +262,7 @@ class QueryBuilder(AbstractQueryBuilder):
                     )
             self.que = self.que.add_entity(alias)
         else:
-            if attrpath:
-                if alias._aliased_insp.class_ == self.Node:
-                    if column_name == 'attributes':
-                        addalias = aliased(DummyAttribute)
-                    elif column_name == 'extras':
-                        addalias = aliased(DummyExtra)
-                else:
-                    NotImplementedError(
-                        "Other classes than Nodes are not implemented yet"
-                    )
-                self.que = self.que.join(
-                        addalias,
-                        addalias.dbnode_id == alias.id
-                    )
-                self.que = self.que.filter(addalias.key == attrpath)
-
-                if cast =='t':
-                    entity_to_project = self.get_column('tval', addalias)
-                elif cast == 'f':
-                    entity_to_project = self.get_column('fval', addalias)
-                elif cast == 'i':
-                    entity_to_project = self.get_column('ival', addalias)
-                elif cast == 'b':
-                    entity_to_project = self.get_column('bval', addalias)
-                elif cast == 'd':
-                    entity_to_project = self.get_column('dval', addalias)
-                else:
-                    raise InputValidationError(
-                            "Invalid type to cast {}".format(cast)
-                        )
-            else:
-                entity_to_project = self.get_column(column_name, alias)
-
+            entity_to_project = self._get_entity(alias, column_name, attrpath, cast)
             if func is None:
                 pass
             elif func == 'max':

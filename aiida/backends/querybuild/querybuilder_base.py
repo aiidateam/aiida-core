@@ -226,8 +226,8 @@ class AbstractQueryBuilder(object):
     def append(self, cls=None, type=None, label=None,
                 autolabel=False, filters=None,
                 project=None, subclassing=True,
-                linklabel=None,
-                **kwargs
+                linklabel=None, linkfilters=None,
+                linkproject=None, **kwargs
         ):
         """
         Any iterative procedure to build the path for a graph query
@@ -439,13 +439,23 @@ class AbstractQueryBuilder(object):
                 reverse_linklabel = None
             aliased_link = aliased(self.Link)
             self.label_to_alias_map[linklabel] = aliased_link
-            self.filters[linklabel] = {}
-            self.projections[linklabel] = {}
+            
+            
 
             if reverse_linklabel is not None:
                 self.label_to_alias_map[reverse_linklabel] = aliased_link
                 self.filters[reverse_linklabel] = {}
                 self.projections[reverse_linklabel] = {}
+
+            # Filters on links:
+            self.filters[linklabel] = {}
+            if linkfilters is not None:
+                self._add_filter(linklabel, linkfilters)
+            
+            # Projections on links
+            self.projections[linklabel] = {}
+            if linkproject is not None:
+                self._add_projection(linklabel, linkproject)
 
 
         ################### EXTENDING THE PATH #################################
@@ -639,14 +649,28 @@ class AbstractQueryBuilder(object):
                         "".format(order_spec)
                     )
             _order_spec = {}
-            for key,val in order_spec.items():
-                if not isinstance(val, (tuple, list)):
-                    val = [val]
+            for key,items_to_order_by in order_spec.items():
+                if not isinstance(items_to_order_by, (tuple, list)):
+                    items_to_order_by = [items_to_order_by]
                 label = self._get_label_from_specification(key)
-                _order_spec[label] = val
+                _order_spec[label] = []
+                for item_to_order_by in items_to_order_by:
+                    if isinstance(item_to_order_by, basestring):
+                        item_to_order_by = {item_to_order_by:{}}
+                    elif isinstance(item_to_order_by, dict):
+                        pass
+                    else:
+                        raise InputValidationError(
+                            "Cannot deal with input to order_by {}\n"
+                            "of type{}"
+                            "\n".format(item_to_order_by, type(item_to_order_by))
+                        )
+                    for k,v in item_to_order_by.items():
+                        if isinstance(v, basestring):
+                            item_to_order_by[k] = {'cast':v}
+                    _order_spec[label].append(item_to_order_by)
 
             self._order_by.append(_order_spec)
-
         return self
 
     @staticmethod
@@ -1039,6 +1063,16 @@ class AbstractQueryBuilder(object):
                 '{} is not a column of {}'.format(colname, alias)
             )
 
+    def _analyze_order_spec(self, alias, entitylabel, entityspec):
+        try:
+            column_name, attrpath = entitylabel.split('.', 1)
+        except ValueError:
+            column_name = entitylabel
+            attrpath = ''
+
+        entity = self._get_entity(alias, column_name, attrpath, **entityspec)
+        return entity
+
     def _build_query(self):
         """
         build the query and return a sqlalchemy.Query instance
@@ -1130,15 +1164,15 @@ class AbstractQueryBuilder(object):
 
         ######################### ORDER ################################
         for order_spec in self._order_by:
-            for key, val in order_spec.items():
-                alias = self.label_to_alias_map[key]
-                if not isinstance(val, list):
-                    val = [val]
-                for colname in val:
-                    self.que = self.que.order_by(
-                            self.get_column(colname, alias)
-                        )
-
+            for label, entities in order_spec.items():
+                alias = self.label_to_alias_map[label]
+                for entitydict in entities:
+                    for entitylabel, entityspec in entitydict.items():
+                        p = self._analyze_order_spec(alias, entitylabel, entityspec)
+                        self.que = self.que.order_by(p)
+                        #~ print "HERE", p
+                        #~ entity = self._get_entity(alias, column_name, attrpath)
+                        #~ self.que = self.que.order_by(entity)
         ######################### LIMIT ################################
         if self._limit:
             self.que = self.que.limit(self._limit)

@@ -1071,8 +1071,14 @@ class AbstractQueryBuilder(object):
             attrpath = ''
 
         entity = self._get_entity(alias, column_name, attrpath, **entityspec)
+        order = entityspec.get('order', 'asc')
+        if order == 'desc':
+            entity = entity.desc()
         return entity
-
+    def __repr__(self):
+        from sqlalchemy.dialects import postgresql
+        que = self.get_query()
+        return str(que.statement.compile(compile_kwargs={"literal_binds": True}, dialect=postgresql.dialect()))
     def _build_query(self):
         """
         build the query and return a sqlalchemy.Query instance

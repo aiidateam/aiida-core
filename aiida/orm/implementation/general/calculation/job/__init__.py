@@ -500,11 +500,11 @@ class AbstractJobCalculation(object):
         return super(AbstractJobCalculation, self)._replace_link_from(src, label, link_type)
 
     def _remove_link_from(self, label):
-        '''
+        """
         Remove a link. Only possible if the calculation is in state NEW.
 
         :param str label: Name of the link to remove.
-        '''
+        """
         valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:

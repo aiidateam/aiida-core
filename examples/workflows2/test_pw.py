@@ -8,10 +8,11 @@ __authors__ = "The AiiDA team."
 
 import sys
 import os
-
 from aiida.common.example_helpers import test_and_get_code
 from aiida.orm import DataFactory
 from aiida.common.exceptions import NotExistent
+from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
+from aiida.workflows2.legacy.job_calculation import JobCalculation
 
 # If set to True, will ask AiiDA to run in serial mode (i.e., AiiDA will not
 # invoke the mpirun command in the submission script)
@@ -50,13 +51,13 @@ queue = None
 settings = None
 #####
 
-code = test_and_get_code(codename, expected_code_type='quantumespresso.pw')
+# code = test_and_get_code(codename, expected_code_type='quantumespresso.pw')
 
 alat = 4.  # angstrom
 cell = [[alat, 0., 0., ],
         [0., alat, 0., ],
         [0., 0., alat, ],
-]
+        ]
 
 # BaTiO3 cubic structure
 s = StructureData(cell=cell)
@@ -108,12 +109,12 @@ parameters = ParameterData(dict={
 kpoints = KpointsData()
 
 # method gamma only
-#settings = ParameterData(dict={'gamma_only':True})
-#kpoints.set_kpoints_mesh([1,1,1])
+# settings = ParameterData(dict={'gamma_only':True})
+# kpoints.set_kpoints_mesh([1,1,1])
 
 # method list
-#import numpy
-#kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)],
+# import numpy
+# kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)],
 #                    weights = [1. for i in range(10)])
 
 # method mesh
@@ -127,38 +128,44 @@ settings = ParameterData(dict=settings_dict)
 
 ## For remote codes, it is not necessary to manually set the computer,
 ## since it is set automatically by new_calc
-#computer = code.get_remote_computer()
-#calc = code.new_calc(computer=computer)
+# computer = code.get_remote_computer()
+# calc = code.new_calc(computer=computer)
 
-calc = code.new_calc()
-calc.label = "Test QE pw.x"
-calc.description = "Test calculation with the Quantum ESPRESSO pw.x code"
-calc.set_max_wallclock_seconds(30 * 60)  # 30 min
+# calc = code.new_calc()
+job_calc = JobCalculation.build(PwCalculation).create()
+
+# calc.label = "Test QE pw.x"
+# calc.description = "Test calculation with the Quantum ESPRESSO pw.x code"
+job_calc.set_max_wallclock_seconds(30 * 60)  # 30 min
 # Valid only for Slurm and PBS (using default values for the
 # number_cpus_per_machine), change for SGE-like schedulers
-calc.set_resources({"num_machines": 1})
-if run_in_serial_mode:
-    calc.set_withmpi(False)
-## Otherwise, to specify a given # of cpus per machine, uncomment the following:
-# calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 8})
-
-#calc.set_custom_scheduler_commands("#SBATCH --account=ch3")
+job_calc.set_resources({"num_machines": 1})
+# if run_in_serial_mode:
+#    calc.set_withmpi(False)
+# Otherwise, to specify a given # of cpus per machine, uncomment the following:
+job_calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 8})
+job_calc.set_custom_scheduler_commands("#SBATCH --account=ch3")
 
 if queue is not None:
-    calc.set_queue_name(queue)
+    job_calc.set_queue_name(queue)
 
-calc.use_structure(s)
-calc.use_parameters(parameters)
+inputs = {
+    'structure': s,
+    'parameters': parameters,
+    'kpoints': kpoints
+}
+if settings is not None:
+    inputs['settings'] = settings
 
-if auto_pseudos:
-    try:
-        calc.use_pseudos_from_family(pseudo_family)
-        print "Pseudos successfully loaded from family {}".format(pseudo_family)
-    except NotExistent:
-        print ("Pseudo or pseudo family not found. You may want to load the "
-               "pseudo family, or set auto_pseudos to False.")
-        raise
-else:
+# if auto_pseudos:
+#     try:
+#         calc.use_pseudos_from_family(pseudo_family)
+#         print "Pseudos successfully loaded from family {}".format(pseudo_family)
+#     except NotExistent:
+#         print ("Pseudo or pseudo family not found. You may want to load the "
+#                "pseudo family, or set auto_pseudos to False.")
+#         raise
+# else:
     raw_pseudos = [
         ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba', 'pbesol'),
         ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti', 'pbesol'),
@@ -167,39 +174,14 @@ else:
     pseudos_to_use = {}
     for fname, elem, pot_type in raw_pseudos:
         absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
+                                                "..", "submission",
                                                 "data", fname))
-        pseudo, created = UpfData.get_or_create(
-            absname, use_first=True)
+        pseudo, created = UpfData.get_or_create(absname, use_first=True)
         if created:
             print "Created the pseudo for {}".format(elem)
         else:
             print "Using the pseudo for {} from DB: {}".format(elem, pseudo.pk)
         pseudos_to_use[elem] = pseudo
+    inputs['pseudo'] = pseudos_to_use
 
-    for k, v in pseudos_to_use.iteritems():
-        calc.use_pseudo(v, kind=k)
-
-calc.use_kpoints(kpoints)
-
-if settings is not None:
-    calc.use_settings(settings)
-#from aiida.orm.data.remote import RemoteData
-#calc.set_outdir(remotedata)
-
-
-if submit_test:
-    subfolder, script_filename = calc.submit_test()
-    print "Test_submit for calculation (uuid='{}')".format(
-        calc.uuid)
-    print "Submit file in {}".format(os.path.join(
-        os.path.relpath(subfolder.abspath),
-        script_filename
-    ))
-else:
-    calc.store_all()
-    print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid, calc.dbnode.pk)
-    calc.submit()
-    print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid, calc.dbnode.pk)
-
+job_calc.run(inputs=inputs)

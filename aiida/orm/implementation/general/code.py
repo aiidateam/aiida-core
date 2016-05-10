@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
-
 from abc import abstractmethod
-
 from aiida.orm.implementation import Node
-
 from aiida.common.exceptions import (ValidationError, MissingPluginError)
 from aiida.common.links import LinkType
 
@@ -358,7 +355,7 @@ class AbstractCode(Node):
     def new_calc(self, *args, **kwargs):
         """
         Create and return a new Calculation object (unstored) with the correct
-        plugin subclass, as otained by the self.get_input_plugin_name() method.
+        plugin subclass, as obtained by the self.get_input_plugin_name() method.
 
         Parameters are passed to the calculation __init__ method.
 

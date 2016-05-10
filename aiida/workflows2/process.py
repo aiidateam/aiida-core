@@ -2,6 +2,7 @@
 
 import plum.process
 import plum.persistence.persistence_mixin
+import plum.port as port
 
 import aiida.workflows2.util as util
 from aiida.workflows2.persistance.active_factory import create_process_record
@@ -35,15 +36,22 @@ class Process(plum.persistence.persistence_mixin.PersistenceMixin,
     """
     __metaclass__ = ABCMeta
 
+    class RunningData(object):
+        def __init__(self, inputs):
+            self.inputs = inputs
+            self.current_calc = None
+            self.process_record = None
+            self.parent = None
+
     _spec_type = ProcessSpec
 
     def __init__(self):
         super(Process, self).__init__()
-        self._current_calc = None
-        self._process_record = None
-        self._parent = None
+        self._running_data = None
 
     def run(self, inputs=None, exec_engine=None):
+        self._running_data = self.RunningData(inputs)
+
         with util.ProcessStack.push(self):
 
             if self._can_fast_forward(inputs):
@@ -80,7 +88,7 @@ class Process(plum.persistence.persistence_mixin.PersistenceMixin,
 
     def _on_process_finalising(self):
         super(Process, self)._on_process_finalising()
-        self._current_calc = None
+        self._running_data = None
 
     def _on_output_emitted(self, output_port, value, dynamic):
         """
@@ -116,7 +124,18 @@ class Process(plum.persistence.persistence_mixin.PersistenceMixin,
         # Link and store the retrospective provenance for this process
         calc = self._create_db_record()  # (unstored)
         assert (not calc.is_stored)
+
+        # First get a dictionary of all the inputs to link, this is needed to
+        # deal with things like input groups
+        to_link = {}
         for name, input in inputs.iteritems():
+            if isinstance(self.spec().get_input(name), port.InputGroupPort):
+                to_link.update(
+                    {"{}_{}".format(name, k): v for k, v in input.iteritems()})
+            else:
+                to_link[name] = input
+
+        for name, input in to_link.iteritems():
             if not input.is_stored:
                 input.store()
                 # If the input isn't stored then assume our parent created it
@@ -150,6 +169,41 @@ class Process(plum.persistence.persistence_mixin.PersistenceMixin,
 
     def _create_child_record(self, child, inputs):
         return self._process_record.create_child(child, inputs)
+
+    @property
+    def _inputs(self):
+        assert self._running_data, "Process not running"
+        return self._running_data.inputs
+
+    @property
+    def _current_calc(self):
+        assert self._running_data, "Process not running"
+        return self._running_data.current_calc
+
+    @_current_calc.setter
+    def _current_calc(self, calc_node):
+        assert self._running_data, "Process not running"
+        self._running_data.current_calc = calc_node
+
+    @property
+    def _process_record(self):
+        assert self._running_data, "Process not running"
+        return self._running_data.process_record
+
+    @_process_record.setter
+    def _process_record(self, record):
+        assert self._running_data, "Process not running"
+        self._running_data.process_record = record
+
+    @property
+    def _parent(self):
+        assert self._running_data, "Process not running"
+        return self._running_data.parent
+
+    @_parent.setter
+    def _parent(self, parent):
+        assert self._running_data, "Process not running"
+        self._running_data.parent = parent
 
 
 class FunctionProcess(Process):

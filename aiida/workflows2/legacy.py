@@ -10,35 +10,6 @@ __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
 
-class LegacyJobCalculation(Process):
-    @classmethod
-    def build(cls, calc_class):
-
-        def _init(spec):
-            for k, v in calc_class._use_methods.iteritems():
-                spec.add_input(v['linkname'], help=v.get('docstring', None))
-            spec.add_output()
-
-        return type(calc_class.__name__, (LegacyJobCalculation,),
-                    {'_init': staticmethod(_init),
-                     '_calc_class': calc_class})
-
-    def __init__(self):
-        super(LegacyJobCalculation, self).__init__()
-
-    def _run(self, **kwargs):
-        self._calc = self._calc_class()
-        for k, v in kwargs.iteritems():
-            self._calc['use_{}'.format(k)](v)
-        # TODO: Here we need to actually call the scheduler to send the job
-        self._calc._presubmit(folder)
-
-        # TODO: Emit outputs
-
-    def _create_db_record(self):
-        return self._calc
-
-
 class LegacyParser(Process):
     @classmethod
     def build(cls, parser_class, output_file_name):

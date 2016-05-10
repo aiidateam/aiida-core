@@ -16,7 +16,7 @@ from sa_init import (
     select, func, join, and_, or_, not_, except_,     # join and filter ops
     relationship, backref, column_property,           # Table to table relationsships
     sessionmaker, create_engine,                      # connection
-    foreign, mapper,
+    foreign, mapper, case, cast
 )
 
 # Aiida Django classes:
@@ -195,6 +195,8 @@ class DbAttribute(Base):
     bval = Column(Boolean, default=None, nullable=True)
     dval = Column(DateTime, default=None, nullable = True)
 
+
+
 class DbExtra(Base):
     __tablename__ = "db_dbextra"
     id  = Column(Integer, primary_key = True)
@@ -357,6 +359,33 @@ DbNode.state = column_property(
     select([recent_states.c.state]).
     where(recent_states.c.dbnode_id == foreign(DbNode.id))
 )
+
+
+#~ stmt = select([users_table]).\
+            #~ where(
+                #~ case(
+                    #~ [
+                        #~ (users_table.c.name == 'wendy', 'W'),
+                        #~ (users_table.c.name == 'jack', 'J')
+                    #~ ],
+                    #~ else_='E'
+                #~ )
+            #~ )
+
+DbAttribute.value_str = column_property(
+        case([
+            (DbAttribute.datatype == 'txt', DbAttribute.tval),
+            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
+            (DbAttribute.datatype == 'int', cast(DbAttribute.ival, String)),
+            (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, String)),
+            (DbAttribute.datatype == 'date', cast(DbAttribute.dval, String)),
+            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, String)),
+            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
+            (DbAttribute.datatype == 'list', None),
+            (DbAttribute.datatype == 'dict', None),
+        ])
+    )
+
 
 engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
 if engine == "sqlite3":

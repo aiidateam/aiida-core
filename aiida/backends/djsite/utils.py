@@ -108,8 +108,7 @@ def get_configured_user_email():
     from aiida.backends import settings
 
     try:
-        profile_conf = get_profile_config(settings.AIIDADB_PROFILE,
-                                          set_test_location=False)
+        profile_conf = get_profile_config(settings.AIIDADB_PROFILE)
         email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
     # I do not catch the error in case of missing configuration, because
     # it is already a ConfigurationError

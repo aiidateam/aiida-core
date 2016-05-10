@@ -1343,6 +1343,35 @@ class _Structure(VerdiCommandWithSubcommands,
             print e
 
 
+    def _import_pwi(self, filename, **kwargs):
+        """
+        Imports a structure from a quantumespresso input file.
+        """
+        from os.path import abspath
+        from aiida.orm.data.structure import get_structuredata_from_qeinput
+        dont_store = kwargs.pop('dont_store')
+        view_in_ase = kwargs.pop('view')
+
+        print 'importing structure from: \n  {}'.format(abspath(filename))
+        filepath =  abspath(filename)
+
+        try:
+            new_structure = get_structuredata_from_qeinput(filepath=filepath)
+
+            if not dont_store:
+                new_structure.store()
+            if view_in_ase:
+                from ase.visualize import view
+                view(new_structure.get_ase())
+            print  (
+                    '  Succesfully imported structure {}, '
+                    '(PK = {})'.format(new_structure.get_formula(), new_structure.pk)
+                )
+
+        except ValueError as e:
+            print e
+
+
 
     def _deposit_tcod(self, node, parameter_data=None, **kwargs):
         """

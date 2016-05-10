@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-import os
-import sys
-import logging
-import shutil
 import datetime
 import json
+import logging
+import os
+import shutil
 import stat
-
-from aiida.common.setup import AIIDA_CONFIG_FOLDER
-from dateutil.parser import parse
+import sys
 from os.path import expanduser
-from aiida.backends.djsite.utils import load_dbenv
-from aiida.common.utils import ask_question
+
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.common import utils
+from aiida.common.setup import AIIDA_CONFIG_FOLDER
 
 # Needed initialization for Django
-
-load_dbenv()
+if not is_dbenv_loaded():
+    load_dbenv()
 from backup import Backup
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
@@ -52,12 +51,11 @@ class BackupSetup(object):
         # The logger of the backup script
         self._logger = logging.getLogger("aiida_backup_setup")
 
-
     def construct_backup_variables(self, file_backup_folder_abs):
         backup_variables = {}
 
         # Setting the oldest backup timestamp
-        oldest_object_bk = ask_question(
+        oldest_object_bk = utils.ask_question(
             "Please provide the oldest backup timestamp "
             "(e.g. 2014-07-18 13:54:53.688484+00:00). ",
             datetime.datetime, True)
@@ -73,11 +71,11 @@ class BackupSetup(object):
         
         # Setting the days_to_backup
         backup_variables[
-            Backup._days_to_backup_key] = ask_question(
+            Backup._days_to_backup_key] = utils.ask_question(
             "Please provide the number of days to backup.", int, True)
         
         # Setting the end date
-        end_date_of_backup_key = ask_question(
+        end_date_of_backup_key = utils.ask_question(
             "Please provide the end date of the backup " +
             "(e.g. 2014-07-18 13:54:53.688484+00:00).",
             datetime.datetime, True)
@@ -89,21 +87,21 @@ class BackupSetup(object):
                 
         # Setting the backup periodicity
         backup_variables[
-            Backup._periodicity_key] = ask_question(
+            Backup._periodicity_key] = utils.ask_question(
             "Please periodicity (in days).", int, False)
         
         # Setting the backup threshold
         backup_variables[
-            Backup._backup_length_threshold_key] = ask_question(
+            Backup._backup_length_threshold_key] = utils.ask_question(
             "Please provide the backup threshold (in hours).", int, False)
         
         return backup_variables
 
     def create_dir(self, question, dir_path):
-        final_path = BackupSetup.query_string(question, dir_path)
+        final_path = utils.query_string(question, dir_path)
         
         if not os.path.exists(final_path):
-            if self.query_yes_no("The path {} doesn't exist. Should it be "
+            if utils.query_yes_no("The path {} doesn't exist. Should it be "
                               "created?".format(final_path), "yes"):
                 try:
                     os.makedirs(final_path)
@@ -190,7 +188,7 @@ class BackupSetup(object):
                 "to the directory {}.".format(conf_backup_folder_abs))
             raise
         
-        if self.query_yes_no("A sample configuration file was copied to {}. "
+        if utils.query_yes_no("A sample configuration file was copied to {}. "
                              "Would you like to ".format(
                                     conf_backup_folder_abs) +
                              "see the configuration parameters explanation?",
@@ -199,10 +197,10 @@ class BackupSetup(object):
 
         # Construct the path to the backup configuration file
         final_conf_filepath = os.path.join(conf_backup_folder_abs,
-                                               self._backup_info_filename)
+                                           self._backup_info_filename)
 
         # If the backup parameters are configured now
-        if self.query_yes_no("Would you like to configure the backup " +
+        if utils.query_yes_no("Would you like to configure the backup " +
                              "configuration file now?", default="yes"):
 
             # Ask questions to properly setup the backup variables
@@ -223,7 +221,7 @@ class BackupSetup(object):
              "Please adapt the startup script accordingly to point to the " +
              "correct backup configuration file. For the moment, it points " +
              "to {}\n".format(os.path.join(conf_backup_folder_abs,
-                                          self._backup_info_filename)))
+                                           self._backup_info_filename)))
 
         # The contents of the startup script
         script_content = \
@@ -247,7 +245,7 @@ backup_inst.run()
                                    self._script_filename)
 
         # Write the contents to the script
-        with open(script_path ,'w') as script_file:
+        with open(script_path, 'w') as script_file:
             script_file.write(script_content)
 
         # Set the right permissions

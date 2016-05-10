@@ -240,7 +240,14 @@ class Devel(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         keys_to_retrieve = arguments[:sep_idx]
-        job_list = arguments[sep_idx + 1:]
+        job_list_str = arguments[sep_idx + 1:]
+
+        try:
+            job_list = [int(i) for i in job_list_str]
+        except ValueError:
+            print >> sys.stderr, "All PKs after -- must be valid integers."
+            sys.exit(1)
+
 
         sep = '\t'  # Default separator: a tab character
 
@@ -279,7 +286,7 @@ class Devel(VerdiCommandWithSubcommands):
 
         # load the data
         if print_header:
-            print "## Job list: %s" % " ".join(job_list)
+            print "## Job list: %s" % " ".join(job_list_str)
             print "#" + sep.join(str(i) for i in keys_to_retrieve)
         for job in job_list:
             values_to_print = []

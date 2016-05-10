@@ -15,6 +15,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
+
 TIME_ZONE = "Europe/Paris"
 USE_TZ = True
 
@@ -38,6 +39,7 @@ DBPASS = profile_conf.get('AIIDADB_PASS', '')
 DBHOST = profile_conf.get('AIIDADB_HOST', '')
 DBPORT = profile_conf.get('AIIDADB_PORT', '')
 REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
+
 
 ## Checks on the REPOSITORY_* variables
 try:

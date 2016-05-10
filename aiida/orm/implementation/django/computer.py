@@ -194,9 +194,6 @@ class Computer(AbstractComputer):
         if not self.to_be_stored:
             self.dbcomputer.save()
 
-        #        else:
-        #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
-
     def get_workdir(self):
         try:
             return self.dbcomputer.get_workdir()

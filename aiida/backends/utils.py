@@ -58,17 +58,6 @@ def get_automatic_user():
         raise ValueError("This method doesn't exist for this backend")
 
 
-def get_group_list(*args, **kwargs):
-    if settings.BACKEND == "sqlalchemy":
-        raise ValueError("This method doesn't exist for this backend")
-    elif settings.BACKEND == "django":
-        from aiida.backends.djsite.cmdline import (
-            get_group_list as get_group_list_dj)
-        return get_group_list_dj(*args, **kwargs)
-    else:
-        raise ValueError("This method doesn't exist for this backend")
-
-
 def get_workflow_list(*args, **kwargs):
     if settings.BACKEND == "sqlalchemy":
         raise ValueError("This method doesn't exist for this backend")

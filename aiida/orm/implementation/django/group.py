@@ -21,6 +21,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
+
 class Group(AbstractGroup):
 
     def __init__(self, **kwargs):
@@ -208,11 +209,11 @@ class Group(AbstractGroup):
 
         self.dbgroup.dbnodes.remove(*list_pk)
 
-
     @classmethod
-    def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
+    def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
               user=None, node_attributes=None, past_days=None, **kwargs):
-        from aiida.backends.djsite.db.models import DbGroup, DbNode, DbAttribute
+        from aiida.backends.djsite.db.models import (DbGroup, DbNode,
+                                                     DbAttribute)
 
         # Analyze args and kwargs to create the query
         queryobject = Q()
@@ -252,8 +253,8 @@ class Group(AbstractGroup):
             else:
                 queryobject &= Q(user=user)
 
-        groups_pk = set(DbGroup.objects.filter(queryobject,**kwargs).values_list(
-            'pk', flat=True))
+        groups_pk = set(DbGroup.objects.filter(
+            queryobject,**kwargs).values_list('pk', flat=True))
 
         if node_attributes is not None:
             for k, vlist in node_attributes.iteritems():

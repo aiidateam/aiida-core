@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
+
 from querybuilder_base import (
-    QueryBuilderBase,
+    AbstractQueryBuilder,
     datetime,
     InputValidationError
 )
@@ -18,7 +20,6 @@ from aiida.backends.querybuild.dummy_model import (
     DbExtra     as DummyExtra,
     DbAttribute as DummyAttribute,
     table_groups_nodes  as Dummy_table_groups_nodes,
-
     session,                             # session with DB
 )
 
@@ -26,7 +27,7 @@ from aiida.backends.querybuild.sa_init import (
     and_, or_, not_, except_, aliased,      # Queryfuncs
     func as sa_func
 )
-class QueryBuilder(QueryBuilderBase):
+class QueryBuilder(AbstractQueryBuilder):
 
     def __init__(self, *args, **kwargs):
         from aiida.orm.implementation.django.node import Node as AiidaNode
@@ -83,7 +84,7 @@ class QueryBuilder(QueryBuilderBase):
                 mapped_entity = mapped_class.fval
             elif isinstance(value, int):
                 mapped_entity = mapped_class.ival
-            elif isinstance(value, datetime.datetime):
+            elif isinstance(value, datetime):
                 mapped_entity = mapped_class.dval
             elif isinstance(value, (list, tuple)):
                 value_type_set = set([type(i) for i in value])
@@ -172,7 +173,7 @@ class QueryBuilder(QueryBuilderBase):
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in  ('and', 'or', '~or', '~and'):
                 subexpressions = [
-                    _analyze_filter_spec(alias, sub_filter_spec)
+                    self._analyze_filter_spec(alias, sub_filter_spec)
                     for sub_filter_spec in filter_operation_dict
                 ]
                 if path_spec == 'and':
@@ -201,6 +202,41 @@ class QueryBuilder(QueryBuilderBase):
                 ]
         return and_(*expressions)
 
+    def _get_entity(self, alias, column_name, attrpath, cast='undefined', **kwargs):
+        if attrpath:
+            if alias._aliased_insp.class_ == self.Node:
+                if column_name == 'attributes':
+                    addalias = aliased(DummyAttribute)
+                elif column_name == 'extras':
+                    addalias = aliased(DummyExtra)
+            else:
+                NotImplementedError(
+                    "Other classes than Nodes are not implemented yet"
+                )
+            self.que = self.que.join(
+                    addalias,
+                    addalias.dbnode_id == alias.id
+                )
+            self.que = self.que.filter(addalias.key == attrpath)
+
+            if cast =='t':
+                entity = self.get_column('tval', addalias)
+            elif cast == 'f':
+                entity = self.get_column('fval', addalias)
+            elif cast == 'i':
+                entity = self.get_column('ival', addalias)
+            elif cast == 'b':
+                entity = self.get_column('bval', addalias)
+            elif cast == 'd':
+                entity = self.get_column('dval', addalias)
+            else:
+                raise InputValidationError(
+                        "Invalid type to cast {}".format(cast)
+                    )
+        else:
+            entity = self.get_column(column_name, alias)
+        return entity
+
     def _add_projectable_entity(self, alias, projectable_entity, cast='undefined', func=None):
         """
         :param alias:
@@ -226,39 +262,7 @@ class QueryBuilder(QueryBuilderBase):
                     )
             self.que = self.que.add_entity(alias)
         else:
-            if attrpath:
-                if alias._aliased_insp.class_ == self.Node:
-                    if column_name == 'attributes':
-                        addalias = aliased(DummyAttribute)
-                    elif column_name == 'extras':
-                        addalias = aliased(DummyExtra)
-                else:
-                    NotImplementedError(
-                        "Other classes than Nodes are not implemented yet"
-                    )
-                self.que = self.que.join(
-                        addalias,
-                        addalias.dbnode_id == alias.id
-                    )
-                self.que = self.que.filter(addalias.key == attrpath)
-
-                if cast =='t':
-                    entity_to_project = self.get_column('tval', addalias)
-                elif cast == 'f':
-                    entity_to_project = self.get_column('fval', addalias)
-                elif cast == 'i':
-                    entity_to_project = self.get_column('ival', addalias)
-                elif cast == 'b':
-                    entity_to_project = self.get_column('bval', addalias)
-                elif cast == 'd':
-                    entity_to_project = self.get_column('dval', addalias)
-                else:
-                    raise InputValidationError(
-                            "Invalid type to cast {}".format(cast)
-                        )
-            else:
-                entity_to_project = self.get_column(column_name, alias)
-
+            entity_to_project = self._get_entity(alias, column_name, attrpath, cast)
             if func is None:
                 pass
             elif func == 'max':

@@ -312,7 +312,7 @@ class Computer(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.backends.djsite.db.models import DbNode
+        # from aiida.backends.djsite.db.models import DbNode
         from aiida.orm.computer import Computer
 
         parser = argparse.ArgumentParser(
@@ -329,8 +329,8 @@ class Computer(VerdiCommandWithSubcommands):
             print "No computer {} was found".format(computer_name)
             sys.exit(1)
 
-        calculation_on_computer = DbNode.objects.filter(dbcomputer__name=computer_name,
-                                                        type__startswith='calculation')
+        calculation_on_computer = computer.get_calculations_on_computer()
+
         if calculation_on_computer:
             # Note: this is an artificial comment.
             # If you comment the following lines, you will be able to overwrite
@@ -916,7 +916,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.backends.djsite.db.models import DbUser
+        from aiida.orm.implementation import User
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -951,22 +951,22 @@ class Computer(VerdiCommandWithSubcommands):
                 computer.set_enabled_state(True)
                 print "Computer '{}' enabled.".format(computername)
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            user_list = User.search_for_users(email=user_email)
+            if user_list is None or len(user_list) == 0:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
+            user = user_list[0]
             try:
-                dbauthinfo = computer.get_dbauthinfo(user)
+                dbauthinfo = computer.get_dbauthinfo(user._dbuser)
                 if not dbauthinfo.enabled:
                     dbauthinfo.enabled = True
                     dbauthinfo.save()
                     print "Computer '{}' enabled for user {}.".format(
                         computername, user.get_full_name())
                 else:
-                    print "Computer '{}' was already enabled for user {}.".format(
-                        computername, user.get_full_name())
+                    print "Computer '{}' was already enabled for user {} {}.".format(
+                        computername, user.first_name, user.last_name)
             except NotExistent:
                 print >> sys.stderr, ("User with email '{}' is not configured "
                                       "for computer '{}' yet.".format(
@@ -986,9 +986,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         import argparse
 
-        from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.backends.djsite.db.models import DbUser
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -1023,12 +1021,12 @@ class Computer(VerdiCommandWithSubcommands):
                 computer.set_enabled_state(False)
                 print "Computer '{}' disabled.".format(computername)
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            user_list = User.search_for_users(email=user_email)
+            if user_list is None or len(user_list) == 0:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
+            user = user_list[0]
             try:
                 dbauthinfo = computer.get_dbauthinfo(user)
                 if dbauthinfo.enabled:
@@ -1037,13 +1035,12 @@ class Computer(VerdiCommandWithSubcommands):
                     print "Computer '{}' disabled for user {}.".format(
                         computername, user.get_full_name())
                 else:
-                    print "Computer '{}' was already disabled for user {}.".format(
-                        computername, user.get_full_name())
+                    print("Computer '{}' was already disabled for user {} {}."
+                        .format(computername, user.first_name, user.last_name))
             except NotExistent:
                 print >> sys.stderr, ("User with email '{}' is not configured "
                                       "for computer '{}' yet.".format(
                     user_email, computername))
-
 
     def get_computer_names(self):
         """

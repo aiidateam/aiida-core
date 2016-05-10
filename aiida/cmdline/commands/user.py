@@ -5,7 +5,8 @@ This allows to setup and configure a user from command line.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.backends.utils import load_dbenv
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.common.exceptions import NotExistent
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -39,7 +40,6 @@ class User(VerdiCommandWithSubcommands):
         return "\n".join(emails)
 
     def user_configure(self, *args):
-        from aiida.backends.djsite.settings import settings_profile
         from aiida.backends.utils import is_dbenv_loaded
         if not is_dbenv_loaded():
             load_dbenv()
@@ -47,8 +47,7 @@ class User(VerdiCommandWithSubcommands):
         import readline
         import getpass
 
-        from aiida.backends.djsite.db import models
-        from django.core.exceptions import ObjectDoesNotExist
+        from aiida.orm.implementation import User
 
         if len(args) != 1:
             print >> sys.stderr, ("You have to pass (only) one parameter after "
@@ -58,8 +57,9 @@ class User(VerdiCommandWithSubcommands):
 
         email = args[0]
 
-        try:
-            user = models.DbUser.objects.get(email=email)
+        user_list = User.search_for_users(email=email)
+        if user_list is not None and len(user_list) > 1:
+            user = user_list[0]
             print ""
             print ("An AiiDA user for email '{}' is already present "
                    "in the DB:".format(email))
@@ -77,18 +77,17 @@ class User(VerdiCommandWithSubcommands):
                 configure_user = True
             else:
                 print "Invalid answer, assuming answer was 'NO'"
-        except ObjectDoesNotExist:
+        else:
             configure_user = True
-            user = models.DbUser(email=email)
+            user = User(email=email)
             print "Configuring a new user with email '{}'".format(email)
 
         if configure_user:
             try:
                 kwargs = {}
-
-                for field in models.DbUser.REQUIRED_FIELDS:
-                    verbose_name = models.DbUser._meta.get_field_by_name(
-                        field)[0].verbose_name.capitalize()
+                # for field in models.DbUser.REQUIRED_FIELDS:
+                for field in User.REQUIRED_FIELDS:
+                    verbose_name = field.capitalize()
                     readline.set_startup_hook(lambda: readline.insert_text(
                         getattr(user, field)))
                     kwargs[field] = raw_input('{}: '.format(verbose_name))
@@ -133,20 +132,26 @@ class User(VerdiCommandWithSubcommands):
                     else:
                         print "ERROR, the two passwords do not match."
                 ## Set the password here
-                user.set_password(new_password)
+                user.password = new_password
+            else:
+                user.password = None
 
-            user.save()
-            print ">> User {} saved. <<".format(user.get_full_name())
+            user.force_save()
+            print ">> User {} {} saved. <<".format(user.first_name,
+                                                   user.last_name)
             if not user.has_usable_password():
                 print "** NOTE: no password set for this user, "
                 print "         so he/she will not be able to login"
                 print "         via the REST API and the Web Interface."
 
     def user_list(self, *args):
-        load_dbenv()
 
-        from aiida.backends.djsite.db.models import DbUser
-        from aiida.common.utils import get_configured_user_email
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        from aiida.orm.implementation import User
+        from aiida.backends.utils import get_configured_user_email
+
         from aiida.common.exceptions import ConfigurationError
 
         try:
@@ -173,7 +178,7 @@ class User(VerdiCommandWithSubcommands):
         else:
             print >> sys.stderr, "### No default user configured yet, run 'verdi install'! ###"
 
-        for user in DbUser.objects.all().order_by('email'):
+        for user in User.get_all_users():
             name_pieces = []
             if user.first_name:
                 name_pieces.append(user.first_name)

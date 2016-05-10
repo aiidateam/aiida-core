@@ -360,7 +360,6 @@ class Group(VerdiCommandWithSubcommands):
 
         group.remove_nodes(nodes)
 
-
     def group_description(self, *args):
         """
         Edit the group description.
@@ -393,8 +392,6 @@ class Group(VerdiCommandWithSubcommands):
 
         group.description = parsed_args.description
 
-
-
     def group_list(self, *args):
         """
         Print a list of groups in the DB.
@@ -402,8 +399,10 @@ class Group(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
+        import datetime
+        from aiida.utils import timezone
         from aiida.orm.group import get_group_type_mapping
-        from aiida.backends.utils import get_automatic_user, get_group_list
+        from aiida.backends.utils import get_automatic_user
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -448,9 +447,8 @@ class Group(VerdiCommandWithSubcommands):
                 # By default: only groups of this user
                 user = get_automatic_user()
 
-        if parsed_args.type is None:
-            type_string = ""
-        else:
+        type_string = None
+        if parsed_args.type is not None:
             try:
                 type_string = get_group_type_mapping()[parsed_args.type]
             except KeyError:
@@ -462,10 +460,20 @@ class Group(VerdiCommandWithSubcommands):
         name_filters = dict((k, getattr(parsed_args, k))
                             for k in ['startswith','endswith','contains'])
 
-        groups = get_group_list(user, type_string,
-                                n_days_ago=parsed_args.past_days,
-                                name_filters=name_filters)
+        name_filters_list = {"name__" + k: v for (k, v)
+                             in name_filters.iteritems() if v}
 
+        n_days_ago = None
+        if parsed_args.past_days:
+            n_days_ago = (timezone.now() -
+                          datetime.timedelta(days=parsed_args.past_days))
+
+        from aiida.orm.implementation import Group
+        res = Group.query(user=user, type_string=type_string,
+                          past_days=n_days_ago, **name_filters_list)
+
+        groups = tuple([(str(g.pk), g.name, len(g.nodes), g.user.email.strip(),
+                         g.description) for g in res])
 
         # nice formatting
         # gather all info
@@ -511,34 +519,3 @@ class Group(VerdiCommandWithSubcommands):
                 print first_fmt_string.format(pk, the_nams[0], nod, usr)
                 for i in the_nams[1:]:
                     print extra_fmt_string.format(i)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

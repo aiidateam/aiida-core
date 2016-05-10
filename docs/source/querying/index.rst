@@ -14,5 +14,5 @@ Here we describe different approaches to query the data in AiiDA.
     :maxdepth: 4
 
     direct
-    querytool
-    querybuilder
+    querytool/usage
+    querybuilder/usage

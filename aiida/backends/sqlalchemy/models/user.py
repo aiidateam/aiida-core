@@ -12,6 +12,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
+
 class DbUser(Base):
     __tablename__ = "db_dbuser"
 
@@ -62,6 +63,3 @@ class DbUser(Base):
     def __str__(self):
         return self.email
 
-    def delete(self):
-        self.session.delete(self)
-        self.session.commit()

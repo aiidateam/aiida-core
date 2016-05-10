@@ -18,6 +18,18 @@ class AbstractComment(object):
         pass
 
     @abstractproperty
+    def pk(self):
+        pass
+
+    @abstractproperty
+    def id(self):
+        pass
+
+    @abstractproperty
+    def to_be_stored(self):
+        pass
+
+    @abstractproperty
     def uuid(self):
         pass
 
@@ -25,6 +37,7 @@ class AbstractComment(object):
     def get_ctime(self):
         pass
 
+    @abstractmethod
     def set_ctime(self, val):
         pass
 

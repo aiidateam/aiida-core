@@ -4,33 +4,30 @@
 """
 The general functionalities that all querybuilders need to have
 are found in this module.
-:func:`QueryBuilderBase` is the Base class for QueryBuilder classes.
+:func:`AbstractQueryBuilder` is the abstract class for QueryBuilder classes.
 Subclasses need to be written for *every* schema/backend implemented
 in backends.
+
 """
 
 import copy
+import datetime
 from abc import abstractmethod, ABCMeta
 from inspect import isclass as inspect_isclass
 from sa_init import aliased
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import flatten_list
-import datetime
-
-replacement_dict = dict(
-        float='float',
-        int='int',
-        JSONB='jsonb',
-        str='str'
-)
 
 
-class QueryBuilderBase(object):
+class AbstractQueryBuilder(object):
     """
     QueryBuilderBase is the base class for QueryBuilder classes,
     which are than adapted to the individual schema and ORM used.
     In here, general graph traversal functionalities are implemented,
     the specific type of node and link is dealt in subclasses.
+    In order to load the correct subclass::
+
+        from aiida.orm.querybuilder import QueryBuilder
     """
 
     __metaclass__ = ABCMeta
@@ -41,366 +38,6 @@ class QueryBuilderBase(object):
 
 
     def __init__(self, *args, **kwargs):
-        """
-Usage::
-
-    qb  =   Querybuilder(**queryhelp)
-
-The queryhelp:The queryhelp is my API.
-
-        It is a dictionary that tells me:
-
-        *   what to join (key **path**)
-        *   what to project (key **project**)
-        *   how to filter (key **filters**)
-        *   how many rows to return (key **limit**)
-        *   how to order the rows (key **order_by**)
-
-What do you have to specify when you want to query:
-
-*   Specifying the path:
-    Here, the user specifies the path along which to join tables as a list,
-    each list item being a vertice in your path.
-    You can define the vertice in two ways:
-    The first is to give the Aiida-class::
-
-        queryhelp = {
-            'path':[Data]
-        }
-
-        # or  (better)
-
-        queryhelp = {
-            'path':[
-                {'cls': Data}
-            ]
-        }
-
-    The second is to give the polymorphic identity
-    of this class, in our case stored in type::
-
-        queryhelp = {
-            'path':[
-                {'type':"data."}
-            ]
-        }
-
-    .. note::
-        In Aiida, polymorphism is not strictly enforced, but
-        achieved with *type* specification in a column.
-        Type-discrimination is achieved by attaching a filter on the
-        type every time a subclass of Node is given,
-        in above example this would results in::
-
-            ...filter(DbNode.type.like("data%"))...
-
-    Each node has to have a unique label.
-    If not given, the label is chosen to be equal to the type of the class.
-    This will not work if the user chooses the same class twice.
-    In this case he has to provide a label::
-
-        queryhelp = {
-            'path':[
-                {
-                    'cls':Node,
-                    'label':'node_1'
-                },
-                {
-                    'cls':Node
-                    'label':'node_2'
-                }
-            ]
-        }
-
-    There also has to be some information on the edges,
-    in order to join correctly.
-    There are several redundant ways this can be done:
-
-    *   You can specify that this node is an input or output of another node
-        preceding the current one in the list.
-        That other node can be specified by an
-        integer or the class or type.
-        The following examples are all valid joining instructions,
-        assuming there is a structure defined at index 2
-        of the path with label "struc1"::
-
-            edge_specification = queryhelp['path'][3]
-            edge_specification['output_of'] = 2
-            edge_specification['output_of'] = StructureData
-            edge_specification['output_of'] = 'struc1'
-            edge_specification['input_of']  = 2
-            edge_specification['input_of']  = StructureData
-            edge_specification['input_of']  = 'struc1'
-
-    *   queryhelp_item['direction'] = integer
-
-        If any of the above specs ("input_of", "output_of")
-        were not specified, the key "direction" is looked for.
-        Directions are defined as distances in the tree.
-        1 is defined as one step down the tree along a link.
-        This means that 1 joins the node specified in this dictionary
-        to the node specified on list-item before **as an output**.
-        Direction defaults to 1, which is why, if nothing is specified,
-        this node is joined to the previous one as an output by default.
-        A minus sign reverse the direction of the link.
-        The absolute value of the direction defines the table to join to
-        with respect to your own position in the list.
-        An absolute value of 1 joins one table above, a
-        value of 2 to the table defined 2 indices above.
-        The two following queryhelps yield the same  query::
-
-            qh1 = {
-                'path':[
-                    {
-                        'cls':PwCalculation
-                    },
-                    {
-                        'cls':Trajectory
-                    },
-                    {
-                        'cls':ParameterData,
-                        'direction':-2
-                    }
-                ]
-            }
-
-            # returns same query as:
-
-            qh2 = {
-                'path':[
-                    {
-                        'cls':PwCalculation
-                    },
-                    {
-                        'cls':Trajectory
-                    },
-                    {
-                        'cls':ParameterData,
-                        'input_of':PwCalculation
-                    }
-                ]
-            }
-
-            # Shorter version:
-
-            qh3 = {
-                'path':[
-                    ParameterData,
-                    PwCalculation,
-                    Trajectory,
-                ]
-            }
-
-*   Project: Determing which columns the query will return::
-
-        queryhelp = {
-            'path':[Relax],
-            'project':{
-                Relax:['state', 'id'],
-            }
-        }
-
-    If you are using JSONB columns,
-    you can also project a value stored inside the json::
-
-        queryhelp = {
-            'path':[
-                Relax,
-                StructureData,
-            ],
-            'project':{
-                'Relax':['state', 'id'], # Yes, type as string works!
-                StructureData:['attributes.cell']
-            }
-        }
-
-    Returns the state and the id of all instances of Relax and
-    the cells of all structures given that
-    the structures are linked as output of a relax-calculation.
-    The strings that you pass have to be name of the columns.
-    If you pass a star ('*'),
-    the query will return the instance of the AiidaClass.
-
-*   Filtering:
-    What if I want not every structure,
-    but only the ones that were added
-    after a certain time `t` and have an id higher than 50::
-
-        queryhelp = {
-            'path':[
-                {'cls':Relax}, # Relaxation with structure as output
-                {'cls':StructureData}
-            ],
-            'filters':{
-                StructureData:[
-                    {
-                        'time':{'>': t},
-                        'id':{'>': 50}
-                    }
-                ]
-            }
-        }
-
-    With the key 'filters', we instruct the querytool to
-    build filters and attach them to the query.
-    Filters are passed as dictionaries.
-    In each key-value pair, the key is the column-name
-    (as a string) to filter on.
-    The value is another dictionary,
-    where the operator is a key and the value is the
-    value to check against.
-
-    .. note:: This follows (in some way) the MongoDB-syntax.
-
-    But what if the user wants to filter
-    by key-value pairs defined inside the structure?
-    In that case,
-    simply specify the path with the dot (`.`) being a separator.
-    If you want to get to the volume of the structure,
-    stored in the attributes, you can specify::
-
-        queryhelp = {
-            'path':[{'cls':StructureData}],  # or 'path':[StructureData]
-            'filters':{
-                'attributes.volume': {'<':6.0}
-            }
-        }
-
-    The above queryhelp would build a query
-    that returns all structures with a volume below 6.0.
-
-    .. note::   A big advantage of SQLAlchemy is that it support
-                the storage of jsons.
-                It is convenient to dump the structure-data
-                into a json and store that as a column.
-                The querytool needs to be told how to query the json.
-
-Let's get to a really complex use-case,
-where we need to reconstruct a workflow:
-
-#.  The MD-simulation with the parameters and structure used as input
-#.  The trajectory that was returned as an output
-#.  We are only interested in calculations with a convergence threshold
-    smaller than 1e-5 and cutoff larger 60 (stored in the parameters)
-#.  In the parameters, we only want to load the temperature
-#.  The MD simulation has to be in state "parsing" or "finished"
-#.  We want the length of the trajectory
-#.  We filter for structures that:
-
-    *   Have any lattice vector smaller than 3.0 or between 5.0 and 7.0
-    *   Contain Nitrogen
-    *   Have 4 atoms
-    *   Have less than 3 types of atoms (elements)
-
-This would be the queryhelp::
-
-    queryhelp =  {
-        'path':[
-            ParameterData,
-            {
-                'cls':MD,
-                'label':'md'
-            },
-            {
-                'cls':Trajectory
-            },
-            {
-                'cls':StructureData,
-                'input_of':'md'
-            },
-            {
-                'cls':Relax,
-                'input_of':StructureData
-            },
-            {
-                'cls':StructureData,
-                'label':'struc2',
-                'input_of':Relax
-            }
-        ],
-        'project':{
-            ParameterData:'attributes.IONS.tempw',
-            'md':['id', 'time'],
-            Trajectory:[
-                'id',
-                'attributes.length'
-            ],
-            StructureData:[
-                'id',
-                'name',
-                'attributes.sites',
-                'attributes.cell'
-            ],
-            'struc2':[
-                'id',
-                'name',
-                'attributes.sites',
-                'attributes.cell'
-            ],
-        },
-        'filters':{
-            Param:{
-                'and':[
-                    {
-                        'attributes.SYSTEM.econv':{
-                            '<':1e-5
-                        }
-                    },
-                    {
-                        'attributes.SYSTEM.ecut':{
-                            '>':60
-                        }
-                    }
-                ]
-            },
-            'md':{
-                'state':{
-                    'in':[
-                        'computing',
-                        'parsing',
-                        'finished',
-                        'new'
-                    ]
-                }
-            },
-            StructureData:{
-                'or':[
-                    {
-                        'attributes.cell.0.0':{
-                            'or':[
-                                {'<':3.0},
-                                {'>':5., '<':7.}
-                            ]
-                        },
-                    },
-                    {
-                        'attributes.cell.1.1':{
-                            'or':[
-                                {'<':3.0},
-                                {'>':5., '<':7.}
-                            ]
-                        },
-                    },
-                    {
-                        'attributes.cell.2.2':{
-                            'or':[
-                                {'<':3.0},
-                                {'>':5., '<':7.}
-                            ]
-                        },
-                    },
-                ],
-                'attributes.sites':{
-                    'of_length':4
-                },
-                'attributes.kinds':{
-                    'shorter':3,
-                    'has_key':'N',
-                }
-            }
-        }
-    }
-        """
 
         # A list storing the path being traversed by the query
         self.path = []
@@ -589,49 +226,41 @@ This would be the queryhelp::
     def append(self, cls=None, type=None, label=None,
                 autolabel=False, filters=None,
                 project=None, subclassing=True,
-                linklabel=None,
-                **kwargs
+                linklabel=None, linkfilters=None,
+                linkproject=None, **kwargs
         ):
         """
         Any iterative procedure to build the path for a graph query
         needs to invoke this method to append to the path.
 
-        :param cls: The Aiidaclass that you want the node to belong to
+        :param cls: The Aiida-class (or backend-class) defining the appended vertice
         :param type: The type of the class, if cls is not given
-        :param label: A unique label
-        :param filters: Filters to apply for this vertice
+        :param label:
+            A unique label. If none is given, will take the classname.
+            See keyword autolabel to achieve unique label. 
+        :param filters:
+            Filters to apply for this vertice.
+            See usage examples for details.
         :param autolabel:
             Whether to search for a unique label,
-            (default **False**)
+            (default **False**). If **True**, will find a unique label.
+            Cannot be set to **True** if label is specified.
         :param subclassing:
             Whether to include subclasses of the given class
-            (default **False**).
-            E.g. Specifying JobCalculation will include PwCalculations
+            (default **True**).
+            E.g. Specifying JobCalculation will include PwCalculation
 
         A small usage example how this can be invoked::
 
             qb = QueryBuilder() # Instantiating empty querybuilder instance
-            qb.append(cls = StructureData) # First item is StructureData node
+            qb.append(cls=StructureData) # First item is StructureData node
             # Note that also qb.append(StructureData) would work.
-            qb.append(cls = PwCalculation, output_of = StructureData) # The
+            qb.append(cls=PwCalculation, output_of=StructureData) # The
             # next node in the path is a PwCalculation, with
             # a structure joined as an input
             # Note that qb.append(PwCalculation) would have worked as
-            # well, since the default is to join to the previous node as
-            # an output
-            qb.append(
-                cls = StructureData,
-                output_of = PwCalculation,
-                label = 'outputstructure',
-                filters = {
-                    'attributes.kinds':{
-                        'has_key':'N'
-                    }
-                }
-            ) # Joining a structure as output of a PwCalculation
-            # Note that label is necessary to avoid a duplicate label.
 
-        :returns: The label that will be given to this vertice.
+        :returns: self
         """
         ######################## INPUT CHECKS ##########################
         # This function can be called by users, so I am checking the
@@ -810,13 +439,23 @@ This would be the queryhelp::
                 reverse_linklabel = None
             aliased_link = aliased(self.Link)
             self.label_to_alias_map[linklabel] = aliased_link
-            self.filters[linklabel] = {}
-            self.projections[linklabel] = {}
+            
+            
 
             if reverse_linklabel is not None:
                 self.label_to_alias_map[reverse_linklabel] = aliased_link
                 self.filters[reverse_linklabel] = {}
                 self.projections[reverse_linklabel] = {}
+
+            # Filters on links:
+            self.filters[linklabel] = {}
+            if linkfilters is not None:
+                self._add_filter(linklabel, linkfilters)
+            
+            # Projections on links
+            self.projections[linklabel] = {}
+            if linkproject is not None:
+                self._add_projection(linklabel, linkproject)
 
 
         ################### EXTENDING THE PATH #################################
@@ -1010,14 +649,28 @@ This would be the queryhelp::
                         "".format(order_spec)
                     )
             _order_spec = {}
-            for key,val in order_spec.items():
-                if not isinstance(val, (tuple, list)):
-                    val = [val]
+            for key,items_to_order_by in order_spec.items():
+                if not isinstance(items_to_order_by, (tuple, list)):
+                    items_to_order_by = [items_to_order_by]
                 label = self._get_label_from_specification(key)
-                _order_spec[label] = val
+                _order_spec[label] = []
+                for item_to_order_by in items_to_order_by:
+                    if isinstance(item_to_order_by, basestring):
+                        item_to_order_by = {item_to_order_by:{}}
+                    elif isinstance(item_to_order_by, dict):
+                        pass
+                    else:
+                        raise InputValidationError(
+                            "Cannot deal with input to order_by {}\n"
+                            "of type{}"
+                            "\n".format(item_to_order_by, type(item_to_order_by))
+                        )
+                    for k,v in item_to_order_by.items():
+                        if isinstance(v, basestring):
+                            item_to_order_by[k] = {'cast':v}
+                    _order_spec[label].append(item_to_order_by)
 
             self._order_by.append(_order_spec)
-
         return self
 
     @staticmethod
@@ -1410,6 +1063,22 @@ This would be the queryhelp::
                 '{} is not a column of {}'.format(colname, alias)
             )
 
+    def _analyze_order_spec(self, alias, entitylabel, entityspec):
+        try:
+            column_name, attrpath = entitylabel.split('.', 1)
+        except ValueError:
+            column_name = entitylabel
+            attrpath = ''
+
+        entity = self._get_entity(alias, column_name, attrpath, **entityspec)
+        order = entityspec.get('order', 'asc')
+        if order == 'desc':
+            entity = entity.desc()
+        return entity
+    def __repr__(self):
+        from sqlalchemy.dialects import postgresql
+        que = self.get_query()
+        return str(que.statement.compile(compile_kwargs={"literal_binds": True}, dialect=postgresql.dialect()))
     def _build_query(self):
         """
         build the query and return a sqlalchemy.Query instance
@@ -1501,15 +1170,15 @@ This would be the queryhelp::
 
         ######################### ORDER ################################
         for order_spec in self._order_by:
-            for key, val in order_spec.items():
-                alias = self.label_to_alias_map[key]
-                if not isinstance(val, list):
-                    val = [val]
-                for colname in val:
-                    self.que = self.que.order_by(
-                            self.get_column(colname, alias)
-                        )
-
+            for label, entities in order_spec.items():
+                alias = self.label_to_alias_map[label]
+                for entitydict in entities:
+                    for entitylabel, entityspec in entitydict.items():
+                        p = self._analyze_order_spec(alias, entitylabel, entityspec)
+                        self.que = self.que.order_by(p)
+                        #~ print "HERE", p
+                        #~ entity = self._get_entity(alias, column_name, attrpath)
+                        #~ self.que = self.que.order_by(entity)
         ######################### LIMIT ################################
         if self._limit:
             self.que = self.que.limit(self._limit)
@@ -1634,11 +1303,12 @@ This would be the queryhelp::
 
     def all(self):
         """
-        Executes full query.
-        :returns: all rows
-        """
-        results = self.yield_per(100)
+        Executes the full query.
 
+        :returns: a generator for all projected entities (each being a list).
+        """
+
+        results = self.yield_per(100)
         if self.nr_of_projections > 1:
             for res in results:
                 yield map(self._get_aiida_res, res)
@@ -1673,15 +1343,16 @@ This would be the queryhelp::
 
     def get_results_dict(self):
         """
-        Calls :func:`QueryBuilderBase.yield_per` for the generator.
+        Calls :func:`QueryBuilderBase.yield_per`.
         Loops through the results and constructs for each row a dictionary
         of results.
-        In this dictionary (one for each row) the key is a unique label
-        and the value the database entry.
+        In this dictionary (one for each row) the key is the unique label in the path
+        and the value is another dictionary of key-value pairs where the key is the entity
+        (column) and the value the database entry.
         Instances of an ORMclass are replaced with Aiidaclasses invoking
         the DbNode.get_aiida_class method (key is '*').
 
-        :returns: a generator
+        :returns: a generator returning the results as an iterable of dictionaries.
         """
         def get_result(res, pos):
             if hasattr(res, '__iter__'):
@@ -1702,7 +1373,7 @@ This would be the queryhelp::
         """
         Join to inputs of previous vertice in path.
 
-        :returns: self, the querybuilder instance
+        :returns: self
         """
         join_to = self.path[-1]['label']
         cls = kwargs.pop('cls', self.AiidaNode)
@@ -1713,7 +1384,7 @@ This would be the queryhelp::
         """
         Join to outputs of previous vertice in path.
 
-        :returns: self, the querybuilder instance
+        :returns: self
         """
         join_to = self.path[-1]['label']
         cls = kwargs.pop('cls', self.AiidaNode)
@@ -1724,7 +1395,7 @@ This would be the queryhelp::
         """
         Join to children/descendants of previous vertice in path.
 
-        :returns: self, the querybuilder instance
+        :returns: self
         """
         join_to = self.path[-1]['label']
         cls = kwargs.pop('cls', self.AiidaNode)
@@ -1735,7 +1406,7 @@ This would be the queryhelp::
         """
         Join to parents/ancestors of previous vertice in path.
 
-        :returns: self, the querybuilder instance
+        :returns: self
         """
         join_to = self.path[-1]['label']
         cls = kwargs.pop('cls', self.AiidaNode)

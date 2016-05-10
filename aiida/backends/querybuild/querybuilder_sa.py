@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from aiida.backends.querybuild.querybuilder_base import QueryBuilderBase
+from datetime import datetime
+
+from aiida.backends.querybuild.querybuilder_base import AbstractQueryBuilder
 from sa_init import (
         and_, or_, not_, except_, func as sa_func,
         aliased, Integer, Float, Boolean, JSONB, jsonb_array_length
@@ -17,7 +19,7 @@ from aiida.common.exceptions import InputValidationError
 
 
 
-class QueryBuilder(QueryBuilderBase):
+class QueryBuilder(AbstractQueryBuilder):
     """
     QueryBuilder to use with SQLAlchemy-backend and
     schema defined in backends.sqlalchemy.models
@@ -39,8 +41,6 @@ class QueryBuilder(QueryBuilderBase):
         self.AiidaComputer      = AiidaComputer
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
-
-        # raise DeprecationWarning("The use of this class is still deprecated")
     def _get_session(self):
         return sa_session
 
@@ -94,11 +94,10 @@ class QueryBuilder(QueryBuilderBase):
                 return path_in_json.cast(JSONB) # BOOLEANS?
             elif isinstance(value, str):
                 return path_in_json.astext
-
-            elif isinstance(value, datetime.datetime):
+            elif isinstance(value, datetime):
                 return path_in_json.cast(TIMESTAMP)
             else:
-                raise Exception( ' Unknown type {}'.format(type(value)))
+                raise Exception('Unknown type {}'.format(type(value)))
 
         if operator.startswith('~'):
             negation = True
@@ -199,6 +198,30 @@ class QueryBuilder(QueryBuilderBase):
         return expr
 
 
+    def _get_entity(self, alias, column_name, attrpath, cast='j', **kwargs):
+        column = self.get_column(column_name, alias)
+        json_path = attrpath
+        
+        if json_path:
+            if cast =='j':
+                entity = column[json_path].cast(JSONB)
+            elif cast == 'f':
+                entity = column[json_path].cast(Float)
+            elif cast == 'i':
+                entity = column[json_path].cast(Integer)
+            elif cast == 'b':
+                entity = column[json_path].cast(Boolean)
+            elif cast == 't':
+                entity = column[json_path].astext
+            else:
+                raise InputValidationError(
+                        "Invalid type to cast {}".format(cast)
+                    )
+        else:
+            entity = column
+        return entity
+        
+
     def _add_projectable_entity(self, alias, projectable_entity, cast='j', func=None):
 
 
@@ -215,25 +238,11 @@ class QueryBuilder(QueryBuilderBase):
                     )
             self.que = self.que.add_entity(alias)
         else:
-            column = self.get_column(column_name, alias)
-            if json_path:
-                if cast =='j':
-                    entity_to_project = column[json_path].cast(JSONB)
-                elif cast == 'f':
-                    entity_to_project = column[json_path].cast(Float)
-                elif cast == 'i':
-                    entity_to_project = column[json_path].cast(Integer)
-                elif cast == 'b':
-                    entity_to_project = column[json_path].cast(Boolean)
-                elif cast == 't':
-                    entity_to_project = column[json_path].astext
-                else:
-                    raise InputValidationError(
-                            "Invalid type to cast {}".format(cast)
-                        )
-            else:
-                entity_to_project = column
-
+            
+            entity_to_project = self._get_entity(
+                    alias, column_name, json_path,
+                    cast=cast
+                )
             if func is None:
                 pass
             elif func == 'max':

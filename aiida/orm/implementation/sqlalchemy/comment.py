@@ -2,6 +2,7 @@
 
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.orm.implementation.general.comment import AbstractComment
+from aiida.common.exceptions import NotExistent, MultipleObjectsError
 
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
@@ -34,6 +35,8 @@ class Comment(AbstractComment):
 
         else:
             id = kwargs.pop('id', None)
+            if id is None:
+                id = kwargs.pop('pk', None)
             user = kwargs.pop('user', None)
             dbnode = kwargs.pop('dbnode', None)
 
@@ -54,14 +57,27 @@ class Comment(AbstractComment):
 
             ccount = dbcomment_query.count()
             if ccount > 1:
-                raise ValueError("The arguments that you specified were too "
-                                 "vague. More than one comments with this "
-                                 "data were found in the database")
+                raise MultipleObjectsError(
+                    "The arguments that you specified were too vague. More "
+                    "than one comments with this data were found in the "
+                    "database")
             elif ccount == 0:
-                raise ValueError("No comments were found with the given "
-                                 "arguments")
+                raise NotExistent("No comments were found with the given "
+                                  "arguments")
 
             self.dbcomment = dbcomment_query.first()
+
+    @property
+    def pk(self):
+        return self.dbcomment.id
+
+    @property
+    def id(self):
+        return self.dbcomment.id
+
+    @property
+    def to_be_stored(self):
+        return self.dbcomment.id is None
 
     @property
     def uuid(self):

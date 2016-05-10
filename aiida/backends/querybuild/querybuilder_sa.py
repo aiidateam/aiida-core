@@ -269,7 +269,7 @@ class QueryBuilder(AbstractQueryBuilder):
 
         :returns: an aiida-compatible instance
         """
-        if isinstance(res, (self.Group, self.Node)):
+        if isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
             return res.get_aiida_class()
         elif isinstance(res, Choice):
             return res.value

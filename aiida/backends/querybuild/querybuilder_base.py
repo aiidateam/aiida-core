@@ -1071,8 +1071,14 @@ class AbstractQueryBuilder(object):
             attrpath = ''
 
         entity = self._get_entity(alias, column_name, attrpath, **entityspec)
+        order = entityspec.get('order', 'asc')
+        if order == 'desc':
+            entity = entity.desc()
         return entity
-
+    def __repr__(self):
+        from sqlalchemy.dialects import postgresql
+        que = self.get_query()
+        return str(que.statement.compile(compile_kwargs={"literal_binds": True}, dialect=postgresql.dialect()))
     def _build_query(self):
         """
         build the query and return a sqlalchemy.Query instance
@@ -1290,7 +1296,9 @@ class AbstractQueryBuilder(object):
         Executes query asking for distinct rows.
         :returns: distinct rows
         """
-        return self.get_query().distinct()
+        self.que = self.get_query().distinct()
+        return self
+
 
     def _all(self):
         return self.get_query().all()
@@ -1320,6 +1328,7 @@ class AbstractQueryBuilder(object):
         """
         return self.get_query().yield_per(count)
 
+    @abstractmethod
     def _get_aiida_res(self, res):
         """
         Some instance returned by ORM (django or SA) need to be converted
@@ -1330,10 +1339,7 @@ class AbstractQueryBuilder(object):
 
         :returns: an aiida-compatible instance
         """
-        if isinstance(res, (self.Group, self.Node)):
-            return res.get_aiida_class()
-        else:
-            return res
+        pass
 
     def get_results_dict(self):
         """

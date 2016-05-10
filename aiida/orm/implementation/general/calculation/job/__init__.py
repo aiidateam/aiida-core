@@ -1059,6 +1059,7 @@ class AbstractJobCalculation(object):
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
         from aiida.orm.computer import Computer
+        from aiida.orm.user import User
         from aiida.orm.querybuilder import QueryBuilder
 
         if state not in calc_states:
@@ -1066,16 +1067,19 @@ class AbstractJobCalculation(object):
                                "is not a valid calculation state".format(state))
 
         calcfilter = {'state':{'==':state}}
+        computerfilter = {"enabled":{'==':True}}
+        userfilter = {}
+
         if computer is None:
             pass
         elif isinstance(computer, int):
             # An ID was provided
-            calcfilter.update({'dbcomputer_id':{'==':computer}})
+            computerfilter.update({'id':{'==':computer}})
         elif isinstance(computer, Computer):
-            calcfilter.update({'dbcomputer_id':{'==':computer.pk}})
+            computerfilter.update({'id':{'==':computer.pk}})
         else:
             try:
-                calcfilter.update({'dbcomputer_id':{'==':computer.id}})
+                computerfilter.update({'id':{'==':computer.id}})
             except AttributeError as e:
                 raise Exception(
                     "{} is not a valid computer\n{}".format(computer, e)
@@ -1084,25 +1088,26 @@ class AbstractJobCalculation(object):
         if user is None:
             pass
         elif isinstance(user, int):
-            calcfilter.update({'user_id':{'==':user}})
+            userfilter.update({'id':{'==':user}})
         else:
             try:
-                calcfilter.update({'user_id':{'==':int(user.id)}})
+                userfilter.update({'id':{'==':int(user.id)}})
                 # Is that safe?
             except:
                 raise Exception("{} is not a valid user".format(user))
 
+
         qb = QueryBuilder()
-        qb.append(type="computer", label='computer', filters={"enabled":{'==':True}})
+        qb.append(type="computer", label='computer', filters=computerfilter)
+        qb.append(cls, filters=calcfilter, label='calc', runs_on='computer')
+        qb.append(type="user", label='user', filters=userfilter, user_of="calc")
+
         if only_computer_user_pairs:
-            qb.append(
-                    cls, filters=calcfilter,
-                    project=['dbcomputer_id', 'user_id'],
-                    runs_on='computer'
-                )
+            qb._add_projection("computer", "*")
+            qb._add_projection("user", "*")
             returnresult = qb.distinct().all()
         else:
-            qb.append(cls, filters=calcfilter, project=['*'], runs_on='computer')
+            qb._add_projection("calc", "*")
             if limit is not None:
                 qb.limit(limit)
             returnresult = qb.all()

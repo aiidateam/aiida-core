@@ -223,10 +223,11 @@ class Group(AbstractGroup):
 
         list(map(self.dbgroup.dbnodes.remove, list_nodes))
 
-
     @classmethod
     def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
-              user=None, node_attributes=None, past_days=None, **kwargs):
+              user=None, node_attributes=None, past_days=None,
+              name_filters=None, **kwargs):
+
         from aiida.orm.implementation.sqlalchemy.node import Node
 
         filters = []
@@ -264,6 +265,17 @@ class Group(AbstractGroup):
             else:
                 # This should be a DbUser
                 filters.append(DbGroup.user == user)
+
+        if name_filters:
+            for (k, v) in name_filters.iteritems():
+                if not v:
+                    continue
+                if k == "startswith":
+                    filters.append(DbGroup.name.like("{}%".format(v)))
+                elif k == "endswith":
+                    filters.append(DbGroup.name.like("%{}".format(v)))
+                elif k == "contains":
+                    filters.append(DbGroup.name.like("%{}%".format(v)))
 
         if node_attributes:
             # TODO SP: IMPLEMENT THIS

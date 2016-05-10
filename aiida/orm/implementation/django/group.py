@@ -73,7 +73,6 @@ class Group(AbstractGroup):
         if self._is_stored:
             self.dbgroup.save()
 
-
     @property
     def type_string(self):
         return self.dbgroup.type
@@ -211,7 +210,9 @@ class Group(AbstractGroup):
 
     @classmethod
     def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
-              user=None, node_attributes=None, past_days=None, **kwargs):
+              user=None, node_attributes=None, past_days=None,
+              name_filters=None, **kwargs):
+
         from aiida.backends.djsite.db.models import (DbGroup, DbNode,
                                                      DbAttribute)
 
@@ -253,8 +254,13 @@ class Group(AbstractGroup):
             else:
                 queryobject &= Q(user=user)
 
+        if name_filters is not None:
+            name_filters_list = {"name__" + k: v for (k, v)
+                                 in name_filters.iteritems() if v}
+            queryobject &= Q(**name_filters_list)
+
         groups_pk = set(DbGroup.objects.filter(
-            queryobject,**kwargs).values_list('pk', flat=True))
+            queryobject, **kwargs).values_list('pk', flat=True))
 
         if node_attributes is not None:
             for k, vlist in node_attributes.iteritems():

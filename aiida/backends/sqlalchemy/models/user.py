@@ -63,3 +63,7 @@ class DbUser(Base):
     def __str__(self):
         return self.email
 
+    def get_aiida_class(self):
+        from aiida.orm.user import User
+        return User(dbuser=self)
+

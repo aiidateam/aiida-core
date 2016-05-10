@@ -88,6 +88,10 @@ class DbComputer(Base):
             raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
         return dbcomputer
 
+    def get_aiida_class(self):
+        from aiida.orm.computer import Computer
+        return Computer(dbcomputer=self)
+
     def get_workdir(self):
         try:
             return self._metadata['workdir']

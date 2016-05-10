@@ -48,6 +48,20 @@ class QueryBuilder(AbstractQueryBuilder):
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
 
+    def _get_aiida_res(self, res):
+        """
+        Some instance returned by ORM (django or SA) need to be converted
+        to Aiida instances (eg nodes)
+
+        :param res: the result returned by the query
+        :param key: the key that this entry would be return with
+
+        :returns: an aiida-compatible instance
+        """
+        if isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
+            return res.get_aiida_class()
+        else:
+            return res
 
     @staticmethod
     def _get_session():

@@ -1297,16 +1297,7 @@ class AbstractQueryBuilder(object):
         :returns: distinct rows
         """
         self.que = self.get_query().distinct()
-        results = self.yield_per(100)
-        if self.nr_of_projections > 1:
-            for res in results:
-                for r in res:
-                    s = self._get_aiida_res(r)
-                    print type(r), r, type(s), s
-                yield [self._get_aiida_res(r) for r in  res]
-        else:
-            for res in results:
-                yield self._get_aiida_res(res)
+        return self
 
 
     def _all(self):

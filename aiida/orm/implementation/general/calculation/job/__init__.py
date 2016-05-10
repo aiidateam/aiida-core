@@ -1105,7 +1105,7 @@ class AbstractJobCalculation(object):
         if only_computer_user_pairs:
             qb._add_projection("computer", "*")
             qb._add_projection("user", "*")
-            returnresult = qb.distinct()
+            returnresult = qb.distinct().all()
         else:
             qb._add_projection("calc", "*")
             if limit is not None:

@@ -1296,7 +1296,18 @@ class AbstractQueryBuilder(object):
         Executes query asking for distinct rows.
         :returns: distinct rows
         """
-        return self.get_query().distinct()
+        self.que = self.get_query().distinct()
+        results = self.yield_per(100)
+        if self.nr_of_projections > 1:
+            for res in results:
+                for r in res:
+                    s = self._get_aiida_res(r)
+                    print type(r), r, type(s), s
+                yield [self._get_aiida_res(r) for r in  res]
+        else:
+            for res in results:
+                yield self._get_aiida_res(res)
+
 
     def _all(self):
         return self.get_query().all()
@@ -1326,6 +1337,7 @@ class AbstractQueryBuilder(object):
         """
         return self.get_query().yield_per(count)
 
+    @abstractmethod
     def _get_aiida_res(self, res):
         """
         Some instance returned by ORM (django or SA) need to be converted
@@ -1336,10 +1348,7 @@ class AbstractQueryBuilder(object):
 
         :returns: an aiida-compatible instance
         """
-        if isinstance(res, (self.Group, self.Node)):
-            return res.get_aiida_class()
-        else:
-            return res
+        pass
 
     def get_results_dict(self):
         """

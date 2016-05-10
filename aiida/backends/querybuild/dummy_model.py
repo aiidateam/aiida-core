@@ -225,6 +225,16 @@ class DbComputer(Base):
 
     transport_params = Column(String(255))
 
+    def get_aiida_class(self):
+        from aiida.backends.djsite.db.models import DbComputer as DjangoSchemaDbComputer
+        djcomputer = DjangoSchemaDbComputer(
+            id=self.id, uuid=self.uuid, name=self.name,
+            hostname=self.hostname, description=self.description,
+            enabled=self.enabled, transport_type=self.transport_type,
+            scheduler_type=self.scheduler_type, transport_params=self.transport_params
+        )
+        return djcomputer.get_aiida_class()
+
 class DbUser(Base):
     __tablename__ = "db_dbuser"
 
@@ -240,6 +250,17 @@ class DbUser(Base):
 
     last_login = Column(DateTime(timezone=True), default=timezone.now)
     date_joined = Column(DateTime(timezone=True), default=timezone.now)
+
+    def get_aiida_class(self):
+        from aiida.backends.djsite.db.models import DbUser as DjangoSchemaDbUser
+        djuser = DjangoSchemaDbUser(
+            id=self.id,email=self.email, password=self.password, 
+            first_name=self.first_name, last_name=self.last_name,
+            institution=self.institution, is_staff=self.is_staff,
+            is_active=self.is_active, last_login=self.last_login,
+            date_joined=self.date_joined
+        )
+        return djuser.get_aiida_class()
 
 
 table_groups_nodes = Table(

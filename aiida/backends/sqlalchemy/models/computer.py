@@ -68,6 +68,12 @@ class DbComputer(Base):
             except MultipleResultsFound:
                 raise DbContentError("There is more than one computer with name '{}', "
                                      "pass a Computer instance".format(computer))
+        elif isinstance(computer, int):
+            try:
+                dbcomputer = cls.session.query(cls).filter(cls.id==computer).one()
+            except NoResultFound:
+                raise NotExistent("No computer found in the table of computers with "
+                                  "the given pk '{}'".format(computer))
 
         elif isinstance(computer, DbComputer):
             if computer.id is None:

@@ -178,41 +178,9 @@ def update_running_calcs_status(authinfo):
     return computed
 
 
-def get_authinfo(computer, aiidauser):
-    if settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
-
-        try:
-            authinfo = DbAuthInfo.objects.get(
-                # converts from name, Computer or DbComputer instance to
-                # a DbComputer instance
-                dbcomputer=DbComputer.get_dbcomputer(computer),
-                aiidauser=aiidauser)
-        except ObjectDoesNotExist:
-            raise AuthenticationError(
-                "The aiida user {} is not configured to use computer {}".format(
-                    aiidauser.email, computer.name))
-        except MultipleObjectsReturned:
-            raise ConfigurationError(
-                "The aiida user {} is configured more than once to use "
-                "computer {}! Only one configuration is allowed".format(
-                    aiidauser.email, computer.name))
-    elif settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-        from aiida.backends.sqlalchemy import session
-        authinfo = session.query(DbAuthInfo).filter_by(
-                dbcomputer_id=computer.id,
-                aiidauser_id=aiidauser.id,
-                
-                ).one()
-
-    else:
-        raise Exception("unknown backend {}".format(settings.BACKEND))
-    return authinfo
-
-
 def retrieve_jobs():
     from aiida.orm import JobCalculation, Computer
+    from aiida.backends.utils import get_authinfo
 
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.db.models import DbComputer, DbUser
@@ -260,6 +228,8 @@ def update_jobs():
     calls an update for each set of pairs (machine, aiidauser)
     """
     from aiida.orm import JobCalculation, Computer
+    from aiida.backends.utils import get_authinfo
+
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.db.models import DbComputer, DbUser
     elif settings.BACKEND == BACKEND_SQLA:
@@ -306,16 +276,9 @@ def submit_jobs():
     """
     Submit all jobs in the TOSUBMIT state.
     """
-    from aiida.orm import JobCalculation, Computer
+    from aiida.orm import JobCalculation, Computer, User
     from aiida.utils.logger import get_dblogger_extra
-
-
-    if settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.db.models import DbComputer, DbUser
-    elif settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.models.computer import DbComputer
-        from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.backends.sqlalchemy import session
+    from aiida.backends.utils import get_authinfo
 
     computers_users_to_check = set(
         JobCalculation._get_all_with_state(
@@ -323,24 +286,20 @@ def submit_jobs():
             only_computer_user_pairs=True,
             only_enabled=True)
     )
+    print computers_users_to_check
 
     # I create a unique set of pairs (computer, aiidauser)
 
-    for dbcomputer_id, aiidauser_id in computers_users_to_check:
+    for dbcomputer_id, dbuser_id in computers_users_to_check:
 
-
-        if settings.BACKEND == BACKEND_DJANGO:
-            aiidauser = DbUser.objects.get(id=aiidauser_id)
-            dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        else:
-            aiidauser = session.query(DbUser).get(aiidauser_id)
-            dbcomputer = session.query(DbComputer).get(dbcomputer_id)
+        user = User.search_for_users(id=dbuser_id)
+        computer = Computer.get(dbcomputer_id)
         execlogger.debug("({},{}) pair to submit".format(
-            aiidauser.email, dbcomputer.name))
+            user.email, computer.name))
 
         try:
             try:
-                authinfo = get_authinfo(dbcomputer, aiidauser)
+                authinfo = get_authinfo(computer.dbcomputer, user.dbuser)
             except AuthenticationError:
                 # TODO!!
                 # Put each calculation in the SUBMISSIONFAILED state because

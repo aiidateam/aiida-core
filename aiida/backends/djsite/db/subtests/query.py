@@ -25,9 +25,9 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(clstype, 'data.structure.StructureData.')
         self.assertTrue(issubclass(cls, DbNode))
 
-        with self.assertRaises(DeprecationWarning):
-            qb._get_ormclass(None, 'structure')
-
+        cls, clstype = qb._get_ormclass(None, 'structure')
+        self.assertEqual(clstype, 'data.structure.StructureData.')
+        self.assertTrue(issubclass(cls, DbNode))
 
         cls, clstype = qb._get_ormclass(Node, None)
         self.assertEqual(clstype, 'node.Node')

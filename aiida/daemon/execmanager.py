@@ -17,8 +17,7 @@ from aiida.common.exceptions import (
 from aiida.common import aiidalogger
 from aiida.orm import load_node
 
-from aiida.backends import settings
-from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
@@ -182,40 +181,26 @@ def retrieve_jobs():
     from aiida.orm import JobCalculation, Computer
     from aiida.backends.utils import get_authinfo
 
-    if settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.db.models import DbComputer, DbUser
-    elif settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.models.computer import DbComputer
-        from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.backends.sqlalchemy import session
-
     # I create a unique set of pairs (computer, aiidauser)
-    computers_users_to_check = set(
+    computers_users_to_check = list(
         JobCalculation._get_all_with_state(
             state=calc_states.COMPUTED,
             only_computer_user_pairs=True,
             only_enabled=True)
     )
 
-    for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        if settings.BACKEND == BACKEND_DJANGO:
-            aiidauser = DbUser.objects.get(id=aiidauser_id)
-            dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        else:
-            aiidauser = session.query(DbUser).get(aiidauser_id)
-            dbcomputer = session.query(DbComputer).get(dbcomputer_id)
-
+    for computer, aiidauser in computers_users_to_check:
         execlogger.debug("({},{}) pair to check".format(
-            aiidauser.email, dbcomputer.name))
+            aiidauser.email, computer.name))
         try:
-            authinfo = get_authinfo(dbcomputer, aiidauser)
+            authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
             retrieve_computed_for_authinfo(authinfo)
         except Exception as e:
             msg = ("Error while retrieving calculation status for "
                    "aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
                 aiidauser.email,
-                dbcomputer.name,
+                computer.name,
                 e.__class__.__name__, e.message))
             execlogger.error(msg)
             # Continue with next computer
@@ -227,18 +212,12 @@ def update_jobs():
     """
     calls an update for each set of pairs (machine, aiidauser)
     """
-    from aiida.orm import JobCalculation, Computer
+    from aiida.orm import JobCalculation, Computer, User
     from aiida.backends.utils import get_authinfo
 
-    if settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.db.models import DbComputer, DbUser
-    elif settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.models.computer import DbComputer
-        from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.backends.sqlalchemy import session
 
     # I create a unique set of pairs (computer, aiidauser)
-    computers_users_to_check = set(
+    computers_users_to_check = list(
         JobCalculation._get_all_with_state(
             state=calc_states.WITHSCHEDULER,
             only_computer_user_pairs=True,
@@ -246,26 +225,20 @@ def update_jobs():
         )
     )
 
-    for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        if settings.BACKEND == BACKEND_DJANGO:
-            aiidauser = DbUser.objects.get(id=aiidauser_id)
-            dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        else:
-            aiidauser = session.query(DbUser).get(aiidauser_id)
-            dbcomputer = session.query(DbComputer).get(dbcomputer_id)
+    for computer, aiidauser in computers_users_to_check:
 
         execlogger.debug("({},{}) pair to check".format(
-            aiidauser.email, dbcomputer.name))
+            aiidauser.email, computer.name))
 
         try:
-            authinfo = get_authinfo(dbcomputer, aiidauser)
+            authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
             computed_calcs = update_running_calcs_status(authinfo)
         except Exception as e:
             msg = ("Error while updating calculation status "
                    "for aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
                 aiidauser.email,
-                dbcomputer.name,
+                computer.name,
                 e.__class__.__name__, e.message))
             execlogger.error(msg)
             # Continue with next computer
@@ -280,34 +253,31 @@ def submit_jobs():
     from aiida.utils.logger import get_dblogger_extra
     from aiida.backends.utils import get_authinfo
 
-    computers_users_to_check = set(
-        JobCalculation._get_all_with_state(
+    computers_users_to_check = list(JobCalculation._get_all_with_state(
             state=calc_states.TOSUBMIT,
             only_computer_user_pairs=True,
-            only_enabled=True)
+            only_enabled=True
+        )
     )
-    print computers_users_to_check
 
-    # I create a unique set of pairs (computer, aiidauser)
 
-    for dbcomputer_id, dbuser_id in computers_users_to_check:
 
-        user = User.search_for_users(id=dbuser_id)
-        computer = Computer.get(dbcomputer_id)
+    for computer, aiidauser in computers_users_to_check:
+        #~ user = User.search_for_users(id=dbuser_id)
+        #~ computer = Computer.get(dbcomputer_id)
         execlogger.debug("({},{}) pair to submit".format(
-            user.email, computer.name))
+            aiidauser.email, computer.name))
 
         try:
             try:
-                authinfo = get_authinfo(computer.dbcomputer, user.dbuser)
+                authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
             except AuthenticationError:
                 # TODO!!
                 # Put each calculation in the SUBMISSIONFAILED state because
                 # I do not have AuthInfo to submit them
                 calcs_to_inquire = JobCalculation._get_all_with_state(
                     state=calc_states.TOSUBMIT,
-                    computer=dbcomputer,
-                    user=aiidauser)
+                    computer=computer, user=aiidauser)
                 for calc in calcs_to_inquire:
                     try:
                         calc._set_state(calc_states.SUBMISSIONFAILED)
@@ -327,12 +297,12 @@ def submit_jobs():
             submitted_calcs = submit_jobs_with_authinfo(authinfo)
         except Exception as e:
             import traceback
-            
+
             msg = ("Error while submitting jobs "
                    "for aiidauser={} on computer={}, "
                    "error type is {}, traceback: {}".format(
                 aiidauser.email,
-                dbcomputer.name,
+                computer.name,
                 e.__class__.__name__, traceback.format_exc()))
             print msg
             execlogger.error(msg)

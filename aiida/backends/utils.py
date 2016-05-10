@@ -99,7 +99,7 @@ def get_configured_user_email(*args, **kwargs):
 
 def get_authinfo(computer, aiidauser):
 
-    if settings.BACKEND == BACKEND_DJANGO:
+    if settings.BACKEND == "django":
         from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
 
         try:
@@ -117,7 +117,7 @@ def get_authinfo(computer, aiidauser):
                 "The aiida user {} is configured more than once to use "
                 "computer {}! Only one configuration is allowed".format(
                     aiidauser.email, computer.name))
-    elif settings.BACKEND == BACKEND_SQLA:
+    elif settings.BACKEND == "sqlalchemy":
         from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
         from aiida.backends.sqlalchemy import session
         from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound

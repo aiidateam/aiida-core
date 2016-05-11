@@ -198,20 +198,20 @@ class QueryBuilder(AbstractQueryBuilder):
         return expr
 
 
-    def _get_entity(self, alias, column_name, attrpath, cast='j', **kwargs):
+    def _get_entity(self, alias, column_name, attrpath, dtype='j', **kwargs):
         column = self.get_column(column_name, alias)
         json_path = attrpath
         
         if json_path:
-            if cast =='j':
+            if dtype =='j':
                 entity = column[json_path].cast(JSONB)
-            elif cast == 'f':
+            elif dtype == 'f':
                 entity = column[json_path].cast(Float)
-            elif cast == 'i':
+            elif dtype == 'i':
                 entity = column[json_path].cast(Integer)
-            elif cast == 'b':
+            elif dtype == 'b':
                 entity = column[json_path].cast(Boolean)
-            elif cast == 't':
+            elif dtype == 't':
                 entity = column[json_path].astext
             else:
                 raise InputValidationError(
@@ -222,7 +222,7 @@ class QueryBuilder(AbstractQueryBuilder):
         return entity
         
 
-    def _add_projectable_entity(self, alias, projectable_entity, cast='j', func=None):
+    def _add_projectable_entity(self, alias, projectable_entity, dtype='j', func=None):
 
 
         column_name = projectable_entity.split('.')[0]
@@ -240,8 +240,7 @@ class QueryBuilder(AbstractQueryBuilder):
         else:
             
             entity_to_project = self._get_entity(
-                    alias, column_name, json_path,
-                    cast=cast
+                    alias, column_name, json_path, dtype=dtype
                 )
             if func is None:
                 pass

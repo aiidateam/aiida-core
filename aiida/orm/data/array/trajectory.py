@@ -445,11 +445,11 @@ class TrajectoryData(ArrayData):
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
         from aiida.orm.data.parameter import ParameterData
-        import trajectory  # This same module
 
         param = ParameterData(dict=kwargs)
-        conv_f = getattr(trajectory, '_get_aiida_structure_inline')
-        ret_dict = conv_f(trajectory=self, parameters=param, store=store)
+
+        ret_dict = _get_aiida_structure_inline(
+            trajectory=self, parameters=param, store=store)
         return ret_dict['structure']
 
     def _get_cif(self, index=None, **kwargs):

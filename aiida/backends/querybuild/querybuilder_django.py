@@ -216,7 +216,7 @@ class QueryBuilder(AbstractQueryBuilder):
                 ]
         return and_(*expressions)
 
-    def _get_entity(self, alias, column_name, attrpath, cast='undefined', **kwargs):
+    def _get_entity(self, alias, column_name, attrpath, dtype='undefined', **kwargs):
         if attrpath:
             if alias._aliased_insp.class_ == self.Node:
                 if column_name == 'attributes':
@@ -233,25 +233,25 @@ class QueryBuilder(AbstractQueryBuilder):
                 )
             self.que = self.que.filter(addalias.key == attrpath)
 
-            if cast =='t':
+            if dtype =='t':
                 entity = self.get_column('tval', addalias)
-            elif cast == 'f':
+            elif dtype == 'f':
                 entity = self.get_column('fval', addalias)
-            elif cast == 'i':
+            elif dtype == 'i':
                 entity = self.get_column('ival', addalias)
-            elif cast == 'b':
+            elif dtype == 'b':
                 entity = self.get_column('bval', addalias)
-            elif cast == 'd':
+            elif dtype == 'd':
                 entity = self.get_column('dval', addalias)
             else:
                 raise InputValidationError(
-                        "Invalid type to cast {}".format(cast)
+                        "Invalid type to dtype {}".format(dtype)
                     )
         else:
             entity = self.get_column(column_name, alias)
         return entity
 
-    def _add_projectable_entity(self, alias, projectable_entity, cast='undefined', func=None):
+    def _add_projectable_entity(self, alias, projectable_entity, dtype='undefined', func=None):
         """
         :param alias:
             A instance of *sqlalchemy.orm.util.AliasedClass*, alias for an ormclass
@@ -276,7 +276,7 @@ class QueryBuilder(AbstractQueryBuilder):
                     )
             self.que = self.que.add_entity(alias)
         else:
-            entity_to_project = self._get_entity(alias, column_name, attrpath, cast)
+            entity_to_project = self._get_entity(alias, column_name, attrpath, dtype)
             if func is None:
                 pass
             elif func == 'max':

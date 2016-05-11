@@ -34,7 +34,7 @@ class AbstractQueryBuilder(object):
 
     NODE_TYPE = 'node.Node'
     LINKLABEL_DEL = '--'
-    VALID_PROJECTION_KEYS = ('func', 'cast')
+    VALID_PROJECTION_KEYS = ('func', 'dtype')
 
 
     def __init__(self, *args, **kwargs):
@@ -548,8 +548,8 @@ class AbstractQueryBuilder(object):
                 for key, val in spec.items():
                     if key not in self.VALID_PROJECTION_KEYS:
                         raise InputValidationError(
-                            "{} is not a valid key ({})".format(
-                                key, self._valid_projection_keys)
+                            "{} is not a valid key {}".format(
+                                key, self.VALID_PROJECTION_KEYS)
                         )
                         if not isinstance(val, basestring):
                             raise InputValidationError(
@@ -667,7 +667,7 @@ class AbstractQueryBuilder(object):
                         )
                     for k,v in item_to_order_by.items():
                         if isinstance(v, basestring):
-                            item_to_order_by[k] = {'cast':v}
+                            item_to_order_by[k] = {'dtype':v}
                     _order_spec[label].append(item_to_order_by)
 
             self._order_by.append(_order_spec)

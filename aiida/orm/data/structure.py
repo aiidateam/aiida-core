@@ -2318,7 +2318,7 @@ class Site(object):
                                                   self.position[2])
 
 
-def get_structuredata_from_qeinput(filepath = None, text = None):
+def get_structuredata_from_qeinput(filepath=None, text=None):
     """
     Function that receives either
     :param filepath: the filepath storing **or**
@@ -2348,16 +2348,18 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
                             \s+                         # White space in front of the number
                             [-|+]?                      # Plus or minus in front of the number (optional)
                             (
-                                \d*                     # optional decimal in the beginning .0001 is ok, for example
-                                [\.]                    # There has to be a dot followed by
-                                \d+                     # at least one decimal
+                                (
+                                    \d*                 # optional decimal in the beginning .0001 is ok, for example
+                                    [\.]                # There has to be a dot followed by
+                                    \d+                 # at least one decimal
+                                )
+                                |                       # OR
+                                (
+                                    \d+                 # at least one decimal, followed by
+                                    [\.]?               # an optional dot ( both 1 and 1. are fine)
+                                    \d*                 # And optional number of decimals (1.00001)
+                                )                        # followed by optional decimals
                             )
-                            |                           # OR
-                            (
-                                \d+                     # at least one decimal, followed by
-                                [\.]?                   # an optional dot ( both 1 and 1. are fine)
-                                \d*                     # And optional number of decimals (1.00001)
-                            )                        # followed by optional decimals
                             ([E|e|d|D][+|-]?\d+)?       # optional exponents E+03, e-05
                         ){3}                            # I expect three float values
                         ((\s+[0-1]){3}\s*)?             # Followed by optional ifpos 
@@ -2404,49 +2406,49 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
         (?P<cell>
         (
             (
-                \s*                                     # White space in front of the element spec is ok
+                \s*             # White space in front of the element spec is ok
                 (
                     (
-                       \s+                              # White space in front of the number
-                        [-|+]?                      # Plus or minus in front of the number (optional)
-                        (\d*                            # optional decimal in the beginning .0001 is ok, for example
-                        [\.]                            # There has to be a dot followed by
-                        \d+)                            # at least one decimal
-                        |                               # OR
-                        (\d+                            # at least one decimal, followed by
-                        [\.]?                           # an optional dot
-                        \d*)                            # followed by optional decimals
-                        ([E|e|d|D][+|-]?\d+)?    # optional exponents E+03, e-05, d0, D0
-                    ){3}                                # I expect three float values
+                       \s+       # White space in front of the number
+                        [-|+]?   # Plus or minus in front of the number (optional)
+                        (\d*     # optional decimal in the beginning .0001 is ok, for example
+                        [\.]     # There has to be a dot followed by
+                        \d+)     # at least one decimal
+                        |        # OR
+                        (\d+     # at least one decimal, followed by
+                        [\.]?    # an optional dot
+                        \d*)     # followed by optional decimals
+                        ([E|e|d|D][+|-]?\d+)?  # optional exponents E+03, e-05, d0, D0
+                    ){3}         # I expect three float values
                     |
                     \#
                     |
-                    !                                  # If a line is commented out, that is also ok
+                    !            # If a line is commented out, that is also ok
                 )
-                .*                                      # I do not care what is after the comment or the vector
-                |                                       # OR
-                \s*                                     # A line only containing white space
+                .*               # I do not care what is after the comment or the vector
+                |                # OR
+                \s*              # A line only containing white space
              )
-            [\n]                                        # line break at the end
-        ){3}                                            # I need exactly 3 vectors
+            [\n]                 # line break at the end
+        ){3}                     # I need exactly 3 vectors
     )
     """, re.X | re.M)
 
     # Matches each vector inside the cell block
     cell_vector_regex =  re.compile(r"""
-        ^                                               # Linestart
-        [ \t]*                                          # Optional white space
-        (?P<x>                                          # Get x
+        ^                        # Linestart
+        [ \t]*                   # Optional white space
+        (?P<x>                   # Get x
             [\-|\+]? ( \d*[\.]\d+ | \d+[\.]?\d*)
             ([E|e|d|D][+|-]?\d+)?
         )
         [ \t]+
-        (?P<y>                                          # Get y
+        (?P<y>                   # Get y
             [\-|\+]? (\d*[\.]\d+ | \d+[\.]?\d*)
             ([E|e|d|D][+|-]?\d+)?
         )
         [ \t]+
-        (?P<z>                                          # Get z
+        (?P<z>                   # Get z
             [\-|\+]? (\d*[\.]\d+ | \d+[\.]?\d*)
             ([E|e|d|D][+|-]?\d+)?
         )
@@ -2457,50 +2459,51 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
 
     # Match the block where atomic species are defined:
     atomic_species_block_regex = re.compile("""
-        ATOMIC_SPECIES \s+                              # Prepended by ATOMIC_SPECIES
+        ATOMIC_SPECIES \s+       # Prepended by ATOMIC_SPECIES
         (?P<block>
-            ([ \t]*                                     # Space at line beginning
-            [A-Za-z0-9]+                                # tag for atom, max 3 characters
-            [ \t]+                                      # Space
+            ([ \t]*              # Space at line beginning
+            [A-Za-z0-9]+         # tag for atom, max 3 characters
+            [ \t]+               # Space
             ( \d*[\.]\d+  | \d+[\.]?\d* )
-            ([D|d|E|e][+|-]?\d+)?                      # Mass
-            [ \t]+                                     # Space
-            \S+ \.(UPF | upf)                          # Pseudofile
+            ([D|d|E|e][+|-]?\d+)?                   # Mass
+            [ \t]+                                  # Space
+            \S+ \.(UPF | upf)                       # Pseudofile
             \s+)+
          )
          """, re.X | re.M)
 
     # Matches each atomic species inside the atomic specis block:
     atomic_species_regex = re.compile("""
-        ^[ \t]*                                         # Space at line beginning
+        ^[ \t]*                  # Space at line beginning
         (?P<tag>
-            [A-Za-z0-9]+                                # tag for atom, max 3 characters
+            [A-Za-z0-9]+         # tag for atom, max 3 characters
         )
-            [ \t]+                                      # Space
-        (?P<mass>                                       # Mass
+            [ \t]+               # Space
+        (?P<mass>                # Mass
             ( \d*[\.]\d+  | \d+[\.]?\d* )
             ([D|d|E|e][+|-]?\d+)?
         )
-            [ \t]+                                      # Space
+            [ \t]+               # Space
         (?P<pseudo>
-            \S+ \.(UPF | upf)                           # Pseudofile
+            \S+ \.(UPF | upf)    # Pseudofile
         )
         """, re.X | re.M)
 
     valid_elements_regex = re.compile("""
         (?P<ele>
-            H  | He |
-            Li | Be | B  | C  | N  | O  | F  | Ne | 
-            Na | Mg | Al | Si | P  | S  | Cl | Ar | 
-            K  | Ca | Sc | Ti | V  | Cr | Mn | Fe | Co | Ni | Cu | Zn | Ga | Ge | As | Se | Br | Kr | 
-            Rb | Sr | Y  | Zr | Nb | Mo | Tc | Ru | Rh | Pd | Ag | Cd | In | Sn | Sb | Te | I  | Xe | 
-            Cs | Ba | Hf | Ta | W  | Re | Os | Ir | Pt | Au | Hg | Tl | Pb | Bi | Po | At | Rn | 
-            Fr | Ra | Rf | Db | Sg | Bh | Hs | Mt |
+H  | He |
+Li | Be | B  | C  | N  | O  | F  | Ne | 
+Na | Mg | Al | Si | P  | S  | Cl | Ar | 
+K  | Ca | Sc | Ti | V  | Cr | Mn | Fe | Co | Ni | Cu | Zn | Ga | Ge | As | Se | Br | Kr | 
+Rb | Sr | Y  | Zr | Nb | Mo | Tc | Ru | Rh | Pd | Ag | Cd | In | Sn | Sb | Te | I  | Xe | 
+Cs | Ba | Hf | Ta | W  | Re | Os | Ir | Pt | Au | Hg | Tl | Pb | Bi | Po | At | Rn | 
+Fr | Ra | Rf | Db | Sg | Bh | Hs | Mt |
 
-            La | Ce | Pr | Nd | Pm | Sm | Eu | Gd | Tb | Dy | Ho | Er | Tm | Yb | Lu |    # Lanthanides
-            Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr |    # Actinides
+La | Ce | Pr | Nd | Pm | Sm | Eu | Gd | Tb | Dy | Ho | Er | Tm | Yb | Lu | # Lanthanides
+Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Actinides
         )
-        [^a-z]   # Any specification of an element is followed by some number or capital letter or special character.
+        [^a-z]  # Any specification of an element is followed by some number 
+                # or capital letter or special character.
     """, re.X)
     # I need either a valid filepath or the text of the qeinput file:
     if filepath:
@@ -2509,7 +2512,9 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
     elif text:
         txt = text
     else:
-        raise Exception('Provide either a filepath or text to be parsed')
+        raise InputValidationError(
+                'Provide either a filepath or text to be parsed'
+            )
 
     #########  THE CELL ################
 
@@ -2596,7 +2601,8 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
                     'celldm(1) or A'
                 )
         # So, depending on what is defined for the first lattice vector,
-        # I define the keys that I will look for to find the other geometry definitions
+        # I define the keys that I will look for to find the other
+        # geometry definitions
         try:
             if celldm1:
                 keys_in_qeinput = (
@@ -2606,7 +2612,8 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
                     'celldm\(5\)',
                     'celldm\(6\)',
                 )
-                # I will do all my calculations in ABC-system and therefore need a conversion factor
+                # I will do all my calculations in ABC-system and
+                # therefore need a conversion factor
                 # if celldm system is chosen:
                 a = bohr_to_ang*celldm1
                 length_conversion = a
@@ -2619,7 +2626,8 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
                     'cosBC',
                 )
                 length_conversion =  1.
-            # Not all geometry definitions are needs, but some are necessary depending on ibrav
+            # Not all geometry definitions are needs,
+            # but some are necessary depending on ibrav
             # and will be matched here:
             if abs(ibrav)  > 7:
                 i = 0
@@ -2637,8 +2645,9 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
                 sinb = np.sqrt(1. - cosb**2)
             if ibrav in (5, 14):
                 i = 4
-                cosa = 1.*get_fortfloat(keys_in_qeinput[i],txt)  # The multiplication with 1.
-                    # necessary to raise Exception here if None was returned by get_fortfloat
+                cosa = 1.*get_fortfloat(keys_in_qeinput[i],txt)  
+                    # The multiplication with 1.
+                    # raises Exception here if None was returned by get_fortfloat
         except Exception as e:
             raise InputValidationError(
                 '\nException {} raised when searching for\n'
@@ -2825,12 +2834,12 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
             [
                 c*cosb,
                 c*(cosa - cosb *cosg ) / sing,
-                c*np.sqrt( 1. + 2.*cosa*cosb*cosg - cosa**2-cosb**2 - cosg**2) / sing
+                c*np.sqrt(1.+2.*cosa*cosb*cosg-cosa**2-cosb**2-cosg**2)/sing
             ]
         ])
 
-    # Ok, I have a valid cell, so let's initialize a structuredata instance and set the cell
-    # as attribute
+    # Ok, I have a valid cell, so let's initialize a structuredata
+    # instance and set the cell
     structuredata = StructureData()
     structuredata._set_attr('cell', cell.tolist())
 
@@ -2839,7 +2848,9 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
     atomic_species = atomic_species_block_regex.search(txt).group('block')
     for match in atomic_species_regex.finditer(atomic_species):
         try:
-            symbols = valid_elements_regex.search(match.group('pseudo')).group('ele')
+            symbols = valid_elements_regex.search(
+                    match.group('pseudo')
+                ).group('ele')
         except Exception as e:
             raise InputValidationError(
                 'I could not read an element name in {}'.format(match.group(0))
@@ -2855,10 +2866,10 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
 
     ################## POSITIONS #######################
 
-    atom_block_match    =   pos_block_regex.search(txt)
-    valid_atom_units    =   ('alat', 'bohr', 'angstrom', 'crystal', 'crystal_sg')
-    atom_unit           =   atom_block_match.group('units') or 'alat'
-    atom_unit           =   atom_unit.lower()
+    atom_block_match = pos_block_regex.search(txt)
+    valid_atom_units = ('alat', 'bohr', 'angstrom', 'crystal', 'crystal_sg')
+    atom_unit = atom_block_match.group('units') or 'alat'
+    atom_unit = atom_unit.lower()
 
     if atom_unit not in valid_atom_units:
         raise InputValidationError(
@@ -2882,77 +2893,6 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
 
     symbols, positions  =   [],[]
 
-    temp_regex = re.compile(
-        """
-            (
-            \s*                                 # White space in front of the element spec is ok
-            (
-                [A-Za-z]+[A-Za-z0-9]{0,2}       # Element spec
-                (
-                    \s+                         # White space in front of the number
-                    (?P<x>
-                        [\-|\+]?                 # Plus or minus in front of the number (optional)
-                        (\d*                        # optional decimal in the beginning .0001 is ok, for example
-                        [\.]                        # There has to be a dot followed by
-                        \d+)                        # at least one decimal
-                        |                           # OR
-                        (\d+                        # at least one decimal, followed by
-                        [\.]?                       # an optional dot
-                        \d*)                        # followed by optional decimals
-                        ([E|e|d|D][+|-]?\d+)?       # optional exponents E+03, e-05
-                    )
-                    \s+                         # White space in front of the number
-                    (?P<y>
-                        [\-|\+]?                 # Plus or minus in front of the number (optional)
-                        (\d*                        # optional decimal in the beginning .0001 is ok, for example
-                        [\.]                        # There has to be a dot followed by
-                        \d+)                        # at least one decimal
-                        |                           # OR
-                        (\d+                        # at least one decimal, followed by
-                        [\.]?                       # an optional dot
-                        \d*)                        # followed by optional decimals
-                        ([E|e|d|D][+|-]?\d+)?       # optional exponents E+03, e-05
-                    )
-    
-                    \s+                         # White space in front of the number
-                    (?P<z>
-                        [\-|\+]?                 # Plus or minus in front of the number (optional)
-                        (\d*                        # optional decimal in the beginning .0001 is ok, for example
-                        [\.]                        # There has to be a dot followed by
-                        \d+)                        # at least one decimal
-                        |                           # OR
-                        (\d+                        # at least one decimal, followed by
-                        [\.]?                       # an optional dot
-                        \d*)                        # followed by optional decimals
-                        ([E|e|d|D][+|-]?\d+)?       # optional exponents E+03, e-05
-                    )
-                    (
-                    \s+
-                    (?P<extra>
-                        [\-|\+]?                 # Plus or minus in front of the number (optional)
-                        (\d*                        # optional decimal in the beginning .0001 is ok, for example
-                        [\.]                        # There has to be a dot followed by
-                        \d+)                        # at least one decimal
-                        |                           # OR
-                        (\d+                        # at least one decimal, followed by
-                        [\.]?                       # an optional dot
-                        \d*)                        # followed by optional decimals
-                        ([E|e|d|D][+|-]?\d+)?       # optional exponents E+03, e-05
-                    )
-                    )?
-                )
-                |
-                \#                              # If a line is commented out, that is also ok
-                |
-                \!                               # Comments also with excl. mark in fortran
-            )
-            (?P<after>.*)                                  # I do not care what is after the comment or the position spec
-            |                                   # OR
-            \s*                                 # A line only containing white space
-         )
-        """, re.X
-    )
-
     for atom_match in pos_regex.finditer(position_block):
         symbols.append(atom_match.group('sym'))
         try:
@@ -2970,7 +2910,6 @@ def get_structuredata_from_qeinput(filepath = None, text = None):
             )
     positions = np.array(positions)
 
-    # I guess it is faster to do the conversion at the end
     if atom_unit == 'bohr':
         positions = bohr_to_ang*positions
     elif atom_unit == 'crystal':

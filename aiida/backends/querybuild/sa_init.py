@@ -15,7 +15,8 @@ Compile a function that postgresql has implemented, but SQLAlchemy has not
 from sqlalchemy import (
     Column, Table, ForeignKey, UniqueConstraint,create_engine,
     Integer, String, DateTime, Float, Boolean, Text,
-    select, func, join, and_, or_, not_, except_, case
+    select, func, join, and_, or_, not_, except_, case, exists,
+    text
 )
 from sqlalchemy.orm import (
     relationship,

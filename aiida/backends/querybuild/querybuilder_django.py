@@ -25,7 +25,8 @@ from aiida.backends.querybuild.dummy_model import (
 
 from aiida.backends.querybuild.sa_init import (
     and_, or_, not_, except_, aliased,      # Queryfuncs
-    func as sa_func
+    func as sa_func, cast, Float, Integer, Boolean, DateTime,
+    case, exists, join, select, text
 )
 class QueryBuilder(AbstractQueryBuilder):
 
@@ -68,7 +69,7 @@ class QueryBuilder(AbstractQueryBuilder):
         return session
 
     @classmethod
-    def _get_expr(cls, operator, value, column, attr_key):
+    def _get_expr(cls, operator, value, column, attr_key, types=None):
         """
         :param operator:
             A string representation of a valid operator,
@@ -89,29 +90,29 @@ class QueryBuilder(AbstractQueryBuilder):
             *sqlalchemy.sql.elements.BinaryExpression*, etc)
             that can be evaluated by a query intance.
         """
-        def get_mapped_entity(mapped_class, value):
-            if isinstance(value, str):
+        def get_attribute_column(mapped_class, dtype, castas=None):
+            if dtype == 't':
                 mapped_entity = mapped_class.tval
-            elif isinstance(value, bool):
+            elif dtype == 'b':
                 mapped_entity = mapped_class.bval
-            elif isinstance(value, float):
+                #~ mapped_entity = cast(mapped_class.value_str, Boolean)
+            elif dtype == 'f':
                 mapped_entity = mapped_class.fval
-            elif isinstance(value, int):
+                #~ mapped_entity = cast(mapped_class.value_str, Float)
+            elif dtype == 'i':
                 mapped_entity = mapped_class.ival
-            elif isinstance(value, datetime):
+                #~ mapped_entity = cast(mapped_class.value_str, Integer)
+            elif dtype == 'd':
                 mapped_entity = mapped_class.dval
-            elif isinstance(value, (list, tuple)):
-                value_type_set = set([type(i) for i in value])
-                if len(value_type_set) > 1:
-                    raise InputValidationError( '{}  contains more than one type'.format(value))
-                elif len(value_type_set) == 0:
-                    raise InputValidationError('Given list is empty, cannot determine type')
-                else:
-                    mapped_entity = get_mapped_entity(mapped_class, value[0])
             else:
                 raise InputValidationError(
-                    "I don't know what to do with value {}".format(value)
+                    "I don't know what to do with dtype {}".format(dtype)
                 )
+            if castas == 't':
+                mapped_entity = cast(mapped_entity, String)
+            elif castas == 'f':
+                mapped_entity = cast(mapped_entity, Float)
+            
             return mapped_entity
 
         if operator.startswith('~'):
@@ -121,16 +122,54 @@ class QueryBuilder(AbstractQueryBuilder):
             negation = False
         if attr_key:
             mapped_class = column.prop.mapper.class_
-            expr = column.any(
-                and_(
-                    mapped_class.key.like(attr_key),
+            # Ok, so we have an attribute key here.
+            # Unless cast is specified, will try to infer my self where the value
+            # is stored
+            # Datetime -> dval
+            # bool -> bval
+            # string -> tval
+            # integer -> ival, fval (cast ival to float)
+            # float -> ival, fval (cast ival to float)
+            # If the user specified of_type ?? 
+            # That is basically a query for where the value is sitting
+            #   (which column in the dbattribtues)
+            # If the user specified in what to cast, he wants an operation to
+            #   be performed to cast the value to a different type
+            if types is None:
+                if  isinstance(value, (list, tuple)):
+                    value_type_set = set([type(i) for i in value])
+                    if len(value_type_set) > 1:
+                        raise InputValidationError( '{}  contains more than one type'.format(value))
+                    elif len(value_type_set) == 0:
+                        raise InputValidationError('Given list is empty, cannot determine type')
+                    else:
+                        value_to_consider = value[0]
+                else:
+                    value_to_consider = value
+
+                types_n_casts = []
+                if isinstance(value_to_consider, basestring):
+                    types_n_casts.append(('t', None))
+                elif isinstance(value_to_consider, bool):
+                    types_n_casts.append(('b', None))
+                elif isinstance(value_to_consider, (int, float)):
+                    types_n_casts.append(('f', None))
+                    types_n_casts.append(('i', 'f'))
+                elif isinstance(value_to_consider, datetime.datetime):
+                    types_n_casts.append(('d', None))
+            else:
+                #some checks
+                pass
+            expressions = []
+            for dtype, castas in types_n_casts:
+                expressions.append(
                     cls._get_expr(
-                            operator, value,
-                            get_mapped_entity(mapped_class, value),
-                            None
-                        )
+                        operator, value,
+                        get_attribute_column(mapped_class, dtype, castas=castas),
+                        None
+                    )
                 )
-            )
+            expr = column.any(and_(mapped_class.key == attr_key, or_(*expressions)))
         else:
             if operator == '==':
                 expr = column == value
@@ -216,39 +255,52 @@ class QueryBuilder(AbstractQueryBuilder):
                 ]
         return and_(*expressions)
 
-    def _get_entity(self, alias, column_name, attrpath, dtype='undefined', **kwargs):
-        if attrpath:
-            if alias._aliased_insp.class_ == self.Node:
+    def _get_entity(self, aliased_node, column_name, attrkey, dtype='undefined', **kwargs):
+        if attrkey:
+            if aliased_node._aliased_insp.class_ == self.Node:
                 if column_name == 'attributes':
-                    addalias = aliased(DummyAttribute)
+                    aliased_attributes = aliased(DummyAttribute)
                 elif column_name == 'extras':
-                    addalias = aliased(DummyExtra)
+                    aliased_attributes = aliased(DummyExtra)
             else:
                 NotImplementedError(
                     "Other classes than Nodes are not implemented yet"
                 )
-            self.que = self.que.join(
-                    addalias,
-                    addalias.dbnode_id == alias.id
-                )
-            self.que = self.que.filter(addalias.key == attrpath)
 
-            if dtype =='t':
-                entity = self.get_column('tval', addalias)
-            elif dtype == 'f':
-                entity = self.get_column('fval', addalias)
-            elif dtype == 'i':
-                entity = self.get_column('ival', addalias)
-            elif dtype == 'b':
-                entity = self.get_column('bval', addalias)
-            elif dtype == 'd':
-                entity = self.get_column('dval', addalias)
-            else:
-                raise InputValidationError(
-                        "Invalid type to dtype {}".format(dtype)
-                    )
+            exists_stmt = exists(select([1], correlate=True).select_from(
+                    aliased_attributes
+                ).where(and_(
+                    aliased_attributes.key==attrkey,
+                    aliased_attributes.dbnode_id==aliased_node.id
+                )))
+
+            select_stmt = select(
+                    [aliased_attributes.datatype], correlate=True
+                ).select_from(aliased_attributes).where(and_(
+                    aliased_attributes.key==attrkey,
+                    aliased_attributes.dbnode_id==aliased_node.id
+                )).label('miao')
+
+            entity = case([(exists_stmt, select_stmt), ], else_=None)
+
+#~ 
+            #~ if dtype =='t':
+                #~ pass
+            #~ elif dtype == 'f':
+                #~ entity = cast(entity, Float)
+            #~ elif dtype == 'i':
+                #~ entity = cast(entity, Integer)
+            #~ elif dtype == 'b':
+                #~ entity = cast(entity,  Boolean)
+            #~ elif dtype == 'd':
+                #~ entity = cast(entity, DateTime)
+            #~ else:
+                #~ raise InputValidationError(
+                        #~ "Invalid dtype {}".format(dtype)
+                    #~ )
         else:
-            entity = self.get_column(column_name, alias)
+            entity = self.get_column(column_name, aliased_node)
+        #~ return None
         return entity
 
     def _add_projectable_entity(self, alias, projectable_entity, dtype='undefined', func=None):
@@ -262,7 +314,7 @@ class QueryBuilder(AbstractQueryBuilder):
 
         """
         column_name = projectable_entity.split('.')[0]
-        attrpath = '.'.join(projectable_entity.split('.')[1:])
+        attrkey = '.'.join(projectable_entity.split('.')[1:])
 
 
         if column_name == '*':
@@ -276,7 +328,7 @@ class QueryBuilder(AbstractQueryBuilder):
                     )
             self.que = self.que.add_entity(alias)
         else:
-            entity_to_project = self._get_entity(alias, column_name, attrpath, dtype)
+            entity_to_project = self._get_entity(alias, column_name, attrkey, dtype)
             if func is None:
                 pass
             elif func == 'max':

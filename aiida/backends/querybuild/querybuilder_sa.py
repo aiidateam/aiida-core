@@ -2,22 +2,18 @@
 
 from datetime import datetime
 try:
-    import ultrajson as json
+    import ultrajson
     from functools import partial
-    # double_precision = 15, to replicate what PostgreSQL numerical type is
-
-    #~ ../../backends/sqlalchemy/utils.py-    json_dumps = partial(json.dumps, double_precision=15)
-    json_loads = partial(json.loads, precise_float=True)
+    json_loads = partial(ultrajson.loads, precise_float=True)
 except ImportError:
     from json import loads as json_loads
-    #~ json_dumps = json.dumps
 
 
 
 from aiida.backends.querybuild.querybuilder_base import AbstractQueryBuilder
 from sa_init import (
-        and_, or_, not_, except_,
-        aliased, Integer, Float, Boolean, JSONB, DateTime,
+        and_, or_, not_,
+        Integer, Float, Boolean, JSONB, DateTime,
         jsonb_array_length, jsonb_typeof
     )
 
@@ -161,6 +157,9 @@ class QueryBuilder(AbstractQueryBuilder):
             self, alias, column, attrpath,
             cast=None, **kwargs
         ):
+        """
+        :returns: An attribute store in a JSON field of the give column
+        """
 
         entity = column[(attrpath)]
         if cast is None:

@@ -461,7 +461,11 @@ class AbstractQueryBuilder(object):
         # Get the functions that are implemented:
         spec_to_function_map = self._get_function_map().keys()
 
-        joining_keyword, joining_value = None, None
+
+        joining_keyword = kwargs.pop('joining_keyword', None)
+        joining_value = kwargs.pop('joining_value', None)
+        reverse_linklabel = kwargs.pop('reverse_linklabel', None)
+
 
         for key, val in kwargs.items():
             if key not in spec_to_function_map:
@@ -511,8 +515,6 @@ class AbstractQueryBuilder(object):
                     link_to_label = self.path[-abs(joining_value)]['label']
                 linklabel = link_to_label + self.LINKLABEL_DEL + label
                 reverse_linklabel = label + self.LINKLABEL_DEL + link_to_label
-            else:
-                reverse_linklabel = None
             aliased_link = aliased(self.Link)
             self.label_to_alias_map[linklabel] = aliased_link
 
@@ -538,7 +540,7 @@ class AbstractQueryBuilder(object):
 
 
         path_extension = dict(
-                type=type, label=label, joining_keyword=joining_keyword,
+                type=ormclasstype, label=label, joining_keyword=joining_keyword,
                 joining_value=joining_value
             )
         if linklabel is not None:
@@ -1211,32 +1213,21 @@ class AbstractQueryBuilder(object):
                     )
         return returnval
 
-    def make_json_compatible(self, inp):
+    def _get_json_compatible(self, inp):
         """
-        Makes the a dictionary json - compatible.
-        In this way,the queryhelp can be stored in a node
-        in the database and retrieved or shared.
-
+        
         :param inp:
             The input value that will be converted.
             Recurses into each value if **inp** is an iterable.
-
-        :returns: A json-compatible value of **inp**
-
-        All classes defined in the input are
-        converted to strings specifying the type,
-        for example:
-
-        *   ``float`` --> "float"
-        *   ``StructureData`` --> "StructureData"
         """
+        print inp
         if isinstance(inp, dict):
             for key, val in inp.items():
                 inp[
-                        self.make_json_compatible(key)
-                ] = self.make_json_compatible(inp.pop(key))
+                        self._get_json_compatible(key)
+                ] = self._get_json_compatible(inp.pop(key))
         elif isinstance(inp, (list, tuple)):
-            inp = [self.make_json_compatible(val) for val in inp]
+            inp = [self._get_json_compatible(val) for val in inp]
         elif inspect_isclass(inp):
             if issubclass(inp, self.AiidaNode):
                 return '.'.join(
@@ -1255,6 +1246,31 @@ class AbstractQueryBuilder(object):
                 while replacing {}""".format(e, inp))
         return inp
 
+
+    def get_json_compatible_queryhelp(self):
+        """
+        Makes the queryhelp a json - compatible  dictionary.
+        In this way,the queryhelp can be stored in a node
+        in the database and retrieved or shared.
+
+        :returns: the json-compatible queryhelp
+
+        All classes defined in the input are
+        converted to strings specifying the type,
+        for example:
+        """
+        from copy import deepcopy
+
+        return deepcopy({
+            'path'      :   self.path,
+            'filters'   :   self.filters,
+            'project'   :   self.projections,
+            'limit'     :   self._limit,
+            'order_by'  :   self._order_by,
+        })
+        
+        #~ self._get_json_compatible()
+        
     def get_column(self, colname, alias):
         """
         Return the column for the projection, if the column name is specified.
@@ -1449,20 +1465,7 @@ class AbstractQueryBuilder(object):
     def get_aliases(self):
         return self.aliased_path
 
-    def get_queryhelp(self):
-        """
-        :returns:
-            the json-compatible list of the
-            input specifications (queryhelp)
-        """
-        raise DeprecationWarning
-        return {
-            'path'      :   self.path,
-            'filters'   :   self.filters,
-            'project'   :   self.projections,
-            'limit'     :   self.limit,
-            'order_by'  :   self.order_by,
-        }
+
 
     def get_query(self):
         """
@@ -1476,16 +1479,23 @@ class AbstractQueryBuilder(object):
 
     def _first(self):
         """
-        Executes query asking, for one instance.
-        :returns: One row of results
+        Executes query in the backend asking for one instance.
+
+        :returns: One row of aiida results
         """
         return self.get_query().first()
 
     def first(self):
         """
         Executes query asking for one instance.
+        Use as follows::
 
-        :returns: One row of aiida results
+            qb = QueryBuilder(**queryhelp)
+            qb.first()
+
+        :returns:
+            One row of results as a list, order as given by
+            order of vertices in  path and projections for vertice
         """
         resultrow = self._first()
         attrkeys_as_in_sql_result = {
@@ -1511,10 +1521,18 @@ class AbstractQueryBuilder(object):
             returnval = [self._get_aiida_res(attrkeys_as_in_sql_result[0], rowitem)]
         return returnval
 
+
     def distinct(self):
         """
-        Executes query asking for distinct rows.
-        :returns: distinct rows
+        Asks for distinct rows.
+        Does not execute the query!
+        If you want a distinct query::
+
+            qb = QueryBuilder(**queryhelp)
+            qb.distinct().all() # or
+            qb.distinct().get_results_dict()
+
+        :returns: self
         """
         self.que = self.get_query().distinct()
         return self
@@ -1542,6 +1560,9 @@ class AbstractQueryBuilder(object):
     def all(self):
         """
         Executes the full query.
+        The order of the rows is as returned by the backend,
+        the order inside each row is given by the order of the path
+        and the order of the projections for each vertice in the path.
 
         :returns: a generator for all projected entities (each being a list).
         """
@@ -1587,15 +1608,18 @@ class AbstractQueryBuilder(object):
         :returns: a generator returning the results as an iterable of dictionaries.
         """
 
-        results = self.yield_per(100)
         try:
             for this_result in self.yield_per(100):
                 yield {
                     label:{
-                        attrkey : self._get_aiida_res(attrkey, this_result[index_in_sql_result])
-                        for attrkey, index_in_sql_result in projected_entities_dict.items()
+                        attrkey:self._get_aiida_res(
+                                attrkey, this_result[index_in_sql_result]
+                            )
+                        for attrkey, index_in_sql_result
+                        in projected_entities_dict.items()
                     }
-                    for label, projected_entities_dict in self.label_to_projected_entity_dict.items()
+                    for label, projected_entities_dict
+                    in self.label_to_projected_entity_dict.items()
                 }
         except TypeError:
             # resultrow not an iterable:

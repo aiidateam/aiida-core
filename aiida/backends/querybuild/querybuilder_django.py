@@ -27,9 +27,9 @@ from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotE
 
 
 from aiida.backends.querybuild.sa_init import (
-    and_, or_, not_, except_, aliased,      # Queryfuncs
-    func as sa_func, cast, Float, Integer, Boolean, DateTime,
-    case, exists, join, select, text
+    and_, or_, aliased,      # Queryfuncs
+    cast, Float, Integer, Boolean, DateTime,
+    case, exists, join, select
 )
 class QueryBuilder(AbstractQueryBuilder):
 

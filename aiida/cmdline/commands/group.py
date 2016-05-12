@@ -460,9 +460,6 @@ class Group(VerdiCommandWithSubcommands):
         name_filters = dict((k, getattr(parsed_args, k))
                             for k in ['startswith','endswith','contains'])
 
-        name_filters_list = {"name__" + k: v for (k, v)
-                             in name_filters.iteritems() if v}
-
         n_days_ago = None
         if parsed_args.past_days:
             n_days_ago = (timezone.now() -
@@ -470,7 +467,7 @@ class Group(VerdiCommandWithSubcommands):
 
         from aiida.orm.implementation import Group
         res = Group.query(user=user, type_string=type_string,
-                          past_days=n_days_ago, **name_filters_list)
+                          past_days=n_days_ago, name_filters=name_filters)
 
         groups = tuple([(str(g.pk), g.name, len(g.nodes), g.user.email.strip(),
                          g.description) for g in res])

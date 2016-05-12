@@ -14,7 +14,7 @@ import copy
 import datetime
 from abc import abstractmethod, ABCMeta
 from inspect import isclass as inspect_isclass
-from sa_init import aliased, and_, or_, not_
+from sa_init import aliased, and_, or_, not_, func as sa_func
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import flatten_list
 
@@ -141,6 +141,59 @@ class AbstractQueryBuilder(object):
                 dialect=mydialect.dialect()
             )
         )
+
+    def order_by(self, order_by):
+        """
+        Set the entity to order by
+
+        :param order_by:
+            This is a list of items, where each item is a dictionary specifies
+            what to sort for an entity
+
+        In each dictionary in that list,
+        keys represent valid labels of entities (tables),
+        values are list of columns
+        """
+
+        self._order_by = []
+
+        if not isinstance(order_by, (list, tuple)):
+            order_by = [order_by]
+
+
+        for order_spec in order_by:
+            if not isinstance(order_spec, dict):
+                    raise InputValidationError(
+                        "Invalid input for order_by statement: {}\n"
+                        "I am expecting a dictionary ORMClass,"
+                        "[columns to sort]"
+                        "".format(order_spec)
+                    )
+            _order_spec = {}
+            for key,items_to_order_by in order_spec.items():
+                if not isinstance(items_to_order_by, (tuple, list)):
+                    items_to_order_by = [items_to_order_by]
+                label = self._get_label_from_specification(key)
+                _order_spec[label] = []
+                for item_to_order_by in items_to_order_by:
+                    if isinstance(item_to_order_by, basestring):
+                        item_to_order_by = {item_to_order_by:{}}
+                    elif isinstance(item_to_order_by, dict):
+                        pass
+                    else:
+                        raise InputValidationError(
+                            "Cannot deal with input to order_by {}\n"
+                            "of type{}"
+                            "\n".format(item_to_order_by, type(item_to_order_by))
+                        )
+                    for k,v in item_to_order_by.items():
+                        if isinstance(v, basestring):
+                            item_to_order_by[k] = {'dtype':v}
+                    _order_spec[label].append(item_to_order_by)
+
+            self._order_by.append(_order_spec)
+        return self
+
 
     def _get_ormclass(self, cls, ormclasstype):
         """
@@ -1217,7 +1270,16 @@ class AbstractQueryBuilder(object):
 
         column_name = entitylabel.split('.')[0]
         attrpath = entitylabel.split('.')[1:]
-
+        if attrpath and 'cast' not in entityspec.keys():
+            raise InputValidationError(
+                "\n\n"
+                "In order to project ({}), I have to cast the the values,\n"
+                "but you have not specified the datatype to cast to\n"
+                "You can do this with keyword 'cast'\n"
+                "".format(entitylabel)
+            )
+                
+                
         entity = self._get_projectable_entity(alias, column_name, attrpath, **entityspec)
         order = entityspec.get('order', 'asc')
         if order == 'desc':
@@ -1468,6 +1530,14 @@ class AbstractQueryBuilder(object):
         """
         return self.get_query().yield_per(count)
 
+    def count(self):
+        """
+        Counts the number of rows returned by the backend.
+
+        :returns: the number of rows as an integer
+        """
+        que = self.get_query()
+        return que.count()
 
     def all(self):
         """

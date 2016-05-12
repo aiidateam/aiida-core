@@ -23,7 +23,7 @@ from aiida.backends.querybuild.dummy_model import (
     session,                             # session with DB
 )
 
-from aiida.backends.djsite.db.models import DbAttribute, DbExtra
+from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
 
 
 from aiida.backends.querybuild.sa_init import (
@@ -63,12 +63,20 @@ class QueryBuilder(AbstractQueryBuilder):
         :returns: an aiida-compatible instance
         """
         if key.startswith('attributes'):
-            return DbAttribute.objects.get(id=res).getvalue()
-
+            try:
+                returnval = DbAttribute.objects.get(id=res).getvalue()
+            except ObjectDoesNotExist:
+                returnval = {}
+        elif key.startswith('extras'):
+            try:
+                returnval = DbExtra.objects.get(id=res).getvalue()
+            except ObjectDoesNotExist:
+                returnval = {}
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
-            return res.get_aiida_class()
+            returnval =  res.get_aiida_class()
         else:
-            return res
+            returnval = res
+        return returnval
 
 
     @staticmethod
@@ -209,46 +217,3 @@ class QueryBuilder(AbstractQueryBuilder):
         entity = case([(exists_stmt, select_stmt), ], else_=None)
 
         return entity
-    def order_by(self, order_by):
-        raise NotImplementedError(
-            "\n\n"
-            "Ordering is not implemented with the Django backend"
-            "\n\n"
-        )
-
-    #~ def _get_entity(self, aliased_node, column_name, attrkey, dtype='undefined', **kwargs):
-
-#~
-    #~ def _add_projectable_entity(self, alias, projectable_entity, dtype='undefined', func=None):
-#~
-        #~ column_name = projectable_entity.split('.')[0]
-        #~ attrkey = '.'.join(projectable_entity.split('.')[1:])
-#~
-#~
-        #~ if column_name == '*':
-            #~ if func is not None:
-                #~ raise InputValidationError(
-#~
-                        #~ "Very sorry, but functions on the aliased class\n"
-                        #~ "(You specified '*')\n"
-                        #~ "will not work!\n"
-                        #~ "I suggest you apply functions on a column, e.g. ('id')\n"
-                    #~ )
-            #~ self.que = self.que.add_entity(alias)
-        #~ else:
-            #~ entity_to_project = self._get_entity(alias, column_name, attrkey, dtype)
-            #~ if func is None:
-                #~ pass
-            #~ elif func == 'max':
-                #~ entity_to_project = sa_func.max(entity_to_project)
-            #~ elif func == 'min':
-                #~ entity_to_project = sa_func.max(entity_to_project)
-            #~ elif func == 'count':
-                #~ entity_to_project = sa_func.count(entity_to_project)
-            #~ else:
-                #~ raise InputValidationError(
-                        #~ "\nInvalid function specification {}".format(func)
-                    #~ )
-#~
-            #~ self.que =  self.que.add_columns(entity_to_project)
-

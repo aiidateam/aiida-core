@@ -16,7 +16,7 @@ except ImportError:
 
 from aiida.backends.querybuild.querybuilder_base import AbstractQueryBuilder
 from sa_init import (
-        and_, or_, not_, except_, func as sa_func,
+        and_, or_, not_, except_,
         aliased, Integer, Float, Boolean, JSONB, DateTime,
         jsonb_array_length, jsonb_typeof
     )
@@ -213,54 +213,3 @@ class QueryBuilder(AbstractQueryBuilder):
         return returnval
 
 
-    def order_by(self, order_by):
-        """
-        Set the entity to order by
-
-        :param order_by:
-            This is a list of items, where each item is a dictionary specifies
-            what to sort for an entity
-
-        In each dictionary in that list,
-        keys represent valid labels of entities (tables),
-        values are list of columns
-        """
-
-        self._order_by = []
-
-        if not isinstance(order_by, (list, tuple)):
-            order_by = [order_by]
-
-
-        for order_spec in order_by:
-            if not isinstance(order_spec, dict):
-                    raise InputValidationError(
-                        "Invalid input for order_by statement: {}\n"
-                        "I am expecting a dictionary ORMClass,"
-                        "[columns to sort]"
-                        "".format(order_spec)
-                    )
-            _order_spec = {}
-            for key,items_to_order_by in order_spec.items():
-                if not isinstance(items_to_order_by, (tuple, list)):
-                    items_to_order_by = [items_to_order_by]
-                label = self._get_label_from_specification(key)
-                _order_spec[label] = []
-                for item_to_order_by in items_to_order_by:
-                    if isinstance(item_to_order_by, basestring):
-                        item_to_order_by = {item_to_order_by:{}}
-                    elif isinstance(item_to_order_by, dict):
-                        pass
-                    else:
-                        raise InputValidationError(
-                            "Cannot deal with input to order_by {}\n"
-                            "of type{}"
-                            "\n".format(item_to_order_by, type(item_to_order_by))
-                        )
-                    for k,v in item_to_order_by.items():
-                        if isinstance(v, basestring):
-                            item_to_order_by[k] = {'dtype':v}
-                    _order_spec[label].append(item_to_order_by)
-
-            self._order_by.append(_order_spec)
-        return self

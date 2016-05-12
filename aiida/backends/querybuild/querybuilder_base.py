@@ -14,7 +14,7 @@ import copy
 import datetime
 from abc import abstractmethod, ABCMeta
 from inspect import isclass as inspect_isclass
-from sa_init import aliased
+from sa_init import aliased, and_, or_, not_
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import flatten_list
 
@@ -34,7 +34,7 @@ class AbstractQueryBuilder(object):
 
     NODE_TYPE = 'node.Node'
     LINKLABEL_DEL = '--'
-    VALID_PROJECTION_KEYS = ('func', 'dtype')
+    VALID_PROJECTION_KEYS = ('func', 'cast')
 
 
     def __init__(self, *args, **kwargs):
@@ -94,16 +94,18 @@ class AbstractQueryBuilder(object):
                     self.append(cls=path_spec)
 
         for key, val in kwargs.pop('project', {}).items():
-            self._add_projection(key, val)
+            self.add_projection(key, val)
 
         for key, val in kwargs.pop('filters', {}).items():
-            self._add_filter(key, val)
+            self.add_filter(key, val)
 
         self._limit = False
         self.limit(kwargs.pop('limit', False))
 
         self._order_by = {}
-        self.order_by(kwargs.pop('order_by', {}))
+        order_spec = kwargs.pop('order_by', None)
+        if order_spec:
+            self.order_by(order_spec)
 
         if kwargs:
             valid_keys = [
@@ -115,6 +117,30 @@ class AbstractQueryBuilder(object):
                     "\nValid keywords are: {}"
                     "".format(kwargs.keys(), valid_keys)
             )
+
+    def __repr__(self):
+        from aiida.common.setup import get_profile_config
+        from aiida.backends import settings
+        from aiida.common.exceptions import ConfigurationError
+
+        engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
+
+        if engine == "sqlite3":
+            from sqlalchemy.dialects import sqlite as mydialect
+        elif engine.startswith("mysql"):
+            from sqlalchemy.dialects import mysql as mydialect
+        elif engine.startswith("postgre"):
+            from sqlalchemy.dialects import postgresql as mydialect
+        else:
+            raise ConfigurationError("Unknown DB engine: {}".format(
+                    engine))
+
+        que = self.get_query()
+        return str(que.statement.compile(
+                compile_kwargs={"literal_binds": True},
+                dialect=mydialect.dialect()
+            )
+        )
 
     def _get_ormclass(self, cls, ormclasstype):
         """
@@ -188,7 +214,7 @@ class AbstractQueryBuilder(object):
                         ormclass = self.Node
                     except MissingPluginError:
                         continue
-                
+
                 if cls is None:
                     # Nothing was found using the factories!
                     raise InputValidationError(
@@ -200,7 +226,7 @@ class AbstractQueryBuilder(object):
         return ormclass, ormclasstype
 
     def _get_autolabel(self, ormclasstype):
-        baselabel = self._get_label(ormclasstype)
+        baselabel = self._get_label_from_type(ormclasstype)
         labels_used = self.label_to_alias_map.keys()
         for i in range(1, 100):
             label = '{}_{}'.format(baselabel, i)
@@ -208,13 +234,12 @@ class AbstractQueryBuilder(object):
                 return label
 
 
-    def _get_label(self, ormclasstype):
+    def _get_label_from_type(self, ormclasstype):
         """
         Assign a label to the given
         vertice of a path, based mainly on the type
         *   data.structure.StructureData -> StructureData
         *   data.structure.StructureData. -> StructureData
-        *   calculation.job.. -> StructureData
         *   calculation.job.quantumespresso.pw.PwCalculation. -. PwCalculation
         *   node.Node. -> Node
         *   Node -> Node
@@ -224,10 +249,8 @@ class AbstractQueryBuilder(object):
 
 
     def append(self, cls=None, type=None, label=None,
-                autolabel=False, filters=None,
-                project=None, subclassing=True,
-                linklabel=None, linkfilters=None,
-                linkproject=None, **kwargs
+                autolabel=False, filters=None, project=None, subclassing=True,
+                linklabel=None, linkfilters=None, linkproject=None, **kwargs
         ):
         """
         Any iterative procedure to build the path for a graph query
@@ -237,7 +260,7 @@ class AbstractQueryBuilder(object):
         :param type: The type of the class, if cls is not given
         :param label:
             A unique label. If none is given, will take the classname.
-            See keyword autolabel to achieve unique label. 
+            See keyword autolabel to achieve unique label.
         :param filters:
             Filters to apply for this vertice.
             See usage examples for details.
@@ -315,7 +338,7 @@ class AbstractQueryBuilder(object):
         elif autolabel:
             label = self._get_autolabel(ormclasstype)
         else:
-            label = self._get_label(ormclasstype)
+            label = self._get_label_from_type(ormclasstype)
         # Check if the label is not yet used:
         if label in self.label_to_alias_map.keys():
             if user_defined_label:
@@ -363,7 +386,7 @@ class AbstractQueryBuilder(object):
         self.filters[label] = {}
         #if the user specified a filter, add it:
         if filters is not None:
-            self._add_filter(label, filters)
+            self.add_filter(label, filters)
 
         # I have to add a filter on column type.
         # This so far only is necessary for AiidaNodes
@@ -375,7 +398,7 @@ class AbstractQueryBuilder(object):
         self.projections[label] = []
 
         if project is not None:
-            self._add_projection(label, project)
+            self.add_projection(label, project)
 
 
 
@@ -430,7 +453,7 @@ class AbstractQueryBuilder(object):
             # substring.
             if linklabel is None:
                 if joining_keyword in ('input_of', 'output_of'):
-                    link_to_label = self._get_label(joining_value)
+                    link_to_label = self._get_label_from_specification(joining_value)
                 elif joining_keyword == 'direction':
                     link_to_label = self.path[-abs(joining_value)]['label']
                 linklabel = link_to_label + self.LINKLABEL_DEL + label
@@ -439,8 +462,8 @@ class AbstractQueryBuilder(object):
                 reverse_linklabel = None
             aliased_link = aliased(self.Link)
             self.label_to_alias_map[linklabel] = aliased_link
-            
-            
+
+
 
             if reverse_linklabel is not None:
                 self.label_to_alias_map[reverse_linklabel] = aliased_link
@@ -450,12 +473,12 @@ class AbstractQueryBuilder(object):
             # Filters on links:
             self.filters[linklabel] = {}
             if linkfilters is not None:
-                self._add_filter(linklabel, linkfilters)
-            
+                self.add_filter(linklabel, linkfilters)
+
             # Projections on links
             self.projections[linklabel] = {}
             if linkproject is not None:
-                self._add_projection(linklabel, linkproject)
+                self.add_projection(linklabel, linkproject)
 
 
         ################### EXTENDING THE PATH #################################
@@ -473,7 +496,7 @@ class AbstractQueryBuilder(object):
         self.path.append(path_extension)
         return self
 
-    def _add_filter(self, labelspec, filter_spec):
+    def add_filter(self, labelspec, filter_spec):
         """
         Adding a filter to my filters.
 
@@ -516,12 +539,9 @@ class AbstractQueryBuilder(object):
             else:
                 node_type_flt = {'==':ormclasstype}
         if node_type_flt is not None:
-            self.filters[label]['type'] = self.filters[label].get(
-                    'type', {}
-                )
-            self.filters[label]['type'].update(node_type_flt)
+            self.add_filter(labelspec, {'type':node_type_flt})
 
-    def _add_projection(self, labelspec, projection_spec):
+    def add_projection(self, labelspec, projection_spec):
         label = self._get_label_from_specification(labelspec)
         _projections = []
         if not isinstance(projection_spec, (list, tuple)):
@@ -558,9 +578,62 @@ class AbstractQueryBuilder(object):
             _projections.append(_thisprojection)
         self.projections[label] = _projections
 
-    def _add_projectable_entities(self, label):
+
+    def _get_projectable_entity(self, alias, column_name, attrpath, **entityspec):
+
+        column = self.get_column(column_name, alias)
+        if len(attrpath):
+
+            entity = self._get_projectable_attribute(
+                        alias, column, attrpath, **entityspec
+                    )
+        else:
+            entity = column
+        return entity
+
+    def _add_to_projections(self, alias, projectable_entity_name, cast=None, func=None):
+        """
+        :param alias:
+            A instance of *sqlalchemy.orm.util.AliasedClass*, alias for an ormclass
+        :param projectable_entity_name:
+            User specification of what to project.
+            Appends to query's entities what the user wants to project
+            (have returned by the query)
+
+        """
+        column_name = projectable_entity_name.split('.')[0]
+        attr_key = projectable_entity_name.split('.')[1:]
 
 
+        if column_name == '*':
+            if func is not None:
+                raise InputValidationError(
+                        "Very sorry, but functions on the aliased class\n"
+                        "(You specified '*')\n"
+                        "will not work!\n"
+                        "I suggest you apply functions on a column, e.g. ('id')\n"
+                    )
+            self.que = self.que.add_entity(alias)
+        else:
+            entity_to_project = self._get_projectable_entity(alias, column_name, attr_key)
+            if func is None:
+                pass
+            elif func == 'max':
+                entity_to_project = sa_func.max(entity_to_project)
+            elif func == 'min':
+                entity_to_project = sa_func.max(entity_to_project)
+            elif func == 'count':
+                entity_to_project = sa_func.count(entity_to_project)
+            else:
+                raise InputValidationError(
+                        "\nInvalid function specification {}".format(func)
+                    )
+            self.que =  self.que.add_columns(entity_to_project)
+
+
+
+
+    def _build_projections(self, label):
         items_to_project = self.projections.get(label, [])
 
         # Sort of spaghetti, but possible speedup
@@ -571,15 +644,16 @@ class AbstractQueryBuilder(object):
         self.label_to_projected_entity_dict[label] = {}
 
         for projectable_spec in items_to_project:
-            for projectable_entity, extraspec in projectable_spec.items():
-                self._add_projectable_entity(
-                        alias, projectable_entity, **extraspec
+            for projectable_entity_name, extraspec in projectable_spec.items():
+                self._add_to_projections(
+                        alias, projectable_entity_name, **extraspec
                     )
 
                 self.label_to_projected_entity_dict[label][
-                        projectable_entity
+                        projectable_entity_name
                     ] = self.nr_of_projections
                 self.nr_of_projections += 1
+
 
     def _get_label_from_specification(self, specification):
         if isinstance(specification, basestring):
@@ -621,65 +695,41 @@ class AbstractQueryBuilder(object):
         self._limit = limit
         return self
 
-    def order_by(self, order_by):
-        """
-        Set the entity to order by
 
-        :param order_by:
-            This is a list of items, where each item is a dictionary specifies
-            what to sort for an entity
-
-        In each dictionary in that list,
-        keys represent valid labels of entities (tables),
-        values are list of columns
-        """
-
-        self._order_by = []
-
-        if not isinstance(order_by, (list, tuple)):
-            order_by = [order_by]
-
-
-        for order_spec in order_by:
-            if not isinstance(order_spec, dict):
-                    raise InputValidationError(
-                        "Invalid input for order_by statement: {}\n"
-                        "I am expecting a dictionary ORMClass,"
-                        "[columns to sort]"
-                        "".format(order_spec)
-                    )
-            _order_spec = {}
-            for key,items_to_order_by in order_spec.items():
-                if not isinstance(items_to_order_by, (tuple, list)):
-                    items_to_order_by = [items_to_order_by]
-                label = self._get_label_from_specification(key)
-                _order_spec[label] = []
-                for item_to_order_by in items_to_order_by:
-                    if isinstance(item_to_order_by, basestring):
-                        item_to_order_by = {item_to_order_by:{}}
-                    elif isinstance(item_to_order_by, dict):
-                        pass
-                    else:
-                        raise InputValidationError(
-                            "Cannot deal with input to order_by {}\n"
-                            "of type{}"
-                            "\n".format(item_to_order_by, type(item_to_order_by))
-                        )
-                    for k,v in item_to_order_by.items():
-                        if isinstance(v, basestring):
-                            item_to_order_by[k] = {'dtype':v}
-                    _order_spec[label].append(item_to_order_by)
-
-            self._order_by.append(_order_spec)
-        return self
 
     @staticmethod
     @abstractmethod
     def _get_session():
         pass
 
-    @abstractmethod
-    def _get_expr(*args):
+
+    @classmethod
+    def _get_filter_expr_from_column(cls, operator, value, database_entity):
+        if operator == '==':
+            expr = database_entity == value
+        elif operator == '>':
+            expr = database_entity > value
+        elif operator == '<':
+            expr = database_entity < value
+        elif operator == '>=':
+            expr = database_entity >= value
+        elif operator == '<=':
+            expr = database_entity <= value
+        elif operator == 'like':
+            expr = database_entity.like(value)
+        elif operator == 'ilike':
+            expr = database_entity.ilike(value)
+        elif operator == 'in':
+            expr = database_entity.in_(value)
+        else:
+            raise InputValidationError(
+                'Unknown operator {} for filters on columns'.format(operator)
+            )
+        return expr
+
+
+    @classmethod
+    def _get_filter_expr(cls, operator, value, db_column, attr_key):
         """
         Applies a filter on the alias given.
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -754,10 +804,73 @@ class AbstractQueryBuilder(object):
                 }
             } # id is not 2
         """
-        pass
 
-    @abstractmethod
-    def _analyze_filter_spec(self, alias, filter_spec):
+        if operator.startswith('~'):
+            negation = True
+            operator = operator.lstrip('~')
+        else:
+            negation = False
+        if operator in ('longer', 'shorter', 'of_length'):
+            if not isinstance(value, int):
+                raise InputValidationError(
+                    "You have to give an integer when comparing to a length"
+                )
+        elif operator in ('like', 'ilike'):
+            if not isinstance(value, basestring):
+                raise InputValidationError(
+                    "Value for operator {} has to be a string (you gave {})"
+                    "".format(operator, value)
+                )
+
+        elif operator == 'in':
+            value_type_set = set([type(i) for i in value])
+            if len(value_type_set) > 1:
+                raise InputValidationError(
+                        '{}  contains more than one type'.format(value)
+                    )
+            elif len(value_type_set) == 0:
+                raise InputValidationError(
+                        '{}  contains is an empty list'.format(value)
+                    )
+        elif operator == 'and':
+            and_expressions_for_this_path = []
+            for filter_operation_dict in value:
+                for newoperator, newvalue in filter_operation_dict.items():
+                    and_expressions_for_this_path.append(
+                            cls._get_filter_expr(
+                                    newoperator, newvalue,
+                                    db_column, attr_key
+                                )
+                        )
+            expr = and_(*and_expressions_for_this_path)
+        elif operator == 'or':
+            or_expressions_for_this_path = []
+            for filter_operation_dict in value:
+                # Attention: Multiple expression inside
+                # one direction are joint by and!
+                # Default will and should always be kept AND
+                or_expressions_for_this_path.append(and_(*[
+                        cls._get_filter_expr(
+                            newoperator, newvalue,
+                            db_column, attr_key
+                        )
+                        for newoperator, newvalue
+                        in filter_operation_dict.items()
+                    ]
+                ))
+            expr = or_(*or_expressions_for_this_path)
+
+        if attr_key:
+            expr = cls._get_filter_expr_from_attributes(operator, value, db_column, attr_key)
+        else:
+            expr = cls._get_filter_expr_from_column(operator, value, db_column)
+        if negation:
+            return not_(expr)
+        return expr
+
+
+
+    def _build_filters(self, alias, filter_spec):
         """
         Recurse through the filter specification and apply filter operations.
 
@@ -766,7 +879,42 @@ class AbstractQueryBuilder(object):
 
         :returns: an instance of *sqlalchemy.sql.elements.BinaryExpression*.
         """
-        pass
+        expressions = []
+        for path_spec, filter_operation_dict in filter_spec.items():
+            if path_spec in  ('and', 'or', '~or', '~and'):
+                subexpressions = [
+                    self._build_filters(alias, sub_filter_spec)
+                    for sub_filter_spec in filter_operation_dict
+                ]
+                if path_spec == 'and':
+                    expressions.append(and_(*subexpressions))
+                elif path_spec == 'or':
+                    expressions.append(or_(*subexpressions))
+                elif path_spec == '~and':
+                    expressions.append(not_(and_(*subexpressions)))
+                elif path_spec == '~or':
+                    expressions.append(not_(or_(*subexpressions)))
+            else:
+                column_name = path_spec.split('.')[0]
+                column =  self.get_column(column_name, alias)
+                attr_key = path_spec.split('.')[1:]
+                #~ is_attribute = bool(attr_key)
+                if not isinstance(filter_operation_dict, dict):
+                    filter_operation_dict = {'==':filter_operation_dict}
+                [
+                    expressions.append(
+                        self._get_filter_expr(
+                            operator, value, column, attr_key
+                        )
+                    )
+                    for operator, value
+                    in filter_operation_dict.items()
+                ]
+        return and_(*expressions)
+
+    #~ @abstractmethod
+    #~ def _build_filters(self, alias, filter_spec):
+        #~ pass
 
     def _join_slaves(self, joined_entity, entity_to_join):
         raise NotImplementedError(
@@ -1000,7 +1148,9 @@ class AbstractQueryBuilder(object):
                 returnval = (self.aliased_path[joining_value], func)
             elif isinstance(joining_value, str):
                 try:
-                    returnval = self.label_to_alias_map[self._get_label(joining_value)], func
+                    returnval = self.label_to_alias_map[
+                            self._get_label_from_specification(joining_value)
+                        ], func
                 except KeyError:
                     raise InputValidationError(
                         'Key {} is unknown to the types I know about:\n'
@@ -1063,23 +1213,19 @@ class AbstractQueryBuilder(object):
                 '{} is not a column of {}'.format(colname, alias)
             )
 
-    def _analyze_order_spec(self, alias, entitylabel, entityspec):
-        try:
-            column_name, attrpath = entitylabel.split('.', 1)
-        except ValueError:
-            column_name = entitylabel
-            attrpath = ''
+    def _build_order(self, alias, entitylabel, entityspec):
 
-        entity = self._get_entity(alias, column_name, attrpath, **entityspec)
+        column_name = entitylabel.split('.')[0]
+        attrpath = entitylabel.split('.')[1:]
+
+        entity = self._get_projectable_entity(alias, column_name, attrpath, **entityspec)
         order = entityspec.get('order', 'asc')
         if order == 'desc':
             entity = entity.desc()
-        return entity
-    def __repr__(self):
-        from sqlalchemy.dialects import postgresql
-        que = self.get_query()
-        return str(que.statement.compile(compile_kwargs={"literal_binds": True}, dialect=postgresql.dialect()))
-    def _build_query(self):
+        self.que = self.que.order_by(entity)
+
+
+    def _build(self):
         """
         build the query and return a sqlalchemy.Query instance
         """
@@ -1131,7 +1277,7 @@ class AbstractQueryBuilder(object):
                     ''.format(label, self.label_to_alias_map.keys())
                 )
             self.que = self.que.filter(
-                    self._analyze_filter_spec(alias, filter_specs)
+                    self._build_filters(alias, filter_specs)
                 )
 
         ######################### PROJECTIONS ##########################
@@ -1149,12 +1295,12 @@ class AbstractQueryBuilder(object):
             # I will simply project the last item specified!
             # Don't change, path traversal querying
             # relies on this behavior!
-            self._add_projection(self.path[-1]['label'], '*')
+            self.add_projection(self.path[-1]['label'], '*')
 
         self.nr_of_projections = 0
 
         for vertice in self.path:
-            self._add_projectable_entities(vertice['label'])
+            self._build_projections(vertice['label'])
 
 
         ##################### LINK-PROJECTIONS #########################
@@ -1162,11 +1308,11 @@ class AbstractQueryBuilder(object):
         for vertice in self.path:
             linklabel = vertice.get('linklabel', None)
             if linklabel is not None:
-                self._add_projectable_entities(linklabel)
+                self._build_projections(linklabel)
 
             linklabel = vertice.get('reverse_linklabel', None)
             if linklabel is not None:
-                self._add_projectable_entities(linklabel)
+                self._build_projections(linklabel)
 
         ######################### ORDER ################################
         for order_spec in self._order_by:
@@ -1174,22 +1320,17 @@ class AbstractQueryBuilder(object):
                 alias = self.label_to_alias_map[label]
                 for entitydict in entities:
                     for entitylabel, entityspec in entitydict.items():
-                        p = self._analyze_order_spec(alias, entitylabel, entityspec)
-                        self.que = self.que.order_by(p)
-                        #~ print "HERE", p
-                        #~ entity = self._get_entity(alias, column_name, attrpath)
-                        #~ self.que = self.que.order_by(entity)
+                        self._build_order(alias, entitylabel, entityspec)
+
         ######################### LIMIT ################################
         if self._limit:
             self.que = self.que.limit(self._limit)
-
 
         ################ LAST BUT NOT LEAST ############################
         #pop the entity that I added to start the query
         self.que._entities.pop(0)
 
         ######################### DONE #################################
-
 
         return self.que
 
@@ -1264,12 +1405,12 @@ class AbstractQueryBuilder(object):
     def get_query(self):
         """
         Checks if query instance is set as attribute of instance,
-        if not invokes :func:`QueryBuilderBase._build_query`.
+        if not invokes :func:`QueryBuilderBase._build`.
         :returns: an instance of sqlalchemy.orm.Query
         """
         if hasattr(self, 'que'):
             return self.que
-        return self._build_query()
+        return self._build()
 
     def _first(self):
         """
@@ -1280,16 +1421,33 @@ class AbstractQueryBuilder(object):
 
     def first(self):
         """
-        Executes query asking, for one instance.
+        Executes query asking for one instance.
+
         :returns: One row of aiida results
         """
-        res = self._first()
+        resultrow = self._first()
+        attrkeys_as_in_sql_result = {
+            index_in_sql_result:attrkey
+            for label, projected_entities_dict
+            in self.label_to_projected_entity_dict.items()
+            for attrkey, index_in_sql_result
+            in projected_entities_dict.items()
+        }
 
-        if self.nr_of_projections > 1:
-            return map(self._get_aiida_res, res)
-        else:
-            return self._get_aiida_res(res)
+        try:
+            returnval = [
+                    self._get_aiida_res(attrkeys_as_in_sql_result[colindex], rowitem)
+                    for colindex, rowitem
+                    in enumerate(resultrow)
+                ]
+        except TypeError:
+            assert(
+                len(attrkeys_as_in_sql_result)==1,
+                "I have not received an iterable, but the number of projections is > 1"
+            )
 
+            returnval = [self._get_aiida_res(attrkeys_as_in_sql_result[0], rowitem)]
+        return returnval
 
     def distinct(self):
         """
@@ -1299,24 +1457,6 @@ class AbstractQueryBuilder(object):
         self.que = self.get_query().distinct()
         return self
 
-
-    def _all(self):
-        return self.get_query().all()
-
-    def all(self):
-        """
-        Executes the full query.
-
-        :returns: a generator for all projected entities (each being a list).
-        """
-
-        results = self.yield_per(100)
-        if self.nr_of_projections > 1:
-            for res in results:
-                yield map(self._get_aiida_res, res)
-        else:
-            for res in results:
-                yield self._get_aiida_res(res)
 
     def yield_per(self, count):
         """
@@ -1328,18 +1468,40 @@ class AbstractQueryBuilder(object):
         """
         return self.get_query().yield_per(count)
 
-    @abstractmethod
-    def _get_aiida_res(self, res):
-        """
-        Some instance returned by ORM (django or SA) need to be converted
-        to Aiida instances (eg nodes)
 
-        :param res: the result returned by the query
-        :param key: the key that this entry would be return with
-
-        :returns: an aiida-compatible instance
+    def all(self):
         """
-        pass
+        Executes the full query.
+
+        :returns: a generator for all projected entities (each being a list).
+        """
+
+        results = self.yield_per(100)
+        attrkeys_as_in_sql_result = {
+            index_in_sql_result:attrkey
+            for label, projected_entities_dict
+            in self.label_to_projected_entity_dict.items()
+            for attrkey, index_in_sql_result
+            in projected_entities_dict.items()
+        }
+
+        try:
+            for resultrow in results:
+                yield [
+                    self._get_aiida_res(attrkeys_as_in_sql_result[colindex], rowitem)
+                    for colindex, rowitem
+                    in enumerate(resultrow)
+                ]
+        except TypeError:
+            # resultrow not an iterable:
+            # Checked, result that raises exception is included
+            assert(
+                len(attrkeys_as_in_sql_result)==1,
+                "I have not received an iterable, but the number of projections is > 1"
+            )
+
+            for rowitem in results:
+                yield [self._get_aiida_res(attrkeys_as_in_sql_result[0], rowitem)]
 
     def get_results_dict(self):
         """
@@ -1354,20 +1516,44 @@ class AbstractQueryBuilder(object):
 
         :returns: a generator returning the results as an iterable of dictionaries.
         """
-        def get_result(res, pos):
-            if hasattr(res, '__iter__'):
-                return res[pos]
-            else:
-                return res
 
-        for this_result in self.yield_per(100):
-            yield {
-                label:{
-                    key : self._get_aiida_res(get_result(this_result, position))
-                    for key, position in val.items()
+        results = self.yield_per(100)
+        try:
+            for this_result in self.yield_per(100):
+                yield {
+                    label:{
+                        attrkey : self._get_aiida_res(attrkey, this_result[index_in_sql_result])
+                        for attrkey, index_in_sql_result in projected_entities_dict.items()
+                    }
+                    for label, projected_entities_dict in self.label_to_projected_entity_dict.items()
                 }
-                for label, val in self.label_to_projected_entity_dict.items()
-            }
+        except TypeError:
+            # resultrow not an iterable:
+            # Checked, result that raises exception is included
+            assert(
+                self.nr_of_projections==1,
+                "I have not received an iterable, but the number of projections is > 1"
+            )
+            for this_result in self.yield_per(100):
+                yield {
+                    label:{
+                        attrkey : self._get_aiida_res(attrkey, this_result)
+                        for attrkey, position in projected_entities_dict.items()
+                    }
+                    for label, projected_entities_dict in self.label_to_projected_entity_dict.items()
+                }
+    @abstractmethod
+    def _get_aiida_res(self, key, res):
+        """
+        Some instance returned by ORM (django or SA) need to be converted
+        to Aiida instances (eg nodes)
+
+        :param key: the key that this entry would be returned with
+        :param res: the result returned by the query
+
+        :returns: an aiida-compatible instance
+        """
+        pass
 
     def inputs(self, **kwargs):
         """

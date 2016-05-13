@@ -66,12 +66,12 @@ class QueryBuilder(AbstractQueryBuilder):
             try:
                 returnval = DbAttribute.objects.get(id=res).getvalue()
             except ObjectDoesNotExist:
-                returnval = {}
+                returnval = None
         elif key.startswith('extras'):
             try:
                 returnval = DbExtra.objects.get(id=res).getvalue()
             except ObjectDoesNotExist:
-                returnval = {}
+                returnval = None
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
             returnval =  res.get_aiida_class()
         else:
@@ -109,7 +109,11 @@ class QueryBuilder(AbstractQueryBuilder):
                 mapped_entity = cast(mapped_entity, Float)
 
             return mapped_entity
-
+        if not attr_key:
+            raise InputValidationError(
+                    "Filters on attributes require a key\n"
+                    "for the Django-backend"
+                )
         mapped_class = db_column.prop.mapper.class_
         # Ok, so we have an attribute key here.
         # Unless cast is specified, will try to infer my self where the value
@@ -148,6 +152,10 @@ class QueryBuilder(AbstractQueryBuilder):
                 "Filtering by type is not implemented\n"
                 "in the Django-Backend"
             )
+        if operator == 'has_key':
+            raise NotImplementedError(
+                "Filtering by a key is not implemented in the Django-backend"
+            )
 
 
         types_n_casts = []
@@ -162,17 +170,18 @@ class QueryBuilder(AbstractQueryBuilder):
             types_n_casts.append(('d', None))
 
         expressions = []
-
         for dtype, castas in types_n_casts:
-
-
-            expressions.append(
-                cls._get_filter_expr(
-                    operator, value,
-                    get_attribute_db_column(mapped_class, dtype, castas=castas),
-                    []
+            try:
+                expressions.append(
+                    cls._get_filter_expr(
+                        operator, value,
+                        get_attribute_db_column(mapped_class, dtype, castas=castas),
+                        [], is_attribute=False
+                    )
                 )
-            )
+            except InputValidationError as e:
+                raise e
+
         actual_attr_key = '.'.join(attr_key)
         expr = db_column.any(and_(
                 mapped_class.key == actual_attr_key,
@@ -190,6 +199,11 @@ class QueryBuilder(AbstractQueryBuilder):
         if cast is not None:
             raise NotImplementedError(
                 "Casting is not implemented in the Django backend"
+            )
+        if not attrpath:
+            raise NotImplementedError(
+                "Cannot project all attributes in the Django backend\n"
+                "(You did not provide a key)"
             )
 
         aliased_attributes = aliased(column.prop.mapper.class_)

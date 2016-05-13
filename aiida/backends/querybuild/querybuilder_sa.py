@@ -69,7 +69,7 @@ class QueryBuilder(AbstractQueryBuilder):
             elif isinstance(value, dict):
                 type_filter = jsonb_typeof(path_in_json)=='array'
                 casted_entity = path_in_json.cast(JSONB) # BOOLEANS?
-            elif isinstance(value, str):
+            elif isinstance(value, (str, unicode)):
                 type_filter = jsonb_typeof(path_in_json)=='string'
                 casted_entity = path_in_json.astext
             elif value is None:
@@ -203,7 +203,7 @@ class QueryBuilder(AbstractQueryBuilder):
         elif key.startswith('attributes') or key.startswith('extras'):
             try:
                 returnval = json_loads(res)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as e:
                 # TypeError when it is not in ' '
                 # ValueError if it is already a casted string
                 returnval = res

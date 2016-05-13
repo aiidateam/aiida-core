@@ -902,6 +902,7 @@ class AbstractJobCalculation(object):
         # filter for calculation pks:
         if pks:
             calculation_filters['id'] = {'in':pks}
+            group_filters=None
         else:
             # The wanted behavior:
             # You know what you're looking for and specify pks,

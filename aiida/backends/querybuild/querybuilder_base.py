@@ -596,8 +596,54 @@ class AbstractQueryBuilder(object):
         if node_type_flt is not None:
             self.add_filter(labelspec, {'type':node_type_flt})
 
-    def add_projection(self, labelspec, projection_spec):
-        label = self._get_label_from_specification(labelspec)
+    def add_projection(self, label_spec, projection_spec):
+        """
+        Adds a projection
+        
+        :param label_spec: A valid specification for a label
+        :param projection_spec:
+            The specification for the projection.
+            A projection is a list of dictionaries, with each dictionary
+            containing key-value pairs where the key is database entity
+            (e.g. a column / an attribute) and the value is (optional)
+            additional information on how to process this database entity.
+
+        If the given *projection_spec* is not a list, it will be expanded to
+        a list.
+        If the listitems are not dictionaries, but strings (No additional 
+        processing of the projected results desired), they will be expanded to
+        dictionaries.
+
+        Usage::
+
+            qb = QueryBuilder()
+            qb.append(StructureData, label='struc')
+            qb.add_projection('struc', 'id') # Will project the id
+            # OR
+            qb.add_projection('struc', ['id', 'attributes.kinds'])
+            # OR
+            # I want to cast the kinds to a JSON-object (will return
+            # a dictionary:
+            qb.add_projection(
+                    'struc',
+                    [
+                        'id',
+                        {'attributes.kinds':{'cast':'j'}},
+                    ]
+                )
+            # OR 
+            # In this example, the order is not specified any more,
+            # but it is valid input if you don't care about the order of the 
+            # results:
+            qb.add_projection(
+                    'struc',
+                    {
+                        'id':{}, 
+                        {'attributes.kinds':{'cast':'j'}},
+                    }
+                )
+        """
+        label = self._get_label_from_specification(label_spec)
         _projections = []
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]

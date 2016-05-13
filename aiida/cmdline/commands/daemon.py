@@ -64,10 +64,11 @@ class Daemon(VerdiCommandWithSubcommands):
             'configureuser': (self.configure_user, self.complete_none),
         }
 
-        conffilename = setup.DAEMON_CONF_FILE.replace('.conf', '_new.conf')
         self.conffile_full_path = os.path.expanduser(os.path.join(
-            setup.AIIDA_CONFIG_FOLDER,
-            setup.DAEMON_SUBDIR, conffilename))
+                setup.AIIDA_CONFIG_FOLDER,
+                setup.DAEMON_SUBDIR,
+                setup.DAEMON_CONF_FILE
+            ))
 
 
     def _get_pid_full_path(self):
@@ -115,16 +116,10 @@ class Daemon(VerdiCommandWithSubcommands):
 
         from aiida.backends.settings import BACKEND
         from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+        from aiida.backends.utils import get_daemon_user
         from aiida.common.utils import get_configured_user_email
 
-        if BACKEND == BACKEND_DJANGO:
-            from aiida.backends.djsite.utils import get_daemon_user as get_daemon_user_dj
-            daemon_user = get_daemon_user_dj()
-        elif BACKEND == BACKEND_SQLA:
-            from aiida.backends.sqlalchemy.utils import get_daemon_user as get_daemon_user_sqla
-            daemon_user = get_daemon_user_sqla()
-
-
+        daemon_user = get_daemon_user()
         this_user = get_configured_user_email()
 
 
@@ -338,7 +333,7 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.backends.djsite.utils import get_daemon_user
+        from aiida.backends.utils import get_daemon_user
         from aiida.common.utils import get_configured_user_email
 
         daemon_user = get_daemon_user()

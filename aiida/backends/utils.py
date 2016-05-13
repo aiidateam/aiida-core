@@ -140,3 +140,12 @@ def get_authinfo(computer, aiidauser):
         raise Exception("unknown backend {}".format(settings.BACKEND))
     return authinfo
 
+
+def get_daemon_user():
+    if settings.BACKEND == "django":
+        from aiida.backends.djsite.utils import get_daemon_user as get_daemon_user_dj
+        daemon_user = get_daemon_user_dj()
+    elif settings.BACKEND ==  "sqlalchemy":
+        from aiida.backends.sqlalchemy.utils import get_daemon_user as get_daemon_user_sqla
+        daemon_user = get_daemon_user_sqla()
+    return daemon_user

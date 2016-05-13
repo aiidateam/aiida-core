@@ -128,7 +128,7 @@ def get_computers_work_dir(calculations, user):
     """
 
     from aiida.orm.computer import Computer
-    from aiida.execmanager import get_authinfo
+    from aiida.backends.utils import get_authinfo
 
     computers = [Computer.get(c.dbcomputer) for c in calculations]
 

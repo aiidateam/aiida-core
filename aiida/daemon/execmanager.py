@@ -80,7 +80,7 @@ def update_running_calcs_status(authinfo):
 
             # I update the status of jobs
 
-            for c in calcs_to_inquire:
+            for c, in calcs_to_inquire:
                 try:
                     logger_extra = get_dblogger_extra(c)
                     t._set_logger_extra(logger_extra)
@@ -278,7 +278,7 @@ def submit_jobs():
                 calcs_to_inquire = JobCalculation._get_all_with_state(
                     state=calc_states.TOSUBMIT,
                     computer=computer, user=aiidauser)
-                for calc in calcs_to_inquire:
+                for calc, in calcs_to_inquire:
                     try:
                         calc._set_state(calc_states.SUBMISSIONFAILED)
                     except ModificationNotAllowed:
@@ -338,7 +338,8 @@ def submit_jobs_with_authinfo(authinfo):
         try:
             # I do it here so that the transport is opened only once per computer
             with authinfo.get_transport() as t:
-                for c in calcs_to_inquire:
+                for c, in calcs_to_inquire:
+                    print c
                     logger_extra = get_dblogger_extra(c)
                     t._set_logger_extra(logger_extra)
 
@@ -360,7 +361,7 @@ def submit_jobs_with_authinfo(authinfo):
             import traceback
             from aiida.utils.logger import get_dblogger_extra
 
-            for calc in calcs_to_inquire:
+            for calc, in calcs_to_inquire:
                 logger_extra = get_dblogger_extra(calc)
                 try:
                     calc._set_state(calc_states.SUBMISSIONFAILED)
@@ -653,7 +654,7 @@ def retrieve_computed_for_authinfo(authinfo):
 
         # Open connection
         with authinfo.get_transport() as t:
-            for calc in calcs_to_retrieve:
+            for calc, in calcs_to_retrieve:
                 logger_extra = get_dblogger_extra(calc)
                 t._set_logger_extra(logger_extra)
 

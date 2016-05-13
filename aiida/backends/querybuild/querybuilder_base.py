@@ -1563,8 +1563,8 @@ class AbstractQueryBuilder(object):
                 len(attrkeys_as_in_sql_result)==1,
                 "I have not received an iterable, but the number of projections is > 1"
             )
-
-            returnval = [self._get_aiida_res(attrkeys_as_in_sql_result[0], rowitem)]
+            # It still returns a list!
+            returnval = [self._get_aiida_res(attrkeys_as_in_sql_result[0], resultrow)]
         return returnval
 
 

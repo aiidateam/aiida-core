@@ -1104,11 +1104,11 @@ class AbstractJobCalculation(object):
         qb.append(type="user", label='user', filters=userfilter, user_of="calc")
 
         if only_computer_user_pairs:
-            qb._add_projection("computer", "*")
-            qb._add_projection("user", "*")
+            qb.add_projection("computer", "*")
+            qb.add_projection("user", "*")
             returnresult = qb.distinct().all()
         else:
-            qb._add_projection("calc", "*")
+            qb.add_projection("calc", "*")
             if limit is not None:
                 qb.limit(limit)
             returnresult = qb.all()

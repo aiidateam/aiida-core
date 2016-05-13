@@ -801,14 +801,9 @@ class AbstractJobCalculation(object):
             cls, states=None, past_days=None, group=None,
             group_pk=None, all_users=False, pks=[],
             relative_ctime=True, with_scheduler_state=False,
-            order_by=None, limit=None
-        ):
+            order_by=None, limit=None):
         """
         Return a string with a description of the AiiDA calculations.
-
-        .. todo:: does not support the query for the IMPORTED state (since it
-          checks the state in the Attributes, not in the DbCalcState table).
-          Decide which is the correct logi and implement the correct query.
 
         :param states: a list of string with states. If set, print only the
             calculations in the states "states", otherwise shows all.
@@ -840,7 +835,6 @@ class AbstractJobCalculation(object):
         from aiida.orm.querybuilder import QueryBuilder
         from django.core.exceptions import ImproperlyConfigured
         from aiida.common.custom_io import pretty_print
-
 
         now = timezone.now()
 
@@ -930,27 +924,14 @@ class AbstractJobCalculation(object):
             else:
                 group_filters = None
 
-            
-
-        if with_scheduler_state:
-            calculation_projections = [
-                    'id', 'state', 'ctime', 'type', '*'
-                ]
-            calc_list_data = [[
-                '# Pk', 'State', 'Creation',
-                'Sched. state', 
-                'Computer', 'Type'
-            ]]
-        else:
-            calculation_projections = [
-                    'id', 'state', 'ctime', 'type'
-                ]
-            calc_list_data = [[
-                '# Pk', 'State', 'Creation',
-                #'Sched. state', 
-                'Computer', 'Type'
-            ]]
-
+        calculation_projections = [
+                'id', 'state', 'ctime', 'type', 'attributes.scheduler_state'
+            ]
+        calc_list_data = [[
+            '# Pk', 'State', 'Creation',
+            'Sched. state', 
+            'Computer', 'Type'
+        ]]
         qb = QueryBuilder()
         qb.append(
                 cls,
@@ -959,12 +940,13 @@ class AbstractJobCalculation(object):
                 label='calculation'
         )
         if group_filters is not None:
-            qb.append("group", filters=group_filters)
+            qb.append(
+                    type="group", filters=group_filters,
+                    group_of="calculation"
+                )
         qb.append(
-                type="computer",
-                computer_of='calculation',
-                project=['name'],
-                label='computer'
+                type="computer", computer_of='calculation',
+                project=['name'], label='computer'
             )
 
         # ORDER
@@ -979,11 +961,12 @@ class AbstractJobCalculation(object):
 
         results_generator = qb.get_results_dict()
 
-        # Make the string to return
+        counter = 0
         while True:
             try:
                 for i in range(100):
                     res = results_generator.next()
+                    counter += 1
                     ctime = res['calculation']['ctime']
                     if relative_ctime:
                         calc_ctime = str_timedelta(
@@ -996,36 +979,23 @@ class AbstractJobCalculation(object):
                             timezone.localtime(ctime).isoformat().split('T')[0],
                             timezone.localtime(ctime).isoformat().split('T')[
                                 1].split('.')[0].rsplit(":", 1)[0]])
-                    if with_scheduler_state:
-                        try:
-                            scheduler_state = res['calculation']['*'].get_attr('scheduler_state')
-                        except Exception:
-                            scheduler_state = 'Unknown'
-                            
-                        calc_list_data.append([
-                            str(res['calculation']['id']),
-                            res['calculation']['state'],
-                            calc_ctime, scheduler_state,
-                            res['computer']['name'],
-                            from_type_to_pluginclassname(
-                                    res['calculation']['type']
-                            ).rsplit(".", 1)[0].lstrip('calculation.job.')
-                        ])
-                    else:
-                        calc_list_data.append([
-                            str(res['calculation']['id']),
-                            res['calculation']['state'],
-                            calc_ctime,
-                            res['computer']['name'],
-                            from_type_to_pluginclassname(
-                                    res['calculation']['type']
-                            ).rsplit(".", 1)[0].lstrip('calculation.job.')
-                        ])
+                    calc_list_data.append([
+                        str(res['calculation']['id']),
+                        res['calculation']['state'],
+                        calc_ctime,
+                        res['calculation']['attributes.scheduler_state'],
+                        res['computer']['name'],
+                        from_type_to_pluginclassname(
+                                res['calculation']['type']
+                        ).rsplit(".", 1)[0].lstrip('calculation.job.')
+                    ])
                 pretty_print(calc_list_data)
                 calc_list_data = []
             except StopIteration:
                 pretty_print(calc_list_data)
                 break
+        print "\n  Number of rows: {}\n".format(counter)
+
 
     @classmethod
     def _get_all_with_state(

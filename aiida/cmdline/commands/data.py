@@ -637,7 +637,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
 
         print "UPF files found: {}. New files uploaded: {}".format(files_found, files_uploaded)
 
-
     def listfamilies(self, *args):
         """
         Print on screen the list of upf families installed
@@ -663,39 +662,44 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         from aiida.orm import DataFactory
 
         UpfData = DataFactory('upf')
-        groups = UpfData.get_upf_groups(filter_elements=parsed_args.element)
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.group import Group
+        qb = QueryBuilder()
+        qb.append(
+            UpfData,
+            filters={'attributes.element': {'in': parsed_args.element}}
+        )
+        qb.append(
+            Group,
+            group_of=UpfData,
+            project=["name", "description"],
+        )
 
-        if groups:
-            for g in groups:
-                pseudos = UpfData.query(dbgroups=g.dbgroup).distinct()
-                num_pseudos = pseudos.count()
-
-                pseudos_list = pseudos.filter(
-                    dbattributes__key="element").values_list(
-                    'dbattributes__tval', flat=True)
-
-                new_ps = pseudos.filter(
-                    dbattributes__key="element").values_list(
-                    'dbattributes__tval', flat=True)
+        if qb.distinct().count() > 0:
+            for res in qb.distinct().get_results_dict():
+                group_name = res.get("group").get("name")
+                group_desc = res.get("group").get("description")
+                qb = QueryBuilder()
+                qb.append(
+                    Group,
+                    filters={"name":  {'like': group_name}}
+                )
+                qb.append(
+                    UpfData,
+                    project=["id"],
+                    member_of=Group
+                )
 
                 if parsed_args.with_description:
-                    description_string = ": {}".format(g.description)
+                    description_string = ": {}".format(group_desc)
                 else:
                     description_string = ""
 
-                if num_pseudos != len(set(pseudos_list)):
-                    print ("x {} [INVALID: {} pseudos, for {} elements]{}"
-                           .format(g.name, num_pseudos, len(set(pseudos_list)),
-                                   description_string))
-                    print ("  Maybe the pseudopotential family wasn't "
-                           "setup with the uploadfamily function?")
+                print "* {} [{} pseudos]{}".format(group_name, qb.count(),
+                                                   description_string)
 
-                else:
-                    print "* {} [{} pseudos]{}".format(g.name, num_pseudos,
-                                                       description_string)
         else:
             print "No valid UPF pseudopotential family found."
-
 
     def exportfamily(self, *args):
         """

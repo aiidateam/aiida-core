@@ -18,9 +18,9 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.utils import (DataFactory, CalculationFactory)
         from aiida.orm.data.structure import StructureData
         from aiida.orm.implementation.django.node import Node
-        
+
         qb = QueryBuilder()
-        
+
         cls, clstype = qb._get_ormclass(DataFactory('structure'), None)
         self.assertEqual(clstype, 'data.structure.StructureData.')
         self.assertTrue(issubclass(cls, DbNode))
@@ -65,19 +65,59 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(clstype, 'computer')
         self.assertTrue(issubclass(cls, DbComputer))
 
-    @unittest.skipIf(not is_postgres(), "Tests only works with postgres")
-    def test_simple_query_django(self):
+    @unittest.skipIf(True, "Tests not fully functional")
+    def test_simple_query_django_1(self):
         """
         Testing a simple query
         """
         from aiida.backends.querybuild.querybuilder_django import QueryBuilder
-        from aiida.backends.querybuild.dummy_model import (
-                DbNode, DbLink, session, Base, DbAttribute, DbUser
-            )
         from aiida.orm.calculation.job import JobCalculation
         from aiida.orm import Node
         from datetime import datetime
 
+        n1 = Node()
+        n1.label = 'test1_node1'
+        n1._set_attr('foo',['hello', 'goodbye'])
+        n1.store()
+
+        n2 = Node()
+        n2.label = 'test1_node2'
+        n2._set_attr('foo', 1)
+        n2.store()
+
+        n3 = Node()
+        n3.label = 'test1_node3'
+        n3._set_attr('foo', 1.0000) # Stored as fval
+        n3.store()
+
+        n4 = Node()
+        n4.label = 'test1_node4'
+        n4._set_attr('foo', 'bar')
+        n4.store()
+
+        n5 = Node()
+        n5.label = 'test1_node5'
+        n5._set_attr('foo', None)
+        n5.store()
+
+
+        n2._add_link_from(n1)
+        n3._add_link_from(n1)
+
+        n4._add_link_from(n2)
+        n5._add_link_from(n2)
+
+        qb = QueryBuilder()
+        qb.append(Node, filters={'attributes.foo':1.000})
+
+
+    @unittest.skipIf(not is_postgres(), "Tests only works with postgres")
+    def test_simple_query_django_2(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
+        from aiida.backends.querybuild.dummy_model import (
+                DbNode, DbLink, DbAttribute, session
+            )
         n0 = DbNode(
                 label='hello',
                 type='tester.TesterData.',
@@ -105,7 +145,7 @@ class TestQueryBuilder(AiidaTestCase):
         l2 = DbLink(input=n1, output=n2, label='random_2')
 
         session.add_all([n0,n1,n2,l1,l2])
-        session.flush() # This is not writing to the DB
+        #~ session.flush() # This is not writing to the DB
 
         qb1 = QueryBuilder()
         qb1.append(
@@ -115,7 +155,7 @@ class TestQueryBuilder(AiidaTestCase):
                 'type':{'like':'tester%'}
             }
         )
-        self.assertEqual(len(qb1.all()),1)
+        self.assertEqual(len(list(qb1.all())),1)
 
         qh = {
                 'path':[
@@ -153,6 +193,7 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(resdict['n2']['label'], 'bar')
 
         qh['filters']['n1']['label'] = {'like':'%FoO'} # Case sensitive
+
         qb3 = QueryBuilder(**qh)
         self.assertEqual(len(list(qb3.all())), 0)
 

@@ -1,11 +1,20 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
+try:
+    import ultrajson
+    from functools import partial
+    json_loads = partial(ultrajson.loads, precise_float=True)
+except ImportError:
+    from json import loads as json_loads
+
+
 
 from aiida.backends.querybuild.querybuilder_base import AbstractQueryBuilder
 from sa_init import (
-        and_, or_, not_, except_, func as sa_func,
-        aliased, Integer, Float, Boolean, JSONB, jsonb_array_length
+        and_, or_, not_,
+        Integer, Float, Boolean, JSONB, DateTime,
+        jsonb_array_length, jsonb_typeof
     )
 
 from sqlalchemy_utils.types.choice import Choice
@@ -44,234 +53,162 @@ class QueryBuilder(AbstractQueryBuilder):
     def _get_session(self):
         return sa_session
 
-    def _analyze_filter_spec(self, alias, filter_spec):
-        expressions = []
-        for path_spec, filter_operation_dict in filter_spec.items():
-            if path_spec in  ('and', 'or', '~or', '~and'):
-                subexpressions = [
-                    self._analyze_filter_spec(alias, sub_filter_spec)
-                    for sub_filter_spec in filter_operation_dict
-                ]
-                if path_spec == 'and':
-                    expressions.append(and_(*subexpressions))
-                elif path_spec == 'or':
-                    expressions.append(or_(*subexpressions))
-                elif path_spec == '~and':
-                    expressions.append(not_(and_(*subexpressions)))
-                elif path_spec == '~or':
-                    expressions.append(not_(or_(*subexpressions)))
-            else:
-                column_name = path_spec.split('.')[0]
-                column =  self.get_column(column_name, alias)
-                json_path = path_spec.split('.')[1:]
-                db_path = column[(json_path)] if json_path else column
-                val_in_json = bool(json_path)
-                if not isinstance(filter_operation_dict, dict):
-                    filter_operation_dict = {'==':filter_operation_dict}
-                [
-                    expressions.append(
-                        self._get_expr(
-                            operator, value, db_path, val_in_json
-                        )
-                    )
-                    for operator, value
-                    in filter_operation_dict.items()
-                ]
-        return and_(*expressions)
-
     @classmethod
-    def _get_expr(cls, operator, value, db_path, val_in_json):
-        def cast_according_to_type(path_in_json, value, val_in_json):
-            if not val_in_json:
-                return path_in_json
-            elif isinstance(value, bool):
-                return path_in_json.cast(Boolean)
-            elif isinstance(value, int):
-                return path_in_json.cast(Integer)
-            elif isinstance(value, float):
-                return path_in_json.cast(Float)
-            elif isinstance(value, (list, tuple, dict)) or value is None:
-                return path_in_json.cast(JSONB) # BOOLEANS?
+    def _get_filter_expr_from_attributes(cls, operator, value, db_column, attr_key):
+
+        def cast_according_to_type(path_in_json, value):
+            if isinstance(value, bool):
+                type_filter = jsonb_typeof(path_in_json)=='boolean'
+                casted_entity = path_in_json.cast(Boolean)
+            elif isinstance(value, (int, float)):
+                type_filter = jsonb_typeof(path_in_json)=='number'
+                casted_entity = path_in_json.cast(Float)
+            elif isinstance(value, dict) or value is None:
+                type_filter = jsonb_typeof(path_in_json)=='object'
+                casted_entity = path_in_json.cast(JSONB) # BOOLEANS?
+            elif isinstance(value, dict):
+                type_filter = jsonb_typeof(path_in_json)=='array'
+                casted_entity = path_in_json.cast(JSONB) # BOOLEANS?
             elif isinstance(value, str):
-                return path_in_json.astext
+                type_filter = jsonb_typeof(path_in_json)=='string'
+                casted_entity = path_in_json.astext
+            elif value is None:
+                type_filter = jsonb_typeof(path_in_json)=='null'
+                casted_entity = path_in_json.cast(JSONB) # BOOLEANS?
             elif isinstance(value, datetime):
-                return path_in_json.cast(TIMESTAMP)
+                # type filter here is filter whether this attributes stores
+                # a string and a filter whether this string
+                # is compatible with a datetime (using a regex)
+                #  - What about historical values (BC, or before 1000AD)??
+                #  - Different ways to represent the timezone
+
+                type_filter = jsonb_typeof(path_in_json)=='string'
+                regex_filter = path_in_json.astext.op(
+                        "SIMILAR TO"
+                    )("\d\d\d\d-[0-1]\d-[0-3]\dT[0-2]\d:[0-5]\d:\d\d\.\d+((\+|\-)\d\d:\d\d)?")
+                type_filter =  and_(type_filter, regex_filter)
+                casted_entity = path_in_json.cast(DateTime)
             else:
                 raise Exception('Unknown type {}'.format(type(value)))
+            return type_filter, casted_entity
 
-        if operator.startswith('~'):
-            negation = True
-            operator = operator.lstrip('~')
-        else:
-            negation = False
+        database_entity = db_column[tuple(attr_key)]
         if operator == '==':
-            expr = cast_according_to_type(db_path, value, val_in_json) == value
+            type_filter, casted_entity = cast_according_to_type(database_entity, value)
+            expr = and_(type_filter, casted_entity == value)
         elif operator == '>':
-            expr = cast_according_to_type(db_path, value, val_in_json) > value
+            type_filter, casted_entity = cast_according_to_type(database_entity, value)
+            expr = and_(type_filter, casted_entity > value)
         elif operator == '<':
-            expr = cast_according_to_type(db_path, value, val_in_json) < value
-        elif operator == '>=':
-            expr = cast_according_to_type(db_path, value, val_in_json) >= value
-        elif operator == '<=':
-            expr = cast_according_to_type(db_path, value, val_in_json) <= value
-        elif operator == 'like':
-            if val_in_json:
-                expr = db_path.astext.like(value)
-            else:
-                expr = db_path.like(value)
-        elif operator == 'ilike':
-            if val_in_json:
-                expr = db_path.astext.ilike(value)
-            else:
-                expr = db_path.ilike(value)
-        elif operator == 'in':
-            value_type_set = set([type(i) for i in value])
-            if len(value_type_set) > 1:
+            type_filter, casted_entity = cast_according_to_type(database_entity, value)
+            expr = and_(type_filter, casted_entity < value)
+        elif operator in ('>=', '=>'):
+            type_filter, casted_entity = cast_according_to_type(database_entity, value)
+            expr = and_(type_filter, casted_entity >= value)
+        elif operator == ('<=', '=<'):
+            type_filter, casted_entity = cast_according_to_type(database_entity, value)
+            expr = and_(type_filter, casted_entity <= value)
+        elif operator == 'of_type':
+            # http://www.postgresql.org/docs/9.5/static/functions-json.html
+            #  Possible types are object, array, string, number, boolean, and null.
+            valid_types = ('object', 'array', 'string', 'number', 'boolean', 'null')
+            if value not in valid_types:
                 raise InputValidationError(
-                        '{}  contains more than one type'.format(value)
-                    )
-            elif len(value_type_set) == 0:
-                if val_in_json:
-                    raise InputValidationError(
-                            'I was given an empty list\n'
-                            'Operator {}\n'
-                            'Db path {}\n'
-                            ''.format(operator, db_path)
-                        )
-                else:
-                    expr = db_path.in_(value)
-            else:
-                casted_column = cast_according_to_type(
-                        db_path,
-                        value[0],
-                        val_in_json
-                    )
-                expr = casted_column.in_(value)
+                    "value {} for of_type is not among valid types\n"
+                    "{}".format(value, valid_types)
+                )
+            expr = jsonb_typeof(database_entity) == value
+        elif operator == 'like':
+            type_filter, casted_entity = cast_according_to_type(database_entity, value)
+            expr = and_(type_filter, casted_entity.like(value))
+        elif operator == 'ilike':
+            type_filter, casted_entity = cast_according_to_type(database_entity, value)
+            expr = and_(type_filter, casted_entity.ilike(value))
+        elif operator == 'in':
+            type_filter, casted_entity = cast_according_to_type(database_entity, value[0])
+            expr = and_(type_filter, casted_entity.in_(value))
         elif operator == 'contains':
-            #~ print 'I must contain', value
-            # This only works for json
-            expr = db_path.cast(JSONB).contains(value)
+            expr = database_entity.cast(JSONB).contains(value)
         elif operator == 'has_key':
-            # print 'I must contain', value
-            expr = db_path.cast(JSONB).has_key(value)
-            #~ print type(expr)
+            expr = database_entity.cast(JSONB).has_key(value)
         elif operator == 'of_length':
-            expr = jsonb_array_length(db_path.cast(JSONB)) == value
+            expr=  and_(
+                jsonb_typeof(database_entity) == 'array',
+                jsonb_array_length(database_entity.cast(JSONB)) == value
+            )
         elif operator == 'longer':
-            expr = jsonb_array_length(db_path.cast(JSONB)) > value
+            expr = and_(
+                jsonb_typeof(database_entity) == 'array',
+                jsonb_array_length(database_entity.cast(JSONB)) > value
+            )
         elif operator == 'shorter':
-            expr = jsonb_array_length(db_path.cast(JSONB)) < value
-        elif operator == 'nr_of_keys':
-            #~ print 'I must contain', value
-            expr = jsonb_dict_length(db_path.cast(JSONB)) == value
-        elif operator == 'and':
-            and_expressions_for_this_path = []
-            for filter_operation_dict in value:
-                for newoperator, newvalue in filter_operation_dict.items():
-                    and_expressions_for_this_path.append(
-                            cls._get_expr(
-                                    newoperator, newvalue,
-                                    db_path, val_in_json
-                                )
-                        )
-            expr = and_(*and_expressions_for_this_path)
-        elif operator == 'or':
-            or_expressions_for_this_path = []
-            for filter_operation_dict in value:
-                # Attention: Multiple expression inside
-                # one direction are joint by and!
-                # Default will and should always be kept AND
-                or_expressions_for_this_path.append(and_(*[
-                        cls._get_expr(
-                            newoperator, newvalue,
-                            db_path, val_in_json
-                        )
-                        for newoperator, newvalue
-                        in filter_operation_dict.items()
-                    ]
-                ))
-            expr = or_(*or_expressions_for_this_path)
+            expr =  and_(
+                jsonb_typeof(database_entity) == 'array',
+                jsonb_array_length(database_entity.cast(JSONB)) < value
+            )
         else:
-            raise Exception (' Unknown filter {}'.format(operator))
-        if negation:
-            return not_(expr)
+            raise InputValidationError(
+                "Unknown operator {} for filters in JSON field".format(operator)
+            )
         return expr
 
 
-    def _get_entity(self, alias, column_name, attrpath, cast='j', **kwargs):
-        column = self.get_column(column_name, alias)
-        json_path = attrpath
-        
-        if json_path:
-            if cast =='j':
-                entity = column[json_path].cast(JSONB)
-            elif cast == 'f':
-                entity = column[json_path].cast(Float)
-            elif cast == 'i':
-                entity = column[json_path].cast(Integer)
-            elif cast == 'b':
-                entity = column[json_path].cast(Boolean)
-            elif cast == 't':
-                entity = column[json_path].astext
-            else:
-                raise InputValidationError(
-                        "Invalid type to cast {}".format(cast)
-                    )
+    def _get_projectable_attribute(
+            self, alias, column, attrpath,
+            cast=None, **kwargs
+        ):
+        """
+        :returns: An attribute store in a JSON field of the give column
+        """
+
+        entity = column[(attrpath)]
+        if cast is None:
+            entity = entity
+        elif cast=='f':
+            entity = entity.cast(Float)
+        elif cast=='i':
+            entity = entity.cast(Integer)
+        elif cast=='b':
+            entity = entity.cast(Boolean)
+        elif cast=='t':
+            entity = entity.astext
+        elif cast=='j':
+            entity = entity.cast(JSONB)
+        elif cast=='d':
+            entity = entity.cast(DateTime)
         else:
-            entity = column
+            raise InputValidationError(
+                "Unkown casting key {}".format(cast)
+            )
         return entity
-        
-
-    def _add_projectable_entity(self, alias, projectable_entity, cast='j', func=None):
-
-
-        column_name = projectable_entity.split('.')[0]
-        json_path = projectable_entity.split('.')[1:]
-
-        if column_name == '*':
-            if func is not None:
-                raise InputValidationError(
-                        "Very sorry, but functions on the aliased class\n"
-                        "(You specified '*')\n"
-                        "will not work!\n"
-                        "I suggest you apply functions on a column, e.g. ('id')\n"
-                    )
-            self.que = self.que.add_entity(alias)
-        else:
-            
-            entity_to_project = self._get_entity(
-                    alias, column_name, json_path,
-                    cast=cast
-                )
-            if func is None:
-                pass
-            elif func == 'max':
-                entity_to_project = sa_func.max(entity_to_project)
-            elif func == 'min':
-                entity_to_project = sa_func.max(entity_to_project)
-            elif func == 'count':
-                entity_to_project = sa_func.count(entity_to_project)
-            else:
-                raise InputValidationError(
-                        "\nInvalid function specification {}".format(func)
-                    )
-            self.que =  self.que.add_columns(entity_to_project)
 
 
 
-    def _get_aiida_res(self, res):
+
+    def _get_aiida_res(self, key, res):
         """
         Some instance returned by ORM (django or SA) need to be converted
         to Aiida instances (eg nodes). Choice (sqlalchemy_utils)
         will return their value
 
+        :param key: The key
         :param res: the result returned by the query
 
         :returns: an aiida-compatible instance
         """
         if isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
-            return res.get_aiida_class()
+            returnval = res.get_aiida_class()
         elif isinstance(res, Choice):
-            return res.value
+            returnval = res.value
+        elif key.startswith('attributes') or key.startswith('extras'):
+            try:
+                returnval = json_loads(res)
+            except (TypeError, ValueError):
+                # TypeError when it is not in ' '
+                # ValueError if it is already a casted string
+                returnval = res
         else:
-            return res
+            returnval = res
+        return returnval
+
+

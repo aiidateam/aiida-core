@@ -16,7 +16,7 @@ from sa_init import (
     select, func, join, and_, or_, not_, except_,     # join and filter ops
     relationship, backref, column_property,           # Table to table relationsships
     sessionmaker, create_engine,                      # connection
-    foreign, mapper,
+    foreign, mapper, case, cast
 )
 
 # Aiida Django classes:
@@ -158,16 +158,10 @@ class DbNode(Base):
         # and instantiate an object that has the same attributes as self.
         from aiida.backends.djsite.db.models import DbNode as DjangoSchemaDbNode
         dbnode = DjangoSchemaDbNode(
-            id = self.id,
-            type = self.type,
-            uuid = self.uuid,
-            ctime = self.ctime,
-            mtime = self.mtime,
-            label = self.label,
-            dbcomputer_id = self.dbcomputer_id,
-            user_id = self.user_id,
-            public = self.public,
-            nodeversion = self.nodeversion
+                id=self.id, type=self.type, uuid=self.uuid, ctime=self.ctime,
+                mtime=self.mtime, label=self.label,
+                dbcomputer_id=self.dbcomputer_id, user_id=self.user_id,
+                public=self.public, nodeversion=self.nodeversion
         )
         return dbnode.get_aiida_class()
 
@@ -175,10 +169,19 @@ class DbNode(Base):
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
     id = Column(Integer, primary_key=True)
-    dbnode = relationship('DbNode', backref=backref('dbstates', passive_deletes=True))
+    dbnode = relationship(
+            'DbNode',
+            backref=backref('dbstates', passive_deletes=True)
+        )
     state = Column(String(255))
     time = Column(DateTime(timezone=True), default=timezone.now)
-    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+    dbnode_id = Column(
+            Integer,
+            ForeignKey(
+                'db_dbnode.id', ondelete="CASCADE",
+                deferrable=True, initially="DEFERRED"
+            )
+        )
     __table_args__ = (
         UniqueConstraint('dbnode_id', 'state'),
     )
@@ -194,6 +197,8 @@ class DbAttribute(Base):
     ival = Column(Integer, default=None, nullable=True)
     bval = Column(Boolean, default=None, nullable=True)
     dval = Column(DateTime, default=None, nullable = True)
+
+
 
 class DbExtra(Base):
     __tablename__ = "db_dbextra"
@@ -254,7 +259,7 @@ class DbUser(Base):
     def get_aiida_class(self):
         from aiida.backends.djsite.db.models import DbUser as DjangoSchemaDbUser
         djuser = DjangoSchemaDbUser(
-            id=self.id,email=self.email, password=self.password, 
+            id=self.id,email=self.email, password=self.password,
             first_name=self.first_name, last_name=self.last_name,
             institution=self.institution, is_staff=self.is_staff,
             is_active=self.is_active, last_login=self.last_login,
@@ -267,8 +272,14 @@ table_groups_nodes = Table(
     'db_dbgroup_dbnodes',
     Base.metadata,
     Column('id', Integer, primary_key=True),
-    Column('dbnode_id', Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")),
-    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED"))
+    Column(
+            'dbnode_id', Integer,
+            ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+        ),
+    Column(
+            'dbgroup_id', Integer,
+            ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED")
+        )
 )
 
 class DbGroup(Base):
@@ -284,7 +295,12 @@ class DbGroup(Base):
     time = Column(DateTime(timezone=True), default=timezone.now)
     description = Column(Text, nullable=True)
 
-    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially="DEFERRED"))
+    user_id = Column(
+            Integer,
+            ForeignKey(
+                'db_dbuser.id', ondelete='CASCADE',
+                deferrable=True, initially="DEFERRED")
+            )
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
     dbnodes = relationship('DbNode', secondary=table_groups_nodes,
@@ -312,7 +328,7 @@ class DbGroup(Base):
             user_id = self.user_id,
         )
 
-        return DjangoAiidaGroup(dbgroup = dbgroup)
+        return DjangoAiidaGroup(dbgroup=dbgroup)
 
 
 
@@ -357,6 +373,36 @@ DbNode.state = column_property(
     select([recent_states.c.state]).
     where(recent_states.c.dbnode_id == foreign(DbNode.id))
 )
+
+
+DbAttribute.value_str = column_property(
+        case([
+            (DbAttribute.datatype == 'txt', DbAttribute.tval),
+            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
+            (DbAttribute.datatype == 'int', cast(DbAttribute.ival, String)),
+            (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, String)),
+            (DbAttribute.datatype == 'date', cast(DbAttribute.dval, String)),
+            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, String)),
+            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
+            (DbAttribute.datatype == 'list', None),
+            (DbAttribute.datatype == 'dict', None),
+        ])
+    )
+
+DbAttribute.value_float = column_property(
+        case([
+            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
+            (DbAttribute.datatype == 'float', DbAttribute.fval),
+            (DbAttribute.datatype == 'int', cast(DbAttribute.ival, Float)),
+            (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, Float)),
+            (DbAttribute.datatype == 'date', cast(DbAttribute.dval, Float)),
+            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
+            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, Float)),
+            (DbAttribute.datatype == 'list', None),
+            (DbAttribute.datatype == 'dict', None),
+        ])
+    )
+
 
 engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
 if engine == "sqlite3":

@@ -683,7 +683,7 @@ class AbstractQueryBuilder(object):
     def _get_projectable_entity(self, alias, column_name, attrpath, **entityspec):
 
         column = self.get_column(column_name, alias)
-        if len(attrpath):
+        if len(attrpath) or column_name in ('attributes', 'extras'):
 
             entity = self._get_projectable_attribute(
                         alias, column, attrpath, **entityspec
@@ -830,7 +830,7 @@ class AbstractQueryBuilder(object):
 
 
     @classmethod
-    def _get_filter_expr(cls, operator, value, db_column, attr_key):
+    def _get_filter_expr(cls, operator, value, db_column, attr_key, is_attribute):
         """
         Applies a filter on the alias given.
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -933,35 +933,23 @@ class AbstractQueryBuilder(object):
                 raise InputValidationError(
                         '{}  contains is an empty list'.format(value)
                     )
-        elif operator == 'and':
-            and_expressions_for_this_path = []
+        elif operator in ('and', 'or'):
+            expressions_for_this_path = []
             for filter_operation_dict in value:
                 for newoperator, newvalue in filter_operation_dict.items():
-                    and_expressions_for_this_path.append(
+                    expressions_for_this_path.append(
                             cls._get_filter_expr(
                                     newoperator, newvalue,
-                                    db_column, attr_key
+                                    db_column, attr_key,
+                                    is_attribute=is_attribute
                                 )
                         )
-            expr = and_(*and_expressions_for_this_path)
-        elif operator == 'or':
-            or_expressions_for_this_path = []
-            for filter_operation_dict in value:
-                # Attention: Multiple expression inside
-                # one direction are joint by and!
-                # Default will and should always be kept AND
-                or_expressions_for_this_path.append(and_(*[
-                        cls._get_filter_expr(
-                            newoperator, newvalue,
-                            db_column, attr_key
-                        )
-                        for newoperator, newvalue
-                        in filter_operation_dict.items()
-                    ]
-                ))
-            expr = or_(*or_expressions_for_this_path)
+            if operator == 'and':
+                expr = and_(*expressions_for_this_path)
+            elif operator == 'or':
+                 expr = or_(*expressions_for_this_path)
 
-        if attr_key:
+        if is_attribute:
             expr = cls._get_filter_expr_from_attributes(operator, value, db_column, attr_key)
         else:
             expr = cls._get_filter_expr_from_column(operator, value, db_column)
@@ -999,13 +987,18 @@ class AbstractQueryBuilder(object):
                 column_name = path_spec.split('.')[0]
                 column =  self.get_column(column_name, alias)
                 attr_key = path_spec.split('.')[1:]
+                is_attribute = (
+                    attr_key or
+                    column_name in ('attributes', 'extras')
+                )
                 #~ is_attribute = bool(attr_key)
                 if not isinstance(filter_operation_dict, dict):
                     filter_operation_dict = {'==':filter_operation_dict}
                 [
                     expressions.append(
                         self._get_filter_expr(
-                            operator, value, column, attr_key
+                            operator, value, column, attr_key,
+                            is_attribute=is_attribute
                         )
                     )
                     for operator, value
@@ -1323,9 +1316,9 @@ class AbstractQueryBuilder(object):
         """
         try:
             return getattr(alias, colname)
-        except KeyError:
+        except (KeyError, AttributeError):
             raise InputValidationError(
-                '{} is not a column of {}'.format(colname, alias)
+                '\n{} is not a column of {}\n'.format(colname, alias)
             )
 
     def _build_order(self, alias, entitylabel, entityspec):

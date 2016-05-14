@@ -716,7 +716,10 @@ class AbstractQueryBuilder(object):
                     )
             self.que = self.que.add_entity(alias)
         else:
-            entity_to_project = self._get_projectable_entity(alias, column_name, attr_key)
+            entity_to_project = self._get_projectable_entity(
+                    alias, column_name, attr_key,
+                    cast=cast
+                )
             if func is None:
                 pass
             elif func == 'max':

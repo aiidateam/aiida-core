@@ -1481,14 +1481,21 @@ class AbstractQueryBuilder(object):
             input_alias_list = []
             for node in self.path:
                 label = node['label']
-                if '*' in self.projections[label]:
+                requested_cols = [
+                        key 
+                        
+                        for item in self.projections[label]
+                        for key in item.keys()
+                    ]
+                if '*' in requested_cols:
                     input_alias_list.append(aliased(self.label_to_alias_map[label]))
-
+                    
+                    
             counterquery = self._get_session().query(orm_calc_class)
             if type_spec:
                 counterquery = counterquery.filter(orm_calc_class.type == type_spec)
             for alias in input_alias_list:
-                print alias
+                
                 link = aliased(self.Link)
                 counterquery = counterquery.join(
                     link,

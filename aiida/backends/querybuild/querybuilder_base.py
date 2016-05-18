@@ -1689,13 +1689,16 @@ class AbstractQueryBuilder(object):
                     in enumerate(resultrow)
                 ]
         except TypeError:
-            if len(self._attrkeys_as_in_sql_result) > 1:
+            if resultrow is None:
+                returnval = None
+            elif len(self._attrkeys_as_in_sql_result) > 1:
                 raise Exception(
                     "I have not received an iterable\n"
                     "but the number of projections is > 1"
                 )
             # It still returns a list!
-            returnval = [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow)]
+            else:
+                returnval = [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow)]
         return returnval
 
 

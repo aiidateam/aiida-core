@@ -1689,7 +1689,7 @@ class AbstractQueryBuilder(object):
                     in enumerate(resultrow)
                 ]
         except TypeError:
-            if len(attrkeys_as_in_sql_result) > 1:
+            if len(self._attrkeys_as_in_sql_result) > 1:
                 raise Exception(
                     "I have not received an iterable\n"
                     "but the number of projections is > 1"

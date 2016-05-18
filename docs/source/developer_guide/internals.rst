@@ -159,7 +159,7 @@ The input/output links of the node can be accessed by the following methods.
 
 *Methods to get the output data*
 
-- :py:meth:`~aiida.orm.node.Node.get_outputs_dict` returns a dictionary where the key is the label of the output link, and the value is the input node.
+- :py:meth:`~aiida.orm.node.Node.get_outputs_dict` returns a dictionary where the key is the label of the output link, and the value is the output node.
 
 - :py:meth:`~aiida.orm.node.Node.get_outputs` returns a list of output nodes.
 

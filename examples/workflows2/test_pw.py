@@ -6,13 +6,25 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
+if not is_dbenv_loaded():
+    load_dbenv()
+
 import sys
 import os
 from aiida.common.example_helpers import test_and_get_code
 from aiida.orm import DataFactory
 from aiida.common.exceptions import NotExistent
+from aiida.workflows2.execution_engine import execution_engine
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.workflows2.legacy.job_calculation import JobCalculation
+import threading
+
+
+def keep_ticking():
+    execution_engine.tick()
+    threading.Timer(10, keep_ticking()).start()
 
 # If set to True, will ask AiiDA to run in serial mode (i.e., AiiDA will not
 # invoke the mpirun command in the submission script)
@@ -50,8 +62,6 @@ queue = None
 # queue = "Q_aries_free"
 settings = None
 #####
-
-# code = test_and_get_code(codename, expected_code_type='quantumespresso.pw')
 
 alat = 4.  # angstrom
 cell = [[alat, 0., 0., ],
@@ -152,7 +162,8 @@ if queue is not None:
 inputs = {
     'structure': s,
     'parameters': parameters,
-    'kpoints': kpoints
+    'kpoints': kpoints,
+    'code': test_and_get_code(codename, expected_code_type='quantumespresso.pw'),
 }
 if settings is not None:
     inputs['settings'] = settings
@@ -185,3 +196,5 @@ if settings is not None:
     inputs['pseudo'] = pseudos_to_use
 
 job_calc.run(inputs=inputs)
+keep_ticking()
+

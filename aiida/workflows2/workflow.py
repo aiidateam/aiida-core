@@ -15,26 +15,6 @@ class Workflow(Process, plum.workflow.Workflow):
     _INPUT_BUFFER = '__input_buffer'
     _spec_type = plum.workflow.WorkflowSpec
 
-    def _continue_from(self, record, exec_engine=None):
-        """
-        Restore the state of the class to how it would have been
-
-        :param record: The record to continue from
-        """
-        # Set up the input buffer of values waiting to be used as inputs
-        if self._INPUT_BUFFER in record.instance_state:
-            self._input_buffer =\
-                {link: load_node(uuid=uuid) for link, uuid in
-                 record.instance_state[self._INPUT_BUFFER].iteritems()}
-
-        if record.children:
-            # Now continue all the children that were running
-            for child_record in record.children.values():
-                label = child_record.instance_state[self._CHILD_LABEL]
-                self._process_instances[label].continue_from(child_record)
-        else:
-            self.run(record.inputs)
-
     def _create_child_record(self, child, inputs):
         # Find the child
         child_label = self._find_instance_label(child)

@@ -5,7 +5,7 @@ import plum.persistence.persistence_mixin
 import plum.port as port
 
 import aiida.workflows2.util as util
-from aiida.workflows2.persistance.active_factory import create_process_record
+from aiida.workflows2.execution_engine import execution_engine
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from abc import ABCMeta
@@ -28,13 +28,16 @@ class ProcessSpec(plum.process.ProcessSpec):
         self._fastforwardable = True
 
 
-class Process(plum.persistence.persistence_mixin.PersistenceMixin,
-              plum.process.Process):
+class Process(plum.process.Process):
     """
     This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
     """
     __metaclass__ = ABCMeta
+
+    @classmethod
+    def _create_default_exec_engine(cls):
+        return execution_engine
 
     class RunningData(object):
         def __init__(self, inputs):
@@ -45,11 +48,12 @@ class Process(plum.persistence.persistence_mixin.PersistenceMixin,
 
     _spec_type = ProcessSpec
 
-    def __init__(self):
+    def __init__(self, create_output_links=True):
         super(Process, self).__init__()
         self._running_data = None
+        self._create_output_links = create_output_links
 
-    def run(self, inputs=None, exec_engine=None):
+    def run(self, inputs=None):
         self._running_data = self.RunningData(inputs)
 
         with util.ProcessStack.push(self):
@@ -57,34 +61,20 @@ class Process(plum.persistence.persistence_mixin.PersistenceMixin,
             if self._can_fast_forward(inputs):
                 self._fast_forward()
             else:
-                super(Process, self).run(inputs, exec_engine)
+                super(Process, self).run(inputs)
 
     @property
     def current_calculation_node(self):
         return self._current_calc
 
-    def _continue_from(self, record, exec_engine=None):
-        """
-        Continue using the state saved in a process record.
-
-        :param record: The record to continue using.
-        """
-        # A generic process can't be continued mid way so just run again using
-        # the same inputs
-        self._run(**record.inputs)
-
     # Messages #####################################################
-    def _on_process_starting(self, inputs):
+    def _on_process_starting(self, inputs, exec_engine):
         """
         The process is starting with the given inputs
         :param inputs: A dictionary of inputs for each input port
         """
+        super(Process, self)._on_process_starting(inputs, exec_engine)
         self._setup_db_record(inputs)
-        super(Process, self)._on_process_starting(inputs)
-
-    def _on_process_continuing(self, record):
-        super(Process, self)._on_process_continuing(record)
-        self._setup_db_record(record.inputs)
 
     def _on_process_finalising(self):
         super(Process, self)._on_process_finalising()
@@ -101,13 +91,14 @@ class Process(plum.persistence.persistence_mixin.PersistenceMixin,
         """
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
 
-        if value.is_stored:
-            link_type = LinkType.RETURN
-        else:
-            value.store()
-            link_type = LinkType.CREATE
+        if self._create_output_links:
+            if value.is_stored:
+                link_type = LinkType.RETURN
+            else:
+                value.store()
+                link_type = LinkType.CREATE
 
-        value.add_link_from(self._current_calc, output_port, link_type)
+            value.add_link_from(self._current_calc, output_port, link_type)
     #################################################################
 
     def _create_db_record(self):
@@ -158,14 +149,6 @@ class Process(plum.persistence.persistence_mixin.PersistenceMixin,
         node = None  # Here we should find the old node
         for k, v in node.get_output_dict():
             self._out(k, v)
-
-    def _create_process_record(self, inputs):
-        assert(not self._process_record)
-
-        if self._parent:
-            return self._parent._create_child_record(self, inputs)
-        else:
-            return create_process_record(self, inputs)
 
     def _create_child_record(self, child, inputs):
         return self._process_record.create_child(child, inputs)

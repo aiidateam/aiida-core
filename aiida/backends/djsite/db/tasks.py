@@ -201,3 +201,7 @@ def workflow_stepper():
     daemon_main_loop()
     set_daemon_timestamp(task_name='workflow', when='stop')
 
+@celery.task(base=SingleTask)
+def execution_engine_ticker():
+    from aiida.workflows2.execution_engine import execution_engine
+    execution_engine.tick()

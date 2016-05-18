@@ -86,86 +86,6 @@ class DbPath(Base):
     direct_edge_id = Column(Integer)
     exit_edge_id = Column(Integer)
 
-
-class DbNode(Base):
-    __tablename__ = "db_dbnode"
-    id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
-    type = Column(String(255), index=True)
-    label = Column(String(255), index=True, nullable=True)
-    description = Column(Text(), nullable=True)
-    ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now)
-    dbcomputer_id = Column(
-        Integer,
-        ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED"),
-        nullable=True
-    )
-    dbcomputer = relationship(
-        'DbComputer',
-        backref=backref('dbnodes', passive_deletes=True)
-    )
-    user_id = Column(
-        Integer,
-        ForeignKey('db_dbuser.id', deferrable=True, initially="DEFERRED"),
-        nullable=False
-    )
-    user = relationship('DbUser', backref='dbnodes')
-
-    public = Column(Boolean, default=False)
-
-    nodeversion = Column(Integer, default=1)
-
-    attributes = relationship('DbAttribute', uselist=True, backref='dbnode')
-    extras = relationship('DbExtra', uselist=True, backref='dbnode')
-
-
-
-    outputs = relationship(
-        "DbNode",
-        secondary       =   "db_dblink",
-        primaryjoin     =   "DbNode.id == DbLink.input_id",
-        secondaryjoin   =   "DbNode.id == DbLink.output_id",
-        backref         =   backref("inputs", passive_deletes=True),
-        passive_deletes =   True
-    )
-
-    children = relationship(
-        "DbNode",
-        secondary       =   "db_dbpath",
-        primaryjoin     =   "DbNode.id == DbPath.parent_id",
-        secondaryjoin   =   "DbNode.id == DbPath.child_id",
-        backref         =   "parents"
-    )
-    def get_aiida_class(self):
-        """
-        Return the corresponding instance of
-        :func:`~aiida.orm.implementation.django.node.Node`
-        or a subclass return by the plugin loader.
-
-        .. todo::
-            The behavior is quite pathetic, creating a django DbNode instance
-            to instantiate the aiida instance.
-            These means that every time you load Aiida instances with
-            the QueryBuilder when using Django as a backend, three instances
-            are instantiated for every Aiida instance you load!
-            Could be fixed by allowing DbNode from the dummy nodel to be passed
-            to AiidaNode's __init__.
-
-        :returns: An instance of the plugin class
-        """
-        # I need to import the DbNode in the Django model,
-        # and instantiate an object that has the same attributes as self.
-        from aiida.backends.djsite.db.models import DbNode as DjangoSchemaDbNode
-        dbnode = DjangoSchemaDbNode(
-                id=self.id, type=self.type, uuid=self.uuid, ctime=self.ctime,
-                mtime=self.mtime, label=self.label,
-                dbcomputer_id=self.dbcomputer_id, user_id=self.user_id,
-                public=self.public, nodeversion=self.nodeversion
-        )
-        return dbnode.get_aiida_class()
-
-
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
     id = Column(Integer, primary_key=True)
@@ -329,6 +249,87 @@ class DbGroup(Base):
         )
 
         return DjangoAiidaGroup(dbgroup=dbgroup)
+
+
+
+class DbNode(Base):
+    __tablename__ = "db_dbnode"
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    type = Column(String(255), index=True)
+    label = Column(String(255), index=True, nullable=True)
+    description = Column(Text(), nullable=True)
+    ctime = Column(DateTime(timezone=True), default=timezone.now)
+    mtime = Column(DateTime(timezone=True), default=timezone.now)
+    dbcomputer_id = Column(
+        Integer,
+        ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED"),
+        nullable=True
+    )
+    dbcomputer = relationship(
+        'DbComputer',
+        backref=backref('dbnodes', passive_deletes=True)
+    )
+    user_id = Column(
+        Integer,
+        ForeignKey('db_dbuser.id', deferrable=True, initially="DEFERRED"),
+        nullable=False
+    )
+    user = relationship('DbUser', backref='dbnodes')
+
+    public = Column(Boolean, default=False)
+
+    nodeversion = Column(Integer, default=1)
+
+    attributes = relationship('DbAttribute', uselist=True, backref='dbnode')
+    extras = relationship('DbExtra', uselist=True, backref='dbnode')
+
+
+
+    outputs = relationship(
+        "DbNode",
+        secondary       =   "db_dblink",
+        primaryjoin     =   "DbNode.id == DbLink.input_id",
+        secondaryjoin   =   "DbNode.id == DbLink.output_id",
+        backref         =   backref("inputs", passive_deletes=True),
+        passive_deletes =   True
+    )
+
+    children = relationship(
+        "DbNode",
+        secondary       =   "db_dbpath",
+        primaryjoin     =   "DbNode.id == DbPath.parent_id",
+        secondaryjoin   =   "DbNode.id == DbPath.child_id",
+        backref         =   "parents"
+    )
+    def get_aiida_class(self):
+        """
+        Return the corresponding instance of
+        :func:`~aiida.orm.implementation.django.node.Node`
+        or a subclass return by the plugin loader.
+
+        .. todo::
+            The behavior is quite pathetic, creating a django DbNode instance
+            to instantiate the aiida instance.
+            These means that every time you load Aiida instances with
+            the QueryBuilder when using Django as a backend, three instances
+            are instantiated for every Aiida instance you load!
+            Could be fixed by allowing DbNode from the dummy nodel to be passed
+            to AiidaNode's __init__.
+
+        :returns: An instance of the plugin class
+        """
+        # I need to import the DbNode in the Django model,
+        # and instantiate an object that has the same attributes as self.
+        from aiida.backends.djsite.db.models import DbNode as DjangoSchemaDbNode
+        dbnode = DjangoSchemaDbNode(
+                id=self.id, type=self.type, uuid=self.uuid, ctime=self.ctime,
+                mtime=self.mtime, label=self.label,
+                dbcomputer_id=self.dbcomputer_id, user_id=self.user_id,
+                public=self.public, nodeversion=self.nodeversion
+        )
+        return dbnode.get_aiida_class()
+
 
 
 

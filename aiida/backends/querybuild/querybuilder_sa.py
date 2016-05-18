@@ -38,6 +38,7 @@ class QueryBuilder(AbstractQueryBuilder):
         from aiida.orm.implementation.sqlalchemy.node import Node as AiidaNode
         from aiida.orm.implementation.sqlalchemy.group import Group as AiidaGroup
         from aiida.orm.implementation.sqlalchemy.computer import Computer as AiidaComputer
+        from aiida.orm.implementation.sqlalchemy.user import User as AiidaUser
         self.Link               = DbLink
         self.Path               = DbPath
         self.Node               = DbNode
@@ -48,13 +49,17 @@ class QueryBuilder(AbstractQueryBuilder):
         self.AiidaNode          = AiidaNode
         self.AiidaGroup         = AiidaGroup
         self.AiidaComputer      = AiidaComputer
+        self.AiidaUser          = AiidaUser
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
     def _get_session(self):
         return sa_session
 
     @classmethod
-    def _get_filter_expr_from_attributes(cls, operator, value, db_column, attr_key):
+    def _get_filter_expr_from_attributes(
+            cls, operator, value, attr_key,
+            column=None, column_name=None,
+            alias=None):
 
         def cast_according_to_type(path_in_json, value):
             if isinstance(value, bool):
@@ -92,7 +97,10 @@ class QueryBuilder(AbstractQueryBuilder):
                 raise Exception('Unknown type {}'.format(type(value)))
             return type_filter, casted_entity
 
-        database_entity = db_column[tuple(attr_key)]
+        if column is None:
+            column = cls._get_column(column_name, alias)
+        
+        database_entity = column[tuple(attr_key)]
         if operator == '==':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = and_(type_filter, casted_entity == value)
@@ -154,14 +162,14 @@ class QueryBuilder(AbstractQueryBuilder):
 
 
     def _get_projectable_attribute(
-            self, alias, column, attrpath,
+            self, alias, column_name, attrpath,
             cast=None, **kwargs
         ):
         """
         :returns: An attribute store in a JSON field of the give column
         """
 
-        entity = column[(attrpath)]
+        entity = self._get_column(column_name, alias)[(attrpath)]
         if cast is None:
             entity = entity
         elif cast=='f':
@@ -200,13 +208,15 @@ class QueryBuilder(AbstractQueryBuilder):
             returnval = res.get_aiida_class()
         elif isinstance(res, Choice):
             returnval = res.value
-        elif key.startswith('attributes') or key.startswith('extras'):
-            try:
-                returnval = json_loads(res)
-            except (TypeError, ValueError) as e:
-                # TypeError when it is not in ' '
-                # ValueError if it is already a casted string
-                returnval = res
+        #~ elif key.startswith('attributes') or key.startswith('extras'):
+            #~ try:
+                #~ returnval = json_loads(res)
+                #~ print key
+            #~ except (TypeError, ValueError) as e:
+                #~ # TypeError when it is not in ' '
+                #~ # ValueError if it is already a casted string
+                #~ 
+                #~ returnval = res
         else:
             returnval = res
         return returnval

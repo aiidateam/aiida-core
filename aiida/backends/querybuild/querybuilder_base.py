@@ -14,7 +14,10 @@ import copy
 import datetime
 from abc import abstractmethod, ABCMeta
 from inspect import isclass as inspect_isclass
-from sa_init import aliased, and_, or_, not_, func as sa_func
+from sa_init import (
+        aliased, and_, or_, not_, func as sa_func,
+        InstrumentedAttribute, Cast
+    )
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import flatten_list
 
@@ -227,9 +230,13 @@ class AbstractQueryBuilder(object):
                 ormclasstype = 'computer'
                 ormclass = self.Computer
 
+            # Users
             elif issubclass(cls, self.User):
                 ormclasstype = 'user'
                 ormclass = cls
+            elif issubclass(cls, self.AiidaUser):
+                ormclasstype = 'user'
+                ormclass = self.User
             else:
                 raise InputValidationError(
                         "\n\n\n"
@@ -682,14 +689,13 @@ class AbstractQueryBuilder(object):
 
     def _get_projectable_entity(self, alias, column_name, attrpath, **entityspec):
 
-        column = self.get_column(column_name, alias)
         if len(attrpath) or column_name in ('attributes', 'extras'):
 
             entity = self._get_projectable_attribute(
-                        alias, column, attrpath, **entityspec
+                        alias, column_name, attrpath, **entityspec
                     )
         else:
-            entity = column
+            entity = self._get_column(column_name, alias)
         return entity
 
     def _add_to_projections(self, alias, projectable_entity_name, cast=None, func=None):
@@ -806,9 +812,16 @@ class AbstractQueryBuilder(object):
     def _get_session():
         pass
 
-
-    @classmethod
-    def _get_filter_expr_from_column(cls, operator, value, database_entity):
+    @staticmethod
+    def _get_filter_expr_from_column(operator, value, column):
+        
+        if not isinstance(column, (Cast, InstrumentedAttribute)):
+            raise TypeError(
+                'column ({}) {} is not a valid column'.format(
+                    type(column), column
+                )
+            )
+        database_entity = column
         if operator == '==':
             expr = database_entity == value
         elif operator == '>':
@@ -833,7 +846,10 @@ class AbstractQueryBuilder(object):
 
 
     @classmethod
-    def _get_filter_expr(cls, operator, value, db_column, attr_key, is_attribute):
+    def _get_filter_expr(
+            cls, operator, value, attr_key, is_attribute,
+            alias=None, column=None, column_name=None
+        ):
         """
         Applies a filter on the alias given.
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -953,9 +969,19 @@ class AbstractQueryBuilder(object):
                  expr = or_(*expressions_for_this_path)
 
         if is_attribute:
-            expr = cls._get_filter_expr_from_attributes(operator, value, db_column, attr_key)
+            expr = cls._get_filter_expr_from_attributes(
+                    operator, value, attr_key,
+                    column=column, column_name=column_name, alias=alias
+                )
         else:
-            expr = cls._get_filter_expr_from_column(operator, value, db_column)
+            if column is None:
+                if (alias is None) and (column_name is None):
+                    raise Exception(
+                        "I need to get the column but do not know \n"
+                        "the alias and the column name"
+                    )
+                column = cls._get_column(column_name, alias)
+            expr = cls._get_filter_expr_from_column(operator, value, column)
         if negation:
             return not_(expr)
         return expr
@@ -988,20 +1014,29 @@ class AbstractQueryBuilder(object):
                     expressions.append(not_(or_(*subexpressions)))
             else:
                 column_name = path_spec.split('.')[0]
-                column =  self.get_column(column_name, alias)
+                
                 attr_key = path_spec.split('.')[1:]
                 is_attribute = (
                     attr_key or
                     column_name in ('attributes', 'extras')
                 )
+                try:
+                    column = self._get_column(column_name, alias)
+                except InputValidationError as e:
+                    if is_attribute:
+                        column = None
+                    else:
+                        raise e
                 #~ is_attribute = bool(attr_key)
                 if not isinstance(filter_operation_dict, dict):
                     filter_operation_dict = {'==':filter_operation_dict}
                 [
                     expressions.append(
                         self._get_filter_expr(
-                            operator, value, column, attr_key,
-                            is_attribute=is_attribute
+                            operator, value, attr_key,
+                            is_attribute=is_attribute,
+                            column=column, column_name=column_name,
+                            alias=alias
                         )
                     )
                     for operator, value
@@ -1012,6 +1047,38 @@ class AbstractQueryBuilder(object):
     #~ @abstractmethod
     #~ def _build_filters(self, alias, filter_spec):
         #~ pass
+    @staticmethod
+    def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship):
+        """
+        :param list entities_cls_joined:
+            A list (tuple) of the aliased class passed as joined_entity and
+            the ormclass that was expected
+        :param list entities_cls_joined:
+            A list (tuple) of the aliased class passed as entity_to_join and
+            the ormclass that was expected
+        :param str relationship:
+            The relationship between the two entities to make the Exception
+            comprehensible
+        """
+        for entity, cls in (entities_cls_joined, entities_cls_to_join):
+           
+            if entity._sa_class_manager.class_ is not cls:
+                raise InputValidationError(
+                    "\nYou are attempting to join {} as '{}' of {}\n"
+                    "This failed because you passed:\n"
+                    " - {} as entity joined (expected {})\n"
+                    " - {} as entity to join (expected {})\n"
+                    "\n".format(
+                        entities_cls_joined[0],
+                        relationship,
+                        entities_cls_to_join[0],
+                        entities_cls_joined[0]._sa_class_manager.class_,
+                        entities_cls_joined[1],
+                        entities_cls_to_join[0]._sa_class_manager.class_,
+                        entities_cls_to_join[1],
+                    )
+                )
+                    
 
     def _join_slaves(self, joined_entity, entity_to_join):
         raise NotImplementedError(
@@ -1044,7 +1111,11 @@ class AbstractQueryBuilder(object):
         from **joined_entity** as input to **enitity_to_join** as output
         (**enitity_to_join** is an *output_of* **joined_entity**)
         """
-        #~ aliased_link = aliased(self.Link)
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Node),
+                'output_of'
+            )
         self.que = self.que.join(
                 aliased_link,
                 aliased_link.input_id == joined_entity.id
@@ -1062,7 +1133,11 @@ class AbstractQueryBuilder(object):
         from **joined_entity** as output to **enitity_to_join** as input
         (**enitity_to_join** is an *input_of* **joined_entity**)
         """
-        aliased_link = aliased(self.Link)
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Node),
+                'input_of'
+            )
         self.que = self.que.join(
                 aliased_link,
                 aliased_link.output_id == joined_entity.id
@@ -1081,6 +1156,11 @@ class AbstractQueryBuilder(object):
         from **joined_entity** as parent to **enitity_to_join** as child
         (**enitity_to_join** is a *descendant_of* **joined_entity**)
         """
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Node),
+                'descendant_of'
+            )
         aliased_path = aliased(self.Path)
         self.que = self.que.join(
                 aliased_path,
@@ -1100,6 +1180,11 @@ class AbstractQueryBuilder(object):
         from **joined_entity** as child to **enitity_to_join** as parent
         (**enitity_to_join** is an *ancestor_of* **joined_entity**)
         """
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Node),
+                'ancestor_of'
+            )
         aliased_path = aliased(self.Path)
         self.que = self.que.join(
                 aliased_path,
@@ -1121,6 +1206,11 @@ class AbstractQueryBuilder(object):
         from **joined_entity** as group to **enitity_to_join** as node.
         (**enitity_to_join** is an *member_of* **joined_entity**)
         """
+        self._check_dbentities(
+                (joined_entity, self.Group),
+                (entity_to_join, self.Node),
+                'member_of'
+            )
         aliased_group_nodes = aliased(self.table_groups_nodes)
         self.que = self.que.join(
                 aliased_group_nodes,
@@ -1139,6 +1229,11 @@ class AbstractQueryBuilder(object):
         from **joined_entity** as node to **enitity_to_join** as group.
         (**enitity_to_join** is an *group_of* **joined_entity**)
         """
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Group),
+                'group_of'
+            )
         aliased_group_nodes = aliased(self.table_groups_nodes)
         self.que = self.que.join(
                 aliased_group_nodes,
@@ -1147,26 +1242,46 @@ class AbstractQueryBuilder(object):
                 entity_to_join,
                 entity_to_join.id == aliased_group_nodes.c.dbgroup_id
         )
-    def _join_user(self, joined_entity, entity_to_join):
+    def _join_user_of(self, joined_entity, entity_to_join):
         """
-        :param joined_entity: the user
-        :param entity_to_join: the dbnode that joins to that user
+        :param joined_entity: the aliased node
+        :param entity_to_join: the aliased user to join to that node
         """
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.User),
+                'user_of'
+            )
         self.que = self.que.join(
                 entity_to_join,
                 entity_to_join.id == joined_entity.user_id
             )
-    def _join_node_to_user(self, joined_entity, entity_to_join):
+    def _join_used_by(self, joined_entity, entity_to_join):
         """
-        :param joined_entity: the (aliased) node or group in the DB
-        :param entity_to_join: the user you want to join with
+        :param joined_entity: the aliased user you want to join to
+        :param entity_to_join: the (aliased) node or group in the DB to join with
         """
+        self._check_dbentities(
+                (joined_entity, self.User),
+                (entity_to_join, self.Node),
+                'used_by'
+            )
         self.que = self.que.join(
                 entity_to_join,
                 entity_to_join.user_id == joined_entity.id
             )
 
     def _join_to_computer_used(self, joined_entity, entity_to_join):
+        """
+        :param joined_entity: the (aliased) computer entity
+        :param entity_to_join: the (aliased) node entity
+        
+        """
+        self._check_dbentities(
+                (joined_entity, self.Computer),
+                (entity_to_join, self.Node),
+                'runs_on'
+            )
         self.que = self.que.join(
                 entity_to_join,
                 entity_to_join.dbcomputer_id == joined_entity.id
@@ -1175,10 +1290,15 @@ class AbstractQueryBuilder(object):
     def _join_computer(self, joined_entity, entity_to_join):
         """
         :param joined_entity: An entity that can use a computer (eg a node)
-        :param entity: aliased dbcomputer entity
+        :param entity_to_join: aliased dbcomputer entity
 
 
         """
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Computer),
+                'computer_of'
+            )
         self.que = self.que.join(
                 entity_to_join,
                 joined_entity.dbcomputer_id == entity_to_join.id
@@ -1197,8 +1317,8 @@ class AbstractQueryBuilder(object):
                 'member_of' : self._join_group_members,
                 'runs_on'   : self._join_to_computer_used,
                 'computer_of':self._join_computer,
-                'used_by'   : self._join_node_to_user,
-                'user_of'   : self._join_user,
+                'used_by'   : self._join_used_by,
+                'user_of'   : self._join_user_of,
         }
         return d
     def _get_connecting_node(
@@ -1313,16 +1433,17 @@ class AbstractQueryBuilder(object):
         
         #~ self._get_json_compatible()
         
-    def get_column(self, colname, alias):
+    @staticmethod
+    def _get_column(colname, alias):
         """
         Return the column for the projection, if the column name is specified.
         """
-        try:
-            return getattr(alias, colname)
-        except (KeyError, AttributeError):
+        
+        if colname not in alias._sa_class_manager.mapper.c.keys():
             raise InputValidationError(
-                '\n{} is not a column of {}\n'.format(colname, alias)
+                "\n{} is not a column of {}\n".format(colname, alias)
             )
+        return getattr(alias, colname)
 
     def _build_order(self, alias, entitylabel, entityspec):
 
@@ -1450,6 +1571,20 @@ class AbstractQueryBuilder(object):
         #pop the entity that I added to start the query
         self.que._entities.pop(0)
 
+        # Make a list that helps the projection postprocessing
+        self._attrkeys_as_in_sql_result = {
+            index_in_sql_result:attrkey
+            for label, projected_entities_dict
+            in self.label_to_projected_entity_dict.items()
+            for attrkey, index_in_sql_result
+            in projected_entities_dict.items()
+        }
+
+        if self.nr_of_projections > len(self._attrkeys_as_in_sql_result):
+            raise InputValidationError(
+                    "\nYou are projecting the same key\n"
+                    "multiple times within the same node"
+                )
         ######################### DONE #################################
 
         return self.que
@@ -1547,27 +1682,20 @@ class AbstractQueryBuilder(object):
             order of vertices in  path and projections for vertice
         """
         resultrow = self._first()
-        attrkeys_as_in_sql_result = {
-            index_in_sql_result:attrkey
-            for label, projected_entities_dict
-            in self.label_to_projected_entity_dict.items()
-            for attrkey, index_in_sql_result
-            in projected_entities_dict.items()
-        }
-
         try:
             returnval = [
-                    self._get_aiida_res(attrkeys_as_in_sql_result[colindex], rowitem)
+                    self._get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
                     for colindex, rowitem
                     in enumerate(resultrow)
                 ]
         except TypeError:
-            assert(
-                len(attrkeys_as_in_sql_result)==1,
-                "I have not received an iterable, but the number of projections is > 1"
-            )
+            if len(attrkeys_as_in_sql_result) > 1:
+                raise Exception(
+                    "I have not received an iterable\n"
+                    "but the number of projections is > 1"
+                )
             # It still returns a list!
-            returnval = [self._get_aiida_res(attrkeys_as_in_sql_result[0], resultrow)]
+            returnval = [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow)]
         return returnval
 
 
@@ -1617,31 +1745,25 @@ class AbstractQueryBuilder(object):
         """
 
         results = self.yield_per(100)
-        attrkeys_as_in_sql_result = {
-            index_in_sql_result:attrkey
-            for label, projected_entities_dict
-            in self.label_to_projected_entity_dict.items()
-            for attrkey, index_in_sql_result
-            in projected_entities_dict.items()
-        }
+
 
         try:
             for resultrow in results:
                 yield [
-                    self._get_aiida_res(attrkeys_as_in_sql_result[colindex], rowitem)
+                    self._get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
                     for colindex, rowitem
                     in enumerate(resultrow)
                 ]
         except TypeError:
             # resultrow not an iterable:
             # Checked, result that raises exception is included
-            assert(
-                len(attrkeys_as_in_sql_result)==1,
-                "I have not received an iterable, but the number of projections is > 1"
-            )
-
+            if len(self._attrkeys_as_in_sql_result) > 1:
+                raise Exception(
+                    "I have not received an iterable\n"
+                    "but the number of projections is > 1"
+                )
             for rowitem in results:
-                yield [self._get_aiida_res(attrkeys_as_in_sql_result[0], rowitem)]
+                yield [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], rowitem)]
 
     def get_results_dict(self):
         """
@@ -1656,9 +1778,10 @@ class AbstractQueryBuilder(object):
 
         :returns: a generator returning the results as an iterable of dictionaries.
         """
-
+        
+        results = self.yield_per(100)
         try:
-            for this_result in self.yield_per(100):
+            for this_result in results:
                 yield {
                     label:{
                         attrkey:self._get_aiida_res(
@@ -1673,11 +1796,13 @@ class AbstractQueryBuilder(object):
         except TypeError:
             # resultrow not an iterable:
             # Checked, result that raises exception is included
-            assert(
-                self.nr_of_projections==1,
-                "I have not received an iterable, but the number of projections is > 1"
-            )
-            for this_result in self.yield_per(100):
+            if len(self._attrkeys_as_in_sql_result) > 1:
+                raise Exception(
+                    "I have not received an iterable\n"
+                    "but the number of projections is > 1"
+                )
+
+            for this_result in results:
                 yield {
                     label:{
                         attrkey : self._get_aiida_res(attrkey, this_result)

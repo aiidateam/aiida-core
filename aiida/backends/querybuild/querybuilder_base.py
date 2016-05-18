@@ -1062,7 +1062,7 @@ class AbstractQueryBuilder(object):
         """
         for entity, cls in (entities_cls_joined, entities_cls_to_join):
            
-            if entity._sa_class_manager.class_ is not cls:
+            if not issubclass(entity._sa_class_manager.class_, cls):
                 raise InputValidationError(
                     "\nYou are attempting to join {} as '{}' of {}\n"
                     "This failed because you passed:\n"

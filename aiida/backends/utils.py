@@ -4,7 +4,10 @@ from __future__ import absolute_import
 
 from aiida.backends import settings
 from aiida.backends.profile import load_profile
-from aiida.common.exceptions import ConfigurationError, InvalidOperation
+from aiida.common.exceptions import (
+        ConfigurationError, AuthenticationError,
+        InvalidOperation
+    )
 
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
@@ -91,3 +94,58 @@ def get_configured_user_email(*args, **kwargs):
         return get_configured_user_email(*args,**kwargs)
     else:
         raise ValueError("This method doesn't exist for this backend")
+
+
+
+def get_authinfo(computer, aiidauser):
+
+    if settings.BACKEND == "django":
+        from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
+
+        try:
+            authinfo = DbAuthInfo.objects.get(
+                # converts from name, Computer or DbComputer instance to
+                # a DbComputer instance
+                dbcomputer=DbComputer.get_dbcomputer(computer),
+                aiidauser=aiidauser)
+        except ObjectDoesNotExist:
+            raise AuthenticationError(
+                "The aiida user {} is not configured to use computer {}".format(
+                    aiidauser.email, computer.name))
+        except MultipleObjectsReturned:
+            raise ConfigurationError(
+                "The aiida user {} is configured more than once to use "
+                "computer {}! Only one configuration is allowed".format(
+                    aiidauser.email, computer.name))
+    elif settings.BACKEND == "sqlalchemy":
+        from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+        from aiida.backends.sqlalchemy import session
+        from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+        try:
+            authinfo = session.query(DbAuthInfo).filter_by(
+                dbcomputer_id=computer.id,
+                aiidauser_id=aiidauser.id,
+            ).one()
+        except NoResultFound:
+            raise AuthenticationError(
+                "The aiida user {} is not configured to use computer {}".format(
+                    aiidauser.email, computer.name))
+        except MultipleResultsFound:
+            raise ConfigurationError(
+                "The aiida user {} is configured more than once to use "
+                "computer {}! Only one configuration is allowed".format(
+                    aiidauser.email, computer.name))
+
+    else:
+        raise Exception("unknown backend {}".format(settings.BACKEND))
+    return authinfo
+
+
+def get_daemon_user():
+    if settings.BACKEND == "django":
+        from aiida.backends.djsite.utils import get_daemon_user as get_daemon_user_dj
+        daemon_user = get_daemon_user_dj()
+    elif settings.BACKEND ==  "sqlalchemy":
+        from aiida.backends.sqlalchemy.utils import get_daemon_user as get_daemon_user_sqla
+        daemon_user = get_daemon_user_sqla()
+    return daemon_user

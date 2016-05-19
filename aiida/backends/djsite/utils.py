@@ -98,33 +98,13 @@ def get_log_messages(obj):
     return log_messages
 
 
-def get_configured_user_email():
-    """
-    Return the email (that is used as the username) configured during the
-    first verdi install.
-    """
-    from aiida.common.exceptions import ConfigurationError
-    from aiida.common.setup import get_profile_config, DEFAULT_USER_CONFIG_FIELD
-    from aiida.backends import settings
-
-    try:
-        profile_conf = get_profile_config(settings.AIIDADB_PROFILE)
-        email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
-    # I do not catch the error in case of missing configuration, because
-    # it is already a ConfigurationError
-    except KeyError:
-        raise ConfigurationError("No 'default_user' key found in the "
-                                 "AiiDA configuration file".format(DEFAULT_USER_CONFIG_FIELD))
-    return email
-
-
 def get_daemon_user():
     """
     Return the username (email) of the user that should run the daemon,
     or the default AiiDA user in case no explicit configuration is found
     in the DbSetting table.
     """
-    from aiida.common.globalsettings import get_global_setting
+    from aiida.backends.djsite.globalsettings import get_global_setting
     from aiida.common.setup import DEFAULT_AIIDA_USER
 
     try:
@@ -137,7 +117,7 @@ def set_daemon_user(user_email):
     """
     Set the username (email) of the user that is allowed to run the daemon.
     """
-    from aiida.common.globalsettings import set_global_setting
+    from aiida.backends.djsite.globalsettings import set_global_setting
 
     set_global_setting('daemon|user', user_email,
                        description="The only user that is allowed to run the "
@@ -159,6 +139,7 @@ def get_automatic_user():
     from django.core.exceptions import ObjectDoesNotExist
     from aiida.backends.djsite.db.models import DbUser
     from aiida.common.exceptions import ConfigurationError
+    from aiida.common.utils import get_configured_user_email
 
     email = get_configured_user_email()
 
@@ -194,7 +175,7 @@ def get_db_schema_version():
     Get the current schema version stored in the DB. Return None if
     it is not stored.
     """
-    from aiida.common.globalsettings import get_global_setting
+    from aiida.backends.djsite.globalsettings import get_global_setting
 
     try:
         return get_global_setting('db|schemaversion')
@@ -207,7 +188,7 @@ def set_db_schema_version(version):
     Set the schema version stored in the DB. Use only if you know what
     you are doing.
     """
-    from aiida.common.globalsettings import set_global_setting
+    from aiida.backends.djsite.globalsettings import set_global_setting
 
     return set_global_setting('db|schemaversion', version, description=
     "The version of the schema used in this "

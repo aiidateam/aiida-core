@@ -151,6 +151,7 @@ class User(VerdiCommandWithSubcommands):
 
         from aiida.orm.implementation import User
         from aiida.backends.utils import get_configured_user_email
+
         from aiida.common.exceptions import ConfigurationError
 
         try:

@@ -50,7 +50,8 @@ class AiidaTestCase(unittest.TestCase):
 
         from aiida.backends.djsite.db.models import DbUser
         from aiida.orm.computer import Computer
-        from aiida.backends.djsite.utils import get_configured_user_email
+        from aiida.common.utils import get_configured_user_email
+        # I create the user only once:
 
         # We create the user only once:
         # Otherwise, get_automatic_user() will fail when the

@@ -33,7 +33,7 @@ def set_daemon_timestamp(task_name, when):
     :param when: can either be 'start' (to call when the task started) or
       'stop' (to call when the task ended)
     """
-    from aiida.common.globalsettings import set_global_setting
+    from aiida.backends.djsite.globalsettings import set_global_setting
     from aiida.utils import timezone
 
     if when == 'start':
@@ -97,7 +97,7 @@ def get_last_daemon_timestamp(task_name, when='stop'):
     :return: a datetime.datetime object. Return None if no information is
       found in the DB.
     """
-    from aiida.common.globalsettings import get_global_setting
+    from aiida.backends.djsite.globalsettings import get_global_setting
 
     try:
         actual_task_name = djcelery_tasks[task_name]
@@ -117,8 +117,8 @@ class SingleTask(celery.Task):
     lock = None
 
     def __call__(self, *args, **kwargs):
-        from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
-
+        from aiida.backends.djsite.utils import get_daemon_user
+        from aiida.common.utils import get_configured_user_email
         daemon_user = get_daemon_user()
         this_user = get_configured_user_email()
 

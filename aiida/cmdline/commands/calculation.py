@@ -215,7 +215,7 @@ class Calculation(VerdiCommandWithSubcommands):
             print '2', sys.exc_info()
             print '3', sys.exc_info()[0]
             print '4', sys.exc_info()[1]
-            print '5', sys.exc_info()[2], 
+            print '5', sys.exc_info()[2],
             print 'Sorry I mean line...',
             print traceback.tb_lineno(sys.exc_info()[2])
             ex_type, ex, tb = sys.exc_info()

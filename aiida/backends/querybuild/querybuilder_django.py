@@ -37,6 +37,7 @@ class QueryBuilder(AbstractQueryBuilder):
         from aiida.orm.implementation.django.node import Node as AiidaNode
         from aiida.orm.implementation.django.group import Group as AiidaGroup
         from aiida.orm.implementation.django.computer import Computer as AiidaComputer
+        from aiida.orm.implementation.django.user import User as AiidaUser
 
         self.Link               = DummyLink
         self.Path               = DummyPath
@@ -48,6 +49,7 @@ class QueryBuilder(AbstractQueryBuilder):
         self.AiidaNode          = AiidaNode
         self.AiidaGroup         = AiidaGroup
         self.AiidaComputer      = AiidaComputer
+        self.AiidaUser          = AiidaUser
 
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
@@ -84,7 +86,10 @@ class QueryBuilder(AbstractQueryBuilder):
         return session
 
     @classmethod
-    def _get_filter_expr_from_attributes(cls, operator, value, db_column, attr_key):
+    def _get_filter_expr_from_attributes(
+            cls, operator, value, attr_key,
+            column=None, column_name=None,
+            alias=None):
         def get_attribute_db_column(mapped_class, dtype, castas=None):
             if dtype == 't':
                 mapped_entity = mapped_class.tval
@@ -114,7 +119,11 @@ class QueryBuilder(AbstractQueryBuilder):
                     "Filters on attributes require a key\n"
                     "for the Django-backend"
                 )
-        mapped_class = db_column.prop.mapper.class_
+        if column:
+            mapped_class = db_column.prop.mapper.class_
+        else:
+            column = getattr(alias, column_name)
+            mapped_class = column.prop.mapper.class_
         # Ok, so we have an attribute key here.
         # Unless cast is specified, will try to infer my self where the value
         # is stored
@@ -174,16 +183,16 @@ class QueryBuilder(AbstractQueryBuilder):
             try:
                 expressions.append(
                     cls._get_filter_expr(
-                        operator, value,
-                        get_attribute_db_column(mapped_class, dtype, castas=castas),
-                        [], is_attribute=False
+                        operator, value, attr_key=[],
+                        column=get_attribute_db_column(mapped_class, dtype, castas=castas),
+                        is_attribute=False
                     )
                 )
             except InputValidationError as e:
                 raise e
 
         actual_attr_key = '.'.join(attr_key)
-        expr = db_column.any(and_(
+        expr = column.any(and_(
                 mapped_class.key == actual_attr_key,
                 or_(*expressions)
             )
@@ -193,7 +202,7 @@ class QueryBuilder(AbstractQueryBuilder):
 
 
     def _get_projectable_attribute(
-            self, alias, column, attrpath,
+            self, alias, column_name, attrpath,
             cast=None, **kwargs
         ):
         if cast is not None:
@@ -206,7 +215,7 @@ class QueryBuilder(AbstractQueryBuilder):
                 "(You did not provide a key)"
             )
 
-        aliased_attributes = aliased(column.prop.mapper.class_)
+        aliased_attributes = aliased(getattr(alias, column_name).prop.mapper.class_)
 
         if not issubclass(alias._aliased_insp.class_,self.Node):
             NotImplementedError(
@@ -214,6 +223,8 @@ class QueryBuilder(AbstractQueryBuilder):
             )
 
         attrkey = '.'.join(attrpath)
+
+
         exists_stmt = exists(select([1], correlate=True).select_from(
                 aliased_attributes
             ).where(and_(

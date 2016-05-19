@@ -28,6 +28,8 @@ from sqlalchemy.orm import (
     sessionmaker,
     foreign, mapper, aliased
 )
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.sql.elements import Cast
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 # TO COMPILE MY OWN FUNCTIONALITIES:
 from sqlalchemy.sql.expression import FunctionElement, cast

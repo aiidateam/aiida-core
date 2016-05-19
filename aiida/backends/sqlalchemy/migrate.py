@@ -270,6 +270,7 @@ def migrate_json_column(profile=None):
         ('db_dbauthinfo', 'metadata'),
         ('db_dbauthinfo', 'auth_params'),
         ('db_dbcomputer', 'metadata'),
+        ('db_dbcomputer', 'transport_params'),
         ('db_dblog', 'metadata')
     ]
 

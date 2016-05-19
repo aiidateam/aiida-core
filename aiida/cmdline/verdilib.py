@@ -416,8 +416,7 @@ class Run(VerdiCommand):
 
         load_dbenv()
         import argparse
-        import aiida.cmdline
-        from aiida.backends.djsite.db.management.commands.customshell import default_modules_list
+        from aiida.cmdline.commands.shell import default_modules_list
         import aiida.orm.autogroup
         from aiida.orm.autogroup import Autogroup
 
@@ -646,6 +645,3 @@ def exec_from_cmdline(argv):
         print >> sys.stderr, "The profile specified is not valid!"
         print >> sys.stderr, e.message
         sys.exit(1)
-
-
-

@@ -12,30 +12,30 @@ __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
 
+default_modules_list = [
+    ("aiida.orm", "Node", "Node"),
+    ("aiida.orm.utils", "load_node", "load_node"),
+    ("aiida.orm", "Calculation", "Calculation"),
+    ("aiida.orm", "JobCalculation", "JobCalculation"),
+    ("aiida.orm.code", "Code", "Code"),
+    ("aiida.orm", "Data", "Data"),
+    ("aiida.orm", "CalculationFactory", "CalculationFactory"),
+    ("aiida.orm", "DataFactory", "DataFactory"),
+    ("aiida.orm", "WorkflowFactory", "WorkflowFactory"),
+    ("aiida.orm.computer", "Computer", "Computer"),
+    ("aiida.orm.group", "Group", "Group"),
+    ("aiida.orm.workflow", "Workflow", "Workflow"),
+    ("aiida.orm", "load_workflow", "load_workflow"),
+    # ("aiida.backends.djsite.db", "models", "models"),
+    # ("aiida.backends.sqlalchemy", "models", "models"),
+]
+
 class Shell(VerdiCommand):
     """
     Run the interactive shell with the AiiDA environment loaded.
 
     This command opens an ipython shell with the AiiDA environment loaded.
     """
-
-    default_modules_list = [
-        ("aiida.orm", "Node", "Node"),
-        ("aiida.orm.utils", "load_node", "load_node"),
-        ("aiida.orm", "Calculation", "Calculation"),
-        ("aiida.orm", "JobCalculation", "JobCalculation"),
-        ("aiida.orm.code", "Code", "Code"),
-        ("aiida.orm", "Data", "Data"),
-        ("aiida.orm", "CalculationFactory", "CalculationFactory"),
-        ("aiida.orm", "DataFactory", "DataFactory"),
-        ("aiida.orm", "WorkflowFactory", "WorkflowFactory"),
-        ("aiida.orm.computer", "Computer", "Computer"),
-        ("aiida.orm.group", "Group", "Group"),
-        ("aiida.orm.workflow", "Workflow", "Workflow"),
-        ("aiida.orm", "load_workflow", "load_workflow"),
-        # ("aiida.backends.djsite.db", "models", "models"),
-        # ("aiida.backends.sqlalchemy", "models", "models"),
-    ]
 
     shells = ['ipython', 'bpython']
 
@@ -49,7 +49,7 @@ class Shell(VerdiCommand):
         from aiida.common.setup import get_property
         user_ns = {}
         # load default modules
-        for app_mod, model_name, alias in self.default_modules_list:
+        for app_mod, model_name, alias in default_modules_list:
             user_ns[alias] = getattr(__import__(app_mod, {}, {},
                                                 model_name), model_name)
 

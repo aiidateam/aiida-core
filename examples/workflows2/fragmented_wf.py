@@ -13,6 +13,7 @@ def keep_ticking():
     execution_engine.tick()
     threading.Timer(10, keep_ticking()).start()
 
+
 class W(FragmentedWorkfunction):
     definition = """
 s1
@@ -29,7 +30,6 @@ while cond2:
     s8
 s9
 """
-
     def s1(self):
         print "s1"
         self.ctx.v = 1

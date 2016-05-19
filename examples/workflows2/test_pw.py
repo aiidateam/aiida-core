@@ -195,6 +195,6 @@ if settings is not None:
         pseudos_to_use[elem] = pseudo
     inputs['pseudo'] = pseudos_to_use
 
-job_calc.run(inputs=inputs)
+job_calc.run(inputs=inputs, daemon=False)
 keep_ticking()
 

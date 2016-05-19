@@ -53,7 +53,7 @@ class Process(plum.process.Process):
         self._running_data = None
         self._create_output_links = create_output_links
 
-    def run(self, inputs=None):
+    def run(self, inputs=None, daemon=False):
         self._running_data = self.RunningData(inputs)
 
         with util.ProcessStack.push(self):

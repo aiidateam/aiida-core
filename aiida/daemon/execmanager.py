@@ -360,7 +360,7 @@ def submit_jobs_with_authinfo(authinfo):
             import traceback
             from aiida.utils.logger import get_dblogger_extra
 
-            for calc, in calcs_to_inquire:
+            for calc in calcs_to_inquire:
                 logger_extra = get_dblogger_extra(calc)
                 try:
                     calc._set_state(calc_states.SUBMISSIONFAILED)

@@ -10,5 +10,12 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
 class DaemonEngine(plum.execution_engine.ExecutionEngine):
-    pass
+    def submit(self, process, inputs):
+        pass
+
+    def run(self, process, inputs):
+        pass
+
+    def get_process(self, pid):
+        pass
 

@@ -32,6 +32,27 @@ class classproperty(object):
         return self.getter(owner)
 
 
+def get_configured_user_email():
+    """
+    Return the email (that is used as the username) configured during the
+    first verdi install.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.setup import get_profile_config, DEFAULT_USER_CONFIG_FIELD
+    from aiida.backends import settings
+
+    try:
+        profile_conf = get_profile_config(settings.AIIDADB_PROFILE,
+                                          set_test_location=False)
+        email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
+    # I do not catch the error in case of missing configuration, because
+    # it is already a ConfigurationError
+    except KeyError:
+        raise ConfigurationError("No 'default_user' key found in the "
+                                 "AiiDA configuration file".format(DEFAULT_USER_CONFIG_FIELD))
+    return email
+
+
 def get_new_uuid():
     """
     Return a new UUID (typically to be used for new nodes).
@@ -49,6 +70,7 @@ def get_new_uuid():
 
 # To speed up the process (os.path.abspath calls are slow)
 _repository_folder_cache = {}
+
 
 
 def get_repository_folder(subfolder=None):

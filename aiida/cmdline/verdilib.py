@@ -367,7 +367,7 @@ class Install(VerdiCommand):
 
         from aiida.common.setup import DEFAULT_AIIDA_USER
         from aiida.backends.djsite.db import models
-        from aiida.backends.djsite.utils import get_configured_user_email
+        from aiida.common.utils import get_configured_user_email
 
         if not models.DbUser.objects.filter(email=DEFAULT_AIIDA_USER):
             print "Installing default AiiDA user..."

@@ -1076,12 +1076,13 @@ class AbstractJobCalculation(object):
         if only_computer_user_pairs:
             qb.add_projection("computer", "*")
             qb.add_projection("user", "*")
-            returnresult = qb.distinct().all()
+            returnresult = list(qb.distinct().all())
         else:
             qb.add_projection("calc", "*")
             if limit is not None:
                 qb.limit(limit)
-            returnresult = qb.all()
+            returnresult = list(qb.all())
+            returnresult = zip(*returnresult)[0]
         return returnresult
 
 
@@ -1109,15 +1110,14 @@ class AbstractJobCalculation(object):
         raise NotImplementedError
 
     def _get_authinfo(self):
-        import aiida.execmanager
+        from aiida.backends.utils import get_authinfo
         from aiida.common.exceptions import NotExistent
 
         computer = self.get_computer()
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return aiida.execmanager.get_authinfo(computer=computer,
-                                              aiidauser=self.dbnode.user)
+        return get_authinfo(computer=computer._dbcomputer,aiidauser=self.dbnode.user)
 
     def _get_transport(self):
         """

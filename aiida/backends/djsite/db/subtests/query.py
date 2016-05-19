@@ -65,12 +65,11 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(clstype, 'computer')
         self.assertTrue(issubclass(cls, DbComputer))
 
-    @unittest.skipIf(True, "Tests not fully functional")
     def test_simple_query_django_1(self):
         """
         Testing a simple query
         """
-        from aiida.backends.querybuild.querybuilder_django import QueryBuilder
+        from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.calculation.job import JobCalculation
         from aiida.orm import Node
         from datetime import datetime
@@ -109,28 +108,32 @@ class TestQueryBuilder(AiidaTestCase):
 
         qb = QueryBuilder()
         qb.append(Node, filters={'attributes.foo':1.000})
+        
+        self.assertEqual(len(list(qb.all())), 2)
 
 
-    @unittest.skipIf(not is_postgres(), "Tests only works with postgres")
+
+    #~ @unittest.skipIf(not is_postgres(), "Tests only works with postgres")
     def test_simple_query_django_2(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
+        from datetime import datetime
         from aiida.backends.querybuild.dummy_model import (
                 DbNode, DbLink, DbAttribute, session
             )
         n0 = DbNode(
                 label='hello',
-                type='tester.TesterData.',
+                type='',
                 description='', user_id=1,
             )
         n1 = DbNode(
                 label='foo',
-                type='tester.TesterData.FOO',
+                type='',
                 description='I am FoO', user_id=2,
             )
         n2 = DbNode(
                 label='bar',
-                type='tester.TesterData.BAR',
+                type='',
                 description='I am BaR', user_id=3,
             )
 
@@ -152,7 +155,6 @@ class TestQueryBuilder(AiidaTestCase):
             DbNode,
             filters={
                 'label':'hello',
-                'type':{'like':'tester%'}
             }
         )
         self.assertEqual(len(list(qb1.all())),1)
@@ -171,15 +173,14 @@ class TestQueryBuilder(AiidaTestCase):
                 ],
                 'filters':{
                     'n1':{
-                        'type':{'like':'tester.%'},
                         'label':{'ilike':'%foO%'},
                     },
                     'n2':{
-                        'type':{'ilike':'tester.%'},
+                        'label':{'ilike':'bar%'},
                     }
                 },
                 'project':{
-                    'n1':['id', 'uuid', 'ctime'],
+                    'n1':['id', 'uuid', 'ctime', 'label'],
                     'n2':['id', 'description', 'label'],
                 }
             }
@@ -192,10 +193,6 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertTrue(isinstance(resdict['n1']['ctime'], datetime))
         self.assertEqual(resdict['n2']['label'], 'bar')
 
-        qh['filters']['n1']['label'] = {'like':'%FoO'} # Case sensitive
-
-        qb3 = QueryBuilder(**qh)
-        self.assertEqual(len(list(qb3.all())), 0)
 
         qh = {
                 'path':[
@@ -210,8 +207,10 @@ class TestQueryBuilder(AiidaTestCase):
                     }
                 ],
                 'filters':{
-                    '<>n2':{label:{'like':'%_2'}}
+                    'n1--n2':{'label':{'like':'%_2'}}
                 }
             }
         qb = QueryBuilder(**qh)
         self.assertEqual(len(list(qb.all())), 1)
+        
+    

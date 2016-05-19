@@ -68,5 +68,7 @@ SQLAlchemy==1.0.12
 SQLAlchemy-Utils==0.31.2
 ultrajson==1.35
 psycopg2==2.6.1
+# For the QueryBuilder in Django when testing:
+aldjemy
 # Password hashing
 passlib

@@ -405,24 +405,44 @@ DbAttribute.value_float = column_property(
     )
 
 
-engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
-if engine == "sqlite3":
-    engine_url = (
-        "sqlite:///{AIIDADB_NAME}"
-        ).format(**get_profile_config(settings.AIIDADB_PROFILE))
-elif engine.startswith("mysql"):
-    engine_url = (
-        "mysql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-        "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-        ).format(**get_profile_config(settings.AIIDADB_PROFILE))
-elif engine.startswith("postgre"):
-    engine_url = (
-        "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-        "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-        ).format(**get_profile_config(settings.AIIDADB_PROFILE))
+
+profile = get_profile_config(settings.AIIDADB_PROFILE)
+
+
+def get_aldjemy_session():
+    """
+    Use aldjemy to make a session
+
+    .. note:
+        Use only in this case. In normal production mode
+        it is safer make session explictly because it is more robust
+    """
+    from aldjemy.core import get_engine
+    engine = get_engine()
+    _Session = sessionmaker(bind=engine)
+    return _Session()
+
+
+if profile['AIIDADB_NAME'] == ':memory:':
+    session = get_aldjemy_session()
 else:
-    raise ConfigurationError("Unknown DB engine: {}".format(
-            engine))
-session = sessionmaker(bind=create_engine(engine_url))()
+    engine = profile["AIIDADB_ENGINE"]
+    if engine == "sqlite3":
+        engine_url = (
+            "sqlite:///{AIIDADB_NAME}"
+            ).format(**get_profile_config(settings.AIIDADB_PROFILE))
+    elif engine.startswith("mysql"):
+        engine_url = (
+            "mysql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+            "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+            ).format(**get_profile_config(settings.AIIDADB_PROFILE))
+    elif engine.startswith("postgre"):
+        engine_url = (
+            "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+            "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+            ).format(**get_profile_config(settings.AIIDADB_PROFILE))
+    else:
+        raise ConfigurationError("Unknown DB engine: {}".format(engine))
+    session = sessionmaker(bind=create_engine(engine_url))()
 
 

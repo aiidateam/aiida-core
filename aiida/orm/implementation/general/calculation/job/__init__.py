@@ -833,8 +833,9 @@ class AbstractJobCalculation(object):
 
 
         from aiida.orm.querybuilder import QueryBuilder
-        from django.core.exceptions import ImproperlyConfigured
         from aiida.common.custom_io import pretty_print
+        from aiida.daemon.timestamps import get_last_daemon_timestamp
+        
 
         now = timezone.now()
 
@@ -858,18 +859,11 @@ class AbstractJobCalculation(object):
             )
         # get the last daemon check:
         try:
-            from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
             last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
         except ValueError:
             last_check_string = (
                     "# Last daemon state_updater check: "
                     "(Error while retrieving the information)"
-            )
-        except (ImproperlyConfigured, ImportError):
-            # get_last_daemon_timestamp cannot be imported
-            # when using SQLA because it is sqla specific
-            last_check_string = (
-                    "# Cannot run state_update, django method"
             )
         else:
             if last_daemon_check is None:

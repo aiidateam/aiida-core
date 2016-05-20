@@ -2,7 +2,9 @@
 
 import re
 from plum.wait_ons import Checkpoint
+from plum.wait import WaitOn
 from aiida.workflows2.process import Process
+from collections import namedtuple
 
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -39,6 +41,8 @@ class FragmentedWorkfunction(Process):
         def __iter__(self):
             for k in self._content:
                 yield k
+
+    StepData = namedtuple('StepData', ['function', 'y'])
 
     @staticmethod
     def _is_valid_keyword(k):
@@ -78,13 +82,20 @@ class FragmentedWorkfunction(Process):
     def _run(self, **kwargs):
         return self._do_step()
 
-    def _do_step(self, checkpoint=None):
-        self._last_step, self._last_context =\
+    def _do_step(self, wait_on=None):
+        if isinstance(wait_on, _ResultToCtx):
+            # Set the results of the futures to values of the context
+            wait_on.assign(self._ctx)
+
+        self._last_step, self._last_context, retval =\
             self._run_from_graph(self._last_step, self._last_context)
-        if self._last_step != self.END:
+        if isinstance(retval, ResultToContext):
+            return _ResultToCtx(self._do_step.__name__, **retval.to_assign)
+        elif self._last_step != self.END:
             return Checkpoint(self._do_step.__name__)
 
     def save_instance_state(self, bundle):
+        super(FragmentedWorkfunction, self).save_instance_state(bundle)
         for key, val in self._last_context:
             bundle[key] = val
 
@@ -121,28 +132,28 @@ class FragmentedWorkfunction(Process):
         step_data = graph[current_step]
         this_type = step_data['type']
         if this_type == self.END:
-            return self.END, last_ctx
+            return self.END, last_ctx, None
         this_step = step_data['method']
 
         if this_type == 'step':
             # manage retval here
             retval = self._run_step(this_step)
-            return this_step, self.ctx._get_dict()
+            return this_step, self.ctx._get_dict(), retval
 
         elif this_type == 'condition':  # can put an optional exit clause, e.g. no more than # steps
-            # TODO This logic should change if blocks caan be nested
+            # TODO This logic should change if blocks can be nested
             retval = self._run_step(this_step)  # NOTE: condition is not allowed to change context
-            if retval == True:
+            if retval is True:
                 return self._run_from_graph(current_step="{}:true".format(this_step),
                                             last_ctx=last_ctx)
-            elif retval == False:
+            elif retval is False:
                 return self._run_from_graph(current_step="{}:false".format(this_step),
                                             last_ctx=last_ctx)
             else:
                 raise ValueError("{} should return true or false, not {}".format(
                     this_step, retval))
         else:
-            raise ValueError("Unknown step type {}".format(current_type))
+            raise ValueError("Unknown step type {}".format(this_type))
 
     def _create_graph(self, wfdef):
         next_step = {}
@@ -208,11 +219,10 @@ class FragmentedWorkfunction(Process):
                 step_name))
         step_method = getattr(self, step_name, None)
         if step_method is None:
-            raise SyntaxError("No step '{}' defined in the class".format(
-                step_name))
-        else:
-            # print "** Current context:", self.ctx._get_dict()
-            return step_method()
+            raise SyntaxError(
+                "No step '{}' defined in the class".format(step_name))
+
+        return step_method(self.ctx)
 
     def _parse_def(self):
         def_list = []
@@ -308,3 +318,34 @@ class FragmentedWorkfunction(Process):
                             "Invalid keyword {} at line {}".format(content, linenum))
 
         return def_list
+
+
+class ResultToContext(object):
+    def __int__(self, **kwargs):
+        # TODO: Check all values of kwargs are futures
+        self.to_assign = kwargs
+
+
+class _ResultToCtx(WaitOn):
+    @classmethod
+    def create_from(cls, bundle, exec_engine):
+        # TODO: Load the futures
+        return _ResultToCtx(bundle[cls.CALLBACK_NAME])
+
+    def __init__(self, callback_name, **kwargs):
+        super(_ResultToCtx, self).__init__(callback_name)
+        # TODO: Check all values of kwargs are futures
+        self._to_assign = kwargs
+
+    def is_ready(self):
+        for fut in self._to_assign.itervalues():
+            if not fut.done():
+                return False
+        return True
+
+    def save_instance_state(self, bundle, exec_engine):
+        super(_ResultToCtx, self).save_instance_state(bundle, exec_engine)
+
+    def assign(self, ctx):
+        for name, fut in self._to_assign.iteritems():
+            ctx.name = fut.result()

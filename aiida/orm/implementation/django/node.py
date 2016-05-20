@@ -182,15 +182,16 @@ class Node(AbstractNode):
                 "Cannot call the internal _add_dblink_from if the "
                 "source node is not stored")
 
-        # Check for cycles. This works if the transitive closure is enabled; if it
-        # isn't, this test will never fail, but then having a circular link is not
-        # meaningful but does not pose a huge threat
-        #
-        # I am linking src->self; a loop would be created if a DbPath exists already
-        # in the TC table from self to src
-        if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode)) > 0:
-            raise ValueError(
-                "The link you are attempting to create would generate a loop")
+        if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
+            # Check for cycles. This works if the transitive closure is enabled; if it
+            # isn't, this test will never fail, but then having a circular link is not
+            # meaningful but does not pose a huge threat
+            #
+            # I am linking src->self; a loop would be created if a DbPath exists already
+            # in the TC table from self to src
+            if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode)) > 0:
+                raise ValueError(
+                    "The link you are attempting to create would generate a loop")
 
         if label is None:
             autolabel_idx = 1

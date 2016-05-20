@@ -43,7 +43,6 @@ class Process(plum.process.Process):
         def __init__(self, inputs):
             self.inputs = inputs
             self.current_calc = None
-            self.process_record = None
             self.parent = None
 
     _spec_type = ProcessSpec
@@ -53,31 +52,24 @@ class Process(plum.process.Process):
         self._running_data = None
         self._create_output_links = create_output_links
 
-    def run(self, inputs=None, daemon=False):
-        self._running_data = self.RunningData(inputs)
-
-        with util.ProcessStack.push(self):
-
-            if self._can_fast_forward(inputs):
-                self._fast_forward()
-            else:
-                super(Process, self).run(inputs)
-
     @property
     def current_calculation_node(self):
         return self._current_calc
 
     # Messages #####################################################
-    def _on_process_starting(self, inputs, exec_engine):
+    def on_start(self, inputs, exec_engine):
         """
         The process is starting with the given inputs
         :param inputs: A dictionary of inputs for each input port
         """
-        super(Process, self)._on_process_starting(inputs, exec_engine)
+        super(Process, self).on_start(inputs, exec_engine)
+        util.ProcessStack.push(self)
+        self._running_data = self.RunningData(inputs)
         self._setup_db_record(inputs)
 
-    def _on_process_finalising(self):
-        super(Process, self)._on_process_finalising()
+    def on_finalise(self):
+        super(Process, self).on_finalise()
+        util.ProcessStack.push(self)
         self._running_data = None
 
     def _on_output_emitted(self, output_port, value, dynamic):
@@ -150,9 +142,6 @@ class Process(plum.process.Process):
         for k, v in node.get_output_dict():
             self._out(k, v)
 
-    def _create_child_record(self, child, inputs):
-        return self._process_record.create_child(child, inputs)
-
     @property
     def _inputs(self):
         assert self._running_data, "Process not running"
@@ -167,16 +156,6 @@ class Process(plum.process.Process):
     def _current_calc(self, calc_node):
         assert self._running_data, "Process not running"
         self._running_data.current_calc = calc_node
-
-    @property
-    def _process_record(self):
-        assert self._running_data, "Process not running"
-        return self._running_data.process_record
-
-    @_process_record.setter
-    def _process_record(self, record):
-        assert self._running_data, "Process not running"
-        self._running_data.process_record = record
 
     @property
     def _parent(self):
@@ -198,7 +177,7 @@ class FunctionProcess(Process):
         This is used internally to store the actual function that is being
         wrapped and will be replaced by the build method.
         """
-        pass
+        return {}
 
     @staticmethod
     def build(func, **kwargs):
@@ -222,6 +201,8 @@ class FunctionProcess(Process):
                 if defaults and len(defaults) - len(args) + i >= 0:
                     default = defaults[i]
                 spec.input(args[i], default=default)
+                # Make sure to get rid of the argument from the keywords dict
+                kwargs.pop(args[i], None)
 
             for k, v in kwargs.iteritems():
                 spec.input(k)

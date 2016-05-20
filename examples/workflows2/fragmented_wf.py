@@ -9,11 +9,6 @@ from aiida.workflows2.execution_engine import execution_engine
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction
 
 
-def keep_ticking():
-    execution_engine.tick()
-    threading.Timer(10, keep_ticking()).start()
-
-
 class W(FragmentedWorkfunction):
     definition = """
 s1
@@ -30,49 +25,49 @@ while cond2:
     s8
 s9
 """
-    def s1(self):
+
+    def s1(self, ctx):
         print "s1"
-        self.ctx.v = 1
+        ctx.v = 1
 
-    def s2(self):
+    def s2(self, ctx):
         print "s2"
-        self.ctx.v = 2
-        self.ctx.w = 2
+        ctx.v = 2
+        ctx.w = 2
 
-    def cond1(self):
-        return self.ctx.v == 3
+    def cond1(self, ctx):
+        return ctx.v == 3
 
-    def s3(self):
+    def s3(self, ctx):
         print "s3"
 
-    def s4(self):
+    def s4(self, ctx):
         print "s4"
 
-    def s5(self):
+    def s5(self, ctx):
         print "s5"
 
-    def s6(self):
+    def s6(self, ctx):
         print "s6"
 
 #        f = async(slow)
 #        return Wait(f)
 
-    def cond2(self):
-        return self.ctx.w < 10
+    def cond2(self, ctx):
+        return ctx.w < 10
 
-    def s7(self):
+    def s7(self, ctx):
         print " s7"
-        self.ctx.w += 1
-        print "w=", self.ctx.w
+        ctx.w += 1
+        print "w=", ctx.w
 
-    def s8(self):
+    def s8(self, ctx):
         print "s8"
 
-    def s9(self):
+    def s9(self, ctx):
         print "s9, end"
 
 
 if __name__ == '__main__':
     w = W.create()
     execution_engine.submit(w, None)
-    keep_ticking()

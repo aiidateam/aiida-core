@@ -38,6 +38,7 @@ class F1(FragmentedWorkfunction):
     @staticmethod
     def _define(spec):
         spec.input('inp')
+        spec.output('r1')
 
     definition = """
 s1
@@ -47,7 +48,7 @@ s2
     def s1(self, ctx):
         p2 = asyncd(F2, a=self._inputs['inp'])
         ctx.a = 1
-        ResultToContext(r2=p2)
+        return ResultToContext(r2=p2)
 
     def s2(self, ctx):
         print("a={}".format(ctx.a))
@@ -61,13 +62,14 @@ class F2(FragmentedWorkfunction):
     @staticmethod
     def _define(spec):
         spec.input('a')
+        spec.output('r2')
 
     definition = """
 s1
 """
 
-    def s1(self):
-        self._out("r2", self._inputs.a)
+    def s1(self, ctx):
+        self._out("r2", self._inputs['a'])
 
 
 if __name__ == '__main__':

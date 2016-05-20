@@ -85,7 +85,7 @@ class FragmentedWorkfunction(Process):
     def _do_step(self, wait_on=None):
         if isinstance(wait_on, _ResultToCtx):
             # Set the results of the futures to values of the context
-            wait_on.assign(self._ctx)
+            wait_on.assign(self._last_context)
 
         self._last_step, self._last_context, retval =\
             self._run_from_graph(self._last_step, self._last_context)
@@ -321,7 +321,7 @@ class FragmentedWorkfunction(Process):
 
 
 class ResultToContext(object):
-    def __int__(self, **kwargs):
+    def __init__(self, **kwargs):
         # TODO: Check all values of kwargs are futures
         self.to_assign = kwargs
 
@@ -348,4 +348,4 @@ class _ResultToCtx(WaitOn):
 
     def assign(self, ctx):
         for name, fut in self._to_assign.iteritems():
-            ctx.name = fut.result()
+            ctx[name] = fut.result()

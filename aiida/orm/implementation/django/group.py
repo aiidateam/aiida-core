@@ -90,6 +90,10 @@ class Group(AbstractGroup):
         return self._dbgroup.pk
 
     @property
+    def id(self):
+        return self._dbgroup.pk
+
+    @property
     def uuid(self):
         return unicode(self.dbgroup.uuid)
 

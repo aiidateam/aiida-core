@@ -12,6 +12,21 @@ __authors__ = "The AiiDA team."
 logger = aiida.common.aiidalogger.getChild('pluginloader')
 
 
+def from_type_to_pluginclassname(typestr):
+    """
+    Return the string to pass to the load_plugin function, starting from
+    the 'type' field of a Node.
+    """
+    # Fix for base class
+    from aiida.common.exceptions import DbContentError
+    if typestr == "":
+        typestr = "node.Node."
+    if not typestr.endswith("."):
+        raise DbContentError("The type name '{}' is not valid!".format(
+            typestr))
+    return typestr[:-1]  # Strip final dot
+
+
 def get_class_typestring(type_string):
     """
     Given the type string, return three strings: the first one is

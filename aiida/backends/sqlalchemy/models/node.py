@@ -125,7 +125,7 @@ class DbNode(Base):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.orm import from_type_to_pluginclassname
+        from aiida.common.pluginloader import from_type_to_pluginclassname
         from aiida.orm.node import Node
 
 

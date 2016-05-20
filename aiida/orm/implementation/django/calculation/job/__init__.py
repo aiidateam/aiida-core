@@ -14,7 +14,7 @@ from aiida.backends.djsite.utils import get_automatic_user
 from aiida.orm.group import Group
 from aiida.orm.implementation.django.calculation import Calculation
 from aiida.orm.implementation.general.calculation.job import AbstractJobCalculation
-from aiida.orm.implementation.general.calculation import from_type_to_pluginclassname
+from aiida.common.pluginloader import from_type_to_pluginclassname
 
 from aiida.utils import timezone
 

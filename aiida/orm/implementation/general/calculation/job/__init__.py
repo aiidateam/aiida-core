@@ -981,10 +981,10 @@ class AbstractJobCalculation(object):
                                 1].split('.')[0].rsplit(":", 1)[0]])
                     calc_list_data.append([
                         str(res['calculation']['id']),
-                        res['calculation']['state'],
-                        calc_ctime,
-                        res['calculation']['attributes.scheduler_state'],
-                        res['computer']['name'],
+                        str(res['calculation']['state']),
+                        str(calc_ctime),
+                        str(res['calculation']['attributes.scheduler_state']),
+                        str(res['computer']['name']),
                         from_type_to_pluginclassname(
                                 res['calculation']['type']
                         ).rsplit(".", 1)[0].lstrip('calculation.job.')

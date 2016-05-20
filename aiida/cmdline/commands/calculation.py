@@ -183,7 +183,7 @@ class Calculation(VerdiCommandWithSubcommands):
                             default=None,
                             help='set a limit to the number of rows returned')
         parser.add_argument('-o', '--order-by',
-                            choices=['id', 'ctime'], default=None,
+                            choices=['id', 'ctime'], default='ctime',
                             help='order the results')
         parser.set_defaults(relative_ctime=True)
 

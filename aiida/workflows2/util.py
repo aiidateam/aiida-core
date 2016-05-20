@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 
-"""
-This file provides very simple workflows for testing purposes.
-Do not delete, otherwise 'verdi developertest' will stop to work.
-"""
 from aiida.orm import Data
 from aiida.orm.data.simple import SimpleData
 from threading import local
@@ -27,31 +23,39 @@ class ProcessStack(object):
     _thread_local = local()
 
     @staticmethod
-    def push(process):
+    def scoped(process):
         return ProcessStack(process)
 
-    def __init__(self, process):
-        self._process = process
-
-    def __enter__(self):
-        self.stack.append(self._process)
-        if len(self.stack) > 1:
-            self._process._parent = self.stack[-2]
-        else:
-            self._process._parent = None
-        return self.stack
-
-    def __exit__(self, type, value, traceback):
-        self.stack.pop()
-        self._process._parent = None
-
-    @property
+    @classmethod
     def stack(self):
         try:
             return self._thread_local.wf_stack
         except AttributeError:
             self._thread_local.wf_stack = []
             return self._thread_local.wf_stack
+
+    @classmethod
+    def push(cls, process):
+        cls.stack().append(process)
+
+    @classmethod
+    def pop(cls):
+        cls.stack().pop()
+
+    def __init__(self, process):
+        self._process = process
+
+    def __enter__(self):
+        self.push(self._process)
+        if len(self.stack()) > 1:
+            self._process._parent = self.stack()[-2]
+        else:
+            self._process._parent = None
+        return self.stack
+
+    def __exit__(self, type, value, traceback):
+        self.pop()
+        self._process._parent = None
 
 
 def get_db_type(native_type):

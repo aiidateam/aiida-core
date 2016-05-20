@@ -5,7 +5,7 @@ Do not delete, otherwise 'verdi developertest' will stop to work.
 """
 
 from aiida.workflows2.process import FunctionProcess
-from aiida.workflows2.async import async
+from aiida.workflows2.execution_engine import execution_engine
 import functools
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -25,15 +25,16 @@ def wf(func):
         # Build up the Process representing this function
         FuncProc = FunctionProcess.build(func, **kwargs)
 
-        # Create and run the wrapped function
-        proc = FuncProc.create()
         if run_async:
             inputs = {}
             if kwargs:
                 inputs.update(kwargs)
-            inputs.update(FuncProc.args_to_dict(*args))
-            return async(proc, inputs)
+            if args:
+                inputs.update(FuncProc.args_to_dict(*args))
+            return execution_engine.submit(FuncProc.create(), inputs)
         else:
+            # Create and run the wrapped function
+            proc = FuncProc.create()
             proc(*args, **kwargs)
             return proc.get_last_outputs()
 

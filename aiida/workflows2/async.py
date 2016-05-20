@@ -15,7 +15,13 @@ def async(proc, *args, **kwargs):
         kwargs['__async'] = True
         return proc(*args, **kwargs)
     elif issubclass(proc, Process):
-        return execution_engine.submit(proc.create(), **kwargs)
+        # No need to consider args as a Process can't deal with positional
+        # arguments anyway
+        return execution_engine.submit(proc.create(), inputs=kwargs)
+
+
+def asyncd(proc, *args, **kwargs):
+    return async(proc, *args, **kwargs)
 
 
 def _is_workfunction(func):

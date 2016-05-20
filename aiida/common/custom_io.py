@@ -14,14 +14,17 @@ def pretty_print(str_matrix, sep = ' | '):
     colwidths = [
             max(map(len, column))
             for column
-            in zip(str_matrix)
+            in zip(*str_matrix)
         ]
     # now print each line:
     for row in str_matrix:
-        print(
-            # sep.join([
-            #     '{:{width}}'.format(rowitem, width=colwidths[colindex] or 1)
-            #     for colindex, rowitem in enumerate(row)
-            # ])
-            row
-        )
+        try:
+            print(
+                sep.join([
+                    '{:{width}}'.format(rowitem, width=colwidths[colindex] or 1)
+                    for colindex, rowitem
+                    in enumerate(row)
+                ])
+            )
+        except Exception as e:
+            print(row)

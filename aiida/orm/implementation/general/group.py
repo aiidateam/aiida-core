@@ -10,6 +10,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
+
 def get_group_type_mapping():
     """
     Return a dictionary with ``{short_name: proper_long_name_in_DB}`` format,
@@ -28,11 +29,11 @@ def get_group_type_mapping():
             'import': IMPORTGROUP_TYPE,
             'autogroup.run': VERDIAUTOGROUP_TYPE}
 
+
 class AbstractGroup(object):
     """
     An AiiDA ORM implementation of group of nodes.
     """
-
 
     __metaclass__ = ABCMeta
 
@@ -107,6 +108,14 @@ class AbstractGroup(object):
         pass
 
     @abstractproperty
+    def id(self):
+        """
+        :return: the principal key (the ID) as an integer, or None if the
+           node was not stored yet
+        """
+        pass
+
+    @abstractproperty
     def uuid(self):
         """
         :return: a string with the uuid
@@ -122,12 +131,17 @@ class AbstractGroup(object):
         :return: (group, created) where group is the group (new or existing,
           in any case already stored) and created is a boolean saying
         """
-        try:
-            # Try to create and store a new class
-            return (cls(*args, **kwargs).store(), True)
-        except UniquenessError:
-            group = cls.get(*args, **kwargs)
-            return (group, False)
+        res = cls.query(name=kwargs.get("name"),
+                        type_string=kwargs.get("type_string"))
+
+        if res is None or len(res) == 0:
+            bla = cls(*args, **kwargs).store(), True
+            return bla
+        elif len(res) > 1:
+            raise MultipleObjectsError("More than one groups found in the "
+                                       "database")
+        else:
+            return res[0], False
 
     @abstractmethod
     def __int__(self):

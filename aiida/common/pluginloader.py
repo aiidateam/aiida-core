@@ -26,6 +26,34 @@ def from_type_to_pluginclassname(typestr):
             typestr))
     return typestr[:-1]  # Strip final dot
 
+def get_query_type_string(plugin_type_string):
+    """
+    Receives a plugin_type_string, an attribute of subclasses of Node.
+    Checks whether it is a valid type_string and manipulates the string
+    to return a string that in a query returns all instances of a class and
+    all instances of subclasses.
+
+    :param str plugin_type_string: The plugin_type_string
+
+    :returns: the query_type_string
+
+    """
+    from aiida.common.exceptions import DbContentError, InputValidationError
+    if not isinstance(plugin_type_string, basestring):
+        raise InputValidationError("You have to pass as argument")
+    # First case, an empty string for Node:
+    if plugin_type_string == '':
+        query_type_string = ''
+    # Anything else should have baseclass.Class., so at least 2 dots 
+    # and end with a dot:
+    elif not(plugin_type_string.endswith('.')) or plugin_type_string.count('.') == 1:
+        raise DbContentError(
+                "The type name '{}' is not valid!".format(plugin_type_string)
+            )
+    else:
+        query_type_string = '{}.'.format('.'.join(plugin_type_string.split('.')[:-2]))
+    return query_type_string
+
 
 def get_class_typestring(type_string):
     """

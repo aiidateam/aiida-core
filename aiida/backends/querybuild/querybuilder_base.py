@@ -18,7 +18,9 @@ from sa_init import (
         aliased, and_, or_, not_, func as sa_func,
         InstrumentedAttribute, Cast
     )
-from aiida.common.exceptions import InputValidationError
+from aiida.common.exceptions import (
+        InputValidationError, DbContentError, MissingPluginError
+    )
 from aiida.common.utils import flatten_list
 
 
@@ -210,32 +212,40 @@ class AbstractQueryBuilder(object):
             if issubclass(cls, self.Node):
                 # If something pass an ormclass node
                 # Users wouldn't do that, by why not...
-                ormclasstype = self.NODE_TYPE
+                ormclasstype = self.AiidaNode._plugin_type_string
+                query_type_string = self.AiidaNode._query_type_string
                 ormclass = cls
             elif issubclass(cls, self.AiidaNode):
-                ormclasstype = cls._plugin_type_string or self.NODE_TYPE
+                ormclasstype = cls._plugin_type_string
+                query_type_string = cls._query_type_string
                 ormclass = self.Node
             # Groups:
             elif issubclass(cls, self.Group):
                 ormclasstype = 'group'
+                query_type_string = None
                 ormclass = cls
             elif issubclass(cls, self.AiidaGroup):
                 ormclasstype = 'group'
+                query_type_string = None
                 ormclass = self.Group
             # Computers:
             elif issubclass(cls, self.Computer):
                 ormclasstype = 'computer'
+                query_type_string = None
                 ormclass = cls
             elif issubclass(cls, self.AiidaComputer):
                 ormclasstype = 'computer'
+                query_type_string = None
                 ormclass = self.Computer
 
             # Users
             elif issubclass(cls, self.User):
                 ormclasstype = 'user'
+                query_type_string = None
                 ormclass = cls
             elif issubclass(cls, self.AiidaUser):
                 ormclasstype = 'user'
+                query_type_string = None
                 ormclass = self.User
             else:
                 raise InputValidationError(
@@ -247,46 +257,51 @@ class AbstractQueryBuilder(object):
         else:
             if ormclasstype.lower() == 'group':
                 ormclasstype = ormclasstype.lower()
+                query_type_string = None
                 ormclass = self.Group
             elif ormclasstype.lower() == 'computer':
                 ormclasstype = ormclasstype.lower()
+                query_type_string = None
                 ormclass = self.Computer
             elif ormclasstype.lower() == 'user':
                 ormclasstype = ormclasstype.lower()
+                query_type_string = None
                 ormclass = self.User
-            elif ormclasstype in ('node', 'Node', self.NODE_TYPE):
-                ormclass = self.Node
-                ormclasstype = self.NODE_TYPE
-            elif ormclasstype.startswith('data') or ormclasstype.startswith('calculation'):
-                # Ok, here I am just going to trust the user that he provided the
-                # correct input to filter by type for specific nodes:
-                ormclass = self.Node
-                ormclasstype = ormclasstype
             else:
-                # The user has specified a certain type that I cannot explicitly
-                # determine what it is
-                # Last resort is using the factories.
-                from aiida.orm import DataFactory, CalculationFactory
-                from aiida.common.exceptions import MissingPluginError
-
-                cls = None
-                for Factory in (DataFactory, CalculationFactory):
-                    try:
-                        cls = Factory(ormclasstype)
-                        ormclasstype = cls._plugin_type_string
-                        ormclass = self.Node
-                    except MissingPluginError:
-                        continue
-
-                if cls is None:
-                    # Nothing was found using the factories!
-                    raise InputValidationError(
-                        "\n\nYou gave me type={}\n"
-                        "But there is no class that can be loaded\n"
-                        "as such using CalculationFactory and DataFactory"
-                        "\n".format(ormclasstype)
+                # At this point, it has to be a node.
+                # The only valid string at this point is a string
+                # that matches exactly the _plugin_type_string
+                # of a node class
+                from aiida.common.pluginloader import (
+                        from_type_to_pluginclassname,
+                        load_plugin
                     )
-        return ormclass, ormclasstype
+                ormclass = self.Node
+                try:
+                    pluginclassname = from_type_to_pluginclassname(ormclasstype)
+                    
+                    # I want to check at this point if that is a valid class,
+                    # so I use the load_plugin to load the plugin class
+                    # and use the classes _plugin_type_string attribute
+                    # In the future, assuming the user knows what he or she is doing
+                    # we could remove that check
+                    # The query_type_string we can get from
+                    # the aiida.common.pluginloader function get_query_type_string
+                    PluginClass = load_plugin(self.AiidaNode, 'aiida.orm', pluginclassname)
+                except (DbContentError, MissingPluginError) as e:
+                    raise InputValidationError(
+                        "\nYou provide a vertice of the path with\n"
+                        "type={}\n"
+                        "But that string is not a valid type string\n"
+                        "Exception raise during check\n"
+                        "{}".format(ormclasstype, e)
+                    )
+                        
+                    
+                ormclasstype = PluginClass._plugin_type_string
+                query_type_string = PluginClass._query_type_string
+
+        return ormclass, ormclasstype, query_type_string
 
     def _get_autolabel(self, ormclasstype):
         baselabel = self._get_label_from_type(ormclasstype)
@@ -385,7 +400,7 @@ class AbstractQueryBuilder(object):
                     "\n\n\n".format(type)
                 )
 
-        ormclass, ormclasstype = self._get_ormclass(cls, type)
+        ormclass, ormclasstype, query_type_string = self._get_ormclass(cls, type)
         ######################## LABEL #################################
         # Let's get a label
         user_defined_label = False
@@ -454,8 +469,8 @@ class AbstractQueryBuilder(object):
         # I have to add a filter on column type.
         # This so far only is necessary for AiidaNodes
         # GROUPS?
-        if issubclass(ormclass, self.Node):
-            self._add_type_filter(label, ormclasstype, subclassing)
+        if query_type_string is not None:
+            self._add_type_filter(label, query_type_string, subclassing)
 
         ##################### PROJECTIONS ##############################
         self.projections[label] = []
@@ -581,30 +596,20 @@ class AbstractQueryBuilder(object):
         label = self._get_label_from_specification(labelspec)
         self.filters[label].update(filter_spec)
 
-    def _add_type_filter(self, labelspec, ormclasstype, subclassing=True):
-
+    def _add_type_filter(
+        self, labelspec, query_type_string, 
+        ormclasstype, subclassing=True):
+        """
+        Add a filter on the type based on the query_type_string
+        """
         label = self._get_label_from_specification(labelspec)
 
         if subclassing:
-            if ormclasstype == self.NODE_TYPE:
-                # User looking for every node, so I will put no filter
-                node_type_flt = None
-            else:
-                node_type_flt = {
-                    'like':'{}.%'.format(
-                        '.'.join(ormclasstype.rstrip('.').split('.')[:-1])
-                    )
-                }
+            node_type_flt = {'like':'{}%'.format(query_type_string)}
         else:
-            if ormclasstype == self.NODE_TYPE:
-                # User looking only for unsubclassed nodes,
-                # which does not make sense, but that is not
-                # my problem
-                node_type_flt = {'==':self.NODE_TYPE}
-            else:
-                node_type_flt = {'==':ormclasstype}
-        if node_type_flt is not None:
-            self.add_filter(labelspec, {'type':node_type_flt})
+            node_type_flt = {'==':ormclasstype}
+        
+        self.add_filter(labelspec, {'type':node_type_flt})
 
     def add_projection(self, label_spec, projection_spec):
         """

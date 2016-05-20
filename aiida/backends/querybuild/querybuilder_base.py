@@ -245,13 +245,16 @@ class AbstractQueryBuilder(object):
                     )
         # If it is not a class
         else:
-            if ormclasstype == 'group':
+            if ormclasstype.lower() == 'group':
+                ormclasstype = ormclasstype.lower()
                 ormclass = self.Group
-            elif ormclasstype == 'computer':
+            elif ormclasstype.lower() == 'computer':
+                ormclasstype = ormclasstype.lower()
                 ormclass = self.Computer
-            elif ormclasstype == 'user':
+            elif ormclasstype.lower() == 'user':
+                ormclasstype = ormclasstype.lower()
                 ormclass = self.User
-            elif ormclasstype in ('node', self.NODE_TYPE):
+            elif ormclasstype in ('node', 'Node', self.NODE_TYPE):
                 ormclass = self.Node
                 ormclasstype = self.NODE_TYPE
             elif ormclasstype.startswith('data') or ormclasstype.startswith('calculation'):

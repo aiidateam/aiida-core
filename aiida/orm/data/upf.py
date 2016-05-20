@@ -136,6 +136,7 @@ def upload_upf_family(folder, group_name, group_description,
         qb = QueryBuilder()
         qb.append(UpfData, filters={'attributes.md5':{'==':md5sum}})
         existing_upf = qb.first()
+        
         #~ existing_upf = UpfData.query(dbattributes__key="md5",
                                      #~ dbattributes__tval=md5sum)
 
@@ -153,6 +154,7 @@ def upload_upf_family(folder, group_name, group_description,
                         " {} cannot be added with stop_if_existing"
                         "".format(f)
                     )
+            existing_upf = existing_upf[0]
             pseudo_and_created.append((existing_upf, False))
 
     # check whether pseudo are unique per element

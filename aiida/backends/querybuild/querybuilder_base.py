@@ -356,13 +356,17 @@ class AbstractQueryBuilder(object):
         # Let's get a tag
         user_defined_tag = False
         label = kwargs.pop('label', None)
-        if label is not None and tag is None:
-            
-            warnings.warn(
-                "\nUse of the keyword 'label' will be deprecated soon\n"
-                "Please use 'tag' instead\n"
-            )
-            tag = label
+        if label is not None:
+            if tag is None:
+                warnings.simplefilter('default', DeprecationWarning)
+                warnings.warn(
+                    "\nUse of the keyword 'label' will be deprecated soon\n"
+                    "Please use 'tag' instead\n",
+                    DeprecationWarning,
+                )
+                tag = label
+            else:
+                raise InputValidationError("Both label and tag specified")
 
         if tag:
             if self._LINKTAG_DEL in tag:
@@ -395,7 +399,7 @@ class AbstractQueryBuilder(object):
                     "".format(tag)
                 )
 
-        ################ tag MAPPING #################################
+        ################ TAG MAPPING #################################
         # Let's fill the cls_to_tag_map so that one can specify
         # this vertice in a joining specification later
         # First this only makes sense if a class was specified:
@@ -499,7 +503,7 @@ class AbstractQueryBuilder(object):
                     "Please use 'link_tag' instead\n"
                 )
                 link_tag = linklabel
-            
+
             if link_tag is None:
                 if joining_keyword in ('input_of', 'output_of'):
                     link_to_tag = self._get_tag_from_specification(joining_value)

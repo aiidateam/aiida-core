@@ -929,7 +929,7 @@ class AbstractJobCalculation(object):
                 cls,
                 filters=calculation_filters,
                 project=calculation_projections,
-                label='calculation'
+                tag='calculation'
         )
         if group_filters is not None:
             qb.append(
@@ -938,7 +938,7 @@ class AbstractJobCalculation(object):
                 )
         qb.append(
                 type="computer", computer_of='calculation',
-                project=['name'], label='computer'
+                project=['name'], tag='computer'
             )
 
         # ORDER
@@ -1061,9 +1061,9 @@ class AbstractJobCalculation(object):
 
 
         qb = QueryBuilder()
-        qb.append(type="computer", label='computer', filters=computerfilter)
-        qb.append(cls, filters=calcfilter, label='calc', runs_on='computer')
-        qb.append(type="user", label='user', filters=userfilter, user_of="calc")
+        qb.append(type="computer", tag='computer', filters=computerfilter)
+        qb.append(cls, filters=calcfilter, tag='calc', runs_on='computer')
+        qb.append(type="user", tag='user', filters=userfilter, user_of="calc")
 
         if only_computer_user_pairs:
             qb.add_projection("computer", "*")

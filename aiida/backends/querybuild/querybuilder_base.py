@@ -155,16 +155,41 @@ class AbstractQueryBuilder(object):
             This is a list of items, where each item is a dictionary specifies
             what to sort for an entity
 
-        In each dictionary in that list,
-        keys represent valid labels of entities (tables),
-        values are list of columns
+        In each dictionary in that list, keys represent valid labels of
+        entities (tables), and values are list of columns.
+
+        Usage::
+
+            #Sorting by id (ascending):
+            qb = QueryBuilder()
+            qb.append(Node, label='node')
+            qb.order_by({'node':['id']})
+
+            # or
+            #Sorting by id (ascending):
+            qb = QueryBuilder()
+            qb.append(Node, label='node')
+            qb.order_by({'node':[{'id':{'order':'asc'}}]})
+
+            # for descending order:
+            qb = QueryBuilder()
+            qb.append(Node, label='node')
+            qb.order_by({'node':[{'id':{'order':'desc'}}]})
+
+            # or (shorter)
+            qb = QueryBuilder()
+            qb.append(Node, label='node')
+            qb.order_by({'node':[{'id':'desc'}]})
+
+
         """
 
         self._order_by = []
+        allowed_keys = ('cast', 'order')
+        possible_orders = ('asc', 'desc')
 
         if not isinstance(order_by, (list, tuple)):
             order_by = [order_by]
-
 
         for order_spec in order_by:
             if not isinstance(order_spec, dict):
@@ -175,10 +200,10 @@ class AbstractQueryBuilder(object):
                         "".format(order_spec)
                     )
             _order_spec = {}
-            for key,items_to_order_by in order_spec.items():
+            for labelspec,items_to_order_by in order_spec.items():
                 if not isinstance(items_to_order_by, (tuple, list)):
                     items_to_order_by = [items_to_order_by]
-                label = self._get_label_from_specification(key)
+                label = self._get_label_from_specification(labelspec)
                 _order_spec[label] = []
                 for item_to_order_by in items_to_order_by:
                     if isinstance(item_to_order_by, basestring):
@@ -191,9 +216,38 @@ class AbstractQueryBuilder(object):
                             "of type{}"
                             "\n".format(item_to_order_by, type(item_to_order_by))
                         )
-                    for k,v in item_to_order_by.items():
-                        if isinstance(v, basestring):
-                            item_to_order_by[k] = {'dtype':v}
+                    for entityname, orderspec in item_to_order_by.items():
+                        # if somebody specifies eg {'node':{'id':'asc'}}
+                        # tranform to {'node':{'id':{'order':'asc'}}}
+
+                        if isinstance(orderspec, basestring):
+                            this_order_spec = {'order':orderspec}
+                        elif isinstance(orderspec, dict):
+                            this_order_spec = orderspec
+                        else:
+                            raise InputValidationError(
+                                "I was expecting a string or a dictionary\n"
+                                "You provided {} {}\n"
+                                "".format(type(orderspec), orderspec)
+                            )
+                        for key in this_order_spec.keys():
+                            if key not in allowed_keys:
+                                raise InputValidationError(
+                                    "The allowed key for an order specification\n"
+                                    "are {}\n"
+                                    "{} is not valid\n"
+                                    "".format(', '.join(allowed_keys), k)
+                                )
+                        this_order_spec['order'] = this_order_spec.get('order', 'asc')
+                        if this_order_spec['order'] not in possible_orders:
+                            raise InputValidationError(
+                                "You gave {} as an order parameters,\n"
+                                "but it is not a valid order parameter\n"
+                                "Valid orders are: {}\n"
+                                "".format(this_order_spec['order'], possible_orders)
+                            )
+                        item_to_order_by[entityname] = this_order_spec
+
                     _order_spec[label].append(item_to_order_by)
 
             self._order_by.append(_order_spec)
@@ -279,7 +333,7 @@ class AbstractQueryBuilder(object):
                 ormclass = self.Node
                 try:
                     pluginclassname = from_type_to_pluginclassname(ormclasstype)
-                    
+
                     # I want to check at this point if that is a valid class,
                     # so I use the load_plugin to load the plugin class
                     # and use the classes _plugin_type_string attribute
@@ -296,8 +350,8 @@ class AbstractQueryBuilder(object):
                         "Exception raise during check\n"
                         "{}".format(ormclasstype, e)
                     )
-                        
-                    
+
+
                 ormclasstype = PluginClass._plugin_type_string
                 query_type_string = PluginClass._query_type_string
 
@@ -597,7 +651,7 @@ class AbstractQueryBuilder(object):
         self.filters[label].update(filter_spec)
 
     def _add_type_filter(
-        self, labelspec, query_type_string, 
+        self, labelspec, query_type_string,
         ormclasstype, subclassing=True):
         """
         Add a filter on the type based on the query_type_string
@@ -608,13 +662,13 @@ class AbstractQueryBuilder(object):
             node_type_flt = {'like':'{}%'.format(query_type_string)}
         else:
             node_type_flt = {'==':ormclasstype}
-        
+
         self.add_filter(labelspec, {'type':node_type_flt})
 
     def add_projection(self, label_spec, projection_spec):
         """
         Adds a projection
-        
+
         :param label_spec: A valid specification for a label
         :param projection_spec:
             The specification for the projection.
@@ -625,7 +679,7 @@ class AbstractQueryBuilder(object):
 
         If the given *projection_spec* is not a list, it will be expanded to
         a list.
-        If the listitems are not dictionaries, but strings (No additional 
+        If the listitems are not dictionaries, but strings (No additional
         processing of the projected results desired), they will be expanded to
         dictionaries.
 
@@ -646,14 +700,14 @@ class AbstractQueryBuilder(object):
                         {'attributes.kinds':{'cast':'j'}},
                     ]
                 )
-            # OR 
+            # OR
             # In this example, the order is not specified any more,
-            # but it is valid input if you don't care about the order of the 
+            # but it is valid input if you don't care about the order of the
             # results:
             qb.add_projection(
                     'struc',
                     {
-                        'id':{}, 
+                        'id':{},
                         {'attributes.kinds':{'cast':'j'}},
                     }
                 )
@@ -822,7 +876,7 @@ class AbstractQueryBuilder(object):
 
     @staticmethod
     def _get_filter_expr_from_column(operator, value, column):
-        
+
         if not isinstance(column, (Cast, InstrumentedAttribute)):
             raise TypeError(
                 'column ({}) {} is not a valid column'.format(
@@ -1022,7 +1076,7 @@ class AbstractQueryBuilder(object):
                     expressions.append(not_(or_(*subexpressions)))
             else:
                 column_name = path_spec.split('.')[0]
-                
+
                 attr_key = path_spec.split('.')[1:]
                 is_attribute = (
                     attr_key or
@@ -1069,7 +1123,7 @@ class AbstractQueryBuilder(object):
             comprehensible
         """
         for entity, cls in (entities_cls_joined, entities_cls_to_join):
-           
+
             if not issubclass(entity._sa_class_manager.class_, cls):
                 raise InputValidationError(
                     "\nYou are attempting to join {} as '{}' of {}\n"
@@ -1086,7 +1140,7 @@ class AbstractQueryBuilder(object):
                         entities_cls_to_join[1],
                     )
                 )
-                    
+
 
     def _join_slaves(self, joined_entity, entity_to_join):
         raise NotImplementedError(
@@ -1283,7 +1337,7 @@ class AbstractQueryBuilder(object):
         """
         :param joined_entity: the (aliased) computer entity
         :param entity_to_join: the (aliased) node entity
-        
+
         """
         self._check_dbentities(
                 (joined_entity, self.Computer),
@@ -1385,7 +1439,7 @@ class AbstractQueryBuilder(object):
 
     def _get_json_compatible(self, inp):
         """
-        
+
         :param inp:
             The input value that will be converted.
             Recurses into each value if **inp** is an iterable.
@@ -1438,15 +1492,15 @@ class AbstractQueryBuilder(object):
             'limit'     :   self._limit,
             'order_by'  :   self._order_by,
         })
-        
+
         #~ self._get_json_compatible()
-        
+
     @staticmethod
     def _get_column(colname, alias):
         """
         Return the column for the projection, if the column name is specified.
         """
-        
+
         if colname not in alias._sa_class_manager.mapper.c.keys():
             raise InputValidationError(
                 "\n{} is not a column of {}\n".format(colname, alias)
@@ -1465,8 +1519,8 @@ class AbstractQueryBuilder(object):
                 "You can do this with keyword 'cast'\n"
                 "".format(entitylabel)
             )
-                
-                
+
+
         entity = self._get_projectable_entity(alias, column_name, attrpath, **entityspec)
         order = entityspec.get('order', 'asc')
         if order == 'desc':
@@ -1625,20 +1679,20 @@ class AbstractQueryBuilder(object):
             for node in self.path:
                 label = node['label']
                 requested_cols = [
-                        key 
-                        
+                        key
+
                         for item in self.projections[label]
                         for key in item.keys()
                     ]
                 if '*' in requested_cols:
                     input_alias_list.append(aliased(self.label_to_alias_map[label]))
-                    
-                    
+
+
             counterquery = self._get_session().query(orm_calc_class)
             if type_spec:
                 counterquery = counterquery.filter(orm_calc_class.type == type_spec)
             for alias in input_alias_list:
-                
+
                 link = aliased(self.Link)
                 counterquery = counterquery.join(
                     link,
@@ -1789,7 +1843,7 @@ class AbstractQueryBuilder(object):
 
         :returns: a generator returning the results as an iterable of dictionaries.
         """
-        
+
         results = self.yield_per(100)
         try:
             for this_result in results:

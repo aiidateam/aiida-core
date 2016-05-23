@@ -104,8 +104,9 @@ class AbstractQueryBuilder(object):
         for key, val in kwargs.pop('filters', {}).items():
             self.add_filter(key, val)
 
-        self._limit = False
-        self.limit(kwargs.pop('limit', False))
+        self.limit(kwargs.pop('limit', None))
+
+        self.offset(kwargs.pop('offset', None))
 
         self._order_by = {}
         order_spec = kwargs.pop('order_by', None)
@@ -858,15 +859,32 @@ class AbstractQueryBuilder(object):
         """
         Set the limit (nr of rows to return)
 
-        :param limit: integers of nr of rows to return, or False if no limit
+        :param int limit: integers of nr of rows to return
         """
 
-        if limit:
+        if limit is not None:
             if not isinstance(limit, int):
                 raise InputValidationError("limit has to be an integer")
         self._limit = limit
         return self
 
+    def offset(self, offset):
+        """
+        Set the offset. If offset is set, that many rows are skipped before returning.
+        *offset* = 0 is the same as omitting setting the offset.
+        If both offset and limit appear,
+        then *offset* rows are skipped before starting to count the *limit* rows
+        that are returned.
+
+        :param int offset: integers of nr of rows to skip
+        """
+        if offset is not None:
+            if not isinstance(offset, int):
+                raise InputValidationError(
+                    "offset has to be an integer"
+                )
+        self._offset = offset
+        return self
 
 
     @staticmethod
@@ -1626,8 +1644,12 @@ class AbstractQueryBuilder(object):
                         self._build_order(alias, entitylabel, entityspec)
 
         ######################### LIMIT ################################
-        if self._limit:
+        if self._limit is not None:
             self.que = self.que.limit(self._limit)
+
+        ######################## OFFSET ################################
+        if self._offset is not None:
+            self.que = self.que.offset(self._offset)
 
         ################ LAST BUT NOT LEAST ############################
         #pop the entity that I added to start the query

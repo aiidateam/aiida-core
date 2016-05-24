@@ -16,11 +16,9 @@ import os
 from aiida.common.example_helpers import test_and_get_code
 from aiida.orm import DataFactory
 from aiida.common.exceptions import NotExistent
-from aiida.workflows2.execution_engine import execution_engine
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.workflows2.legacy.job_process import JobProcess
 from aiida.workflows2.process import run
-import threading
 
 # If set to True, will ask AiiDA to run in serial mode (i.e., AiiDA will not
 # invoke the mpirun command in the submission script)

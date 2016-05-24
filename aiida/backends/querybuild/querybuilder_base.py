@@ -1030,6 +1030,8 @@ class AbstractQueryBuilder(object):
             } # id is not 2
         """
 
+
+        expr = None
         if operator.startswith('~'):
             negation = True
             operator = operator.lstrip('~')
@@ -1064,29 +1066,32 @@ class AbstractQueryBuilder(object):
                     expressions_for_this_path.append(
                             cls._get_filter_expr(
                                     newoperator, newvalue,
-                                    db_column, attr_key,
-                                    is_attribute=is_attribute
+                                    attr_key=attr_key, is_attribute=is_attribute,
+                                    alias=alias, column=column,
+                                    column_name=column_name
                                 )
                         )
             if operator == 'and':
                 expr = and_(*expressions_for_this_path)
             elif operator == 'or':
                  expr = or_(*expressions_for_this_path)
+            need_expr = False
 
-        if is_attribute:
-            expr = cls._get_filter_expr_from_attributes(
-                    operator, value, attr_key,
-                    column=column, column_name=column_name, alias=alias
-                )
-        else:
-            if column is None:
-                if (alias is None) and (column_name is None):
-                    raise Exception(
-                        "I need to get the column but do not know \n"
-                        "the alias and the column name"
+        if expr is None:
+            if is_attribute:
+                expr = cls._get_filter_expr_from_attributes(
+                        operator, value, attr_key,
+                        column=column, column_name=column_name, alias=alias
                     )
-                column = cls._get_column(column_name, alias)
-            expr = cls._get_filter_expr_from_column(operator, value, column)
+            else:
+                if column is None:
+                    if (alias is None) and (column_name is None):
+                        raise Exception(
+                            "I need to get the column but do not know \n"
+                            "the alias and the column name"
+                        )
+                    column = cls._get_column(column_name, alias)
+                expr = cls._get_filter_expr_from_column(operator, value, column)
         if negation:
             return not_(expr)
         return expr

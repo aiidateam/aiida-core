@@ -362,7 +362,6 @@ class AbstractQueryBuilder(object):
         label = kwargs.pop('label', None)
         if label is not None:
             if tag is None:
-                warnings.simplefilter('default', DeprecationWarning)
                 warnings.warn(
                     "\nUse of the keyword 'label' will be deprecated soon\n"
                     "Please use 'tag' instead\n",

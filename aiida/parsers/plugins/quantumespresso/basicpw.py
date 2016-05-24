@@ -166,12 +166,12 @@ class BasicpwParser(Parser):
                     cells = numpy.array([in_struc.cell] * len(positions))
 
                 symbols = numpy.array([str(i.kind_name) for i in in_struc.sites])
-                steps = numpy.arange(len(positions))  # a growing integer per step
+                stepids = numpy.arange(len(positions))  # a growing integer per step
                 # I will insert time parsing when they fix their issues about time 
                 # printing (logic is broken if restart is on)
 
                 traj = TrajectoryData()
-                traj.set_trajectory(steps=steps,
+                traj.set_trajectory(stepids=stepids,
                                     cells=cells,
                                     symbols=symbols,
                                     positions=positions,

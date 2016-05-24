@@ -274,6 +274,18 @@ class TestQueryBuilder(AiidaTestCase):
                 }
             }
         qb = QueryBuilder(**qh)
-        self.assertEqual(len(list(qb.all())), 1)
+        self.assertEqual(qb.count(), 1)
 
+        # Test the hashing:
+        query1 = qb.get_query()
+        qb.add_filter('n2', {'label':'nonexistentlabel'})
+        self.assertEqual(qb.count(), 0)
+        query2 = qb.get_query()
+        query3 = qb.get_query()
+
+        self.assertTrue(id(query1) != id(query2))
+        self.assertTrue(id(query2) == id(query3))
+
+
+        
 

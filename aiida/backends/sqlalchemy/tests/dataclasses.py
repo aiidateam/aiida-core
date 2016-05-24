@@ -1952,8 +1952,8 @@ class TestTrajectoryData(SqlAlchemyTests):
         n = TrajectoryData()
 
         # I create sample data
-        steps = numpy.array([60, 70])
-        times = steps * 0.01
+        stepids = numpy.array([60, 70])
+        times = stepids * 0.01
         cells = numpy.array([
             [[2., 0., 0., ],
              [0., 2., 0., ],
@@ -1978,13 +1978,13 @@ class TestTrajectoryData(SqlAlchemyTests):
              [-0.5, -0.5, -0.5]]])
 
         # I set the node
-        n.set_trajectory(steps=steps, cells=cells, symbols=symbols,
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
                          positions=positions, times=times, velocities=velocities)
 
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
-        self.assertAlmostEqual(abs(steps - n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertAlmostEqual(abs(times - n.get_times()).sum(), 0.)
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
         self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
@@ -1993,7 +1993,7 @@ class TestTrajectoryData(SqlAlchemyTests):
 
         # get_step_data function check
         data = n.get_step_data(1)
-        self.assertEqual(data[0], steps[1])
+        self.assertEqual(data[0], stepids[1])
         self.assertAlmostEqual(data[1], times[1])
         self.assertAlmostEqual(abs(cells[1] - data[2]).sum(), 0.)
         self.assertEqual(symbols.tolist(), data[3].tolist())
@@ -2001,19 +2001,19 @@ class TestTrajectoryData(SqlAlchemyTests):
         self.assertAlmostEqual(abs(data[5] - velocities[1]).sum(), 0.)
 
         # Step 70 has index 1
-        self.assertEqual(1, n.get_step_index(70))
+        self.assertEqual(1, n.get_index_from_stepid(70))
         with self.assertRaises(ValueError):
             # Step 66 does not exist
-            n.get_step_index(66)
+            n.get_index_from_stepid(66)
 
         ########################################################
         # I set the node, this time without times or velocities (the same node)
-        n.set_trajectory(steps=steps, cells=cells, symbols=symbols,
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
                          positions=positions)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
-        self.assertAlmostEqual(abs(steps - n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertIsNone(n.get_times())
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
         self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
@@ -2022,12 +2022,12 @@ class TestTrajectoryData(SqlAlchemyTests):
 
         # Same thing, but for a new node
         n = TrajectoryData()
-        n.set_trajectory(steps=steps, cells=cells, symbols=symbols,
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
                          positions=positions)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
-        self.assertAlmostEqual(abs(steps - n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertIsNone(n.get_times())
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
         self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
@@ -2036,12 +2036,12 @@ class TestTrajectoryData(SqlAlchemyTests):
 
         ########################################################
         # I set the node, this time without velocities (the same node)
-        n.set_trajectory(steps=steps, cells=cells, symbols=symbols,
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
                          positions=positions, times=times)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
-        self.assertAlmostEqual(abs(steps - n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertAlmostEqual(abs(times - n.get_times()).sum(), 0.)
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
         self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
@@ -2050,12 +2050,12 @@ class TestTrajectoryData(SqlAlchemyTests):
 
         # Same thing, but for a new node
         n = TrajectoryData()
-        n.set_trajectory(steps=steps, cells=cells, symbols=symbols,
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
                          positions=positions, times=times)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
-        self.assertAlmostEqual(abs(steps - n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertAlmostEqual(abs(times - n.get_times()).sum(), 0.)
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
         self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
@@ -2068,7 +2068,7 @@ class TestTrajectoryData(SqlAlchemyTests):
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
-        self.assertAlmostEqual(abs(steps - n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertAlmostEqual(abs(times - n.get_times()).sum(), 0.)
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
         self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
@@ -2077,7 +2077,7 @@ class TestTrajectoryData(SqlAlchemyTests):
 
         # get_step_data function check
         data = n.get_step_data(1)
-        self.assertEqual(data[0], steps[1])
+        self.assertEqual(data[0], stepids[1])
         self.assertAlmostEqual(data[1], times[1])
         self.assertAlmostEqual(abs(cells[1] - data[2]).sum(), 0.)
         self.assertEqual(symbols.tolist(), data[3].tolist())
@@ -2085,10 +2085,10 @@ class TestTrajectoryData(SqlAlchemyTests):
         self.assertIsNone(data[5])
 
         # Step 70 has index 1
-        self.assertEqual(1, n.get_step_index(70))
+        self.assertEqual(1, n.get_index_from_stepid(70))
         with self.assertRaises(ValueError):
             # Step 66 does not exist
-            n.get_step_index(66)
+            n.get_index_from_stepid(66)
 
         ##############################################################
         # Again, but after reloading from uuid
@@ -2096,7 +2096,7 @@ class TestTrajectoryData(SqlAlchemyTests):
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
-        self.assertAlmostEqual(abs(steps - n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertAlmostEqual(abs(times - n.get_times()).sum(), 0.)
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
         self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
@@ -2105,7 +2105,7 @@ class TestTrajectoryData(SqlAlchemyTests):
 
         # get_step_data function check
         data = n.get_step_data(1)
-        self.assertEqual(data[0], steps[1])
+        self.assertEqual(data[0], stepids[1])
         self.assertAlmostEqual(data[1], times[1])
         self.assertAlmostEqual(abs(cells[1] - data[2]).sum(), 0.)
         self.assertEqual(symbols.tolist(), data[3].tolist())
@@ -2113,10 +2113,10 @@ class TestTrajectoryData(SqlAlchemyTests):
         self.assertIsNone(data[5])
 
         # Step 70 has index 1
-        self.assertEqual(1, n.get_step_index(70))
+        self.assertEqual(1, n.get_index_from_stepid(70))
         with self.assertRaises(ValueError):
             # Step 66 does not exist
-            n.get_step_index(66)
+            n.get_index_from_stepid(66)
 
     def test_conversion_to_structure(self):
         """
@@ -2126,8 +2126,8 @@ class TestTrajectoryData(SqlAlchemyTests):
         n = TrajectoryData()
 
         # I create sample data
-        steps = numpy.array([60, 70])
-        times = steps * 0.01
+        stepids = numpy.array([60, 70])
+        times = stepids * 0.01
         cells = numpy.array([
             [[2., 0., 0., ],
              [0., 2., 0., ],
@@ -2152,10 +2152,10 @@ class TestTrajectoryData(SqlAlchemyTests):
              [-0.5, -0.5, -0.5]]])
 
         # I set the node
-        n.set_trajectory(steps=steps, cells=cells, symbols=symbols,
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
                          positions=positions, times=times, velocities=velocities)
 
-        from_step = n.step_to_structure(1)
+        from_step = n.get_step_structure(1)
         from_get_aiida_structure = n._get_aiida_structure(index=1)
 
         for struc in [from_step, from_get_aiida_structure]:
@@ -2175,22 +2175,22 @@ class TestTrajectoryData(SqlAlchemyTests):
 
             with self.assertRaises(ValueError):
                 # Not enough kinds
-                struc = n.step_to_structure(1, custom_kinds=[k1, k2])
+                struc = n.get_step_structure(1, custom_kinds=[k1, k2])
 
             with self.assertRaises(ValueError):
                 # Too many kinds
-                struc = n.step_to_structure(1, custom_kinds=[k1, k2, k3, k4])
+                struc = n.get_step_structure(1, custom_kinds=[k1, k2, k3, k4])
 
             with self.assertRaises(ValueError):
                 # Wrong kinds
-                struc = n.step_to_structure(1, custom_kinds=[k1, k2, k4])
+                struc = n.get_step_structure(1, custom_kinds=[k1, k2, k4])
 
             with self.assertRaises(ValueError):
                 # Two kinds with the same name
-                struc = n.step_to_structure(1, custom_kinds=[k1, k2, k3, k3])
+                struc = n.get_step_structure(1, custom_kinds=[k1, k2, k3, k3])
 
             # Correct kinds
-            struc = n.step_to_structure(1, custom_kinds=[k1, k2, k3])
+            struc = n.get_step_structure(1, custom_kinds=[k1, k2, k3])
 
             # Checks
             self.assertEqual(len(struc.sites), 3)  # 3 sites

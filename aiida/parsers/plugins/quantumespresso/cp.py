@@ -197,7 +197,7 @@ class CpParser(Parser):
         raw_trajectory['symbols'] = numpy.array([str(i.kind_name) for i in input_structure.sites])
 
         traj = TrajectoryData()
-        traj.set_trajectory(steps=raw_trajectory['steps'],
+        traj.set_trajectory(stepids=raw_trajectory['steps'],
                             cells=raw_trajectory['cells'],
                             symbols=raw_trajectory['symbols'],
                             positions=raw_trajectory['positions_ordered'],

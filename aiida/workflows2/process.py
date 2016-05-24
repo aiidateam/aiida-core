@@ -4,16 +4,32 @@ import plum.process
 import plum.persistence.persistence_mixin
 import plum.port as port
 
-import aiida.workflows2.util as util
 from aiida.workflows2.execution_engine import execution_engine
+import aiida.workflows2.util as util
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
+from aiida.common.extendeddicts import FixedFieldsAttributeDict
 from abc import ABCMeta
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+
+
+def run(proc, _attributes=None, *args, **inputs):
+    """
+    Synchronously (i.e. blocking) run a workfunction or Process.
+
+    :param proc: The process class or workfunction
+    :param _attributes: Optional attributes (only for Processes)
+    :param args: Positional arguments for a workfunction
+    :param inputs: The list of inputs
+    """
+    if util.is_workfunction(proc):
+        return proc(*args, **inputs)
+    elif issubclass(proc, Process):
+        proc(attributes=_attributes).run(inputs=inputs)
 
 
 class ProcessSpec(plum.process.ProcessSpec):
@@ -27,6 +43,18 @@ class ProcessSpec(plum.process.ProcessSpec):
     def fastforwardable(self):
         self._fastforwardable = True
 
+    def get_attributes_template(self):
+        attrs = type(
+            "{}Attributes".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
+            {'_valid_fields': self.attributes.keys()})()
+
+        # Now fill in any default values
+        for name, value_spec in self.attributes.iteritems():
+            if value_spec.default is not None:
+                attrs[name] = value_spec.default
+
+        return attrs
+
 
 class Process(plum.process.Process):
     """
@@ -34,6 +62,10 @@ class Process(plum.process.Process):
     have full provenance saved in the database.
     """
     __metaclass__ = ABCMeta
+
+    @classmethod
+    def get_attributes_template(cls):
+        return cls.spec().get_attributes_template()
 
     @classmethod
     def _create_default_exec_engine(cls):
@@ -47,8 +79,8 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, create_output_links=True):
-        super(Process, self).__init__()
+    def __init__(self, attributes=None, create_output_links=True):
+        super(Process, self).__init__(attributes=attributes)
         self._running_data = None
         self._create_output_links = create_output_links
 
@@ -112,11 +144,14 @@ class Process(plum.process.Process):
         # deal with things like input groups
         to_link = {}
         for name, input in inputs.iteritems():
-            if isinstance(self.spec().get_input(name), port.InputGroupPort):
-                to_link.update(
-                    {"{}_{}".format(name, k): v for k, v in input.iteritems()})
+            if self.spec().has_input(name):
+                if isinstance(self.spec().get_input(name), port.InputGroupPort):
+                    to_link.update(
+                        {"{}_{}".format(name, k): v for k, v in input.iteritems()})
+                else:
+                    to_link[name] = input
             else:
-                to_link[name] = input
+                assert self.spec().has_dynamic_input()
 
         for name, input in to_link.iteritems():
             if not input.is_stored:

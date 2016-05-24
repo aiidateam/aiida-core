@@ -101,3 +101,10 @@ def load_class(classstring):
     module = importlib.import_module(module_path)
     # Finally, we retrieve the Class
     return getattr(module, class_name)
+
+
+def is_workfunction(func):
+    try:
+        return func._is_workfunction
+    except AttributeError:
+        return False

@@ -37,8 +37,7 @@ class Enumerate(frozenset):
 class AttributeDict(dict):
     """
     This class internally stores values in a dictionary, but exposes
-    the keys also as attributes, i.e. asking for
-    attrdict.key
+    the keys also as attributes, i.e. asking for attrdict.key
     will return the value of attrdict['key'] and so on.
 
     Raises an AttributeError if the key does not exist, when called as an attribute,
@@ -46,12 +45,14 @@ class AttributeDict(dict):
     used.
     """
 
-    def __init__(self, init={}):
+    def __init__(self, init=None):
         """
         Possibly set the initial values of the dictionary from an external dictionary
         init. Note that the attribute-calling syntax will work only 1 level deep.
         """
-        dict.__init__(self, init)
+        if init is None:
+            init = {}
+        super(AttributeDict, self).__init__(init)
 
     def __repr__(self):
         """
@@ -94,12 +95,14 @@ class AttributeDict(dict):
         """
         return self.__class__(self)
 
-    def __deepcopy__(self, memo={}):
+    def __deepcopy__(self, memo=None):
         """
         Support deepcopy.
         """
         from copy import deepcopy
 
+        if memo is None:
+            memo = {}
         retval = deepcopy(dict(self))
         return self.__class__(retval)
 
@@ -129,7 +132,10 @@ class FixedFieldsAttributeDict(AttributeDict):
     """
     _valid_fields = tuple()
 
-    def __init__(self, init={}):
+    def __init__(self, init=None):
+        if init is None:
+            init = {}
+
         for key in init:
             if key not in self._valid_fields:
                 errmsg = "'{}' is not a valid key for object '{}'".format(
@@ -274,4 +280,3 @@ class DefaultFieldsAttributeDict(AttributeDict):
         Return the extra keys defined in the instance.
         """
         return [_ for _ in self.keys() if _ not in self._default_fields]
-

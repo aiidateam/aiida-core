@@ -20,12 +20,19 @@ class JobProcess(Process):
 
         def _define(spec):
             # Attributes
-            spec.attribute("max_wallclock_seconds", valid_type=(int, float))
+            spec.attribute("max_wallclock_seconds", valid_type=int)
             spec.attribute("resources", valid_type=dict)
-            spec.attribute("custom_scheduler_commands", valid_type=basestring)
+            spec.attribute("custom_scheduler_commands", valid_type=unicode)
             spec.attribute("queue_name", valid_type=basestring)
             spec.attribute("computer", valid_type=Computer)
             spec.attribute("withmpi", valid_type=bool)
+            spec.attribute("mpirun_extra_params", valid_type=(list, tuple))
+            spec.attribute("import_sys_environment", valid_type=bool)
+            spec.attribute("environment_variables", valid_type=dict)
+            spec.attribute("priority", valid_type=unicode)
+            spec.attribute("max_memory_kb", valid_type=int)
+            spec.attribute("prepend_text", valid_type=unicode)
+            spec.attribute("append_text", valid_type=unicode)
 
             # Inputs from use methods
             for k, v in calc_class._use_methods.iteritems():

@@ -1762,7 +1762,21 @@ class AbstractQueryBuilder(object):
 
 
     def get_aliases(self):
+        """
+        :returns: the list of aliases
+        """
         return self._aliased_path
+
+    def get_alias(self, tag):
+        """
+        In order to continue a query by the user, this utility function
+        returns the aliased ormclasses.
+
+        :param tag: The tag for a vertice in the path
+        :returns: the alias given for that vertice
+        """
+        tag = self._get_tag_from_specification(tag)
+        return self._tag_to_alias_map[tag]
 
 
 

@@ -478,8 +478,8 @@ class Computer(VerdiCommandWithSubcommands):
 
         from aiida.common.exceptions import (
             NotExistent, ValidationError)
-        from aiida.backends.utils import (
-            get_automatic_user, get_configured_user_email)
+        from aiida.backends.utils import get_automatic_user
+        from aiida.common.utils import get_configured_user_email
         from aiida.backends.settings import BACKEND
         from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
@@ -1051,7 +1051,7 @@ class Computer(VerdiCommandWithSubcommands):
         from aiida.orm.querybuilder import QueryBuilder
         qb = QueryBuilder()
         qb.append(type='computer', project=['name'])
-        return zip(*qb._all())[0]
+        return zip(*qb.all())[0]
         #~ from aiida.orm.computer import Computer as AiidaOrmComputer
 
         #~ return AiidaOrmComputer.list_names()

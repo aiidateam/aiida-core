@@ -121,8 +121,8 @@ serverurl=unix:///{daemon_dir}/supervisord.sock
 ; Main AiiDA Daemon
 ;=======================================
 [program:aiida-daemon]
-command=python "{aiida_module_dir}/backends/djsite/manage.py" --aiida-process=daemon celeryd --loglevel=INFO
-directory={daemon_dir}
+command=celery worker -A tasks --loglevel=INFO --beat --schedule={daemon_dir}/celerybeat-schedule
+directory={aiida_code_home}/daemon/
 user={local_user}
 numprocs=1
 stdout_logfile={log_dir}/aiida_daemon.log
@@ -130,32 +130,29 @@ stderr_logfile={log_dir}/aiida_daemon.log
 autostart=true
 autorestart=true
 startsecs=10
-stopwaitsecs=30
-process_name=%(process_num)s
 
-; ==========================================
-; AiiDA Deamon BEAT - for scheduled tasks
-; ==========================================
-[program:aiida-daemon-beat]
-command=python "{aiida_module_dir}/backends/djsite/manage.py" --aiida-process=daemon celerybeat
-directory={daemon_dir}
-user={local_user}
-numprocs=1
-stdout_logfile={log_dir}/aiida_daemon_beat.log
-stderr_logfile={log_dir}/aiida_daemon_beat.log
-autostart=true
-autorestart=true
-startsecs=10
-stopwaitsecs = 30
-process_name=%(process_num)s
+; Need to wait for currently executing tasks to finish at shutdown.
+; Increase this if you have very long running tasks.
+stopwaitsecs = 600
+
+; When resorting to send SIGKILL to the program to terminate it
+; send SIGKILL to its whole process group instead,
+; taking care of its children as well.
+killasgroup=true
+
+; Set Celery priority higher than default (999)
+; so, if rabbitmq is supervised, it will start first.
+priority=1000
 """
+
     old_umask = os.umask(DEFAULT_UMASK)
     try:
         with open(os.path.join(aiida_dir, daemon_dir, DAEMON_CONF_FILE), "w") as f:
             f.write(daemon_conf.format(daemon_dir=daemon_dir, log_dir=log_dir,
                                        local_user=local_user,
-                                       aiida_module_dir=os.path.split(os.path.abspath(
-                                           aiida.__file__))[0]))
+                                       aiida_code_home=os.path.split(
+                                           os.path.abspath(
+                                               aiida.__file__))[0]))
     finally:
         os.umask(old_umask)
 

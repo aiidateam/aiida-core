@@ -72,3 +72,6 @@ psycopg2==2.6.1
 aldjemy
 # Password hashing
 passlib
+
+# Email validation for verdi install
+validate_email

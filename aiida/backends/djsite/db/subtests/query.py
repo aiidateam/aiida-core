@@ -8,112 +8,175 @@ def is_postgres():
     profile_conf = get_profile_config(settings.AIIDADB_PROFILE)
     return profile_conf['AIIDADB_ENGINE'] == 'postgresql_psycopg2'
 
+def is_django():
+    from aiida.backends import settings
+    return settings.BACKEND == 'django'
+
+
+@unittest.skipIf(not(is_django()), "Tests only works with Django backend")
 class TestQueryBuilder(AiidaTestCase):
-    def test_querybuilder_classifications_django(self):
-        from aiida.backends.querybuild.querybuilder_django import QueryBuilder
+    def test_querybuilder_classifications(self):
+        """
+        This tests the classifications of the QueryBuilder u. the django backend.
+        """
         from aiida.backends.querybuild.dummy_model import (
                 DbNode, DbUser, DbComputer,
                 DbGroup,
             )
+        from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.utils import (DataFactory, CalculationFactory)
         from aiida.orm.data.structure import StructureData
         from aiida.orm.implementation.django.node import Node
-
+        from aiida.orm import Group, User, Node, Computer, Data, Calculation
+        from aiida.common.exceptions import InputValidationError
         qb = QueryBuilder()
 
-        cls, clstype = qb._get_ormclass(DataFactory('structure'), None)
-        self.assertEqual(clstype, 'data.structure.StructureData.')
-        self.assertTrue(issubclass(cls, DbNode))
 
-        cls, clstype = qb._get_ormclass(None, 'structure')
-        self.assertEqual(clstype, 'data.structure.StructureData.')
-        self.assertTrue(issubclass(cls, DbNode))
+        
+        with self.assertRaises(InputValidationError):
+            qb._get_ormclass(None, 'data')
+        with self.assertRaises(InputValidationError):
+            qb._get_ormclass(None, 'data.Data')
+        with self.assertRaises(InputValidationError):
+            qb._get_ormclass(None, '.')
+        
+        for cls, clstype, query_type_string in (
+                qb._get_ormclass(StructureData, None),
+                qb._get_ormclass(None, 'data.structure.StructureData.'),
+            ):
+            self.assertEqual(clstype, 'data.structure.StructureData.')
+            self.assertTrue(issubclass(cls, DbNode))
+            self.assertEqual(clstype, 'data.structure.StructureData.')
+            self.assertEqual(query_type_string, StructureData._query_type_string)
 
-        cls, clstype = qb._get_ormclass(Node, None)
-        self.assertEqual(clstype, 'node.Node')
-        self.assertTrue(issubclass(cls, DbNode))
 
-        cls, clstype = qb._get_ormclass(DbNode, None)
-        self.assertEqual(clstype, 'node.Node')
-        self.assertTrue(issubclass(cls, DbNode))
 
-        cls, clstype = qb._get_ormclass(None, 'node')
-        self.assertEqual(clstype, 'node.Node')
-        self.assertTrue(issubclass(cls, DbNode))
+        for cls, clstype, query_type_string in (
+                qb._get_ormclass(Node, None),
+                qb._get_ormclass(DbNode, None),
+                qb._get_ormclass(None, '')
+            ):
+            self.assertEqual(clstype, Node._plugin_type_string)
+            self.assertEqual(query_type_string, Node._query_type_string)
+            self.assertTrue(issubclass(cls, DbNode))
 
-        cls, clstype = qb._get_ormclass(DbGroup, None)
-        self.assertEqual(clstype, 'group')
-        self.assertTrue(issubclass(cls, DbGroup))
+        for cls, clstype, query_type_string in (
+                qb._get_ormclass(DbGroup, None),
+                qb._get_ormclass(Group, None),
+                qb._get_ormclass(None, 'group'),
+                qb._get_ormclass(None, 'Group'),
+            ):
 
-        cls, clstype = qb._get_ormclass(None, 'group')
-        self.assertEqual(clstype, 'group')
-        self.assertTrue(issubclass(cls, DbGroup))
+            self.assertEqual(clstype, 'group')
+            self.assertEqual(query_type_string, None)
+            self.assertTrue(issubclass(cls, DbGroup))
 
-        cls, clstype = qb._get_ormclass(DbUser, None)
-        self.assertEqual(clstype, 'user')
-        self.assertTrue(issubclass(cls, DbUser))
 
-        cls, clstype = qb._get_ormclass(None, "user")
-        self.assertEqual(clstype, 'user')
-        self.assertTrue(issubclass(cls, DbUser))
+        for cls, clstype, query_type_string in (
+                qb._get_ormclass(DbUser, None),
+                qb._get_ormclass(DbUser, None),
+                qb._get_ormclass(None, "user"),
+                qb._get_ormclass(None, "User"),
+            ):
+            self.assertEqual(clstype, 'user')
+            self.assertEqual(query_type_string, None)
+            self.assertTrue(issubclass(cls, DbUser))
 
-        cls, clstype = qb._get_ormclass(DbComputer, None)
-        self.assertEqual(clstype, 'computer')
-        self.assertTrue(issubclass(cls, DbComputer))
+        for cls, clstype, query_type_string in (
+                qb._get_ormclass(DbComputer, None),
+                qb._get_ormclass(Computer, None),
+                qb._get_ormclass(None, 'computer'),
+                qb._get_ormclass(None, 'Computer'),
+            ):
+            self.assertEqual(clstype, 'computer')
+            self.assertEqual(query_type_string, None)
+            self.assertTrue(issubclass(cls, DbComputer))
 
-        cls, clstype = qb._get_ormclass(None, "computer"    )
-        self.assertEqual(clstype, 'computer')
-        self.assertTrue(issubclass(cls, DbComputer))
+        for cls, clstype, query_type_string in (
+                qb._get_ormclass(Data, None),
+                qb._get_ormclass(None, 'data.Data.'),
+            ):
+            self.assertEqual(clstype, Data._plugin_type_string)
+            self.assertEqual(query_type_string, Data._query_type_string)
+            self.assertTrue(issubclass(cls, DbNode))
 
+    @unittest.skipIf(not(is_django()), "Tests only works with Django backend")
     def test_simple_query_django_1(self):
         """
         Testing a simple query
         """
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.calculation.job import JobCalculation
-        from aiida.orm import Node
+        from aiida.orm import Node, Data, Calculation
         from datetime import datetime
 
-        n1 = Node()
-        n1.label = 'test1_node1'
+        n1 = Data()
+        n1.label = 'node1'
         n1._set_attr('foo',['hello', 'goodbye'])
         n1.store()
 
-        n2 = Node()
-        n2.label = 'test1_node2'
+        n2 = Calculation()
+        n2.label = 'node2'
         n2._set_attr('foo', 1)
         n2.store()
 
-        n3 = Node()
-        n3.label = 'test1_node3'
+        n3 = Data()
+        n3.label = 'node3'
         n3._set_attr('foo', 1.0000) # Stored as fval
         n3.store()
 
-        n4 = Node()
-        n4.label = 'test1_node4'
+        n4 = Calculation()
+        n4.label = 'node4'
         n4._set_attr('foo', 'bar')
         n4.store()
 
-        n5 = Node()
-        n5.label = 'test1_node5'
+        n5 = Data()
+        n5.label = 'node5'
         n5._set_attr('foo', None)
         n5.store()
 
-
         n2._add_link_from(n1)
-        n3._add_link_from(n1)
+        n3._add_link_from(n2)
 
-        n4._add_link_from(n2)
-        n5._add_link_from(n2)
+        n4._add_link_from(n3)
+        n5._add_link_from(n4)
 
-        qb = QueryBuilder()
-        qb.append(Node, filters={'attributes.foo':1.000})
+
+        qb1 = QueryBuilder()
+        qb1.append(Node, filters={'attributes.foo':1.000})
+
+        self.assertEqual(len(list(qb1.all())), 2)
+
+        qb2 = QueryBuilder()
+        qb2.append(Data)
+        self.assertEqual(qb2.count(), 3)
+
+        qb2 = QueryBuilder()
+        qb2.append(type='data.Data.')
+        self.assertEqual(qb2.count(), 3)
+
+        qb3 = QueryBuilder()
+        qb3.append(Node, project='label', label='node1')
+        qb3.append(Node, project='label', label='node2')
+        self.assertEqual(qb3.count(), 4)
+
+        qb4 = QueryBuilder()
+        qb4.append(Calculation, label='node1')
+        qb4.append(Data, label='node2')
+        self.assertEqual(qb4.count(), 2)
+
+        qb5 = QueryBuilder()
+        qb5.append(Data, label='node1')
+        qb5.append(Calculation, label='node2')
+        self.assertEqual(qb5.count(), 2)
         
-        self.assertEqual(len(list(qb.all())), 2)
+        qb6 = QueryBuilder()
+        qb6.append(Data, label='node1')
+        qb6.append(Data, label='node2')
+        self.assertEqual(qb6.count(), 0)
+        
 
-
-
-    #~ @unittest.skipIf(not is_postgres(), "Tests only works with postgres")
+    @unittest.skipIf(not(is_django()), "Tests only works with Django backend")
     def test_simple_query_django_2(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
@@ -211,6 +274,18 @@ class TestQueryBuilder(AiidaTestCase):
                 }
             }
         qb = QueryBuilder(**qh)
-        self.assertEqual(len(list(qb.all())), 1)
+        self.assertEqual(qb.count(), 1)
+
+        # Test the hashing:
+        query1 = qb.get_query()
+        qb.add_filter('n2', {'label':'nonexistentlabel'})
+        self.assertEqual(qb.count(), 0)
+        query2 = qb.get_query()
+        query3 = qb.get_query()
+
+        self.assertTrue(id(query1) != id(query2))
+        self.assertTrue(id(query2) == id(query3))
+
+
         
-    
+

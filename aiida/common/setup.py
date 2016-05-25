@@ -1025,8 +1025,13 @@ _property_table = {
         "string",
         "E-mail address for TCOD depositions",
         None,
+        None),
+    "warnings.showdeprecations":(
+        "show_deprecations",
+        "bool",
+        "Boolean whether to print deprecation warnings",
+        True,
         None)
-
 }
 
 

@@ -3,6 +3,8 @@ from passlib.context import CryptContext
 import random
 import hashlib
 import time
+import numpy as np
+from datetime import datetime
 
 """
 Here we define a single password hashing instance for the full AiiDA.
@@ -100,3 +102,143 @@ def get_random_string(length=12,
             ).digest())
     return ''.join(random.choice(allowed_chars) for i in range(length))
 
+
+
+def make_hash_with_type(type_chr, string_to_hash):
+    """
+    Convention: type_chr should be a single char, lower case
+      for simple datatypes, upper case for composite datatypes
+      We don't check anything for speed efficiency
+    """
+    return hashlib.sha224("{}{}".format(type_chr, string_to_hash)).hexdigest()
+
+def make_hash(object_to_hash, float_precision=12):
+    """
+    Makes a hash from a dictionary, list, tuple or set to any level, that contains
+    only other hashable or nonhashable types (including lists, tuples, sets, and
+    dictionaries).
+
+    :param object_to_hash: the object to hash
+    :param int float_precision: the precision when converting floats to strings
+
+    :returns: a unique hash
+
+    There are a lot of modules providing functionalities to create unique
+    hashes for hashable values.
+    However, getting hashes for nonhashable items like sets or dictionaries is
+    not easily doable because order is not fixed.
+    This leads to the peril of getting different hashes for the same
+    dictionary.
+
+    This function avoids this by recursing through nonhashable items and
+    hashing iteratively.
+    Uses python's sorted function to sort unsorted sets and dictionaries
+    and hashlib.sha224 to hash the value.
+    We make an example with two dictionaries that should produce the
+    same hash because only the order of the keys is different::
+
+        aa = {
+            '3':4,
+            3:4,
+            'a':{
+                '1':'hello', 2:'goodbye', 1:'here'
+            },
+            'b':4,
+            'c': set([2, '5','a', 'b', 5])
+        }
+        bb = {
+            'c': set([2, 'b', 5, 'a', '5']),
+            'b':4, 'a':{2:'goodbye', 1:'here', '1':'hello'},
+            '3':4, 3:4
+        }
+
+        print str(aa) == str(bb)
+        print aa == bb
+        print
+        print hashlib.sha224(str(aa)).hexdigest()
+        print hashlib.sha224(str(bb)).hexdigest()
+        print hashlib.sha224(str(aa)).hexdigest(
+            ) == hashlib.sha224(str(bb)).hexdigest()
+        print
+        print make_hash(aa)
+        print make_hash(bb)
+        print make_hash(aa) == make_hash(bb)
+
+    produces the output::
+
+        False
+        True
+
+        0f6f0cc1e3256f6486e998e934d07cb192ea78d3ce75595267b4c665
+        86877298dfb629201055e8bc410b5a2157ce65cf246677c54316723a
+        False
+
+        696cdf26b46d7abc5d6fdfb2244829dad9dd2b0100afd1e2f20a8002
+        696cdf26b46d7abc5d6fdfb2244829dad9dd2b0100afd1e2f20a8002
+        True
+
+    We can conclude that using simple hashfunctions operating on
+    the string of dictionary do not suffice if we want to check for equality
+    of dictionaries using hashes.
+    """
+    if isinstance(object_to_hash, (tuple, list)):
+        hashes = tuple([
+                make_hash(_, float_precision=float_precision)
+                for _
+                in object_to_hash
+            ])
+        # We treat lists and tuples as if they are the same thing,
+        # but I think this is OK
+        return make_hash_with_type('L', "".join(hashes))
+
+    elif isinstance(object_to_hash, set):
+        hashes = tuple([
+                make_hash(_, float_precision=float_precision)
+                for _
+                in sorted(object_to_hash)
+            ])
+        return make_hash_with_type('S', "".join(hashes))
+
+    elif isinstance(object_to_hash, dict):
+        hashed_dictionary = {
+            k: make_hash(v, float_precision=float_precision)
+            for k,v
+            in object_to_hash.items()
+        }
+        return make_hash_with_type(
+            'D', make_hash(sorted(
+                    hashed_dictionary.items()), float_precision=float_precision
+                )
+            )
+
+    elif isinstance(object_to_hash, float):
+        return make_hash_with_type(
+                'f','{:.{precision}f}'.format(
+                        object_to_hash, precision=float_precision
+                )
+            )
+    # If is numpy:
+    elif type(object_to_hash).__module__ == np.__name__:
+        return make_hash_with_type('N', str(object_to_hash))
+
+    elif isinstance(object_to_hash, basestring):
+        return make_hash_with_type('s', object_to_hash)
+
+    elif isinstance(object_to_hash, bool): # bool must come before int
+        # I prefer to be sure of what I hash instead of using 'str'
+        return make_hash_with_type('b', "True" if object_to_hash else "False")
+
+    elif object_to_hash is None:
+        return make_hash_with_type('n', "None")
+
+    elif isinstance(object_to_hash, int):
+        return make_hash_with_type('i', str(object_to_hash))
+    elif isinstance(object_to_hash, long):
+        return make_hash_with_type('l', str(object_to_hash))
+
+    elif isinstance(object_to_hash, datetime):
+        return make_hash_with_type('d', str(object_to_hash))
+    # Possibly add more types here, as needed
+    else:
+        raise ValueError("Value of type {} cannot be hashed".format(
+                type(object_to_hash)))

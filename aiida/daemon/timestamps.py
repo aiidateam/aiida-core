@@ -3,9 +3,9 @@ from aiida.backends import settings
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
 if settings.BACKEND == BACKEND_DJANGO:
-    from aiida.backends.djsite.globalsettings import set_global_setting
+    from aiida.backends.djsite.globalsettings import set_global_setting, get_global_setting
 elif settings.BACKEND == BACKEND_SQLA:
-    from aiida.backends.sqlalchemy.globalsettings import set_global_setting
+    from aiida.backends.sqlalchemy.globalsettings import set_global_setting, get_global_setting
 else:
     raise Exception("Unkown backend {}".format(settings.BACKEND))
 
@@ -113,10 +113,10 @@ def get_last_daemon_timestamp(task_name, when='stop'):
     :return: a datetime.datetime object. Return None if no information is
       found in the DB.
     """
-    from aiida.backends.djsite.globalsettings import get_global_setting
+    #~ from aiida.backends.djsite.globalsettings import get_global_setting
 
     try:
-        actual_task_name = djcelery_tasks[task_name]
+        actual_task_name = celery_tasks[task_name]
     except KeyError:
         raise ValueError("Unknown value for '{}', not found in the "
                          "djcelery_tasks dictionary".format(task_name))

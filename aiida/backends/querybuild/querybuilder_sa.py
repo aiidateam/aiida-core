@@ -99,7 +99,7 @@ class QueryBuilder(AbstractQueryBuilder):
 
         if column is None:
             column = cls._get_column(column_name, alias)
-        
+
         database_entity = column[tuple(attr_key)]
         if operator == '==':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
@@ -208,15 +208,6 @@ class QueryBuilder(AbstractQueryBuilder):
             returnval = res.get_aiida_class()
         elif isinstance(res, Choice):
             returnval = res.value
-        #~ elif key.startswith('attributes') or key.startswith('extras'):
-            #~ try:
-                #~ returnval = json_loads(res)
-                #~ print key
-            #~ except (TypeError, ValueError) as e:
-                #~ # TypeError when it is not in ' '
-                #~ # ValueError if it is already a casted string
-                #~ 
-                #~ returnval = res
         else:
             returnval = res
         return returnval

@@ -790,8 +790,8 @@ class StructureData(Data):
         self.pbc = [True, True, True]
         self.clear_kinds()
         for site in struct.sites:
-            self.append_atom(symbols=[x[0].symbol for x in site.items()],
-                             weights=[x[1] for x in site.items()],
+            self.append_atom(symbols=[x[0].symbol for x in site.species_and_occu.items()],
+                             weights=[x[1] for x in site.species_and_occu.items()],
                              position=site.coords.tolist())
 
     def _validate(self):

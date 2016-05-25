@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from aiida.backends.settings import BACKEND
 from aiida.common.exceptions import ConfigurationError
 
-from aiida.orm.implementation.general.calculation import from_type_to_pluginclassname
+from aiida.common.pluginloader import from_type_to_pluginclassname
 from aiida.orm.implementation.general.calculation.job import _input_subfolder
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."

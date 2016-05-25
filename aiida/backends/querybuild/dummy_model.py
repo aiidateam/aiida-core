@@ -21,7 +21,7 @@ from sa_init import (
 
 # Aiida Django classes:
 #from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
-#from aiida.orm.implementation.calculation import from_type_to_pluginclassname
+
 #from aiida.common.pluginloader import load_plugin
 
 

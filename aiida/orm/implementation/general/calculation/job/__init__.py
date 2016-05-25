@@ -9,9 +9,7 @@ from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.backends.utils import get_automatic_user
 
-from aiida.orm.implementation.general.calculation import (
-    from_type_to_pluginclassname
-)
+from aiida.common.pluginloader import from_type_to_pluginclassname
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -833,8 +831,9 @@ class AbstractJobCalculation(object):
 
 
         from aiida.orm.querybuilder import QueryBuilder
-        from django.core.exceptions import ImproperlyConfigured
         from aiida.common.custom_io import pretty_print
+        from aiida.daemon.timestamps import get_last_daemon_timestamp
+        
 
         now = timezone.now()
 
@@ -858,18 +857,11 @@ class AbstractJobCalculation(object):
             )
         # get the last daemon check:
         try:
-            from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
             last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
         except ValueError:
             last_check_string = (
                     "# Last daemon state_updater check: "
                     "(Error while retrieving the information)"
-            )
-        except (ImproperlyConfigured, ImportError):
-            # get_last_daemon_timestamp cannot be imported
-            # when using SQLA because it is sqla specific
-            last_check_string = (
-                    "# Cannot run state_update, django method"
             )
         else:
             if last_daemon_check is None:
@@ -937,7 +929,7 @@ class AbstractJobCalculation(object):
                 cls,
                 filters=calculation_filters,
                 project=calculation_projections,
-                label='calculation'
+                tag='calculation'
         )
         if group_filters is not None:
             qb.append(
@@ -946,7 +938,7 @@ class AbstractJobCalculation(object):
                 )
         qb.append(
                 type="computer", computer_of='calculation',
-                project=['name'], label='computer'
+                project=['name'], tag='computer'
             )
 
         # ORDER
@@ -1069,9 +1061,9 @@ class AbstractJobCalculation(object):
 
 
         qb = QueryBuilder()
-        qb.append(type="computer", label='computer', filters=computerfilter)
-        qb.append(cls, filters=calcfilter, label='calc', runs_on='computer')
-        qb.append(type="user", label='user', filters=userfilter, user_of="calc")
+        qb.append(type="computer", tag='computer', filters=computerfilter)
+        qb.append(cls, filters=calcfilter, tag='calc', runs_on='computer')
+        qb.append(type="user", tag='user', filters=userfilter, user_of="calc")
 
         if only_computer_user_pairs:
             qb.add_projection("computer", "*")

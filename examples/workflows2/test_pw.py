@@ -125,8 +125,9 @@ settings = ParameterData(dict=settings_dict)
 # number_cpus_per_machine), change for SGE-like schedulers
 
 JobCalc = JobProcess.build(PwCalculation)
-attrs = JobCalc.get_attributes_template()
 
+# Attributes
+attrs = JobCalc.get_attributes_template()
 attrs.max_wallclock_seconds = 30 * 60  # 30 min
 attrs.resources = {"num_machines": 1, "num_mpiprocs_per_machine": 8}
 attrs.custom_scheduler_commands = "#SBATCH --account=ch3"
@@ -135,12 +136,13 @@ if run_in_serial_mode:
 if queue is not None:
     attrs.queue_name = queue
 
-inputs = {
-    'structure': s,
-    'parameters': parameters,
-    'kpoints': kpoints,
-    'code': test_and_get_code(codename, expected_code_type='quantumespresso.pw'),
-}
+# Inputs
+inputs = JobCalc.get_inputs_template()
+inputs.structure = s
+inputs.parameters= parameters
+inputs.kpoints = kpoints
+inputs.code= test_and_get_code(codename, expected_code_type='quantumespresso.pw')
+
 if settings is not None:
     inputs['settings'] = settings
 
@@ -160,16 +162,16 @@ if settings is not None:
 
     pseudos_to_use = {}
     for fname, elem, pot_type in raw_pseudos:
-        absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
-                                                "..", "submission",
-                                                "data", fname))
+        absname = os.path.realpath(
+            os.path.join(
+                os.path.dirname(__file__), "..", "submission", "data", fname))
         pseudo, created = UpfData.get_or_create(absname, use_first=True)
         if created:
             print "Created the pseudo for {}".format(elem)
         else:
             print "Using the pseudo for {} from DB: {}".format(elem, pseudo.pk)
         pseudos_to_use[elem] = pseudo
-    inputs['pseudo'] = pseudos_to_use
+    inputs.pseudo = pseudos_to_use
 
 # Run the calculation
 run(JobCalc, _attributes=attrs, **inputs)

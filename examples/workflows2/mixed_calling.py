@@ -11,7 +11,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.workflows2.util import to_db_type
+from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.async import async, asyncd
 from aiida.workflows2.wf import wf
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, ResultToContext

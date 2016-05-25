@@ -46,16 +46,28 @@ class ProcessSpec(plum.process.ProcessSpec):
         self._fastforwardable = True
 
     def get_attributes_template(self):
-        attrs = type(
+        template = type(
             "{}Attributes".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
             {'_valid_fields': self.attributes.keys()})()
 
         # Now fill in any default values
         for name, value_spec in self.attributes.iteritems():
             if value_spec.default is not None:
-                attrs[name] = value_spec.default
+                template[name] = value_spec.default
 
-        return attrs
+        return template
+
+    def get_inputs_template(self):
+        template = type(
+            "{}Inputs".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
+            {'_valid_fields': self.inputs.keys()})()
+
+        # Now fill in any default values
+        for name, value_spec in self.inputs.iteritems():
+            if value_spec.default is not None:
+                template[name] = value_spec.default
+
+        return template
 
 
 class Process(plum.process.Process):

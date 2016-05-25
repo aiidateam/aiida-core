@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import collections
+
 import plum.process
 import plum.persistence.persistence_mixin
 import plum.port as port
@@ -71,11 +73,8 @@ class Process(plum.process.Process):
     def _create_default_exec_engine(cls):
         return execution_engine
 
-    class RunningData(object):
-        def __init__(self, inputs):
-            self.inputs = inputs
-            self.current_calc = None
-            self.parent = None
+    RunningData = collections.namedtuple('RunningData',
+                                         ['current_calc', 'parent'])
 
     _spec_type = ProcessSpec
 
@@ -96,12 +95,12 @@ class Process(plum.process.Process):
         """
         super(Process, self).on_start(inputs, exec_engine)
         util.ProcessStack.push(self)
-        self._running_data = self.RunningData(inputs)
+        self._running_data = self.RunningData()
         self._setup_db_record(inputs)
 
     def on_finalise(self):
         super(Process, self).on_finalise()
-        util.ProcessStack.push(self)
+        util.ProcessStack.pop()
         self._running_data = None
 
     def _on_output_emitted(self, output_port, value, dynamic):
@@ -176,11 +175,6 @@ class Process(plum.process.Process):
         node = None  # Here we should find the old node
         for k, v in node.get_output_dict():
             self._out(k, v)
-
-    @property
-    def _inputs(self):
-        assert self._running_data, "Process not running"
-        return self._running_data.inputs
 
     @property
     def _current_calc(self):

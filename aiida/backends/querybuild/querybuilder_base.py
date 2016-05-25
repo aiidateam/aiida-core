@@ -41,7 +41,7 @@ class AbstractQueryBuilder(object):
     __metaclass__ = ABCMeta
 
 
-    _LINKTAG_DEL = '--'
+    _EDGE_TAG_DELIM = '--'
     _VALID_PROJECTION_KEYS = ('func', 'cast')
 
 
@@ -283,7 +283,7 @@ class AbstractQueryBuilder(object):
 
     def append(self, cls=None, type=None, tag=None,
                 autotag=False, filters=None, project=None, subclassing=True,
-                link_tag=None, link_filters=None, link_project=None, **kwargs
+                edge_tag=None, edge_filters=None, edge_project=None, **kwargs
         ):
         """
         Any iterative procedure to build the path for a graph query
@@ -355,6 +355,8 @@ class AbstractQueryBuilder(object):
                     "\n\n\n".format(type)
                 )
 
+        if 'link_tag' in kwargs:
+            raise DeprecationWarning("link_tag is deprecated, use edge_tag instead")
         ormclass, ormclasstype, query_type_string = self._get_ormclass(cls, type)
         ############################### TAG #################################
         # Let's get a tag
@@ -372,11 +374,11 @@ class AbstractQueryBuilder(object):
                 raise InputValidationError("Both label and tag specified")
 
         if tag:
-            if self._LINKTAG_DEL in tag:
+            if self._EDGE_TAG_DELIM in tag:
                 raise InputValidationError(
                     "tag cannot contain {}\n"
                     "since this is used as a delimiter for links"
-                    "".format(self._LINKTAG_DEL)
+                    "".format(self._EDGE_TAG_DELIM)
                 )
             tag = tag
             user_defined_tag = True
@@ -484,55 +486,64 @@ class AbstractQueryBuilder(object):
             else:
                 joining_keyword = key
                 joining_value = self._get_tag_from_specification(val)
-        # the default is just a direction keyword and value 1
-        # meaning that this vertice is linked to the previous
-        # vertice as output
-        if joining_keyword is None:
-            joining_keyword = 'direction'
-            joining_value = 1
+        # the default is that this vertice is 'output_of' the previous one
+        if joining_keyword is None and len(self._path)>0:
+            joining_keyword = 'output_of'
+            joining_value = self._path[-1]['tag']
 
-        ############################# LINKS ####################################
-        # See if this requires a link:
-        if joining_keyword in ('input_of', 'output_of', 'direction') and len(self._path)>0:
-            # Ok, so here we are joining one node to another, as input or output
-            # This means that the user might want to query by link.
-            # Since the tag of this vertice is unique the tag, e.g. 'calc1'
-            # the tag '<>calc1' will also be unique if '<>' is a protected
-            # substring.
-            linklabel = kwargs.pop('linklabel', None)
-            if linklabel is not None and link_tag is None:
-                warnings.warn(
-                    "\nUse of the keyword 'linklabel' will be deprecated soon\n"
-                    "Please use 'link_tag' instead\n"
+        if joining_keyword == 'direction':
+            if not isinstance(joining_value, int):
+                raise InputValidationError("direction=n expects n to be an integer")
+            try:
+                if joining_value < 0:
+                    joining_keyword = 'input_of'
+                elif joining_value > 0:
+                    joining_keyword = 'output_of'
+                else:
+                    raise InputValidationError("direction=0 is not valid")
+                joining_value = self._path[-abs(joining_value)]['tag']
+            except IndexError as e:
+                raise InputValidationError(
+                    "You have specified a non-existent entity with\n"
+                    "direction={}\n"
+                    "{}\n".format(joining_value, e.message)
                 )
-                link_tag = linklabel
 
-            if link_tag is None:
-                if joining_keyword in ('input_of', 'output_of'):
-                    link_to_tag = self._get_tag_from_specification(joining_value)
-                elif joining_keyword == 'direction':
-                    link_to_tag = self._path[-abs(joining_value)]['tag']
-                link_tag = link_to_tag + self._LINKTAG_DEL + tag
-                #~ reverse_link_tag = tag + self._LINKTAG_DEL + link_to_tag
-            aliased_link = aliased(self.Link)
-            self._tag_to_alias_map[link_tag] = aliased_link
+        ############################# EDGES #################################
+        # See if this requires a link:
+        aliased_edge = None
+        if len(self._path) > 0:
+            if joining_keyword in ('input_of', 'output_of'):
+                aliased_edge = aliased(self.Link)
+            elif joining_keyword in ('ancestor_of', 'descendant_of'):
+                aliased_edge = aliased(self.Path)
 
+            if aliased_edge is not None:
 
+                # Ok, so here we are joining through a m2m relationship,
+                # e.g. input or output.
+                # This means that the user might want to query by that edge!
 
-            #~ if reverse_linktag is not None:
-                #~ self._tag_to_alias_map[reverse_linktag] = aliased_link
-                #~ self._filters[reverse_linktag] = {}
-                #~ self._projections[reverse_linktag] = {}
+                if edge_tag is None:
+                    edge_destination_tag = self._get_tag_from_specification(joining_value)
+                    edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
+                else:
+                    if edge_tag in self._tag_to_alias_map.keys():
+                        raise InputValidationError(
+                            "The tag {} is already in use".format(edge_tag)
+                        )
 
-            # Filters on links:
-            self._filters[link_tag] = {}
-            if link_filters is not None:
-                self.add_filter(link_tag, link_filters)
+                self._tag_to_alias_map[edge_tag] = aliased_edge
 
-            # Projections on links
-            self._projections[link_tag] = {}
-            if link_project is not None:
-                self.add_projection(link_tag, link_project)
+                # Filters on links:
+                self._filters[edge_tag] = {}
+                if edge_filters is not None:
+                    self.add_filter(edge_tag, edge_filters)
+
+                # Projections on links
+                self._projections[edge_tag] = {}
+                if edge_project is not None:
+                    self.add_projection(edge_tag, edge_project)
 
 
         ################### EXTENDING THE PATH #################################
@@ -542,8 +553,8 @@ class AbstractQueryBuilder(object):
                 type=ormclasstype, tag=tag, joining_keyword=joining_keyword,
                 joining_value=joining_value
             )
-        if link_tag is not None:
-            path_extension.update(dict(link_tag=link_tag))
+        if aliased_edge is not None:
+            path_extension.update(dict(edge_tag=edge_tag))
             #~ if reverse_linktag is not None:
                 #~ path_extension.update(dict(reverse_linktag=reverse_linktag))
 
@@ -1212,7 +1223,7 @@ class AbstractQueryBuilder(object):
                 #~ call.caller_id == entity_to_join.id
             #~ )
 
-    def _join_outputs(self, joined_entity, entity_to_join, aliased_link):
+    def _join_outputs(self, joined_entity, entity_to_join, aliased_edge):
         """
         :param joined_entity: The (aliased) ORMclass that is an input
         :param entity_to_join: The (aliased) ORMClass that is an output.
@@ -1227,14 +1238,14 @@ class AbstractQueryBuilder(object):
                 'output_of'
             )
         self._query = self._query.join(
-                aliased_link,
-                aliased_link.input_id == joined_entity.id
+                aliased_edge,
+                aliased_edge.input_id == joined_entity.id
         ).join(
                 entity_to_join,
-                aliased_link.output_id == entity_to_join.id
+                aliased_edge.output_id == entity_to_join.id
         )
 
-    def _join_inputs(self, joined_entity, entity_to_join, aliased_link):
+    def _join_inputs(self, joined_entity, entity_to_join, aliased_edge):
         """
         :param joined_entity: The (aliased) ORMclass that is an output
         :param entity_to_join: The (aliased) ORMClass that is an input.
@@ -1249,17 +1260,18 @@ class AbstractQueryBuilder(object):
                 'input_of'
             )
         self._query = self._query.join(
-                aliased_link,
-                aliased_link.output_id == joined_entity.id
+                aliased_edge,
+                aliased_edge.output_id == joined_entity.id
         ).join(
                 entity_to_join,
-                aliased_link.input_id == entity_to_join.id
+                aliased_edge.input_id == entity_to_join.id
         )
 
-    def _join_descendants(self, joined_entity, entity_to_join):
+    def _join_descendants(self, joined_entity, entity_to_join, aliased_path):
         """
         :param joined_entity: The (aliased) ORMclass that is an ancestor
         :param entity_to_join: The (aliased) ORMClass that is a descendant.
+        :param aliased_path: An aliased instance of DbPath
 
         **joined_entity** and **entity_to_join** are
         joined via the DbPath table.
@@ -1271,7 +1283,7 @@ class AbstractQueryBuilder(object):
                 (entity_to_join, self.Node),
                 'descendant_of'
             )
-        aliased_path = aliased(self._path)
+        
         self._query = self._query.join(
                 aliased_path,
                 aliased_path.parent_id == joined_entity.id
@@ -1280,10 +1292,11 @@ class AbstractQueryBuilder(object):
                 aliased_path.child_id == entity_to_join.id
         )
 
-    def _join_ancestors(self, joined_entity, entity_to_join):
+    def _join_ancestors(self, joined_entity, entity_to_join, aliased_path):
         """
         :param joined_entity: The (aliased) ORMclass that is a descendant
         :param entity_to_join: The (aliased) ORMClass that is an ancestor.
+        :param aliased_path: An aliased instance of DbPath
 
         **joined_entity** and **entity_to_join**
         are joined via the DbPath table.
@@ -1295,7 +1308,7 @@ class AbstractQueryBuilder(object):
                 (entity_to_join, self.Node),
                 'ancestor_of'
             )
-        aliased_path = aliased(self._path)
+        #~ aliased_path = aliased(self.Path)
         self._query = self._query.join(
                 aliased_path,
                 aliased_path.child_id == joined_entity.id
@@ -1609,12 +1622,12 @@ class AbstractQueryBuilder(object):
             toconnectwith, connection_func = self._get_connecting_node(
                     index, **verticespec
                 )
-            link_tag = verticespec.get('link_tag', None)
-            if link_tag is None:
+            edge_tag = verticespec.get('edge_tag', None)
+            if edge_tag is None:
                 connection_func(toconnectwith, alias)
             else:
-                link = self._tag_to_alias_map[link_tag]
-                connection_func(toconnectwith, alias, link)
+                aliased_edge = self._tag_to_alias_map[edge_tag]
+                connection_func(toconnectwith, alias, aliased_edge)
 
         ######################### FILTERS ##############################
 
@@ -1658,9 +1671,9 @@ class AbstractQueryBuilder(object):
         ##################### LINK-PROJECTIONS #########################
 
         for vertice in self._path:
-            link_tag = vertice.get('link_tag', None)
-            if link_tag is not None:
-                self._build_projections(link_tag)
+            edge_tag = vertice.get('edge_tag', None)
+            if edge_tag is not None:
+                self._build_projections(edge_tag)
 
             #~ linktag = vertice.get('reverse_linktag', None)
             #~ if linktag is not None:
@@ -1790,10 +1803,10 @@ class AbstractQueryBuilder(object):
 
         """
         # Need_to_build is True by default.
-        # It describes whether the current query 
+        # It describes whether the current query
         # which is an attribute _query of this instance is still valid
 
-        # The queryhelp_hash is used to determine 
+        # The queryhelp_hash is used to determine
         # whether the query is still valid
 
         queryhelp_hash = make_hash(self.get_json_compatible_queryhelp())

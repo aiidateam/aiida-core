@@ -309,6 +309,38 @@ class KpointsData(ArrayData):
             offset_kpoints[:,2] /= mesh[2]
             return offset_kpoints
 
+    def set_kpoints_mesh_from_density(self, distance, offset=[0., 0., 0.],
+                                      force_parity=False):
+        """
+        Set a kpoints mesh using a kpoints density, expressed as the maximum
+        distance between adjacent points along a reciprocal axis
+        :param distance: distance (in 1/Angstrom) between adjacent kpoints, i.e.
+            the number of kpoints along each reciprocal axis i is |b_i|/distance
+            where |b_i| is the norm of the reciprocal cell vector.
+        :param (optional) offset: a list of three floats between 0 and 1.
+            [0.,0.,0.] is Gamma centered mesh
+            [0.5,0.5,0.5] is half shifted
+            Default = [0.,0.,0.].
+        :param (optional) force_parity: if True, force each integer in the mesh
+            to be even (except for the non-periodic directions). Default = False.
+        :note: a cell should be defined first.
+        :note: the number of kpoints per non-periodic axes is always 1.
+        """
+        try:
+            rec_cell = self.reciprocal_cell
+        except AttributeError:
+            # rec_cell = numpy.eye(3)
+            raise AttributeError("Cannot define a mesh from a density without "
+                                 "having defined a cell")
+        # I first round to the fifth digit |b|/distance (to avoid that e.g.
+        # 3.00000001 becomes 4)
+        kpointsmesh = [max(int(numpy.ceil(round(numpy.linalg.norm(b)/distance,5))),1)
+                       if pbc else 1 for pbc,b in zip(self.pbc,rec_cell)]
+        if force_parity:
+            kpointsmesh = [k + (k % 2) if pbc else 1
+                           for pbc,k in zip(self.pbc,kpointsmesh)]
+        self.set_kpoints_mesh(kpointsmesh,offset=offset)
+    
     @property
     def _dimension(self):
         """

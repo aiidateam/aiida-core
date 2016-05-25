@@ -93,7 +93,6 @@ class Process(plum.process.Process):
     def __init__(self, attributes=None, create_output_links=True):
         super(Process, self).__init__(attributes=attributes)
         self._running_data = None
-        self._create_output_links = create_output_links
 
     @property
     def current_calculation_node(self):
@@ -125,15 +124,11 @@ class Process(plum.process.Process):
         beforehand?)
         """
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
-
-        if self._create_output_links:
-            if value.is_stored:
-                link_type = LinkType.RETURN
-            else:
-                value.store()
-                link_type = LinkType.CREATE
-
-            value.add_link_from(self._current_calc, output_port, link_type)
+        if not value.is_stored:
+            value.store()
+            value.add_link_from(self._current_calc, output_port,
+                                LinkType.CREATE)
+        value.add_link_from(self._current_calc, output_port, LinkType.RETURN)
     #################################################################
 
     def _create_db_record(self):

@@ -1,19 +1,37 @@
 # -*- coding: utf-8 -*-
 
+import collections
+
 import plum.process
 import plum.persistence.persistence_mixin
 import plum.port as port
 
-import aiida.workflows2.util as util
 from aiida.workflows2.execution_engine import execution_engine
+import aiida.workflows2.util as util
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
+from aiida.common.extendeddicts import FixedFieldsAttributeDict
 from abc import ABCMeta
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+
+
+def run(proc, _attributes=None, *args, **inputs):
+    """
+    Synchronously (i.e. blocking) run a workfunction or Process.
+
+    :param proc: The process class or workfunction
+    :param _attributes: Optional attributes (only for Processes)
+    :param args: Positional arguments for a workfunction
+    :param inputs: The list of inputs
+    """
+    if util.is_workfunction(proc):
+        return proc(*args, **inputs)
+    elif issubclass(proc, Process):
+        proc(attributes=_attributes).run(inputs=inputs)
 
 
 class ProcessSpec(plum.process.ProcessSpec):
@@ -27,6 +45,30 @@ class ProcessSpec(plum.process.ProcessSpec):
     def fastforwardable(self):
         self._fastforwardable = True
 
+    def get_attributes_template(self):
+        template = type(
+            "{}Attributes".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
+            {'_valid_fields': self.attributes.keys()})()
+
+        # Now fill in any default values
+        for name, value_spec in self.attributes.iteritems():
+            if value_spec.default is not None:
+                template[name] = value_spec.default
+
+        return template
+
+    def get_inputs_template(self):
+        template = type(
+            "{}Inputs".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
+            {'_valid_fields': self.inputs.keys()})()
+
+        # Now fill in any default values
+        for name, value_spec in self.inputs.iteritems():
+            if value_spec.default is not None:
+                template[name] = value_spec.default
+
+        return template
+
 
 class Process(plum.process.Process):
     """
@@ -36,21 +78,21 @@ class Process(plum.process.Process):
     __metaclass__ = ABCMeta
 
     @classmethod
+    def get_attributes_template(cls):
+        return cls.spec().get_attributes_template()
+
+    @classmethod
     def _create_default_exec_engine(cls):
         return execution_engine
 
-    class RunningData(object):
-        def __init__(self, inputs):
-            self.inputs = inputs
-            self.current_calc = None
-            self.parent = None
+    RunningData = collections.namedtuple('RunningData',
+                                         ['current_calc', 'parent'])
 
     _spec_type = ProcessSpec
 
-    def __init__(self, create_output_links=True):
-        super(Process, self).__init__()
+    def __init__(self, attributes=None, create_output_links=True):
+        super(Process, self).__init__(attributes=attributes)
         self._running_data = None
-        self._create_output_links = create_output_links
 
     @property
     def current_calculation_node(self):
@@ -64,12 +106,12 @@ class Process(plum.process.Process):
         """
         super(Process, self).on_start(inputs, exec_engine)
         util.ProcessStack.push(self)
-        self._running_data = self.RunningData(inputs)
+        self._running_data = self.RunningData()
         self._setup_db_record(inputs)
 
     def on_finalise(self):
         super(Process, self).on_finalise()
-        util.ProcessStack.push(self)
+        util.ProcessStack.pop()
         self._running_data = None
 
     def _on_output_emitted(self, output_port, value, dynamic):
@@ -82,15 +124,11 @@ class Process(plum.process.Process):
         beforehand?)
         """
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
-
-        if self._create_output_links:
-            if value.is_stored:
-                link_type = LinkType.RETURN
-            else:
-                value.store()
-                link_type = LinkType.CREATE
-
-            value.add_link_from(self._current_calc, output_port, link_type)
+        if not value.is_stored:
+            value.store()
+            value.add_link_from(self._current_calc, output_port,
+                                LinkType.CREATE)
+        value.add_link_from(self._current_calc, output_port, LinkType.RETURN)
     #################################################################
 
     def _create_db_record(self):
@@ -112,11 +150,14 @@ class Process(plum.process.Process):
         # deal with things like input groups
         to_link = {}
         for name, input in inputs.iteritems():
-            if isinstance(self.spec().get_input(name), port.InputGroupPort):
-                to_link.update(
-                    {"{}_{}".format(name, k): v for k, v in input.iteritems()})
+            if self.spec().has_input(name):
+                if isinstance(self.spec().get_input(name), port.InputGroupPort):
+                    to_link.update(
+                        {"{}_{}".format(name, k): v for k, v in input.iteritems()})
+                else:
+                    to_link[name] = input
             else:
-                to_link[name] = input
+                assert self.spec().has_dynamic_input()
 
         for name, input in to_link.iteritems():
             if not input.is_stored:
@@ -141,11 +182,6 @@ class Process(plum.process.Process):
         node = None  # Here we should find the old node
         for k, v in node.get_output_dict():
             self._out(k, v)
-
-    @property
-    def _inputs(self):
-        assert self._running_data, "Process not running"
-        return self._running_data.inputs
 
     @property
     def _current_calc(self):

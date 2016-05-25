@@ -14,6 +14,13 @@ __contributors__ = "The AiiDA team"
 
 
 class FragmentedWorkfunction(Process):
+    @staticmethod
+    def _define(spec):
+        # For now fragmented workflows can accept any input and emit any output
+        # If this changes in the future the spec should be updated here.
+        spec.dynamic_input()
+        spec.dynamic_output()
+
     class Context(object):
         _content = {}
 
@@ -72,12 +79,11 @@ class FragmentedWorkfunction(Process):
 
     definition = ""
 
-    _ctx = Context()
+    _ctx = None
 
     def __init__(self):
         super(FragmentedWorkfunction, self).__init__()
         self._last_step = None
-        self._last_context = None
 
     def _run(self, **kwargs):
         return self._do_step()
@@ -85,10 +91,9 @@ class FragmentedWorkfunction(Process):
     def _do_step(self, wait_on=None):
         if isinstance(wait_on, _ResultToCtx):
             # Set the results of the futures to values of the context
-            wait_on.assign(self._last_context)
+            wait_on.assign(self.ctx)
 
-        self._last_step, self._last_context, retval =\
-            self._run_from_graph(self._last_step, self._last_context)
+        self._last_step, retval = self._run_from_graph(self._last_step)
         if isinstance(retval, ResultToContext):
             return _ResultToCtx(self._do_step.__name__, **retval.to_assign)
         elif self._last_step != self.END:
@@ -96,12 +101,15 @@ class FragmentedWorkfunction(Process):
 
     def save_instance_state(self, bundle):
         super(FragmentedWorkfunction, self).save_instance_state(bundle)
-        for key, val in self._last_context:
+        for key, val in self.ctx:
             bundle[key] = val
 
     ## Internal messages ################################
+    def on_start(self, inputs, exec_engine):
+        super(FragmentedWorkfunction, self).on_start(inputs, exec_engine)
+        self._ctx = self.Context()
+
     def on_finalise(self):
-        self._last_context = None
         self._last_step = None
     #####################################################
 
@@ -114,17 +122,8 @@ class FragmentedWorkfunction(Process):
         graph = self._create_graph(wfdef)
         return graph
 
-    def _run_from_graph(self, current_step=None, last_ctx=None):
+    def _run_from_graph(self, current_step=None):
         graph = self._get_graph()
-
-        if last_ctx is not None:
-            if current_step is None:
-                raise ValueError("A ctx was specified, but not current_step")
-            for k, v in last_ctx.iteritems():
-                setattr(self.ctx, k, v)
-        else:
-            if current_step is not None:
-                raise ValueError("last_step was specified, but no last_ctx")
 
         if current_step is None:
             current_step = self.START
@@ -132,23 +131,21 @@ class FragmentedWorkfunction(Process):
         step_data = graph[current_step]
         this_type = step_data['type']
         if this_type == self.END:
-            return self.END, last_ctx, None
+            return self.END, None
         this_step = step_data['method']
 
         if this_type == 'step':
             # manage retval here
             retval = self._run_step(this_step)
-            return this_step, self.ctx._get_dict(), retval
+            return this_step, retval
 
         elif this_type == 'condition':  # can put an optional exit clause, e.g. no more than # steps
             # TODO This logic should change if blocks can be nested
             retval = self._run_step(this_step)  # NOTE: condition is not allowed to change context
             if retval is True:
-                return self._run_from_graph(current_step="{}:true".format(this_step),
-                                            last_ctx=last_ctx)
+                return self._run_from_graph(current_step="{}:true".format(this_step))
             elif retval is False:
-                return self._run_from_graph(current_step="{}:false".format(this_step),
-                                            last_ctx=last_ctx)
+                return self._run_from_graph(current_step="{}:false".format(this_step))
             else:
                 raise ValueError("{} should return true or false, not {}".format(
                     this_step, retval))
@@ -348,4 +345,4 @@ class _ResultToCtx(WaitOn):
 
     def assign(self, ctx):
         for name, fut in self._to_assign.iteritems():
-            ctx[name] = fut.result()
+            setattr(ctx, name, fut.result())

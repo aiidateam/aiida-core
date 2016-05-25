@@ -11,7 +11,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.workflows2.util import to_db_type
+from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.async import async, asyncd
 from aiida.workflows2.wf import wf
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, ResultToContext
@@ -35,11 +35,6 @@ def f2(a):
 
 
 class F1(FragmentedWorkfunction):
-    @staticmethod
-    def _define(spec):
-        spec.input('inp')
-        spec.output('r1')
-
     definition = """
 s1
 s2
@@ -59,11 +54,6 @@ s2
 
 
 class F2(FragmentedWorkfunction):
-    @staticmethod
-    def _define(spec):
-        spec.input('a')
-        spec.output('r2')
-
     definition = """
 s1
 """
@@ -72,8 +62,29 @@ s1
         self._out("r2", self._inputs['a'])
 
 
+class F1WaitForf2(FragmentedWorkfunction):
+    definition = """
+s1
+s2
+"""
+
+    def s1(self, ctx):
+        p2 = async(f2, a=self._inputs['inp'])
+        ctx.a = 1
+        ctx.r2 = p2.result()
+
+    def s2(self, ctx):
+        print("a={}".format(ctx.a))
+        print("r2={}".format(ctx.r2))
+        r1 = ctx.r2.copy()
+
+        self._out("r1", r1['r2'])
+
+
 if __name__ == '__main__':
     five = to_db_type(5)
 
     r1 = f1(five)
-    R1 = F1().run(inputs={'inp': five})
+    F1().run(inputs={'inp': five})
+    F1WaitForf2().run(inputs={'inp': five})
+

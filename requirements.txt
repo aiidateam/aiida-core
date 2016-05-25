@@ -52,4 +52,4 @@ ultrajson==1.35
 
 # For workflows
 enum34==1.1.2
-git+https://bitbucket.org/aiida_team/plum.git@d83264c7fa4af3b094f7c1f6279c45702aeedc74#egg=plum
+git+https://bitbucket.org/aiida_team/plum.git@5dfda4a2f4dec45edba1100a0c8c7f0f40cd29d2#egg=plum

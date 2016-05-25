@@ -26,12 +26,12 @@ class TestTransitiveNoLoops(AiidaTestCase):
         n3 = Node().store()
         n4 = Node().store()
 
-        n2.add_link_from(n1)
-        n3.add_link_from(n2)
-        n4.add_link_from(n3)
+        n2.add_link_from(n1, link_type=LinkType.CREATE)
+        n3.add_link_from(n2, link_type=LinkType.CREATE)
+        n4.add_link_from(n3, link_type=LinkType.CREATE)
 
         with self.assertRaises(ValueError):  # This would generate a loop
-            n1.add_link_from(n4)
+            n1.add_link_from(n4, link_type=LinkType.CREATE)
 
 
 class TestTransitiveClosureDeletion(AiidaTestCase):

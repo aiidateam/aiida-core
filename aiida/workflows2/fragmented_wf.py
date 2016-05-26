@@ -79,7 +79,7 @@ class FragmentedWorkfunction(Process):
 
     definition = ""
 
-    _ctx = None
+    _scope = None
 
     def __init__(self):
         super(FragmentedWorkfunction, self).__init__()
@@ -89,33 +89,33 @@ class FragmentedWorkfunction(Process):
         return self._do_step()
 
     def _do_step(self, wait_on=None):
-        if isinstance(wait_on, _ResultToCtx):
+        if isinstance(wait_on, _ResultToScope):
             # Set the results of the futures to values of the context
-            wait_on.assign(self.ctx)
+            wait_on.assign(self.scope)
 
         self._last_step, retval = self._run_from_graph(self._last_step)
-        if isinstance(retval, ResultToContext):
-            return _ResultToCtx(self._do_step.__name__, **retval.to_assign)
+        if isinstance(retval, ResultToScope):
+            return _ResultToScope(self._do_step.__name__, **retval.to_assign)
         elif self._last_step != self.END:
             return Checkpoint(self._do_step.__name__)
 
     def save_instance_state(self, bundle):
         super(FragmentedWorkfunction, self).save_instance_state(bundle)
-        for key, val in self.ctx:
+        for key, val in self.scope:
             bundle[key] = val
 
     ## Internal messages ################################
     def on_start(self, inputs, exec_engine):
         super(FragmentedWorkfunction, self).on_start(inputs, exec_engine)
-        self._ctx = self.Context()
+        self._scope = self.Context()
 
     def on_finalise(self):
         self._last_step = None
     #####################################################
 
     @property
-    def ctx(self):
-        return self._ctx
+    def scope(self):
+        return self._scope
 
     def _get_graph(self):
         wfdef = self._parse_def()
@@ -219,7 +219,7 @@ class FragmentedWorkfunction(Process):
             raise SyntaxError(
                 "No step '{}' defined in the class".format(step_name))
 
-        return step_method(self.ctx)
+        return step_method(self.scope)
 
     def _parse_def(self):
         def_list = []
@@ -317,20 +317,20 @@ class FragmentedWorkfunction(Process):
         return def_list
 
 
-class ResultToContext(object):
+class ResultToScope(object):
     def __init__(self, **kwargs):
         # TODO: Check all values of kwargs are futures
         self.to_assign = kwargs
 
 
-class _ResultToCtx(WaitOn):
+class _ResultToScope(WaitOn):
     @classmethod
     def create_from(cls, bundle, exec_engine):
         # TODO: Load the futures
-        return _ResultToCtx(bundle[cls.CALLBACK_NAME])
+        return _ResultToScope(bundle[cls.CALLBACK_NAME])
 
     def __init__(self, callback_name, **kwargs):
-        super(_ResultToCtx, self).__init__(callback_name)
+        super(_ResultToScope, self).__init__(callback_name)
         # TODO: Check all values of kwargs are futures
         self._to_assign = kwargs
 
@@ -341,8 +341,8 @@ class _ResultToCtx(WaitOn):
         return True
 
     def save_instance_state(self, bundle, exec_engine):
-        super(_ResultToCtx, self).save_instance_state(bundle, exec_engine)
+        super(_ResultToScope, self).save_instance_state(bundle, exec_engine)
 
-    def assign(self, ctx):
+    def assign(self, scope):
         for name, fut in self._to_assign.iteritems():
-            setattr(ctx, name, fut.result())
+            setattr(scope, name, fut.result())

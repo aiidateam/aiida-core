@@ -118,6 +118,9 @@ class AttributeDict(dict):
         """
         self.__dict__.update(dict)
 
+    def __dir__(self):
+        return self.keys()
+
 
 class FixedFieldsAttributeDict(AttributeDict):
     """
@@ -168,6 +171,9 @@ class FixedFieldsAttributeDict(AttributeDict):
         Return the list of valid fields.
         """
         return cls._valid_fields
+
+    def __dir__(self):
+        return list(self._valid_fields)
 
 
 class DefaultFieldsAttributeDict(AttributeDict):

@@ -14,7 +14,7 @@ if not is_dbenv_loaded():
 from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.async import async, asyncd
 from aiida.workflows2.wf import wf
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, ResultToContext
+from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, ResultToScope
 
 
 @wf
@@ -43,7 +43,7 @@ s2
     def s1(self, ctx):
         p2 = asyncd(F2, a=self._inputs['inp'])
         ctx.a = 1
-        return ResultToContext(r2=p2)
+        return ResultToScope(r2=p2)
 
     def s2(self, ctx):
         print("a={}".format(ctx.a))

@@ -18,6 +18,10 @@ class ProcessStack(object):
         return ProcessStack(process)
 
     @classmethod
+    def top(cls):
+        return cls._thread_local.wf_stack[-1]
+
+    @classmethod
     def stack(self):
         try:
             return self._thread_local.wf_stack
@@ -27,26 +31,25 @@ class ProcessStack(object):
 
     @classmethod
     def push(cls, process):
+        try:
+            process._parent = cls.top()
+        except IndexError:
+            process._parent = None
         cls.stack().append(process)
 
     @classmethod
     def pop(cls):
-        cls.stack().pop()
+        process = cls.stack().pop()
+        process._parent = None
 
     def __init__(self, process):
         self._process = process
 
     def __enter__(self):
         self.push(self._process)
-        if len(self.stack()) > 1:
-            self._process._parent = self.stack()[-2]
-        else:
-            self._process._parent = None
-        return self.stack
 
     def __exit__(self, type, value, traceback):
         self.pop()
-        self._process._parent = None
 
 
 def load_class(classstring):

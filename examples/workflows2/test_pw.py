@@ -19,6 +19,7 @@ from aiida.common.exceptions import NotExistent
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.workflows2.legacy.job_process import JobProcess
 from aiida.workflows2.process import run
+from aiida.workflows2.async import async
 
 # If set to True, will ask AiiDA to run in serial mode (i.e., AiiDA will not
 # invoke the mpirun command in the submission script)
@@ -124,7 +125,10 @@ settings = ParameterData(dict=settings_dict)
 # Valid only for Slurm and PBS (using default values for the
 # number_cpus_per_machine), change for SGE-like schedulers
 
+
 JobCalc = JobProcess.build(PwCalculation)
+
+JobCalc = PwCalculation.process()
 
 # Attributes
 attrs = JobCalc.get_attributes_template()
@@ -174,4 +178,4 @@ if settings is not None:
     inputs.pseudo = pseudos_to_use
 
 # Run the calculation
-run(JobCalc, _attributes=attrs, **inputs)
+f = async(JobCalc, _attributes=attrs, **inputs)

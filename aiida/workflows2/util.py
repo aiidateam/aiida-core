@@ -19,7 +19,7 @@ class ProcessStack(object):
 
     @classmethod
     def top(cls):
-        return cls._thread_local.wf_stack[-1]
+        return cls.stack()[-1]
 
     @classmethod
     def stack(self):

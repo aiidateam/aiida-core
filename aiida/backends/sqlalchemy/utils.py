@@ -46,17 +46,21 @@ def get_session(config):
 
     :returns: A sqlalchemy session (connection to DB)
     """
-    engine_url = (
-            "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-            "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-        ).format(**config)
-    engine = create_engine(engine_url,
-                           json_serializer=dumps_json,
-                           json_deserializer=loads_json)
-    Session = sessionmaker(bind=engine)
+    Session = sessionmaker(bind=get_engine(config))
     return Session()
 
 
+def get_engine(config):
+    engine_url = (
+        "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+        "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+    ).format(**config)
+
+    engine = create_engine(engine_url,
+                           json_serializer=dumps_json,
+                           json_deserializer=loads_json)
+
+    return engine
 
 def load_dbenv(process=None, profile=None, connection=None):
     """
@@ -94,7 +98,8 @@ def get_automatic_user():
         return _aiida_autouser_cache
 
     from aiida.backends.sqlalchemy.models.user import DbUser
-
+    from aiida.common.utils import get_configured_user_email
+    
     email = get_configured_user_email()
 
     _aiida_autouser_cache = DbUser.query.filter(DbUser.email == email).first()
@@ -120,8 +125,6 @@ def get_daemon_user():
         return DEFAULT_AIIDA_USER
 
 
-
-
 def dumps_json(d):
     """
     Transforms all datetime object into isoformat and then returns the JSON
@@ -139,6 +142,7 @@ def dumps_json(d):
     return json_dumps(f(d))
 
 date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
+
 
 def loads_json(s):
     """

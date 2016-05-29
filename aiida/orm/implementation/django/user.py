@@ -2,6 +2,7 @@
 
 from aiida.orm.implementation.general.user import AbstractUser
 from aiida.backends.djsite.db.models import DbUser
+from aiida.utils.email import normalize_email
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -38,7 +39,7 @@ class User(AbstractUser):
             if len(kwargs) > 1:
                 raise ValueError("When an email is passed as argument, no"
                                  "further arguments are accepted.")
-            email = kwargs.pop('email')
+            email = normalize_email(kwargs.pop('email'))
             self._dbuser = DbUser(email=email)
 
         else:
@@ -70,8 +71,7 @@ class User(AbstractUser):
     @email.setter
     def email(self, val):
         self._dbuser.email = val
-        if not self.to_be_stored:
-            self._dbuser.save()
+        self.save()
 
     def _set_password(self, val):
         self._dbuser.password = val

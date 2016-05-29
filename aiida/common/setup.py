@@ -512,7 +512,8 @@ key_explanation = {
 
 def create_configuration(profile='default'):
     """
-    :param database: create the configuration file
+    :param profile: The profile to be configured
+    :return: The populated profile that was also stored.
     """
     import readline
     from aiida.backends import settings
@@ -558,7 +559,7 @@ def create_configuration(profile='default'):
         answ = query_yes_no("Would you like to change it?", "no")
         # If the user doesn't want to change it, we abandon
         if answ is False:
-            return
+            return this_existing_confs
         # Otherwise, we continue.
         else:
             updating_existing_prof = True
@@ -610,11 +611,11 @@ def create_configuration(profile='default'):
         # Setting the database engine
         db_possibilities = []
         if aiida_backend == 'django':
-            db_possibilities.extend(['sqlite', 'postgres', 'mysql'])
+            db_possibilities.extend(['postgres', 'sqlite', 'mysql'])
         elif aiida_backend == 'sqlalchemy':
             db_possibilities.extend(['postgres'])
         if len(db_possibilities) > 0:
-            db_engine = this_existing_confs.get('AIIDADB_ENGINE')
+            db_engine = this_existing_confs.get('AIIDADB_ENGINE', db_possibilities[0])
             readline.set_startup_hook(lambda: readline.insert_text(
                 db_engine))
 
@@ -670,10 +671,8 @@ def create_configuration(profile='default'):
             this_new_confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
-                this_existing_confs.get('AIIDADB_PASS', 'aiida_password')))
+                this_existing_confs.get('AIIDADB_PASS')))
             this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
-
-            # HERE IT WAS THE BACKEND QUESTION
 
         elif 'mysql' in this_new_confs['AIIDADB_ENGINE']:
             this_new_confs['AIIDADB_ENGINE'] = 'mysql'
@@ -704,7 +703,7 @@ def create_configuration(profile='default'):
             this_new_confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
-                this_existing_confs.get('AIIDADB_PASS', 'aiida_password')))
+                this_existing_confs.get('AIIDADB_PASS')))
             this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
         else:
             raise ValueError("You have to specify a valid database "
@@ -714,8 +713,7 @@ def create_configuration(profile='default'):
         # it should change in the future to add the possibility of having a
         # remote repository. Atm, I act as only a local repo is possible
         existing_repo = this_existing_confs.get('AIIDADB_REPOSITORY_URI',
-            os.path.join(aiida_dir, "repository-{}/".format(
-                    settings.AIIDADB_PROFILE)))
+            os.path.join(aiida_dir, "repository-{}/".format(profile)))
         default_protocol = 'file://'
         if existing_repo.startswith(default_protocol):
             existing_repo = existing_repo[len(default_protocol):]
@@ -737,6 +735,8 @@ def create_configuration(profile='default'):
 
         backup_config()
         store_config(confs)
+
+        return this_new_confs
     finally:
         readline.set_startup_hook(lambda: readline.insert_text(""))
 

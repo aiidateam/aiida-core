@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.implementation.general.user import AbstractUser
 from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.utils.email import normalize_email
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -37,7 +38,7 @@ class User(AbstractUser):
             if len(kwargs) > 1:
                 raise ValueError("When an email is passed as argument, no"
                                  "further arguments are accepted.")
-            email = kwargs.pop('email')
+            email = normalize_email(kwargs.pop('email'))
             self._dbuser = DbUser(email=email)
 
         else:

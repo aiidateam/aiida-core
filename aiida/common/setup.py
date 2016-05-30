@@ -1030,7 +1030,7 @@ _property_table = {
         "show_deprecations",
         "bool",
         "Boolean whether to print deprecation warnings",
-        True,
+        False,
         None)
 }
 

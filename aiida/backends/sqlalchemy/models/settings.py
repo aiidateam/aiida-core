@@ -19,7 +19,7 @@ class DbSetting(Base):
     fval = Column(Float, default = None, nullable = True)
     ival = Column(Integer, default = None, nullable = True)
     bval = Column(Boolean, default=None, nullable=True)
-    dval = Column(DateTime, default=None, nullable = True)
+    dval = Column(DateTime(timezone=True), default=None, nullable = True)
 
     # I also add a description field for the variables
     description = Column(String(255), default = '', nullable = True)

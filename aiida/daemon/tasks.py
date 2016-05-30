@@ -4,20 +4,15 @@ from celery.task import periodic_task
 from datetime import timedelta
 
 from aiida.backends import settings
-from aiida.backends.utils import load_dbenv
-load_dbenv(process="daemon")
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-
+if not is_dbenv_loaded():
+    load_dbenv(process="daemon")
 
 from aiida.common.setup import get_profile_config
 from aiida.common.exceptions import ConfigurationError
 
-
-#~ from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
-
 from aiida.daemon.timestamps import set_daemon_timestamp
-
-
 
 
 DAEMON_INTERVALS_SUBMIT = 30

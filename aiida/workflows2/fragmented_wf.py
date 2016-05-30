@@ -79,11 +79,10 @@ class FragmentedWorkfunction(Process):
 
     definition = ""
 
-    _scope = None
-
     def __init__(self):
         super(FragmentedWorkfunction, self).__init__()
         self._last_step = None
+        self._scope = None
 
     def _run(self, **kwargs):
         return self._do_step()
@@ -91,7 +90,7 @@ class FragmentedWorkfunction(Process):
     def _do_step(self, wait_on=None):
         if isinstance(wait_on, _ResultToScope):
             # Set the results of the futures to values of the context
-            wait_on.assign(self.scope)
+            wait_on.assign(self._scope)
 
         self._last_step, retval = self._run_from_graph(self._last_step)
         if isinstance(retval, ResultToScope):
@@ -101,7 +100,7 @@ class FragmentedWorkfunction(Process):
 
     def save_instance_state(self, bundle):
         super(FragmentedWorkfunction, self).save_instance_state(bundle)
-        for key, val in self.scope:
+        for key, val in self._scope:
             bundle[key] = val
 
     ## Internal messages ################################
@@ -112,10 +111,6 @@ class FragmentedWorkfunction(Process):
     def on_finalise(self):
         self._last_step = None
     #####################################################
-
-    @property
-    def scope(self):
-        return self._scope
 
     def _get_graph(self):
         wfdef = self._parse_def()
@@ -219,7 +214,7 @@ class FragmentedWorkfunction(Process):
             raise SyntaxError(
                 "No step '{}' defined in the class".format(step_name))
 
-        return step_method(self.scope)
+        return step_method(self._scope)
 
     def _parse_def(self):
         def_list = []

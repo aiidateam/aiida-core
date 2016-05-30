@@ -277,7 +277,6 @@ class Computer(VerdiCommandWithSubcommands):
                             bold_sequence, name, nobold_sequence,
                             enabled_str, configured_str, end_color)
 
-
         else:
             print "# No computers configured yet. Use 'verdi computer setup'"
 
@@ -1051,10 +1050,10 @@ class Computer(VerdiCommandWithSubcommands):
         from aiida.orm.querybuilder import QueryBuilder
         qb = QueryBuilder()
         qb.append(type='computer', project=['name'])
-        return zip(*qb.all())[0]
-        #~ from aiida.orm.computer import Computer as AiidaOrmComputer
-
-        #~ return AiidaOrmComputer.list_names()
+        if qb.count() > 0:
+            return zip(*qb.all())[0]
+        else:
+            return None
 
     def get_computer(self, name):
         """

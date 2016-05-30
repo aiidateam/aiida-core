@@ -85,18 +85,18 @@ class Process(plum.process.Process):
     def _create_default_exec_engine(cls):
         return execution_engine
 
-    RunningData = collections.namedtuple('RunningData',
-                                         ['current_calc', 'parent'])
+    #__RunningData = collections.namedtuple('__RunningData',
+    #                                     ['current_calc', 'parent'])
+    class __RunningData(object):
+        def __init__(self):
+            self.current_calc = None
+            self.parent = None
 
     _spec_type = ProcessSpec
 
     def __init__(self, attributes=None, create_output_links=True):
         super(Process, self).__init__(attributes=attributes)
         self._running_data = None
-
-    @property
-    def current_calculation_node(self):
-        return self._current_calc
 
     # Messages #####################################################
     def on_start(self, inputs, exec_engine):
@@ -105,8 +105,12 @@ class Process(plum.process.Process):
         :param inputs: A dictionary of inputs for each input port
         """
         super(Process, self).on_start(inputs, exec_engine)
-        self._running_data = self.RunningData()
+        # First create the running data because it gets used by the
+        # ProcessStack
+        self._running_data = self.__RunningData()
+        # This fills out the parent
         util.ProcessStack.push(self)
+        # This fills out the current calculation
         self._setup_db_record(inputs)
 
     def on_finalise(self):

@@ -19,7 +19,7 @@ class ProcessStack(object):
 
     @classmethod
     def top(cls):
-        return cls.stack()
+        return cls.stack()[-1]
 
     @classmethod
     def stack(self):

@@ -3,13 +3,14 @@
 from aiida.backends.settings import BACKEND
 from aiida.common.exceptions import ConfigurationError
 from aiida.orm.implementation.general.group import get_group_type_mapping
+from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
-if BACKEND == "sqlalchemy":
+if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.node import Node
     from aiida.orm.implementation.sqlalchemy.computer import Computer
     from aiida.orm.implementation.sqlalchemy.group import Group
@@ -22,7 +23,7 @@ if BACKEND == "sqlalchemy":
     from aiida.orm.implementation.sqlalchemy.utils import delete_computer
     from aiida.backends.querybuild.querybuilder_sa import QueryBuilder
     from aiida.backends.sqlalchemy import models
-elif BACKEND == "django":
+elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.node import Node
     from aiida.orm.implementation.django.computer import Computer
     from aiida.orm.implementation.django.group import Group

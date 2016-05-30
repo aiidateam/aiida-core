@@ -91,6 +91,7 @@ def load_dbenv(process=None, profile=None, connection=None):
 
 _aiida_autouser_cache = None
 
+
 def get_automatic_user():
     global _aiida_autouser_cache
 
@@ -190,6 +191,7 @@ def install_tc(session):
                               links_table_output_field, closure_table_name,
                               closure_table_parent_field,
                               closure_table_child_field))
+
 
 def get_pg_tc(links_table_name,
               links_table_input_field,
@@ -372,3 +374,22 @@ CREATE TRIGGER autoupdate_tc
                             closure_table_name=closure_table_name,
                             closure_table_parent_field=closure_table_parent_field,
                             closure_table_child_field=closure_table_child_field)
+
+
+def check_schema_version():
+    """
+    Check if the version stored in the database is the same of the version
+    of the code.
+
+    :note: if the DbSetting table does not exist, this function does not
+      fail. The reason is to avoid to have problems before running the first
+      migrate call.
+
+    :note: if no version is found, the version is set to the version of the
+      code. This is useful to have the code automatically set the DB version
+      at the first code execution.
+
+    :raise ConfigurationError: if the two schema versions do not match.
+      Otherwise, just return.
+    """
+    raise NotImplementedError

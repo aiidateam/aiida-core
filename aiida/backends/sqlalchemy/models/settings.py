@@ -30,7 +30,6 @@ class DbSetting(Base):
     def __str__(self):
         return "'{}'={}".format(self.key, self.getvalue())
     
-
     # There are no subspecifiers. If instead you want to group attributes
     # (e.g. by node, as it is done in the DbAttributeBaseClass), specify here
     # the field name

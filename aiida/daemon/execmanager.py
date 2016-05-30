@@ -260,8 +260,6 @@ def submit_jobs():
         )
     )
 
-
-
     for computer, aiidauser in computers_users_to_check:
         #~ user = User.search_for_users(id=dbuser_id)
         #~ computer = Computer.get(dbcomputer_id)

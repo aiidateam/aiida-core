@@ -314,6 +314,7 @@ class Install(VerdiCommand):
     def run(self, *args):
         from aiida.common.setup import (create_base_dirs, create_configuration,
                                         set_default_profile, DEFAULT_UMASK)
+        from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
         cmdline_args = list(args)
 
@@ -353,7 +354,7 @@ class Install(VerdiCommand):
         else:
             print "Executing now a migrate command..."
             backend_choice = created_conf['AIIDADB_BACKEND']
-            if backend_choice == "django":
+            if backend_choice == BACKEND_DJANGO:
                 print("...for Django backend")
                 # The correct profile is selected within load_dbenv.
                 # Setting os.umask here since sqlite database gets created in
@@ -363,7 +364,7 @@ class Install(VerdiCommand):
                     pass_to_django_manage([execname, 'migrate'], profile=gprofile)
                 finally:
                     os.umask(old_umask)
-            elif backend_choice == "sqlalchemy":
+            elif backend_choice == BACKEND_SQLA:
                 print("...for SQLAlchemy backend")
                 from aiida.backends.sqlalchemy.models.base import Base
                 from aiida.backends.sqlalchemy.utils import get_engine
@@ -373,9 +374,8 @@ class Install(VerdiCommand):
                 if not is_dbenv_loaded():
                     load_dbenv()
 
-                # Those import are necessary for SQLAlchemy to correctly detect the models
-                # These should be on top of the file, but because of a circular import they need to be
-                # here.
+                # Those import are necessary for SQLAlchemy to correctly create
+                # the needed database tables.
                 from aiida.backends.sqlalchemy.models.authinfo import (
                     DbAuthInfo)
                 from aiida.backends.sqlalchemy.models.comment import DbComment
@@ -388,8 +388,8 @@ class Install(VerdiCommand):
                 from aiida.backends.sqlalchemy.models.node import (
                     DbLink, DbNode, DbPath, DbCalcState)
                 from aiida.backends.sqlalchemy.models.user import DbUser
-                from aiida.backends.sqlalchemy.models.workflow import \
-                    DbWorkflow, DbWorkflowData, DbWorkflowStep
+                from aiida.backends.sqlalchemy.models.workflow import (
+                    DbWorkflow, DbWorkflowData, DbWorkflowStep)
                 from aiida.backends.sqlalchemy.models.settings import DbSetting
 
                 Base.metadata.create_all(get_engine(get_profile_config(gprofile)))
@@ -399,8 +399,6 @@ class Install(VerdiCommand):
 
 
         print "Database was created successfuly"
-        # ### HERE WE SHOULD EXIT
-        # sys.exit(0)
 
         # I create here the default user
         print "Loading new environment..."

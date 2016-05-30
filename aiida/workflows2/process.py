@@ -105,8 +105,8 @@ class Process(plum.process.Process):
         :param inputs: A dictionary of inputs for each input port
         """
         super(Process, self).on_start(inputs, exec_engine)
-        util.ProcessStack.push(self)
         self._running_data = self.RunningData()
+        util.ProcessStack.push(self)
         self._setup_db_record(inputs)
 
     def on_finalise(self):

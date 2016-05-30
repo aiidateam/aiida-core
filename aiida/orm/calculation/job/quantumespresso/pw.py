@@ -90,3 +90,22 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
 
         return retdict
    
+    @classmethod
+    def input_helper(cls, *args, **kwargs):
+        """
+        Validate if the keywords are valid Quantum ESPRESSO pw.x keywords, and
+        also helps in preparing the input parameter dictionary in a 
+        'standardized' form (e.g., converts ints to floats when required,
+        or if the flag flat_mode is specified, puts the keywords in the right
+        namelists).
+        
+        This function calls 
+        :py:func:`aiida.orm.calculation.job.quantumespresso.validators.pw_input_helper`,
+        see its docstring for further information.
+        """
+        from . import validators
+        return validators.pw_input_helper(*args, **kwargs)
+    
+    
+    
+    

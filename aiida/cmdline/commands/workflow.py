@@ -80,7 +80,7 @@ class Workflow(VerdiCommandWithSubcommands):
                                       n_days_ago=parsed_args.past_days)
 
         for w in workflows:
-            if not w.is_subworkflow():
+            if not w.is_subworkflow() or w.pk in parsed_args.pks:
                 print "\n".join(get_workflow_info(w, tab_size=tab_size,
                                                   short=parsed_args.short,
                                                   depth=parsed_args.depth))

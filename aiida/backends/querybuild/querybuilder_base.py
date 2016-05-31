@@ -1365,7 +1365,7 @@ class AbstractQueryBuilder(object):
                 entity_to_join,
                 entity_to_join.id == aliased_group_nodes.c.dbgroup_id
         )
-    def _join_user_of(self, joined_entity, entity_to_join):
+    def _join_creator_of(self, joined_entity, entity_to_join):
         """
         :param joined_entity: the aliased node
         :param entity_to_join: the aliased user to join to that node
@@ -1373,13 +1373,13 @@ class AbstractQueryBuilder(object):
         self._check_dbentities(
                 (joined_entity, self.Node),
                 (entity_to_join, self.User),
-                'user_of'
+                'creator_of'
             )
         self._query = self._query.join(
                 entity_to_join,
                 entity_to_join.id == joined_entity.user_id
             )
-    def _join_used_by(self, joined_entity, entity_to_join):
+    def _join_created_by(self, joined_entity, entity_to_join):
         """
         :param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
@@ -1387,7 +1387,7 @@ class AbstractQueryBuilder(object):
         self._check_dbentities(
                 (joined_entity, self.User),
                 (entity_to_join, self.Node),
-                'used_by'
+                'created_by'
             )
         self._query = self._query.join(
                 entity_to_join,
@@ -1403,7 +1403,7 @@ class AbstractQueryBuilder(object):
         self._check_dbentities(
                 (joined_entity, self.Computer),
                 (entity_to_join, self.Node),
-                'runs_on'
+                'has_computer'
             )
         self._query = self._query.join(
                 entity_to_join,
@@ -1438,10 +1438,10 @@ class AbstractQueryBuilder(object):
                 'direction' : None,
                 'group_of'  : self._join_groups,
                 'member_of' : self._join_group_members,
-                'runs_on'   : self._join_to_computer_used,
+                'has_computer':self._join_to_computer_used,
                 'computer_of':self._join_computer,
-                'used_by'   : self._join_used_by,
-                'user_of'   : self._join_user_of,
+                'created_by' : self._join_created_by,
+                'creator_of' : self._join_creator_of,
         }
         return d
     def _get_connecting_node(
@@ -1463,10 +1463,10 @@ class AbstractQueryBuilder(object):
         *   *direction*
         *   *group_of*
         *   *member_of*
-        *   *runs_on*
+        *   *has_computer*
         *   *computer_of*
-        *   *used_by*
-        *   *user_of*
+        *   *created_by*
+        *   *creator_of*
 
         Future:
 

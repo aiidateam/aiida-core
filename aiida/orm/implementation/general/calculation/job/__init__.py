@@ -1062,8 +1062,8 @@ class AbstractJobCalculation(object):
 
         qb = QueryBuilder()
         qb.append(type="computer", tag='computer', filters=computerfilter)
-        qb.append(cls, filters=calcfilter, tag='calc', runs_on='computer')
-        qb.append(type="user", tag='user', filters=userfilter, user_of="calc")
+        qb.append(cls, filters=calcfilter, tag='calc', has_computer='computer')
+        qb.append(type="user", tag='user', filters=userfilter, creator_of="calc")
 
         if only_computer_user_pairs:
             qb.add_projection("computer", "*")

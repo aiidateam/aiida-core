@@ -729,7 +729,7 @@ class Code(VerdiCommandWithSubcommands):
         qb = QueryBuilder()
         qb.append(AiidaOrmCode, project=['id', 'label'])
         qb.append(type='computer', computer_of=AiidaOrmCode, project=['name'])
-        qb.append(type='user', user_of=AiidaOrmCode, project=['email'])
+        qb.append(type='user', creator_of=AiidaOrmCode, project=['email'])
 
         return sorted(qb.all())
 

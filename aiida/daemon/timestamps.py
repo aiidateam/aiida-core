@@ -10,14 +10,13 @@ else:
     raise Exception("Unkown backend {}".format(settings.BACKEND))
 
 
-
-
 celery_tasks = {
         'submitter': 'submitter',
         'updater': 'updater',
         'retriever': 'retriever',
         'workflow': 'workflow_stepper',
 }
+
 
 def get_most_recent_daemon_timestamp():
     """
@@ -29,7 +28,7 @@ def get_most_recent_daemon_timestamp():
     """
     import datetime
     # I go low-level here
-    if settings.BACKEND==BACKEND_DJANGO:
+    if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.db.models import DbSetting
         daemon_timestamps = DbSetting.objects.filter(key__startswith='daemon|task_')
         timestamps = []
@@ -45,7 +44,7 @@ def get_most_recent_daemon_timestamp():
         else:
             return None
 
-    elif settings.BACKEND==BACKEND_SQLA:
+    elif settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.models.settings import DbSetting
         from aiida.backends.sqlalchemy import session
         from sqlalchemy import func
@@ -55,8 +54,6 @@ def get_most_recent_daemon_timestamp():
                 DbSetting.key.like("daemon|task%")
             ).first()
         return maxtimestamp
-
-
 
 
 def set_daemon_timestamp(task_name, when):
@@ -99,6 +96,8 @@ def set_daemon_timestamp(task_name, when):
                     )
             )
     )
+
+
 def get_last_daemon_timestamp(task_name, when='stop'):
     """
     Return the last time stored in the DB that the daemon executed the given

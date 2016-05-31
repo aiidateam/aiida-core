@@ -8,6 +8,7 @@ import django
 from aiida.backends import settings
 from aiida.backends.utils import is_dbenv_loaded
 from aiida.utils.logger import get_dblogger_extra
+from aiida.backends.utils import set_db_schema_version, get_db_schema_version
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -168,31 +169,6 @@ def long_field_length():
         return 255
     else:
         return 1024
-
-
-def get_db_schema_version():
-    """
-    Get the current schema version stored in the DB. Return None if
-    it is not stored.
-    """
-    from aiida.backends.djsite.globalsettings import get_global_setting
-
-    try:
-        return get_global_setting('db|schemaversion')
-    except KeyError:
-        return None
-
-
-def set_db_schema_version(version):
-    """
-    Set the schema version stored in the DB. Use only if you know what
-    you are doing.
-    """
-    from aiida.backends.djsite.globalsettings import set_global_setting
-
-    return set_global_setting('db|schemaversion', version, description=
-    "The version of the schema used in this "
-    "database.")
 
 
 def check_schema_version():

@@ -19,7 +19,7 @@ class DbSetting(Base):
     fval = Column(Float, default = None, nullable = True)
     ival = Column(Integer, default = None, nullable = True)
     bval = Column(Boolean, default=None, nullable=True)
-    dval = Column(DateTime, default=None, nullable = True)
+    dval = Column(DateTime(timezone=True), default=None, nullable = True)
 
     # I also add a description field for the variables
     description = Column(String(255), default = '', nullable = True)
@@ -30,7 +30,6 @@ class DbSetting(Base):
     def __str__(self):
         return "'{}'={}".format(self.key, self.getvalue())
     
-
     # There are no subspecifiers. If instead you want to group attributes
     # (e.g. by node, as it is done in the DbAttributeBaseClass), specify here
     # the field name

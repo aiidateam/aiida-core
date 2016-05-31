@@ -145,7 +145,7 @@ class TestQueryBuilder(AiidaTestCase):
         qb1 = QueryBuilder()
         qb1.append(Node, filters={'attributes.foo':1.000})
 
-        self.assertEqual(len(list(qb1.all())), 2)
+        self.assertEqual(len(qb1.all()), 2)
 
         qb2 = QueryBuilder()
         qb2.append(Data)
@@ -250,7 +250,7 @@ class TestQueryBuilder(AiidaTestCase):
 
         qb2 = QueryBuilder(**qh)
 
-        resdict = list(qb2.get_results_dict())
+        resdict = qb2.dict()
         self.assertEqual(len(resdict),1 )
         resdict = resdict[0]
         self.assertTrue(isinstance(resdict['n1']['ctime'], datetime))

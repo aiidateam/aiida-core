@@ -53,44 +53,59 @@ The first thing to know is how to chose entities that you want to query::
     qb.append(JobCalculation) # Setting first vertice of path
 
 So, let's suppose that's what we want to query for (all job calculations in the
-database). The question is how to get the results from the query.
+database). The question is how to get the results from the query::
 
     from aiida.orm.querybuilder import QueryBuilder
-    qb = QueryBuilder() # Instantiating instance
-    qb.append(JobCalculation) # Setting first vertice of path
+    qb = QueryBuilder()                 # Instantiating instance
+    qb.append(JobCalculation)           # Setting first vertice of path
 
-    first_row = qb.first() # Returns a list (!) of the results of the first row
+    first_row = qb.first()              # Returns a list (!)
+                                        # of the results of the first row
+
+    all_results = qb.dict()             # Returns all results as
+                                        # a list of dictionaries
+
+    all_r_generator = qb.iterdict()     # Return a generator of dictionaries
+                                        # of all results
     
-    all_rows = qb.all()  # Returns a list of lists
+    # Some more (for completeness)
+    all_rows = qb.all()                 # Returns a list of lists
 
-    all_rows_generator = qb.iterall() # Returns a generator of lists
-
-    all_as_dictionary = qb.dict()  # Returns a list of dictionaries
-
-    all_as_dictionary_generator = qb.iterdict() # Return a generator of dictionaries
+    all_rows_generator = qb.iterall()   # Returns a generator of lists
 
 
+Since we now know how to set an entity, we can start to filter by properties
+of that entity.
+Suppose we do not want to all JobCalculations, but only the ones in state
+``FINISHED''::
+
+    qb = QueryBuilder()                 # An empty QueryBuilder instances
+    qb.append(
+        JobCalculation,                 # I am appending a JobCalculation
+        filters={                       # Specifying the filters:
+            'state':{'==':'FINISHED'},  # the calculation has to have finished
+        },
+    )
+
+How, can we have multiple filters?
 Suppose you are interested in all calculations in your database that are in 
 state 'FINISHED' and were created in the last *n* days::
 
     from datetime import timedelta
     from aiida.utils import timezone
     now = timezone.now()
-    qb = QueryBuilder()    # An empty QueryBuilder instances
-    qb.append(
-        JobCalculation,  # I am appending a JobCalculation to the path
-        filters={            # Specifying the filters, such as
-            'state':{'==':'FINISHED'},   # the calculation has to have finished
-            'ctime':{'>': now - timedelta(days=n)}  # created in the last n days
-        },
-        project=['label']       # Only need the label of the calculations
-    )
-    resultgen = qb.all()     # Give me all results (returns a generator)
-    resultslist = list(resultgen) # Making it a list (of labels)
+    time_n_days_ago = now - timedelta(days=n)
 
-.. note::
-    How to get the results back will be described later.
-    But in general, a generator is returned to speed up the process.
+    qb = QueryBuilder()                 # An empty QueryBuilder instances
+    qb.append(
+        JobCalculation,                 # I am appending a JobCalculation
+        filters={                       # Specifying the filters:
+            'state':{'==':'FINISHED'},  # the calculation has to have finished AND
+            'ctime':{'>':time_n_days_ago}     # created in the last n days
+        },
+    )
+    resultgen = qb.dict()               # Give me all results
+
 
 Let's go through the above example.
 We have instantiated QueryBuilder instance.
@@ -103,38 +118,78 @@ What if we want calculations that have finished **or** were created in the last
 
     qb = QueryBuilder()
     qb.append(
-            JobCalculation,
-            filters={
-                'or':[
-                    {'state':{'==':'FINISHED'}},
-                    {'ctime':{'>': now - timedelta(days=n)}}
-                ]
-            },
-            project=['label']
-        )
-    print list(qb.all())
+        JobCalculation,
+        filters={
+            'or':[
+                {'state':{'==':'FINISHED'}},
+                {'ctime':{'>': now - timedelta(days=n)}}
+            ]
+        },
+    )
+    res =qb.dict()
 
 If we'd have written *and* instead of *or*, we would have created the exact same
 query as in the first query, because *and* is the default behavior if
 you attach several filters.
 What if you want calculation in state 'FINISHED' or 'RETRIEVING'?
-This will be the next example. We will not filter by creation time,
-but have the time returned to as::
+This will be the next example::
 
     qb = QueryBuilder()
     qb.append(
-            JobCalculation,
-            filters={
-                'state':{'in':['FINISHED', 'RETRIEVING']}
-            },
-            project=['label', 'ctime']
-        )
-    print list(qb.all())
+        JobCalculation,
+        filters={
+            'state':{'in':['FINISHED', 'RETRIEVING']}
+        },
+    )
+    res = qb.all()
 
-This was the query for a single node in the database.
-Let's make it more complicated by querying relationships in graph-like database.
+This showed you how to 'filter' by properties of a node (and implicitly by type)
+So far we can do that for a single a single node in the database.
+But we sometimes need to query relationships in graph-like database.
+
+There are several relationships that entities in Aiida can have.
+
++------------------+---------------+------------------+-------------------------------------------------+
+| **Entity from**  | **Entity to** | **Relationship** | **Explanation**                                 |
++==================+===============+==================+=================================================+
+| Node             | Node          | *input_of*       | One node as input of another node               |
++------------------+---------------+------------------+-------------------------------------------------+
+| Node             | Node          | *output_of*      | One node as output of another node              |
++------------------+---------------+------------------+-------------------------------------------------+
+| Node             | Node          | *ancestor_of*    | One node as the ancestor of another node (Path) |
++------------------+---------------+------------------+-------------------------------------------------+
+| Node             | Node          | *descendant_of*  | One node as descendant of another node (Path)   |
++------------------+---------------+------------------+-------------------------------------------------+
+| Node             | Group         | *group_of*       | The group of a node                             |
++------------------+---------------+------------------+-------------------------------------------------+
+| Group            | Node          | *member_of*      | The node is a member of a group                 |
++------------------+---------------+------------------+-------------------------------------------------+
+| Node             | Computer      | *computer_of*    | The computer of a node                          |
++------------------+---------------+------------------+-------------------------------------------------+
+| Computer         | Node          | *has_computer*   | The node of a computer                          |
++------------------+---------------+------------------+-------------------------------------------------+
+| Node             | User          | *creater_of*     | The creator of a node is a user                 |
++------------------+---------------+------------------+-------------------------------------------------+
+| User             | Node          | *created_by*     | The node was created by a user                  |
++------------------+---------------+------------------+-------------------------------------------------+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 You are familiar with the :ref:`sec.quantumespresso` tutorial? Great, because this will be
-our usecase here.
+our use case here.
 
 A common query is to query for calculations that were done on a certain structure (*mystructure*),
 that fulfill certain requirements, such as a cutoff above 30.0.

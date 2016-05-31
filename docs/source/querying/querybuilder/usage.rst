@@ -146,8 +146,7 @@ This will be the next example::
 This showed you how to 'filter' by properties of a node (and implicitly by type)
 So far we can do that for a single a single node in the database.
 But we sometimes need to query relationships in graph-like database.
-
-There are several relationships that entities in Aiida can have.
+There are several relationships that entities in Aiida can have:
 
 +------------------+---------------+------------------+-------------------------------------------------+
 | **Entity from**  | **Entity to** | **Relationship** | **Explanation**                                 |
@@ -174,7 +173,42 @@ There are several relationships that entities in Aiida can have.
 +------------------+---------------+------------------+-------------------------------------------------+
 
 
+Let's join a node to its output, e.g. StructureData and JobCalculation (as output)::
 
+    qb = QueryBuilder()
+    qb.append(StructureData, tag='structure')
+    qb.append(JobCalculation, output_of='structure')
+
+In the above example, we have first appended StructureData to the path.
+So that we can refer to that vertice later, we *tag* it with a unique keyword
+of our choice, which can be used only once.
+When we append another vertice to the path, we specify the relationship
+to a previous entity by using one of the keywords in the above table
+and as a value the tag of the vertice that it has a relationship with.
+
+Some more examples::
+
+    # StructureData as an input of a job calculation
+    qb = QueryBuilder()
+    qb.append(JobCalculation, tag='calc')
+    qb.append(StructureData, input_of='calc')
+
+    # StructureData and ParameterData as inputs to a calculation
+    qb = QueryBuilder()
+    qb.append(JobCalculation, tag='calc')
+    qb.append(StructureData, input_of='calc')
+    qb.append(ParameterDataData, input_of='calc')
+
+    # Filtering the remote data instance by the computer it ran on (name)
+    qb = QueryBuilder()
+    qb.append(RemoteData, tag='remote')
+    qb.append(Computer, computer_of='remote', filters={'name':{'==':'mycomputer'}})
+
+    # Find all descendants of a structure with a certain uuid
+    qb = QueryBuilder()
+    qb.append(StructureData, tag='structure', filters={'uuid':{'==':myuuid}})
+    qb.append(Node, descendant_of='structure')
+    
 
 
 

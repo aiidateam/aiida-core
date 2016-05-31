@@ -1834,6 +1834,35 @@ class AbstractQueryBuilder(object):
                 self._hash = queryhelp_hash
         return query
 
+    def distinct(self):
+        """
+        Asks for distinct rows.
+        Does not execute the query!
+        If you want a distinct query::
+
+            qb = QueryBuilder(**queryhelp)
+            qb.distinct().all() # or
+            qb.distinct().get_results_dict()
+
+        :returns: self
+        """
+        self._query = self.get_query().distinct()
+        return self
+
+
+    def _yield_per(self, batch_size):
+        """
+        :param count: Number of rows to yield per step
+
+        Yields *count* rows at a time
+
+        :returns: a generator
+        """
+        return self.get_query().yield_per(batch_size)
+
+    def _all(self):
+        return self.get_query().all()
+
     def _first(self):
         """
         Executes query in the backend asking for one instance.
@@ -1875,31 +1904,6 @@ class AbstractQueryBuilder(object):
         return returnval
 
 
-    def distinct(self):
-        """
-        Asks for distinct rows.
-        Does not execute the query!
-        If you want a distinct query::
-
-            qb = QueryBuilder(**queryhelp)
-            qb.distinct().all() # or
-            qb.distinct().get_results_dict()
-
-        :returns: self
-        """
-        self._query = self.get_query().distinct()
-        return self
-
-
-    def yield_per(self, count):
-        """
-        :param count: Number of rows to yield per step
-
-        Yields *count* rows at a time
-
-        :returns: a generator
-        """
-        return self.get_query().yield_per(count)
 
     def count(self):
         """
@@ -1910,7 +1914,7 @@ class AbstractQueryBuilder(object):
         que = self.get_query()
         return que.count()
 
-    def all(self):
+    def iterall(self, batch_size=100):
         """
         Executes the full query.
         The order of the rows is as returned by the backend,
@@ -1920,9 +1924,10 @@ class AbstractQueryBuilder(object):
         :returns: a generator for all projected entities (each being a list).
         """
 
-        results = self.yield_per(100)
-
-
+        if batch_size is not None:
+            results = self._yield_per(batch_size)
+        else:
+            results = self._all()
         try:
             for resultrow in results:
                 yield [
@@ -1941,7 +1946,24 @@ class AbstractQueryBuilder(object):
             for rowitem in results:
                 yield [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], rowitem)]
 
-    def get_results_dict(self):
+    def all(self, batch_size=None):
+        """
+        Executes the full query.
+        The order of the rows is as returned by the backend,
+        the order inside each row is given by the order of the path
+        and the order of the projections for each vertice in the path.
+
+        :returns: a generator for all projected entities (each being a list).
+        """
+
+        return list(self.iterall(batch_size=batch_size))
+
+
+    def dict(self, batch_size=None):
+        return list(self.iterdict(batch_size=batch_size))
+
+
+    def iterdict(self, batch_size=100):
         """
         Calls :func:`QueryBuilderBase.yield_per`.
         Loops through the results and constructs for each row a dictionary
@@ -1955,7 +1977,10 @@ class AbstractQueryBuilder(object):
         :returns: a generator returning the results as an iterable of dictionaries.
         """
 
-        results = self.yield_per(100)
+        if batch_size is not None:
+            results = self._yield_per(batch_size=batch_size)
+        else:
+            results = self._all()
         try:
             for this_result in results:
                 yield {
@@ -1986,6 +2011,16 @@ class AbstractQueryBuilder(object):
                     }
                     for tag, projected_entities_dict in self.tag_to_projected_entity_dict.items()
                 }
+
+    def get_results_dict(self):
+        warnings.warn(
+                "get_results_dict will be deprecated in the future"
+                "User iterdict for generator or dict for list",
+                DeprecationWarning
+            )
+        
+        return self.iterdict()
+
     @abstractmethod
     def _get_aiida_res(self, key, res):
         """

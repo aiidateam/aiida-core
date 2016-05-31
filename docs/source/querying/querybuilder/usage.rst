@@ -9,32 +9,35 @@ Introduction
 .. toctree::
    :maxdepth: 2
 
-This section describes the use of the QueryBuilder, which
-is meant to help you querying the database
-with a Python interface and regardless of backend and schema used.
+This section describes the use of the QueryBuilder, which is meant to help you
+querying the database with a Python interface and regardless of backend and
+schema employed in the background.
 Before jumping into the specifics, let's discuss what you should be clear about
 before writing a query:
 
-*   You should know which quantities you want to query for.
-    In database-speek, you need to tell the backend what to *project*.
-    For example, you might only be interested in the label of a calculation and the pks of 
-    all its outputs, and nothing else.
+*   You should know what you want to query for. In database-speek, you need to
+    tell the backend what to *project*. For example, you might be
+    interested in the label of a calculation and the pks of all its outputs.
 *   In many use-cases, you will query for relationships between entities that are
     connected in a graph-like fashion, with links as edges and nodes as vertices.
-    You have to know how to describe a *path* between your entities.
+    You have to know the relationships between these entities.
+    A *Node* can be either input or output of another *Node*, but also an
+    ancestor or a descendant.
 *   In almost all cases, you will be interested in a subset of all possible
     entities that could be returned based on the joins between the entities of
     your graph. In other ways, you need to have an idea of how to filter the
     results.
 
-If you are clear about what you want and how you can get it,
-you will have to provide this information to QueryBuilder, who will build
-an SQL-query for you.
-There are possible APIs that you can use, and the have the exact same functionalities,
-it's up to you what to use:
+If you are clear about what you want and how you can get it, you will have to
+provide this information to QueryBuilder, who will build an SQL-query for you.
+There is more than one  possible API that you can use:
 
 #.  The appender-method
 #.  Using the queryhelp 
+
+What you will use depends on the specific use case.
+The functionalities are the same, so it's up to you what to use.
+
 
 
 The appender method
@@ -42,6 +45,31 @@ The appender method
 
 
 Let's first discuss the appender-method using some concrete examples.
+We will start from simple examples and get to more complex ones later.
+The first thing to know is how to chose entities that you want to query::
+
+    from aiida.orm.querybuilder import QueryBuilder
+    qb = QueryBuilder() # Instantiating instance
+    qb.append(JobCalculation) # Setting first vertice of path
+
+So, let's suppose that's what we want to query for (all job calculations in the
+database). The question is how to get the results from the query.
+
+    from aiida.orm.querybuilder import QueryBuilder
+    qb = QueryBuilder() # Instantiating instance
+    qb.append(JobCalculation) # Setting first vertice of path
+
+    first_row = qb.first() # Returns a list (!) of the results of the first row
+    
+    all_rows = qb.all()  # Returns a list of lists
+
+    all_rows_generator = qb.iterall() # Returns a generator of lists
+
+    all_as_dictionary = qb.dict()  # Returns a list of dictionaries
+
+    all_as_dictionary_generator = qb.iterdict() # Return a generator of dictionaries
+
+
 Suppose you are interested in all calculations in your database that are in 
 state 'FINISHED' and were created in the last *n* days::
 

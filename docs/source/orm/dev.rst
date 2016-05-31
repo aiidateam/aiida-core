@@ -126,7 +126,7 @@ Quantum Espresso - pw.x
 .. automodule:: aiida.orm.calculation.job.quantumespresso.pw
    :members:
 
-.. automodule:: aiida.orm.calculation.job.quantumespresso.validators
+.. automodule:: aiida.orm.calculation.job.quantumespresso.helpers
    :members:
 
 Quantum Espresso - Dos

@@ -244,7 +244,7 @@ You can access this function as follows. First, you define the input dictionary:
                 }}
 
 Then, you can verify if the input is correct by using the 
-:py:func:`~aiida.orm.calculation.job.quantumespresso.validators.pw_input_helper` function, 
+:py:func:`~aiida.orm.calculation.job.quantumespresso.helpers.pw_input_helper` function, 
 conveniently exposes also as a ``input_helper`` class method of the ``PwCalculation`` class::
 
   resdict = CalculationFactory('quantumespresso.pw').input_helper(test_dict, structure=s)

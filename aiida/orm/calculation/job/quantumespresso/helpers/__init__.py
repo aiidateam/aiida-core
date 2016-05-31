@@ -66,7 +66,7 @@ def _check_and_convert(kw,val,expected_type):
     return outval
 
 def pw_input_helper(input_params, structure, 
-    stop_at_first_error=False, flat_mode = False, version="5.4.0"):
+    stop_at_first_error=False, flat_mode=False, version="5.4.0"):
     """
     Validate if the input dictionary for Quantum ESPRESSO is valid.
     Return the dictionary (possibly with small variations: e.g. convert

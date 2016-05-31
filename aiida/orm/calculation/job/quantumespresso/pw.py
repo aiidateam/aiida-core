@@ -100,11 +100,11 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
         namelists).
         
         This function calls 
-        :py:func:`aiida.orm.calculation.job.quantumespresso.validators.pw_input_helper`,
+        :py:func:`aiida.orm.calculation.job.quantumespresso.helpers.pw_input_helper`,
         see its docstring for further information.
         """
-        from . import validators
-        return validators.pw_input_helper(*args, **kwargs)
+        from . import helpers
+        return helpers.pw_input_helper(*args, **kwargs)
     
     
     

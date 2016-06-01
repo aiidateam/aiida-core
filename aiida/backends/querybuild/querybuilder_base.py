@@ -308,13 +308,15 @@ class AbstractQueryBuilder(object):
 
         A small usage example how this can be invoked::
 
-            qb = QueryBuilder() # Instantiating empty querybuilder instance
-            qb.append(cls=StructureData) # First item is StructureData node
-            # Note that also qb.append(StructureData) would work.
-            qb.append(cls=PwCalculation, output_of=StructureData) # The
+            qb = QueryBuilder()             # Instantiating empty querybuilder instance
+            qb.append(cls=StructureData)    # First item is StructureData node
+            # The
             # next node in the path is a PwCalculation, with
-            # a structure joined as an input
-            # Note that qb.append(PwCalculation) would have worked as
+            # the structure joined as an input
+            qb.append(
+                cls=PwCalculation,
+                output_of=StructureData
+            )
 
         :returns: self
         """
@@ -724,30 +726,9 @@ class AbstractQueryBuilder(object):
 
             qb = QueryBuilder()
             qb.append(StructureData, tag='struc')
-            qb.add_projection('struc', 'id') # Will project the id
-            # OR
-            qb.add_projection('struc', ['id', 'attributes.kinds'])
-            # OR
-            # I want to cast the kinds to a JSON-object (will return
-            # a dictionary:
-            qb.add_projection(
-                    'struc',
-                    [
-                        'id',
-                        {'attributes.kinds':{'cast':'j'}},
-                    ]
-                )
-            # OR
-            # In this example, the order is not specified any more,
-            # but it is valid input if you don't care about the order of the
-            # results:
-            qb.add_projection(
-                    'struc',
-                    {
-                        'id':{},
-                        {'attributes.kinds':{'cast':'j'}},
-                    }
-                )
+
+            # Will project the uuid and the kinds
+            qb.add_projection('struc', ['uuid', 'attributes.kinds'])
         """
         tag = self._get_tag_from_specification(tag_spec)
         _projections = []
@@ -1916,12 +1897,17 @@ class AbstractQueryBuilder(object):
 
     def iterall(self, batch_size=100):
         """
-        Executes the full query.
-        The order of the rows is as returned by the backend,
-        the order inside each row is given by the order of the path
-        and the order of the projections for each vertice in the path.
+        Same as :func:`QueryBuilderBase.all`, but returns a generator.
+        Be aware that this is only safe if no commit will take place during this
+        transaction. You might also want to read the SQLAlchemy documentation on
+        http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
 
-        :returns: a generator for all projected entities (each being a list).
+
+        :param int batch_size: 
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+
+        :returns: a generator of lists
         """
 
         if batch_size is not None:
@@ -1948,33 +1934,90 @@ class AbstractQueryBuilder(object):
 
     def all(self, batch_size=None):
         """
-        Executes the full query.
-        The order of the rows is as returned by the backend,
-        the order inside each row is given by the order of the path
+        Executes the full query with the order of the rows as returned by the backend.
+        the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
 
-        :returns: a generator for all projected entities (each being a list).
+        :param int batch_size: 
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+            Leave the default (*None*) if speed is not critical or if you don't know
+            what you're doing!
+
+        :returns: a list of lists of all projected entities.
         """
 
         return list(self.iterall(batch_size=batch_size))
 
 
     def dict(self, batch_size=None):
+        """
+        Executes the full query with the order of the rows as returned by the backend.
+        the order inside each row is given by the order of the vertices in the path
+        and the order of the projections for each vertice in the path.
+
+        :param int batch_size: 
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+            Leave the default (*None*) if speed is not critical or if you don't know
+            what you're doing!
+
+        :returns: 
+            a list of dictionaries of all projected entities.
+            Each dictionary consists of key value pairs, where the key is the tag
+            of the vertice and the value a dictionary of key-value pairs where key
+            is the entity description (a column name or attribute path)
+            and the value the value in the DB.
+        
+        Usage::
+
+            qb = QueryBuilder()
+            qb.append(
+                StructureData,
+                tag='structure',
+                filters={'uuid':{'==':myuuid}},
+            )
+            qb.append(
+                Node,
+                descendant_of='structure',
+                project=['type', 'id'],  # returns type (string) and id (string)
+                tag='descendant'
+            )
+            
+            # Return the dictionaries:
+            print "qb.iterdict()"
+            for d in qb.iterdict():
+                print '>>>', d
+
+        results in the following output::
+
+            qb.iterdict()
+            >>> {'descendant': {
+                    'type': u'calculation.job.quantumespresso.pw.PwCalculation.',
+                    'id': 7716}
+                }
+            >>> {'descendant': {
+                    'type': u'data.remote.RemoteData.',
+                    'id': 8510}
+                }
+
+        """
         return list(self.iterdict(batch_size=batch_size))
 
 
     def iterdict(self, batch_size=100):
         """
-        Calls :func:`QueryBuilderBase.yield_per`.
-        Loops through the results and constructs for each row a dictionary
-        of results.
-        In this dictionary (one for each row) the key is the unique tag in the path
-        and the value is another dictionary of key-value pairs where the key is the entity
-        (column) and the value the database entry.
-        Instances of an ORMclass are replaced with Aiidaclasses invoking
-        the DbNode.get_aiida_class method (key is '*').
+        Same as :func:`QueryBuilderBase.dict`, but returns a generator.
+        Be aware that this is only safe if no commit will take place during this
+        transaction. You might also want to read the SQLAlchemy documentation on
+        http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
 
-        :returns: a generator returning the results as an iterable of dictionaries.
+
+        :param int batch_size: 
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+
+        :returns: a generator of dictionaries
         """
 
         if batch_size is not None:
@@ -2013,6 +2056,10 @@ class AbstractQueryBuilder(object):
                 }
 
     def get_results_dict(self):
+        """
+        Deprecated, use :func:`QueryBuilderBase.dict` or
+        :func:`QueryBuilderBase.iterdict` instead
+        """
         warnings.warn(
                 "get_results_dict will be deprecated in the future"
                 "User iterdict for generator or dict for list",

@@ -8,6 +8,6 @@ aiida.execmanager documentation
 Execution Manager
 -----------------
 
-.. automodule:: aiida.execmanager
+.. automodule:: aiida.daemon.execmanager
    :members:
    :undoc-members:

@@ -1,3 +1,4 @@
+from pytz import UTC
 
 from aiida.backends import settings
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
@@ -33,7 +34,7 @@ def get_most_recent_daemon_timestamp():
         daemon_timestamps = DbSetting.objects.filter(key__startswith='daemon|task_')
         timestamps = []
         for timestamp_setting in daemon_timestamps:
-            timestamp = timestamp_setting.getvalue()
+            timestamp = timestamp_setting.get_value()
             if isinstance(timestamp, datetime.datetime):
                 timestamps.append(timestamp)
 
@@ -48,12 +49,14 @@ def get_most_recent_daemon_timestamp():
         from aiida.backends.sqlalchemy.models.settings import DbSetting
         from aiida.backends.sqlalchemy import session
         from sqlalchemy import func
+        from pytz import utc
+        from sqlalchemy.dialects.postgresql import TIMESTAMP
+
         maxtimestamp, = session.query(
-                func.max(DbSetting.dval)
-            ).filter(
-                DbSetting.key.like("daemon|task%")
-            ).first()
-        return maxtimestamp
+            func.max(DbSetting.val[()].cast(TIMESTAMP))).filter(
+            DbSetting.key.like("daemon|task%")).first()
+
+        return utc.localize(maxtimestamp)
 
 
 def set_daemon_timestamp(task_name, when):
@@ -85,7 +88,7 @@ def set_daemon_timestamp(task_name, when):
 
     set_global_setting(
             'daemon|task_{}|{}'.format(when, actual_task_name),
-            timezone.now(),
+            timezone.datetime.now(tz=UTC),
             description=(
                     "The last time the daemon {} to run the "
                     "task '{}' ({})"
@@ -112,8 +115,6 @@ def get_last_daemon_timestamp(task_name, when='stop'):
     :return: a datetime.datetime object. Return None if no information is
       found in the DB.
     """
-    #~ from aiida.backends.djsite.globalsettings import get_global_setting
-
     try:
         actual_task_name = celery_tasks[task_name]
     except KeyError:

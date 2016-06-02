@@ -141,29 +141,44 @@ def get_daemon_user():
     return daemon_user
 
 
+def get_global_setting(key):
+    if settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.globalsettings import get_global_setting
+        from django.db import connection
+        if 'db_dbsetting' not in connection.introspection.table_names():
+            raise KeyError("No table found")
+    elif settings.BACKEND == BACKEND_SQLA:
+        from sqlalchemy.engine import reflection
+        from aiida.backends import sqlalchemy as sa
+        inspector = reflection.Inspector.from_engine(sa.session.bind)
+        if 'db_dbsetting' not in inspector.get_table_names():
+            raise KeyError("No table found")
+        from aiida.backends.sqlalchemy.globalsettings import get_global_setting
+    else:
+        raise Exception("unknown backend {}".format(settings.BACKEND))
+    return get_global_setting(key)
+
+
 def get_db_schema_version():
     """
     Get the current schema version stored in the DB. Return None if
     it is not stored.
     """
-    if settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.globalsettings import get_global_setting
-    elif settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.globalsettings import get_global_setting
-    else:
-        raise Exception("unknown backend {}".format(settings.BACKEND))
-
     try:
         return get_global_setting('db|schemaversion')
     except KeyError:
         return None
 
 
-def set_db_schema_version(version):
+def get_backend_type():
     """
     Set the schema version stored in the DB. Use only if you know what
     you are doing.
     """
+    return get_global_setting('db|backend')
+
+
+def set_global_setting(key, value, description=None):
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.globalsettings import set_global_setting
     elif settings.BACKEND == BACKEND_SQLA:
@@ -171,9 +186,27 @@ def set_db_schema_version(version):
     else:
         raise Exception("unknown backend {}".format(settings.BACKEND))
 
+    set_global_setting(key, value, description)
+
+
+def set_db_schema_version(version):
+    """
+    Set the schema version stored in the DB. Use only if you know what
+    you are doing.
+    """
     return set_global_setting(
         'db|schemaversion', version,
         description="The version of the schema used in this database.")
+
+
+def set_backend_type(backend_name):
+    """
+    Set the schema version stored in the DB. Use only if you know what
+    you are doing.
+    """
+    return set_global_setting(
+        'db|backend', backend_name,
+        description="The backend used to communicate with the database.")
 
 
 def check_schema_version():
@@ -195,8 +228,16 @@ def check_schema_version():
         raise Exception("unknown backend {}".format(settings.BACKEND))
 
 
+def get_current_profile():
+    """
+    Return, as a string, the current profile being used.
 
+    Return None if load_dbenv has not been loaded yet.
+    """
 
-
+    if is_dbenv_loaded():
+        return settings.AIIDADB_PROFILE
+    else:
+        return None
 
 

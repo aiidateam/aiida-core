@@ -516,11 +516,7 @@ def create_configuration(profile='default'):
     :return: The populated profile that was also stored.
     """
     import readline
-    from aiida.backends import settings
     from aiida.common.exceptions import ConfigurationError
-    # BE CAREFUL: THIS IS THE DJANGO VALIDATIONERROR
-    from django.core.exceptions import ValidationError as DjangoValidationError
-    from django.core.validators import EmailValidator
     from validate_email import validate_email
 
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)

@@ -1,0 +1,482 @@
+# -*- coding: utf-8 -*-
+
+import gc
+import math
+import sys
+
+from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql.json import JSON
+from sqlalchemy.engine import reflection
+from sqlalchemy.orm import relationship, subqueryload, load_only
+from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.schema import Column
+from sqlalchemy.sql.expression import func
+from sqlalchemy.types import Integer, String, Boolean, DateTime, Text, Float
+
+from aiida import load_dbenv, is_dbenv_loaded
+from aiida.backends import sqlalchemy as sa
+from aiida.backends.sqlalchemy.models.base import Base
+from aiida.common.utils import query_yes_no
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
+
+"""
+This scipt transitions an Django database 0.5.* or 0.6.0 to an SQLAlchemy
+database 0.6.*
+
+It is supposed to be executed via ipython in the following way:
+
+from aiida.backends.sqlalchemy.transition import transition
+transition(profile="your_profile",group_size=10000)
+"""
+
+
+# Table name definitions
+NODE_TABLE_NAME = "db_dbnode"
+ATTR_TABLE_NAME = "db_dbattribute"
+EXTRAS_TABLE_NAME = "db_dbextra"
+SETTINGS_TABLE_NAME= "db_dbsetting"
+
+# Column name definitions
+ATTR_COL_NAME = "attributes"
+EXTRAS_COL_NAME = "extras"
+SETTINGS_VAL_COL_NAME = "val"
+
+
+def attributes_to_dict(attr_list):
+    """
+    Transform the attributes of a node into a dictionary. It assumes the key
+    are ordered alphabetically, and that they all belong to the same node.
+    """
+    d = {}
+
+    error = False
+    for a in attr_list:
+        try:
+            tmp_d = select_from_key(a.key, d)
+        except Exception:
+            print("Couldn't transfer attribute {} with key {} for dbnode {}"
+                  .format(a.id, a.key, a.dbnode_id))
+            error = True
+            continue
+        key = a.key.split('.')[-1]
+
+        if key.isdigit():
+            key = int(key)
+
+        dt = a.datatype
+
+        if dt == "dict":
+            tmp_d[key] = {}
+        elif dt == "list":
+            tmp_d[key] = [None] * a.ival
+        else:
+            val = None
+            if dt == "txt":
+                val = a.tval
+            elif dt == "float":
+                val = a.fval
+                if math.isnan(val):
+                    val = 'NaN'
+            elif dt == "int":
+                val = a.ival
+            elif dt == "bool":
+                val = a.bval
+            elif dt == "date":
+                val = a.dval
+
+            tmp_d[key] = val
+
+    return (d, error)
+
+
+def select_from_key(key, d):
+    """
+    Return element of the dict to do the insertion on. If it is foo.1.bar, it
+    will return d["foo"][1]. If it is only foo, it will return d directly.
+    """
+    path = key.split('.')[:-1]
+
+    tmp_d = d
+    for p in path:
+        if p.isdigit():
+            tmp_d = tmp_d[int(p)]
+        else:
+            tmp_d = tmp_d[p]
+
+    return tmp_d
+
+
+def modify_link_table():
+
+    with sa.session.begin(subtransactions=True):
+        print("\nStaring the modification of link table.")
+
+        inspector = reflection.Inspector.from_engine(sa.session.bind)
+        table_cols = inspector.get_columns("db_dblink")
+        col_type_list = [_["type"] for _ in table_cols if _["name"] == "type"]
+        if len(col_type_list) == 0:
+            print("Creating link type column")
+            sa.session.execute('ALTER TABLE db_dblink ADD COLUMN '
+                               'type varchar(255)')
+        else:
+            print("Link type column already exists.")
+    sa.session.commit()
+
+
+def transition_extras(profile=None, group_size=1000, delete_table=False):
+    """
+    Migrate the DbExtra table into the extras column for db_dbnode.
+    """
+    if not is_dbenv_loaded():
+        load_dbenv(profile=profile)
+
+    class DbExtra(Base):
+        """
+        DbExtra table, use only for migration purposes.
+        """
+        __tablename__ = EXTRAS_TABLE_NAME
+
+        id = Column(Integer, primary_key=True)
+
+        key = Column(String(1024), nullable=False)
+        datatype = Column(String(10), nullable=False)
+
+        tval = Column(Text, nullable=False)
+        fval = Column(Float)
+        ival = Column(Integer)
+        bval = Column(Boolean)
+        dval = Column(DateTime(timezone=True))
+
+        dbnode_id = Column(Integer, ForeignKey('db_dbnode.id'), nullable=False)
+        dbnode = relationship('DbNode', backref='old_extras')
+
+    print("\nStarting migration of extras.")
+
+    inspector = reflection.Inspector.from_engine(sa.session.bind)
+
+    table_names = inspector.get_table_names()
+    if NODE_TABLE_NAME not in table_names:
+        raise Exception("There is no {} table in the database. Transition"
+                        "to SQLAlchemy can not be done. Exiting."
+                        .format(NODE_TABLE_NAME))
+
+    node_table_cols = inspector.get_columns(NODE_TABLE_NAME)
+    col_names = [_["name"] for _ in node_table_cols]
+
+    if EXTRAS_COL_NAME in col_names:
+        print("Column named {} found at the {} table of the database. I assume "
+              "that the migration of the attributes has already been done and "
+              "therefore I proceed with the next migration step."
+              .format(EXTRAS_COL_NAME, NODE_TABLE_NAME))
+        return
+
+    with sa.session.begin(subtransactions=True):
+        print("Creating columns..")
+        sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN extras '
+                           'JSONB DEFAULT \'{}\'')
+        from aiida.backends.sqlalchemy.models.node import DbNode
+        total_nodes = sa.session.query(func.count(DbNode.id)).scalar()
+
+        total_groups = int(math.ceil(total_nodes/float(group_size)))
+        error = False
+
+        for i in xrange(total_groups):
+
+            print("Migrating group {} of {}".format(i, total_groups))
+            nodes = DbNode.query.options(
+                subqueryload('old_extras'), load_only('id', 'extras')
+            ).order_by(DbNode.id)[i*group_size:(i+1)*group_size]
+
+            for node in nodes:
+                attrs, err_ = attributes_to_dict(sorted(node.old_extras,
+                                                        key=lambda a: a.key))
+                error |= err_
+
+                node.extras = attrs
+                sa.session.add(node)
+
+            sa.session.flush()
+            sa.session.expunge_all()
+
+        if error:
+            cont = query_yes_no("There has been some errors during the "
+                                "migration. Do you want to continue?", "no")
+            if not cont:
+                sa.session.rollback()
+                sys.exit(-1)
+        if delete_table:
+            sa.session.execute('DROP TABLE db_dbextra')
+    sa.session.commit()
+    print("Migration of extras finished.")
+
+
+def transition_attributes(profile=None, group_size=1000, debug=False,
+                          delete_table=False):
+    """
+    Migrate the DbAttribute table into the attributes column of db_dbnode.
+    """
+    if not is_dbenv_loaded():
+        load_dbenv(profile=profile)
+
+    class DbAttribute(Base):
+        """
+        DbAttribute table, use only for migration purposes.
+        """
+        __tablename__ = ATTR_TABLE_NAME
+
+        id = Column(Integer, primary_key=True)
+
+        key = Column(String(1024), nullable=False)
+        datatype = Column(String(10), nullable=False)
+
+        tval = Column(Text, nullable=False)
+        fval = Column(Float)
+        ival = Column(Integer)
+        bval = Column(Boolean)
+        dval = Column(DateTime(timezone=True))
+
+        dbnode_id = Column(Integer, ForeignKey('db_dbnode.id'), nullable=False)
+        dbnode = relationship('DbNode', backref='old_attrs')
+
+    print("\nStarting migration of attributes")
+
+    inspector = reflection.Inspector.from_engine(sa.session.bind)
+
+    table_names = inspector.get_table_names()
+    if NODE_TABLE_NAME not in table_names:
+        raise Exception("There is no {} table in the database. Transition"
+                        "to SQLAlchemy can not be done. Exiting"
+                        .format(NODE_TABLE_NAME))
+
+    node_table_cols = inspector.get_columns(NODE_TABLE_NAME)
+    col_names = [_["name"] for _ in node_table_cols]
+
+    if ATTR_COL_NAME in col_names:
+        print("Column named {} found at the {} table of the database. I assume "
+              "that the migration of the attributes has already been done and "
+              "therefore I proceed with the next migration step."
+              .format(ATTR_COL_NAME, NODE_TABLE_NAME))
+        return
+
+    with sa.session.begin(subtransactions=True):
+        print("Creating columns..")
+        sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN attributes '
+                           'JSONB DEFAULT \'{}\'')
+        from aiida.backends.sqlalchemy.models.node import DbNode
+        total_nodes = sa.session.query(func.count(DbNode.id)).scalar()
+
+        total_groups = int(math.ceil(total_nodes/float(group_size)))
+        error = False
+
+        for i in xrange(total_groups):
+            print("Migrating group {} of {}".format(i, total_groups))
+
+            nodes = DbNode.query.options(
+                subqueryload('old_attrs'), load_only('id', 'attributes')
+            ).order_by(DbNode.id)[i*group_size:(i+1)*group_size]
+
+            for node in nodes:
+                attrs, err_ = attributes_to_dict(sorted(node.old_attrs,
+                                                        key=lambda a: a.key))
+                error |= err_
+
+                node.attributes = attrs
+                sa.session.add(node)
+
+            # Remove the db_dbnode from sqlalchemy, to allow the GC to do its
+            # job.
+            sa.session.flush()
+            sa.session.expunge_all()
+
+            del nodes
+            gc.collect()
+
+        if error:
+            cont = query_yes_no("There has been some errors during the "
+                                "migration. Do you want to continue?", "no")
+            if not cont:
+                sa.session.rollback()
+                sys.exit(-1)
+        if delete_table:
+            sa.session.execute('DROP TABLE db_dbattribute')
+    sa.session.commit()
+    print("Migration of attributes finished.")
+
+
+def transition_settings(profile=None):
+    """
+    Migrate the DbAttribute table into the attributes column of db_dbnode.
+    """
+    if not is_dbenv_loaded():
+        load_dbenv(profile=profile)
+
+    from aiida.utils import timezone
+
+    class DbSetting(Base):
+        __tablename__ = "db_dbsetting"
+        id = Column(Integer, primary_key=True)
+
+        key = Column(String(255), index=True, nullable=False)
+        datatype = Column(String(10), index=True, nullable=False)
+
+        tval = Column(String(255), default='', nullable=True)
+        fval = Column(Float, default=None, nullable=True)
+        ival = Column(Integer, default=None, nullable=True)
+        bval = Column(Boolean, default=None, nullable=True)
+        dval = Column(DateTime(timezone=True), default=None, nullable=True)
+        val = Column(JSONB, default={}, nullable=True)
+
+        description = Column(String(255), default='', nullable=True)
+        time = Column(DateTime(timezone=True), default=timezone.now)
+
+    print("\nStarting migration of settings.")
+
+    inspector = reflection.Inspector.from_engine(sa.session.bind)
+
+    settings_table_cols = inspector.get_columns(SETTINGS_TABLE_NAME)
+    col_names = [_["name"] for _ in settings_table_cols]
+
+    if SETTINGS_VAL_COL_NAME in col_names:
+        print("Column named {} found at the {} table of the database. I assume "
+              "that the migration of the attributes has already been done and "
+              "therefore I proceed with the next migration step."
+              .format(SETTINGS_VAL_COL_NAME, SETTINGS_TABLE_NAME))
+        return
+
+    with sa.session.begin(subtransactions=True):
+        print("Creating columns..")
+        sa.session.execute('ALTER TABLE db_dbsetting ADD COLUMN val '
+                           'JSONB DEFAULT \'{}\'')
+    sa.session.commit()
+
+    with sa.session.begin(subtransactions=True):
+        total_settings = sa.session.query(DbSetting).all()
+
+        for settings in total_settings:
+
+            dt = settings.datatype
+            val = None
+            if dt == "txt":
+                val = settings.tval
+            elif dt == "float":
+                val = settings.fval
+                if math.isnan(val):
+                    val = 'NaN'
+            elif dt == "int":
+                val = settings.ival
+            elif dt == "bool":
+                val = settings.bval
+            elif dt == "date":
+                val = settings.dval
+
+            settings.val = val
+            flag_modified(settings, "val")
+            sa.session.flush()
+
+    sa.session.commit()
+
+    with sa.session.begin(subtransactions=True):
+        for col_name in ["datatype", "tval", "fval", "ival", "bval", "dval"]:
+            sql = ("ALTER TABLE {table} DROP COLUMN {column}")
+            sa.session.execute(sql.format(table=SETTINGS_TABLE_NAME,
+                                          column=col_name))
+
+    sa.session.commit()
+    print("Migration of settings finished.")
+
+
+def transition_json_column(profile=None):
+    """
+    Migrate the TEXT column containing JSON into JSON columns
+    """
+
+    print("\nChanging various columns to JSON format.")
+
+    if not is_dbenv_loaded():
+        load_dbenv(profile=profile)
+
+    table_col = [
+        ('db_dbauthinfo', 'metadata'),
+        ('db_dbauthinfo', 'auth_params'),
+        ('db_dbcomputer', 'metadata'),
+        ('db_dbcomputer', 'transport_params'),
+        ('db_dblog', 'metadata')
+    ]
+
+    inspector = reflection.Inspector.from_engine(sa.session.bind)
+
+    sql = ("ALTER TABLE {table} ALTER COLUMN {column} TYPE JSONB "
+           "USING {column}::JSONB")
+
+    with sa.session.begin(subtransactions=True):
+
+        for table, col in table_col:
+            table_cols = inspector.get_columns(table)
+            col_type_list = [_["type"] for _ in table_cols if _["name"] == col]
+            if len(col_type_list) != 1:
+                raise Exception("Problem with table {} and column {}. Either"
+                                "the column doesn't exist or multiple "
+                                "occurrences were found.".format(table, col))
+
+            if isinstance(col_type_list[0], JSON):
+                print("Column {} of table {} is already in JSON format. "
+                      "Proceeding with the next table & column."
+                      .format(col, table))
+                continue
+
+            print("Changing column {} of table {} in JSON format."
+                  .format(table, col))
+            sa.session.execute(sql.format(table=table, column=col))
+
+    sa.session.commit()
+
+
+def create_gin_index():
+    """
+    Create the GIN index for the attributes column of db_dbnode.
+    """
+    print("\nChecking if GIN indexes have to be created.")
+    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    db_node_idx = inspector.get_indexes("db_dbnode")
+    db_node_idx_names = [_["name"] for _ in db_node_idx]
+    if "db_dbnode_attributes_idx" not in db_node_idx_names:
+        print("Creating db_dbnode_attributes_idx on db_node.")
+        sa.session.bind.execute("CREATE INDEX db_dbnode_attributes_idx ON "
+                                "db_dbnode USING gin(attributes)")
+    else:
+        print("db_dbnode_attributes_idx on db_node already exists.")
+
+
+def transition(profile=None, group_size=1000, delete_table=False):
+    """
+    Migrate the attributes, extra, and some other columns to use JSONMigrate
+    the attributes, extra, and some other columns to use JSONB column type.
+    """
+    cont = query_yes_no("Starting complete migration. Be sure to backup your "
+                        "database before continuing, and that no one else is "
+                        "using it. Do you want to continue?", "no")
+    if not cont:
+        print("Answered no. Exiting")
+        sys.exit(0)
+
+    transition_attributes(profile=profile, group_size=group_size,
+                          delete_table=delete_table)
+
+    transition_extras(profile=profile,group_size=group_size,
+                      delete_table=delete_table)
+
+    create_gin_index()
+
+    modify_link_table()
+
+    transition_settings(profile=profile)
+
+    transition_json_column(profile=profile)
+
+    print("\nMigration finished")

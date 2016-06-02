@@ -55,7 +55,7 @@ def get_global_setting(key):
     from django.core.exceptions import ObjectDoesNotExist
 
     try:
-        return DbSetting.objects.get(key=key).getvalue()
+        return DbSetting.objects.get(key=key).get_value()
     except ObjectDoesNotExist:
         raise KeyError("No global setting with key={}".format(key))
 

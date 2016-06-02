@@ -5,10 +5,7 @@ import os
 
 import django
 
-from aiida.backends import settings
-from aiida.backends.utils import is_dbenv_loaded
 from aiida.utils.logger import get_dblogger_extra
-from aiida.backends.utils import set_db_schema_version, get_db_schema_version
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -46,19 +43,6 @@ def _load_dbenv_noschemacheck(process, profile):
     # djsite.settings.settings module.
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings.settings'
     django.setup()
-
-
-def get_current_profile():
-    """
-    Return, as a string, the current profile being used.
-
-    Return None if load_dbenv has not been loaded yet.
-    """
-
-    if is_dbenv_loaded():
-        return settings.AIIDADB_PROFILE
-    else:
-        return None
 
 
 class DBLogHandler(logging.Handler):
@@ -127,7 +111,6 @@ def set_daemon_user(user_email):
 _aiida_autouser_cache = None
 
 
-
 def get_automatic_user():
     """
     Return the default user for this installation of AiiDA.
@@ -188,6 +171,8 @@ def check_schema_version():
       Otherwise, just return.
     """
     import aiida.backends.djsite.db.models
+    from aiida.backends.utils import (
+        get_current_profile,  set_db_schema_version, get_db_schema_version)
     from django.db import connection
     from aiida.common.exceptions import ConfigurationError
 
@@ -207,8 +192,8 @@ def check_schema_version():
         raise ConfigurationError(
             "The code schema version is {}, but the version stored in the"
             "database (DbSetting table) is {}, stopping.\n"
-            "To migrate to latest version, go to aiida.backends.djsite and run:\n"
-            "python manage.py --aiida-profile={} migrate".
+            "To migrate to latest version, go to aiida.backends.djsite and "
+            "run:\npython manage.py --aiida-profile={} migrate".
             format(code_schema_version, db_schema_version,
                    get_current_profile())
         )

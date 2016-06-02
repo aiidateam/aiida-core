@@ -66,12 +66,12 @@ class QueryBuilder(AbstractQueryBuilder):
         """
         if key.startswith('attributes'):
             try:
-                returnval = DbAttribute.objects.get(id=res).getvalue()
+                returnval = DbAttribute.objects.get(id=res).get_value()
             except ObjectDoesNotExist:
                 returnval = None
         elif key.startswith('extras'):
             try:
-                returnval = DbExtra.objects.get(id=res).getvalue()
+                returnval = DbExtra.objects.get(id=res).get_value()
             except ObjectDoesNotExist:
                 returnval = None
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):

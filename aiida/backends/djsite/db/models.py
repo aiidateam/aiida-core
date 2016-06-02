@@ -1141,7 +1141,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         except ObjectDoesNotExist:
             raise AttributeError("{} with key {} for node {} not found "
                                  "in db".format(cls.__name__, key, dbnode.pk))
-        return attr.getvalue()
+        return attr.get_value()
 
     @classmethod
     def get_all_values_for_node(cls, dbnode):

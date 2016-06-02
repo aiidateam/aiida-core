@@ -952,7 +952,7 @@ class AbstractJobCalculation(object):
         # I have removed order_by since it slows query down
         # qb.order_by({'calculation':['ctime']})
 
-        results_generator = qb.get_results_dict()
+        results_generator = qb.iterdict()
 
         counter = 0
         while True:
@@ -1063,18 +1063,18 @@ class AbstractJobCalculation(object):
 
         qb = QueryBuilder()
         qb.append(type="computer", tag='computer', filters=computerfilter)
-        qb.append(cls, filters=calcfilter, tag='calc', runs_on='computer')
-        qb.append(type="user", tag='user', filters=userfilter, user_of="calc")
+        qb.append(cls, filters=calcfilter, tag='calc', has_computer='computer')
+        qb.append(type="user", tag='user', filters=userfilter, creator_of="calc")
 
         if only_computer_user_pairs:
             qb.add_projection("computer", "*")
             qb.add_projection("user", "*")
-            returnresult = list(qb.distinct().all())
+            returnresult = qb.distinct().all()
         else:
             qb.add_projection("calc", "*")
             if limit is not None:
                 qb.limit(limit)
-            returnresult = list(qb.all())
+            returnresult = qb.all()
             returnresult = zip(*returnresult)[0]
         return returnresult
 

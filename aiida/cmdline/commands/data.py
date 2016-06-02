@@ -676,7 +676,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
 
         qb.distinct()
         if qb.count() > 0:
-            for res in qb.get_results_dict():
+            for res in qb.dict():
                 group_name = res.get("group").get("name")
                 group_desc = res.get("group").get("description")
                 qb = QueryBuilder()

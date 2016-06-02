@@ -94,7 +94,7 @@ parameters = ParameterData(dict={
         'smearing': 'marzari-vanderbilt',
         'degauss': 0.01,
         'nspin': 2,
-        'starting_magnetization': 0.36,
+        'starting_magnetization': {'Fe': 0.36},
         'nosym': True,
     },
     'ELECTRONS': {

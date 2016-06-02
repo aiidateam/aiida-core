@@ -41,7 +41,7 @@ class AbstractQueryBuilder(object):
     __metaclass__ = ABCMeta
 
 
-    _LINKTAG_DEL = '--'
+    _EDGE_TAG_DELIM = '--'
     _VALID_PROJECTION_KEYS = ('func', 'cast')
 
 
@@ -283,7 +283,7 @@ class AbstractQueryBuilder(object):
 
     def append(self, cls=None, type=None, tag=None,
                 autotag=False, filters=None, project=None, subclassing=True,
-                link_tag=None, link_filters=None, link_project=None, **kwargs
+                edge_tag=None, edge_filters=None, edge_project=None, **kwargs
         ):
         """
         Any iterative procedure to build the path for a graph query
@@ -308,13 +308,15 @@ class AbstractQueryBuilder(object):
 
         A small usage example how this can be invoked::
 
-            qb = QueryBuilder() # Instantiating empty querybuilder instance
-            qb.append(cls=StructureData) # First item is StructureData node
-            # Note that also qb.append(StructureData) would work.
-            qb.append(cls=PwCalculation, output_of=StructureData) # The
+            qb = QueryBuilder()             # Instantiating empty querybuilder instance
+            qb.append(cls=StructureData)    # First item is StructureData node
+            # The
             # next node in the path is a PwCalculation, with
-            # a structure joined as an input
-            # Note that qb.append(PwCalculation) would have worked as
+            # the structure joined as an input
+            qb.append(
+                cls=PwCalculation,
+                output_of=StructureData
+            )
 
         :returns: self
         """
@@ -355,6 +357,8 @@ class AbstractQueryBuilder(object):
                     "\n\n\n".format(type)
                 )
 
+        if 'link_tag' in kwargs:
+            raise DeprecationWarning("link_tag is deprecated, use edge_tag instead")
         ormclass, ormclasstype, query_type_string = self._get_ormclass(cls, type)
         ############################### TAG #################################
         # Let's get a tag
@@ -372,11 +376,11 @@ class AbstractQueryBuilder(object):
                 raise InputValidationError("Both label and tag specified")
 
         if tag:
-            if self._LINKTAG_DEL in tag:
+            if self._EDGE_TAG_DELIM in tag:
                 raise InputValidationError(
                     "tag cannot contain {}\n"
                     "since this is used as a delimiter for links"
-                    "".format(self._LINKTAG_DEL)
+                    "".format(self._EDGE_TAG_DELIM)
                 )
             tag = tag
             user_defined_tag = True
@@ -484,55 +488,64 @@ class AbstractQueryBuilder(object):
             else:
                 joining_keyword = key
                 joining_value = self._get_tag_from_specification(val)
-        # the default is just a direction keyword and value 1
-        # meaning that this vertice is linked to the previous
-        # vertice as output
-        if joining_keyword is None:
-            joining_keyword = 'direction'
-            joining_value = 1
+        # the default is that this vertice is 'output_of' the previous one
+        if joining_keyword is None and len(self._path)>0:
+            joining_keyword = 'output_of'
+            joining_value = self._path[-1]['tag']
 
-        ############################# LINKS ####################################
-        # See if this requires a link:
-        if joining_keyword in ('input_of', 'output_of', 'direction') and len(self._path)>0:
-            # Ok, so here we are joining one node to another, as input or output
-            # This means that the user might want to query by link.
-            # Since the tag of this vertice is unique the tag, e.g. 'calc1'
-            # the tag '<>calc1' will also be unique if '<>' is a protected
-            # substring.
-            linklabel = kwargs.pop('linklabel', None)
-            if linklabel is not None and link_tag is None:
-                warnings.warn(
-                    "\nUse of the keyword 'linklabel' will be deprecated soon\n"
-                    "Please use 'link_tag' instead\n"
+        if joining_keyword == 'direction':
+            if not isinstance(joining_value, int):
+                raise InputValidationError("direction=n expects n to be an integer")
+            try:
+                if joining_value < 0:
+                    joining_keyword = 'input_of'
+                elif joining_value > 0:
+                    joining_keyword = 'output_of'
+                else:
+                    raise InputValidationError("direction=0 is not valid")
+                joining_value = self._path[-abs(joining_value)]['tag']
+            except IndexError as e:
+                raise InputValidationError(
+                    "You have specified a non-existent entity with\n"
+                    "direction={}\n"
+                    "{}\n".format(joining_value, e.message)
                 )
-                link_tag = linklabel
 
-            if link_tag is None:
-                if joining_keyword in ('input_of', 'output_of'):
-                    link_to_tag = self._get_tag_from_specification(joining_value)
-                elif joining_keyword == 'direction':
-                    link_to_tag = self._path[-abs(joining_value)]['tag']
-                link_tag = link_to_tag + self._LINKTAG_DEL + tag
-                #~ reverse_link_tag = tag + self._LINKTAG_DEL + link_to_tag
-            aliased_link = aliased(self.Link)
-            self._tag_to_alias_map[link_tag] = aliased_link
+        ############################# EDGES #################################
+        # See if this requires a link:
+        aliased_edge = None
+        if len(self._path) > 0:
+            if joining_keyword in ('input_of', 'output_of'):
+                aliased_edge = aliased(self.Link)
+            elif joining_keyword in ('ancestor_of', 'descendant_of'):
+                aliased_edge = aliased(self.Path)
 
+            if aliased_edge is not None:
 
+                # Ok, so here we are joining through a m2m relationship,
+                # e.g. input or output.
+                # This means that the user might want to query by that edge!
 
-            #~ if reverse_linktag is not None:
-                #~ self._tag_to_alias_map[reverse_linktag] = aliased_link
-                #~ self._filters[reverse_linktag] = {}
-                #~ self._projections[reverse_linktag] = {}
+                if edge_tag is None:
+                    edge_destination_tag = self._get_tag_from_specification(joining_value)
+                    edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
+                else:
+                    if edge_tag in self._tag_to_alias_map.keys():
+                        raise InputValidationError(
+                            "The tag {} is already in use".format(edge_tag)
+                        )
 
-            # Filters on links:
-            self._filters[link_tag] = {}
-            if link_filters is not None:
-                self.add_filter(link_tag, link_filters)
+                self._tag_to_alias_map[edge_tag] = aliased_edge
 
-            # Projections on links
-            self._projections[link_tag] = {}
-            if link_project is not None:
-                self.add_projection(link_tag, link_project)
+                # Filters on links:
+                self._filters[edge_tag] = {}
+                if edge_filters is not None:
+                    self.add_filter(edge_tag, edge_filters)
+
+                # Projections on links
+                self._projections[edge_tag] = {}
+                if edge_project is not None:
+                    self.add_projection(edge_tag, edge_project)
 
 
         ################### EXTENDING THE PATH #################################
@@ -542,8 +555,8 @@ class AbstractQueryBuilder(object):
                 type=ormclasstype, tag=tag, joining_keyword=joining_keyword,
                 joining_value=joining_value
             )
-        if link_tag is not None:
-            path_extension.update(dict(link_tag=link_tag))
+        if aliased_edge is not None:
+            path_extension.update(dict(edge_tag=edge_tag))
             #~ if reverse_linktag is not None:
                 #~ path_extension.update(dict(reverse_linktag=reverse_linktag))
 
@@ -713,30 +726,9 @@ class AbstractQueryBuilder(object):
 
             qb = QueryBuilder()
             qb.append(StructureData, tag='struc')
-            qb.add_projection('struc', 'id') # Will project the id
-            # OR
-            qb.add_projection('struc', ['id', 'attributes.kinds'])
-            # OR
-            # I want to cast the kinds to a JSON-object (will return
-            # a dictionary:
-            qb.add_projection(
-                    'struc',
-                    [
-                        'id',
-                        {'attributes.kinds':{'cast':'j'}},
-                    ]
-                )
-            # OR
-            # In this example, the order is not specified any more,
-            # but it is valid input if you don't care about the order of the
-            # results:
-            qb.add_projection(
-                    'struc',
-                    {
-                        'id':{},
-                        {'attributes.kinds':{'cast':'j'}},
-                    }
-                )
+
+            # Will project the uuid and the kinds
+            qb.add_projection('struc', ['uuid', 'attributes.kinds'])
         """
         tag = self._get_tag_from_specification(tag_spec)
         _projections = []
@@ -1212,7 +1204,7 @@ class AbstractQueryBuilder(object):
                 #~ call.caller_id == entity_to_join.id
             #~ )
 
-    def _join_outputs(self, joined_entity, entity_to_join, aliased_link):
+    def _join_outputs(self, joined_entity, entity_to_join, aliased_edge):
         """
         :param joined_entity: The (aliased) ORMclass that is an input
         :param entity_to_join: The (aliased) ORMClass that is an output.
@@ -1227,14 +1219,14 @@ class AbstractQueryBuilder(object):
                 'output_of'
             )
         self._query = self._query.join(
-                aliased_link,
-                aliased_link.input_id == joined_entity.id
+                aliased_edge,
+                aliased_edge.input_id == joined_entity.id
         ).join(
                 entity_to_join,
-                aliased_link.output_id == entity_to_join.id
+                aliased_edge.output_id == entity_to_join.id
         )
 
-    def _join_inputs(self, joined_entity, entity_to_join, aliased_link):
+    def _join_inputs(self, joined_entity, entity_to_join, aliased_edge):
         """
         :param joined_entity: The (aliased) ORMclass that is an output
         :param entity_to_join: The (aliased) ORMClass that is an input.
@@ -1249,17 +1241,18 @@ class AbstractQueryBuilder(object):
                 'input_of'
             )
         self._query = self._query.join(
-                aliased_link,
-                aliased_link.output_id == joined_entity.id
+                aliased_edge,
+                aliased_edge.output_id == joined_entity.id
         ).join(
                 entity_to_join,
-                aliased_link.input_id == entity_to_join.id
+                aliased_edge.input_id == entity_to_join.id
         )
 
-    def _join_descendants(self, joined_entity, entity_to_join):
+    def _join_descendants(self, joined_entity, entity_to_join, aliased_path):
         """
         :param joined_entity: The (aliased) ORMclass that is an ancestor
         :param entity_to_join: The (aliased) ORMClass that is a descendant.
+        :param aliased_path: An aliased instance of DbPath
 
         **joined_entity** and **entity_to_join** are
         joined via the DbPath table.
@@ -1271,7 +1264,7 @@ class AbstractQueryBuilder(object):
                 (entity_to_join, self.Node),
                 'descendant_of'
             )
-        aliased_path = aliased(self._path)
+        
         self._query = self._query.join(
                 aliased_path,
                 aliased_path.parent_id == joined_entity.id
@@ -1280,10 +1273,11 @@ class AbstractQueryBuilder(object):
                 aliased_path.child_id == entity_to_join.id
         )
 
-    def _join_ancestors(self, joined_entity, entity_to_join):
+    def _join_ancestors(self, joined_entity, entity_to_join, aliased_path):
         """
         :param joined_entity: The (aliased) ORMclass that is a descendant
         :param entity_to_join: The (aliased) ORMClass that is an ancestor.
+        :param aliased_path: An aliased instance of DbPath
 
         **joined_entity** and **entity_to_join**
         are joined via the DbPath table.
@@ -1295,7 +1289,7 @@ class AbstractQueryBuilder(object):
                 (entity_to_join, self.Node),
                 'ancestor_of'
             )
-        aliased_path = aliased(self._path)
+        #~ aliased_path = aliased(self.Path)
         self._query = self._query.join(
                 aliased_path,
                 aliased_path.child_id == joined_entity.id
@@ -1352,7 +1346,7 @@ class AbstractQueryBuilder(object):
                 entity_to_join,
                 entity_to_join.id == aliased_group_nodes.c.dbgroup_id
         )
-    def _join_user_of(self, joined_entity, entity_to_join):
+    def _join_creator_of(self, joined_entity, entity_to_join):
         """
         :param joined_entity: the aliased node
         :param entity_to_join: the aliased user to join to that node
@@ -1360,13 +1354,13 @@ class AbstractQueryBuilder(object):
         self._check_dbentities(
                 (joined_entity, self.Node),
                 (entity_to_join, self.User),
-                'user_of'
+                'creator_of'
             )
         self._query = self._query.join(
                 entity_to_join,
                 entity_to_join.id == joined_entity.user_id
             )
-    def _join_used_by(self, joined_entity, entity_to_join):
+    def _join_created_by(self, joined_entity, entity_to_join):
         """
         :param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
@@ -1374,7 +1368,7 @@ class AbstractQueryBuilder(object):
         self._check_dbentities(
                 (joined_entity, self.User),
                 (entity_to_join, self.Node),
-                'used_by'
+                'created_by'
             )
         self._query = self._query.join(
                 entity_to_join,
@@ -1390,7 +1384,7 @@ class AbstractQueryBuilder(object):
         self._check_dbentities(
                 (joined_entity, self.Computer),
                 (entity_to_join, self.Node),
-                'runs_on'
+                'has_computer'
             )
         self._query = self._query.join(
                 entity_to_join,
@@ -1425,10 +1419,10 @@ class AbstractQueryBuilder(object):
                 'direction' : None,
                 'group_of'  : self._join_groups,
                 'member_of' : self._join_group_members,
-                'runs_on'   : self._join_to_computer_used,
+                'has_computer':self._join_to_computer_used,
                 'computer_of':self._join_computer,
-                'used_by'   : self._join_used_by,
-                'user_of'   : self._join_user_of,
+                'created_by' : self._join_created_by,
+                'creator_of' : self._join_creator_of,
         }
         return d
     def _get_connecting_node(
@@ -1450,10 +1444,10 @@ class AbstractQueryBuilder(object):
         *   *direction*
         *   *group_of*
         *   *member_of*
-        *   *runs_on*
+        *   *has_computer*
         *   *computer_of*
-        *   *used_by*
-        *   *user_of*
+        *   *created_by*
+        *   *creator_of*
 
         Future:
 
@@ -1609,12 +1603,12 @@ class AbstractQueryBuilder(object):
             toconnectwith, connection_func = self._get_connecting_node(
                     index, **verticespec
                 )
-            link_tag = verticespec.get('link_tag', None)
-            if link_tag is None:
+            edge_tag = verticespec.get('edge_tag', None)
+            if edge_tag is None:
                 connection_func(toconnectwith, alias)
             else:
-                link = self._tag_to_alias_map[link_tag]
-                connection_func(toconnectwith, alias, link)
+                aliased_edge = self._tag_to_alias_map[edge_tag]
+                connection_func(toconnectwith, alias, aliased_edge)
 
         ######################### FILTERS ##############################
 
@@ -1658,9 +1652,9 @@ class AbstractQueryBuilder(object):
         ##################### LINK-PROJECTIONS #########################
 
         for vertice in self._path:
-            link_tag = vertice.get('link_tag', None)
-            if link_tag is not None:
-                self._build_projections(link_tag)
+            edge_tag = vertice.get('edge_tag', None)
+            if edge_tag is not None:
+                self._build_projections(edge_tag)
 
             #~ linktag = vertice.get('reverse_linktag', None)
             #~ if linktag is not None:
@@ -1762,7 +1756,21 @@ class AbstractQueryBuilder(object):
 
 
     def get_aliases(self):
+        """
+        :returns: the list of aliases
+        """
         return self._aliased_path
+
+    def get_alias(self, tag):
+        """
+        In order to continue a query by the user, this utility function
+        returns the aliased ormclasses.
+
+        :param tag: The tag for a vertice in the path
+        :returns: the alias given for that vertice
+        """
+        tag = self._get_tag_from_specification(tag)
+        return self._tag_to_alias_map[tag]
 
 
 
@@ -1776,10 +1784,10 @@ class AbstractQueryBuilder(object):
 
         """
         # Need_to_build is True by default.
-        # It describes whether the current query 
+        # It describes whether the current query
         # which is an attribute _query of this instance is still valid
 
-        # The queryhelp_hash is used to determine 
+        # The queryhelp_hash is used to determine
         # whether the query is still valid
 
         queryhelp_hash = make_hash(self.get_json_compatible_queryhelp())
@@ -1806,6 +1814,35 @@ class AbstractQueryBuilder(object):
                 query = self._build()
                 self._hash = queryhelp_hash
         return query
+
+    def distinct(self):
+        """
+        Asks for distinct rows.
+        Does not execute the query!
+        If you want a distinct query::
+
+            qb = QueryBuilder(**queryhelp)
+            qb.distinct().all() # or
+            qb.distinct().get_results_dict()
+
+        :returns: self
+        """
+        self._query = self.get_query().distinct()
+        return self
+
+
+    def _yield_per(self, batch_size):
+        """
+        :param count: Number of rows to yield per step
+
+        Yields *count* rows at a time
+
+        :returns: a generator
+        """
+        return self.get_query().yield_per(batch_size)
+
+    def _all(self):
+        return self.get_query().all()
 
     def _first(self):
         """
@@ -1848,31 +1885,6 @@ class AbstractQueryBuilder(object):
         return returnval
 
 
-    def distinct(self):
-        """
-        Asks for distinct rows.
-        Does not execute the query!
-        If you want a distinct query::
-
-            qb = QueryBuilder(**queryhelp)
-            qb.distinct().all() # or
-            qb.distinct().get_results_dict()
-
-        :returns: self
-        """
-        self._query = self.get_query().distinct()
-        return self
-
-
-    def yield_per(self, count):
-        """
-        :param count: Number of rows to yield per step
-
-        Yields *count* rows at a time
-
-        :returns: a generator
-        """
-        return self.get_query().yield_per(count)
 
     def count(self):
         """
@@ -1883,19 +1895,25 @@ class AbstractQueryBuilder(object):
         que = self.get_query()
         return que.count()
 
-    def all(self):
+    def iterall(self, batch_size=100):
         """
-        Executes the full query.
-        The order of the rows is as returned by the backend,
-        the order inside each row is given by the order of the path
-        and the order of the projections for each vertice in the path.
+        Same as :func:`QueryBuilderBase.all`, but returns a generator.
+        Be aware that this is only safe if no commit will take place during this
+        transaction. You might also want to read the SQLAlchemy documentation on
+        http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
 
-        :returns: a generator for all projected entities (each being a list).
+
+        :param int batch_size: 
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+
+        :returns: a generator of lists
         """
 
-        results = self.yield_per(100)
-
-
+        if batch_size is not None:
+            results = self._yield_per(batch_size)
+        else:
+            results = self._all()
         try:
             for resultrow in results:
                 yield [
@@ -1914,21 +1932,98 @@ class AbstractQueryBuilder(object):
             for rowitem in results:
                 yield [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], rowitem)]
 
-    def get_results_dict(self):
+    def all(self, batch_size=None):
         """
-        Calls :func:`QueryBuilderBase.yield_per`.
-        Loops through the results and constructs for each row a dictionary
-        of results.
-        In this dictionary (one for each row) the key is the unique tag in the path
-        and the value is another dictionary of key-value pairs where the key is the entity
-        (column) and the value the database entry.
-        Instances of an ORMclass are replaced with Aiidaclasses invoking
-        the DbNode.get_aiida_class method (key is '*').
+        Executes the full query with the order of the rows as returned by the backend.
+        the order inside each row is given by the order of the vertices in the path
+        and the order of the projections for each vertice in the path.
 
-        :returns: a generator returning the results as an iterable of dictionaries.
+        :param int batch_size: 
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+            Leave the default (*None*) if speed is not critical or if you don't know
+            what you're doing!
+
+        :returns: a list of lists of all projected entities.
         """
 
-        results = self.yield_per(100)
+        return list(self.iterall(batch_size=batch_size))
+
+
+    def dict(self, batch_size=None):
+        """
+        Executes the full query with the order of the rows as returned by the backend.
+        the order inside each row is given by the order of the vertices in the path
+        and the order of the projections for each vertice in the path.
+
+        :param int batch_size: 
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+            Leave the default (*None*) if speed is not critical or if you don't know
+            what you're doing!
+
+        :returns: 
+            a list of dictionaries of all projected entities.
+            Each dictionary consists of key value pairs, where the key is the tag
+            of the vertice and the value a dictionary of key-value pairs where key
+            is the entity description (a column name or attribute path)
+            and the value the value in the DB.
+        
+        Usage::
+
+            qb = QueryBuilder()
+            qb.append(
+                StructureData,
+                tag='structure',
+                filters={'uuid':{'==':myuuid}},
+            )
+            qb.append(
+                Node,
+                descendant_of='structure',
+                project=['type', 'id'],  # returns type (string) and id (string)
+                tag='descendant'
+            )
+            
+            # Return the dictionaries:
+            print "qb.iterdict()"
+            for d in qb.iterdict():
+                print '>>>', d
+
+        results in the following output::
+
+            qb.iterdict()
+            >>> {'descendant': {
+                    'type': u'calculation.job.quantumespresso.pw.PwCalculation.',
+                    'id': 7716}
+                }
+            >>> {'descendant': {
+                    'type': u'data.remote.RemoteData.',
+                    'id': 8510}
+                }
+
+        """
+        return list(self.iterdict(batch_size=batch_size))
+
+
+    def iterdict(self, batch_size=100):
+        """
+        Same as :func:`QueryBuilderBase.dict`, but returns a generator.
+        Be aware that this is only safe if no commit will take place during this
+        transaction. You might also want to read the SQLAlchemy documentation on
+        http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
+
+
+        :param int batch_size: 
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+
+        :returns: a generator of dictionaries
+        """
+
+        if batch_size is not None:
+            results = self._yield_per(batch_size=batch_size)
+        else:
+            results = self._all()
         try:
             for this_result in results:
                 yield {
@@ -1959,6 +2054,20 @@ class AbstractQueryBuilder(object):
                     }
                     for tag, projected_entities_dict in self.tag_to_projected_entity_dict.items()
                 }
+
+    def get_results_dict(self):
+        """
+        Deprecated, use :func:`QueryBuilderBase.dict` or
+        :func:`QueryBuilderBase.iterdict` instead
+        """
+        warnings.warn(
+                "get_results_dict will be deprecated in the future"
+                "User iterdict for generator or dict for list",
+                DeprecationWarning
+            )
+        
+        return self.iterdict()
+
     @abstractmethod
     def _get_aiida_res(self, key, res):
         """

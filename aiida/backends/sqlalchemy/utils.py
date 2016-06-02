@@ -110,6 +110,7 @@ _aiida_autouser_cache = None
 
 
 def get_automatic_user():
+    from aiida.common.utils import get_configured_user_email
     global _aiida_autouser_cache
 
     if _aiida_autouser_cache is not None:

@@ -67,6 +67,8 @@ Inputs
     *  **'ALSO_BANDS'**: boolean. If True, retrieves the band structure (default: False)
     *  **'FORCE_KPOINTS_LIST'**: If it is set to True and the KpointsData have a mesh set, it will pass the kpoints to
        QE as if they were a list of coordinates, generating a list of points. (at the moment used for wannier90)
+    *  **'ENVIRON'**: dictionary. If present a separate input file for the ENVIRON module is created with the dictionary
+       converted to a namelist. A proper flag is added to the CMDLINE to instruct QE to use ENVIRON, if not already present.
     
 * **parent_folder**, class :py:class:`RemoteData <aiida.orm.data.parameter.ParameterData>` (optional)
   If specified, the scratch folder coming from a previous QE calculation is 

@@ -790,8 +790,8 @@ class StructureData(Data):
         self.pbc = [True, True, True]
         self.clear_kinds()
         for site in struct.sites:
-            self.append_atom(symbols=[x[0].symbol for x in site.items()],
-                             weights=[x[1] for x in site.items()],
+            self.append_atom(symbols=[x[0].symbol for x in site.species_and_occu.items()],
+                             weights=[x[1] for x in site.species_and_occu.items()],
                              position=site.coords.tolist())
 
     def _validate(self):
@@ -1038,6 +1038,27 @@ class StructureData(Data):
         :return: a list of strings
         """
         return [this_site.kind_name for this_site in self.sites]
+
+
+    def get_composition(self):
+        """
+        Returns the chemical composition of this structure as a dictionary,
+        where each key is the kind symbol (e.g. H, Li, Ba),
+        and each value is the number of occurences of that element in this
+        structure. For BaZrO3 it would return {'Ba':1, 'Zr':1, 'O':3}.
+        No reduction with smallest common divisor!
+
+        :returns: a dictionary with the composition
+        """
+        symbols_list = [self.get_kind(s.kind_name).get_symbols_string()
+                       for s in self.sites]
+        composition = {
+                symbol: symbols_list.count(symbol)
+                for symbol
+                in set(symbols_list)
+            }
+        return composition
+
 
     def get_ase(self):
         """

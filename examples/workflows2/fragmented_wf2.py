@@ -11,7 +11,7 @@ from aiida.workflows2.fragmented_wf import FragmentedWorkfunction
 class W(FragmentedWorkfunction):
     @classmethod
     def _define(cls, spec):
-        spec.outline((
+        spec.outline(
             cls.start,
             cls.s2,
             if_(cls.cond1)(
@@ -28,7 +28,7 @@ class W(FragmentedWorkfunction):
                 cls.s8
             ),
             cls.s9
-        ))
+        )
 
 
     def start(self, ctx):

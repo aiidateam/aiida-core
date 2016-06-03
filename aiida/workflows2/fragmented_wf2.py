@@ -11,8 +11,21 @@ __version__ = "0.5.0"
 __contributors__ = "The AiiDA team"
 
 
+class _FragmentedWorkfunction2Spec(ProcessSpec):
+    def __init__(self):
+        super(_FragmentedWorkfunction2Spec, self).__init__()
+        self._outline = None
+
+    def outline(self, *commands):
+        self._outline = commands \
+            if isinstance(commands, _Step) else _Block(commands)
+
+    def get_outline(self):
+        return self._outline
+
+
 class FragmentedWorkfunction2(Process):
-    _spec_type = _FragmentedWorkfunctionSpec
+    _spec_type = _FragmentedWorkfunction2Spec
 
     @staticmethod
     def _define(spec):
@@ -49,52 +62,63 @@ class FragmentedWorkfunction2(Process):
             for k in self._content:
                 yield k
 
+        def get(self, key, default=None):
+            return self._content.get(key, default)
+
+        def setdefault(self, key, default=None):
+            return self._content.setdefault(key, default)
+
     def __init__(self, attributes=None):
         super(FragmentedWorkfunction2, self).__init__(attributes)
-        self._outline = self.spec().get_outline()
-        self._scope = None
+        self._context = None
+        self._stepper = None
 
     def save_instance_state(self, bundle):
         super(FragmentedWorkfunction2, self).save_instance_state(bundle)
-        for key, val in self._scope:
+        for key, val in self._context:
             bundle[key] = val
 
+    @property
+    def context(self):
+        return self._context
+
     def _run(self, **kwargs):
-        self._outline.reset()
+        self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
     def _do_step(self, wait_on=None):
-        retval, finished = self._outline.step(self._scope)
+        finished, retval = self._stepper.step()
         if not finished:
-            if isinstance(retval, _ResultToScope):
-                return _ResultToScope(self._do_step.__name__, **retval.to_assign)
+            if isinstance(retval, _ResultToContext):
+                return _ResultToContext(self._do_step.__name__, **retval.to_assign)
             else:
                 return Checkpoint(self._do_step.__name__)
 
-    ## Internal messages ################################
+    # Internal messages #################################
     def on_start(self, inputs, exec_engine):
         super(FragmentedWorkfunction2, self).on_start(inputs, exec_engine)
-        self._scope = self.Context()
+        self._context = self.Context()
 
     def on_finalise(self):
+        super(FragmentedWorkfunction2, self).on_finalise()
         self._last_step = None
-        #####################################################
+    #####################################################
 
 
-class ResultToScope(object):
+class ResultToContext(object):
     def __init__(self, **kwargs):
         # TODO: Check all values of kwargs are futures
         self.to_assign = kwargs
 
 
-class _ResultToScope(WaitOn):
+class _ResultToContext(WaitOn):
     @classmethod
     def create_from(cls, bundle, exec_engine):
         # TODO: Load the futures
-        return _ResultToScope(bundle[cls.CALLBACK_NAME])
+        return _ResultToContext(bundle[cls.CALLBACK_NAME])
 
     def __init__(self, callback_name, **kwargs):
-        super(_ResultToScope, self).__init__(callback_name)
+        super(_ResultToContext, self).__init__(callback_name)
         # TODO: Check all values of kwargs are futures
         self._to_assign = kwargs
 
@@ -105,25 +129,21 @@ class _ResultToScope(WaitOn):
         return True
 
     def save_instance_state(self, bundle, exec_engine):
-        super(_ResultToScope, self).save_instance_state(bundle, exec_engine)
+        super(_ResultToContext, self).save_instance_state(bundle, exec_engine)
 
-    def assign(self, scope):
+    def assign(self, context):
         for name, fut in self._to_assign.iteritems():
-            setattr(scope, name, fut.result())
+            setattr(context, name, fut.result())
 
 
 class Stepper(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, description):
-        self._description = description
+    def __init__(self, workflow):
+        self._workflow = workflow
 
     @abstractmethod
-    def step(self, local):
-        pass
-
-    @abstractmethod
-    def reset(self):
+    def step(self):
         pass
 
 
@@ -131,140 +151,184 @@ class _Step(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def step(self, local):
-        pass
-
-    @abstractmethod
-    def reset(self):
+    def create_stepper(self, workflow):
         pass
 
 
-class _SingleCommand(_Step):
-    def __init__(self, command):
-        self.command = command
+class _Block(_Step, tuple):
+    class Stepper(Stepper):
+        def __init__(self, workflow, commands):
+            super(_Block.Stepper, self).__init__(workflow)
+            self._commands = commands
+            self._current_stepper = None
+            self._pos = 0
 
-    class _Stepper(Stepper):
-        def __init__(self, description):
-            super(_SingleCommand._Stepper, self).__init__(description)
+        def step(self):
+            assert(self._pos != len(self._commands),
+                   "Can't call step after the block is finished")
 
-        def step(self, local):
-            return self._description.command(local), True
+            command = self._commands[self._pos]
 
-        def reset(self):
-            pass  # Nothing to do
+            if self._current_stepper is None and isinstance(command, _Step):
+                self._current_stepper = command.create_stepper(self._workflow)
+
+            # If there is a stepper being used then call that, otherwise just
+            # call the command (function) directly
+            if self._current_stepper is not None:
+                finished, retval = self._current_stepper.step()
+            else:
+                finished, retval = True, command(self._workflow,
+                                                 self._workflow.context)
+
+            if finished:
+                self._pos += 1
+                self._current_stepper = None
+
+            return self._pos == len(self._commands), retval
+
+    def create_stepper(self, workflow):
+        return self.Stepper(workflow, self)
 
 
-class _Scope(_Step):
-    @staticmethod
-    def make_step(command):
-        if isinstance(command, _Step):
-            return command
-        else:
-            # Assume it's a direct function
-            return _SingleCommand(command)
+class _Conditional(object):
+    """
+    Object that represents some condition with the corresponding body to be
+    executed if the condition is met e.g.:
+    if(condition):
+      body
 
-    def __init__(self, *commands):
-        self._commands = [_Scope.make_step(c) for c in commands]
-        self._current_pos = 0
+    or
 
-    def step(self, local):
-        retval, finished = self._commands[self._current_pos].step(local)
-        if finished:
-            self._current_pos += 1
-        return retval, self._current_pos == len(self._commands)
+    while(condition):
+      body
+    """
+    def __init__(self, parent, condition):
+        self._parent = parent
+        self._condition = condition
+        self._body = None
 
-    def reset(self):
-        self._current_pos = 0
+    @property
+    def body(self):
+        return self._body
+
+    def is_true(self, workflow):
+        return self._condition(workflow, workflow.context)
+
+    def __call__(self, *commands):
+        assert self._body is None
+        self._body = _Block(commands)
+        return self._parent
 
 
 class _If(_Step):
+    class Stepper(Stepper):
+        def __init__(self, workflow, if_spec):
+            super(_If.Stepper, self).__init__(workflow)
+            self._if_spec = if_spec
+            self._pos = 0
+            self._current_stepper = None
+
+        def step(self):
+            if self._current_stepper is None:
+                stepper = self._get_next_stepper()
+                # If we can't get a stepper then no conditions match, return
+                if stepper is None:
+                    return True, None
+                self._current_stepper = stepper
+
+            finished, retval = self._current_stepper.step()
+            if finished:
+                self._current_stepper = None
+            else:
+                self._pos += 1
+
+            return finished, retval
+
+        def _get_next_stepper(self):
+            # Check the conditions until we find that that is true
+            for conditional in self._if_spec.conditionals[self._pos:]:
+                if conditional.is_true(self._workflow):
+                    return conditional.body.create_stepper(self._workflow)
+            return None
+
     def __init__(self, condition):
         super(_If, self).__init__()
         self._ifs = [_Conditional(self, condition)]
-        self._else = None
-        self._current_block = None
+        self._sealed = False
+
+    def __call__(self, *commands):
+        """
+        This is how the commands for the if(...) body are set
+        :param commands: The commands to run on the original if.
+        :return: This instance.
+        """
+        self._ifs[0](*commands)
+        return self
 
     def elif_(self, condition):
         self._ifs.append(_Conditional(self, condition))
         return self._ifs[-1]
 
     def else_(self, *commands):
-        self._else = _Scope(*commands)
+        assert not self._sealed
+        cond = _Conditional(self, lambda x, y: True)
+        cond(*commands)
+        self._ifs.append(cond)
+        # Can't do any more after the else
+        self._sealed = True
         return self
 
-    def step(self, local):
-        if self._current_block is None:
-            # Assume it's the else block unless we match an if that matches
-            self._current_block = self._else
-
-            # We need to determine which (if any) condition is met
-            for conditional in self._ifs:
-                if conditional.is_true(local):
-                    self._current_block = conditional
-                    break
-
-        if self._current_block is None:
-            return None, True
-        else:
-            return self._current_block.step
-
-    def reset(self):
-        self._current_block = None
-
-    def __call__(self, *commands):
-        self._ifs[0](*commands)
-        return self
-
-
-class _Conditional(_Step):
-    def __init__(self, parent, condition):
-        self._parent = parent
-        self._condition = condition
-        self._scope = None
+    def create_stepper(self, workflow):
+        return self.Stepper(workflow, self)
 
     @property
-    def block(self):
-        return self._scope
-
-    def is_true(self, local):
-        return self._condition(local)
-
-    def step(self, local):
-        return self._scope.step(local)
-
-    def reset(self):
-        self._scope.reset()
-
-    def __call__(self, *commands):
-        assert self._scope is None
-        self._scope = _Scope(*commands)
-        return self._parent
+    def conditionals(self):
+        return self._ifs
 
 
-class _While(_Step):
-    def __init__(self, condition):
-        self._conditional = _Conditional(self, condition)
-        self._check_condition = True
-
-    def step(self, local):
-        if self._check_condition and not self._conditional.is_true(local):
-            return None, True  # We're done
-
-        retval, finished = self._conditional.step(local)
-        if finished:
-            # Check the condition next time around
+class _While(_Conditional, _Step):
+    class Stepper(Stepper):
+        def __init__(self, workflow, while_spec):
+            super(_While.Stepper, self).__init__(workflow)
+            self._spec = while_spec
+            self._stepper = None
             self._check_condition = True
-            self._conditional.reset()
+            self._finished = False
 
-        return retval, finished
+        def step(self):
+            assert (not self._finished,
+                    "Can't call step after the loop has finished")
 
-    def reset(self):
-        self._check_condition = False
-        self._conditional.reset()
+            # Do we need to check the condition?
+            if self._check_condition is True:
+                self._check_condition = False
+                # Should we go into the loop body?
+                if self._spec.is_true(self._workflow):
+                    self._stepper = self._spec.body.create_stepper(self._workflow)
+                else:  # Nope...
+                    self._finished = True
+                    return True, None
 
-    def __call__(self, *commands):
-        self._conditional(commands)
-        return self
+            finished, retval = self._stepper.step()
+            if finished:
+                self._check_condition = True
+                self._stepper = None
+
+            # Are we finished looping?
+            return self._finished, retval
+
+        @property
+        def _body_stepper(self):
+            if self._stepper is None:
+                self._stepper =\
+                    self._spec.body.create_stepper(self._workflow)
+            return self._stepper
+
+    def __init__(self, condition):
+        super(_While, self).__init__(self, condition)
+
+    def create_stepper(self, workflow):
+        return self.Stepper(workflow, self)
 
 
 def if_(condition):
@@ -273,15 +337,3 @@ def if_(condition):
 
 def while_(condition):
     return _While(condition)
-
-
-class _FragmentedWorkfunctionSpec(ProcessSpec):
-    def __init__(self):
-        super(_FragmentedWorkfunctionSpec, self).__init__()
-        self._outline = None
-
-    def outline(self, *commands):
-        self._outline = _Scope(*commands)
-
-    def get_outline(self):
-        return self._outline

@@ -20,11 +20,11 @@ class DbSetting(Base):
     val = Column(JSONB, default={})
 
     # I also add a description field for the variables
-    description = Column(String(255), default='', nullable=True)
+    description = Column(String(255), default='', nullable=False)
     time = Column(DateTime(timezone=True), default=timezone.utc)
 
     def __str__(self):
-        return "'{}'={}".format(self.key, self.get_value())
+        return "'{}'={}".format(self.key, self.getvalue())
     
     @classmethod
     def set_value(cls, key, value, with_transaction=True,
@@ -35,9 +35,9 @@ class DbSetting(Base):
         if setting is not None:
             if stop_if_existing:
                 return
-            setting.delete()
+        else:
+            setting = cls()
 
-        setting = cls()
         setting.key = key
         setting.val = value
         setting.time = timezone.datetime.now(tz=UTC)
@@ -46,7 +46,7 @@ class DbSetting(Base):
         flag_modified(setting, "val")
         setting.save()
 
-    def get_value(self):
+    def getvalue(self):
         """
         This can be called on a given row and will get the corresponding value.
         """

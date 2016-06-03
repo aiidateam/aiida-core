@@ -76,7 +76,7 @@ def load_dbenv(process=None, profile=None, connection=None):
     """
     _load_dbenv_noschemacheck(process=process, profile=profile)
     # Check schema version and the existence of the needed tables
-    check_schema_version()
+    # check_schema_version()
 
 
 def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):

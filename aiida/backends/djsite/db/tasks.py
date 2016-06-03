@@ -71,7 +71,7 @@ def get_most_recent_daemon_timestamp():
     daemon_timestamps = DbSetting.objects.filter(key__startswith='daemon|task_')
     timestamps = []
     for timestamp_setting in daemon_timestamps:
-        timestamp = timestamp_setting.get_value()
+        timestamp = timestamp_setting.getvalue()
         if isinstance(timestamp, datetime.datetime):
             timestamps.append(timestamp)
 

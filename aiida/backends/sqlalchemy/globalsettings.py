@@ -44,7 +44,7 @@ def get_global_setting(key):
     :raise KeyError: if the setting does not exist in the DB
     """
     try:
-        return session.query(DbSetting).filter_by(key=key).one().get_value()
+        return session.query(DbSetting).filter_by(key=key).one().getvalue()
     except NoResultFound:
         raise KeyError("No global setting with key={}".format(key))
 

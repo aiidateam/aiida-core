@@ -431,7 +431,7 @@ class Node(AbstractNode):
         else:
             extraslist = DbExtra.list_all_node_elements(self.dbnode)
             for e in extraslist:
-                yield (e.key, e.get_value())
+                yield (e.key, e.getvalue())
 
     def iterattrs(self, also_updatable=True):
         from aiida.backends.djsite.db.models import DbAttribute

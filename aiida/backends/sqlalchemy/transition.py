@@ -14,7 +14,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.sql.expression import func
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text, Float
 
-from aiida import load_dbenv, is_dbenv_loaded
+from aiida import is_dbenv_loaded
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.utils import query_yes_no
@@ -134,7 +134,7 @@ def transition_extras(profile=None, group_size=1000, delete_table=False):
     Migrate the DbExtra table into the extras column for db_dbnode.
     """
     if not is_dbenv_loaded():
-        load_dbenv(profile=profile)
+        transition_load_db_env(profile=profile)
 
     class DbExtra(Base):
         """
@@ -222,7 +222,7 @@ def transition_attributes(profile=None, group_size=1000, debug=False,
     Migrate the DbAttribute table into the attributes column of db_dbnode.
     """
     if not is_dbenv_loaded():
-        load_dbenv(profile=profile)
+        transition_load_db_env(profile=profile)
 
     class DbAttribute(Base):
         """
@@ -314,7 +314,7 @@ def transition_settings(profile=None):
     Migrate the DbAttribute table into the attributes column of db_dbnode.
     """
     if not is_dbenv_loaded():
-        load_dbenv(profile=profile)
+        transition_load_db_env(profile=profile)
 
     from aiida.utils import timezone
 
@@ -399,7 +399,7 @@ def transition_json_column(profile=None):
     print("\nChanging various columns to JSON format.")
 
     if not is_dbenv_loaded():
-        load_dbenv(profile=profile)
+        transition_load_db_env(profile=profile)
 
     table_col = [
         ('db_dbauthinfo', 'metadata'),
@@ -451,6 +451,20 @@ def create_gin_index():
                                 "db_dbnode USING gin(attributes)")
     else:
         print("db_dbnode_attributes_idx on db_node already exists.")
+
+
+def transition_load_db_env(process=None, profile=None, *args, **kwargs):
+    from aiida.backends.profile import load_profile
+    from aiida.backends import settings
+    from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck
+
+    settings.LOAD_DBENV_CALLED = True
+
+    # This is going to set global variables in settings, including
+    # settings.BACKEND
+    load_profile(process=process, profile=profile)
+
+    _load_dbenv_noschemacheck(process=process, profile=profile)
 
 
 def transition(profile=None, group_size=1000, delete_table=False):

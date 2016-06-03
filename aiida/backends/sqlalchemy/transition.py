@@ -16,8 +16,11 @@ from sqlalchemy.types import Integer, String, Boolean, DateTime, Text, Float
 
 from aiida import is_dbenv_loaded
 from aiida.backends import sqlalchemy as sa
+from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.sqlalchemy.models.base import Base
+from aiida.backends.utils import set_backend_type
 from aiida.common.utils import query_yes_no
+from aiida.backends.utils import set_db_schema_version
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -330,7 +333,7 @@ def transition_settings(profile=None):
         ival = Column(Integer, default=None, nullable=True)
         bval = Column(Boolean, default=None, nullable=True)
         dval = Column(DateTime(timezone=True), default=None, nullable=True)
-        val = Column(JSONB, default={}, nullable=True)
+        val = Column(JSONB, default={})
 
         description = Column(String(255), default='', nullable=True)
         time = Column(DateTime(timezone=True), default=timezone.now)
@@ -467,6 +470,30 @@ def transition_load_db_env(process=None, profile=None, *args, **kwargs):
     _load_dbenv_noschemacheck(process=process, profile=profile)
 
 
+def set_correct_schema_version_and_backend():
+    from aiida.utils import timezone
+    # Setting the correct backend and schema version
+    SQLA_SCHEMA_VERSION = 0.1
+    with sa.session.begin(subtransactions=True):
+        # Setting manually the correct schema version
+        sa.session.execute(
+            'DELETE FROM db_dbsetting WHERE key=\'db|schemaversion\'')
+        sa.session.execute(
+            'INSERT INTO db_dbsetting (key, val, description, time) values '
+            '(\'db|schemaversion\', \'{}\', '
+            '\'The version of the schema used in this database.\', \'{}\')'
+                .format(SQLA_SCHEMA_VERSION, timezone.datetime.now()))
+
+        # Setting the correct backend
+        sa.session.execute('DELETE FROM db_dbsetting WHERE key=\'db|backend\'')
+        sa.session.execute(
+            'INSERT INTO db_dbsetting (key, val, description, time) values '
+            '(\'db|backend\', \'"{}"\', '
+            '\'The backend used to communicate with database.\', \'{}\')'
+                .format(BACKEND_SQLA, timezone.datetime.now()))
+    sa.session.commit()
+
+
 def transition(profile=None, group_size=1000, delete_table=False):
     """
     Migrate the attributes, extra, and some other columns to use JSONMigrate
@@ -492,5 +519,7 @@ def transition(profile=None, group_size=1000, delete_table=False):
     transition_settings(profile=profile)
 
     transition_json_column(profile=profile)
+
+    set_correct_schema_version_and_backend()
 
     print("\nMigration finished")

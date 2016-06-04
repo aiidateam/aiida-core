@@ -43,7 +43,7 @@ class FileProcessRecord(plum.persistence.file_process_record.FileProcessRecord,
     def inputs(self):
         if not self._input_nodes:
             # Translate the UUIDs back into a actual data nodes
-            self._input_nodes = {label: load_node(uuid) for label, uuid in self._inputs.iteritems()}
+            self._input_nodes = {label: load_node(uuid) for label, uuid in self.inputs.iteritems()}
         return self._input_nodes
 
     def create_child(self, process, inputs):

@@ -41,7 +41,7 @@ s2
 """
 
     def s1(self, ctx):
-        p2 = asyncd(F2, a=self._inputs['inp'])
+        p2 = asyncd(F2, a=self.inputs['inp'])
         ctx.a = 1
         return ResultToScope(r2=p2)
 
@@ -50,7 +50,7 @@ s2
         print("r2={}".format(ctx.r2))
         r1 = ctx.r2.copy()
 
-        self._out("r1", r1['r2'])
+        self.out("r1", r1['r2'])
 
 
 class F2(FragmentedWorkfunction):
@@ -59,7 +59,7 @@ s1
 """
 
     def s1(self, ctx):
-        self._out("r2", self._inputs['a'])
+        self.out("r2", self.inputs['a'])
 
 
 class F1WaitForf2(FragmentedWorkfunction):
@@ -69,7 +69,7 @@ s2
 """
 
     def s1(self, ctx):
-        p2 = async(f2, a=self._inputs['inp'])
+        p2 = async(f2, a=self.inputs['inp'])
         ctx.a = 1
         ctx.r2 = p2.result()
 
@@ -78,7 +78,7 @@ s2
         print("r2={}".format(ctx.r2))
         r1 = ctx.r2.copy()
 
-        self._out("r1", r1['r2'])
+        self.out("r1", r1['r2'])
 
 
 if __name__ == '__main__':

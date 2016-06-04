@@ -58,7 +58,7 @@ class JobProcess(Process):
         assert not self._current_calc._is_running()
 
         for label, node in self._current_calc.get_outputs_dict():
-            self._out(label, node)
+            self.out(label, node)
 
     def _create_db_record(self):
         return self._CALC_CLASS()

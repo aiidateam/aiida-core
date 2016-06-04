@@ -69,14 +69,14 @@ class _Wf(FragmentedWorkfunction2):
 
     def isA(self, ctx):
         self._set_finished(inspect.stack()[0][3])
-        return self._inputs.value.value == 'A'
+        return self.inputs.value.value == 'A'
 
     def isB(self, ctx):
         self._set_finished(inspect.stack()[0][3])
-        return self._inputs.value.value == 'B'
+        return self.inputs.value.value == 'B'
 
     def ltN(self, ctx):
-        keep_looping = ctx.get('counter') < self._inputs.n.value
+        keep_looping = ctx.get('counter') < self.inputs.n.value
         if not keep_looping:
             self._set_finished(inspect.stack()[0][3])
         return keep_looping

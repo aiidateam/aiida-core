@@ -185,7 +185,7 @@ class Process(plum.process.Process):
     def _fast_forward(self):
         node = None  # Here we should find the old node
         for k, v in node.get_output_dict():
-            self._out(k, v)
+            self.out(k, v)
 
     @property
     def _current_calc(self):
@@ -292,7 +292,7 @@ class FunctionProcess(Process):
             args.append(kwargs.pop(arg))
         outs = self._func(*args)
         for name, value in outs.iteritems():
-            self._out(name, value)
+            self.out(name, value)
 
     def _create_db_record(self):
         calc = super(FunctionProcess, self)._create_db_record()

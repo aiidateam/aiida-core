@@ -174,7 +174,7 @@ def transition_extras(profile=None, group_size=1000, delete_table=False):
 
     if EXTRAS_COL_NAME in col_names:
         print("Column named {} found at the {} table of the database. I assume "
-              "that the migration of the attributes has already been done and "
+              "that the migration of the extras has already been done and "
               "therefore I proceed with the next migration step."
               .format(EXTRAS_COL_NAME, NODE_TABLE_NAME))
         return

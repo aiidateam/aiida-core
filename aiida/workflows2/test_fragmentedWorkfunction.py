@@ -12,11 +12,11 @@ if not is_dbenv_loaded():
 
 import inspect
 from unittest import TestCase
-from aiida.workflows2.fragmented_wf2 import *
+from aiida.workflows2.fragmented_wf import *
 from aiida.workflows2.db_types import to_db_type
 
 
-class _Wf(FragmentedWorkfunction2):
+class _Wf(FragmentedWorkfunction):
     @classmethod
     def _define(cls, spec):
         spec.input("value")
@@ -117,3 +117,18 @@ class TestFragmentedWorkfunction2(TestCase):
             if step not in ['isA', 's2', 'isB', 's3']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
+
+    def test_incorrect_outline(self):
+        class Wf(FragmentedWorkfunction):
+            @classmethod
+            def _define(cls, spec):
+                # Try defining an invalid outline
+                a = 5
+                spec.outline(a)
+
+        with self.assertRaises(ValueError):
+            Wf.spec()
+
+    def test_str(self):
+        # print(str(_Wf.spec().get_outline()))
+        self.assertIsInstance(str(_Wf.spec()), basestring)

@@ -14,7 +14,8 @@ if not is_dbenv_loaded():
 from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.async import async, asyncd
 from aiida.workflows2.wf import wf
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, ResultToScope
+from aiida.workflows2.fragmented_wf import FragmentedWorkfunction,\
+    ResultToContext
 
 
 @wf
@@ -35,15 +36,14 @@ def f2(a):
 
 
 class F1(FragmentedWorkfunction):
-    definition = """
-s1
-s2
-"""
+    @classmethod
+    def _define(cls, spec):
+        spec.outline(cls.s1, cls.s2)
 
     def s1(self, ctx):
         p2 = asyncd(F2, a=self.inputs['inp'])
         ctx.a = 1
-        return ResultToScope(r2=p2)
+        return ResultToContext(r2=p2)
 
     def s2(self, ctx):
         print("a={}".format(ctx.a))
@@ -54,19 +54,18 @@ s2
 
 
 class F2(FragmentedWorkfunction):
-    definition = """
-s1
-"""
+    @classmethod
+    def _define(cls, spec):
+        spec.outline(cls.s1)
 
     def s1(self, ctx):
         self.out("r2", self.inputs['a'])
 
 
 class F1WaitForf2(FragmentedWorkfunction):
-    definition = """
-s1
-s2
-"""
+    @classmethod
+    def _define(cls, spec):
+        spec.outline(cls.s1, cls.s2)
 
     def s1(self, ctx):
         p2 = async(f2, a=self.inputs['inp'])

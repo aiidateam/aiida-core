@@ -3,28 +3,31 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
+from aiida.workflows2.fragmented_wf import *
 from aiida.workflows2.process import run
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction
 
 
 class W(FragmentedWorkfunction):
-    definition = """
-s1
-s2
-if cond1:
-    s3
-    s4
-elif cond3:
-    s11 # <- For Mounet
-else:
-    s5
-    s6
-
-while cond2:
-    s7
-    s8
-s9
-"""
+    @classmethod
+    def _define(cls, spec):
+        spec.outline(
+            cls.start,
+            cls.s2,
+            if_(cls.cond1)(
+                cls.s3,
+                cls.s4,
+            ).elif_(cls.cond3)(
+                cls.s11
+            ).else_(
+                cls.s5,
+                cls.s6
+            ),
+            while_(cls.cond2)(
+                cls.s7,
+                cls.s8
+            ),
+            cls.s9
+        )
 
 
     def start(self, ctx):

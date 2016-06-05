@@ -37,7 +37,7 @@ class JobProcess(Process):
                                valid_type=v['valid_types'], required=False)
 
             # Outputs
-            spec.has_dynamic_output()
+            spec.dynamic_output()
 
         return type(calc_class.__name__, (JobProcess,),
                     {'_define': staticmethod(_define),

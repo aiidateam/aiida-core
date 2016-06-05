@@ -3,11 +3,13 @@ CP
 
 Description
 -----------
-Use the plugin to support inputs of Quantum Espresso pw.x executable.
+Use the plugin to support inputs of Quantum Espresso cp.x executable.
+Note that most of the options are the same of the pw.x plugin, so refer to 
+:doc:`that page <pw>` for more details.
 
 Supported codes
 ---------------
-* tested from pw.x v5.0 onwards. Back compatibility is not guaranteed (although
+* tested from cp.x v5.0 onwards. Back compatibility is not guaranteed (although
   versions 4.3x might work most of the times).
 
 Inputs
@@ -47,19 +49,9 @@ Inputs
 * **structure**, class :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
   The initial ionic configuration of the CP molecular dynamics.
 * **settings**, class :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` (optional)
-  An optional dictionary that activates non-default operations. Possible values are:
-    
-    *  **'FIXED_COORDS'**: a list Nx3 booleans, with N the number of atoms. If True,
-       the atomic position is fixed (in relaxations/md).
-    *  **'NAMELISTS'**: list of strings. Specify all the list of Namelists to be 
-       printed in the input file.
-    *  **'PARENT_FOLDER_SYMLINK'**: boolean # If True, create a symlnk to the scratch 
-       of the parent folder, otherwise the folder is copied (default: False)
-    *  **'CMDLINE'**: list of strings. parameters to be put after the executable and before the input file. 
-       Example: ["-npool","4"] will produce `pw.x -npool 4 < aiida.in`
-    *  **'ADDITIONAL_RETRIEVE_LIST'**: list of strings. Specify additional files to be retrieved.
-       By default, the output file and the xml file are already retrieved. 
-    *  **'ALSO_BANDS'**: boolean. If True, retrieves the band structure (default: False)
+  An optional dictionary that activates non-default operations. Check the section
+  :ref:`Advanced features (on the PW plugin documentation page)<pw-advanced-features>`
+  to know which flags can be passed.
     
 * **parent_folder**, class :py:class:`RemoteData <aiida.orm.data.parameter.ParameterData>` (optional)
   If specified, the scratch folder coming from a previous QE calculation is 

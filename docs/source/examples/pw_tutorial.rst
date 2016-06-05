@@ -525,7 +525,12 @@ You can find a more sophisticated example, that checks the possible exceptions
 and prints nice error messages inside your AiiDA folder, under
 ``examples/submission/test_pw.py``.
 
-
+Advanced features
+-----------------
+For a list of advanced features that can be activated (change of the
+command line parameters, blocking some coordinates, ...) you can refer
+to :ref:`this section<pw-advanced-features>`
+in the pw.x input plugin documentation.
 
 Importing previously run Quantum ESPRESSO pw.x calculations: PwImmigrant
 ========================================================================

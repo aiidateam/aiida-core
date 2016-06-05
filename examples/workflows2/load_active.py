@@ -6,7 +6,8 @@ if not is_dbenv_loaded():
 from aiida.workflows2.persistance.active_factory import load_all_process_records
 from aiida.workflows2.process import Process
 from aiida.workflows2.workflow import Workflow
-from aiida.workflows2.util import to_db_type, load_class
+from aiida.workflows2.util import load_class
+from aiida.workflows2.db_types import to_db_type
 
 
 class Add(Process):

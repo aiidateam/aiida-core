@@ -44,7 +44,7 @@ class JobProcess(Process):
                                valid_type=v['valid_types'], required=False)
 
             # Outputs
-            spec.has_dynamic_output()
+            spec.dynamic_output()
 
         return type(calc_class.__name__, (JobProcess,),
                     {'_define': staticmethod(_define),
@@ -65,7 +65,7 @@ class JobProcess(Process):
         assert not self._current_calc._is_running()
 
         for label, node in self._current_calc.get_outputs_dict():
-            self._out(label, node)
+            self.out(label, node)
 
     def _create_db_record(self):
         return self._CALC_CLASS()

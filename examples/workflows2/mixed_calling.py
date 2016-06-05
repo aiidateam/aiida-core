@@ -11,10 +11,11 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.workflows2.util import to_db_type
+from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.async import async, asyncd
 from aiida.workflows2.wf import wf
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, ResultToContext
+from aiida.workflows2.fragmented_wf import FragmentedWorkfunction,\
+    ResultToContext
 
 
 @wf
@@ -35,13 +36,12 @@ def f2(a):
 
 
 class F1(FragmentedWorkfunction):
-    definition = """
-s1
-s2
-"""
+    @classmethod
+    def _define(cls, spec):
+        spec.outline(cls.s1, cls.s2)
 
     def s1(self, ctx):
-        p2 = asyncd(F2, a=self._inputs['inp'])
+        p2 = asyncd(F2, a=self.inputs['inp'])
         ctx.a = 1
         return ResultToContext(r2=p2)
 
@@ -50,26 +50,25 @@ s2
         print("r2={}".format(ctx.r2))
         r1 = ctx.r2.copy()
 
-        self._out("r1", r1['r2'])
+        self.out("r1", r1['r2'])
 
 
 class F2(FragmentedWorkfunction):
-    definition = """
-s1
-"""
+    @classmethod
+    def _define(cls, spec):
+        spec.outline(cls.s1)
 
     def s1(self, ctx):
-        self._out("r2", self._inputs['a'])
+        self.out("r2", self.inputs['a'])
 
 
 class F1WaitForf2(FragmentedWorkfunction):
-    definition = """
-s1
-s2
-"""
+    @classmethod
+    def _define(cls, spec):
+        spec.outline(cls.s1, cls.s2)
 
     def s1(self, ctx):
-        p2 = async(f2, a=self._inputs['inp'])
+        p2 = async(f2, a=self.inputs['inp'])
         ctx.a = 1
         ctx.r2 = p2.result()
 
@@ -78,7 +77,7 @@ s2
         print("r2={}".format(ctx.r2))
         r1 = ctx.r2.copy()
 
-        self._out("r1", r1['r2'])
+        self.out("r1", r1['r2'])
 
 
 if __name__ == '__main__':

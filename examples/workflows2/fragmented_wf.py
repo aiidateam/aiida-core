@@ -1,36 +1,40 @@
-
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
 if not is_dbenv_loaded():
     load_dbenv()
 
-import threading
-from aiida.workflows2.execution_engine import execution_engine
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction
+from aiida.workflows2.fragmented_wf import *
+from aiida.workflows2.process import run
 
 
 class W(FragmentedWorkfunction):
-    definition = """
-s1
-s2
-if cond1:
-    s3
-    s4
-elif cond3:
-    s11 # <- For Mounet
-else:
-    s5
-    s6
+    @classmethod
+    def _define(cls, spec):
+        spec.outline(
+            cls.start,
+            cls.s2,
+            if_(cls.cond1)(
+                cls.s3,
+                cls.s4,
+            ).elif_(cls.cond3)(
+                cls.s11
+            ).else_(
+                cls.s5,
+                cls.s6
+            ),
+            while_(cls.cond2)(
+                cls.s7,
+                cls.s8
+            ),
+            cls.s9
+        )
 
-while cond2:
-    s7
-    s8
-s9
-"""
 
-    def s1(self, ctx):
+    def start(self, ctx):
         print "s1"
         ctx.v = 1
+
+        return 1, 2, 3, 4
 
     def s2(self, ctx):
         print "s2"
@@ -52,11 +56,14 @@ s9
     def s6(self, ctx):
         print "s6"
 
-#        f = async(slow)
-#        return Wait(f)
+    #        f = async(slow)
+    #        return Wait(f)
 
     def cond2(self, ctx):
         return ctx.w < 10
+
+    def cond3(self, ctx):
+        return True
 
     def s7(self, ctx):
         print " s7"
@@ -69,7 +76,9 @@ s9
     def s9(self, ctx):
         print "s9, end"
 
+    def s11(self, ctx):
+        pass
+
 
 if __name__ == '__main__':
-    w = W.create()
-    execution_engine.submit(w, None)
+    run(W)

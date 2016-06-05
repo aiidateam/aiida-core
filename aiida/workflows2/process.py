@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import collections
+
 import plum.process
 import plum.persistence.persistence_mixin
 import plum.port as port
@@ -44,16 +46,28 @@ class ProcessSpec(plum.process.ProcessSpec):
         self._fastforwardable = True
 
     def get_attributes_template(self):
-        attrs = type(
+        template = type(
             "{}Attributes".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
             {'_valid_fields': self.attributes.keys()})()
 
         # Now fill in any default values
         for name, value_spec in self.attributes.iteritems():
             if value_spec.default is not None:
-                attrs[name] = value_spec.default
+                template[name] = value_spec.default
 
-        return attrs
+        return template
+
+    def get_inputs_template(self):
+        template = type(
+            "{}Inputs".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
+            {'_valid_fields': self.inputs.keys()})()
+
+        # Now fill in any default values
+        for name, value_spec in self.inputs.iteritems():
+            if value_spec.default is not None:
+                template[name] = value_spec.default
+
+        return template
 
 
 class Process(plum.process.Process):
@@ -71,9 +85,10 @@ class Process(plum.process.Process):
     def _create_default_exec_engine(cls):
         return execution_engine
 
-    class RunningData(object):
-        def __init__(self, inputs):
-            self.inputs = inputs
+    #__RunningData = collections.namedtuple('__RunningData',
+    #                                     ['current_calc', 'parent'])
+    class __RunningData(object):
+        def __init__(self):
             self.current_calc = None
             self.parent = None
 
@@ -82,11 +97,6 @@ class Process(plum.process.Process):
     def __init__(self, attributes=None, create_output_links=True):
         super(Process, self).__init__(attributes=attributes)
         self._running_data = None
-        self._create_output_links = create_output_links
-
-    @property
-    def current_calculation_node(self):
-        return self._current_calc
 
     # Messages #####################################################
     def on_start(self, inputs, exec_engine):
@@ -95,13 +105,17 @@ class Process(plum.process.Process):
         :param inputs: A dictionary of inputs for each input port
         """
         super(Process, self).on_start(inputs, exec_engine)
+        # First create the running data because it gets used by the
+        # ProcessStack
+        self._running_data = self.__RunningData()
+        # This fills out the parent
         util.ProcessStack.push(self)
-        self._running_data = self.RunningData(inputs)
+        # This fills out the current calculation
         self._setup_db_record(inputs)
 
     def on_finalise(self):
         super(Process, self).on_finalise()
-        util.ProcessStack.push(self)
+        util.ProcessStack.pop()
         self._running_data = None
 
     def _on_output_emitted(self, output_port, value, dynamic):
@@ -114,15 +128,11 @@ class Process(plum.process.Process):
         beforehand?)
         """
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
-
-        if self._create_output_links:
-            if value.is_stored:
-                link_type = LinkType.RETURN
-            else:
-                value.store()
-                link_type = LinkType.CREATE
-
-            value.add_link_from(self._current_calc, output_port, link_type)
+        if not value.is_stored:
+            value.store()
+            value.add_link_from(self._current_calc, output_port,
+                                LinkType.CREATE)
+        value.add_link_from(self._current_calc, output_port, LinkType.RETURN)
     #################################################################
 
     def _create_db_record(self):
@@ -175,12 +185,7 @@ class Process(plum.process.Process):
     def _fast_forward(self):
         node = None  # Here we should find the old node
         for k, v in node.get_output_dict():
-            self._out(k, v)
-
-    @property
-    def _inputs(self):
-        assert self._running_data, "Process not running"
-        return self._running_data.inputs
+            self.out(k, v)
 
     @property
     def _current_calc(self):
@@ -287,7 +292,7 @@ class FunctionProcess(Process):
             args.append(kwargs.pop(arg))
         outs = self._func(*args)
         for name, value in outs.iteritems():
-            self._out(name, value)
+            self.out(name, value)
 
     def _create_db_record(self):
         calc = super(FunctionProcess, self)._create_db_record()

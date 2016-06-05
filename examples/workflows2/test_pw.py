@@ -108,7 +108,8 @@ parameters = ParameterData(dict={
     },
     'ELECTRONS': {
         'conv_thr': 1.e-10,
-    }})
+    }
+})
 
 # Set up kpoint
 kpoints = KpointsData()
@@ -126,19 +127,7 @@ settings = ParameterData(dict=settings_dict)
 # number_cpus_per_machine), change for SGE-like schedulers
 
 
-JobCalc = JobProcess.build(PwCalculation)
-
 JobCalc = PwCalculation.process()
-
-# Attributes
-attrs = JobCalc.get_attributes_template()
-attrs.max_wallclock_seconds = 30 * 60  # 30 min
-attrs.resources = {"num_machines": 1, "num_mpiprocs_per_machine": 8}
-attrs.custom_scheduler_commands = "#SBATCH --account=ch3"
-if run_in_serial_mode:
-    attrs.withmpi = False
-if queue is not None:
-    attrs.queue_name = queue
 
 # Inputs
 inputs = JobCalc.get_inputs_template()
@@ -146,6 +135,16 @@ inputs.structure = s
 inputs.parameters= parameters
 inputs.kpoints = kpoints
 inputs.code= test_and_get_code(codename, expected_code_type='quantumespresso.pw')
+
+# Attributes
+attrs = inputs.attributes
+attrs.max_wallclock_seconds = 30 * 60  # 30 min
+attrs.resources = {"num_machines": 1, "num_mpiprocs_per_machine": 8}
+attrs.custom_scheduler_commands = u"#SBATCH --account=ch3"
+if run_in_serial_mode:
+    attrs.withmpi = False
+if queue is not None:
+    attrs.queue_name = queue
 
 if settings is not None:
     inputs['settings'] = settings
@@ -178,4 +177,4 @@ if settings is not None:
     inputs.pseudo = pseudos_to_use
 
 # Run the calculation
-f = async(JobCalc, _attributes=attrs, **inputs)
+f = run(JobCalc, **inputs)

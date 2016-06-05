@@ -36,8 +36,8 @@ class _Wf(FragmentedWorkfunction):
             ),
         )
 
-    def __init__(self, attributes=None):
-        super(_Wf, self).__init__(attributes)
+    def __init__(self):
+        super(_Wf, self).__init__()
         self.finished_steps = {
             k: False for k in
             [self.s1.__name__, self.s2.__name__, self.s3.__name__,

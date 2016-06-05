@@ -3,17 +3,17 @@ from aiida.workflows2.process import ProcessSpec
 
 
 class TestProcessSpec(TestCase):
-    def test_get_attributes_template(self):
-        s = ProcessSpec()
-        s.attribute('a')
-        s.attribute('b', default=5)
-
-        self._test_template(s.get_attributes_template())
-
     def test_get_inputs_template(self):
         s = ProcessSpec()
         s.input('a')
         s.input('b', default=5)
+
+        template = s.get_inputs_template()
+        self.assertIsInstance(template, dict)
+        for attr in ['b']:
+            self.assertTrue(
+                attr in template,
+                "Attribute \"{}\" not found in template".format(attr))
 
     def _test_template(self, template):
         template.a = 2

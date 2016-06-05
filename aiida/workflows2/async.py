@@ -10,16 +10,16 @@ __version__ = "0.5.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
-def async(proc, _attributes=None, *args, **kwargs):
-    if util.is_workfunction(proc):
+def async(process_class, *args, **kwargs):
+    if util.is_workfunction(process_class):
         kwargs['__async'] = True
-        return proc(*args, **kwargs)
-    elif issubclass(proc, Process):
+        return process_class(*args, **kwargs)
+    elif issubclass(process_class, Process):
         # No need to consider args as a Process can't deal with positional
         # arguments anyway
-        return execution_engine.submit(proc(attributes=_attributes), inputs=kwargs)
+        return execution_engine.submit(process_class, inputs=kwargs)
 
 
-def asyncd(proc, _attributes=None, *args, **kwargs):
+def asyncd(proc, *args, **kwargs):
     # For now no daemon implementation so just run locally
-    return async(proc, _attributes, *args, **kwargs)
+    return async(proc, *args, **kwargs)

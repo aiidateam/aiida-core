@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import collections
-
 import plum.process
 import plum.persistence.persistence_mixin
 import plum.port as port
-
+import voluptuous
 from aiida.workflows2.execution_engine import execution_engine
 import aiida.workflows2.util as util
 from aiida.common.links import LinkType
@@ -19,19 +18,54 @@ __version__ = "0.6.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
-def run(proc, _attributes=None, *args, **inputs):
+def run(process_class, *args, **inputs):
     """
     Synchronously (i.e. blocking) run a workfunction or Process.
 
-    :param proc: The process class or workfunction
+    :param process_class: The process class or workfunction
     :param _attributes: Optional attributes (only for Processes)
     :param args: Positional arguments for a workfunction
     :param inputs: The list of inputs
     """
-    if util.is_workfunction(proc):
-        return proc(*args, **inputs)
-    elif issubclass(proc, Process):
-        proc(attributes=_attributes).run(inputs=inputs)
+    if util.is_workfunction(process_class):
+        return process_class(*args, **inputs)
+    elif issubclass(process_class, Process):
+        return execution_engine.run(process_class, inputs)
+
+
+class DictSchema(object):
+    def __init__(self, schema):
+        self._schema = voluptuous.Schema(schema)
+
+    def __call__(self, value):
+        """
+        Call this to validate the value against the chema
+        :return: tuple (success, msg).  success is True if the value is valid
+        and False otherwise, in which case msg will contain information about
+        the validation failure.
+        """
+        try:
+            self._schema(value)
+            return True, None
+        except voluptuous.Invalid as e:
+            return False, str(e)
+
+    def get_template(self):
+        return self._get_template(self._schema.schema)
+
+    def _get_template(self, dict):
+        template = type(
+            "{}Inputs".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
+            {'_valid_fields': dict.keys()})()
+        for key, value in dict.iteritems():
+            if isinstance(key, (voluptuous.Optional, voluptuous.Required)):
+                if key.default is not voluptuous.UNDEFINED:
+                    template[key.schema] = key.default
+                else:
+                    template[key.schema] = None
+            if isinstance(value, collections.Mapping):
+                template[key] = self._get_template(value)
+        return template
 
 
 class ProcessSpec(plum.process.ProcessSpec):
@@ -45,18 +79,6 @@ class ProcessSpec(plum.process.ProcessSpec):
     def fastforwardable(self):
         self._fastforwardable = True
 
-    def get_attributes_template(self):
-        template = type(
-            "{}Attributes".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
-            {'_valid_fields': self.attributes.keys()})()
-
-        # Now fill in any default values
-        for name, value_spec in self.attributes.iteritems():
-            if value_spec.default is not None:
-                template[name] = value_spec.default
-
-        return template
-
     def get_inputs_template(self):
         template = type(
             "{}Inputs".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
@@ -64,8 +86,12 @@ class ProcessSpec(plum.process.ProcessSpec):
 
         # Now fill in any default values
         for name, value_spec in self.inputs.iteritems():
-            if value_spec.default is not None:
+            if isinstance(value_spec.validator, DictSchema):
+                template[name] = value_spec.validator.get_template()
+            elif value_spec.default is not None:
                 template[name] = value_spec.default
+            else:
+                template[name] = None
 
         return template
 
@@ -78,8 +104,8 @@ class Process(plum.process.Process):
     __metaclass__ = ABCMeta
 
     @classmethod
-    def get_attributes_template(cls):
-        return cls.spec().get_attributes_template()
+    def get_inputs_template(cls):
+        return cls.spec().get_inputs_template()
 
     @classmethod
     def _create_default_exec_engine(cls):
@@ -94,8 +120,8 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, attributes=None, create_output_links=True):
-        super(Process, self).__init__(attributes=attributes)
+    def __init__(self, create_output_links=True):
+        super(Process, self).__init__()
         self._running_data = None
 
     # Messages #####################################################

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import plum.port as port
-from aiida.workflows2.process import Process
+from aiida.workflows2.process import Process, DictSchema
 from aiida.workflows2.legacy.wait_on import WaitOnJobCalculation
 from aiida.orm.computer import Computer
+from voluptuous import Any
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -20,19 +21,25 @@ class JobProcess(Process):
 
         def _define(spec):
             # Attributes
-            spec.attribute("max_wallclock_seconds", valid_type=int)
-            spec.attribute("resources", valid_type=dict)
-            spec.attribute("custom_scheduler_commands", valid_type=unicode)
-            spec.attribute("queue_name", valid_type=basestring)
-            spec.attribute("computer", valid_type=Computer)
-            spec.attribute("withmpi", valid_type=bool)
-            spec.attribute("mpirun_extra_params", valid_type=(list, tuple))
-            spec.attribute("import_sys_environment", valid_type=bool)
-            spec.attribute("environment_variables", valid_type=dict)
-            spec.attribute("priority", valid_type=unicode)
-            spec.attribute("max_memory_kb", valid_type=int)
-            spec.attribute("prepend_text", valid_type=unicode)
-            spec.attribute("append_text", valid_type=unicode)
+            attributes = {
+                "max_wallclock_seconds": int,
+                "resources": {
+                    "num_machines": int,
+                    "num_mpiprocs_per_machine": int
+                },
+                "custom_scheduler_commands": unicode,
+                "queue_name": basestring,
+                "computer": Computer,
+                "withmpi": bool,
+                "mpirun_extra_params": Any(list, tuple),
+                "import_sys_environment": bool,
+                "environment_variables": dict,
+                "priority": unicode,
+                "max_memory_kb": int,
+                "prepend_text": unicode,
+                "append_text": unicode,
+            }
+            spec.input("attributes", validator=DictSchema(attributes))
 
             # Inputs from use methods
             for k, v in calc_class._use_methods.iteritems():
@@ -40,7 +47,7 @@ class JobProcess(Process):
                     spec.input_group(k, help=v.get('docstring', None),
                                      valid_type=v['valid_types'], required=False)
                 else:
-                    spec.input(v['linkname'], help=v.get('docstring', None),
+                    spec.input(k, help=v.get('docstring', None),
                                valid_type=v['valid_types'], required=False)
 
             # Outputs
@@ -50,11 +57,10 @@ class JobProcess(Process):
                     {'_define': staticmethod(_define),
                      '_CALC_CLASS': calc_class})
 
-    def __init__(self, attributes=None):
+    def __init__(self):
         # Need to tell Process to not create output links as these are
         # created internally by the execution manager
-        super(JobProcess, self).__init__(attributes=attributes,
-                                         create_output_links=False)
+        super(JobProcess, self).__init__(create_output_links=False)
 
     def _run(self, **kwargs):
         self._current_calc.submit()
@@ -78,14 +84,18 @@ class JobProcess(Process):
         assert (not calc.is_stored)
 
         # Set all the attributes using the setter methods
-        for name, value in self._attributes.iteritems():
-            if value is not None:
-                getattr(calc, "set_{}".format(name))(value)
+        if 'attributes' in inputs:
+            for name, value in inputs['attributes'].iteritems():
+                if value is not None:
+                    getattr(calc, "set_{}".format(name))(value)
 
         # First get a dictionary of all the inputs to link, this is needed to
         # deal with things like input groups
         to_link = {}
         for name, input in inputs.iteritems():
+            if input is None or name is 'attributes':
+                continue
+
             if isinstance(self.spec().get_input(name), port.InputGroupPort):
                 additional =\
                     self._CALC_CLASS._use_methods[name]['additional_parameter']

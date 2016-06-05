@@ -69,8 +69,8 @@ class FragmentedWorkfunction(Process):
         def setdefault(self, key, default=None):
             return self._content.setdefault(key, default)
 
-    def __init__(self, attributes=None):
-        super(FragmentedWorkfunction, self).__init__(attributes)
+    def __init__(self):
+        super(FragmentedWorkfunction, self).__init__()
         self._context = None
         self._stepper = None
 
@@ -103,7 +103,7 @@ class FragmentedWorkfunction(Process):
     def on_finalise(self):
         super(FragmentedWorkfunction, self).on_finalise()
         self._last_step = None
-    #####################################################
+        #####################################################
 
 
 class ResultToContext(object):
@@ -169,8 +169,8 @@ class _Block(_Step):
             self._pos = 0
 
         def step(self):
-            assert(self._pos != len(self._commands),
-                   "Can't call step after the block is finished")
+            assert (self._pos != len(self._commands),
+                    "Can't call step after the block is finished")
 
             command = self._commands[self._pos]
 
@@ -205,7 +205,7 @@ class _Block(_Step):
 
     def __str__(self):
         return "\n".join([str(c) if isinstance(c, _Step) else c.__name__
-                         for c in self._commands])
+                          for c in self._commands])
 
 
 class _Conditional(object):
@@ -220,6 +220,7 @@ class _Conditional(object):
     while(condition):
       body
     """
+
     def __init__(self, parent, condition):
         self._parent = parent
         self._condition = condition
@@ -351,7 +352,7 @@ class _While(_Conditional, _Step):
         @property
         def _body_stepper(self):
             if self._stepper is None:
-                self._stepper =\
+                self._stepper = \
                     self._spec.body.create_stepper(self._workflow)
             return self._stepper
 

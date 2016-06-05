@@ -27,6 +27,11 @@ class AbstractJobCalculation(object):
     remotely on a job scheduler.
     """
 
+    @classmethod
+    def process(cls):
+        from aiida.workflows2.legacy.job_process import JobProcess
+        return JobProcess.build(cls)
+
     def _init_internal_params(self):
         """
         Define here internal parameters that should be defined
@@ -1518,17 +1523,6 @@ class AbstractJobCalculation(object):
         return errfile_content
 
 
-#
-#     @property
-#     def files(self):
-#         """
-#         To be used to get direct access to the retrieved files.
-#
-#         :return: an instance of the CalculationFileManager.
-#         """
-#         return CalculationFileManager(self)
-
-
 class CalculationResultManager(object):
     """
     An object used internally to interface the calculation object with the Parser
@@ -1608,39 +1602,3 @@ class CalculationResultManager(object):
         except AttributeError:
             raise KeyError("Parser '{}' did not provide a result '{}'"
                            .format(self._parser.__class__.__name__, name))
-
-#
-# class CalculationFileManager(object):
-#     """
-#     An object used internally to interface the calculation with the FolderData
-#     object result.
-#     It shouldn't be used explicitely by a user, but accessed through calc.files.
-#     """
-#     def __init__(self, calc):
-#         """
-#         :param calc: the calculation object.
-#         """
-#         # Possibly add checks here
-#         self._calc = calc
-#
-#     def _get_folder(self):
-#         from aiida.orm.data.folder import FolderData
-#         from aiida.common.exceptions import NotExistent, UniquenessError
-#         folders = self._calc.get_outputs(type=FolderData)
-#         if not folders:
-#             raise NotExistent("No output FolderData found")
-#         try:
-#             folders[1]
-#         except IndexError:
-#             pass
-#         else:
-#             raise UniquenessError("More than one output folder found")
-#         return folders[0]
-#
-#     def path(self,name='.'):
-#         folder = self._get_folder()
-#         return folder.get_abs_path(name)
-#
-#     def list(self,name='.'):
-#         folder = self._get_folder()
-#         return folder.get_folder_list(name)

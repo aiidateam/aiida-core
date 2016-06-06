@@ -20,6 +20,6 @@ def async(process_class, *args, **kwargs):
         return execution_engine.submit(process_class, inputs=kwargs)
 
 
-def asyncd(proc, *args, **kwargs):
+def asyncd(process_class, *args, **kwargs):
     # For now no daemon implementation so just run locally
-    return async(proc, *args, **kwargs)
+    return async(process_class, *args, **kwargs)

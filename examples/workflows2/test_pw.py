@@ -17,7 +17,6 @@ from aiida.common.example_helpers import test_and_get_code
 from aiida.orm import DataFactory
 from aiida.common.exceptions import NotExistent
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.workflows2.legacy.job_process import JobProcess
 from aiida.workflows2.process import run
 from aiida.workflows2.async import async
 
@@ -136,18 +135,18 @@ inputs.parameters= parameters
 inputs.kpoints = kpoints
 inputs.code= test_and_get_code(codename, expected_code_type='quantumespresso.pw')
 
-# Attributes
-attrs = inputs.attributes
-attrs.max_wallclock_seconds = 30 * 60  # 30 min
-attrs.resources = {"num_machines": 1, "num_mpiprocs_per_machine": 8}
-attrs.custom_scheduler_commands = u"#SBATCH --account=ch3"
+# Calculation options
+options = inputs._options
+options.max_wallclock_seconds = 30 * 60  # 30 min
+options.resources = {"num_machines": 1, "num_mpiprocs_per_machine": 8}
+options.custom_scheduler_commands = u"#SBATCH --account=ch3"
 if run_in_serial_mode:
-    attrs.withmpi = False
+    options.withmpi = False
 if queue is not None:
-    attrs.queue_name = queue
+    options.queue_name = queue
 
 if settings is not None:
-    inputs['settings'] = settings
+    inputs.settings = settings
 
     # if auto_pseudos:
     #     try:

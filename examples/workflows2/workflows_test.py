@@ -4,7 +4,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.workflows2.wf import wf
-from aiida.workflows2.db_types import to_db_type
+from aiida.workflows2.db_types import to_db_type, SimpleData
 from aiida.workflows2.process import Process
 from aiida.workflows2.workflow import Workflow
 
@@ -18,18 +18,18 @@ def multiply(a, b):
 
 
 @wf
-def add_wf(a, b):
-    return {'value': to_db_type(a.value + b.value)}
+def sum(a, b):
+    return {'sum': to_db_type(a.value + b.value)}
 
 
 @wf
-def muliply_wf(a, b):
-    return {'value': to_db_type(a.value * b.value)}
+def prod(a, b):
+    return {'prod': to_db_type(a.value * b.value)}
 
 
 @wf
 def add_multiply_wf(a, b, c):
-    return muliply_wf(add_wf(a, b)['value'], c)
+    return {'result': prod(sum(a, b)['sum'], c)['prod']}
 
 
 class Add(Process):
@@ -69,9 +69,9 @@ class MulAdd(Workflow):
 
 
 if __name__ == '__main__':
-    two = to_db_type(2)
-    three = to_db_type(3)
-    four = to_db_type(4)
+    two = Int(2)
+    three = Int(3)
+    four = Int(4)
 
     print "WORKFUNCTION:"
 

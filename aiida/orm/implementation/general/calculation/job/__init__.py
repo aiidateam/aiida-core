@@ -1085,11 +1085,7 @@ class AbstractJobCalculation(object):
         from aiida.orm.utils import load_node
 
         computer = self.get_computer()
-
-        if use_unstored_links:
-            inputdict = self.get_inputs_dict(only_in_db=False)
-        else:
-            inputdict = self.get_inputs_dict(only_in_db=True)
+        inputdict = self.get_inputs_dict(only_in_db=not use_unstored_links)
 
         codes = [_ for _ in inputdict.itervalues() if isinstance(_, Code)]
 

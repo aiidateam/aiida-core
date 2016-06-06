@@ -18,6 +18,10 @@ _TYPE_MAPPING = {
 }
 
 
+def Int(value):
+    return SimpleData(typevalue=(int, value))
+
+
 def to_db_type(value):
     if isinstance(value, Data):
         return value

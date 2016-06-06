@@ -20,23 +20,23 @@ def wf(func):
         """
         This wrapper function is the actual function that is called.
         """
+        # Do this here so that it doesn't enter as an input to the process
         run_async = kwargs.pop('__async', False)
 
         # Build up the Process representing this function
         FuncProc = FunctionProcess.build(func, **kwargs)
 
+        inputs = {}
+        if kwargs:
+            inputs.update(kwargs)
+        if args:
+            inputs.update(FuncProc.args_to_dict(*args))
+        future = execution_engine.submit(FuncProc, inputs)
+
         if run_async:
-            inputs = {}
-            if kwargs:
-                inputs.update(kwargs)
-            if args:
-                inputs.update(FuncProc.args_to_dict(*args))
-            return execution_engine.submit(FuncProc.create(), inputs)
+            return future
         else:
-            # Create and run the wrapped function
-            proc = FuncProc.create()
-            proc(*args, **kwargs)
-            return proc.get_last_outputs()
+            return future.result()
 
     wrapped_function._is_workfunction = True
     return wrapped_function

@@ -5,6 +5,7 @@ import inspect
 from plum.wait_ons import Checkpoint
 from plum.wait import WaitOn
 from aiida.workflows2.process import Process, ProcessSpec
+from aiida.workflows2.util import override
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -83,6 +84,7 @@ class FragmentedWorkfunction(Process):
     def context(self):
         return self._context
 
+    @override
     def _run(self, **kwargs):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
@@ -90,20 +92,28 @@ class FragmentedWorkfunction(Process):
     def _do_step(self, wait_on=None):
         finished, retval = self._stepper.step()
         if not finished:
-            if isinstance(retval, _ResultToContext):
-                return _ResultToContext(self._do_step.__name__, **retval.to_assign)
+            if isinstance(retval, ResultToContext):
+                return _ResultToContext(self._do_step.__name__,
+                                        **retval.to_assign)
             else:
                 return Checkpoint(self._do_step.__name__)
 
     # Internal messages #################################
+    @override
     def on_start(self, inputs, exec_engine):
         super(FragmentedWorkfunction, self).on_start(inputs, exec_engine)
         self._context = self.Context()
 
+    @override
+    def on_continue(self, wait_on):
+        if isinstance(wait_on, _ResultToContext):
+            wait_on.assign(self._context)
+
+    @override
     def on_finalise(self):
         super(FragmentedWorkfunction, self).on_finalise()
         self._last_step = None
-        #####################################################
+    #####################################################
 
 
 class ResultToContext(object):

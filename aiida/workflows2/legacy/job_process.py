@@ -14,14 +14,15 @@ __authors__ = "The AiiDA team."
 
 class JobProcess(Process):
     CALC_NODE_LABEL = 'calc_node'
+    OPTIONS_INPUT_LABEL = '_options'
     _CALC_CLASS = None
 
     @classmethod
     def build(cls, calc_class):
 
         def _define(spec):
-            # Attributes
-            attributes = {
+            # Calculation options
+            options = {
                 "max_wallclock_seconds": int,
                 "resources": {
                     "num_machines": int,
@@ -39,7 +40,7 @@ class JobProcess(Process):
                 "prepend_text": unicode,
                 "append_text": unicode,
             }
-            spec.input("attributes", validator=DictSchema(attributes))
+            spec.input(cls.OPTIONS_INPUT_LABEL, validator=DictSchema(options))
 
             # Inputs from use methods
             for k, v in calc_class._use_methods.iteritems():
@@ -84,16 +85,15 @@ class JobProcess(Process):
         assert (not calc.is_stored)
 
         # Set all the attributes using the setter methods
-        if 'attributes' in inputs:
-            for name, value in inputs['attributes'].iteritems():
-                if value is not None:
-                    getattr(calc, "set_{}".format(name))(value)
+        for name, value in inputs.get(self.OPTIONS_INPUT_LABEL, {}).iteritems():
+            if value is not None:
+                getattr(calc, "set_{}".format(name))(value)
 
         # First get a dictionary of all the inputs to link, this is needed to
         # deal with things like input groups
         to_link = {}
         for name, input in inputs.iteritems():
-            if input is None or name is 'attributes':
+            if input is None or name is self.OPTIONS_INPUT_LABEL:
                 continue
 
             if isinstance(self.spec().get_input(name), port.InputGroupPort):

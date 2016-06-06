@@ -175,6 +175,16 @@ class Calculation(VerdiCommandWithSubcommands):
         parser.add_argument('-t', '--absolute-time',
                             dest='relative_ctime', action='store_false',
                             help="Print the absolute creation time, rather than the relative creation time")
+        #~ parser.add_argument('-w', '--with-scheduler-state',
+                            #~ action='store_true',
+                            #~ help='Print the scheduler state (slow)')
+        parser.add_argument('-l', '--limit',
+                            type=int,
+                            default=None,
+                            help='set a limit to the number of rows returned')
+        parser.add_argument('-o', '--order-by',
+                            choices=['id', 'ctime'], default='ctime',
+                            help='order the results')
         parser.set_defaults(relative_ctime=True)
 
         args = list(args)
@@ -187,16 +197,33 @@ class Calculation(VerdiCommandWithSubcommands):
             parsed_args.states = None
 
         try:
-            print C._list_calculations(states=parsed_args.states,
-                                       past_days=parsed_args.past_days,
-                                       pks=parsed_args.pks,
-                                       all_users=parsed_args.all_users,
-                                       group=parsed_args.group,
-                                       group_pk=parsed_args.group_pk,
-                                       relative_ctime=parsed_args.relative_ctime)
+            C._list_calculations(
+                    states=parsed_args.states,
+                    past_days=parsed_args.past_days,
+                    pks=parsed_args.pks,
+                    all_users=parsed_args.all_users,
+                    group=parsed_args.group,
+                    group_pk=parsed_args.group_pk,
+                    relative_ctime=parsed_args.relative_ctime,
+                    # with_scheduler_state=parsed_args.with_scheduler_state,
+                    order_by=parsed_args.order_by,
+                    limit=parsed_args.limit
+            )
         except Exception as e:
-            print >> sys.stderr, "Error ({}): {}".format(e.__class__.__name__,
-                                                         e.message)
+            import traceback
+            print '1', e.__doc__
+            print '2', sys.exc_info()
+            print '3', sys.exc_info()[0]
+            print '4', sys.exc_info()[1]
+            print '5', sys.exc_info()[2],
+            print 'Sorry I mean line...',
+            print traceback.tb_lineno(sys.exc_info()[2])
+            ex_type, ex, tb = sys.exc_info()
+            print '6', traceback.print_tb(tb)
+            #~ print >> sys.stderr, "Error ({}): {}".format(
+                    #~ e.__class__.__name__,
+                    #~ e.message
+                #~ )
 
     def calculation_res(self, *args):
         """

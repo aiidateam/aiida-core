@@ -460,9 +460,9 @@ class TestNodeBasic(AiidaTestCase):
         # I modify an attribute and add a new one; I mirror it in the dictionary
         # for later checking
         b_expected_attributes = copy.deepcopy(attrs_to_set)
-        b._set_attr('integer', 489)
+        b._set_val('integer', 489)
         b_expected_attributes['integer'] = 489
-        b._set_attr('new', 'cvb')
+        b._set_val('new', 'cvb')
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
@@ -848,7 +848,7 @@ class TestNodeBasic(AiidaTestCase):
 
         s1 = models.DbSetting.objects.get(key='pippo')
 
-        self.assertEqual(s1.getvalue(), [1, 2, 3])
+        self.assertEqual(s1.get_value(), [1, 2, 3])
 
         s2 = models.DbSetting(key='pippo')
 
@@ -862,10 +862,10 @@ class TestNodeBasic(AiidaTestCase):
         models.DbSetting.set_value(key='pippo', value="a")
         s1 = models.DbSetting.objects.get(key='pippo')
 
-        self.assertEqual(s1.getvalue(), "a")
+        self.assertEqual(s1.get_value(), "a")
 
     def test_settings_methods(self):
-        from aiida.common.globalsettings import (
+        from aiida.backends.djsite.globalsettings import (
             get_global_setting_description, get_global_setting,
             set_global_setting, del_global_setting)
 

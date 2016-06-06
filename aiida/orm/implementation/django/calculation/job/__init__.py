@@ -14,7 +14,7 @@ from aiida.backends.djsite.utils import get_automatic_user
 from aiida.orm.group import Group
 from aiida.orm.implementation.django.calculation import Calculation
 from aiida.orm.implementation.general.calculation.job import AbstractJobCalculation
-from aiida.orm.implementation.general.calculation import from_type_to_pluginclassname
+from aiida.common.pluginloader import from_type_to_pluginclassname
 
 from aiida.utils import timezone
 
@@ -118,7 +118,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                     return most_recent_state
 
     @classmethod
-    def _list_calculations(cls, states=None, past_days=None, group=None,
+    def _list_calculations_old(cls, states=None, past_days=None, group=None,
                            group_pk=None, all_users=False, pks=[],
                            relative_ctime=True):
         """

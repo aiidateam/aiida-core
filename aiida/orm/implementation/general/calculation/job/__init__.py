@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
 
 from abc import abstractmethod
+import datetime
 
+from aiida.utils import timezone
+from aiida.common.utils import str_timedelta
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
+from aiida.backends.utils import get_automatic_user
+
+from aiida.common.pluginloader import from_type_to_pluginclassname
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -43,10 +49,12 @@ class AbstractJobCalculation(object):
         # Set default for the link to the retrieved folder (after calc is done)
         self._linkname_retrieved = 'retrieved'
 
-        self._updatable_attributes = ('state', 'job_id', 'scheduler_state',
-                                      'scheduler_lastchecktime',
-                                      'last_jobinfo', 'remote_workdir', 'retrieve_list',
-                                      'retrieve_singlefile_list')
+        self._updatable_attributes = (
+                'state', 'job_id', 'scheduler_state',
+                'scheduler_lastchecktime',
+                'last_jobinfo', 'remote_workdir', 'retrieve_list',
+                'retrieve_singlefile_list'
+        )
 
         # Files in which the scheduler output and error will be stored.
         # If they are identical, outputs will be joined.
@@ -112,9 +120,11 @@ class AbstractJobCalculation(object):
         try:
             _ = self.get_parserclass()
         except MissingPluginError:
-            raise ValidationError("No valid plugin found for the parser '{}'. "
-                                  "Set the parser to None if you do not need an automatic "
-                                  "parser.".format(self.get_parser_name()))
+            raise ValidationError(
+                    "No valid plugin found for the parser '{}'. "
+                    "Set the parser to None if you do not need an automatic "
+                    "parser.".format(self.get_parser_name())
+                )
 
         computer = self.get_computer()
         s = computer.get_scheduler()
@@ -126,7 +136,9 @@ class AbstractJobCalculation(object):
 
         if not isinstance(self.get_withmpi(), bool):
             raise ValidationError(
-                "withmpi property must be boolean! It in instead {}".format(str(type(self.get_withmpi()))))
+                    "withmpi property must be boolean! It in instead {}"
+                    "".format(str(type(self.get_withmpi())))
+            )
 
 
     def _can_link_as_output(self, dest):
@@ -216,7 +228,8 @@ class AbstractJobCalculation(object):
 
     def get_import_sys_environment(self):
         """
-        To check if it's loading the system environment on the submission script.
+        To check if it's loading the system environment
+        on the submission script.
 
         :return: a boolean. If True the system environment will be load.
         """
@@ -237,9 +250,11 @@ class AbstractJobCalculation(object):
 
         for k, v in env_vars_dict.iteritems():
             if not isinstance(k, basestring) or not isinstance(v, basestring):
-                raise ValueError("Both the keys and the values of the "
-                                 "dictionary passed to set_environment_variables must be "
-                                 "strings.")
+                raise ValueError(
+                    "Both the keys and the values of the "
+                    "dictionary passed to set_environment_variables must be "
+                    "strings."
+                )
 
         return self._set_attr('custom_environment_variables', env_vars_dict)
 
@@ -299,7 +314,8 @@ class AbstractJobCalculation(object):
         like the number of nodes, cpus, ...
         This dictionary is scheduler-plugin dependent. Look at the documentation
         of the scheduler.
-        (scheduler type can be found with calc.get_computer().get_scheduler_type() )
+        (scheduler type can be found with
+        calc.get_computer().get_scheduler_type() )
         """
         # Note: for the time being, resources are only validated during the
         # 'store' because here we are not sure that a Computer has been set
@@ -510,7 +526,7 @@ class AbstractJobCalculation(object):
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed(
                 "Can remove an input link to a calculation only if it is in one "
-                "of the following states: {}, it is instead {}".format(
+                "of the following states:\n   {}\n it is instead {}".format(
                     valid_states, self.get_state()))
 
         return super(AbstractJobCalculation, self)._remove_link_from(label)
@@ -589,8 +605,13 @@ class AbstractJobCalculation(object):
         :return: a boolean
         """
         return self.get_state() in [
-            calc_states.TOSUBMIT, calc_states.SUBMITTING, calc_states.WITHSCHEDULER,
-            calc_states.COMPUTED, calc_states.RETRIEVING, calc_states.PARSING]
+                calc_states.TOSUBMIT,
+                calc_states.SUBMITTING,
+                calc_states.WITHSCHEDULER,
+                calc_states.COMPUTED,
+                calc_states.RETRIEVING,
+                calc_states.PARSING
+            ]
 
     def has_finished_ok(self):
         """
@@ -622,7 +643,8 @@ class AbstractJobCalculation(object):
 
     def _get_remote_workdir(self):
         """
-        Get the path to the remote (on cluster) scratch folder of the calculation.
+        Get the path to the remote (on cluster) scratch
+        folder of the calculation.
 
         :return: a string with the remote path
         """
@@ -638,7 +660,8 @@ class AbstractJobCalculation(object):
 
         # accept format of: [ 'remotename',
         #                     ['remotepath','localpath',0] ]
-        # where the last number is used to decide the localname, see CalcInfo or execmanager
+        # where the last number is used
+        # to decide the localname, see CalcInfo or execmanager
 
         if not (isinstance(retrieve_list, (tuple, list))):
             raise ValueError("You should pass a list/tuple")
@@ -646,14 +669,18 @@ class AbstractJobCalculation(object):
             if not isinstance(item, basestring):
                 if (not (isinstance(item, (tuple, list))) or
                             len(item) != 3):
-                    raise ValueError("You should pass a list containing either "
-                                     "strings or lists/tuples")
+                    raise ValueError(
+                        "You should pass a list containing either "
+                        "strings or lists/tuples"
+                    )
                 if (not (isinstance(item[0], basestring)) or
                         not (isinstance(item[1], basestring)) or
                         not (isinstance(item[2], int))):
-                    raise ValueError("You have to pass a list (or tuple) of "
-                                     "lists, with remotepath(string), "
-                                     "localpath(string) and depth (integer)")
+                    raise ValueError(
+                        "You have to pass a list (or tuple) of "
+                        "lists, with remotepath(string), "
+                        "localpath(string) and depth (integer)"
+                    )
 
         self._set_attr('retrieve_list', retrieve_list)
 
@@ -703,9 +730,11 @@ class AbstractJobCalculation(object):
         Always set as a string
         """
         if self.get_state() != calc_states.SUBMITTING:
-            raise ModificationNotAllowed("Cannot set the job id if you are not "
-                                         "submitting the calculation (current state is "
-                                         "{})".format(self.get_state()))
+            raise ModificationNotAllowed(
+                    "Cannot set the job id if you are not "
+                    "submitting the calculation (current state is "
+                    "{})".format(self.get_state())
+                )
 
         return self._set_attr('job_id', unicode(job_id))
 
@@ -749,7 +778,8 @@ class AbstractJobCalculation(object):
 
     def _get_last_jobinfo(self):
         """
-        Get the last information asked to the scheduler about the status of the job.
+        Get the last information asked to the scheduler
+        about the status of the job.
 
         :return: a JobInfo object (that closely resembles a dictionary) or None.
         """
@@ -765,16 +795,13 @@ class AbstractJobCalculation(object):
             return None
 
     @classmethod
-    @abstractmethod
-    def _list_calculations(cls, states=None, past_days=None, group=None,
-                           group_pk=None, all_users=False, pks=[],
-                           relative_ctime=True):
+    def _list_calculations(
+            cls, states=None, past_days=None, group=None,
+            group_pk=None, all_users=False, pks=[],
+            relative_ctime=True, with_scheduler_state=False,
+            order_by=None, limit=None):
         """
         Return a string with a description of the AiiDA calculations.
-
-        .. todo:: does not support the query for the IMPORTED state (since it
-          checks the state in the Attributes, not in the DbCalcState table).
-          Decide which is the correct logi and implement the correct query.
 
         :param states: a list of string with states. If set, print only the
             calculations in the states "states", otherwise shows all.
@@ -800,11 +827,175 @@ class AbstractJobCalculation(object):
 
         :return: a string with description of calculations.
         """
-        pass
+
+
+
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.common.custom_io import pretty_print
+        from aiida.daemon.timestamps import get_last_daemon_timestamp
+        
+
+        now = timezone.now()
+
+        # Let's check the states:
+        if states:
+            for state in states:
+                if state not in calc_states:
+                    return "Invalid state provided: {}.".format(state)
+        #Let's check if there is something to order_by:
+        valid_order_parameters = (None, 'id', 'ctime')
+        if order_by not in valid_order_parameters:
+            raise Exception(
+                "invalid order by parameter {}\n"
+                "valid parameters are:\n"
+                "".format(order_by, valid_order_parameters)
+            )
+        # Limit:
+        if not(limit is None or isinstance(limit, int)):
+            raise Exception(
+                "Limit (set to {}) has to be an integer or None".format(limit)
+            )
+        # get the last daemon check:
+        try:
+            last_daemon_check = get_last_daemon_timestamp('updater',
+                                                          when='stop')
+        except ValueError:
+            last_check_string = (
+                    "# Last daemon state_updater check: "
+                    "(Error while retrieving the information)"
+            )
+        else:
+            if last_daemon_check is None:
+                last_check_string = (
+                    "# Last daemon state_updater check: (Never)"
+                )
+            else:
+                last_check_string = (
+                    "# Last daemon state_updater check: "
+                    "{} ({})".format(
+                        str_timedelta(
+                            now - last_daemon_check,
+                            negative_to_zero=True
+                        ),
+                        timezone.localtime(
+                            last_daemon_check
+                        ).strftime("at %H:%M:%S on %Y-%m-%d")
+                    )
+                )
+        print last_check_string
+
+        calculation_filters = {}
+
+        # filter for calculation pks:
+        if pks:
+            calculation_filters['id'] = {'in':pks}
+            group_filters=None
+        else:
+            # The wanted behavior:
+            # You know what you're looking for and specify pks,
+            # Otherwise the other filters apply.
+            # Open question: Is that the best way?
+
+            # filter for states:
+            if states:
+                calculation_filters['state'] = {'in':states}
+
+            # Filter on the users, if not all users
+            if not all_users:
+                user_id = get_automatic_user().id
+                calculation_filters['user_id'] = {'==':user_id}
+
+            if past_days is not None:
+                n_days_ago = now - datetime.timedelta(days=past_days)
+                calculation_filters['ctime'] = {'>':n_days_ago}
+
+            # Filter on the group, either name or by pks
+            if group:
+                group_filters = {'name':{'like':'%{}%'.format(group)}}
+            elif group_pk:
+                group_filters = {'id':{'==':group_pk}}
+            else:
+                group_filters = None
+
+        calculation_projections = [
+                'id', 'state', 'ctime', 'type', 'attributes.scheduler_state'
+            ]
+        calc_list_data = [[
+            '# Pk', 'State', 'Creation',
+            'Sched. state', 
+            'Computer', 'Type'
+        ]]
+        qb = QueryBuilder()
+        qb.append(
+                cls,
+                filters=calculation_filters,
+                project=calculation_projections,
+                tag='calculation'
+        )
+        if group_filters is not None:
+            qb.append(
+                    type="group", filters=group_filters,
+                    group_of="calculation"
+                )
+        qb.append(
+                type="computer", computer_of='calculation',
+                project=['name'], tag='computer'
+            )
+
+        # ORDER
+        if order_by is not None:
+            qb.order_by({'calculation':[order_by]})
+
+        # LIMIT
+        if limit is not None:
+            qb.limit(limit)
+        # I have removed order_by since it slows query down
+        # qb.order_by({'calculation':['ctime']})
+
+        results_generator = qb.iterdict()
+
+        counter = 0
+        while True:
+            try:
+                for i in range(100):
+                    res = results_generator.next()
+                    counter += 1
+                    ctime = res['calculation']['ctime']
+                    if relative_ctime:
+                        calc_ctime = str_timedelta(
+                                now - ctime,
+                                negative_to_zero=True,
+                                max_num_fields=1
+                            )
+                    else:
+                        calc_ctime = " ".join([
+                            timezone.localtime(ctime).isoformat().split('T')[0],
+                            timezone.localtime(ctime).isoformat().split('T')[
+                                1].split('.')[0].rsplit(":", 1)[0]])
+                    calc_list_data.append([
+                        str(res['calculation']['id']),
+                        str(res['calculation']['state']),
+                        str(calc_ctime),
+                        str(res['calculation']['attributes.scheduler_state']),
+                        str(res['computer']['name']),
+                        from_type_to_pluginclassname(
+                                res['calculation']['type']
+                        ).rsplit(".", 1)[0].lstrip('calculation.job.')
+                    ])
+                pretty_print(calc_list_data)
+                calc_list_data = []
+            except StopIteration:
+                pretty_print(calc_list_data)
+                break
+        print "\n  Number of rows: {}\n".format(counter)
+
 
     @classmethod
-    def _get_all_with_state(cls, state, computer=None, user=None,
-                            only_computer_user_pairs=False):
+    def _get_all_with_state(
+            cls, state, computer=None, user=None,
+            only_computer_user_pairs=False,
+            only_enabled=True, limit=None
+        ):
         """
         Filter all calculations with a given state.
 
@@ -825,36 +1016,69 @@ class AbstractJobCalculation(object):
                 in the format
                 ('dbcomputer__id', 'user__id')
                 [where the IDs are the IDs of the respective tables]
+        :param int limit: Limit the number of rows returned
 
         :return: a list of calculation objects matching the filters.
         """
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
         from aiida.orm.computer import Computer
+        from aiida.orm.user import User
+        from aiida.orm.querybuilder import QueryBuilder
 
         if state not in calc_states:
             cls.logger.warning("querying for calculation state='{}', but it "
                                "is not a valid calculation state".format(state))
 
-        kwargs = {}
-        if computer is not None:
-            # I convert it from various type of inputs
-            # (string, DbComputer, Computer)
-            # to a DbComputer type
-            kwargs['dbcomputer'] = Computer.get(computer).dbcomputer
-        if user is not None:
-            kwargs['user'] = user
+        calcfilter = {'state':{'==':state}}
+        computerfilter = {"enabled":{'==':True}}
+        userfilter = {}
 
-        queryresults = cls.query(
-            dbattributes__key='state',
-            dbattributes__tval=state,
-            **kwargs)
+        if computer is None:
+            pass
+        elif isinstance(computer, int):
+            # An ID was provided
+            computerfilter.update({'id':{'==':computer}})
+        elif isinstance(computer, Computer):
+            computerfilter.update({'id':{'==':computer.pk}})
+        else:
+            try:
+                computerfilter.update({'id':{'==':computer.id}})
+            except AttributeError as e:
+                raise Exception(
+                    "{} is not a valid computer\n{}".format(computer, e)
+                )
+
+        if user is None:
+            pass
+        elif isinstance(user, int):
+            userfilter.update({'id':{'==':user}})
+        else:
+            try:
+                userfilter.update({'id':{'==':int(user.id)}})
+                # Is that safe?
+            except:
+                raise Exception("{} is not a valid user".format(user))
+
+
+        qb = QueryBuilder()
+        qb.append(type="computer", tag='computer', filters=computerfilter)
+        qb.append(cls, filters=calcfilter, tag='calc', has_computer='computer')
+        qb.append(type="user", tag='user', filters=userfilter, creator_of="calc")
 
         if only_computer_user_pairs:
-            return queryresults.values_list(
-                'dbcomputer__id', 'user__id')
+            qb.add_projection("computer", "*")
+            qb.add_projection("user", "*")
+            returnresult = qb.distinct().all()
         else:
-            return queryresults
+            qb.add_projection("calc", "*")
+            if limit is not None:
+                qb.limit(limit)
+            returnresult = qb.all()
+            returnresult = zip(*returnresult)[0]
+        return returnresult
+
+
 
 
     def _prepare_for_submission(self, tempfolder, inputdict):
@@ -879,15 +1103,14 @@ class AbstractJobCalculation(object):
         raise NotImplementedError
 
     def _get_authinfo(self):
-        import aiida.execmanager
+        from aiida.backends.utils import get_authinfo
         from aiida.common.exceptions import NotExistent
 
         computer = self.get_computer()
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return aiida.execmanager.get_authinfo(computer=computer,
-                                              aiidauser=self.dbnode.user)
+        return get_authinfo(computer=computer._dbcomputer,aiidauser=self.dbnode.user)
 
     def _get_transport(self):
         """

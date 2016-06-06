@@ -107,6 +107,9 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         return self.email
 
+    def get_aiida_class(self):
+        from aiida.orm.user import User
+        return User(dbuser=self)
 
 @python_2_unicode_compatible
 class DbNode(m.Model):
@@ -186,7 +189,7 @@ class DbNode(m.Model):
         appropriate subclass.
         """
         from aiida.orm.node import Node
-        from aiida.orm import from_type_to_pluginclassname
+        from aiida.common.pluginloader import from_type_to_pluginclassname
         from aiida.common.pluginloader import load_plugin
         from aiida.common import aiidalogger
 
@@ -1460,6 +1463,10 @@ class DbComputer(m.Model):
         else:
             raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
         return dbcomputer
+
+    def get_aiida_class(self):
+        from aiida.orm.computer import Computer
+        return Computer(dbcomputer=self)
 
     def get_workdir(self):
         import json

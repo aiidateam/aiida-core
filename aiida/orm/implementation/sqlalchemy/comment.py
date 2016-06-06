@@ -1,0 +1,119 @@
+# -*- coding: utf-8 -*-
+
+from aiida.backends.sqlalchemy.models.comment import DbComment
+from aiida.orm.implementation.general.comment import AbstractComment
+from aiida.common.exceptions import NotExistent, MultipleObjectsError
+
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "The AiiDA team."
+__version__ = "0.6.0"
+
+
+class Comment(AbstractComment):
+
+    def __init__(self, **kwargs):
+
+        # If no arguments are passed, then create a new DbComment
+        if not kwargs:
+            self.dbcomment = DbComment()
+
+        # If a DbComment is passed as argument. Just use it and
+        # wrap it with a Comment object
+        elif 'dbcomment' in kwargs:
+            # When a dbcomment is passed as argument, then no other arguments
+            # should be passed.
+            if len(kwargs) > 1:
+                raise ValueError("When a DbComment is passed as argument, no"
+                                 "further arguments are accepted.")
+            dbcomment = kwargs.pop('dbcomment')
+            if not isinstance(dbcomment, DbComment):
+                raise ValueError("Expected a DbComment. Object of a different"
+                                 "class was given as argument.")
+            self.dbcomment = dbcomment
+
+        else:
+            id = kwargs.pop('id', None)
+            if id is None:
+                id = kwargs.pop('pk', None)
+            user = kwargs.pop('user', None)
+            dbnode = kwargs.pop('dbnode', None)
+
+            # Constructing the default query
+            dbcomment_query = DbComment.query
+
+            # If an id is specified then we add it to the query
+            if id is not None:
+                dbcomment_query = dbcomment_query.filter_by(id=id)
+
+            # If a user is specified then we add it to the query
+            if user is not None:
+                dbcomment_query = dbcomment_query.filter_by(user=user)
+
+            # If a dbnode is specified then we add it to the query
+            if dbnode is not None:
+                dbcomment_query = dbcomment_query.filter_by(dbnode=dbnode)
+
+            ccount = dbcomment_query.count()
+            if ccount > 1:
+                raise MultipleObjectsError(
+                    "The arguments that you specified were too vague. More "
+                    "than one comments with this data were found in the "
+                    "database")
+            elif ccount == 0:
+                raise NotExistent("No comments were found with the given "
+                                  "arguments")
+
+            self.dbcomment = dbcomment_query.first()
+
+    @property
+    def pk(self):
+        return self.dbcomment.id
+
+    @property
+    def id(self):
+        return self.dbcomment.id
+
+    @property
+    def to_be_stored(self):
+        return self.dbcomment.id is None
+
+    @property
+    def uuid(self):
+        return self.dbcomment.uuid
+
+    def get_ctime(self):
+        return self.dbcomment.ctime
+
+    def set_ctime(self, val):
+        self.dbcomment.ctime = val
+        if not self.to_be_stored:
+            self.dbcomment.save()
+
+    def get_mtime(self):
+        return self.dbcomment.mtime
+
+    def set_mtime(self, val):
+        self.dbcomment.mtime = val
+        if not self.to_be_stored:
+            self.dbcomment.save()
+
+    def get_user(self):
+        return self.dbcomment.user
+
+    def set_user(self, val):
+        self.dbcomment.user = val
+        if not self.to_be_stored:
+            self.dbcomment.save()
+
+    def get_content(self):
+        return self.dbcomment.content
+
+    def set_content(self, val):
+        self.dbcomment.content = val
+        if not self.to_be_stored:
+            self.dbcomment.save()
+
+    def delete(self):
+        self.dbcomment.delete()

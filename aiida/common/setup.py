@@ -6,6 +6,7 @@ import aiida
 # The username (email) used by the default superuser, that should also run
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
+from aiida.common.utils import query_yes_no
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -121,8 +122,8 @@ serverurl=unix:///{daemon_dir}/supervisord.sock
 ; Main AiiDA Daemon
 ;=======================================
 [program:aiida-daemon]
-command=python "{aiida_module_dir}/backends/djsite/manage.py" --aiida-process=daemon celeryd --loglevel=INFO
-directory={daemon_dir}
+command=celery worker -A tasks --loglevel=INFO --beat --schedule={daemon_dir}/celerybeat-schedule
+directory={aiida_code_home}/daemon/
 user={local_user}
 numprocs=1
 stdout_logfile={log_dir}/aiida_daemon.log
@@ -130,32 +131,29 @@ stderr_logfile={log_dir}/aiida_daemon.log
 autostart=true
 autorestart=true
 startsecs=10
-stopwaitsecs=30
-process_name=%(process_num)s
 
-; ==========================================
-; AiiDA Deamon BEAT - for scheduled tasks
-; ==========================================
-[program:aiida-daemon-beat]
-command=python "{aiida_module_dir}/backends/djsite/manage.py" --aiida-process=daemon celerybeat
-directory={daemon_dir}
-user={local_user}
-numprocs=1
-stdout_logfile={log_dir}/aiida_daemon_beat.log
-stderr_logfile={log_dir}/aiida_daemon_beat.log
-autostart=true
-autorestart=true
-startsecs=10
-stopwaitsecs = 30
-process_name=%(process_num)s
+; Need to wait for currently executing tasks to finish at shutdown.
+; Increase this if you have very long running tasks.
+stopwaitsecs = 600
+
+; When resorting to send SIGKILL to the program to terminate it
+; send SIGKILL to its whole process group instead,
+; taking care of its children as well.
+killasgroup=true
+
+; Set Celery priority higher than default (999)
+; so, if rabbitmq is supervised, it will start first.
+priority=1000
 """
+
     old_umask = os.umask(DEFAULT_UMASK)
     try:
         with open(os.path.join(aiida_dir, daemon_dir, DAEMON_CONF_FILE), "w") as f:
             f.write(daemon_conf.format(daemon_dir=daemon_dir, log_dir=log_dir,
                                        local_user=local_user,
-                                       aiida_module_dir=os.path.split(os.path.abspath(
-                                           aiida.__file__))[0]))
+                                       aiida_code_home=os.path.split(
+                                           os.path.abspath(
+                                               aiida.__file__))[0]))
     finally:
         os.umask(old_umask)
 
@@ -498,7 +496,250 @@ def get_profile_config(profile, conf_dict=None, set_test_location=True):
     return profile_info
 
 
+key_explanation = {
+    "AIIDADB_ENGINE": "Database engine",
+    "AIIDADB_PASS": "AiiDA Database password",
+    "AIIDADB_NAME": "AiiDA Database name",
+    "AIIDADB_HOST": "Database host",
+    "AIIDADB_BACKEND": "AiiDA backend",
+    "AIIDADB_PORT": "Database port",
+    "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
+    "AIIDADB_USER": "AiiDA Database user",
+    "TIMEZONE": "Timezone",
+    DEFAULT_USER_CONFIG_FIELD: "Default user email"
+}
+
+
 def create_configuration(profile='default'):
+    """
+    :param profile: The profile to be configured
+    :return: The populated profile that was also stored.
+    """
+    import readline
+    from aiida.common.exceptions import ConfigurationError
+    from validate_email import validate_email
+
+    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+
+    print("Setting up profile {}.".format(profile))
+
+    try:
+        confs = get_config()
+    except ConfigurationError:
+        # No configuration file found
+        confs = {}
+
+        # first time creation check
+    try:
+        confs['profiles']
+    except KeyError:
+        confs['profiles'] = {}
+
+    # load the old configuration for the given profile
+    try:
+        this_existing_confs = confs['profiles'][profile]
+    except KeyError:
+        this_existing_confs = {}
+
+    # if there is an existing configuration, print it and ask if the user wants
+    # to modify it.
+    updating_existing_prof = False
+    if this_existing_confs:
+        print("The following configuration found corresponding to "
+              "profile {}.".format(profile))
+        for k, v in this_existing_confs.iteritems():
+            if key_explanation.has_key(k):
+                print("{}: {}".format(key_explanation.get(k), v))
+            else:
+                print("{}: {}".format(k, v))
+        answ = query_yes_no("Would you like to change it?", "no")
+        # If the user doesn't want to change it, we abandon
+        if answ is False:
+            return this_existing_confs
+        # Otherwise, we continue.
+        else:
+            updating_existing_prof = True
+
+    this_new_confs = {}
+
+    try:
+        # Defining the backend to be used
+        aiida_backend = this_existing_confs.get('AIIDADB_BACKEND')
+        if updating_existing_prof:
+            print("The backend of already stored profiles can not be "
+                  "changed. The current backend is {}.".format(aiida_backend))
+        else:
+            backend_possibilities = ['django', 'sqlalchemy']
+            if len(backend_possibilities) > 0:
+
+                valid_aiida_backend = False
+                while not valid_aiida_backend:
+                    backend_ans = raw_input(
+                        'AiiDA backend (available: {}): '
+                            .format(', '.join(backend_possibilities)))
+                    if backend_ans in backend_possibilities:
+                        valid_aiida_backend = True
+                    else:
+                        print "* ERROR! Invalid backend inserted."
+                        print ("*        The available middlewares are {}"
+                               .format(', '.join(backend_possibilities)))
+                this_new_confs['AIIDADB_BACKEND'] = backend_ans
+                aiida_backend = backend_ans
+
+        # Setting the timezone
+        timezone = ask_for_timezone(
+            existing_timezone=this_existing_confs.get('TIMEZONE', None))
+        this_new_confs['TIMEZONE'] = timezone
+
+        # Setting the email
+        valid_email = False
+        readline.set_startup_hook(lambda: readline.insert_text(
+            this_existing_confs.get(DEFAULT_USER_CONFIG_FIELD,
+                                    DEFAULT_AIIDA_USER)))
+        while not valid_email:
+            this_new_confs[DEFAULT_USER_CONFIG_FIELD] = raw_input(
+                'Default user email: ')
+            valid_email = validate_email(
+                this_new_confs[DEFAULT_USER_CONFIG_FIELD])
+            if not valid_email:
+                print "** Invalid email provided!"
+
+        # Setting the database engine
+        db_possibilities = []
+        if aiida_backend == 'django':
+            db_possibilities.extend(['postgres', 'sqlite', 'mysql'])
+        elif aiida_backend == 'sqlalchemy':
+            db_possibilities.extend(['postgres'])
+        if len(db_possibilities) > 0:
+            db_engine = this_existing_confs.get('AIIDADB_ENGINE', db_possibilities[0])
+            readline.set_startup_hook(lambda: readline.insert_text(
+                db_engine))
+
+            valid_db_engine = False
+            while not valid_db_engine:
+                db_engine_ans = raw_input(
+                    'Database engine (available: {}): '
+                    .format(', '.join(db_possibilities)))
+                if db_engine_ans in db_possibilities:
+                    valid_db_engine = True
+                else:
+                    print "* ERROR! Invalid database engine inserted."
+                    print ("*        The available engines are {}"
+                           .format(', '.join(db_possibilities)))
+            this_new_confs['AIIDADB_ENGINE'] = db_engine_ans
+
+        if 'sqlite' in this_new_confs['AIIDADB_ENGINE']:
+            this_new_confs['AIIDADB_ENGINE'] = 'sqlite3'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                this_existing_confs.get('AIIDADB_NAME', os.path.join(aiida_dir, "aiida.db"))))
+            this_new_confs['AIIDADB_NAME'] = raw_input('AiiDA Database location: ')
+            this_new_confs['AIIDADB_HOST'] = ""
+            this_new_confs['AIIDADB_PORT'] = ""
+            this_new_confs['AIIDADB_USER'] = ""
+            this_new_confs['AIIDADB_PASS'] = ""
+
+        elif 'postgres' in this_new_confs['AIIDADB_ENGINE']:
+            this_new_confs['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
+
+            old_host = this_existing_confs.get('AIIDADB_HOST', 'localhost')
+            if not old_host:
+                old_host = 'localhost'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_host))
+            this_new_confs['AIIDADB_HOST'] = raw_input('PostgreSQL host: ')
+
+            old_port = this_existing_confs.get('AIIDADB_PORT', '5432')
+            if not old_port:
+                old_port = '5432'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_port))
+            this_new_confs['AIIDADB_PORT'] = raw_input('PostgreSQL port: ')
+
+            readline.set_startup_hook(lambda: readline.insert_text(
+                this_existing_confs.get('AIIDADB_NAME', 'aiidadb')))
+            this_new_confs['AIIDADB_NAME'] = raw_input('AiiDA Database name: ')
+
+            old_user = this_existing_confs.get('AIIDADB_USER', 'aiida')
+            if not old_user:
+                old_user = 'aiida'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_user))
+            this_new_confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
+
+            readline.set_startup_hook(lambda: readline.insert_text(
+                this_existing_confs.get('AIIDADB_PASS')))
+            this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
+
+        elif 'mysql' in this_new_confs['AIIDADB_ENGINE']:
+            this_new_confs['AIIDADB_ENGINE'] = 'mysql'
+
+            old_host = this_existing_confs.get('AIIDADB_HOST', 'localhost')
+            if not old_host:
+                old_host = 'localhost'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_host))
+            this_new_confs['AIIDADB_HOST'] = raw_input('mySQL host: ')
+
+            old_port = this_existing_confs.get('AIIDADB_PORT', '3306')
+            if not old_port:
+                old_port = '3306'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_port))
+            this_new_confs['AIIDADB_PORT'] = raw_input('mySQL port: ')
+
+            readline.set_startup_hook(lambda: readline.insert_text(
+                this_existing_confs.get('AIIDADB_NAME', 'aiidadb')))
+            this_new_confs['AIIDADB_NAME'] = raw_input('AiiDA Database name: ')
+
+            old_user = this_existing_confs.get('AIIDADB_USER', 'aiida')
+            if not old_user:
+                old_user = 'aiida'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_user))
+            this_new_confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
+
+            readline.set_startup_hook(lambda: readline.insert_text(
+                this_existing_confs.get('AIIDADB_PASS')))
+            this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
+        else:
+            raise ValueError("You have to specify a valid database "
+                             "(valid choices are 'sqlite', 'mysql', 'postgres')")
+
+        # This part for the time being is a bit oddly written
+        # it should change in the future to add the possibility of having a
+        # remote repository. Atm, I act as only a local repo is possible
+        existing_repo = this_existing_confs.get('AIIDADB_REPOSITORY_URI',
+            os.path.join(aiida_dir, "repository-{}/".format(profile)))
+        default_protocol = 'file://'
+        if existing_repo.startswith(default_protocol):
+            existing_repo = existing_repo[len(default_protocol):]
+        readline.set_startup_hook(lambda: readline.insert_text(existing_repo))
+        new_repo_path = raw_input('AiiDA repository directory: ')
+        new_repo_path = os.path.expanduser(new_repo_path)
+        if not os.path.isabs(new_repo_path):
+            raise ValueError("You must specify an absolute path")
+        if (not os.path.isdir(new_repo_path)):
+            old_umask = os.umask(DEFAULT_UMASK)
+            try:
+                os.makedirs(new_repo_path)
+            finally:
+                os.umask(old_umask)
+
+        this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
+
+        confs['profiles'][profile] = this_new_confs
+
+        backup_config()
+        store_config(confs)
+
+        return this_new_confs
+    finally:
+        readline.set_startup_hook(lambda: readline.insert_text(""))
+
+
+
+
+def create_configuration_old(profile='default'):
     """
     :param database: create the configuration file
     """
@@ -780,8 +1021,13 @@ _property_table = {
         "string",
         "E-mail address for TCOD depositions",
         None,
+        None),
+    "warnings.showdeprecations":(
+        "show_deprecations",
+        "bool",
+        "Boolean whether to print deprecation warnings",
+        False,
         None)
-
 }
 
 

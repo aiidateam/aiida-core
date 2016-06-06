@@ -724,12 +724,14 @@ class Code(VerdiCommandWithSubcommands):
           with Q()) to filter the results on the AiidaOrmCode class.
         """
         from aiida.orm import Code as AiidaOrmCode
-        from django.db.models import Q
+        from aiida.orm.querybuilder import QueryBuilder
 
-        f = django_filter if django_filter is not None else Q()
+        qb = QueryBuilder()
+        qb.append(AiidaOrmCode, project=['id', 'label'])
+        qb.append(type='computer', computer_of=AiidaOrmCode, project=['name'])
+        qb.append(type='user', creator_of=AiidaOrmCode, project=['email'])
 
-        return sorted(AiidaOrmCode.query(f).distinct().values_list(
-            'pk', 'label', 'dbcomputer__name', 'user__email'))
+        return sorted(qb.all())
 
 
     def get_code(self, code_id):

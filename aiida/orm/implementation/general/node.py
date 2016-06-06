@@ -8,6 +8,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
 from aiida.common.folders import SandboxFolder
 from aiida.common.utils import combomethod
+from aiida.common.pluginloader import get_query_type_string
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -63,10 +64,9 @@ class AbstractNode(object):
                         '.'.join(newcls._plugin_type_string.split('.')[2:])
                 if newcls._plugin_type_string == 'node.Node.':
                     newcls._plugin_type_string = ''
-                newcls._query_type_string = "{}.".format(
-                    attrs['__module__'][len(prefix):])
-                if newcls._query_type_string == 'node.':
-                    newcls._query_type_string = ''
+                newcls._query_type_string = get_query_type_string(
+                        newcls._plugin_type_string
+                    )
             else:
                 raise InternalError("Class {} is not in a module under "
                                     "aiida.orm. (module is {})".format(

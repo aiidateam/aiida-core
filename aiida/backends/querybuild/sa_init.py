@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Imports used for the QueryBuilder.
-See 
+See
 :func:`querybuilder_base.QueryBuilderBase`,
 :func:`querybuilder_django.QueryBuilder`,
 :func:`querybuilder_sa.QueryBuilder`,
@@ -11,10 +11,15 @@ SQLAlchemy's functionalities can be extended using SA's FunctionElement class
 and @compiles decorator.
 Compile a function that postgresql has implemented, but SQLAlchemy has not
 """
+
 from sqlalchemy import (
     Column, Table, ForeignKey, UniqueConstraint,create_engine,
+    select, func, join, and_, or_, not_, except_, case, exists,
+    text
+)
+
+from sqlalchemy.types import (
     Integer, String, DateTime, Float, Boolean, Text,
-    select, func, join, and_, or_, not_, except_
 )
 from sqlalchemy.orm import (
     relationship,
@@ -23,9 +28,11 @@ from sqlalchemy.orm import (
     sessionmaker,
     foreign, mapper, aliased
 )
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.sql.elements import Cast
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 # TO COMPILE MY OWN FUNCTIONALITIES:
-from sqlalchemy.sql.expression import FunctionElement
+from sqlalchemy.sql.expression import FunctionElement, cast
 from sqlalchemy.ext.compiler import compiles
 
 class jsonb_array_length(FunctionElement):
@@ -37,3 +44,13 @@ def compile(element, compiler, **kw):
     Get length of array defined in a JSONB column
     """
     return "jsonb_array_length(%s)" % compiler.process(element.clauses)
+
+class jsonb_typeof(FunctionElement):
+    name = 'jsonb_typeof'
+
+@compiles(jsonb_typeof  )
+def compile(element, compiler, **kw):
+    """
+    Get length of array defined in a JSONB column
+    """
+    return "jsonb_typeof(%s)" % compiler.process(element.clauses)

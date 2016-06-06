@@ -14,36 +14,38 @@ from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.utils import get_automatic_user
 
-from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError)
+from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
+                                     NotExistent)
 
 from aiida.orm.implementation.general.group import AbstractGroup
-
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
+
 class Group(AbstractGroup):
 
     def __init__(self, **kwargs):
-        dbgroup = kwargs.pop('dbgroup', None)
+        given_dbgroup = kwargs.pop('dbgroup', None)
 
-        if dbgroup is not None:
-            if isinstance(dbgroup, (int, long)):
-                dbgroup = DbGroup.query.filter_by(id=dbgroup).first()
-                if not dbgroup:
+        if given_dbgroup is not None:
+            if isinstance(given_dbgroup, (int, long)):
+                dbgroup_res = DbGroup.query.filter_by(id=given_dbgroup).first()
+                if not dbgroup_res:
                     raise NotExistent("Group with pk={} does not exist".format(
-                        dbgroup))
+                        given_dbgroup))
+                self._dbgroup = dbgroup_res
+                return
 
-            if not isinstance(dbgroup, DbGroup):
-                raise TypeError("dbgroup is not a DbGroup instance, it is "
-                                "instead {}".format(str(type(dbgroup))))
-            if kwargs:
-                raise ValueError("If you pass a dbgroups, you cannot pass any "
+            elif isinstance(given_dbgroup, DbGroup):
+                self._dbgroup = given_dbgroup
+                return
+
+            raise ValueError("If you pass a dbgroups, you cannot pass any "
                                  "further parameter")
 
-            self._dbgroup = dbgroup
         else:
             name = kwargs.pop('name', None)
             if name is None:
@@ -58,32 +60,31 @@ class Group(AbstractGroup):
                                      ", ".join(kwargs.keys())))
 
             self._dbgroup = DbGroup(name=name, description=description,
-                                    user=user, type=group_type)
+                                   user=user, type=group_type)
 
     @property
     def name(self):
-        return self.dbgroup.name
+        return self._dbgroup.name
 
     @property
     def description(self):
-        return self.dbgroup.description
+        return self._dbgroup.description
 
     @description.setter
     def description(self, value):
-        self.dbgroup.description = value
+        self._dbgroup.description = value
 
         # Update the entry in the DB, if the group is already stored
         if self._is_stored:
-            self.dbgroup.save()
-
+            self._dbgroup.save()
 
     @property
     def type_string(self):
-        return self.dbgroup.type
+        return self._dbgroup.type
 
     @property
     def user(self):
-        return self.dbgroup.user
+        return self._dbgroup.user
 
     @property
     def dbgroup(self):
@@ -91,11 +92,15 @@ class Group(AbstractGroup):
 
     @property
     def pk(self):
-        return self.dbgroup.id
+        return self._dbgroup.id
+
+    @property
+    def id(self):
+        return self._dbgroup.id
 
     @property
     def uuid(self):
-        return unicode(self.dbgroup.uuid)
+        return unicode(self._dbgroup.uuid)
 
     def __int__(self):
         if self._to_be_stored:
@@ -113,7 +118,7 @@ class Group(AbstractGroup):
                                          "already stored")
         else:
             try:
-                self.dbgroup.save()
+                self._dbgroup.save(commit=True)
             except SQLAlchemyError:
                 raise UniquenessError("A group with the same name (and of the "
                                       "same type) already "
@@ -126,6 +131,7 @@ class Group(AbstractGroup):
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
         from aiida.orm.implementation.sqlalchemy.node import Node
+        from aiida.backends.sqlalchemy import session
 
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
@@ -153,10 +159,11 @@ class Group(AbstractGroup):
             else:
                 to_add = node
 
-            if to_add not in self.dbgroup.dbnodes:
-                list_nodes.append(to_add)
-
-        self.dbgroup.dbnodes.extend(list_nodes)
+            if to_add not in self._dbgroup.dbnodes:
+                #~ list_nodes.append(to_add)
+                self._dbgroup.dbnodes.append(to_add)
+        session.commit()
+        #~ self._dbgroup.dbnodes.extend(list_nodes)
 
     @property
     def nodes(self):
@@ -182,7 +189,7 @@ class Group(AbstractGroup):
             def next(self):
                 return next(self.generator)
 
-        return iterator(self.dbgroup.dbnodes.all())
+        return iterator(self._dbgroup.dbnodes.all())
 
     def remove_nodes(self, nodes):
         if not self._is_stored:
@@ -215,15 +222,16 @@ class Group(AbstractGroup):
                 node = node.dbnode
             # If we don't check first, SqlA might issue a DELETE statement for
             # an unexisting key, resulting in an error
-            if node in self.dbgroup.dbnodes:
+            if node in self._dbgroup.dbnodes:
                 list_nodes.append(node)
 
-        list(map(self.dbgroup.dbnodes.remove, list_nodes))
-
+        list(map(self._dbgroup.dbnodes.remove, list_nodes))
 
     @classmethod
-    def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
-              user=None, node_attributes=None, past_days=None, **kwargs):
+    def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
+              user=None, node_attributes=None, past_days=None,
+              name_filters=None, **kwargs):
+
         from aiida.orm.implementation.sqlalchemy.node import Node
 
         filters = []
@@ -247,7 +255,6 @@ class Group(AbstractGroup):
                                 "nodes for the query on Group is neither "
                                 "a Node nor a DbNode")
 
-
             # In the case of the Node orm from Sqlalchemy, there is an id
             # property on it.
             sub_query = (sa.session.query(table_groups_nodes).filter(
@@ -258,10 +265,21 @@ class Group(AbstractGroup):
             filters.append(sub_query)
         if user:
             if isinstance(user, basestring):
-                filters.append(DbGroup.user.has(email = user))
+                filters.append(DbGroup.user.has(email=user))
             else:
                 # This should be a DbUser
                 filters.append(DbGroup.user == user)
+
+        if name_filters:
+            for (k, v) in name_filters.iteritems():
+                if not v:
+                    continue
+                if k == "startswith":
+                    filters.append(DbGroup.name.like("{}%".format(v)))
+                elif k == "endswith":
+                    filters.append(DbGroup.name.like("%{}".format(v)))
+                elif k == "contains":
+                    filters.append(DbGroup.name.like("%{}%".format(v)))
 
         if node_attributes:
             # TODO SP: IMPLEMENT THIS
@@ -272,7 +290,6 @@ class Group(AbstractGroup):
                   .order_by(DbGroup.id).distinct().all())
 
         return [cls(dbgroup=g[0]) for g in groups]
-
 
     def delete(self):
         if self.pk is not None:

@@ -220,9 +220,9 @@ Before running the backup script, you will have to configure it. Therefore you
 should execute the ``backup_setup.py`` which is located under
 ``MY_AIIDA_FOLDER/aiida/common/additions/backup_script``. For example::
 
-	python MY_AIIDA_FOLDER/aiida/common/additions/backup_script/backup_setup.py
+	verdi -p PROFILENAME run MY_AIIDA_FOLDER/aiida/common/additions/backup_script/backup_setup.py
 
-This will ask a set of questions. More precisely, it will initially ask for:
+where PROFILENAME is the name of the profile you want to use (if you don't specify the ``-p`` option, the default profile will be used). This will ask a set of questions. More precisely, it will initially ask for:
 
  * The backup folder. This is the destination of the backup *configuration file*.
    By default a folder named ``backup`` in your ``.aiida`` directory is
@@ -245,7 +245,8 @@ This will ask a set of questions. More precisely, it will initially ask for:
   ``sshfs -o idmap=user -o rw backup_user@server_2:/home/backup_user/backup_destination_dir/``
   ``/home/aiida_user/remote_backup_dir/``
   
-  You can put this line into the actions performed at start-up, so that the 
+  You should put this line into the actions performed at start-up (under gnome you 
+  can access them by typing ``gnome-session-properties`` in a terminal), so that the 
   remote directory is mounted automatically after a reboot (but do not put it in 
   your ``.bashrc`` file otherwise each time you open a new terminal, your 
   computer will complain that the mount point is not empty...). 
@@ -318,7 +319,11 @@ day) to backup new changes.
   
     00 03 * * * /home/aiida_user/.aiida/backup/start_backup.py 2>&1 | mail -s "Incremental backup of the repository" aiida_user_email@domain.net
 
-  This will launch the backup of the database everyday at 3 AM, and send the output
+  or (if you need to backup a different profile than the default one)::
+
+    00 03 * * * verdi -p PROFILENAME run /home/aiida_user/.aiida/backup/start_backup.py 2>&1 | mail -s "Incremental backup of the repository" aiida_user_email@domain.net
+
+  This will launch the backup of the database every day at 3 AM, and send the output
   (or any error message) to the email address of the user (provided the ``mail``
   command -- from ``mailutils`` -- is configured appropriately).
   

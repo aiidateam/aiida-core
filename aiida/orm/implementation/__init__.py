@@ -27,6 +27,9 @@ elif BACKEND == "django":
     from aiida.orm.implementation.django.workflow import Workflow, kill_all, get_workflow_info
     from aiida.orm.implementation.django.code import Code, delete_code
     from aiida.orm.implementation.django.utils import delete_computer
+elif BACKEND is None:
+    raise ConfigurationError("settings.BACKEND has not been set.\n"
+                             "Hint: Have you called aiida.load_dbenv?")
 else:
-    raise ConfigurationError("Invalid settings.BACKEND: {}".format(
-            BACKEND))
+    raise ConfigurationError("Unknown settings.BACKEND: {}".format(
+        BACKEND))

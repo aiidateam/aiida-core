@@ -56,6 +56,24 @@ class ArrayData(Data):
         """
         Return a list of all arrays stored in the node, listing the files (and
         not relying on the properties).
+        
+        .. deprecated:: 0.7
+           Use :meth:`get_arraynames` instead.
+        """
+        import warnings
+        
+        warnings.warn(
+            "arraynames is deprecated, use get_arraynames instead", 
+            DeprecationWarning)
+        return self.get_arraynames()
+
+    def get_arraynames(self):
+        """
+        Return a list of all arrays stored in the node, listing the files (and 
+        not relying on the properties).
+        
+        .. versionadded:: 0.7
+           Renamed from arraynames
         """
         return self._arraynames_from_properties()
 

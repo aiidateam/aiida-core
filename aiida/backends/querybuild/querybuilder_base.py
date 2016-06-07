@@ -432,16 +432,21 @@ class AbstractQueryBuilder(object):
 
 
         ################# FILTERS ######################################
+
         self._filters[tag] = {}
-        #if the user specified a filter, add it:
-        if filters is not None:
-            self.add_filter(tag, filters)
 
         # I have to add a filter on column type.
         # This so far only is necessary for AiidaNodes
         # GROUPS?
         if query_type_string is not None:
             self._add_type_filter(tag, query_type_string, subclassing)
+        # The order has to be first _add_type_filter and then add_filter.
+        # If the user adds a query on the type column, it overwrites what I did
+
+        #if the user specified a filter, add it:
+        if filters is not None:
+            self.add_filter(tag, filters)
+
 
         ##################### PROJECTIONS ##############################
         self._projections[tag] = []

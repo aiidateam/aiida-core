@@ -918,7 +918,7 @@ class AbstractJobCalculation(object):
                 group_filters = None
 
         calculation_projections = [
-                'id', 'state', 'ctime', 'type', 'attributes.scheduler_state'
+                'id', 'state', 'attributes.state', 'ctime', 'type', 'attributes.scheduler_state'
             ]
         calc_list_data = [[
             '# Pk', 'State', 'Creation',
@@ -972,9 +972,15 @@ class AbstractJobCalculation(object):
                             timezone.localtime(ctime).isoformat().split('T')[0],
                             timezone.localtime(ctime).isoformat().split('T')[
                                 1].split('.')[0].rsplit(":", 1)[0]])
+                    state = str(res['calculation']['state'])
+                    if state == calc_states.IMPORTED:
+                        attrstate = res['calculation']['attributes.state']
+                        if attrstate == None:
+                            attrstate = 'UNKNOWN'
+                        state = '{}/{}'.format(state, attrstate)
                     calc_list_data.append([
                         str(res['calculation']['id']),
-                        str(res['calculation']['state']),
+                        state,
                         str(calc_ctime),
                         str(res['calculation']['attributes.scheduler_state']),
                         str(res['computer']['name']),

@@ -315,6 +315,8 @@ class Install(VerdiCommand):
         from aiida.common.setup import (create_base_dirs, create_configuration,
                                         set_default_profile, DEFAULT_UMASK)
         from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+        from aiida.backends.utils import set_backend_type, get_backend_type
+        from aiida.common.exceptions import InvalidOperation
 
         cmdline_args = list(args)
 
@@ -350,7 +352,8 @@ class Install(VerdiCommand):
         set_default_profile('daemon', gprofile, force_rewrite=False)
 
         if only_user_config:
-            print "Only user configuration requested, skipping the migrate command"
+            print ("Only user configuration requested, "
+                   "skipping the migrate command")
         else:
             print "Executing now a migrate command..."
             backend_choice = created_conf['AIIDADB_BACKEND']
@@ -360,10 +363,26 @@ class Install(VerdiCommand):
                 # Setting os.umask here since sqlite database gets created in
                 # this step.
                 old_umask = os.umask(DEFAULT_UMASK)
+
                 try:
-                    pass_to_django_manage([execname, 'migrate'], profile=gprofile)
+                    backend_type = get_backend_type()
+                except KeyError:
+                    backend_type = None
+
+                if backend_type is not None and backend_type != BACKEND_DJANGO:
+                    raise InvalidOperation("An already existing database found"
+                                           "and a different than the selected"
+                                           "backend was used for its "
+                                           "management.")
+
+                try:
+                    pass_to_django_manage([execname, 'migrate'],
+                                          profile=gprofile)
                 finally:
                     os.umask(old_umask)
+
+                set_backend_type(BACKEND_DJANGO)
+
             elif backend_choice == BACKEND_SQLA:
                 print("...for SQLAlchemy backend")
                 from aiida.backends.sqlalchemy.models.base import Base
@@ -373,6 +392,17 @@ class Install(VerdiCommand):
 
                 if not is_dbenv_loaded():
                     load_dbenv()
+
+                try:
+                    backend_type = get_backend_type()
+                except KeyError:
+                    backend_type = None
+
+                if backend_type is not None and backend_type != BACKEND_SQLA:
+                    raise InvalidOperation("An already existing database found"
+                                           "and a different than the selected"
+                                           "backend was used for its "
+                                           "management.")
 
                 # Those import are necessary for SQLAlchemy to correctly create
                 # the needed database tables.
@@ -392,13 +422,15 @@ class Install(VerdiCommand):
                     DbWorkflow, DbWorkflowData, DbWorkflowStep)
                 from aiida.backends.sqlalchemy.models.settings import DbSetting
 
-                Base.metadata.create_all(get_engine(get_profile_config(gprofile)))
+                Base.metadata.create_all(
+                    get_engine(get_profile_config(gprofile)))
+
+                set_backend_type(BACKEND_SQLA)
+
             else:
-                from aiida.common.exceptions import InvalidOperation
                 raise InvalidOperation("Not supported backend selected.")
 
-
-        print "Database was created successfuly"
+        print "Database was created successfully"
 
         # I create here the default user
         print "Loading new environment..."
@@ -556,9 +588,6 @@ class Run(VerdiCommand):
             finally:
                 f.close()
 
-
-# print "Done."
-
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST
 ########################################################################
@@ -603,6 +632,7 @@ def print_usage(execname):
     print >> sys.stderr, ""
     print >> sys.stderr, get_listparams()
     print >> sys.stderr, "See '{} help' for more help.".format(execname)
+
 
 def exec_from_cmdline(argv):
     """

@@ -857,7 +857,8 @@ class AbstractJobCalculation(object):
             )
         # get the last daemon check:
         try:
-            last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
+            last_daemon_check = get_last_daemon_timestamp('updater',
+                                                          when='stop')
         except ValueError:
             last_check_string = (
                     "# Last daemon state_updater check: "

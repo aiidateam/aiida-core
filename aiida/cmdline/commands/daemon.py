@@ -249,11 +249,13 @@ class Daemon(VerdiCommandWithSubcommands):
 
         from aiida.daemon.timestamps import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
+        from pytz import UTC
 
         most_recent_timestamp = get_most_recent_daemon_timestamp()
 
         if most_recent_timestamp is not None:
-            timestamp_delta = timezone.now() - most_recent_timestamp
+            timestamp_delta = (timezone.datetime.now(tz=UTC) -
+                               most_recent_timestamp)
             print ("# Most recent daemon timestamp:{}".format(
                 str_timedelta(timestamp_delta)))
         else:

@@ -30,6 +30,8 @@ from aiida.common.exceptions import InvalidOperation, ConfigurationError
 from aiida.common.setup import (get_profile_config, DEFAULT_USER_CONFIG_FIELD)
 
 from aiida.backends import sqlalchemy, settings
+from aiida.backends.utils import check_schema_version
+
 from aiida.backends.profile import (is_profile_loaded,
                                     load_profile)
 
@@ -62,7 +64,22 @@ def get_engine(config):
 
     return engine
 
+
 def load_dbenv(process=None, profile=None, connection=None):
+    """
+    Load the database environment (Django) and perform some checks.
+
+    :param process: the process that is calling this command ('verdi', or
+        'daemon')
+    :param profile: the string with the profile to use. If not specified,
+        use the default one specified in the AiiDA configuration file.
+    """
+    _load_dbenv_noschemacheck(process=process, profile=profile)
+    # Check schema version and the existence of the needed tables
+    # check_schema_version()
+
+
+def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
     """
     Load the SQLAlchemy database.
     """
@@ -393,4 +410,29 @@ def check_schema_version():
     :raise ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
-    raise NotImplementedError
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.backends import sqlalchemy as sa
+    from sqlalchemy.engine import reflection
+    from aiida.backends.sqlalchemy.models import SCHEMA_VERSION
+    from aiida.backends.utils import (
+        get_db_schema_version, set_db_schema_version,get_current_profile)
+
+    # Do not do anything if the table does not exist yet
+    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    if 'db_dbsetting' not in inspector.get_table_names():
+        return
+
+    code_schema_version = SCHEMA_VERSION
+    db_schema_version = get_db_schema_version()
+
+    if db_schema_version is None:
+        # No code schema defined yet, I set it to the code version
+        set_db_schema_version(code_schema_version)
+        db_schema_version = get_db_schema_version()
+
+    if code_schema_version != db_schema_version:
+        raise ConfigurationError(
+            "The code schema version is {}, but the version stored in the"
+            "database (DbSetting table) is {}, stopping.\n".
+            format(code_schema_version, db_schema_version)
+        )

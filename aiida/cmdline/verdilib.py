@@ -356,6 +356,7 @@ class Install(VerdiCommand):
                    "skipping the migrate command")
         else:
             print "Executing now a migrate command..."
+
             backend_choice = created_conf['AIIDADB_BACKEND']
             if backend_choice == BACKEND_DJANGO:
                 print("...for Django backend")
@@ -364,16 +365,17 @@ class Install(VerdiCommand):
                 # this step.
                 old_umask = os.umask(DEFAULT_UMASK)
 
-                try:
-                    backend_type = get_backend_type()
-                except KeyError:
-                    backend_type = None
-
-                if backend_type is not None and backend_type != BACKEND_DJANGO:
-                    raise InvalidOperation("An already existing database found"
-                                           "and a different than the selected"
-                                           "backend was used for its "
-                                           "management.")
+                # This check should be done more properly
+                # try:
+                #     backend_type = get_backend_type()
+                # except KeyError:
+                #     backend_type = None
+                #
+                # if backend_type is not None and backend_type != BACKEND_DJANGO:
+                #     raise InvalidOperation("An already existing database found"
+                #                            "and a different than the selected"
+                #                            "backend was used for its "
+                #                            "management.")
 
                 try:
                     pass_to_django_manage([execname, 'migrate'],
@@ -393,16 +395,17 @@ class Install(VerdiCommand):
                 if not is_dbenv_loaded():
                     load_dbenv()
 
-                try:
-                    backend_type = get_backend_type()
-                except KeyError:
-                    backend_type = None
-
-                if backend_type is not None and backend_type != BACKEND_SQLA:
-                    raise InvalidOperation("An already existing database found"
-                                           "and a different than the selected"
-                                           "backend was used for its "
-                                           "management.")
+                # This check should be done more properly
+                # try:
+                #     backend_type = get_backend_type()
+                # except KeyError:
+                #     backend_type = None
+                #
+                # if backend_type is not None and backend_type != BACKEND_SQLA:
+                #     raise InvalidOperation("An already existing database found"
+                #                            "and a different than the selected"
+                #                            "backend was used for its "
+                #                            "management.")
 
                 # Those import are necessary for SQLAlchemy to correctly create
                 # the needed database tables.

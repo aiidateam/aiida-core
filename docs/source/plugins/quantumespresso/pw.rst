@@ -50,25 +50,8 @@ Inputs
      
 * **structure**, class :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
 * **settings**, class :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` (optional)
-  An optional dictionary that activates non-default operations. Possible values are:
-    
-    *  **'FIXED_COORDS'**: a list Nx3 booleans, with N the number of atoms. If True,
-       the atomic position is fixed (in relaxations/md).
-    *  **'GAMMA_ONLY'**: boolean. If True and the kpoint mesh is gamma, activate 
-       a speed up of the calculation.
-    *  **'NAMELISTS'**: list of strings. Specify all the list of Namelists to be 
-       printed in the input file.
-    *  **'PARENT_FOLDER_SYMLINK'**: boolean # If True, create a symlnk to the scratch 
-       of the parent folder, otherwise the folder is copied (default: False)
-    *  **'CMDLINE'**: list of strings. parameters to be put after the executable and before the input file. 
-       Example: ["-npool","4"] will produce `pw.x -npool 4 < aiida.in`
-    *  **'ADDITIONAL_RETRIEVE_LIST'**: list of strings. Specify additional files to be retrieved.
-       By default, the output file and the xml file are already retrieved. 
-    *  **'ALSO_BANDS'**: boolean. If True, retrieves the band structure (default: False)
-    *  **'FORCE_KPOINTS_LIST'**: If it is set to True and the KpointsData have a mesh set, it will pass the kpoints to
-       QE as if they were a list of coordinates, generating a list of points. (at the moment used for wannier90)
-    *  **'ENVIRON'**: dictionary. If present a separate input file for the ENVIRON module is created with the dictionary
-       converted to a namelist. A proper flag is added to the CMDLINE to instruct QE to use ENVIRON, if not already present.
+  An optional dictionary that activates non-default operations. For a list of possible
+  values to pass, see the section on the :ref:`advanced features <pw-advanced-features>`.
     
 * **parent_folder**, class :py:class:`RemoteData <aiida.orm.data.parameter.ParameterData>` (optional)
   If specified, the scratch folder coming from a previous QE calculation is 
@@ -121,3 +104,149 @@ Errors of the parsing are reported in the log of the calculation (accessible
 with the ``verdi calculation logshow`` command). 
 Moreover, they are stored in the ParameterData under the key ``warnings``, and are
 accessible with ``Calculation.res.warnings``.
+
+.. _pw-advanced-features:
+
+Additional advanced features
+----------------------------
+
+In this section we describe how to use some advanced functionality in the
+Quantum ESPRESSO pw.x plugin (note that most of them apply also to the 
+cp.x plugin).
+
+While the input link with name 'parameters' is used for the content of the 
+namelists, additional parameters can be specified in the 'settings' input,
+also of type ParameterData.
+
+Below we summarise some of the options that you can specify, and their effect.
+In each case, after having defined the content of ``settings_dict``, you can use
+it as input of a calculation ``calc`` by doing::
+
+  calc.use_settings(ParameterData(dict=settings_dict))
+
+Parsing band energies
+.....................
+During each scf or nscf run, QE stores the band energies at the k-points
+of interest in .xml files in the output directory. If you want to retrieve
+and parse them, you can set::
+
+  settings_dict = {
+      'also_bands': True
+  }
+
+Fixing some atom coordinates
+............................
+If you want to ask QE to keep some coordinates of some atoms fixed
+(called ``if_pos`` in the QE documentation, and typically specified with
+0 or 1 values after the atomic coordinates), you can specify the following
+list of lists::
+
+  settings_dict = {
+      'fixed_coords': [
+          [True,False,False],
+          [True,True,True],
+          [False,False,False],
+          [False,False,False],
+          [False,False,False],
+          ],
+  }
+
+the list of lists (of booleans) must be of length N times 3, where N is the 
+number of sites (i.e., atoms) in the input structure. ``False`` means that
+the coordinate is free to move, ``True`` blocks that coordinate.
+
+Passing an explicit list of kpoints on a grid
+.............................................
+Some codes (e.g., Wannier90) require that a QE calculation is run with 
+an explicit grid of points (i.e., all points in a grid, even if they are
+equivalent by symmetry). Instead of generating it manually, you can
+pass a usual KpointsData specifying a mesh, and then pass the following 
+variable::
+
+  settings_dict = {  
+      'force_kpoints_list': True,
+  }
+
+Gamma-only calculation
+......................
+If you are using only the Gamma point (a grid of 1x1x1 without offset), you
+may want to use the following flag to tell QE to use the gamma-only routines
+(typically twice faster)::
+
+  settings_dict = {  
+      'gamma_only': False,
+  }
+
+Initialization only
+...................
+Sometimes you want to run QE but stop it immediately after the initialisation
+part (e.g. to parse the number of symmetries detected, the number of G vectors,
+of k-points, ...)
+In this case, by specifying::
+
+  settings_dict = {  
+      'only_initialization': True,
+  }
+
+a file named ``aiida.EXIT`` (where ``aiida`` is the prefix) will be also generated,
+asking QE to exit cleanly after the initialisation.
+
+Different set of namelists
+..........................
+The QE plugin will automatically figure out which namelists should be specified
+(and in which order) depending con ``CONTROL.calculation`` (e.g. for SCF only
+``CONTROL``, ``SYSTEM``, ``ELECTRONS``, but also ``IONS`` for RELAX, ...).
+If you want to override the automatic list, you can specify the list
+of namelists you want to produce as follows::
+
+  settings_dict = {  
+      'namelists': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL', 'OTHERNL'],
+  }
+
+
+Adding command-line options
+...........................
+If you want to add command-line options to the executable (particularly 
+relevant e.g. to tune the parallelization level), you can pass each option 
+as a string in a list, as follows::
+
+  settings_dict = {  
+      'cmdline': ['-nk', '4'],
+  }
+
+Using symlinks for the restarts
+...............................
+During a restart, the output directory of QE (stored by default in the subfolder
+``./out``) containing charge density, wavefunctions, ...is copied over.
+This is done in order to make sure one can perform multiple restarts of the 
+same calculation without affecting it (QE often changes/replaces the content 
+of that folder).
+
+However, for big calculations this may take time at each restart, or fill the
+scratch directory of your computing cluster. If you prefer to use symlinks, 
+pass::
+
+
+  settings_dict = {  
+      'parent_folder_symlink': True,
+  }
+
+.. note:: Use this flag ONLY IF YOU KNOW WHAT YOU ARE DOING. In particular, 
+  if you run a NSCF with this flag after a SCF calculation, the scratch directory
+  of the SCF will change and you may have problems restarting other calculations 
+  from the SCF.
+
+
+Retrieving more files
+.....................
+If you know that your calculation is producing additional files that you want to
+retrieve (and preserve in the AiiDA repository in the long term), you can add
+those files as a list as follows (here in the case of a file named
+``testfile.txt``)::
+
+  settings_dict = {  
+    'additional_retrieve_list': ['testfile.txt'],
+  }
+
+
+

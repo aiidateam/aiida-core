@@ -207,7 +207,8 @@ class _Block(_Step):
                 # Maybe it's a simple method
                 if not inspect.ismethod(command):
                     raise ValueError(
-                        "Workflow commands {} is not a class method.".format(command))
+                        "Workflow commands {} is not a class method.".
+                        format(command))
         self._commands = commands
 
     def create_stepper(self, workflow):

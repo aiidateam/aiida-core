@@ -13,14 +13,20 @@ if not is_dbenv_loaded():
 import inspect
 from unittest import TestCase
 from aiida.workflows2.fragmented_wf import *
+from aiida.workflows2.fragmented_wf import _FragmentedWorkfunctionSpec
 from aiida.workflows2.db_types import to_db_type
 
+# This is nasty, use a global variable to track the finishing of steps but in a
+# test it's kind of OK.
+finished_steps = {}
 
-class _Wf(FragmentedWorkfunction):
+
+class Wf(FragmentedWorkfunction):
     @classmethod
     def _define(cls, spec):
         spec.input("value")
         spec.input("n")
+        spec.dynamic_output()
         spec.outline(
             cls.s1,
             if_(cls.isA)(
@@ -37,16 +43,14 @@ class _Wf(FragmentedWorkfunction):
         )
 
     def __init__(self):
-        super(_Wf, self).__init__()
-        self.finished_steps = {
+        super(Wf, self).__init__()
+        self.finished_steps = finished_steps
+        self.finished_steps.update({
             k: False for k in
             [self.s1.__name__, self.s2.__name__, self.s3.__name__,
              self.s4.__name__, self.s5.__name__, self.s6.__name__,
              self.isA.__name__, self.isB.__name__, self.ltN.__name__]
-        }
-
-    def all_steps_finished(self):
-        return all(self.finished_steps.itervalues())
+        })
 
     def s1(self, ctx):
         self._set_finished(inspect.stack()[0][3])
@@ -85,9 +89,9 @@ class _Wf(FragmentedWorkfunction):
         self.finished_steps[function_name] = True
 
 
-class TestFragmentedWorkfunction2(TestCase):
+class TestFragmentedWorkfunction(TestCase):
     def test__run(self):
-        wf = _Wf()
+        global finished_steps
 
         A = to_db_type('A')
         B = to_db_type('B')
@@ -95,25 +99,25 @@ class TestFragmentedWorkfunction2(TestCase):
         three = to_db_type(3)
 
         # Try the if(..) part
-        wf.run(inputs={'value': A,'n': three})
-        # All steps except s3 and s4 should have finished
-        for step, finished in wf.finished_steps.iteritems():
+        Wf.run(inputs={'value': A, 'n': three})
+        # Check the steps that should have been run
+        for step, finished in finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        wf.run(inputs={'value': B, 'n': three})
-        # All steps except s3 and s4 should have finished
-        for step, finished in wf.finished_steps.iteritems():
+        finished_steps = Wf.run(inputs={'value': B, 'n': three})
+        # Check the steps that should have been run
+        for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        wf.run(inputs={'value': C, 'n': three})
-        # All steps except s3 and s4 should have finished
-        for step, finished in wf.finished_steps.iteritems():
+        finished_steps = Wf.run(inputs={'value': C, 'n': three})
+        # Check the steps that should have been run
+        for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -123,12 +127,20 @@ class TestFragmentedWorkfunction2(TestCase):
             @classmethod
             def _define(cls, spec):
                 # Try defining an invalid outline
-                a = 5
-                spec.outline(a)
+                spec.outline(5)
 
         with self.assertRaises(ValueError):
             Wf.spec()
 
     def test_str(self):
         # print(str(_Wf.spec().get_outline()))
-        self.assertIsInstance(str(_Wf.spec()), basestring)
+        self.assertIsInstance(str(Wf.spec()), basestring)
+
+    def test_malformed_outline(self):
+        spec = _FragmentedWorkfunctionSpec()
+
+        with self.assertRaises(ValueError):
+            spec.outline(5)
+
+        with self.assertRaises(ValueError):
+            spec.outline(type)

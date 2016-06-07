@@ -5,6 +5,7 @@ import plum.execution_engine
 from plum.wait import WaitOn
 from plum.serial_engine import SerialEngine
 import plum.parallel
+from aiida.workflows2.util import override
 import uuid
 from enum import Enum
 
@@ -106,7 +107,9 @@ class TickingEngine(plum.execution_engine.ExecutionEngine):
         self._serial_engine = SerialEngine()
         self._process_queue = []
 
-    def submit(self, process, inputs):
+    @override
+    def submit(self, process_class, inputs, checkpoint=None):
+        process = process_class()
         pid = self._create_pid()
         fut = _Future(self, pid)
         # Put it in the queue

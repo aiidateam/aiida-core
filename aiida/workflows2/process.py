@@ -7,6 +7,8 @@ import plum.port as port
 import voluptuous
 from aiida.workflows2.execution_engine import execution_engine
 import aiida.workflows2.util as util
+from aiida.workflows2.util import override, protected
+from aiida.orm.data import Data
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
@@ -125,6 +127,7 @@ class Process(plum.process.Process):
         self._running_data = None
 
     # Messages #####################################################
+    @override
     def on_start(self, inputs, exec_engine):
         """
         The process is starting with the given inputs
@@ -139,11 +142,13 @@ class Process(plum.process.Process):
         # This fills out the current calculation
         self._setup_db_record(inputs)
 
+    @override
     def on_finalise(self):
         super(Process, self).on_finalise()
         util.ProcessStack.pop()
         self._running_data = None
 
+    @override
     def _on_output_emitted(self, output_port, value, dynamic):
         """
         The process has emitted a value on the given output port.
@@ -154,6 +159,10 @@ class Process(plum.process.Process):
         beforehand?)
         """
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
+        assert isinstance(value, Data),\
+            "Values outputted from process must be instances of AiiDA Data" \
+            "types.  Got: {}".format(value.__class__)
+
         if not value.is_stored:
             value.store()
             value.add_link_from(self._current_calc, output_port,

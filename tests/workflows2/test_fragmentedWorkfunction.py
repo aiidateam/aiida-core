@@ -42,8 +42,8 @@ class Wf(FragmentedWorkfunction):
             ),
         )
 
-    def __init__(self):
-        super(Wf, self).__init__()
+    def __init__(self, pid=None):
+        super(Wf, self).__init__(pid)
         self.finished_steps = finished_steps
         self.finished_steps.update({
             k: False for k in

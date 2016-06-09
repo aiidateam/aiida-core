@@ -70,8 +70,8 @@ class FragmentedWorkfunction(Process):
         def setdefault(self, key, default=None):
             return self._content.setdefault(key, default)
 
-    def __init__(self):
-        super(FragmentedWorkfunction, self).__init__()
+    def __init__(self, pid):
+        super(FragmentedWorkfunction, self).__init__(pid)
         self._context = None
         self._stepper = None
 

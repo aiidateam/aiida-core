@@ -9,7 +9,7 @@ __version__ = "0.5.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
-class ExecutionEngine(plum.parallel.MultithreadedExecutionEngine):
+class ExecutionEngine(plum.parallel.MultithreadedEngine):
     pass
 
 

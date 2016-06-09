@@ -10,65 +10,49 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
+from aiida.workflows2.db_types import Bool
 from unittest import TestCase
 from aiida.workflows2.ticking_engine import TickingEngine
 from aiida.workflows2.process import Process
+from concurrent.futures import ThreadPoolExecutor
 
 
 class DummyProcess(Process):
     @staticmethod
     def _define(spec):
         spec.dynamic_input()
-
-    def __init__(self):
-        super(DummyProcess, self).__init__()
-        self.ran = False
+        spec.dynamic_output()
 
     def _run(self, a):
-        self.ran = True
+        self.out("ran", Bool(True))
 
 
 class TestTickingEngine(TestCase):
-    def test_get_process(self):
-        te = TickingEngine()
+    def setUp(self):
+        self.ticking_engine = TickingEngine()
+        self.executor = ThreadPoolExecutor(max_workers=1)
 
+    def test_get_process(self):
         # Test cancelling a future before the process runs
-        future = te.submit(DummyProcess(), inputs={'a': 5})
-        self.assertIsNotNone(te.get_process(future._pid))
+        future = self.ticking_engine.submit(DummyProcess, inputs={'a': 5})
 
     def test_submit(self):
-        te = TickingEngine()
-        dp = DummyProcess()
-        future = te.submit(dp, inputs={'a': 5})
-
-        self.assertFalse(future.done())
-        te.tick()
-        # Make sure both the future and the process say they finished
-        self.assertTrue(future.running())
-        te.tick()
-        self.assertTrue(future.done())
-        self.assertTrue(dp.ran)
-
-    def test_run(self):
-        """
-        Test that we can run a process and it completes.
-        :return:
-        """
-        te = TickingEngine()
-        dp = DummyProcess()
-        te.run(dp, inputs={'a': 5})
-        self.assertTrue(dp.ran)
+        fut = self.ticking_engine.submit(DummyProcess, inputs={'a': 5})
+        self._tick_till_finished()
+        res = fut.result()
+        self.assertTrue(res['ran'].value)
 
     def test_cancel(self):
-        te = TickingEngine()
-        dp = DummyProcess()
-
         # Test cancelling a future before the process runs
-        future = te.submit(dp, inputs={'a': 5})
+        future = self.ticking_engine.submit(DummyProcess, inputs={'a': 5})
         self.assertTrue(future.running())
-        self.assertIsNotNone(te.get_process(future._pid))
         future.cancel()
         self.assertTrue(future.cancelled())
-        with self.assertRaises(KeyError):
-            te.get_process(future._pid)
+
+    def _tick_till_finished(self):
+        self.executor.submit(self._keep_ticking())
+
+    def _keep_ticking(self):
+        while self.ticking_engine.tick():
+            pass
 

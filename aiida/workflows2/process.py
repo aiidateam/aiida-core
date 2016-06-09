@@ -2,7 +2,6 @@
 
 import collections
 import plum.process
-import plum.persistence.persistence_mixin
 import plum.port as port
 import voluptuous
 from aiida.workflows2.execution_engine import execution_engine
@@ -57,8 +56,10 @@ class DictSchema(object):
 
     def _get_template(self, dict):
         template = type(
-            "{}Inputs".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
+            "{}Inputs".format(self.__class__.__name__),
+            (FixedFieldsAttributeDict,),
             {'_valid_fields': dict.keys()})()
+
         for key, value in dict.iteritems():
             if isinstance(key, (voluptuous.Optional, voluptuous.Required)):
                 if key.default is not voluptuous.UNDEFINED:
@@ -143,8 +144,8 @@ class Process(plum.process.Process):
         self._setup_db_record(inputs)
 
     @override
-    def on_finalise(self):
-        super(Process, self).on_finalise()
+    def on_stop(self):
+        super(Process, self).on_stop()
         util.ProcessStack.pop()
         self._running_data = None
 
@@ -298,9 +299,6 @@ class FunctionProcess(Process):
         """
         assert(len(args) == len(cls._func_args))
         return dict(zip(cls._func_args, args))
-
-    def __init__(self):
-        super(FunctionProcess, self).__init__()
 
     def __call__(self, *args, **kwargs):
         """

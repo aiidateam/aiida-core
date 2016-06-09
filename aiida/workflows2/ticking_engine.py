@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from abc import ABCMeta, abstractmethod
-import plum.execution_engine
+import threading
+import concurrent.futures
 from plum.wait import WaitOn
-from plum.serial_engine import SerialEngine
+import plum.execution_engine
 import plum.parallel
 from aiida.workflows2.util import override
-import uuid
 from enum import Enum
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -33,13 +32,22 @@ class _Future(plum.execution_engine.Future):
         self._pid = pid
         self._status = self.Status.CURRENT
         self._done_callbacks = []
+        self._result = None
+        self._condition = None
 
     @property
     def pid(self):
         return self._pid
 
-    def process_finished(self):
+    def process_finished(self, result):
         self._status = self.Status.FINISHED
+        self._result = result
+
+        try:
+            self._condition.set()
+        except AttributeError:
+            pass
+
         for fn in self._done_callbacks:
             fn(self)
 
@@ -57,7 +65,13 @@ class _Future(plum.execution_engine.Future):
         return self._status in [self.Status.CANCELLED, self.Status.FINISHED]
 
     def result(self, timeout=None):
-        return None
+        if self._status is self.Status.CURRENT:
+            self._condition = threading.Event()
+            if not self._condition.wait(timeout):
+                raise concurrent.futures.TimeoutError()
+            self._condition = None
+
+        return self._result
 
     def exception(self, timeout=None):
         return None
@@ -69,57 +83,42 @@ class _Future(plum.execution_engine.Future):
 class TickingEngine(plum.execution_engine.ExecutionEngine):
     class ProcessInfo(object):
         @classmethod
-        def from_process(cls, pid, process, inputs, future, status):
-            return cls(pid, process=process, inputs=inputs, future=future, status=status)
+        def from_process(cls, process, inputs, future, status):
+            return cls(process=process, inputs=inputs, future=future, status=status)
 
-        @classmethod
-        def from_record(cls, record):
-            return cls(record.pid, record=record)
-
-        def __init__(self, pid, process=None, inputs=None, future=None,
-                     wait_on=None, record=None, status=None):
+        def __init__(self, process=None, inputs=None, future=None,
+                     wait_on=None, status=None):
             self._process = process
             self.inputs = inputs
-            self.pid = pid
             self.waiting_on = wait_on
             self.futures = []
             if future:
                 self.futures.append(future)
-            self.record = record
             self.status = status
 
         @property
         def process(self):
-            if self._process is None:
-                self._load_process()
             return self._process
 
-        def _load_process(self):
-            assert not self.process
-            assert (self.record and self.record.has_checkpoint())
+    def __init__(self, process_manager=None):
+        if process_manager is None:
+            from plum.simple_manager import SimpleManager
+            process_manager = SimpleManager()
+        self._process_manager = process_manager
 
-            self._process = self.record.create_process_from_checkpoint()
-            self.inputs = self.record.inputs
-
-    def __init__(self, persistence=None):
         self._current_processes = {}
-        self._persistence = persistence
-        self._serial_engine = SerialEngine()
         self._process_queue = []
 
     @override
     def submit(self, process_class, inputs, checkpoint=None):
-        process = process_class()
-        pid = self._create_pid()
-        fut = _Future(self, pid)
+        process, wait_on = self._process_manager.create_process(
+            process_class, inputs, checkpoint)
+        fut = _Future(self, process.pid)
         # Put it in the queue
-        self._current_processes[pid] =\
-            self.ProcessInfo.from_process(pid, process, inputs, fut,
+        self._current_processes[process.pid] =\
+            self.ProcessInfo.from_process(process, inputs, fut,
                                           ProcessStatus.QUEUEING)
         return fut
-
-    def run(self, process, inputs):
-        return self._serial_engine.run(process, inputs)
 
     def tick(self):
         for proc_info in self._current_processes.values():
@@ -130,18 +129,13 @@ class TickingEngine(plum.execution_engine.ExecutionEngine):
                     self._continue_process(proc_info)
             elif proc_info.status is ProcessStatus.FINISHED:
                 for fut in proc_info.futures:
-                    fut.process_finished()
-                del self._current_processes[proc_info.pid]
+                    fut.process_finished(proc_info.process.get_last_outputs())
+                del self._current_processes[proc_info.process.pid]
             else:
                 raise RuntimeError(
-                    "Process should not be in state {}".format(proc_info.status))
-
-    def get_process(self, pid):
-        proc_info = self._current_processes.get(pid, None)
-        if proc_info:
-            return proc_info.process
-        else:
-            return self._serial_engine.get_process(pid)
+                    "Process should not be in state {}".format(proc_info.status)
+                )
+        return len(self._current_processes) > 0
 
     def cancel(self, pid):
         proc_info = self._current_processes[pid]
@@ -167,10 +161,6 @@ class TickingEngine(plum.execution_engine.ExecutionEngine):
 
         ins = process._create_input_args(inputs)
         process.on_start(ins, self)
-        if self._persistence:
-            record = self._persistence.create_running_process_record(process, inputs, proc_info.pid)
-            record.save()
-            proc_info.record = record
 
         retval = process._run(**inputs)
         if isinstance(retval, WaitOn):
@@ -181,7 +171,8 @@ class TickingEngine(plum.execution_engine.ExecutionEngine):
 
     def _continue_process(self, proc_info):
         assert proc_info.status is ProcessStatus.WAITING
-        assert proc_info.waiting_on, "Cannot continue a process that was not waiting"
+        assert proc_info.waiting_on,\
+            "Cannot continue a process that was not waiting"
 
         # Get the WaitOn callback function name and call it
         # making sure to reset the waiting_on
@@ -201,20 +192,12 @@ class TickingEngine(plum.execution_engine.ExecutionEngine):
 
         proc_info.waiting_on = wait_on
         proc_info.process.on_wait()
-        if proc_info.record:
-            proc_info.record.create_checkpoint(self, proc_info.process, proc_info.waiting_on)
-            proc_info.record.save()
+
         proc_info.status = ProcessStatus.WAITING
 
     def _finish_process(self, proc_info, retval):
         assert not proc_info.waiting_on, "Cannot finish a process that is waiting"
 
-        proc_info.process.on_finalise()
-        if proc_info.record:
-            proc_info.record.delete(proc_info.pid)
-            proc_info.record = None
         proc_info.process.on_finish(retval)
         proc_info.status = ProcessStatus.FINISHED
 
-    def _create_pid(self):
-        return uuid.uuid1()

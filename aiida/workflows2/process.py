@@ -4,9 +4,10 @@ import collections
 import plum.process
 import plum.port as port
 import voluptuous
+from aiida.orm import load_node
 from aiida.workflows2.execution_engine import execution_engine
 import aiida.workflows2.util as util
-from aiida.workflows2.util import override, protected
+from aiida.workflows2.util import override
 from aiida.orm.data import Data
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
@@ -84,7 +85,8 @@ class ProcessSpec(plum.process.ProcessSpec):
 
     def get_inputs_template(self):
         template = type(
-            "{}Inputs".format(self.__class__.__name__), (FixedFieldsAttributeDict,),
+            "{}Inputs".format(self.__class__.__name__),
+            (FixedFieldsAttributeDict,),
             {'_valid_fields': self.inputs.keys()})()
 
         # Now fill in any default values
@@ -106,6 +108,8 @@ class Process(plum.process.Process):
     """
     __metaclass__ = ABCMeta
 
+    KEY_CALC_PK = 'calc_pk'
+
     @classmethod
     def get_inputs_template(cls):
         return cls.spec().get_inputs_template()
@@ -114,34 +118,41 @@ class Process(plum.process.Process):
     def _create_default_exec_engine(cls):
         return execution_engine
 
-    #__RunningData = collections.namedtuple('__RunningData',
-    #                                     ['current_calc', 'parent'])
-    class __RunningData(object):
-        def __init__(self):
-            self.current_calc = None
-            self.parent = None
+    @classmethod
+    def create_db_record(cls):
+        """
+        Create a database calculation node that represents what happened in
+        this process.
+        :return:
+        """
+        from aiida.orm.calculation.process import ProcessCalculation
+        calc = ProcessCalculation()
+        return calc
 
     _spec_type = ProcessSpec
 
-    def __init__(self, create_output_links=True):
+    def __init__(self, store_provenance=True):
         super(Process, self).__init__()
-        self._running_data = None
+        self._calc = None
+        self.parent = None
+        self._store_provenance = store_provenance
 
     # Messages #####################################################
     @override
-    def on_start(self, inputs, exec_engine):
-        """
-        The process is starting with the given inputs
-        :param inputs: A dictionary of inputs for each input port
-        """
-        super(Process, self).on_start(inputs, exec_engine)
-        # First create the running data because it gets used by the
-        # ProcessStack
-        self._running_data = self.__RunningData()
+    def on_create(self, pid, inputs=None):
+        super(Process, self).on_create(pid, inputs)
+
         # This fills out the parent
         util.ProcessStack.push(self)
-        # This fills out the current calculation
-        self._setup_db_record(inputs)
+        self._calc = self.create_db_record()
+        self._setup_db_record()
+
+    @override
+    def on_recreate(self, pid, saved_instance_state):
+        self._calc = load_node(saved_instance_state[self.KEY_CALC_PK])
+        pid =  self._calc.pk
+
+        super(Process, self).on_create(pid, saved_instance_state)
 
     @override
     def on_stop(self):
@@ -166,30 +177,18 @@ class Process(plum.process.Process):
 
         if not value.is_stored:
             value.store()
-            value.add_link_from(self._current_calc, output_port,
+            value.add_link_from(self._calc, output_port,
                                 LinkType.CREATE)
-        value.add_link_from(self._current_calc, output_port, LinkType.RETURN)
+        value.add_link_from(self._calc, output_port, LinkType.RETURN)
     #################################################################
 
-    def _create_db_record(self):
-        """
-        Create a database calculation node that represents what happened in
-        this process.
-        :return:
-        """
-        from aiida.orm.calculation.process import ProcessCalculation
-        calc = ProcessCalculation()
-        return calc
-
-    def _setup_db_record(self, inputs):
-        # Link and store the retrospective provenance for this process
-        calc = self._create_db_record()  # (unstored)
-        assert (not calc.is_stored)
+    def _setup_db_record(self):
+        assert self.inputs is not None
 
         # First get a dictionary of all the inputs to link, this is needed to
         # deal with things like input groups
         to_link = {}
-        for name, input in inputs.iteritems():
+        for name, input in self.inputs.iteritems():
             if self.spec().has_input(name):
                 if isinstance(self.spec().get_input(name), port.InputGroupPort):
                     to_link.update(
@@ -204,16 +203,17 @@ class Process(plum.process.Process):
                 input.store()
                 # If the input isn't stored then assume our parent created it
                 if self._parent:
-                    input.add_link_from(self._parent._current_calc, "CREATE",
+                    input.add_link_from(self._parent.calc, "CREATE",
                                         link_type=LinkType.CREATE)
 
-            calc.add_link_from(input, name)
+            self.calc.add_link_from(input, name)
 
         if self._parent:
-            calc.add_link_from(self._parent._current_calc, "CALL", LinkType.CALL)
+            self.calc.add_link_from(self._parent.calc, "CALL",
+                                     LinkType.CALL)
 
-        self._current_calc = calc
-        self._current_calc.store()
+        if self._store_provenance:
+            self.calc.store_all()
 
     def _can_fast_forward(self, inputs):
         return False
@@ -224,24 +224,16 @@ class Process(plum.process.Process):
             self.out(k, v)
 
     @property
-    def _current_calc(self):
-        assert self._running_data, "Process not running"
-        return self._running_data.current_calc
-
-    @_current_calc.setter
-    def _current_calc(self, calc_node):
-        assert self._running_data, "Process not running"
-        self._running_data.current_calc = calc_node
+    def calc(self):
+        return self._calc
 
     @property
     def _parent(self):
-        assert self._running_data, "Process not running"
-        return self._running_data.parent
+        return self.parent
 
     @_parent.setter
     def _parent(self, parent):
-        assert self._running_data, "Process not running"
-        self._running_data.parent = parent
+        self.parent = parent
 
 
 class FunctionProcess(Process):
@@ -300,24 +292,11 @@ class FunctionProcess(Process):
         assert(len(args) == len(cls._func_args))
         return dict(zip(cls._func_args, args))
 
-    def __call__(self, *args, **kwargs):
-        """
-        Call the function process, this way the object can be used as a
-        function.  It will translate the arguments into process inputs and
-        run the process.
-
-        :param args: Function arguments
-        :param kwargs: Keyword arguments
-        :return:
-        """
-        assert(len(args) == len(self._func_args))
-        inputs = kwargs
-        # Add all the non-keyword arguments as inputs
-        # TODO: Check that we're not overwriting kwargs with args
-        for name, value in zip(self._func_args, args):
-            inputs[name] = value
-        # Now get the superclass to deal with the keyword args and run
-        return super(FunctionProcess, self).__call__(**inputs)
+    @classmethod
+    def create_db_record(cls):
+        calc = super(FunctionProcess, cls).create_db_record()
+        add_source_info(calc, cls._func)
+        return calc
 
     def _run(self, **kwargs):
         args = []
@@ -326,8 +305,3 @@ class FunctionProcess(Process):
         outs = self._func(*args)
         for name, value in outs.iteritems():
             self.out(name, value)
-
-    def _create_db_record(self):
-        calc = super(FunctionProcess, self)._create_db_record()
-        add_source_info(calc, self._func)
-        return calc

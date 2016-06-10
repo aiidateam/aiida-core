@@ -84,7 +84,8 @@ class TickingEngine(plum.execution_engine.ExecutionEngine):
     class ProcessInfo(object):
         @classmethod
         def from_process(cls, process, inputs, future, status):
-            return cls(process=process, inputs=inputs, future=future, status=status)
+            return cls(process=process, inputs=inputs, future=future,
+                       status=status)
 
         def __init__(self, process=None, inputs=None, future=None,
                      wait_on=None, status=None):
@@ -100,19 +101,23 @@ class TickingEngine(plum.execution_engine.ExecutionEngine):
         def process(self):
             return self._process
 
-    def __init__(self, process_manager=None):
-        if process_manager is None:
-            from plum.simple_manager import SimpleManager
-            process_manager = SimpleManager()
-        self._process_manager = process_manager
+    def __init__(self, process_factory=None):
+        if process_factory is None:
+            from aiida.workflows2.process_factory import ProcessFactory
+            process_factory = ProcessFactory()
+        self._process_factory = process_factory
 
         self._current_processes = {}
         self._process_queue = []
 
     @override
     def submit(self, process_class, inputs, checkpoint=None):
-        process, wait_on = self._process_manager.create_process(
-            process_class, inputs, checkpoint)
+        if checkpoint is None:
+            process =\
+                self._process_factory.create_process(process_class, inputs)
+        else:
+            process, wait_on = self._process_factory.recreate_process(
+                process_class, checkpoint)
         fut = _Future(self, process.pid)
         # Put it in the queue
         self._current_processes[process.pid] =\
@@ -160,9 +165,8 @@ class TickingEngine(plum.execution_engine.ExecutionEngine):
         inputs = proc_info.inputs
 
         ins = process._create_input_args(inputs)
-        process.on_start(ins, self)
-
-        retval = process._run(**inputs)
+        process.on_start(self)
+        retval = process._run(**ins)
         if isinstance(retval, WaitOn):
             self._wait_process(proc_info, retval)
         else:
@@ -188,7 +192,8 @@ class TickingEngine(plum.execution_engine.ExecutionEngine):
             return retval
 
     def _wait_process(self, proc_info, wait_on):
-        assert not proc_info.waiting_on, "Cannot wait on a process that is already waiting"
+        assert not proc_info.waiting_on,\
+            "Cannot wait on a process that is already waiting"
 
         proc_info.waiting_on = wait_on
         proc_info.process.on_wait()
@@ -196,7 +201,8 @@ class TickingEngine(plum.execution_engine.ExecutionEngine):
         proc_info.status = ProcessStatus.WAITING
 
     def _finish_process(self, proc_info, retval):
-        assert not proc_info.waiting_on, "Cannot finish a process that is waiting"
+        assert not proc_info.waiting_on,\
+            "Cannot finish a process that is waiting"
 
         proc_info.process.on_finish(retval)
         proc_info.status = ProcessStatus.FINISHED

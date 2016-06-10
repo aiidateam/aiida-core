@@ -70,14 +70,14 @@ class FragmentedWorkfunction(Process):
         def setdefault(self, key, default=None):
             return self._content.setdefault(key, default)
 
-    def __init__(self, pid):
-        super(FragmentedWorkfunction, self).__init__(pid)
+    def __init__(self, store_provenance=True):
+        super(FragmentedWorkfunction, self).__init__(store_provenance)
         self._context = None
         self._stepper = None
 
     def save_instance_state(self, bundle):
         super(FragmentedWorkfunction, self).save_instance_state(bundle)
-        for key, val in self._context:
+        for key, val in self._context._get_dict().iteritems():
             bundle[key] = val
 
     @property
@@ -100,8 +100,8 @@ class FragmentedWorkfunction(Process):
 
     # Internal messages #################################
     @override
-    def on_start(self, inputs, exec_engine):
-        super(FragmentedWorkfunction, self).on_start(inputs, exec_engine)
+    def on_create(self, pid, saved_instance_state=None):
+        super(FragmentedWorkfunction, self).on_create(pid, saved_instance_state)
         self._context = self.Context()
 
     @override

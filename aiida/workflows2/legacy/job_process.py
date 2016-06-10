@@ -61,27 +61,27 @@ class JobProcess(Process):
     def __init__(self):
         # Need to tell Process to not create output links as these are
         # created internally by the execution manager
-        super(JobProcess, self).__init__(create_output_links=False)
+        super(JobProcess, self).__init__(store_provenance=False)
 
     def _run(self, **kwargs):
-        self._current_calc.submit()
+        self._calc.submit()
         return WaitOnJobCalculation(
-            self.calculation_finished.__name__, self._current_calc.pk)
+            self.calculation_finished.__name__, self._calc.pk)
 
     def calculation_finished(self):
-        assert not self._current_calc._is_running()
+        assert not self._calc._is_running()
 
-        for label, node in self._current_calc.get_outputs_dict():
+        for label, node in self._calc.get_outputs_dict():
             self.out(label, node)
 
-    def _create_db_record(self):
+    def create_db_record(self):
         return self._CALC_CLASS()
 
     def _setup_db_record(self, inputs):
         from aiida.common.links import LinkType
 
         # Link and store the retrospective provenance for this process
-        calc = self._create_db_record()  # (unstored)
+        calc = self.create_db_record()  # (unstored)
         assert (not calc.is_stored)
 
         # Set all the attributes using the setter methods
@@ -114,5 +114,5 @@ class JobProcess(Process):
         if self._parent:
             calc.add_link_from(self._parent._current_calc, "CALL", LinkType.CALL)
 
-        self._current_calc = calc
-        self._current_calc.store_all()
+        self._calc = calc
+        self._calc.store_all()

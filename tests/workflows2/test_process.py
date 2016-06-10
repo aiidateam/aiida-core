@@ -8,15 +8,16 @@ from unittest import TestCase
 from aiida.workflows2.process import Process
 
 
+class BadOutput(Process):
+    @staticmethod
+    def _define(spec):
+        spec.dynamic_output()
+
+    def _run(self):
+        self.out("bad_output", 5)
+
+
 class TestProcess(TestCase):
     def test_inputs(self):
-        class BadOutput(Process):
-            @staticmethod
-            def _define(spec):
-                spec.dynamic_output()
-
-            def _run(self):
-                self.out("bad_output", 5)
-
         with self.assertRaises(AssertionError):
             BadOutput.run()

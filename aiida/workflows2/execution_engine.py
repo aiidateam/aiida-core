@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import plum.execution_engine
 import plum.parallel
+from aiida.workflows2.process_factory import ProcessFactory
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -13,4 +13,4 @@ class ExecutionEngine(plum.parallel.MultithreadedEngine):
     pass
 
 
-execution_engine = ExecutionEngine()
+execution_engine = ExecutionEngine(process_factory=ProcessFactory())

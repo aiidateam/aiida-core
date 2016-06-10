@@ -9,8 +9,9 @@ from aiida.common.exceptions import ModificationNotAllowed, DbContentError
 from aiida.backends.djsite.utils import get_automatic_user
 from aiida.orm.group import Group
 from aiida.orm.implementation.django.calculation import Calculation
-from aiida.orm.implementation.general.calculation.job import AbstractJobCalculation
-from aiida.orm.implementation.general.calculation import from_type_to_pluginclassname
+from aiida.orm.implementation.general.calculation.job import \
+    AbstractJobCalculation
+from aiida.common.pluginloader import from_type_to_pluginclassname
 from aiida.utils import timezone
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
@@ -62,8 +63,9 @@ class JobCalculation(AbstractJobCalculation, Calculation):
             with transaction.commit_on_success():
                 new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
         except IntegrityError:
-            raise ModificationNotAllowed("Calculation pk= {} already transited through "
-                                         "the state {}".format(self.pk, state))
+            raise ModificationNotAllowed(
+                "Calculation pk= {} already transited through "
+                "the state {}".format(self.pk, state))
 
         # For non-imported states, also set in the attribute (so that, if we
         # export, we can still see the original state the calculation had.
@@ -107,14 +109,15 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                         most_recent_state = sort_states(this_calc_states)[0]
                     except ValueError as e:
                         raise DbContentError("Error in the content of the "
-                                             "DbCalcState table ({})".format(e.message))
+                                             "DbCalcState table ({})".format(
+                            e.message))
 
                     return most_recent_state
 
     @classmethod
-    def _list_calculations(cls, states=None, past_days=None, group=None,
-                           group_pk=None, all_users=False, pks=[],
-                           relative_ctime=True):
+    def _list_calculations_old(cls, states=None, past_days=None, group=None,
+                               group_pk=None, all_users=False, pks=[],
+                               relative_ctime=True):
         """
         Return a string with a description of the AiiDA calculations.
 
@@ -183,12 +186,15 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                 n_days_ago = now - datetime.timedelta(days=past_days)
                 q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
 
-        calc_list_pk = list(cls.query(q_object).distinct().values_list('pk', flat=True))
+        calc_list_pk = list(
+            cls.query(q_object).distinct().values_list('pk', flat=True))
 
         calc_list = cls.query(pk__in=calc_list_pk).order_by('ctime')
 
-        scheduler_states = dict(DbAttribute.objects.filter(dbnode__pk__in=calc_list_pk,
-                                                           key='scheduler_state').values_list('dbnode__pk', 'tval'))
+        scheduler_states = dict(
+            DbAttribute.objects.filter(dbnode__pk__in=calc_list_pk,
+                                       key='scheduler_state').values_list(
+                'dbnode__pk', 'tval'))
 
         # I do the query now, so that the list of pks gets cached
         calc_list_data = list(
@@ -216,7 +222,8 @@ class JobCalculation(AbstractJobCalculation, Calculation):
 
         ## Get the last daemon check
         try:
-            last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
+            last_daemon_check = get_last_daemon_timestamp('updater',
+                                                          when='stop')
         except ValueError:
             last_check_string = ("# Last daemon state_updater check: "
                                  "(Error while retrieving the information)")
@@ -226,8 +233,10 @@ class JobCalculation(AbstractJobCalculation, Calculation):
             else:
                 last_check_string = ("# Last daemon state_updater check: "
                                      "{} ({})".format(
-                    str_timedelta(now - last_daemon_check, negative_to_zero=True),
-                    timezone.localtime(last_daemon_check).strftime("at %H:%M:%S on %Y-%m-%d")))
+                    str_timedelta(now - last_daemon_check,
+                                  negative_to_zero=True),
+                    timezone.localtime(last_daemon_check).strftime(
+                        "at %H:%M:%S on %Y-%m-%d")))
 
         disabled_ignorant_states = [
             None, calc_states.FINISHED, calc_states.SUBMISSIONFAILED,
@@ -258,7 +267,8 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                     else:
                         remote_state = '{}'.format(sched_state)
                         if calc_state == calc_states.WITHSCHEDULER:
-                            last_check = scheduler_lastcheck.get(calcdata['pk'], None)
+                            last_check = scheduler_lastcheck.get(calcdata['pk'],
+                                                                 None)
                             if last_check is not None:
                                 when_string = " {}".format(
                                     str_timedelta(now - last_check, short=True,
@@ -268,11 +278,13 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                                 when_string = ""
                                 verb_string = ""
                             remote_state = "{}{}{}".format(verb_string,
-                                                           sched_state, when_string)
+                                                           sched_state,
+                                                           when_string)
                 except ValueError:
                     raise
 
-                calc_module = from_type_to_pluginclassname(calcdata['type']).rsplit(".", 1)[0]
+                calc_module = \
+                from_type_to_pluginclassname(calcdata['type']).rsplit(".", 1)[0]
                 prefix = 'calculation.job.'
                 prefix_len = len(prefix)
                 if calc_module.startswith(prefix):
@@ -283,8 +295,11 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                                                negative_to_zero=True,
                                                max_num_fields=1)
                 else:
-                    calc_ctime = " ".join([timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
-                                           timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[
+                    calc_ctime = " ".join([timezone.localtime(
+                        calcdata['ctime']).isoformat().split('T')[0],
+                                           timezone.localtime(calcdata[
+                                                                  'ctime']).isoformat().split(
+                                               'T')[1].split('.')[
                                                0].rsplit(":", 1)[0]])
 
                 the_state = states[calcdata['pk']]
@@ -292,8 +307,9 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                 # decide if it is needed to print enabled/disabled information
                 # By default, if the computer is not configured for the
                 # given user, assume it is user_enabled
-                user_enabled = enabled_auth_dict.get((calcdata['dbcomputer__pk'],
-                                                      calcdata['user__pk']), True)
+                user_enabled = enabled_auth_dict.get(
+                    (calcdata['dbcomputer__pk'],
+                     calcdata['user__pk']), True)
                 global_enabled = calcdata["dbcomputer__enabled"]
 
                 enabled = "" if (user_enabled and global_enabled or
@@ -311,7 +327,8 @@ class JobCalculation(AbstractJobCalculation, Calculation):
             rows = []
             for j in range(len(str_matrix[0])):
                 rows.append([len(str(i[j])) for i in str_matrix])
-            line_lengths = [str(max(max(rows[i]), len_title[i])) for i in range(len(rows))]
+            line_lengths = [str(max(max(rows[i]), len_title[i])) for i in
+                            range(len(rows))]
             fmt_string = "{:<" + "}|{:<".join(line_lengths) + "}"
             for row in str_matrix:
                 res_str_list.append(fmt_string.format(*[str(i) for i in row]))

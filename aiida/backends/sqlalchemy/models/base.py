@@ -63,7 +63,11 @@ class Model(object):
         self.session.add(self)
         if commit:
             self.session.commit()
-
         return self
+
+    def delete(self, commit=True):
+        self.session.delete(self)
+        if commit:
+            self.session.commit()
 
 Base = declarative_base(cls=Model, name='Model')

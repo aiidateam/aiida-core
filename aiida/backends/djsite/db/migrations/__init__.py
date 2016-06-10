@@ -9,7 +9,7 @@ LATEST_MIGRATION = '0003_add_link_type'
 
 
 def _update_schema_version(version, apps, schema_editor):
-    from aiida.backends.djsite.utils import set_db_schema_version
+    from aiida.backends.utils import set_db_schema_version
     set_db_schema_version(version)
 
 

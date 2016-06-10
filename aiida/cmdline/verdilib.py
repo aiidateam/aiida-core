@@ -41,6 +41,7 @@ from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.profile import Profile
 from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.comment import Comment
+from aiida.cmdline.commands.shell import Shell
 from aiida.cmdline import execname
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
@@ -313,6 +314,9 @@ class Install(VerdiCommand):
     def run(self, *args):
         from aiida.common.setup import (create_base_dirs, create_configuration,
                                         set_default_profile, DEFAULT_UMASK)
+        from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+        from aiida.backends.utils import set_backend_type, get_backend_type
+        from aiida.common.exceptions import InvalidOperation
 
         cmdline_args = list(args)
 
@@ -331,50 +335,128 @@ class Install(VerdiCommand):
 
         # create the directories to store the configuration files
         create_base_dirs()
-        profile = 'default' if settings_profile.AIIDADB_PROFILE is None \
-                            else settings_profile.AIIDADB_PROFILE
+        # gprofile = 'default' if profile is None else profile
+        gprofile = 'default' if settings_profile.AIIDADB_PROFILE is None \
+            else settings_profile.AIIDADB_PROFILE
+
+        created_conf = None
         # ask and store the configuration of the DB
         try:
-            create_configuration(profile=profile)
+            created_conf = create_configuration(profile=gprofile)
         except ValueError as e:
             print >> sys.stderr, "Error during configuration: {}".format(e.message)
             sys.exit(1)
 
         # set default DB profiles
-        set_default_profile('verdi', profile, force_rewrite=False)
-        set_default_profile('daemon', profile, force_rewrite=False)
+        set_default_profile('verdi', gprofile, force_rewrite=False)
+        set_default_profile('daemon', gprofile, force_rewrite=False)
 
         if only_user_config:
-            print "Only user configuration requested, skipping the migrate command"
+            print ("Only user configuration requested, "
+                   "skipping the migrate command")
         else:
             print "Executing now a migrate command..."
-            # The correct profile is selected within load_dbenv.
-            # Setting os.umask here since sqlite database gets created in
-            # this step.
-            old_umask = os.umask(DEFAULT_UMASK)
-            try:
-                pass_to_django_manage([execname, 'migrate'])
-            finally:
-                os.umask(old_umask)
+
+            backend_choice = created_conf['AIIDADB_BACKEND']
+            if backend_choice == BACKEND_DJANGO:
+                print("...for Django backend")
+                # The correct profile is selected within load_dbenv.
+                # Setting os.umask here since sqlite database gets created in
+                # this step.
+                old_umask = os.umask(DEFAULT_UMASK)
+
+                # This check should be done more properly
+                # try:
+                #     backend_type = get_backend_type()
+                # except KeyError:
+                #     backend_type = None
+                #
+                # if backend_type is not None and backend_type != BACKEND_DJANGO:
+                #     raise InvalidOperation("An already existing database found"
+                #                            "and a different than the selected"
+                #                            "backend was used for its "
+                #                            "management.")
+
+                try:
+                    pass_to_django_manage([execname, 'migrate'],
+                                          profile=gprofile)
+                finally:
+                    os.umask(old_umask)
+
+                set_backend_type(BACKEND_DJANGO)
+
+            elif backend_choice == BACKEND_SQLA:
+                print("...for SQLAlchemy backend")
+                from aiida.backends.sqlalchemy.models.base import Base
+                from aiida.backends.sqlalchemy.utils import get_engine
+                from aiida.common.setup import get_profile_config
+                from aiida import is_dbenv_loaded, load_dbenv
+
+                if not is_dbenv_loaded():
+                    load_dbenv()
+
+                # This check should be done more properly
+                # try:
+                #     backend_type = get_backend_type()
+                # except KeyError:
+                #     backend_type = None
+                #
+                # if backend_type is not None and backend_type != BACKEND_SQLA:
+                #     raise InvalidOperation("An already existing database found"
+                #                            "and a different than the selected"
+                #                            "backend was used for its "
+                #                            "management.")
+
+                # Those import are necessary for SQLAlchemy to correctly create
+                # the needed database tables.
+                from aiida.backends.sqlalchemy.models.authinfo import (
+                    DbAuthInfo)
+                from aiida.backends.sqlalchemy.models.comment import DbComment
+                from aiida.backends.sqlalchemy.models.computer import (
+                    DbComputer)
+                from aiida.backends.sqlalchemy.models.group import (
+                    DbGroup,table_groups_nodes)
+                from aiida.backends.sqlalchemy.models.lock import DbLock
+                from aiida.backends.sqlalchemy.models.log import DbLog
+                from aiida.backends.sqlalchemy.models.node import (
+                    DbLink, DbNode, DbPath, DbCalcState)
+                from aiida.backends.sqlalchemy.models.user import DbUser
+                from aiida.backends.sqlalchemy.models.workflow import (
+                    DbWorkflow, DbWorkflowData, DbWorkflowStep)
+                from aiida.backends.sqlalchemy.models.settings import DbSetting
+
+                Base.metadata.create_all(
+                    get_engine(get_profile_config(gprofile)))
+
+                set_backend_type(BACKEND_SQLA)
+
+            else:
+                raise InvalidOperation("Not supported backend selected.")
+
+        print "Database was created successfully"
 
         # I create here the default user
         print "Loading new environment..."
         if only_user_config:
-            from aiida.backends.utils import load_dbenv
+            from aiida.backends.utils import load_dbenv, is_dbenv_loaded
             # db environment has not been loaded in this case
-            load_dbenv()
+            if not is_dbenv_loaded():
+                load_dbenv()
 
         from aiida.common.setup import DEFAULT_AIIDA_USER
-        from aiida.backends.djsite.db import models
-        from aiida.backends.djsite.utils import get_configured_user_email
+        from aiida.orm.user import User
 
-        if not models.DbUser.objects.filter(email=DEFAULT_AIIDA_USER):
+        if not User.search_for_users(email=DEFAULT_AIIDA_USER):
             print "Installing default AiiDA user..."
-            # No password, so no access via API/AWI
-            models.DbUser.objects.create_superuser(email=DEFAULT_AIIDA_USER,
-                                                   password='',
-                                                   first_name="AiiDA",
-                                                   last_name="Daemon")
+            nuser = User(email=DEFAULT_AIIDA_USER)
+            nuser.first_name = "AiiDA"
+            nuser.last_name = "Daemon"
+            nuser.is_staff = True
+            nuser.is_active = True
+            nuser.is_superuser = True
+            nuser.force_save()
+
+        from aiida.common.utils import get_configured_user_email
         email = get_configured_user_email()
         print "Starting user configuration for {}...".format(email)
         if email == DEFAULT_AIIDA_USER:
@@ -390,21 +472,6 @@ class Install(VerdiCommand):
         """
         No completion after 'verdi install'.
         """
-        print ""
-
-
-class Shell(VerdiCommand):
-    """
-    Run the interactive shell with the AiiDA environment loaded.
-
-    This command opens an ipython shell with the AiiDA environment loaded.
-    """
-
-    def run(self, *args):
-        pass_to_django_manage([execname, 'customshell'] + list(args))
-
-    def complete(self, subargs_idx, subargs):
-        # disable further completion
         print ""
 
 
@@ -430,8 +497,7 @@ class Run(VerdiCommand):
 
         load_dbenv()
         import argparse
-        import aiida.cmdline
-        from aiida.backends.djsite.db.management.commands.customshell import default_modules_list
+        from aiida.cmdline.commands.shell import default_modules_list
         import aiida.orm.autogroup
         from aiida.orm.autogroup import Autogroup
 
@@ -525,9 +591,6 @@ class Run(VerdiCommand):
             finally:
                 f.close()
 
-
-# print "Done."
-
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST
 ########################################################################
@@ -572,6 +635,7 @@ def print_usage(execname):
     print >> sys.stderr, ""
     print >> sys.stderr, get_listparams()
     print >> sys.stderr, "See '{} help' for more help.".format(execname)
+
 
 def exec_from_cmdline(argv):
     """
@@ -633,7 +697,7 @@ def exec_from_cmdline(argv):
         print_usage(execname)
         sys.exit(1)
 
-    # We now set the internal variable, if needed
+    # # We now set the internal variable, if needed
     if profile is not None:
         settings_profile.AIIDADB_PROFILE = profile
     # I set the process to verdi
@@ -660,6 +724,3 @@ def exec_from_cmdline(argv):
         print >> sys.stderr, "The profile specified is not valid!"
         print >> sys.stderr, e.message
         sys.exit(1)
-
-
-

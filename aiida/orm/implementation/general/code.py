@@ -405,7 +405,7 @@ class AbstractCode(Node):
         ret_lines.append(" * Default plugin: {}".format(
             self.get_input_plugin_name()))
         ret_lines.append(" * Used by:        {} calculations".format(
-            self.dbnode.outputs.count()))
+            len(self.get_outputs())))
         if self.is_local():
             ret_lines.append(" * Type:           {}".format("local"))
             ret_lines.append(" * Exec name:      {}".format(self.get_execname()))

@@ -81,9 +81,12 @@ class Computer(AbstractComputer):
         ret_lines.append(" * UUID:           {}".format(self.uuid))
         ret_lines.append(" * Description:    {}".format(self.description))
         ret_lines.append(" * Hostname:       {}".format(self.hostname))
-        ret_lines.append(" * Enabled:        {}".format("True" if self.is_enabled() else "False"))
-        ret_lines.append(" * Transport type: {}".format(self.get_transport_type()))
-        ret_lines.append(" * Scheduler type: {}".format(self.get_scheduler_type()))
+        ret_lines.append(" * Enabled:        {}".format(
+            "True" if self.is_enabled() else "False"))
+        ret_lines.append(
+            " * Transport type: {}".format(self.get_transport_type()))
+        ret_lines.append(
+            " * Scheduler type: {}".format(self.get_scheduler_type()))
         ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
         ret_lines.append(" * mpirun command: {}".format(" ".join(
             self.get_mpirun_command())))
@@ -121,7 +124,8 @@ class Computer(AbstractComputer):
     def copy(self):
         from aiida.backends.djsite.db.models import DbComputer
         if self.to_be_stored:
-            raise InvalidOperation("You can copy a computer only after having stored it")
+            raise InvalidOperation(
+                "You can copy a computer only after having stored it")
         newdbcomputer = DbComputer.objects.get(pk=self.dbcomputer.pk)
         newdbcomputer.pk = None
 
@@ -146,7 +150,8 @@ class Computer(AbstractComputer):
             transaction.savepoint_commit(sid)
         except IntegrityError:
             transaction.savepoint_rollback(sid)
-            raise ValueError("Integrity error, probably the hostname already exists in the DB")
+            raise ValueError(
+                "Integrity error, probably the hostname already exists in the DB")
 
         # self.logger.error("Trying to store an already saved computer")
         # raise ModificationNotAllowed("The computer was already stored")
@@ -194,9 +199,6 @@ class Computer(AbstractComputer):
         if not self.to_be_stored:
             self.dbcomputer.save()
 
-            #        else:
-            #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
-
     def get_workdir(self):
         try:
             return self.dbcomputer.get_workdir()
@@ -235,6 +237,11 @@ class Computer(AbstractComputer):
         self.dbcomputer.description = val
         if not self.to_be_stored:
             self.dbcomputer.save()
+
+    def get_calculations_on_computer(self):
+        from aiida.backends.djsite.db.models import DbNode
+        return DbNode.objects.filter(dbcomputer__name=self.name,
+                                     type__startswith='calculation')
 
     def is_enabled(self):
         return self.dbcomputer.enabled

@@ -634,16 +634,19 @@ class BasePwCpInputGenerator(object):
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list
 
+        try:
+            Parserclass = self.get_parserclass()
+            parser = Parserclass(self)
+            parser_opts = parser.get_parser_settings_key()
+            settings_dict.pop(parser_opts)
+        except (KeyError, AttributeError):  
+            # the key parser_opts isn't inside the dictionary
+            pass
+
         if settings_dict:
-            try:
-                Parserclass = self.get_parserclass()
-                parser = Parserclass(self)
-                parser_opts = parser.get_parser_settings_key()
-                settings_dict.pop(parser_opts)
-            except (KeyError, AttributeError):  # the key parser_opts isn't inside the dictionary
-                raise InputValidationError("The following keys have been found in "
-                                           "the settings input node, but were not understood: {}".format(
-                    ",".join(settings_dict.keys())))
+            raise InputValidationError("The following keys have been found in "
+                "the settings input node, but were not understood: {}".format(
+                ",".join(settings_dict.keys())))
 
         return calcinfo
 

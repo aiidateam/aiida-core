@@ -2,7 +2,8 @@
 
 from aiida.backends.sqlalchemy import session
 
-from aiida.orm.implementation.general.calculation.inline import InlineCalculation
+from aiida.orm.implementation.general.calculation.inline import \
+    InlineCalculation
 
 from aiida.orm.data import Data
 from aiida.common.exceptions import ModificationNotAllowed
@@ -84,14 +85,13 @@ def make_inline(func):
         for k, v in retval.iteritems():
             v.add_link_from(c, label=k, link_type=LinkType.RETURN)
 
-        with session.begin(subtransactions=True):
-            # I call store_all for the Inline calculation;
-            # this will store also the inputs, if needed.
-            c.store_all(with_transaction=False)
-            # As c is already stored, I just call store (and not store_all)
-            # on each output
-            for v in retval.itervalues():
-                v.store(with_transaction=False)
+        # I call store_all for the Inline calculation;
+        # this will store also the inputs, if neeced.
+        c.store_all(with_transaction=False)
+        # As c is already stored, I just call store (and not store_all)
+        # on each output
+        for v in retval.itervalues():
+            v.store(with_transaction=False)
 
         # Return the calculation and the return values
         return c, retval

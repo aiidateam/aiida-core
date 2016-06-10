@@ -45,7 +45,8 @@ class Group(AbstractGroup):
             name = kwargs.pop('name', None)
             if name is None:
                 raise ValueError("You have to specify a group name")
-            group_type = kwargs.pop('type_string', "")  # By default, an user group
+            group_type = kwargs.pop('type_string',
+                                    "")  # By default, an user group
             user = kwargs.pop('user', get_automatic_user())
             description = kwargs.pop('description', "")
             self._dbgroup = DbGroup(name=name, description=description,
@@ -68,7 +69,7 @@ class Group(AbstractGroup):
         self.dbgroup.description = value
 
         # Update the entry in the DB, if the group is already stored
-        if self.is_stored:
+        if self._is_stored:
             self.dbgroup.save()
 
     @property
@@ -88,21 +89,25 @@ class Group(AbstractGroup):
         return self._dbgroup.pk
 
     @property
+    def id(self):
+        return self._dbgroup.pk
+
+    @property
     def uuid(self):
         return unicode(self.dbgroup.uuid)
 
     def __int__(self):
-        if not self.is_stored:
+        if self._to_be_stored:
             return None
         else:
             return self._dbnode.pk
 
     @property
-    def is_stored(self):
+    def _is_stored(self):
         return self.pk is not None
 
     def store(self):
-        if self.is_stored:
+        if self._is_stored:
             raise ModificationNotAllowed("Cannot restore a group that was "
                                          "already stored")
         else:
@@ -120,7 +125,7 @@ class Group(AbstractGroup):
 
     def add_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
-        if not self.is_stored:
+        if not self._is_stored:
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
 
@@ -177,7 +182,7 @@ class Group(AbstractGroup):
 
     def remove_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
-        if not self.is_stored:
+        if not self._is_stored:
             raise ModificationNotAllowed("Cannot remove nodes from a group "
                                          "before storing")
 
@@ -208,8 +213,11 @@ class Group(AbstractGroup):
 
     @classmethod
     def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
-              user=None, node_attributes=None, past_days=None, **kwargs):
-        from aiida.backends.djsite.db.models import DbGroup, DbNode, DbAttribute
+              user=None, node_attributes=None, past_days=None,
+              name_filters=None, **kwargs):
+
+        from aiida.backends.djsite.db.models import (DbGroup, DbNode,
+                                                     DbAttribute)
 
         # Analyze args and kwargs to create the query
         queryobject = Q()
@@ -249,8 +257,13 @@ class Group(AbstractGroup):
             else:
                 queryobject &= Q(user=user)
 
-        groups_pk = set(DbGroup.objects.filter(queryobject, **kwargs).values_list(
-            'pk', flat=True))
+        if name_filters is not None:
+            name_filters_list = {"name__" + k: v for (k, v)
+                                 in name_filters.iteritems() if v}
+            queryobject &= Q(**name_filters_list)
+
+        groups_pk = set(DbGroup.objects.filter(
+            queryobject, **kwargs).values_list('pk', flat=True))
 
         if node_attributes is not None:
             for k, vlist in node_attributes.iteritems():

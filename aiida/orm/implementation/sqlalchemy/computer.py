@@ -72,13 +72,15 @@ class Computer(AbstractComputer):
 
     @classmethod
     def list_names(cls):
-        return list(DbComputer.objects.filter().values_list('name', flat=True))
+        from aiida.backends.sqlalchemy import session
+        return session.query(DbComputer.name).all()
+
 
     @property
     def full_text_info(self):
         ret_lines = []
         ret_lines.append("Computer name:     {}".format(self.name))
-        ret_lines.append(" * PK:             {}".format(self.id))
+        ret_lines.append(" * PK:             {}".format(self.pk))
         ret_lines.append(" * UUID:           {}".format(self.uuid))
         ret_lines.append(" * Description:    {}".format(self.description))
         ret_lines.append(" * Hostname:       {}".format(self.hostname))
@@ -93,9 +95,8 @@ class Computer(AbstractComputer):
         if def_cpus_machine is not None:
             ret_lines.append(" * Default number of cpus per machine: {}".format(
                 def_cpus_machine))
-
         ret_lines.append(" * Used by:        {} nodes".format(
-            len(self.dbcomputer.dbnodes.all())))
+            len(self.dbcomputer.dbnodes)))
 
         ret_lines.append(" * prepend text:")
 
@@ -171,17 +172,16 @@ class Computer(AbstractComputer):
             self.dbcomputer.save()
 
     def get_transport_params(self):
-        try:
-            return json.loads(self.dbcomputer.transport_params)
-        except ValueError:
-            raise DbContentError(
-                "Error while reading transport_params for computer {}".format(
-                    self.hostname))
+        """
+        Return transport params stored in dbcomputer instance
+        """
+        return self.dbcomputer.transport_params
 
     def set_transport_params(self, val):
         # if self.to_be_stored:
         try:
-            self.dbcomputer.transport_params = json.dumps(val)
+            json.dumps(val) # Check if json compatible
+            self.dbcomputer.transport_params = val
         except ValueError:
             raise ValueError("The set of transport_params are not JSON-able")
         if not self.to_be_stored:
@@ -230,12 +230,19 @@ class Computer(AbstractComputer):
         if not self.to_be_stored:
             self.dbcomputer.save()
 
+    def get_calculations_on_computer(self):
+        from aiida.backends.sqlalchemy.models.node import DbNode
+        return DbNode.query.filter(
+            DbNode.dbcomputer_id == self.dbcomputer.id,
+            DbNode.type.like("calculation%")).all()
+
     def is_enabled(self):
         return self.dbcomputer.enabled
 
     def get_dbauthinfo(self, user):
-        info = DbAuthInfo.query.filter_by(dbcomputer=self.dbcomputer,
-                                          aiidauser=user.first())
+        info = DbAuthInfo.query.filter_by(
+                dbcomputer=self.dbcomputer,
+                aiidauser=user).first()
         if not info:
             raise NotExistent("The user '{}' is not configured for "
                               "computer '{}'".format(

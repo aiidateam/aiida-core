@@ -53,3 +53,7 @@ class DbGroup(Base):
             return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
         else:
             return '<DbGroup [user-defined] "{}">'.format(self.name)
+
+    def get_aiida_class(self):
+        from aiida.orm.implementation.sqlalchemy.group import Group
+        return Group(dbgroup=self)

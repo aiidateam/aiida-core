@@ -18,6 +18,7 @@ from aiida.common import aiidalogger
 from aiida.common.links import LinkType
 from aiida.orm import load_node
 
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
@@ -43,10 +44,11 @@ def update_running_calcs_status(authinfo):
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida JobCalculation objects
-    calcs_to_inquire = JobCalculation._get_all_with_state(
+    calcs_to_inquire = list(JobCalculation._get_all_with_state(
         state=calc_states.WITHSCHEDULER,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
+    )
 
     # NOTE: no further check is done that machine and
     # aiidauser are correct for each calc in calcs
@@ -176,55 +178,30 @@ def update_running_calcs_status(authinfo):
     return computed
 
 
-def get_authinfo(computer, aiidauser):
-    from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
-
-    try:
-        authinfo = DbAuthInfo.objects.get(
-            # converts from name, Computer or DbComputer instance to
-            # a DbComputer instance
-            dbcomputer=DbComputer.get_dbcomputer(computer),
-            aiidauser=aiidauser)
-    except ObjectDoesNotExist:
-        raise AuthenticationError(
-            "The aiida user {} is not configured to use computer {}".format(
-                aiidauser.email, computer.name))
-    except MultipleObjectsReturned:
-        raise ConfigurationError(
-            "The aiida user {} is configured more than once to use "
-            "computer {}! Only one configuration is allowed".format(
-                aiidauser.email, computer.name))
-    return authinfo
-
-
 def retrieve_jobs():
     from aiida.orm import JobCalculation, Computer
-    from aiida.backends.djsite.db.models import DbComputer, DbUser
+    from aiida.backends.utils import get_authinfo
 
     # I create a unique set of pairs (computer, aiidauser)
-    computers_users_to_check = set(
+    computers_users_to_check = list(
         JobCalculation._get_all_with_state(
             state=calc_states.COMPUTED,
-            only_computer_user_pairs=True)
+            only_computer_user_pairs=True,
+            only_enabled=True)
     )
 
-    for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        if not Computer(dbcomputer=dbcomputer).is_enabled():
-            continue
-        aiidauser = DbUser.objects.get(id=aiidauser_id)
-
+    for computer, aiidauser in computers_users_to_check:
         execlogger.debug("({},{}) pair to check".format(
-            aiidauser.email, dbcomputer.name))
+            aiidauser.email, computer.name))
         try:
-            authinfo = get_authinfo(dbcomputer, aiidauser)
+            authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
             retrieve_computed_for_authinfo(authinfo)
         except Exception as e:
             msg = ("Error while retrieving calculation status for "
                    "aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
                 aiidauser.email,
-                dbcomputer.name,
+                computer.name,
                 e.__class__.__name__, e.message))
             execlogger.error(msg)
             # Continue with next computer
@@ -236,34 +213,33 @@ def update_jobs():
     """
     calls an update for each set of pairs (machine, aiidauser)
     """
-    from aiida.orm import JobCalculation, Computer
-    from aiida.backends.djsite.db.models import DbComputer, DbUser
+    from aiida.orm import JobCalculation, Computer, User
+    from aiida.backends.utils import get_authinfo
+
 
     # I create a unique set of pairs (computer, aiidauser)
-    computers_users_to_check = set(
+    computers_users_to_check = list(
         JobCalculation._get_all_with_state(
             state=calc_states.WITHSCHEDULER,
-            only_computer_user_pairs=True)
+            only_computer_user_pairs=True,
+            only_enabled=True
+        )
     )
 
-    for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        if not Computer(dbcomputer=dbcomputer).is_enabled():
-            continue
-        aiidauser = DbUser.objects.get(id=aiidauser_id)
+    for computer, aiidauser in computers_users_to_check:
 
         execlogger.debug("({},{}) pair to check".format(
-            aiidauser.email, dbcomputer.name))
+            aiidauser.email, computer.name))
 
         try:
-            authinfo = get_authinfo(dbcomputer, aiidauser)
+            authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
             computed_calcs = update_running_calcs_status(authinfo)
         except Exception as e:
             msg = ("Error while updating calculation status "
                    "for aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
                 aiidauser.email,
-                dbcomputer.name,
+                computer.name,
                 e.__class__.__name__, e.message))
             execlogger.error(msg)
             # Continue with next computer
@@ -274,37 +250,33 @@ def submit_jobs():
     """
     Submit all jobs in the TOSUBMIT state.
     """
-    from aiida.orm import JobCalculation, Computer
-    from aiida.backends.djsite.db.models import DbComputer, DbUser
+    from aiida.orm import JobCalculation, Computer, User
     from aiida.utils.logger import get_dblogger_extra
+    from aiida.backends.utils import get_authinfo
 
-
-    # I create a unique set of pairs (computer, aiidauser)
-    computers_users_to_check = set(
-        JobCalculation._get_all_with_state(
+    computers_users_to_check = list(JobCalculation._get_all_with_state(
             state=calc_states.TOSUBMIT,
-            only_computer_user_pairs=True)
+            only_computer_user_pairs=True,
+            only_enabled=True
+        )
     )
 
-    for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        if not Computer(dbcomputer=dbcomputer).is_enabled():
-            continue
-        aiidauser = DbUser.objects.get(id=aiidauser_id)
-
+    for computer, aiidauser in computers_users_to_check:
+        #~ user = User.search_for_users(id=dbuser_id)
+        #~ computer = Computer.get(dbcomputer_id)
         execlogger.debug("({},{}) pair to submit".format(
-            aiidauser.email, dbcomputer.name))
+            aiidauser.email, computer.name))
 
         try:
             try:
-                authinfo = get_authinfo(dbcomputer, aiidauser)
+                authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
             except AuthenticationError:
+                # TODO!!
                 # Put each calculation in the SUBMISSIONFAILED state because
                 # I do not have AuthInfo to submit them
                 calcs_to_inquire = JobCalculation._get_all_with_state(
                     state=calc_states.TOSUBMIT,
-                    computer=dbcomputer,
-                    user=aiidauser)
+                    computer=computer, user=aiidauser)
                 for calc in calcs_to_inquire:
                     try:
                         calc._set_state(calc_states.SUBMISSIONFAILED)
@@ -329,8 +301,9 @@ def submit_jobs():
                    "for aiidauser={} on computer={}, "
                    "error type is {}, traceback: {}".format(
                 aiidauser.email,
-                dbcomputer.name,
+                computer.name,
                 e.__class__.__name__, traceback.format_exc()))
+            print msg
             execlogger.error(msg)
             # Continue with next computer
             continue
@@ -352,10 +325,10 @@ def submit_jobs_with_authinfo(authinfo):
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida JobCalculation objects
-    calcs_to_inquire = JobCalculation._get_all_with_state(
+    calcs_to_inquire = list(JobCalculation._get_all_with_state(
         state=calc_states.TOSUBMIT,
         computer=authinfo.dbcomputer,
-        user=authinfo.aiidauser)
+        user=authinfo.aiidauser))
 
     # I avoid to open an ssh connection if there are
     # no calcs with state WITHSCHEDULER
@@ -667,11 +640,11 @@ def retrieve_computed_for_authinfo(authinfo):
     if not authinfo.enabled:
         return
 
-    calcs_to_retrieve = JobCalculation._get_all_with_state(
+    calcs_to_retrieve = list(JobCalculation._get_all_with_state(
         state=calc_states.COMPUTED,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
-
+    )
     retrieved = []
 
     # I avoid to open an ssh connection if there are no

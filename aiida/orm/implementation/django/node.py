@@ -471,6 +471,28 @@ class Node(AbstractNode):
                                  user=user,
                                  content=content)
 
+    def get_comment_obj(self, id=None, user=None):
+        from aiida.backends.djsite.db.models import DbComment
+        import operator
+        from django.db.models import Q
+        query_list = []
+
+        # If an id is specified then we add it to the query
+        if id is not None:
+            query_list.append(Q(pk=id))
+
+        # If a user is specified then we add it to the query
+        if user is not None:
+            query_list.append(Q(user=user))
+
+        dbcomments = DbComment.objects.filter(
+            reduce(operator.and_, query_list))
+        comments = []
+        from aiida.orm.implementation.django.comment import Comment
+        for dbcomment in dbcomments:
+            comments.append(Comment(dbcomment=dbcomment))
+        return comments
+
     def get_comments(self, pk=None):
         from aiida.backends.djsite.db.models import DbComment
         if pk is not None:
@@ -481,9 +503,9 @@ class Node(AbstractNode):
             except TypeError:
                 if not isinstance(pk, int):
                     raise ValueError('pk must be an integer or a list of integers')
-            return list(DbComment.objects.filter(dbnode=self._dbnode, pk=pk
-                                                 ).order_by('pk').values('pk', 'user__email',
-                                                                         'ctime', 'mtime', 'content'))
+            return list(DbComment.objects.filter(
+                dbnode=self._dbnode, pk=pk).order_by('pk').values(
+                'pk', 'user__email', 'ctime', 'mtime', 'content'))
 
         return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
             'pk').values('pk', 'user__email', 'ctime', 'mtime', 'content'))

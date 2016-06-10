@@ -106,6 +106,14 @@ class AbstractGroup(object):
         pass
 
     @abstractproperty
+    def id(self):
+        """
+        :return: the principal key (the ID) as an integer, or None if the
+           node was not stored yet
+        """
+        pass
+
+    @abstractproperty
     def uuid(self):
         """
         :return: a string with the uuid
@@ -121,12 +129,17 @@ class AbstractGroup(object):
         :return: (group, created) where group is the group (new or existing,
           in any case already stored) and created is a boolean saying
         """
-        try:
-            # Try to create and store a new class
-            return (cls(*args, **kwargs).store(), True)
-        except UniquenessError:
-            group = cls.get(*args, **kwargs)
-            return (group, False)
+        res = cls.query(name=kwargs.get("name"),
+                        type_string=kwargs.get("type_string"))
+
+        if res is None or len(res) == 0:
+            bla = cls(*args, **kwargs).store(), True
+            return bla
+        elif len(res) > 1:
+            raise MultipleObjectsError("More than one groups found in the "
+                                       "database")
+        else:
+            return res[0], False
 
     @abstractmethod
     def __int__(self):

@@ -3,7 +3,7 @@
 import json
 
 from sqlalchemy.schema import Column
-from sqlalchemy.types import Integer, DateTime, String
+from sqlalchemy.types import Integer, DateTime, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aiida.utils import timezone
@@ -14,6 +14,7 @@ __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For fu
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
+
 
 class DbLog(Base):
     __tablename__ = "db_dblog"
@@ -27,8 +28,8 @@ class DbLog(Base):
     objname = Column(String(255), index=True)
     objpk = Column(Integer, index=True, nullable=True)
 
+    message = Column(Text(), nullable=True)
     _metadata = Column('metadata', JSONB)
-
 
     def __init__(self, loggername="", levelname="", objname="", objpk=None,
                  message=None, metadata=None):

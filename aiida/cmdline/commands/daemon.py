@@ -15,7 +15,8 @@ def is_daemon_user():
     """
     Return True if the user is the current daemon user, False otherwise.
     """
-    from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
+    from aiida.backends.djsite.utils import get_daemon_user
+    from aiida.common.utils import get_configured_user_email
 
     daemon_user = get_daemon_user()
     this_user = get_configured_user_email()
@@ -64,8 +65,10 @@ class Daemon(VerdiCommandWithSubcommands):
         }
 
         self.conffile_full_path = os.path.expanduser(os.path.join(
-            setup.AIIDA_CONFIG_FOLDER,
-            setup.DAEMON_SUBDIR, setup.DAEMON_CONF_FILE))
+                setup.AIIDA_CONFIG_FOLDER,
+                setup.DAEMON_SUBDIR,
+                setup.DAEMON_CONF_FILE
+            ))
 
 
     def _get_pid_full_path(self):
@@ -111,11 +114,14 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.backends.djsite.utils import get_daemon_user, \
-            get_configured_user_email
+        from aiida.backends.settings import BACKEND
+        from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+        from aiida.backends.utils import get_daemon_user
+        from aiida.common.utils import get_configured_user_email
 
         daemon_user = get_daemon_user()
         this_user = get_configured_user_email()
+
 
         if daemon_user != this_user:
             print "You are not the daemon user! I will not start the daemon."
@@ -241,13 +247,15 @@ class Daemon(VerdiCommandWithSubcommands):
 
         from aiida.utils import timezone
 
-        from aiida.backends.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.daemon.timestamps import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
+        from pytz import UTC
 
         most_recent_timestamp = get_most_recent_daemon_timestamp()
 
         if most_recent_timestamp is not None:
-            timestamp_delta = timezone.now() - most_recent_timestamp
+            timestamp_delta = (timezone.datetime.now(tz=UTC) -
+                               most_recent_timestamp)
             print ("# Most recent daemon timestamp:{}".format(
                 str_timedelta(timestamp_delta)))
         else:
@@ -273,7 +281,6 @@ class Daemon(VerdiCommandWithSubcommands):
                 raise
         except Exception as e:
             import socket
-
             if isinstance(e, socket.error):
                 print "Could not reach the daemon, I got a socket.error: "
                 print "  -> [Errno {}] {}".format(e.errno, e.strerror)
@@ -284,9 +291,9 @@ class Daemon(VerdiCommandWithSubcommands):
             return
 
         if running_processes:
-            print "## Found {} processes running:".format(len(running_processes))
+            print "## Found {} process{} running:".format(len(running_processes), '' if len(running_processes)==1 else 'es')
             for process in running_processes:
-                print "* {:<22} {:<10} {}".format(
+                print "   * {:<22} {:<10} {}".format(
                     "{}[{}]".format(process['group'], process['name']),
                     process['statename'], process['description'])
         else:
@@ -309,7 +316,7 @@ class Daemon(VerdiCommandWithSubcommands):
 
         try:
             process = subprocess.Popen(
-                "supervisorctl -c {} tail -f aiida-daemon:0".format(
+                "supervisorctl -c {} tail -f aiida-daemon".format(
                     self.conffile_full_path),
                 shell=True)  # , stdout=subprocess.PIPE)
             process.wait()
@@ -328,7 +335,8 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
+        from aiida.backends.utils import get_daemon_user
+        from aiida.common.utils import get_configured_user_email
 
         daemon_user = get_daemon_user()
         this_user = get_configured_user_email()
@@ -369,10 +377,8 @@ class Daemon(VerdiCommandWithSubcommands):
         from django.core.exceptions import ObjectDoesNotExist
 
         from aiida.backends.djsite.db.models import DbUser
-        from aiida.backends.djsite.utils import (
-            get_configured_user_email,
-            get_daemon_user, set_daemon_user)
-
+        from aiida.backends.djsite.utils import get_daemon_user, set_daemon_user
+        from aiida.common.utils import get_configured_user_email
         from aiida.backends.djsite.db.tasks import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
 

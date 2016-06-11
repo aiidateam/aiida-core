@@ -843,7 +843,7 @@ class TestNodeBasic(AiidaTestCase):
 
         s1 = models.DbSetting.objects.get(key='pippo')
 
-        self.assertEqual(s1.get_value(), [1, 2, 3])
+        self.assertEqual(s1.getvalue(), [1, 2, 3])
 
         s2 = models.DbSetting(key='pippo')
 
@@ -857,7 +857,7 @@ class TestNodeBasic(AiidaTestCase):
         models.DbSetting.set_value(key='pippo', value="a")
         s1 = models.DbSetting.objects.get(key='pippo')
 
-        self.assertEqual(s1.get_value(), "a")
+        self.assertEqual(s1.getvalue(), "a")
 
     def test_settings_methods(self):
         from aiida.backends.djsite.globalsettings import (

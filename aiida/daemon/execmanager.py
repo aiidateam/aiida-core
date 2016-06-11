@@ -5,8 +5,6 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
@@ -132,10 +130,11 @@ def update_running_calcs_status(authinfo):
                     # TODO: implement a counter, after N retrials
                     # set it to a status that
                     # requires the user intervention
-                    execlogger.warning("There was an exception for "
-                                       "calculation {} ({}): {}".format(
-                        c.pk, e.__class__.__name__, e.message),
-                                       extra=logger_extra)
+                    execlogger.warning(
+                        "There was an exception for "
+                        "calculation {} ({}): {}".format(
+                            c.pk, e.__class__.__name__, e.message
+                        ), extra=logger_extra)
                     continue
 
             for c in computed:
@@ -284,12 +283,12 @@ def submit_jobs():
                         # Someone already set it, just skip
                         pass
                     logger_extra = get_dblogger_extra(calc)
-                    execlogger.error("Submission of calc {} failed, "
-                                     "computer pk= {} ({}) is not configured "
-                                     "for aiidauser {}".format(
-                        calc.pk, dbcomputer.pk,
-                        dbcomputer.name, aiidauser.email),
-                                     extra=logger_extra)
+                    execlogger.error(
+                        "Submission of calc {} failed, "
+                        "computer pk= {} ({}) is not configured "
+                        "for aiidauser {}".format(
+                            calc.pk, computer.pk, computer.name, aiidauser.email
+                        ), extra=logger_extra)
                 # Go to the next (dbcomputer,aiidauser) pair
                 continue
 

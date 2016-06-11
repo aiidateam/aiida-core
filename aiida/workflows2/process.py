@@ -137,6 +137,13 @@ class Process(plum.process.Process):
         self.parent = None
         self._store_provenance = store_provenance
 
+    @override
+    def save_instance_state(self, bundle):
+        super(Process, self).save_instance_state(bundle)
+        if self._store_provenance:
+            assert self._calc.is_stored
+            bundle[self.KEY_CALC_PK] = self._calc.pk
+
     # Messages #####################################################
     @override
     def on_create(self, pid, inputs=None):
@@ -144,21 +151,31 @@ class Process(plum.process.Process):
 
         # This fills out the parent
         util.ProcessStack.push(self)
-        self._calc = self.create_db_record()
-        self._setup_db_record()
+        self._pid = self._create_and_setup_db_record()
 
     @override
     def on_recreate(self, pid, saved_instance_state):
-        self._calc = load_node(saved_instance_state[self.KEY_CALC_PK])
-        pid =  self._calc.pk
+        super(Process, self).on_recreate(pid, saved_instance_state)
 
-        super(Process, self).on_create(pid, saved_instance_state)
+        if self.KEY_CALC_PK in saved_instance_state:
+            self._calc = load_node(saved_instance_state[self.KEY_CALC_PK])
+            self._pid = self._calc.pk
+        else:
+            self._pid = self._create_and_setup_db_record()
+
+    def _create_and_setup_db_record(self):
+        self._calc = self.create_db_record()
+        self._setup_db_record()
+        if self._store_provenance:
+            assert self._calc.is_stored
+            return self._calc.pk
+        else:
+            return self._calc.uuid
 
     @override
     def on_stop(self):
         super(Process, self).on_stop()
         util.ProcessStack.pop()
-        self._running_data = None
 
     @override
     def _on_output_emitted(self, output_port, value, dynamic):
@@ -171,15 +188,17 @@ class Process(plum.process.Process):
         beforehand?)
         """
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
-        assert isinstance(value, Data),\
+        assert isinstance(value, Data), \
             "Values outputted from process must be instances of AiiDA Data" \
             "types.  Got: {}".format(value.__class__)
 
         if not value.is_stored:
-            value.store()
+            if self._store_provenance:
+                value.store()
             value.add_link_from(self._calc, output_port,
                                 LinkType.CREATE)
         value.add_link_from(self._calc, output_port, LinkType.RETURN)
+
     #################################################################
 
     def _setup_db_record(self):
@@ -192,15 +211,19 @@ class Process(plum.process.Process):
             if self.spec().has_input(name):
                 if isinstance(self.spec().get_input(name), port.InputGroupPort):
                     to_link.update(
-                        {"{}_{}".format(name, k): v for k, v in input.iteritems()})
+                        {"{}_{}".format(name, k): v for k, v in
+                         input.iteritems()})
                 else:
                     to_link[name] = input
             else:
+                # It's not in the spec, so we better support dynamic inputs
                 assert self.spec().has_dynamic_input()
+                to_link[name] = input
 
         for name, input in to_link.iteritems():
             if not input.is_stored:
-                input.store()
+                if self._store_provenance:
+                    input.store()
                 # If the input isn't stored then assume our parent created it
                 if self._parent:
                     input.add_link_from(self._parent.calc, "CREATE",
@@ -210,7 +233,7 @@ class Process(plum.process.Process):
 
         if self._parent:
             self.calc.add_link_from(self._parent.calc, "CALL",
-                                     LinkType.CALL)
+                                    link_type=LinkType.CALL)
 
         if self._store_provenance:
             self.calc.store_all()
@@ -289,7 +312,7 @@ class FunctionProcess(Process):
         :param args: The values to use
         :return: A label: value dictionary
         """
-        assert(len(args) == len(cls._func_args))
+        assert (len(args) == len(cls._func_args))
         return dict(zip(cls._func_args, args))
 
     @classmethod

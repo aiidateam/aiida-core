@@ -1,5 +1,5 @@
 
-
+import plum.persistence.pickle_persistence
 import plum.process_registry
 import plum.process
 from aiida.workflows2.util import override
@@ -25,7 +25,7 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
 
     @override
     def is_finished(self, pid):
-        # Is ir finished?
+        # Is it finished?
         if pid in self._finished:
             return True
         # Is it running?
@@ -44,4 +44,10 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
         process.remove_process_listener(self)
         del self._running_processes[process.pid]
         self._finished[process.pid] = process.get_last_outputs()
+
+    def load_all_checkpoints(self):
+        if self._persistence_engine:
+            return self._persistence_engine.load_all_checkpoints()
+        return []
+
 

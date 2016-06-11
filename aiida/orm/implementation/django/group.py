@@ -69,7 +69,7 @@ class Group(AbstractGroup):
         self.dbgroup.description = value
 
         # Update the entry in the DB, if the group is already stored
-        if self._is_stored:
+        if self.is_stored:
             self.dbgroup.save()
 
     @property
@@ -103,11 +103,11 @@ class Group(AbstractGroup):
             return self._dbnode.pk
 
     @property
-    def _is_stored(self):
+    def is_stored(self):
         return self.pk is not None
 
     def store(self):
-        if self._is_stored:
+        if self.is_stored:
             raise ModificationNotAllowed("Cannot restore a group that was "
                                          "already stored")
         else:
@@ -125,7 +125,7 @@ class Group(AbstractGroup):
 
     def add_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
-        if not self._is_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
 
@@ -182,7 +182,7 @@ class Group(AbstractGroup):
 
     def remove_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
-        if not self._is_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("Cannot remove nodes from a group "
                                          "before storing")
 

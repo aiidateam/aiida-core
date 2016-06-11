@@ -20,7 +20,6 @@ pytz==2014.10
 ## For the daemon
 django-celery == 3.1.16
 celery==3.1.17
-kombu==3.0.35
 billiard==3.3.0.19
 amqp==1.4.9
 anyjson==0.3.3
@@ -30,10 +29,6 @@ meld3==1.0.0
 
 # For the AiiDA shell
 ipython
-
-## ONLY if using mysql?
-#sudo easy_install mysql-python
-#sudo apt-get install python-mysqldb on ubuntu
 
 ## Paramiko, for ssh connections
 paramiko==1.15.2
@@ -56,10 +51,9 @@ ultrajson==1.35
 
 # For workflows
 enum34==1.1.2
-git+https://bitbucket.org/aiida_team/plum.git@131d7834d5fa6b32565df75d53e01bec9c03b012#egg=plum
+git+https://bitbucket.org/aiida_team/plum.git@e9b0358ab84ba1a5730d742556b80b2ffd03ad47#egg=plum
 voluptuous==0.8.11
 
-psycopg2==2.6.1
 # For the QueryBuilder in Django when testing:
 aldjemy
 # Password hashing

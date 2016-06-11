@@ -41,7 +41,7 @@ setup(
     # for a useful dicussion
     install_requires=[
         'django', 'django_extensions', 'pytz', 'django-celery',
-        'celery', 'kombu', 'billiard', 'anyjson', 'six', 'supervisor',
+        'celery', 'billiard', 'anyjson', 'six', 'supervisor',
         'meld3', 'paramiko', 'ecdsa', 'pycrypto', 'numpy', 'django-tastypie',
         'python-dateutil', 'python-mimeparse', 'plum', 'enum34' 'voluptuous'
         ],

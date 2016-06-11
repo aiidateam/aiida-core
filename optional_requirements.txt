@@ -41,3 +41,6 @@ jinja2==2.7.3
 markupsafe==0.23
 ## For a nicer documentation theme (from read the docs):
 sphinx_rtd_theme
+
+# For the deamon to use kombu message passing
+kombu==3.0.35

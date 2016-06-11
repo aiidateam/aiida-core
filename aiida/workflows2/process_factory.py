@@ -15,7 +15,6 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 class ProcessFactory(plum.process_factory.ProcessFactory):
     def __init__(self, store_provenance=True):
         # Keep track of the running processes
-        self._processes = {}
         self._store_provenance = store_provenance
 
     @override
@@ -26,20 +25,21 @@ class ProcessFactory(plum.process_factory.ProcessFactory):
         proc = process_class(self._store_provenance)
         proc.on_create(None, inputs)
 
-        self._processes[proc.pid] = proc
         return proc
 
     @override
-    def recreate_process(self, process_class, checkpoint):
+    def recreate_process(self, checkpoint):
         from aiida.workflows2.process import Process
-        assert(issubclass(process_class, Process))
 
-        wait_on = WaitOn.create_from(checkpoint.wait_on_state, self)
+        if checkpoint.wait_on_instance_state:
+            wait_on = WaitOn.create_from(
+                checkpoint.wait_on_instance_state, self)
+        else:
+            wait_on = None
 
-        proc = process_class(self._store_provenance)
+        proc = checkpoint.process_class(self._store_provenance)
         proc.on_recreate(None, checkpoint.process_instance_state)
 
-        self._processes[proc.pid] = proc
         return proc, wait_on
 
     @override
@@ -56,7 +56,3 @@ class ProcessFactory(plum.process_factory.ProcessFactory):
             wait_on.save_instance_state(cp.wait_on_instance_state)
 
         return cp
-
-
-# Have a global singleton we can use
-process_factory = ProcessFactory(store_provenance=True)

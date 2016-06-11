@@ -53,10 +53,10 @@ class AbstractJobCalculation(object):
         self._linkname_retrieved = 'retrieved'
 
         self._updatable_attributes = (
-                'state', 'job_id', 'scheduler_state',
-                'scheduler_lastchecktime',
-                'last_jobinfo', 'remote_workdir', 'retrieve_list',
-                'retrieve_singlefile_list'
+            'state', 'job_id', 'scheduler_state',
+            'scheduler_lastchecktime',
+            'last_jobinfo', 'remote_workdir', 'retrieve_list',
+            'retrieve_singlefile_list'
         )
 
         # Files in which the scheduler output and error will be stored.
@@ -124,10 +124,10 @@ class AbstractJobCalculation(object):
             _ = self.get_parserclass()
         except MissingPluginError:
             raise ValidationError(
-                    "No valid plugin found for the parser '{}'. "
-                    "Set the parser to None if you do not need an automatic "
-                    "parser.".format(self.get_parser_name())
-                )
+                "No valid plugin found for the parser '{}'. "
+                "Set the parser to None if you do not need an automatic "
+                "parser.".format(self.get_parser_name())
+            )
 
         computer = self.get_computer()
         s = computer.get_scheduler()
@@ -139,8 +139,8 @@ class AbstractJobCalculation(object):
 
         if not isinstance(self.get_withmpi(), bool):
             raise ValidationError(
-                    "withmpi property must be boolean! It in instead {}"
-                    "".format(str(type(self.get_withmpi())))
+                "withmpi property must be boolean! It in instead {}"
+                "".format(str(type(self.get_withmpi())))
             )
 
     def _linking_as_output(self, dest, link_type):
@@ -169,7 +169,8 @@ class AbstractJobCalculation(object):
                 "of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._linking_as_output(dest, link_type)
+        return super(AbstractJobCalculation, self)._linking_as_output(dest,
+                                                                      link_type)
 
     def _store_raw_input_folder(self, folder_path):
         """
@@ -356,7 +357,8 @@ class AbstractJobCalculation(object):
             computer = self.get_computer()
             def_cpus_machine = computer.get_default_mpiprocs_per_machine()
             if def_cpus_machine is not None:
-                resources_dict['default_mpiprocs_per_machine'] = def_cpus_machine
+                resources_dict[
+                    'default_mpiprocs_per_machine'] = def_cpus_machine
 
         return resources_dict
 
@@ -499,7 +501,8 @@ class AbstractJobCalculation(object):
                 "one of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self).add_link_from(src, label, link_type)
+        return super(AbstractJobCalculation, self).add_link_from(src, label,
+                                                                 link_type)
 
     def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
         """
@@ -517,7 +520,9 @@ class AbstractJobCalculation(object):
                 "one of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._replace_link_from(src, label, link_type)
+        return super(AbstractJobCalculation, self)._replace_link_from(src,
+                                                                      label,
+                                                                      link_type)
 
     def _remove_link_from(self, label):
         """
@@ -607,13 +612,13 @@ class AbstractJobCalculation(object):
         :return: a boolean
         """
         return self.get_state() in [
-                calc_states.TOSUBMIT,
-                calc_states.SUBMITTING,
-                calc_states.WITHSCHEDULER,
-                calc_states.COMPUTED,
-                calc_states.RETRIEVING,
-                calc_states.PARSING
-            ]
+            calc_states.TOSUBMIT,
+            calc_states.SUBMITTING,
+            calc_states.WITHSCHEDULER,
+            calc_states.COMPUTED,
+            calc_states.RETRIEVING,
+            calc_states.PARSING
+        ]
 
     def has_finished_ok(self):
         """
@@ -733,10 +738,10 @@ class AbstractJobCalculation(object):
         """
         if self.get_state() != calc_states.SUBMITTING:
             raise ModificationNotAllowed(
-                    "Cannot set the job id if you are not "
-                    "submitting the calculation (current state is "
-                    "{})".format(self.get_state())
-                )
+                "Cannot set the job id if you are not "
+                "submitting the calculation (current state is "
+                "{})".format(self.get_state())
+            )
 
         return self._set_attr('job_id', unicode(job_id))
 
@@ -830,12 +835,9 @@ class AbstractJobCalculation(object):
         :return: a string with description of calculations.
         """
 
-
-
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.common.custom_io import pretty_print
         from aiida.daemon.timestamps import get_last_daemon_timestamp
-
 
         now = timezone.now()
 
@@ -844,7 +846,7 @@ class AbstractJobCalculation(object):
             for state in states:
                 if state not in calc_states:
                     return "Invalid state provided: {}.".format(state)
-        #Let's check if there is something to order_by:
+        # Let's check if there is something to order_by:
         valid_order_parameters = (None, 'id', 'ctime')
         if order_by not in valid_order_parameters:
             raise Exception(
@@ -853,7 +855,7 @@ class AbstractJobCalculation(object):
                 "".format(order_by, valid_order_parameters)
             )
         # Limit:
-        if not(limit is None or isinstance(limit, int)):
+        if not (limit is None or isinstance(limit, int)):
             raise Exception(
                 "Limit (set to {}) has to be an integer or None".format(limit)
             )
@@ -863,8 +865,8 @@ class AbstractJobCalculation(object):
                                                           when='stop')
         except ValueError:
             last_check_string = (
-                    "# Last daemon state_updater check: "
-                    "(Error while retrieving the information)"
+                "# Last daemon state_updater check: "
+                "(Error while retrieving the information)"
             )
         else:
             if last_daemon_check is None:
@@ -890,8 +892,8 @@ class AbstractJobCalculation(object):
 
         # filter for calculation pks:
         if pks:
-            calculation_filters['id'] = {'in':pks}
-            group_filters=None
+            calculation_filters['id'] = {'in': pks}
+            group_filters = None
         else:
             # The wanted behavior:
             # You know what you're looking for and specify pks,
@@ -900,28 +902,29 @@ class AbstractJobCalculation(object):
 
             # filter for states:
             if states:
-                calculation_filters['state'] = {'in':states}
+                calculation_filters['state'] = {'in': states}
 
             # Filter on the users, if not all users
             if not all_users:
                 user_id = get_automatic_user().id
-                calculation_filters['user_id'] = {'==':user_id}
+                calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:
                 n_days_ago = now - datetime.timedelta(days=past_days)
-                calculation_filters['ctime'] = {'>':n_days_ago}
+                calculation_filters['ctime'] = {'>': n_days_ago}
 
             # Filter on the group, either name or by pks
             if group:
-                group_filters = {'name':{'like':'%{}%'.format(group)}}
+                group_filters = {'name': {'like': '%{}%'.format(group)}}
             elif group_pk:
-                group_filters = {'id':{'==':group_pk}}
+                group_filters = {'id': {'==': group_pk}}
             else:
                 group_filters = None
 
         calculation_projections = [
-                'id', 'state', 'attributes.state', 'ctime', 'type', 'attributes.scheduler_state'
-            ]
+            'id', 'state', 'attributes.state', 'ctime', 'type',
+            'attributes.scheduler_state'
+        ]
         calc_list_data = [[
             '# Pk', 'State', 'Creation',
             'Sched. state',
@@ -929,24 +932,24 @@ class AbstractJobCalculation(object):
         ]]
         qb = QueryBuilder()
         qb.append(
-                cls,
-                filters=calculation_filters,
-                project=calculation_projections,
-                tag='calculation'
+            cls,
+            filters=calculation_filters,
+            project=calculation_projections,
+            tag='calculation'
         )
         if group_filters is not None:
             qb.append(
-                    type="group", filters=group_filters,
-                    group_of="calculation"
-                )
-        qb.append(
-                type="computer", computer_of='calculation',
-                project=['name'], tag='computer'
+                type="group", filters=group_filters,
+                group_of="calculation"
             )
+        qb.append(
+            type="computer", computer_of='calculation',
+            project=['name'], tag='computer'
+        )
 
         # ORDER
         if order_by is not None:
-            qb.order_by({'calculation':[order_by]})
+            qb.order_by({'calculation': [order_by]})
 
         # LIMIT
         if limit is not None:
@@ -965,10 +968,10 @@ class AbstractJobCalculation(object):
                     ctime = res['calculation']['ctime']
                     if relative_ctime:
                         calc_ctime = str_timedelta(
-                                now - ctime,
-                                negative_to_zero=True,
-                                max_num_fields=1
-                            )
+                            now - ctime,
+                            negative_to_zero=True,
+                            max_num_fields=1
+                        )
                     else:
                         calc_ctime = " ".join([
                             timezone.localtime(ctime).isoformat().split('T')[0],
@@ -987,7 +990,7 @@ class AbstractJobCalculation(object):
                         str(res['calculation']['attributes.scheduler_state']),
                         str(res['computer']['name']),
                         from_type_to_pluginclassname(
-                                res['calculation']['type']
+                            res['calculation']['type']
                         ).rsplit(".", 1)[0].lstrip('calculation.job.')
                     ])
                 pretty_print(calc_list_data)
@@ -997,13 +1000,12 @@ class AbstractJobCalculation(object):
                 break
         print "\n  Number of rows: {}\n".format(counter)
 
-
     @classmethod
     def _get_all_with_state(
             cls, state, computer=None, user=None,
             only_computer_user_pairs=False,
             only_enabled=True, limit=None
-        ):
+    ):
         """
         Filter all calculations with a given state.
 
@@ -1038,20 +1040,20 @@ class AbstractJobCalculation(object):
             cls.logger.warning("querying for calculation state='{}', but it "
                                "is not a valid calculation state".format(state))
 
-        calcfilter = {'state':{'==':state}}
-        computerfilter = {"enabled":{'==':True}}
+        calcfilter = {'state': {'==': state}}
+        computerfilter = {"enabled": {'==': True}}
         userfilter = {}
 
         if computer is None:
             pass
         elif isinstance(computer, int):
             # An ID was provided
-            computerfilter.update({'id':{'==':computer}})
+            computerfilter.update({'id': {'==': computer}})
         elif isinstance(computer, Computer):
-            computerfilter.update({'id':{'==':computer.pk}})
+            computerfilter.update({'id': {'==': computer.pk}})
         else:
             try:
-                computerfilter.update({'id':{'==':computer.id}})
+                computerfilter.update({'id': {'==': computer.id}})
             except AttributeError as e:
                 raise Exception(
                     "{} is not a valid computer\n{}".format(computer, e)
@@ -1060,19 +1062,19 @@ class AbstractJobCalculation(object):
         if user is None:
             pass
         elif isinstance(user, int):
-            userfilter.update({'id':{'==':user}})
+            userfilter.update({'id': {'==': user}})
         else:
             try:
-                userfilter.update({'id':{'==':int(user.id)}})
+                userfilter.update({'id': {'==': int(user.id)}})
                 # Is that safe?
             except:
                 raise Exception("{} is not a valid user".format(user))
 
-
         qb = QueryBuilder()
         qb.append(type="computer", tag='computer', filters=computerfilter)
         qb.append(cls, filters=calcfilter, tag='calc', has_computer='computer')
-        qb.append(type="user", tag='user', filters=userfilter, creator_of="calc")
+        qb.append(type="user", tag='user', filters=userfilter,
+                  creator_of="calc")
 
         if only_computer_user_pairs:
             qb.add_projection("computer", "*")
@@ -1085,8 +1087,6 @@ class AbstractJobCalculation(object):
             returnresult = qb.all()
             returnresult = zip(*returnresult)[0]
         return returnresult
-
-
 
     def _prepare_for_submission(self, tempfolder, inputdict):
         """
@@ -1117,7 +1117,8 @@ class AbstractJobCalculation(object):
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return get_authinfo(computer=computer._dbcomputer,aiidauser=self.dbnode.user)
+        return get_authinfo(computer=computer._dbcomputer,
+                            aiidauser=self.dbnode.user)
 
     def _get_transport(self):
         """
@@ -1246,7 +1247,8 @@ class AbstractJobCalculation(object):
             actually being submitted at the same time in another thread.
         """
         # TODO: Check if we want to add a status "KILLED" or something similar.
-        from aiida.common.exceptions import InvalidOperation, RemoteOperationError
+        from aiida.common.exceptions import InvalidOperation, \
+            RemoteOperationError
 
         old_state = self.get_state()
 
@@ -1283,7 +1285,8 @@ class AbstractJobCalculation(object):
             # Do not set the state, but let the parser do its job
             # self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
-                                "(it was {})".format(self.pk, calc_states.WITHSCHEDULER))
+                                "(it was {})".format(self.pk,
+                                                     calc_states.WITHSCHEDULER))
 
     def _presubmit(self, folder, use_unstored_links=False):
         """
@@ -1303,7 +1306,8 @@ class AbstractJobCalculation(object):
         import json
 
         from aiida.common.exceptions import (NotExistent,
-                                             PluginInternalError, ValidationError)
+                                             PluginInternalError,
+                                             ValidationError)
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm.computer import Computer
@@ -1447,8 +1451,9 @@ class AbstractJobCalculation(object):
                              (code_info.cmdline_params if
                               code_info.cmdline_params is not None else []))
             else:
-                this_argv = [this_code.get_execname()] + (code_info.cmdline_params if
-                                                          code_info.cmdline_params is not None else [])
+                this_argv = [this_code.get_execname()] + (
+                code_info.cmdline_params if
+                code_info.cmdline_params is not None else [])
 
             this_stdin_name = code_info.stdin_name
             this_stdout_name = code_info.stdout_name
@@ -1543,11 +1548,13 @@ class AbstractJobCalculation(object):
                 raise PluginInternalError("[presubmission of calc {}] "
                                           "The remote copy requires a computer with UUID={}"
                                           "but no such computer was found in the "
-                                          "database".format(this_pk, remote_computer_uuid))
+                                          "database".format(this_pk,
+                                                            remote_computer_uuid))
             if os.path.isabs(dest_rel_path):
                 raise PluginInternalError("[presubmission of calc {}] "
                                           "The destination path of the remote copy "
-                                          "is absolute! ({})".format(this_pk, dest_rel_path))
+                                          "is absolute! ({})".format(this_pk,
+                                                                     dest_rel_path))
 
         return calcinfo, script_filename
 
@@ -1595,7 +1602,8 @@ class AbstractJobCalculation(object):
         folder.create()
 
         if subfolder_name is None:
-            subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d')
+            subfolder_basename = timezone.localtime(timezone.now()).strftime(
+                '%Y%m%d')
         else:
             subfolder_basename = subfolder_name
 
@@ -1660,11 +1668,13 @@ class AbstractJobCalculation(object):
 
             if remote_copy_list:
                 with open(os.path.join(subfolder.abspath,
-                                       '_aiida_remote_copy_list.txt'), 'w') as f:
+                                       '_aiida_remote_copy_list.txt'),
+                          'w') as f:
                     for (remote_computer_uuid, remote_abs_path,
                          dest_rel_path) in remote_copy_list:
                         try:
-                            remote_computer = Computer(uuid=remote_computer_uuid)
+                            remote_computer = Computer(
+                                uuid=remote_computer_uuid)
                         except NotExistent:
                             remote_computer = "[unknown]"
                         f.write("* I WOULD REMOTELY COPY "
@@ -1676,11 +1686,13 @@ class AbstractJobCalculation(object):
 
             if remote_symlink_list:
                 with open(os.path.join(subfolder.abspath,
-                                       '_aiida_remote_symlink_list.txt'), 'w') as f:
+                                       '_aiida_remote_symlink_list.txt'),
+                          'w') as f:
                     for (remote_computer_uuid, remote_abs_path,
                          dest_rel_path) in remote_symlink_list:
                         try:
-                            remote_computer = Computer(uuid=remote_computer_uuid)
+                            remote_computer = Computer(
+                                uuid=remote_computer_uuid)
                         except NotExistent:
                             remote_computer = "[unknown]"
                         f.write("* I WOULD PUT SYMBOLIC LINKS FOR "

@@ -1,38 +1,25 @@
 # -*- coding: utf-8 -*-
 
 import collections
-import plum.process
+
 import plum.port as port
-import voluptuous
-from aiida.orm import load_node
-from aiida.workflows2.execution_engine import execution_engine
+import plum.process
+
 import aiida.workflows2.util as util
-from aiida.common.lang import override
-from aiida.orm.data import Data
-from aiida.common.links import LinkType
-from aiida.utils.calculation import add_source_info
-from aiida.common.extendeddicts import FixedFieldsAttributeDict
+import voluptuous
 from abc import ABCMeta
+from aiida.common.extendeddicts import FixedFieldsAttributeDict
+from aiida.common.lang import override
+from aiida.common.links import LinkType
+from aiida.orm import Node
+from aiida.orm import load_node
+from aiida.orm.data import Data
+from aiida.utils.calculation import add_source_info
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
-
-
-def run(process_class, *args, **inputs):
-    """
-    Synchronously (i.e. blocking) run a workfunction or Process.
-
-    :param process_class: The process class or workfunction
-    :param _attributes: Optional attributes (only for Processes)
-    :param args: Positional arguments for a workfunction
-    :param inputs: The list of inputs
-    """
-    if util.is_workfunction(process_class):
-        return process_class(*args, **inputs)
-    elif issubclass(process_class, Process):
-        return execution_engine.run(process_class, inputs)
 
 
 class DictSchema(object):
@@ -116,6 +103,7 @@ class Process(plum.process.Process):
 
     @classmethod
     def _create_default_exec_engine(cls):
+        from aiida.workflows2.defaults import execution_engine
         return execution_engine
 
     @classmethod
@@ -140,9 +128,40 @@ class Process(plum.process.Process):
     @override
     def save_instance_state(self, bundle):
         super(Process, self).save_instance_state(bundle)
+
+        bundle[self._INPUTS] = self._convert_to_ids(self.inputs)
         if self._store_provenance:
             assert self._calc.is_stored
             bundle[self.KEY_CALC_PK] = self._calc.pk
+        else:
+            bundle[self.KEY_CALC_PK] = self._calc.uuid
+
+    def _convert_to_ids(self, nodes):
+        input_ids = {}
+        for label, node in nodes.iteritems():
+            if node is None:
+                continue
+            elif isinstance(node, Node):
+                if node.is_stored:
+                    input_ids[label] = node.pk
+                else:
+                    # Try using the UUID, but there's probably no chance of being
+                    # abel to recover the node from this if not stored
+                    # (for the time being)
+                    input_ids[label] = node.uuid
+            elif isinstance(node, collections.Mapping):
+                input_ids[label] = self._convert_to_ids(node)
+        return input_ids
+
+    def _convert_to_nodes(self, ids):
+        # Replace the node pks for real nodes
+        nodes = {}
+        for label, id in ids.iteritems():
+            if isinstance(id, collections.Mapping):
+                nodes[label] = self._convert_to_nodes(id)
+            else:
+                nodes[label] = load_node(id)
+        return nodes
 
     # Messages #####################################################
     @override
@@ -155,6 +174,9 @@ class Process(plum.process.Process):
 
     @override
     def on_recreate(self, pid, saved_instance_state):
+        # Replace the node pks for real nodes
+        saved_instance_state[self._INPUTS] = \
+            self._convert_to_nodes(saved_instance_state[self._INPUTS])
         super(Process, self).on_recreate(pid, saved_instance_state)
 
         if self.KEY_CALC_PK in saved_instance_state:

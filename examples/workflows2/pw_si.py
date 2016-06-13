@@ -7,7 +7,7 @@ if not is_dbenv_loaded():
 from aiida.orm import DataFactory
 from aiida.orm.code import Code
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.workflows2.async import asyncd
+from aiida.workflows2.run import asyncd
 
 
 def get_pseudos(structure, family_name):

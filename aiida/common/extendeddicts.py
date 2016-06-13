@@ -77,7 +77,12 @@ class AttributeDict(dict):
         """
         Set a key as an attribute.
         """
-        self[attr] = value
+        try:
+            self[attr] = value
+        except KeyError:
+            raise AttributeError(
+                "AttributeError: '{}' is not a valid attribute of the object "
+                "'{}'".format(attr,  self.__class__.__name__))
 
     def __delattr__(self, attr):
         """
@@ -154,7 +159,7 @@ class FixedFieldsAttributeDict(AttributeDict):
         if item not in self._valid_fields:
             errmsg = "'{}' is not a valid key for object '{}'".format(
                 item, self.__class__.__name__)
-            raise ValueError(errmsg)
+            raise KeyError(errmsg)
         super(FixedFieldsAttributeDict, self).__setitem__(item, value)
 
     def __setattr__(self, attr, value):

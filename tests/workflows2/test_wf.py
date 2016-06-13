@@ -6,7 +6,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.workflows2.wf import wf
-from aiida.workflows2.async import async
+from aiida.workflows2.run import async
 from aiida.workflows2.db_types import to_db_type
 
 

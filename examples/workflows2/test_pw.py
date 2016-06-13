@@ -17,7 +17,7 @@ from aiida.common.example_helpers import test_and_get_code
 from aiida.orm import DataFactory
 from aiida.common.exceptions import NotExistent
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.workflows2.async import asyncd
+from aiida.workflows2.run import asyncd
 
 # If set to True, will ask AiiDA to run in serial mode (i.e., AiiDA will not
 # invoke the mpirun command in the submission script)

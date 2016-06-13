@@ -6,7 +6,7 @@ from aiida.workflows2.db_types import Float
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.workflows2.async import async
+from aiida.workflows2.run import async
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, while_,\
     ResultToContext
 

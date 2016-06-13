@@ -1,5 +1,6 @@
+
 import unittest
-from aiida.common.extendeddicts import DefaultsDict, DefaultsFamiliesDict
+from aiida.common.extendeddicts import DefaultsDict
 
 
 class TestDefaultsDict(unittest.TestCase):

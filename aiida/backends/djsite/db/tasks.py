@@ -203,5 +203,5 @@ def workflow_stepper():
 
 @celery.task(base=SingleTask)
 def execution_engine_ticker():
-    from aiida.workflows2.execution_engine import execution_engine
+    from aiida.workflows2.defaults import execution_engine
     execution_engine.tick()

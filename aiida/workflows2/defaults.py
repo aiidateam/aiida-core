@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from aiida.workflows2.execution_engine import ExecutionEngine
 from aiida.workflows2.process_factory import ProcessFactory
 from plum.persistence.pickle_persistence import PicklePersistence
 from aiida.workflows2.process_registry import ProcessRegistry
@@ -14,3 +14,4 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 factory = ProcessFactory(store_provenance=True)
 storage = PicklePersistence(factory, '/tmp/to_run')
 registry = ProcessRegistry(storage)
+execution_engine = ExecutionEngine(process_factory=factory)

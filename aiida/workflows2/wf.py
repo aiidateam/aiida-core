@@ -5,7 +5,7 @@ Do not delete, otherwise 'verdi developertest' will stop to work.
 """
 
 from aiida.workflows2.process import FunctionProcess
-from aiida.workflows2.execution_engine import execution_engine
+from aiida.workflows2.defaults import execution_engine
 import functools
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."

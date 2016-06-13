@@ -4,7 +4,7 @@ from aiida.workflows2.db_types import Bool
 from aiida.workflows2.defaults import factory
 from aiida.workflows2.process import Process
 from aiida.workflows2.process_registry import ProcessRegistry
-from aiida.workflows2.async import asyncd
+from aiida.workflows2.run import asyncd
 from aiida.common.lang import override
 from plum.wait_ons import checkpoint
 from plum.persistence.pickle_persistence import PicklePersistence

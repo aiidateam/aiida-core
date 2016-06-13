@@ -4,7 +4,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.workflows2.fragmented_wf import *
-from aiida.workflows2.process import run
+from aiida.workflows2.run import run
 
 
 class W(FragmentedWorkfunction):

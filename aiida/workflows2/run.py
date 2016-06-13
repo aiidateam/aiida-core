@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import aiida.workflows2.util as util
-from aiida.workflows2.execution_engine import execution_engine
+from aiida.workflows2 import util as util
+from aiida.workflows2.defaults import execution_engine
 from aiida.workflows2.process import Process
 import aiida.workflows2.defaults as defaults
 
@@ -27,3 +27,18 @@ def asyncd(process_class, _jobs_store=None, **kwargs):
     proc = defaults.factory.create_process(process_class, inputs=kwargs)
     _jobs_store.save(proc)
     return proc.pid
+
+
+def run(process_class, *args, **inputs):
+    """
+    Synchronously (i.e. blocking) run a workfunction or Process.
+
+    :param process_class: The process class or workfunction
+    :param _attributes: Optional attributes (only for Processes)
+    :param args: Positional arguments for a workfunction
+    :param inputs: The list of inputs
+    """
+    if util.is_workfunction(process_class):
+        return process_class(*args, **inputs)
+    elif issubclass(process_class, Process):
+        return execution_engine.run(process_class, inputs)

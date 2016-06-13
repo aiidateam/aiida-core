@@ -17,8 +17,7 @@ from aiida.common.example_helpers import test_and_get_code
 from aiida.orm import DataFactory
 from aiida.common.exceptions import NotExistent
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.workflows2.process import run
-from aiida.workflows2.async import async
+from aiida.workflows2.async import asyncd
 
 # If set to True, will ask AiiDA to run in serial mode (i.e., AiiDA will not
 # invoke the mpirun command in the submission script)
@@ -133,7 +132,7 @@ inputs = JobCalc.get_inputs_template()
 inputs.structure = s
 inputs.parameters= parameters
 inputs.kpoints = kpoints
-inputs.code= test_and_get_code(codename, expected_code_type='quantumespresso.pw')
+inputs.code=test_and_get_code(codename, expected_code_type='quantumespresso.pw')
 
 # Calculation options
 options = inputs._options
@@ -176,4 +175,4 @@ if settings is not None:
     inputs.pseudo = pseudos_to_use
 
 # Run the calculation
-f = run(JobCalc, **inputs)
+print(asyncd(JobCalc, **inputs))

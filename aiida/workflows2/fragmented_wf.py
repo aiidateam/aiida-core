@@ -5,7 +5,7 @@ import inspect
 from plum.wait_ons import Checkpoint
 from plum.wait import WaitOn
 from aiida.workflows2.process import Process, ProcessSpec
-from aiida.workflows2.util import override
+from aiida.common.lang import override
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -29,8 +29,8 @@ class _FragmentedWorkfunctionSpec(ProcessSpec):
 class FragmentedWorkfunction(Process):
     _spec_type = _FragmentedWorkfunctionSpec
 
-    @staticmethod
-    def _define(spec):
+    @classmethod
+    def _define(cls, spec):
         # For now fragmented workflows can accept any input and emit any output
         # _If this changes in the future the spec should be updated here.
         spec.dynamic_input()
@@ -110,8 +110,8 @@ class FragmentedWorkfunction(Process):
             wait_on.assign(self._context)
 
     @override
-    def on_finalise(self):
-        super(FragmentedWorkfunction, self).on_finalise()
+    def on_stop(self):
+        super(FragmentedWorkfunction, self).on_stop()
         self._last_step = None
     #####################################################
 
@@ -133,14 +133,14 @@ class _ResultToContext(WaitOn):
         # TODO: Check all values of kwargs are futures
         self._to_assign = kwargs
 
-    def is_ready(self):
+    def is_ready(self, registry):
         for fut in self._to_assign.itervalues():
             if not fut.done():
                 return False
         return True
 
-    def save_instance_state(self, bundle, exec_engine):
-        super(_ResultToContext, self).save_instance_state(bundle, exec_engine)
+    def save_instance_state(self, out_state):
+        super(_ResultToContext, self).save_instance_state(out_state)
 
     def assign(self, context):
         for name, fut in self._to_assign.iteritems():

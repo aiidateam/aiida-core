@@ -3,8 +3,7 @@
 import plum.process_factory
 from plum.wait import WaitOn
 from plum.persistence.checkpoint import Checkpoint
-from aiida.workflows2.util import override
-
+from aiida.common.lang import override
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -29,8 +28,6 @@ class ProcessFactory(plum.process_factory.ProcessFactory):
 
     @override
     def recreate_process(self, checkpoint):
-        from aiida.workflows2.process import Process
-
         if checkpoint.wait_on_instance_state:
             wait_on = WaitOn.create_from(
                 checkpoint.wait_on_instance_state, self)

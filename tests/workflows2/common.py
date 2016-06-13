@@ -3,8 +3,8 @@ from aiida.workflows2.process import Process
 
 
 class DummyProcess(Process):
-    @staticmethod
-    def _define(spec):
+    @classmethod
+    def _define(cls, spec):
         spec.dynamic_input()
         spec.dynamic_output()
 

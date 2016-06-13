@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from aiida.orm import Data
-from aiida.orm.data.simple import SimpleData
+from aiida.orm.data.simple import NumericType, SimpleData
 
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -19,11 +19,19 @@ _TYPE_MAPPING = {
 
 
 def Int(value):
-    return SimpleData(typevalue=(int, value))
+    return NumericType(typevalue=(int, value))
 
 
 def Bool(value):
     return SimpleData(typevalue=(bool, value))
+
+
+def Float(value):
+    return NumericType(typevalue=(bool, value))
+
+
+def Str(value):
+    return SimpleData(typevalue=(float, value))
 
 
 def to_db_type(value):
@@ -34,7 +42,7 @@ def to_db_type(value):
     elif isinstance(value, (int, long)):
         return SimpleData(typevalue=(int, value))
     elif isinstance(value, float):
-        return SimpleData(typevalue=(float, value))
+        return Float(value)
     elif isinstance(value, basestring):
         return SimpleData(typevalue=(type(value), value))
     else:

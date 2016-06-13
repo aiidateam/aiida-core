@@ -5,8 +5,8 @@ from aiida.workflows2.defaults import factory
 from aiida.workflows2.process import Process
 from aiida.workflows2.process_registry import ProcessRegistry
 from aiida.workflows2.async import asyncd
-from aiida.workflows2.util import override
-from plum.wait_ons import Checkpoint
+from aiida.common.lang import override
+from plum.wait_ons import checkpoint
 from plum.persistence.pickle_persistence import PicklePersistence
 from aiida.orm import load_node
 
@@ -20,8 +20,8 @@ class ProcessEventsTester(Process):
     EVENTS = ["create", "start", "continue_", "finish", "emitted", "stop",
               "destroy", ]
 
-    @staticmethod
-    def _define(spec):
+    @classmethod
+    def _define(cls, spec):
         for label in ["create", "recreate", "start", "wait", "continue_",
                       "finish", "emitted", "stop", "destroy"]:
             spec.optional_output(label)
@@ -81,7 +81,7 @@ class ProcessEventsTester(Process):
 
     @override
     def _run(self):
-        return Checkpoint(self.finish.__name__)
+        return checkpoint(self.finish)
 
     def finish(self, wait_on):
         pass

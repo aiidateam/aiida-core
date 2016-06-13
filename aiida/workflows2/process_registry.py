@@ -2,7 +2,7 @@
 import plum.persistence.pickle_persistence
 import plum.process_registry
 import plum.process
-from aiida.workflows2.util import override
+from aiida.common.lang import override
 
 
 class ProcessRegistry(plum.process_registry.ProcessRegistry,
@@ -33,6 +33,13 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
             return False
         # TODO: check the database
         return False
+
+    @override
+    def get_output(self, pid, port):
+        try:
+            return self._finished[pid][port]
+        except KeyError:
+            raise ValueError("Process not finished.")
 
     @override
     def get_outputs(self, pid):

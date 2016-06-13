@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import plum.port as port
+from aiida.common.lang import override
 from aiida.workflows2.process import Process, DictSchema
 from aiida.workflows2.legacy.wait_on import WaitOnJobCalculation
 from aiida.orm.computer import Computer
@@ -58,7 +59,7 @@ class JobProcess(Process):
                     {'_define': staticmethod(_define),
                      '_CALC_CLASS': calc_class})
 
-    def __init__(self):
+    def __init__(self, store_provenance=True):
         # Need to tell Process to not create output links as these are
         # created internally by the execution manager
         super(JobProcess, self).__init__(store_provenance=False)
@@ -74,10 +75,12 @@ class JobProcess(Process):
         for label, node in self._calc.get_outputs_dict():
             self.out(label, node)
 
+    @override
     def create_db_record(self):
         return self._CALC_CLASS()
 
-    def _setup_db_record(self, inputs):
+    @override
+    def _setup_db_record(self):
         from aiida.common.links import LinkType
 
         # Link and store the retrospective provenance for this process
@@ -85,14 +88,14 @@ class JobProcess(Process):
         assert (not calc.is_stored)
 
         # Set all the attributes using the setter methods
-        for name, value in inputs.get(self.OPTIONS_INPUT_LABEL, {}).iteritems():
+        for name, value in self.inputs.get(self.OPTIONS_INPUT_LABEL, {}).iteritems():
             if value is not None:
                 getattr(calc, "set_{}".format(name))(value)
 
         # First get a dictionary of all the inputs to link, this is needed to
         # deal with things like input groups
         to_link = {}
-        for name, input in inputs.iteritems():
+        for name, input in self.inputs.iteritems():
             if input is None or name is self.OPTIONS_INPUT_LABEL:
                 continue
 
@@ -106,8 +109,8 @@ class JobProcess(Process):
             else:
                 getattr(calc, 'use_{}'.format(name))(input)
 
-        if calc.get_computer() is None and 'code' in inputs:
-            code = inputs['code']
+        if calc.get_computer() is None and 'code' in self.inputs:
+            code = self.inputs['code']
             if not code.is_local():
                 calc.set_computer(code.get_remote_computer())
 

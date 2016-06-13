@@ -7,7 +7,7 @@ import voluptuous
 from aiida.orm import load_node
 from aiida.workflows2.execution_engine import execution_engine
 import aiida.workflows2.util as util
-from aiida.workflows2.util import override
+from aiida.common.lang import override
 from aiida.orm.data import Data
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info

@@ -8,7 +8,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
-'''
+"""
 Specifications of the Data class:
 AiiDA Data objects are subclasses of Node and should have
 
@@ -19,8 +19,7 @@ Architecture note:
 The code plugin is responsible for converting a raw data object produced by code
 to AiiDA standard object format. The data object then validates itself according to its
 method. This is done independently in order to allow cross-validation of plugins.
-
-'''
+"""
 
 
 class Data(Node):
@@ -70,7 +69,7 @@ class Data(Node):
         unknown_attrs = list(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
             raise KeyError("Unknown source parameters: "
-                                 "{}".format(", ".join(unknown_attrs)))
+                           "{}".format(", ".join(unknown_attrs)))
 
         self._set_attr('source', source)
 
@@ -84,11 +83,12 @@ class Data(Node):
         from aiida.orm.calculation import Calculation
 
         if link_type is LinkType.CREATE and \
-           len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
+                        len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
             raise ValueError("At most one CREATE node can enter a data node")
 
         if not isinstance(src, Calculation):
-            raise ValueError("Links entering a data object can only be of type calculation")
+            raise ValueError(
+                "Links entering a data object can only be of type calculation")
 
         return super(Data, self).add_link_from(src, label, link_type)
 
@@ -100,7 +100,8 @@ class Data(Node):
         """
         from aiida.orm.calculation import Calculation
         if not isinstance(dest, Calculation):
-            raise ValueError("The output of a data node can only be a calculation")
+            raise ValueError(
+                "The output of a data node can only be a calculation")
 
         return super(Data, self)._linking_as_output(dest, link_type)
 

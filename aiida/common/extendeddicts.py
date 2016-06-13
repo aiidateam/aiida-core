@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from aiida.common import aiidalogger
 from aiida.common.exceptions import ValidationError
+import collections
+from aiida.common.lang import override
 
 ## TODO: see if we want to have a function to rebuild a nested dictionary as
 ## a nested AttributeDict object when deserializing with json.
@@ -286,3 +287,102 @@ class DefaultFieldsAttributeDict(AttributeDict):
         Return the extra keys defined in the instance.
         """
         return [_ for _ in self.keys() if _ not in self._default_fields]
+
+
+class FixedDict(collections.MutableMapping, object):
+    def __init__(self, valid_keys):
+        class M(object):
+            pass
+
+        self._m = M()
+        self._m.values = {}
+        self._m.valid_keys = valid_keys
+
+    # Methods from MutableMapping ##########################
+    @override
+    def __dir__(self):
+        return self._m.valid_keys
+
+    @override
+    def __getitem__(self, key):
+        return self._m.values.__getitem__(key)
+
+    @override
+    def __setitem__(self, key, value):
+        if key not in self._m.valid_keys:
+            raise AttributeError("Invalid attribute: {}".format(key))
+        return self._m.values.__setitem__(key, value)
+
+    @override
+    def __delitem__(self, key):
+        assert key in self._m.values,\
+               "Cannot delete an item that has not been set."
+        return self._m.values.__delitem__(key)
+
+    @override
+    def __iter__(self):
+        return self._m.values.__iter__()
+
+    @override
+    def __len__(self):
+        return self._m.values.__len__()
+    ########################################################
+
+    def __getattr__(self, item):
+        if item == '_m':
+            return super(FixedDict, self).__getattr__(item)
+        try:
+            return self.__getitem__(item)
+        except KeyError:
+            raise AttributeError("AttributeError: '{}'".format(item))
+
+    def __setattr__(self, key, value):
+        if key == '_m':
+            return super(FixedDict, self).__setattr__(key, value)
+        return self.__setitem__(key, value)
+
+    def __delattr__(self, item):
+        return self.__delitem__(item)
+
+
+class _WithDefaults(object):
+    def __init__(self, defaults):
+        self._m._defaults = {}
+        if defaults:
+            self._m._defaults.update(defaults)
+
+    def get_default(self, key):
+        return self._m._defaults[key]
+
+    @property
+    def defaults(self):
+        return self._m._defaults
+
+
+class _WithFamilies(object):
+    FAMILY_SEPERATOR = '_'
+
+    def __init__(self, valid_families, family_seperator=FAMILY_SEPERATOR):
+        self._m.valid_families = valid_families
+        self._m.family_sep = family_seperator
+
+    def __setitem__(self, key, value):
+        if self._m.family_sep in key:
+            assert key.split(self._m.family_sep)[0] in self._m.valid_families
+            return self._m.values.__setitem__(key, value)
+        else:
+            # It's just a normal key
+            super(_WithFamilies, self).__setitem__(key, value)
+
+
+class DefaultsDict(FixedDict, _WithDefaults):
+    def __init__(self, valid_keys, defaults=None):
+        FixedDict.__init__(self, valid_keys)
+        _WithDefaults.__init__(self, defaults)
+
+    @override
+    def __getitem__(self, key):
+        try:
+            return super(DefaultsDict, self).__getitem__(key)
+        except KeyError:
+            return self.get_default(key)

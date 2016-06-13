@@ -20,13 +20,14 @@ class TestProcessSpec(TestCase):
         self._test_template(template)
         for attr in ['b']:
             self.assertTrue(
-                attr in template,
-                "Attribute \"{}\" not found in template".format(attr))
+                attr in template.defaults,
+                "Attribute '{}' not found in template".format(attr))
 
     def _test_template(self, template):
         template.a = 2
-        self.assertEqual(template.b, 5)
-        with self.assertRaises(ValueError):
+        self.assertEqual(template.a, 2)
+        self.assertEqual(template.get_default('b'), 5)
+        with self.assertRaises(AttributeError):
             template.c = 6
 
         # Check that we can unpack

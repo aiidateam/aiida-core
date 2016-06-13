@@ -36,6 +36,9 @@ elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.utils import delete_computer
     from aiida.backends.querybuild.querybuilder_django import QueryBuilder
     from aiida.backends.djsite.db import models
+elif BACKEND is None:
+    raise ConfigurationError("settings.BACKEND has not been set.\n"
+                             "Hint: Have you called aiida.load_dbenv?")
 else:
-    raise ConfigurationError("Invalid settings.BACKEND: {}".format(
-            BACKEND))
+    raise ConfigurationError("Unknown settings.BACKEND: {}".format(
+        BACKEND))

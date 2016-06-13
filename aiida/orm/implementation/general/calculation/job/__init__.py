@@ -7,8 +7,8 @@ from aiida.utils import timezone
 from aiida.common.utils import str_timedelta
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
+from aiida.common.links import LinkType
 from aiida.backends.utils import get_automatic_user
-
 from aiida.common.pluginloader import from_type_to_pluginclassname
 
 # TODO: set the following as properties of the Calculation
@@ -32,6 +32,11 @@ class AbstractJobCalculation(object):
     remotely on a job scheduler.
     """
 
+    @classmethod
+    def process(cls):
+        from aiida.workflows2.legacy.job_process import JobProcess
+        return JobProcess.build(cls)
+
     def _init_internal_params(self):
         """
         Define here internal parameters that should be defined
@@ -42,18 +47,16 @@ class AbstractJobCalculation(object):
           call super()._init_internal_params() as the first thing
           in your inherited function.
         """
-        super(AbstractJobCalculation, self)._init_internal_params()
-
         # By default, no output parser
         self._default_parser = None
         # Set default for the link to the retrieved folder (after calc is done)
         self._linkname_retrieved = 'retrieved'
 
         self._updatable_attributes = (
-                'state', 'job_id', 'scheduler_state',
-                'scheduler_lastchecktime',
-                'last_jobinfo', 'remote_workdir', 'retrieve_list',
-                'retrieve_singlefile_list'
+            'state', 'job_id', 'scheduler_state',
+            'scheduler_lastchecktime',
+            'last_jobinfo', 'remote_workdir', 'retrieve_list',
+            'retrieve_singlefile_list'
         )
 
         # Files in which the scheduler output and error will be stored.
@@ -121,10 +124,10 @@ class AbstractJobCalculation(object):
             _ = self.get_parserclass()
         except MissingPluginError:
             raise ValidationError(
-                    "No valid plugin found for the parser '{}'. "
-                    "Set the parser to None if you do not need an automatic "
-                    "parser.".format(self.get_parser_name())
-                )
+                "No valid plugin found for the parser '{}'. "
+                "Set the parser to None if you do not need an automatic "
+                "parser.".format(self.get_parser_name())
+            )
 
         computer = self.get_computer()
         s = computer.get_scheduler()
@@ -136,12 +139,11 @@ class AbstractJobCalculation(object):
 
         if not isinstance(self.get_withmpi(), bool):
             raise ValidationError(
-                    "withmpi property must be boolean! It in instead {}"
-                    "".format(str(type(self.get_withmpi())))
+                "withmpi property must be boolean! It in instead {}"
+                "".format(str(type(self.get_withmpi())))
             )
 
-
-    def _can_link_as_output(self, dest):
+    def _linking_as_output(self, dest, link_type):
         """
         An output of a JobCalculation can only be set
         when the calculation is in the SUBMITTING or RETRIEVING or
@@ -167,7 +169,8 @@ class AbstractJobCalculation(object):
                 "of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._can_link_as_output(dest)
+        return super(AbstractJobCalculation, self)._linking_as_output(dest,
+                                                                      link_type)
 
     def _store_raw_input_folder(self, folder_path):
         """
@@ -354,7 +357,8 @@ class AbstractJobCalculation(object):
             computer = self.get_computer()
             def_cpus_machine = computer.get_default_mpiprocs_per_machine()
             if def_cpus_machine is not None:
-                resources_dict['default_mpiprocs_per_machine'] = def_cpus_machine
+                resources_dict[
+                    'default_mpiprocs_per_machine'] = def_cpus_machine
 
         return resources_dict
 
@@ -475,8 +479,8 @@ class AbstractJobCalculation(object):
 
         self._set_attr("mpirun_extra_params", list(extra_params))
 
-    def _add_link_from(self, src, label=None):
-        '''
+    def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
+        """
         Add a link with a code as destination. Add the additional
         contraint that this is only possible if the calculation
         is in state NEW.
@@ -486,7 +490,9 @@ class AbstractJobCalculation(object):
 
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link. Default=None
-        '''
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
+        """
         valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:
@@ -495,16 +501,17 @@ class AbstractJobCalculation(object):
                 "one of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._add_link_from(src, label)
+        return super(AbstractJobCalculation, self).add_link_from(src, label,
+                                                                 link_type)
 
-    def _replace_link_from(self, src, label):
-        '''
+    def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
+        """
         Replace a link. Add the additional constratint that this is
         only possible if the calculation is in state NEW.
 
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link.
-        '''
+        """
         valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:
@@ -513,14 +520,16 @@ class AbstractJobCalculation(object):
                 "one of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._replace_link_from(src, label)
+        return super(AbstractJobCalculation, self)._replace_link_from(src,
+                                                                      label,
+                                                                      link_type)
 
     def _remove_link_from(self, label):
-        '''
+        """
         Remove a link. Only possible if the calculation is in state NEW.
 
         :param str label: Name of the link to remove.
-        '''
+        """
         valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:
@@ -530,7 +539,6 @@ class AbstractJobCalculation(object):
                     valid_states, self.get_state()))
 
         return super(AbstractJobCalculation, self)._remove_link_from(label)
-
 
     @abstractmethod
     def _set_state(self, state):
@@ -587,7 +595,6 @@ class AbstractJobCalculation(object):
         else:
             return state
 
-
     def _is_new(self):
         """
         Get whether the calculation is in the NEW status.
@@ -605,13 +612,13 @@ class AbstractJobCalculation(object):
         :return: a boolean
         """
         return self.get_state() in [
-                calc_states.TOSUBMIT,
-                calc_states.SUBMITTING,
-                calc_states.WITHSCHEDULER,
-                calc_states.COMPUTED,
-                calc_states.RETRIEVING,
-                calc_states.PARSING
-            ]
+            calc_states.TOSUBMIT,
+            calc_states.SUBMITTING,
+            calc_states.WITHSCHEDULER,
+            calc_states.COMPUTED,
+            calc_states.RETRIEVING,
+            calc_states.PARSING
+        ]
 
     def has_finished_ok(self):
         """
@@ -731,10 +738,10 @@ class AbstractJobCalculation(object):
         """
         if self.get_state() != calc_states.SUBMITTING:
             raise ModificationNotAllowed(
-                    "Cannot set the job id if you are not "
-                    "submitting the calculation (current state is "
-                    "{})".format(self.get_state())
-                )
+                "Cannot set the job id if you are not "
+                "submitting the calculation (current state is "
+                "{})".format(self.get_state())
+            )
 
         return self._set_attr('job_id', unicode(job_id))
 
@@ -828,12 +835,9 @@ class AbstractJobCalculation(object):
         :return: a string with description of calculations.
         """
 
-
-
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.common.custom_io import pretty_print
         from aiida.daemon.timestamps import get_last_daemon_timestamp
-        
 
         now = timezone.now()
 
@@ -842,7 +846,7 @@ class AbstractJobCalculation(object):
             for state in states:
                 if state not in calc_states:
                     return "Invalid state provided: {}.".format(state)
-        #Let's check if there is something to order_by:
+        # Let's check if there is something to order_by:
         valid_order_parameters = (None, 'id', 'ctime')
         if order_by not in valid_order_parameters:
             raise Exception(
@@ -851,7 +855,7 @@ class AbstractJobCalculation(object):
                 "".format(order_by, valid_order_parameters)
             )
         # Limit:
-        if not(limit is None or isinstance(limit, int)):
+        if not (limit is None or isinstance(limit, int)):
             raise Exception(
                 "Limit (set to {}) has to be an integer or None".format(limit)
             )
@@ -861,8 +865,8 @@ class AbstractJobCalculation(object):
                                                           when='stop')
         except ValueError:
             last_check_string = (
-                    "# Last daemon state_updater check: "
-                    "(Error while retrieving the information)"
+                "# Last daemon state_updater check: "
+                "(Error while retrieving the information)"
             )
         else:
             if last_daemon_check is None:
@@ -888,8 +892,8 @@ class AbstractJobCalculation(object):
 
         # filter for calculation pks:
         if pks:
-            calculation_filters['id'] = {'in':pks}
-            group_filters=None
+            calculation_filters['id'] = {'in': pks}
+            group_filters = None
         else:
             # The wanted behavior:
             # You know what you're looking for and specify pks,
@@ -898,53 +902,54 @@ class AbstractJobCalculation(object):
 
             # filter for states:
             if states:
-                calculation_filters['state'] = {'in':states}
+                calculation_filters['state'] = {'in': states}
 
             # Filter on the users, if not all users
             if not all_users:
                 user_id = get_automatic_user().id
-                calculation_filters['user_id'] = {'==':user_id}
+                calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:
                 n_days_ago = now - datetime.timedelta(days=past_days)
-                calculation_filters['ctime'] = {'>':n_days_ago}
+                calculation_filters['ctime'] = {'>': n_days_ago}
 
             # Filter on the group, either name or by pks
             if group:
-                group_filters = {'name':{'like':'%{}%'.format(group)}}
+                group_filters = {'name': {'like': '%{}%'.format(group)}}
             elif group_pk:
-                group_filters = {'id':{'==':group_pk}}
+                group_filters = {'id': {'==': group_pk}}
             else:
                 group_filters = None
 
         calculation_projections = [
-                'id', 'state', 'attributes.state', 'ctime', 'type', 'attributes.scheduler_state'
-            ]
+            'id', 'state', 'attributes.state', 'ctime', 'type',
+            'attributes.scheduler_state'
+        ]
         calc_list_data = [[
             '# Pk', 'State', 'Creation',
-            'Sched. state', 
+            'Sched. state',
             'Computer', 'Type'
         ]]
         qb = QueryBuilder()
         qb.append(
-                cls,
-                filters=calculation_filters,
-                project=calculation_projections,
-                tag='calculation'
+            cls,
+            filters=calculation_filters,
+            project=calculation_projections,
+            tag='calculation'
         )
         if group_filters is not None:
             qb.append(
-                    type="group", filters=group_filters,
-                    group_of="calculation"
-                )
-        qb.append(
-                type="computer", computer_of='calculation',
-                project=['name'], tag='computer'
+                type="group", filters=group_filters,
+                group_of="calculation"
             )
+        qb.append(
+            type="computer", computer_of='calculation',
+            project=['name'], tag='computer'
+        )
 
         # ORDER
         if order_by is not None:
-            qb.order_by({'calculation':[order_by]})
+            qb.order_by({'calculation': [order_by]})
 
         # LIMIT
         if limit is not None:
@@ -963,10 +968,10 @@ class AbstractJobCalculation(object):
                     ctime = res['calculation']['ctime']
                     if relative_ctime:
                         calc_ctime = str_timedelta(
-                                now - ctime,
-                                negative_to_zero=True,
-                                max_num_fields=1
-                            )
+                            now - ctime,
+                            negative_to_zero=True,
+                            max_num_fields=1
+                        )
                     else:
                         calc_ctime = " ".join([
                             timezone.localtime(ctime).isoformat().split('T')[0],
@@ -985,7 +990,7 @@ class AbstractJobCalculation(object):
                         str(res['calculation']['attributes.scheduler_state']),
                         str(res['computer']['name']),
                         from_type_to_pluginclassname(
-                                res['calculation']['type']
+                            res['calculation']['type']
                         ).rsplit(".", 1)[0].lstrip('calculation.job.')
                     ])
                 pretty_print(calc_list_data)
@@ -995,13 +1000,12 @@ class AbstractJobCalculation(object):
                 break
         print "\n  Number of rows: {}\n".format(counter)
 
-
     @classmethod
     def _get_all_with_state(
             cls, state, computer=None, user=None,
             only_computer_user_pairs=False,
             only_enabled=True, limit=None
-        ):
+    ):
         """
         Filter all calculations with a given state.
 
@@ -1036,20 +1040,20 @@ class AbstractJobCalculation(object):
             cls.logger.warning("querying for calculation state='{}', but it "
                                "is not a valid calculation state".format(state))
 
-        calcfilter = {'state':{'==':state}}
-        computerfilter = {"enabled":{'==':True}}
+        calcfilter = {'state': {'==': state}}
+        computerfilter = {"enabled": {'==': True}}
         userfilter = {}
 
         if computer is None:
             pass
         elif isinstance(computer, int):
             # An ID was provided
-            computerfilter.update({'id':{'==':computer}})
+            computerfilter.update({'id': {'==': computer}})
         elif isinstance(computer, Computer):
-            computerfilter.update({'id':{'==':computer.pk}})
+            computerfilter.update({'id': {'==': computer.pk}})
         else:
             try:
-                computerfilter.update({'id':{'==':computer.id}})
+                computerfilter.update({'id': {'==': computer.id}})
             except AttributeError as e:
                 raise Exception(
                     "{} is not a valid computer\n{}".format(computer, e)
@@ -1058,19 +1062,19 @@ class AbstractJobCalculation(object):
         if user is None:
             pass
         elif isinstance(user, int):
-            userfilter.update({'id':{'==':user}})
+            userfilter.update({'id': {'==': user}})
         else:
             try:
-                userfilter.update({'id':{'==':int(user.id)}})
+                userfilter.update({'id': {'==': int(user.id)}})
                 # Is that safe?
             except:
                 raise Exception("{} is not a valid user".format(user))
 
-
         qb = QueryBuilder()
         qb.append(type="computer", tag='computer', filters=computerfilter)
         qb.append(cls, filters=calcfilter, tag='calc', has_computer='computer')
-        qb.append(type="user", tag='user', filters=userfilter, creator_of="calc")
+        qb.append(type="user", tag='user', filters=userfilter,
+                  creator_of="calc")
 
         if only_computer_user_pairs:
             qb.add_projection("computer", "*")
@@ -1083,9 +1087,6 @@ class AbstractJobCalculation(object):
             returnresult = qb.all()
             returnresult = zip(*returnresult)[0]
         return returnresult
-
-
-
 
     def _prepare_for_submission(self, tempfolder, inputdict):
         """
@@ -1116,7 +1117,8 @@ class AbstractJobCalculation(object):
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return get_authinfo(computer=computer._dbcomputer,aiidauser=self.dbnode.user)
+        return get_authinfo(computer=computer._dbcomputer,
+                            aiidauser=self.dbnode.user)
 
     def _get_transport(self):
         """
@@ -1245,7 +1247,8 @@ class AbstractJobCalculation(object):
             actually being submitted at the same time in another thread.
         """
         # TODO: Check if we want to add a status "KILLED" or something similar.
-        from aiida.common.exceptions import InvalidOperation, RemoteOperationError
+        from aiida.common.exceptions import InvalidOperation, \
+            RemoteOperationError
 
         old_state = self.get_state()
 
@@ -1282,8 +1285,8 @@ class AbstractJobCalculation(object):
             # Do not set the state, but let the parser do its job
             # self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
-                                "(it was {})".format(self.pk, calc_states.WITHSCHEDULER))
-
+                                "(it was {})".format(self.pk,
+                                                     calc_states.WITHSCHEDULER))
 
     def _presubmit(self, folder, use_unstored_links=False):
         """
@@ -1303,7 +1306,8 @@ class AbstractJobCalculation(object):
         import json
 
         from aiida.common.exceptions import (NotExistent,
-                                             PluginInternalError, ValidationError)
+                                             PluginInternalError,
+                                             ValidationError)
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm.computer import Computer
@@ -1313,13 +1317,9 @@ class AbstractJobCalculation(object):
         from aiida.orm.utils import load_node
 
         computer = self.get_computer()
+        inputdict = self.get_inputs_dict(only_in_db=not use_unstored_links)
 
-        if use_unstored_links:
-            inputdict = self.get_inputs_dict(only_in_db=False)
-        else:
-            inputdict = self.get_inputs_dict(only_in_db=True)
-
-        codes = [ _ for _ in inputdict.itervalues() if isinstance(_,Code) ]
+        codes = [_ for _ in inputdict.itervalues() if isinstance(_, Code)]
 
         calcinfo = self._prepare_for_submission(folder, inputdict)
         s = computer.get_scheduler()
@@ -1403,30 +1403,30 @@ class AbstractJobCalculation(object):
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
-        extra_mpirun_params = self.get_mpirun_extra_params() # this is the same for all codes in the same calc
+        extra_mpirun_params = self.get_mpirun_extra_params()  # this is the same for all codes in the same calc
 
         ########################################################################
-#         if self.get_withmpi():
-#             job_tmpl.argv = (mpi_args + extra_mpirun_params +
-#                              [code.get_execname()] +
-#                              (calcinfo.cmdline_params if
-#                               calcinfo.cmdline_params is not None else []))
-#         else:
-#             job_tmpl.argv = [code.get_execname()] + (
-#                 calcinfo.cmdline_params if
-#                 calcinfo.cmdline_params is not None else [])
-#         job_tmpl.stdin_name = calcinfo.stdin_name
-#         job_tmpl.stdout_name = calcinfo.stdout_name
+        #         if self.get_withmpi():
+        #             job_tmpl.argv = (mpi_args + extra_mpirun_params +
+        #                              [code.get_execname()] +
+        #                              (calcinfo.cmdline_params if
+        #                               calcinfo.cmdline_params is not None else []))
+        #         else:
+        #             job_tmpl.argv = [code.get_execname()] + (
+        #                 calcinfo.cmdline_params if
+        #                 calcinfo.cmdline_params is not None else [])
+        #         job_tmpl.stdin_name = calcinfo.stdin_name
+        #         job_tmpl.stdout_name = calcinfo.stdout_name
 
         # set the codes_info
-        if not isinstance(calcinfo.codes_info,(list,tuple)):
+        if not isinstance(calcinfo.codes_info, (list, tuple)):
             raise PluginInternalError("codes_info passed to CalcInfo must be a "
                                       "list of CalcInfo objects")
 
         codes_info = []
         for code_info in calcinfo.codes_info:
 
-            if not isinstance(code_info,CodeInfo):
+            if not isinstance(code_info, CodeInfo):
                 raise PluginInternalError("Invalid codes_info, must be a list "
                                           "of CodeInfo objects")
 
@@ -1436,9 +1436,9 @@ class AbstractJobCalculation(object):
                                           "to be launched")
             this_code = load_node(code_info.code_uuid, parent_class=Code)
 
-            this_withmpi = code_info.withmpi    # to decide better how to set the default
+            this_withmpi = code_info.withmpi  # to decide better how to set the default
             if this_withmpi is None:
-                if len(calcinfo.codes_info)>1:
+                if len(calcinfo.codes_info) > 1:
                     raise PluginInternalError("For more than one code, it is "
                                               "necessary to set withmpi in "
                                               "codes_info")
@@ -1451,8 +1451,9 @@ class AbstractJobCalculation(object):
                              (code_info.cmdline_params if
                               code_info.cmdline_params is not None else []))
             else:
-                this_argv = [this_code.get_execname()] + (code_info.cmdline_params if
-                                                          code_info.cmdline_params is not None else [])
+                this_argv = [this_code.get_execname()] + (
+                code_info.cmdline_params if
+                code_info.cmdline_params is not None else [])
 
             this_stdin_name = code_info.stdin_name
             this_stdout_name = code_info.stdout_name
@@ -1462,12 +1463,12 @@ class AbstractJobCalculation(object):
             # overwrite the old cmdline_params and add codename and mpirun stuff
             code_info.cmdline_params = this_argv
 
-            codes_info.append( code_info )
+            codes_info.append(code_info)
         job_tmpl.codes_info = codes_info
 
         # set the codes execution mode
 
-        if len(codes)>1:
+        if len(codes) > 1:
             try:
                 job_tmpl.codes_run_mode = calcinfo.codes_run_mode
             except KeyError:
@@ -1547,14 +1548,15 @@ class AbstractJobCalculation(object):
                 raise PluginInternalError("[presubmission of calc {}] "
                                           "The remote copy requires a computer with UUID={}"
                                           "but no such computer was found in the "
-                                          "database".format(this_pk, remote_computer_uuid))
+                                          "database".format(this_pk,
+                                                            remote_computer_uuid))
             if os.path.isabs(dest_rel_path):
                 raise PluginInternalError("[presubmission of calc {}] "
                                           "The destination path of the remote copy "
-                                          "is absolute! ({})".format(this_pk, dest_rel_path))
+                                          "is absolute! ({})".format(this_pk,
+                                                                     dest_rel_path))
 
         return calcinfo, script_filename
-
 
     @property
     def res(self):
@@ -1600,7 +1602,8 @@ class AbstractJobCalculation(object):
         folder.create()
 
         if subfolder_name is None:
-            subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d')
+            subfolder_basename = timezone.localtime(timezone.now()).strftime(
+                '%Y%m%d')
         else:
             subfolder_basename = subfolder_name
 
@@ -1665,11 +1668,13 @@ class AbstractJobCalculation(object):
 
             if remote_copy_list:
                 with open(os.path.join(subfolder.abspath,
-                                       '_aiida_remote_copy_list.txt'), 'w') as f:
+                                       '_aiida_remote_copy_list.txt'),
+                          'w') as f:
                     for (remote_computer_uuid, remote_abs_path,
                          dest_rel_path) in remote_copy_list:
                         try:
-                            remote_computer = Computer(uuid=remote_computer_uuid)
+                            remote_computer = Computer(
+                                uuid=remote_computer_uuid)
                         except NotExistent:
                             remote_computer = "[unknown]"
                         f.write("* I WOULD REMOTELY COPY "
@@ -1681,11 +1686,13 @@ class AbstractJobCalculation(object):
 
             if remote_symlink_list:
                 with open(os.path.join(subfolder.abspath,
-                                       '_aiida_remote_symlink_list.txt'), 'w') as f:
+                                       '_aiida_remote_symlink_list.txt'),
+                          'w') as f:
                     for (remote_computer_uuid, remote_abs_path,
                          dest_rel_path) in remote_symlink_list:
                         try:
-                            remote_computer = Computer(uuid=remote_computer_uuid)
+                            remote_computer = Computer(
+                                uuid=remote_computer_uuid)
                         except NotExistent:
                             remote_computer = "[unknown]"
                         f.write("* I WOULD PUT SYMBOLIC LINKS FOR "
@@ -1752,17 +1759,6 @@ class AbstractJobCalculation(object):
         return errfile_content
 
 
-#
-#     @property
-#     def files(self):
-#         """
-#         To be used to get direct access to the retrieved files.
-#
-#         :return: an instance of the CalculationFileManager.
-#         """
-#         return CalculationFileManager(self)
-
-
 class CalculationResultManager(object):
     """
     An object used internally to interface the calculation object with the Parser
@@ -1782,12 +1778,12 @@ class CalculationResultManager(object):
         try:
             ParserClass = calc.get_parserclass()
             if ParserClass is None:
-                #raise AttributeError("No output parser is attached to the calculation")
+                # raise AttributeError("No output parser is attached to the calculation")
                 self._parser = Parser(calc)
             else:
                 self._parser = ParserClass(calc)
         except MissingPluginError:
-            self._parser = Parser(calc) # Use base class
+            self._parser = Parser(calc)  # Use base class
 
     def __dir__(self):
         """
@@ -1842,41 +1838,3 @@ class CalculationResultManager(object):
         except AttributeError:
             raise KeyError("Parser '{}' did not provide a result '{}'"
                            .format(self._parser.__class__.__name__, name))
-
-
-#
-# class CalculationFileManager(object):
-#     """
-#     An object used internally to interface the calculation with the FolderData
-#     object result.
-#     It shouldn't be used explicitely by a user, but accessed through calc.files.
-#     """
-#     def __init__(self, calc):
-#         """
-#         :param calc: the calculation object.
-#         """
-#         # Possibly add checks here
-#         self._calc = calc
-#
-#     def _get_folder(self):
-#         from aiida.orm.data.folder import FolderData
-#         from aiida.common.exceptions import NotExistent, UniquenessError
-#         folders = self._calc.get_outputs(type=FolderData)
-#         if not folders:
-#             raise NotExistent("No output FolderData found")
-#         try:
-#             folders[1]
-#         except IndexError:
-#             pass
-#         else:
-#             raise UniquenessError("More than one output folder found")
-#         return folders[0]
-#
-#     def path(self,name='.'):
-#         folder = self._get_folder()
-#         return folder.get_abs_path(name)
-#
-#     def list(self,name='.'):
-#         folder = self._get_folder()
-#         return folder.get_folder_list(name)
-

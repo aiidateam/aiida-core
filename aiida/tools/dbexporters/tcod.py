@@ -640,7 +640,7 @@ def _collect_tags(node, calc,parameters=None,
 
     # Creating importable AiiDA database dump in CIF tags
 
-    if dump_aiida_database and node._is_stored:
+    if dump_aiida_database and node.is_stored:
         import json
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder

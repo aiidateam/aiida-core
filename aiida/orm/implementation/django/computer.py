@@ -10,14 +10,13 @@ from aiida.orm.implementation.general.computer import AbstractComputer
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
 
-
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
-class Computer(AbstractComputer):
 
+class Computer(AbstractComputer):
     @property
     def uuid(self):
         return self._dbcomputer.uuid
@@ -28,6 +27,8 @@ class Computer(AbstractComputer):
 
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbComputer
+        super(Computer, self).__init__()
+
         uuid = kwargs.pop('uuid', None)
         if uuid is not None:
             if kwargs:
@@ -55,7 +56,6 @@ class Computer(AbstractComputer):
             # Set all remaining parameters, stop if unknown
             self.set(**kwargs)
 
-
     def set(self, **kwargs):
         for k, v in kwargs.iteritems():
             try:
@@ -81,9 +81,12 @@ class Computer(AbstractComputer):
         ret_lines.append(" * UUID:           {}".format(self.uuid))
         ret_lines.append(" * Description:    {}".format(self.description))
         ret_lines.append(" * Hostname:       {}".format(self.hostname))
-        ret_lines.append(" * Enabled:        {}".format("True" if self.is_enabled() else "False"))
-        ret_lines.append(" * Transport type: {}".format(self.get_transport_type()))
-        ret_lines.append(" * Scheduler type: {}".format(self.get_scheduler_type()))
+        ret_lines.append(" * Enabled:        {}".format(
+            "True" if self.is_enabled() else "False"))
+        ret_lines.append(
+            " * Transport type: {}".format(self.get_transport_type()))
+        ret_lines.append(
+            " * Scheduler type: {}".format(self.get_scheduler_type()))
         ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
         ret_lines.append(" * mpirun command: {}".format(" ".join(
             self.get_mpirun_command())))
@@ -121,7 +124,8 @@ class Computer(AbstractComputer):
     def copy(self):
         from aiida.backends.djsite.db.models import DbComputer
         if self.to_be_stored:
-            raise InvalidOperation("You can copy a computer only after having stored it")
+            raise InvalidOperation(
+                "You can copy a computer only after having stored it")
         newdbcomputer = DbComputer.objects.get(pk=self.dbcomputer.pk)
         newdbcomputer.pk = None
 
@@ -146,10 +150,11 @@ class Computer(AbstractComputer):
             transaction.savepoint_commit(sid)
         except IntegrityError:
             transaction.savepoint_rollback(sid)
-            raise ValueError("Integrity error, probably the hostname already exists in the DB")
+            raise ValueError(
+                "Integrity error, probably the hostname already exists in the DB")
 
-        #self.logger.error("Trying to store an already saved computer")
-        #raise ModificationNotAllowed("The computer was already stored")
+        # self.logger.error("Trying to store an already saved computer")
+        # raise ModificationNotAllowed("The computer was already stored")
 
         # This is useful because in this way I can do
         # c = Computer().store()
@@ -206,7 +211,7 @@ class Computer(AbstractComputer):
         metadata = self._get_metadata()
         metadata['workdir'] = val
         self._set_metadata(metadata)
-        #else:
+        # else:
         #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_name(self):
@@ -249,7 +254,7 @@ class Computer(AbstractComputer):
         except ObjectDoesNotExist:
             raise NotExistent("The user '{}' is not configured for "
                               "computer '{}'".format(
-                                  user.email, self.name))
+                user.email, self.name))
 
     def is_user_configured(self, user):
         try:

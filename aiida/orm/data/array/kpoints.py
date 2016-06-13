@@ -16,14 +16,14 @@ __authors__ = "The AiiDA team."
 class KpointsData(ArrayData):
     """
     Class to handle array of kpoints in the Brillouin zone. Provide methods to
-    generate either user-defined k-points or path of k-points along symmetry 
+    generate either user-defined k-points or path of k-points along symmetry
     lines.
-    Internally, all k-points are defined in terms of crystal (fractional) 
+    Internally, all k-points are defined in terms of crystal (fractional)
     coordinates.
     Cell and lattice vector coordinates are in Angstroms, reciprocal lattice
     vectors in Angstrom^-1 .
     :note: The methods setting and using the Bravais lattice info assume the
-    PRIMITIVE unit cell is provided in input to the set_cell or 
+    PRIMITIVE unit cell is provided in input to the set_cell or
     set_cell_from_structure methods.
     """
 
@@ -58,10 +58,9 @@ class KpointsData(ArrayData):
         from aiida.common.exceptions import ModificationNotAllowed
         from aiida.orm.data.structure import _get_valid_cell
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
-                "KpointsData cannot be modified, "
-                "it has already been stored")
+                "KpointsData cannot be modified, it has already been stored")
 
         the_cell = _get_valid_cell(value)
 
@@ -71,7 +70,7 @@ class KpointsData(ArrayData):
     def pbc(self):
         """
         The periodic boundary conditions along the vectors a1,a2,a3.
-        
+
         :return: a tuple of three booleans, each one tells if there are periodic
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
@@ -93,10 +92,9 @@ class KpointsData(ArrayData):
         from aiida.common.exceptions import ModificationNotAllowed
         from aiida.orm.data.structure import get_valid_pbc
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
-                "The KpointsData object cannot be modified, "
-                "it has already been stored")
+                "The KpointsData object cannot be modified, it has already been stored")
         the_pbc = get_valid_pbc(value)
         self._set_attr('pbc1', the_pbc[0])
         self._set_attr('pbc2', the_pbc[1])
@@ -188,7 +186,7 @@ class KpointsData(ArrayData):
         Set a cell to be used for symmetry analysis from an AiiDA structure.
         Inherits both the cell and the pbc's.
         To set manually a cell, use "set_cell"
-        
+
         :param structuredata: an instance of StructureData
         """
         from aiida.orm.data.structure import StructureData
@@ -204,8 +202,8 @@ class KpointsData(ArrayData):
         """
         Set a cell to be used for symmetry analysis.
         To set a cell from an AiiDA structure, use "set_cell_from_structure".
-        
-        :param cell: 3x3 matrix of cell vectors. Orientation: each row 
+
+        :param cell: 3x3 matrix of cell vectors. Orientation: each row
                      represent a lattice vector. Units are Angstroms.
         :param pbc: list of 3 booleans, True if in the nth crystal direction the
                     structure is periodic. Default = [True,True,True]
@@ -219,7 +217,7 @@ class KpointsData(ArrayData):
     def _load_cell_properties(self):
         """
         A function executed by the __init__ or by set_cell.
-        If a cell is set, properties like a1, a2, a3, cosalpha, reciprocal_cell are 
+        If a cell is set, properties like a1, a2, a3, cosalpha, reciprocal_cell are
         set as well, although they are not stored in the DB.
         :note: units are Angstrom for the cell parameters, 1/Angstrom for the
         reciprocal cell parameters.
@@ -248,8 +246,8 @@ class KpointsData(ArrayData):
         """
         Set KpointsData to represent a uniformily spaced mesh of kpoints in the
         Brillouin zone. This excludes the possibility of set/get kpoints
-        
-        :param mesh: a list of three integers, representing the size of the 
+
+        :param mesh: a list of three integers, representing the size of the
             kpoint mesh along b1,b2,b3.
         :param (optional) offset: a list of three floats between 0 and 1.
             [0.,0.,0.] is Gamma centered mesh
@@ -357,7 +355,7 @@ class KpointsData(ArrayData):
     def _validate_kpoints_weights(self, kpoints, weights):
         """
         Validate the list of kpoints and of weights before storage.
-        Kpoints and weights must be convertible respectively to an array of 
+        Kpoints and weights must be convertible respectively to an array of
         N x dimension and N floats
         """
         kpoints = numpy.array(kpoints)
@@ -403,9 +401,9 @@ class KpointsData(ArrayData):
     def set_kpoints(self, kpoints, cartesian=False, labels=None, weights=None,
                     fill_values=0):
         """
-        Set the list of kpoints. If a mesh has already been stored, raise a 
+        Set the list of kpoints. If a mesh has already been stored, raise a
         ModificationNotAllowed
-        
+
         :param kpoints: a list of kpoints, each kpoint being a list of one, two
             or three coordinates, depending on self.pbc: if structure is 1D
             (only one True in self.pbc) one allows singletons or scalars for
@@ -420,12 +418,12 @@ class KpointsData(ArrayData):
 
             For 0D (all pbc are False), the list can be any of the above
             or empty - then only Gamma point is set.
-            The value of k for the non-periodic dimension(s) is set by 
+            The value of k for the non-periodic dimension(s) is set by
             fill_values
-        :param cartesian: if True, the coordinates given in input are treated 
+        :param cartesian: if True, the coordinates given in input are treated
             as in cartesian units. If False, the coordinates are crystal,
             i.e. in units of b1,b2,b3. Default = False
-        :param labels: optional, the list of labels to be set for some of the 
+        :param labels: optional, the list of labels to be set for some of the
             kpoints. See labels for more info
         :param weights: optional, a list of floats with the weight associated
             to the kpoint list
@@ -487,8 +485,8 @@ class KpointsData(ArrayData):
     def get_kpoints(self, also_weights=False, cartesian=False):
         """
         Return the list of kpoints
-        
-        :param also_weights: if True, returns also the list of weights. 
+
+        :param also_weights: if True, returns also the list of weights.
             Default = False
         :param cartesian: if True, returns points in cartesian coordinates,
             otherwise, returns in crystal coordinates. Default = False.
@@ -509,7 +507,7 @@ class KpointsData(ArrayData):
         # note that this operation may lead to duplicates if the kpoints were
         # set thinking that everything is 3D.
         # Atm, it's up to the user to avoid duplication, if he cares.
-        # in the future, add the bravais_lattice for 2d and 1d cases, 
+        # in the future, add the bravais_lattice for 2d and 1d cases,
         # and do a set() on the kpoints lists (before storing)
 
         if cartesian:
@@ -528,7 +526,7 @@ class KpointsData(ArrayData):
 
     def _change_reference(self, kpoints, to_cartesian=True):
         """
-        Change reference system, from cartesian to crystal coordinates (units 
+        Change reference system, from cartesian to crystal coordinates (units
         of b1,b2,b3) or viceversa.
         :param kpoints: a list of (3) point coordinates
         :return kpoints: a list of (3) point coordinates in the new reference

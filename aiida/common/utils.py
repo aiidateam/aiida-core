@@ -49,7 +49,8 @@ def get_configured_user_email():
     # it is already a ConfigurationError
     except KeyError:
         raise ConfigurationError("No 'default_user' key found in the "
-                                 "AiiDA configuration file".format(DEFAULT_USER_CONFIG_FIELD))
+                                 "AiiDA configuration file".format(
+            DEFAULT_USER_CONFIG_FIELD))
     return email
 
 
@@ -67,6 +68,7 @@ def get_new_uuid():
 
     the_uuid = uuid.uuid4()
     return unicode(the_uuid)
+
 
 # To speed up the process (os.path.abspath calls are slow)
 _repository_folder_cache = {}
@@ -92,7 +94,8 @@ def get_repository_folder(subfolder=None):
         elif subfolder == "sandbox":
             retval = os.path.abspath(os.path.join(REPOSITORY_PATH, 'sandbox'))
         elif subfolder == "repository":
-            retval = os.path.abspath(os.path.join(REPOSITORY_PATH, 'repository'))
+            retval = os.path.abspath(
+                os.path.join(REPOSITORY_PATH, 'repository'))
         else:
             raise ValueError("Invalid 'subfolder' passed to "
                              "get_repository_folder: {}".format(subfolder))
@@ -456,6 +459,7 @@ def gunzip_string(string):
         g = gzip.open(f.name, 'rb')
         return g.read()
 
+
 def xyz_parser_iterator(string):
     """
     Yields a tuple `(natoms, comment, atomiter)`for each frame
@@ -470,6 +474,7 @@ def xyz_parser_iterator(string):
         An iterator for wrapping the iterator returned by `match.finditer`
         to extract the required fields directly from the match object
         """
+
         def __init__(self, it, natoms):
             self._it = it
             self._natoms = natoms
@@ -489,15 +494,15 @@ def xyz_parser_iterator(string):
                 else:
                     # otherwise we got too less entries
                     raise TypeError("Number of atom entries ({}) is smaller "
-                        "than the number of atoms ({})".format(
-                            self._catom, self._natoms))
+                                    "than the number of atoms ({})".format(
+                        self._catom, self._natoms))
 
             self._catom += 1
 
             if self._catom > self._natoms:
                 raise TypeError("Number of atom entries ({}) is larger "
-                    "than the number of atoms ({})".format(
-                        self._catom, self._natoms))
+                                "than the number of atoms ({})".format(
+                    self._catom, self._natoms))
 
             return (
                 match.group('sym'),
@@ -505,7 +510,7 @@ def xyz_parser_iterator(string):
                     float(match.group('x')),
                     float(match.group('y')),
                     float(match.group('z'))
-                    ))
+                ))
 
         def next(self):
             """
@@ -567,7 +572,8 @@ def xyz_parser_iterator(string):
             BlockIterator(
                 pos_regex.finditer(block.group('positions')),
                 natoms)
-            )
+        )
+
 
 class EmptyContextManager(object):
     def __enter__(self):
@@ -577,14 +583,14 @@ class EmptyContextManager(object):
         pass
 
 
-def get_extremas_from_positions (positions):
+def get_extremas_from_positions(positions):
     """
     returns the minimum and maximum value for each dimension in the positions given
     """
-    return zip(*[(min(values), max(values)) for values in  zip(* positions)])
+    return zip(*[(min(values), max(values)) for values in zip(*positions)])
 
 
-def get_fortfloat(key, txt, be_case_sensitive = True):
+def get_fortfloat(key, txt, be_case_sensitive=True):
     """
     Matches a fortran compatible specification of a float behind a defined key in a string.
     :param key: The key to look for
@@ -635,7 +641,7 @@ def get_fortfloat(key, txt, be_case_sensitive = True):
     if not match:
         return None
     else:
-        return float(match.group('float').replace('d','e').replace('D','e'))
+        return float(match.group('float').replace('d', 'e').replace('D', 'e'))
 
 
 def ask_question(question, reply_type, allow_none_as_answer):
@@ -677,7 +683,7 @@ def ask_question(question, reply_type, allow_none_as_answer):
                 continue
 
         if query_yes_no("{} was parsed. Is it correct?"
-                             .format(final_answer), default="yes"):
+                                .format(final_answer), default="yes"):
             break
     return final_answer
 
@@ -750,7 +756,7 @@ def query_string(question, default):
             sys.stdout.write("Please provide a non empty answer.\n")
 
 
-def flatten_list ( value ):
+def flatten_list(value):
     """
     Flattens a list or a tuple
     In [2]: flatten_list([[[[[4],3]],[3],['a',[3]]]])
@@ -771,7 +777,7 @@ class combomethod(object):
     """
     A decorator that wraps a function that can be both a classmethod or
     instancemethod and behaves accordingly::
-        
+
         class A():
 
             @combomethod
@@ -781,18 +787,19 @@ class combomethod(object):
                     print "I am a class", self
                 else:
                     print "I am an instance", self
-    
+
         A.do()
         A().do()
-    
+
         >>> I am a class __main__.A
         >>> I am an instance <__main__.A instance at 0x7f2efb116e60>
-    
-    Attention: For ease of handling, pass keyword **isclass** 
+
+    Attention: For ease of handling, pass keyword **isclass**
     equal to True if this was called as a classmethod and False if this
     was called as an instance.
     The argument self is therefore ambiguous!
     """
+
     def __init__(self, method):
         self.method = method
 
@@ -801,8 +808,9 @@ class combomethod(object):
         def _wrapper(*args, **kwargs):
             kwargs.pop('isclass', None)
             if obj is not None:
-                return self.method(obj, *args, isclass = False, **kwargs)
-            return self.method(objtype, *args, isclass = True,  **kwargs)
+                return self.method(obj, *args, isclass=False, **kwargs)
+            return self.method(objtype, *args, isclass=True, **kwargs)
+
         return _wrapper
 
 

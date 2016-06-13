@@ -8,7 +8,6 @@ from sqlalchemy.exc import SQLAlchemyError, ProgrammingError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
 
-
 from aiida.backends.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
 from aiida.backends.sqlalchemy.models.comment import DbComment
@@ -20,6 +19,7 @@ from aiida.common.folders import RepositoryFolder
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError,
                                      ValidationError)
+from aiida.common.links import LinkType
 
 from aiida.orm.implementation.general.node import AbstractNode
 from aiida.orm.implementation.sqlalchemy.computer import Computer
@@ -28,22 +28,19 @@ from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
 
 import aiida.orm.autogroup
 
-
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
-class Node(AbstractNode):
 
+class Node(AbstractNode):
     def __init__(self, **kwargs):
-        self._to_be_stored = False
+        super(Node, self).__init__()
+
         self._temp_folder = None
 
         dbnode = kwargs.pop('dbnode', None)
-
-        # Empty cache of input links in any case
-        self._inputlinks_cache = {}
 
         # Set the internal parameters
         # Can be redefined in the subclasses
@@ -123,7 +120,6 @@ class Node(AbstractNode):
         else:
             return self._dbnode.id
 
-
     @classmethod
     def query(cls, *args, **kwargs):
         q = django_filter(DbNode.aiida_query, **kwargs)
@@ -133,7 +129,6 @@ class Node(AbstractNode):
             if not cls._plugin_type_string.endswith('.'):
                 raise InternalError("The plugin type string does not "
                                     "finish with a dot??")
-
 
             # If it is 'calculation.Calculation.', we want to filter
             # for things that start with 'calculation.' and so on
@@ -164,14 +159,14 @@ class Node(AbstractNode):
             self._dbnode.save(commit=False)
             self._increment_version_number_db()
 
-    def _replace_dblink_from(self, src, label):
+    def _replace_dblink_from(self, src, label, link_type):
         from aiida.backends.sqlalchemy import session
         try:
             self._add_dblink_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             self._remove_dblink_from(label)
-            self._add_dblink_from(src, label)
+            self._add_dblink_from(src, label, link_type)
 
     def _remove_dblink_from(self, label):
         from aiida.backends.sqlalchemy import session
@@ -179,17 +174,12 @@ class Node(AbstractNode):
         session.delete(link)
         session.commit()
 
-    def _add_dblink_from(self, src, label=None):
+    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.backends.sqlalchemy import session
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
-
-        # Check if the source allows output links from this node
-        # (will raise ValueError if
-        # this is not the case)
-        src._can_link_as_output(self)
 
         if self._to_be_stored:
             raise ModificationNotAllowed(
@@ -207,8 +197,8 @@ class Node(AbstractNode):
         # I am linking src->self; a loop would be created if a DbPath exists
         # already in the TC table from self to src
         c = session.query(literal(True)).filter(DbPath.query
-                          .filter_by(parent_id=self.dbnode.id, child_id=src.dbnode.id)
-                          .exists()).scalar()
+                                                .filter_by(parent_id=self.dbnode.id, child_id=src.dbnode.id)
+                                                .exists()).scalar()
         if c:
             raise ValueError(
                 "The link you are attempting to create would generate a loop")
@@ -234,31 +224,36 @@ class Node(AbstractNode):
                                         " adds of links "
                                         "to the same nodes! Are you really doing that??")
                 try:
-                    link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
-                                  label="link_{}".format(autolabel_idx))
-                    session.add(link)
-                    session.commit()
+                    self._do_create_link(src, "link_{}".format(autolabel_idx), link_type)
                     break
-                except SQLAlchemyError as e:
-                    session.rollback()
+                except UniquenessError:
                     # Retry loop until you find a new loop
                     autolabel_idx += 1
         else:
-            try:
-                link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
-                              label=label)
-                session.add(link)
-                session.commit()
-            except SQLAlchemyError as e:
-                session.rollback()
-                raise UniquenessError("There is already a link with the same "
-                                      "name (raw message was {})"
-                                      "".format(e))
+            self._do_create_link(src, label, link_type)
 
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False):
+    def _do_create_link(self, src, label, link_type):
+        from aiida.backends.sqlalchemy import session
+        try:
+            link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
+                          label=label, type=link_type.value)
+            session.add(link)
+            session.commit()
+        except SQLAlchemyError as e:
+            session.rollback()
+            raise UniquenessError("There is already a link with the same "
+                                  "name (raw message was {})"
+                                  "".format(e))
+
+    def get_inputs(self, type=None, also_labels=False, only_in_db=False,
+                   link_type=None):
+
+        link_filter = {'output': self.dbnode}
+        if link_type:
+            link_filter['type'] = link_type.value
         inputs_list = [(i.label, i.input.get_aiida_class()) for i in
                        DbLink.query.filter_by(output=self.dbnode)
-                       .distinct().all()]
+                           .distinct().all()]
 
         if not only_in_db:
             # Needed for the check
@@ -305,7 +300,6 @@ class Node(AbstractNode):
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
 
-
     def _set_attr(self, key, value):
         if self._to_be_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
@@ -330,7 +324,7 @@ class Node(AbstractNode):
                 self._increment_version_number_db()
             else:
                 raise ModificationNotAllowed("Cannot delete an attribute after "
-                                                "saving a node")
+                                             "saving a node")
 
     def get_attr(self, key, *args):
         exception = AttributeError("Attribute '{}' does not exist".format(key))
@@ -578,7 +572,7 @@ class Node(AbstractNode):
                 "unstored (node {} is stored, instead)".format(self.id))
 
         for link in self._inputlinks_cache:
-            if self._inputlinks_cache[link]._to_be_stored:
+            if not self._inputlinks_cache[link].is_stored:
                 self._inputlinks_cache[link].store(with_transaction=False)
 
     def _check_are_parents_stored(self):
@@ -590,13 +584,12 @@ class Node(AbstractNode):
         """
         # Preliminary check to verify that inputs are stored already
         for link in self._inputlinks_cache:
-            if self._inputlinks_cache[link]._to_be_stored:
+            if not self._inputlinks_cache[link].is_stored:
                 raise ModificationNotAllowed(
                     "Cannot store the input link '{}' because the "
                     "source node is not stored. Either store it first, "
                     "or call _store_input_links with the store_parents "
                     "parameter set to True".format(link))
-
 
     def _store_cached_input_links(self, with_transaction=True):
         """
@@ -629,15 +622,15 @@ class Node(AbstractNode):
         # stored
         links_to_store = list(self._inputlinks_cache.keys())
 
-        for link in links_to_store:
-            self._add_dblink_from(self._inputlinks_cache[link], link)
+        for label in links_to_store:
+            src, link_type = self._inputlinks_cache[label]
+            self._add_dblink_from(src, label, link_type)
         # If everything went smoothly, clear the entries from the cache.
         # I do it here because I delete them all at once if no error
         # occurred; otherwise, links will not be stored and I
         # should not delete them from the cache (but then an exception
         # would have been raised, and the following lines are not executed)
-        for link in links_to_store:
-            del self._inputlinks_cache[link]
+        self._inputlinks_cache.clear()
 
         from aiida.backends.sqlalchemy import session
         if with_transaction:
@@ -645,7 +638,6 @@ class Node(AbstractNode):
                 session.commit()
             except SQLAlchemyError as e:
                 session.rollback()
-
 
     def store(self, with_transaction=True):
         """

@@ -6,6 +6,7 @@ Tests for nodes, attributes and links
 from aiida.orm.utils import load_node
 from aiida.orm.node import Node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
+from aiida.common.links import LinkType
 from aiida.backends.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
@@ -25,12 +26,12 @@ class TestTransitiveNoLoops(AiidaTestCase):
         n3 = Node().store()
         n4 = Node().store()
 
-        n2._add_link_from(n1)
-        n3._add_link_from(n2)
-        n4._add_link_from(n3)
+        n2.add_link_from(n1, link_type=LinkType.CREATE)
+        n3.add_link_from(n2, link_type=LinkType.CREATE)
+        n4.add_link_from(n3, link_type=LinkType.CREATE)
 
         with self.assertRaises(ValueError):  # This would generate a loop
-            n1._add_link_from(n4)
+            n1.add_link_from(n4, link_type=LinkType.CREATE)
 
 
 class TestTransitiveClosureDeletion(AiidaTestCase):
@@ -55,30 +56,30 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3._add_link_from(n2)
-        n2._add_link_from(n1)
-        n5._add_link_from(n3)
-        n5._add_link_from(n4)
-        n4._add_link_from(n2)
+        n3.add_link_from(n2)
+        n2.add_link_from(n1)
+        n5.add_link_from(n3)
+        n5.add_link_from(n4)
+        n4.add_link_from(n2)
 
-        n7._add_link_from(n6)
-        n8._add_link_from(n7)
+        n7.add_link_from(n6)
+        n8.add_link_from(n7)
 
         # Yet, no links from 1 to 8
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 0)
 
-        n6._add_link_from(n5)
+        n6.add_link_from(n5)
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 2)
 
-        n7._add_link_from(n9)
+        n7.add_link_from(n9)
         # Still two links...
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 2)
 
-        n9._add_link_from(n6)
+        n9.add_link_from(n6)
         # And now there should be 4 nodes
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 4)
@@ -92,15 +93,15 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
 
         # print "\n".join([str((i.pk, i.input.pk, i.output.pk))
         #                 for i in DbLink.objects.filter()])
-        #print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
+        # print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
         #                      i.entry_edge_id, i.direct_edge_id,
         #                      i.exit_edge_id)) for i in DbPath.objects.filter()])
 
         # I cut another branch above: I should loose one more link
         DbLink.objects.filter(input=n2, output=n4).delete()
-        #print "\n".join([str((i.pk, i.input.pk, i.output.pk))
+        # print "\n".join([str((i.pk, i.input.pk, i.output.pk))
         #                 for i in DbLink.objects.filter()])
-        #print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
+        # print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
         #                      i.entry_edge_id, i.direct_edge_id,
         #                      i.exit_edge_id)) for i in DbPath.objects.filter()])
         self.assertEquals(
@@ -120,7 +121,7 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
 
         # Finally, I reconnect in a different way the two graphs and
         # check that 1 and 8 are again connected
-        n4._add_link_from(n3)
+        n4.add_link_from(n3)
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
 
@@ -190,17 +191,16 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         self.assertEquals(set([i.pk for i in results]),
                           set([a2.pk]))
 
-
     def test_get_inputs_and_outputs(self):
         a1 = Node().store()
         a2 = Node().store()
         a3 = Node().store()
         a4 = Node().store()
 
-        a2._add_link_from(a1)
-        a3._add_link_from(a2)
-        a4._add_link_from(a2)
-        a4._add_link_from(a3)
+        a2.add_link_from(a1)
+        a3.add_link_from(a2)
+        a4.add_link_from(a2)
+        a4.add_link_from(a3)
 
         # I check that I get the correct links
         self.assertEquals(set([n.uuid for n in a1.get_inputs()]),
@@ -238,10 +238,10 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
 
         a4 = Node().store()
 
-        a2._add_link_from(a)
-        a3._add_link_from(a2)
-        a4._add_link_from(a2)
-        a4._add_link_from(a3)
+        a2.add_link_from(a)
+        a3.add_link_from(a2)
+        a4.add_link_from(a2)
+        a4.add_link_from(a3)
 
         b = Node.query(pk=a2)
         self.assertEquals(len(b), 1)
@@ -284,7 +284,6 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         uuid_set_db_link = set([output_links_b[0].output.uuid,
                                 output_links_b[1].output.uuid])
         self.assertEquals(uuid_set, uuid_set_db_link)
-
 
         # Query for related fields using django syntax
         # Note that being myvalue an attribute, it is internally stored starting
@@ -424,7 +423,6 @@ class TestNodeBasic(AiidaTestCase):
         retrieved = retrieved.replace(microsecond=0)
 
         self.assertEquals(date_to_compare, retrieved)
-
 
     def test_attributes_on_copy(self):
         import copy
@@ -567,7 +565,6 @@ class TestNodeBasic(AiidaTestCase):
             self.assertEquals(f.read(), file_content)
         with open(c.get_abs_path('file4.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
-
 
     def test_folders(self):
         """
@@ -719,7 +716,6 @@ class TestNodeBasic(AiidaTestCase):
         # garbage cleaning
         shutil.rmtree(directory)
 
-
     def test_attr_after_storing(self):
         a = Node()
         a._set_attr('none', None)
@@ -747,7 +743,6 @@ class TestNodeBasic(AiidaTestCase):
             a._del_attr('bool')
         with self.assertRaises(ModificationNotAllowed):
             a._set_attr('integer', 13)
-
 
     def test_attr_with_reload(self):
         a = Node()
@@ -848,7 +843,7 @@ class TestNodeBasic(AiidaTestCase):
 
         s1 = models.DbSetting.objects.get(key='pippo')
 
-        self.assertEqual(s1.get_value(), [1, 2, 3])
+        self.assertEqual(s1.getvalue(), [1, 2, 3])
 
         s2 = models.DbSetting(key='pippo')
 
@@ -862,7 +857,7 @@ class TestNodeBasic(AiidaTestCase):
         models.DbSetting.set_value(key='pippo', value="a")
         s1 = models.DbSetting.objects.get(key='pippo')
 
-        self.assertEqual(s1.get_value(), "a")
+        self.assertEqual(s1.getvalue(), "a")
 
     def test_settings_methods(self):
         from aiida.backends.djsite.globalsettings import (
@@ -922,7 +917,6 @@ class TestNodeBasic(AiidaTestCase):
 
         returned_attrs = {k: v for k, v in a.iterextras()}
         self.assertEquals(returned_attrs, extras_to_set)
-
 
     def test_versioning_and_postsave_attributes(self):
         """
@@ -1027,7 +1021,6 @@ class TestNodeBasic(AiidaTestCase):
             # I check that I cannot modify this attribute
             _ = a.get_attr('state')
 
-
     def test_delete_extras(self):
         """
         Checks the ability of deleting extras, also when they are dictionaries
@@ -1058,7 +1051,6 @@ class TestNodeBasic(AiidaTestCase):
             a.del_extra(k)
             del extras_to_set[k]
             self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
-
 
     def test_replace_extras(self):
         """
@@ -1141,7 +1133,6 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.dbnode.nodeversion, 6)
         self.assertEquals(a._dbnode.nodeversion, 6)
 
-
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead of
         # directly loading datetime.datetime.now(), or you can get a
@@ -1172,7 +1163,6 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals([(i['user__email'], i['content']) for i in comments],
                           [(self.user.email, 'text'),
                            (self.user.email, 'text2'), ])
-
 
     def test_load_nodes(self):
         """
@@ -1214,9 +1204,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endnode = Node()
 
         # Nothing stored
-        endnode._add_link_from(n1, "N1")
+        endnode.add_link_from(n1, "N1")
         # Try also reverse storage
-        endnode._add_link_from(n2, "N2")
+        endnode.add_link_from(n2, "N2")
 
         self.assertEqual(endnode.get_inputs(only_in_db=True), [])
         self.assertEqual(set([(i[0], i[1].uuid)
@@ -1224,9 +1214,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
                          set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
         # Endnode not stored yet, n3 and n4 already stored
-        endnode._add_link_from(n3, "N3")
+        endnode.add_link_from(n3, "N3")
         # Try also reverse storage
-        endnode._add_link_from(n4, "N4")
+        endnode.add_link_from(n4, "N4")
 
         self.assertEqual(endnode.get_inputs(only_in_db=True), [])
         self.assertEqual(set([(i[0], i[1].uuid)
@@ -1260,7 +1250,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
                          set([("N1", n1.uuid), ("N2", n2.uuid),
                               ("N3", n3.uuid), ("N4", n4.uuid)]))
 
-
     def test_store_with_unstored_parents(self):
         """
         I want to check that if parents are unstored I cannot store
@@ -1269,8 +1258,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n2 = Node().store()
         endnode = Node()
 
-        endnode._add_link_from(n1, "N1")
-        endnode._add_link_from(n2, "N2")
+        endnode.add_link_from(n1, "N1")
+        endnode.add_link_from(n2, "N2")
 
         self.assertEqual(endnode.get_inputs(only_in_db=True), [])
 
@@ -1292,7 +1281,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
                               for i in endnode.get_inputs(also_labels=True)]),
                          set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
-
     def test_storeall_with_unstored_grandparents(self):
         """
         I want to check that if grandparents are unstored I cannot store_all
@@ -1301,8 +1289,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n2 = Node()
         endnode = Node()
 
-        n2._add_link_from(n1, "N1")
-        endnode._add_link_from(n2, "N2")
+        n2.add_link_from(n1, "N1")
+        endnode.add_link_from(n2, "N2")
 
         # Grandparents are unstored
         with self.assertRaises(ModificationNotAllowed):
@@ -1360,18 +1348,20 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n4 = Node().store()
         n5 = Node().store()
 
-        n3._add_link_from(n1, label='label1')
+        n3.add_link_from(n1, label='label1')
         # This should be allowed since it is an output label with the same name
-        n4._add_link_from(n3, label='label1')
+        n4.add_link_from(n3, label='label1')
 
+        # TODO: The following assertion doesn't apply anymore as it is
+        # link_type specific
         # An input link with that name already exists
-        with self.assertRaises(UniquenessError):
-            n3._add_link_from(n2, label='label1')
+        # with self.assertRaises(UniquenessError):
+        #     n3.add_link_from(n2, label='label1')
 
         # instead, for outputs, I can have multiple times the same label
         # (think to the case where n3 is a StructureData, and both n4 and n5
         # are calculations that use as label 'input_cell')
-        n5._add_link_from(n3, label='label1')
+        n5.add_link_from(n3, label='label1')
 
     def test_links_label_autogenerator(self):
         n1 = Node().store()
@@ -1385,26 +1375,28 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n9 = Node().store()
         n10 = Node().store()
 
-        n10._add_link_from(n1)
+        n10.add_link_from(n1)
         # Label should be automatically generated
-        n10._add_link_from(n2)
-        n10._add_link_from(n3)
-        n10._add_link_from(n4)
-        n10._add_link_from(n5)
-        n10._add_link_from(n6)
-        n10._add_link_from(n7)
-        n10._add_link_from(n8)
-        n10._add_link_from(n9)
+        n10.add_link_from(n2)
+        n10.add_link_from(n3)
+        n10.add_link_from(n4)
+        n10.add_link_from(n5)
+        n10.add_link_from(n6)
+        n10.add_link_from(n7)
+        n10.add_link_from(n8)
+        n10.add_link_from(n9)
 
     def test_link_replace(self):
         n1 = Node().store()
         n2 = Node().store()
         n3 = Node().store()
 
-        n3._add_link_from(n1, label='the_label')
-        with self.assertRaises(UniquenessError):
-            # A link with the same name already exists
-            n3._add_link_from(n1, label='the_label')
+        n3.add_link_from(n1, label='the_label')
+        # TODO: The following assertion doesn't apply anymore as it is
+        # link_type specific
+        # with self.assertRaises(UniquenessError):
+        #     # A link with the same name already exists
+        #     n3.add_link_from(n1, label='the_label')
 
         # I can replace the link and check that it was replaced
         n3._replace_link_from(n2, label='the_label')
@@ -1429,20 +1421,20 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # No link names provided
         with self.assertRaises(ModificationNotAllowed):
-            n4._add_link_from(n1)
+            n4.add_link_from(n1)
 
         # Caching the links
-        n2._add_link_from(n1, label='l1')
-        n3._add_link_from(n2, label='l2')
-        n3._add_link_from(n1, label='l3')
+        n2.add_link_from(n1, label='l1')
+        n3.add_link_from(n2, label='l2')
+        n3.add_link_from(n1, label='l3')
 
         # Twice the same link name
         with self.assertRaises(UniquenessError):
-            n3._add_link_from(n4, label='l2')
+            n3.add_link_from(n4, label='l2')
 
         # Twice the link to the same node
         with self.assertRaises(UniquenessError):
-            n3._add_link_from(n2, label='l4')
+            n3.add_link_from(n2, label='l4')
 
         # Same error also in _replace_link_from
         with self.assertRaises(UniquenessError):
@@ -1450,11 +1442,11 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         n2_in_links = [(l, n.uuid) for l, n in n2.get_inputs_dict().iteritems()]
         self.assertEquals(sorted(n2_in_links), sorted([('l1', n1.uuid),
-        ]))
+                                                       ]))
         n3_in_links = [(l, n.uuid) for l, n in n3.get_inputs_dict().iteritems()]
         self.assertEquals(sorted(n3_in_links), sorted([('l2', n2.uuid),
                                                        ('l3', n1.uuid),
-        ]))
+                                                       ]))
 
         n2.store_all()
         n3.store_all()
@@ -1462,13 +1454,12 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n1_out_links = [(l, n.pk) for l, n in n1.get_outputs(also_labels=True)]
         self.assertEquals(sorted(n1_out_links), sorted([('l1', n2.pk),
                                                         ('l3', n3.pk),
-        ]))
+                                                        ]))
         n2_out_links = [(l, n.pk) for l, n in n2.get_outputs(also_labels=True)]
         self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
 
     def test_valid_links(self):
         import tempfile
-
         from aiida.orm import JobCalculation, Data, DataFactory
         from aiida.orm.code import Code
         from aiida.orm.computer import Computer
@@ -1501,29 +1492,29 @@ class TestSubNodesAndLinks(AiidaTestCase):
             _ = JobCalculation(computer=1,
                                resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
-        calc._add_link_from(d1)
-        calc._add_link_from(d2, label='some_label')
+        calc.add_link_from(d1)
+        calc.add_link_from(d2, label='some_label')
         calc.use_code(code)
 
         # Cannot link to itself
         with self.assertRaises(ValueError):
-            d1._add_link_from(d1)
+            d1.add_link_from(d1)
 
         # I try to add wrong links (data to data, calc to calc, etc.)
         with self.assertRaises(ValueError):
-            d2._add_link_from(d1)
+            d2.add_link_from(d1)
 
         with self.assertRaises(ValueError):
-            d1._add_link_from(d2)
+            d1.add_link_from(d2)
 
         with self.assertRaises(ValueError):
-            d1._add_link_from(code)
+            d1.add_link_from(code)
 
         with self.assertRaises(ValueError):
-            code._add_link_from(d1)
+            code.add_link_from(d1)
 
         with self.assertRaises(ValueError):
-            calc._add_link_from(calc2)
+            calc.add_link_from(calc2)
 
         calc_a = JobCalculation(computer=self.computer,
                                 resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
@@ -1536,15 +1527,15 @@ class TestSubNodesAndLinks(AiidaTestCase):
         calc_a._set_state(calc_states.RETRIEVING)
         calc_b._set_state(calc_states.RETRIEVING)
 
-        data_node._add_link_from(calc_a)
+        data_node.add_link_from(calc_a, link_type=LinkType.CREATE)
         # A data cannot have two input calculations
         with self.assertRaises(ValueError):
-            data_node._add_link_from(calc_b)
+            data_node.add_link_from(calc_b, link_type=LinkType.CREATE)
 
         newdata = Data()
         # Cannot add an input link if the calculation is not in status NEW
         with self.assertRaises(ModificationNotAllowed):
-            calc_a._add_link_from(newdata)
+            calc_a.add_link_from(newdata)
 
         # Cannot replace input nodes if the calculation is not in status NEW
         with self.assertRaises(ModificationNotAllowed):
@@ -1579,15 +1570,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # I cannot, calc it is in state NEW
         with self.assertRaises(ModificationNotAllowed):
-            d1._add_link_from(calc)
+            d1.add_link_from(calc)
 
         # I do a trick to set it to a state that allows setting the link
         calc._set_state(calc_states.RETRIEVING)
         calc2._set_state(calc_states.RETRIEVING)
 
-        d1._add_link_from(calc)
+        d1.add_link_from(calc, link_type=LinkType.CREATE)
 
-        # more than on input to the same data object!
+        # more than one input to the same data object!
         with self.assertRaises(ValueError):
-            d1._add_link_from(calc2)
-
+            d1.add_link_from(calc2, link_type=LinkType.CREATE)

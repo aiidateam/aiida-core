@@ -3,11 +3,14 @@
 import collections
 
 from aiida.common.utils import classproperty
+from aiida.common.exceptions import DbContentError
+from aiida.common.links import LinkType
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
+
 
 
 
@@ -170,12 +173,13 @@ class AbstractCalculation(object):
                     args=args, kwargs=kwargs)
 
                 # Type check
-                if isinstance(self.data['valid_types'], collections.Iterable):
-                    valid_types_string = ",".join([_.__name__ for _ in
-                                                   self.data['valid_types']])
-                else:
-                    valid_types_string = self.data['valid_types'].__name__
                 if not isinstance(parent_node, self.data['valid_types']):
+                    if isinstance(self.data['valid_types'], collections.Iterable):
+                        valid_types_string = ",".join([_.__name__ for _ in
+                                                       self.data['valid_types']])
+                    else:
+                        valid_types_string = self.data['valid_types'].__name__
+
                     raise TypeError("The given node is not of the valid type "
                                     "for use_{}. Valid types are: {}, while "
                                     "you provided {}".format(
@@ -231,7 +235,7 @@ class AbstractCalculation(object):
 
         return actual_linkname
 
-    def _can_link_as_output(self, dest):
+    def _linking_as_output(self, dest, link_type):
         """
         An output of a calculation can only be a data.
 
@@ -239,14 +243,22 @@ class AbstractCalculation(object):
         :raise: ValueError if a link from self to dest is not allowed.
         """
         from aiida.orm.data import Data
-        if not isinstance(dest, Data):
+
+        if link_type is LinkType.CREATE or link_type is LinkType.RETURN:
+            if not isinstance(dest, Data):
+                raise ValueError(
+                    "The output of a calculation node can only be a data node")
+        elif link_type is LinkType.CALL:
+            if not isinstance(dest, AbstractCalculation):
+                raise ValueError("Call links can only link two calculations.")
+        else:
             raise ValueError(
-                "The output of a calculation node can only be a data node")
+                "Calculation cannot have links of type {} as output".format(link_type))
 
-        return super(AbstractCalculation, self)._can_link_as_output(dest)
+        return super(AbstractCalculation, self)._linking_as_output(dest, link_type)
 
-    def _add_link_from(self, src, label=None):
-        '''
+    def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
+        """
         Add a link with a code as destination.
 
         You can use the parameters of the base Node class, in particular the
@@ -254,23 +266,33 @@ class AbstractCalculation(object):
 
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link. Default=None
-        '''
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
+        """
         from aiida.orm.data import Data
         from aiida.orm.code import Code
 
-        if not isinstance(src, (Data, Code)):
-            raise ValueError("Nodes entering in calculation can only be of "
-                             "type data or code")
+        if link_type is LinkType.INPUT:
+            if not isinstance(src, (Data, Code)):
+                raise ValueError(
+                    "Nodes entering calculation as input link can only be of "
+                    "type data or code")
+        elif link_type is LinkType.CALL:
+            if not isinstance(src, AbstractCalculation):
+                raise ValueError("Call links can only link two calculations.")
+        else:
+            raise ValueError(
+                "Calculation cannot have links of type {} as input".format(link_type))
 
-        return super(AbstractCalculation, self)._add_link_from(src, label)
+        return super(AbstractCalculation, self).add_link_from(src, label, link_type)
 
-    def _replace_link_from(self, src, label):
-        '''
+    def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
+        """
         Replace a link.
 
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link.
-        '''
+        """
         from aiida.orm.data import Data
         from aiida.orm.code import Code
 
@@ -278,7 +300,7 @@ class AbstractCalculation(object):
             raise ValueError("Nodes entering in calculation can only be of "
                              "type data or code")
 
-        return super(AbstractCalculation, self)._replace_link_from(src, label)
+        return super(AbstractCalculation, self)._replace_link_from(src, label, link_type)
 
     def get_code(self):
         """
@@ -288,5 +310,3 @@ class AbstractCalculation(object):
         from aiida.orm.code import Code
         return dict(self.get_inputs(type=Code, also_labels=True)).get(
             self._use_methods['code']['linkname'], None)
-
-

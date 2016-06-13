@@ -254,10 +254,10 @@ class DbNode(m.Model):
 
 @python_2_unicode_compatible
 class DbLink(m.Model):
-    '''
+    """
     Direct connection between two dbnodes. The label is identifying the
     link type.
-    '''
+    """
     # If I delete an output, delete also the link; if I delete an input, stop
     # NOTE: this will in most cases render a DbNode.objects.filter(...).delete()
     # call unusable because some nodes will be inputs; Nodes will have to
@@ -268,6 +268,7 @@ class DbLink(m.Model):
                           on_delete=m.CASCADE)
     # label for data input for calculation
     label = m.CharField(max_length=255, db_index=True, blank=False)
+    type = m.CharField(max_length=255, db_index=True, blank=True)
 
     class Meta:
         # I cannot add twice the same link
@@ -277,11 +278,10 @@ class DbLink(m.Model):
         # if the input is a 'data' and I want to add it more than
         # once to different calculations, the different links must be
         # allowed to have the same name. For calculations, it is the
-        # rensponsibility of the output plugin to avoid to have many
+        # responsibility of the output plugin to avoid to have many
         # times the same name.
-        unique_together = (("input", "output"),
-                           ("output", "label"),
-                           )
+        #unique_together = ("output", "label")
+        pass
 
     def __str__(self):
         return "{} ({}) --> {} ({})".format(
@@ -431,7 +431,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
             return make_aware(mainitem['dval'], get_current_timezone())
         else:
             return mainitem['dval']
-        return mainitem['dval']
+
     elif mainitem['datatype'] == 'list':
         # subitems contains all subitems, here I store only those of
         # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
@@ -447,8 +447,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
         # ones are there, I just issue an error but I do not stop.
 
         if not expected_set.issubset(received_set):
-            if (original_class is not None
-                and original_class._subspecifier_field_name is not None):
+            if (original_class is not None and original_class._subspecifier_field_name is not None):
                 subspecifier_string = "{}={} and ".format(
                     original_class._subspecifier_field_name,
                     original_pk)
@@ -1154,7 +1153,6 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         """
         return cls.get_all_values_for_nodepk(dbnode.pk)
 
-
     @classmethod
     def get_all_values_for_nodepk(cls, dbnodepk):
         """
@@ -1179,7 +1177,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
                 }
         try:
             return deserialize_attributes(data, sep=cls._sep,
-                                          original_class=cls, 
+                                          original_class=cls,
                                           original_pk=dbnodepk)
         except DeserializationException as e:
             exc = DbContentError(e.message)

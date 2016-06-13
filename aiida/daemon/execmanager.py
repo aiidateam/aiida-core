@@ -5,8 +5,6 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
@@ -15,6 +13,7 @@ from aiida.common.exceptions import (
     ModificationNotAllowed,
 )
 from aiida.common import aiidalogger
+from aiida.common.links import LinkType
 from aiida.orm import load_node
 
 
@@ -131,10 +130,11 @@ def update_running_calcs_status(authinfo):
                     # TODO: implement a counter, after N retrials
                     # set it to a status that
                     # requires the user intervention
-                    execlogger.warning("There was an exception for "
-                                       "calculation {} ({}): {}".format(
-                        c.pk, e.__class__.__name__, e.message),
-                                       extra=logger_extra)
+                    execlogger.warning(
+                        "There was an exception for "
+                        "calculation {} ({}): {}".format(
+                            c.pk, e.__class__.__name__, e.message
+                        ), extra=logger_extra)
                     continue
 
             for c in computed:
@@ -283,12 +283,12 @@ def submit_jobs():
                         # Someone already set it, just skip
                         pass
                     logger_extra = get_dblogger_extra(calc)
-                    execlogger.error("Submission of calc {} failed, "
-                                     "computer pk= {} ({}) is not configured "
-                                     "for aiidauser {}".format(
-                        calc.pk, dbcomputer.pk,
-                        dbcomputer.name, aiidauser.email),
-                                     extra=logger_extra)
+                    execlogger.error(
+                        "Submission of calc {} failed, "
+                        "computer pk= {} ({}) is not configured "
+                        "for aiidauser {}".format(
+                            calc.pk, computer.pk, computer.name, aiidauser.email
+                        ), extra=logger_extra)
                 # Go to the next (dbcomputer,aiidauser) pair
                 continue
 
@@ -585,7 +585,8 @@ def submit_calc(calc, authinfo, transport=None):
 
             remotedata = RemoteData(computer=computer,
                                     remote_path=workdir)
-            remotedata._add_link_from(calc, label='remote_folder')
+            remotedata.add_link_from(calc, label='remote_folder',
+                                     link_type=LinkType.CREATE)
             remotedata.store()
 
             job_id = s.submit_from_script(t.getcwd(), script_filename)
@@ -676,8 +677,9 @@ def retrieve_computed_for_authinfo(authinfo):
                     t.chdir(workdir)
 
                     retrieved_files = FolderData()
-                    retrieved_files._add_link_from(calc,
-                                                   label=calc._get_linkname_retrieved())
+                    retrieved_files.add_link_from(
+                        calc, label=calc._get_linkname_retrieved(),
+                        link_type=LinkType.CREATE)
 
                     # First, retrieve the files of folderdata
                     with SandboxFolder() as folder:
@@ -756,7 +758,8 @@ def retrieve_computed_for_authinfo(authinfo):
                             SinglefileSubclass = DataFactory(subclassname)
                             singlefile = SinglefileSubclass()
                             singlefile.set_file(filename)
-                            singlefile._add_link_from(calc, label=linkname)
+                            singlefile.add_link_from(calc, label=linkname,
+                                                     link_type=LinkType.CREATE)
                             singlefiles.append(singlefile)
 
                     # Finally, store
@@ -785,7 +788,8 @@ def retrieve_computed_for_authinfo(authinfo):
                         successful, new_nodes_tuple = parser.parse_from_calc()
 
                         for label, n in new_nodes_tuple:
-                            n._add_link_from(calc, label=label)
+                            n.add_link_from(calc, label=label,
+                                            link_type=LinkType.CREATE)
                             n.store()
 
                     if successful:

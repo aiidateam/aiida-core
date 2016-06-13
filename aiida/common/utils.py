@@ -72,7 +72,6 @@ def get_new_uuid():
 _repository_folder_cache = {}
 
 
-
 def get_repository_folder(subfolder=None):
     """
     Return the top folder of the local repository.

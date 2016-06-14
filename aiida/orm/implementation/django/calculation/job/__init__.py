@@ -152,7 +152,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
         from aiida.backends.djsite.db.models import DbAuthInfo, DbAttribute
-        from aiida.backends.djsite.db.tasks import get_last_daemon_timestamp
+        from aiida.daemon.timestamps import get_last_daemon_timestamp
 
         if states:
             for state in states:

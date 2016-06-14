@@ -849,11 +849,9 @@ class AbstractJobCalculation(object):
         # Let's check if there is something to order_by:
         valid_order_parameters = (None, 'id', 'ctime')
         if order_by not in valid_order_parameters:
-            raise Exception(
-                "invalid order by parameter {}\n"
-                "valid parameters are:\n"
-                "".format(order_by, valid_order_parameters)
-            )
+            raise Exception("invalid order by parameter {}\n"
+                            "valid parameters are:\n"
+                            "".format(order_by, valid_order_parameters))
         # Limit:
         if not (limit is None or isinstance(limit, int)):
             raise Exception(
@@ -878,7 +876,7 @@ class AbstractJobCalculation(object):
                     "# Last daemon state_updater check: "
                     "{} ({})".format(
                         str_timedelta(
-                            now - last_daemon_check,
+                            timezone.delta(last_daemon_check, now),
                             negative_to_zero=True
                         ),
                         timezone.localtime(
@@ -910,7 +908,8 @@ class AbstractJobCalculation(object):
                 calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:
-                n_days_ago = now - datetime.timedelta(days=past_days)
+                n_days_ago = \
+                    timezone.delta(datetime.timedelta(days=past_days), now)
                 calculation_filters['ctime'] = {'>': n_days_ago}
 
             # Filter on the group, either name or by pks
@@ -938,14 +937,10 @@ class AbstractJobCalculation(object):
             tag='calculation'
         )
         if group_filters is not None:
-            qb.append(
-                type="group", filters=group_filters,
-                group_of="calculation"
-            )
-        qb.append(
-            type="computer", computer_of='calculation',
-            project=['name'], tag='computer'
-        )
+            qb.append(type="group", filters=group_filters,
+                      group_of="calculation")
+        qb.append(type="computer", computer_of='calculation',
+                  project=['name'], tag='computer')
 
         # ORDER
         if order_by is not None:
@@ -968,7 +963,7 @@ class AbstractJobCalculation(object):
                     ctime = res['calculation']['ctime']
                     if relative_ctime:
                         calc_ctime = str_timedelta(
-                            now - ctime,
+                            timezone.delta(ctime, now),
                             negative_to_zero=True,
                             max_num_fields=1
                         )
@@ -1252,12 +1247,11 @@ class AbstractJobCalculation(object):
 
         old_state = self.get_state()
 
-        if (old_state == calc_states.NEW or
-                    old_state == calc_states.TOSUBMIT):
+        if (old_state == calc_states.NEW or old_state == calc_states.TOSUBMIT):
             self._set_state(calc_states.FAILED)
-            self.logger.warning("Calculation {} killed by the user "
-                                "(it was in {} state)".format(
-                self.pk, old_state))
+            self.logger.warning(
+                "Calculation {} killed by the user "
+                "(it was in {} state)".format(self.pk, old_state))
             return
 
         if old_state != calc_states.WITHSCHEDULER:
@@ -1277,10 +1271,11 @@ class AbstractJobCalculation(object):
 
         # Raise error is something went wrong
         if not retval:
-            raise RemoteOperationError("An error occurred while trying to kill "
-                                       "calculation {} (jobid {}), see log "
-                                       "(maybe the calculation already finished?)"
-                                       .format(self.pk, self.get_job_id()))
+            raise RemoteOperationError(
+                "An error occurred while trying to kill "
+                "calculation {} (jobid {}), see log "
+                "(maybe the calculation already finished?)"
+                .format(self.pk, self.get_job_id()))
         else:
             # Do not set the state, but let the parser do its job
             # self._set_state(calc_states.FAILED)
@@ -1452,8 +1447,8 @@ class AbstractJobCalculation(object):
                               code_info.cmdline_params is not None else []))
             else:
                 this_argv = [this_code.get_execname()] + (
-                code_info.cmdline_params if
-                code_info.cmdline_params is not None else [])
+                    code_info.cmdline_params if
+                    code_info.cmdline_params is not None else [])
 
             this_stdin_name = code_info.stdin_name
             this_stdout_name = code_info.stdout_name
@@ -1527,34 +1522,35 @@ class AbstractJobCalculation(object):
             validate_list_of_string_tuples(local_copy_list,
                                            tuple_length=2)
         except ValidationError as e:
-            raise PluginInternalError("[presubmission of calc {}] "
-                                      "local_copy_list format problem: {}".format(
-                this_pk, e.message))
+            raise PluginInternalError(
+                "[presubmission of calc {}] "
+                "local_copy_list format problem: {}".format(this_pk, e.message))
 
         remote_copy_list = calcinfo.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list,
                                            tuple_length=3)
         except ValidationError as e:
-            raise PluginInternalError("[presubmission of calc {}] "
-                                      "remote_copy_list format problem: {}".format(
-                this_pk, e.message))
+            raise PluginInternalError(
+                "[presubmission of calc {}] "
+                "remote_copy_list format problem: {}".
+                    format(this_pk, e.message))
 
         for (remote_computer_uuid, remote_abs_path,
              dest_rel_path) in remote_copy_list:
             try:
                 remote_computer = Computer(uuid=remote_computer_uuid)
             except NotExistent:
-                raise PluginInternalError("[presubmission of calc {}] "
-                                          "The remote copy requires a computer with UUID={}"
-                                          "but no such computer was found in the "
-                                          "database".format(this_pk,
-                                                            remote_computer_uuid))
+                raise PluginInternalError(
+                    "[presubmission of calc {}] "
+                    "The remote copy requires a computer with UUID={}"
+                    "but no such computer was found in the "
+                    "database".format(this_pk, remote_computer_uuid))
             if os.path.isabs(dest_rel_path):
-                raise PluginInternalError("[presubmission of calc {}] "
-                                          "The destination path of the remote copy "
-                                          "is absolute! ({})".format(this_pk,
-                                                                     dest_rel_path))
+                raise PluginInternalError(
+                    "[presubmission of calc {}] "
+                    "The destination path of the remote copy "
+                    "is absolute! ({})".format(this_pk, dest_rel_path))
 
         return calcinfo, script_filename
 

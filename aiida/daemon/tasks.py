@@ -93,7 +93,7 @@ def retriever():
                            DAEMON_INTERVALS_TICK_WORKFLOWS)
     )
 )
-def tick_workflows():
+def tick_workflows2():
     from aiida.workflows2.daemon import tick_workflow_engine
     print "aiida.daemon.tasks.tick_workflows:  Ticking workflows"
     tick_workflow_engine()
@@ -112,3 +112,12 @@ def tick_workflows():
 # ~ set_daemon_timestamp(task_name='workflow', when='start')
 # ~ daemon_main_loop()
 # ~ set_daemon_timestamp(task_name='workflow', when='stop')
+
+
+def manual_tick_all():
+    from aiida.daemon.execmanager import submit_jobs, update_jobs, retrieve_jobs
+    from aiida.workflows2.daemon import tick_workflow_engine
+    submit_jobs()
+    update_jobs()
+    retrieve_jobs()
+    tick_workflow_engine()

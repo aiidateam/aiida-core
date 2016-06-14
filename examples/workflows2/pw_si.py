@@ -85,8 +85,7 @@ def run_si_scf(codename, pseudo_family):
     inputs.parameters = ParameterData(dict=parameters_dict)
 
     # Pseudopotentials
-    for species, pseudo in get_pseudos(structure, pseudo_family).iteritems():
-        inputs['pseudo_{}'.format(species)] = pseudo
+    inputs.pseudo = get_pseudos(structure, pseudo_family)
 
     #calc.set_extra("element", "Si")
     #calc.submit()

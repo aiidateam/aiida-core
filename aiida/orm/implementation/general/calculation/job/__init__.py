@@ -908,8 +908,7 @@ class AbstractJobCalculation(object):
                 calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:
-                n_days_ago = \
-                    timezone.delta(datetime.timedelta(days=past_days), now)
+                n_days_ago = now - datetime.timedelta(days=past_days)
                 calculation_filters['ctime'] = {'>': n_days_ago}
 
             # Filter on the group, either name or by pks

@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from plum.wait import WaitOn
+from plum.wait import WaitOn, validate_callback_func
 from aiida.orm.utils import load_node
 from aiida.common.lang import override
-from aiida.workflows2.process import Process
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -33,6 +32,5 @@ class WaitOnJobCalculation(WaitOn):
 
 
 def wait_on_job_calculation(callback, pk):
-    assert isinstance(callback.im_self, Process),\
-        "Can only callback process methods"
+    validate_callback_func(callback)
     return WaitOnJobCalculation(callback.__name__, pk)

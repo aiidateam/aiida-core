@@ -63,11 +63,16 @@ class JobProcess(Process):
     def __init__(self, store_provenance=True):
         # Need to tell Process to not create output links as these are
         # created internally by the execution manager
-        super(JobProcess, self).__init__(store_provenance=False)
+        super(JobProcess, self).__init__(store_provenance)
 
     def _run(self, **kwargs):
+        # I create this here because there is a check to make sure the callback
+        # function is defined correctly which may cause an assertion, in which
+        # case we shouldn't submit
+        wait_on = wait_on_job_calculation(
+            self.calculation_finished, self._calc.pk)
         self._calc.submit()
-        return wait_on_job_calculation(self.calculation_finished, self._calc.pk)
+        return wait_on
 
     def calculation_finished(self, wait_on):
         assert not self._calc._is_running()

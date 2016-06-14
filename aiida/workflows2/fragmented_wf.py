@@ -6,6 +6,7 @@ from plum.wait_ons import Checkpoint
 from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
 from aiida.workflows2.process import Process, ProcessSpec
+from plum.engine.execution_engine import Future
 from aiida.common.lang import override
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -130,32 +131,41 @@ class FragmentedWorkfunction(Process):
 
 class ResultToContext(object):
     def __init__(self, **kwargs):
-        # TODO: Check all values of kwargs are futures
+        for value in kwargs.itervalues():
+            assert isinstance(value, Future),\
+                "Values to be stored must be futures"
         self.to_assign = kwargs
 
 
 class _ResultToContext(WaitOn):
+    PIDS = 'pids'
+
     @classmethod
-    def create_from(cls, bundle, exec_engine):
-        # TODO: Load the futures
-        return _ResultToContext(bundle[cls.CALLBACK_NAME])
+    def create_from(cls, bundle, process_factory):
+        return _ResultToContext(bundle[cls.CALLBACK_NAME], **bundle[cls.PIDS])
 
     def __init__(self, callback_name, **kwargs):
         super(_ResultToContext, self).__init__(callback_name)
-        # TODO: Check all values of kwargs are futures
         self._to_assign = kwargs
+        self._ready_values = None
 
     def is_ready(self, registry):
-        for fut in self._to_assign.itervalues():
-            if not fut.done():
-                return False
-        return True
+        # Check all the processes have finished
+        all_done = all(registry.is_finished(pid) for pid
+                       in self._to_assign.itervalues())
+        if all_done:
+            for key, pid in self._to_assign.iteritems():
+                self._ready_values[key] = registry.get_outputs(pid)
+            return True
+        else:
+            return False
 
     def save_instance_state(self, out_state):
         super(_ResultToContext, self).save_instance_state(out_state)
+        out_state[self.PIDS] = self._to_assign
 
     def assign(self, context):
-        for name, fut in self._to_assign.iteritems():
+        for name, fut in self._ready_values.iteritems():
             setattr(context, name, fut.result())
 
 

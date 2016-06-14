@@ -10,7 +10,7 @@ __version__ = "0.5.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
-# Have gloals that can be used by all of AiiDA
+# Have globals that can be used by all of AiiDA
 factory = ProcessFactory(store_provenance=True)
 storage = PicklePersistence(factory, '/tmp/to_run')
 registry = ProcessRegistry(storage)

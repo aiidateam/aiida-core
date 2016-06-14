@@ -39,8 +39,9 @@ class ProcessFactory(plum.process_factory.ProcessFactory):
 
         if self.CALC_CLASS in checkpoint.process_instance_state:
             # It's a wrapped legacy calculation class, so rebuild it.
-            proc = JobProcess.build(
+            ProcClass = JobProcess.build(
                 checkpoint.process_instance_state[self.CALC_CLASS])
+            proc = ProcClass(self._store_provenance)
         else:
             proc = checkpoint.process_class(self._store_provenance)
         proc.on_recreate(None, checkpoint.process_instance_state)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import collections
+import uuid
 
 import plum.port as port
 import plum.process
@@ -95,7 +96,7 @@ class Process(plum.process.Process):
     """
     __metaclass__ = ABCMeta
 
-    KEY_CALC_PK = 'calc_pk'
+    KEY_CALC_ID = 'calc_id'
 
     @classmethod
     def get_inputs_template(cls):
@@ -132,9 +133,8 @@ class Process(plum.process.Process):
         bundle[self._INPUTS] = self._convert_to_ids(self.inputs)
         if self._store_provenance:
             assert self._calc.is_stored
-            bundle[self.KEY_CALC_PK] = self._calc.pk
-        else:
-            bundle[self.KEY_CALC_PK] = self._calc.uuid
+
+        bundle[self.KEY_CALC_ID] = self.pid
 
     def _convert_to_ids(self, nodes):
         input_ids = {}
@@ -145,8 +145,8 @@ class Process(plum.process.Process):
                 if node.is_stored:
                     input_ids[label] = node.pk
                 else:
-                    # Try using the UUID, but there's probably no chance of being
-                    # abel to recover the node from this if not stored
+                    # Try using the UUID, but there's probably no chance of
+                    # being abel to recover the node from this if not stored
                     # (for the time being)
                     input_ids[label] = node.uuid
             elif isinstance(node, collections.Mapping):
@@ -179,8 +179,8 @@ class Process(plum.process.Process):
             self._convert_to_nodes(saved_instance_state[self._INPUTS])
         super(Process, self).on_recreate(pid, saved_instance_state)
 
-        if self.KEY_CALC_PK in saved_instance_state:
-            self._calc = load_node(saved_instance_state[self.KEY_CALC_PK])
+        if self.KEY_CALC_ID in saved_instance_state:
+            self._calc = load_node(saved_instance_state[self.KEY_CALC_ID])
             self._pid = self._calc.pk
         else:
             self._pid = self._create_and_setup_db_record()
@@ -190,9 +190,11 @@ class Process(plum.process.Process):
         self._setup_db_record()
         if self._store_provenance:
             assert self._calc.is_stored
+
+        if self._calc.pk is not None:
             return self._calc.pk
         else:
-            return self._calc.uuid
+            return uuid.UUID(self._calc.uuid)
 
     @override
     def on_stop(self):

@@ -43,7 +43,7 @@ setup(
         'django', 'django_extensions', 'pytz', 'django-celery',
         'celery', 'billiard', 'anyjson', 'six', 'supervisor',
         'meld3', 'paramiko', 'ecdsa', 'pycrypto', 'numpy', 'django-tastypie',
-        'python-dateutil', 'python-mimeparse', 'plum', 'enum34' 'voluptuous'
+        'python-dateutil', 'python-mimeparse', 'plum', 'enum34', 'voluptuous'
         ],
     packages=find_packages(),
     scripts=[os.path.join(bin_folder, f) for f in os.listdir(bin_folder)

@@ -17,8 +17,8 @@ class WaitOnJobCalculation(WaitOn):
     def create_from(cls, bundle, exec_engine):
         return WaitOnJobCalculation(bundle[cls.CALLBACK_NAME], bundle[cls.PK])
 
-    def __init__(self, callback, pk):
-        super(WaitOnJobCalculation, self).__init__(callback)
+    def __init__(self, callback_name, pk):
+        super(WaitOnJobCalculation, self).__init__(callback_name)
         self._pk = pk
 
     @override
@@ -27,4 +27,9 @@ class WaitOnJobCalculation(WaitOn):
 
     @override
     def save_instance_state(self, out_state):
+        super(WaitOnJobCalculation, self).save_instance_state(out_state)
         out_state[self.PK] = self._pk
+
+
+def wait_on_job_calculation(callback, pk):
+    return WaitOnJobCalculation(callback.__name__, pk)

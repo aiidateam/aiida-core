@@ -364,30 +364,67 @@ class _WithDefaults(object):
         return self._m._defaults
 
 
-class _WithFamilies(object):
-    FAMILY_SEPERATOR = '_'
+class DefaultsDict(collections.MutableMapping):
+    def __init__(self, valid_keys, defaults=None):
+        self._set_internal('_valid_keys', valid_keys)
+        self._set_internal('_user_supplied', {})
 
-    def __init__(self, valid_families, family_seperator=FAMILY_SEPERATOR):
-        self._m.valid_families = valid_families
-        self._m.family_sep = family_seperator
+        if defaults is None:
+            defaults = {}
+        for key in defaults:
+            assert key in valid_keys
+        self._set_internal('_defaults', defaults)
+
+    def __dir__(self):
+        return self._get_internal('_valid_keys')
+
+    def __getitem__(self, item):
+        return self._get_internal('_user_supplied')[item]
 
     def __setitem__(self, key, value):
-        if self._m.family_sep in key:
-            assert key.split(self._m.family_sep)[0] in self._m.valid_families
-            return self._m.values.__setitem__(key, value)
-        else:
-            # It's just a normal key
-            super(_WithFamilies, self).__setitem__(key, value)
+        if key not in self._get_internal('_valid_keys'):
+            raise KeyError("KeyError: '{}'".format(key))
+        self._get_internal('_user_supplied')[key] = value
 
+    def __iter__(self):
+        self._get_internal('_user_supplied').__iter__()
 
-class DefaultsDict(FixedDict, _WithDefaults):
-    def __init__(self, valid_keys, defaults=None):
-        FixedDict.__init__(self, valid_keys)
-        _WithDefaults.__init__(self, defaults)
+    def __len__(self):
+        return len(self._get_internal('_user_supplied'))
 
-    @override
-    def __getitem__(self, key):
+    def __delitem__(self, key):
+        del self._get_internal('_user_supplied')[key]
+
+    def __getattr__(self, item):
         try:
-            return super(DefaultsDict, self).__getitem__(key)
+            return self._user_supplied[item]
         except KeyError:
-            return self.get_default(key)
+            try:
+                self._defaults[item]
+            except KeyError:
+                raise AttributeError("AttributeError: '{}'".format(item))
+
+    def __setattr__(self, key, value):
+        try:
+            self.__setitem__(key, value)
+        except KeyError:
+            raise AttributeError("AttributeError: '{}'".format(key))
+
+    def __delattr__(self, key):
+        try:
+            self.__delitem__(key)
+        except KeyError:
+            raise AttributeError("AttributeError: '{}'".format(key))
+
+    def _get_internal(self, item):
+        return super(DefaultsDict, self).__getattribute__(item)
+
+    def _set_internal(self, key, value):
+        return super(DefaultsDict, self).__setattr__(key, value)
+
+    def _set_value(self, key, value):
+        self._get_internal('_user_supplied')[key] = value
+
+    @property
+    def defaults(self):
+        return self._get_internal('_defaults')

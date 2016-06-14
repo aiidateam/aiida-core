@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
+if not is_dbenv_loaded():
+    load_dbenv()
+
 import aiida.workflows2.defaults as defaults
 from plum.engine.ticking import TickingEngine
 
@@ -24,3 +29,15 @@ def tick_workflow_engine(registry=None):
     engine = TickingEngine(defaults.factory, registry)
     run_all_saved_processes(engine, registry)
     return engine.tick()
+
+
+if __name__ == "__main__":
+    """
+    A convenience method so that this module can be ran ticking the engine once.
+    """
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
+    if not is_dbenv_loaded():
+        load_dbenv()
+
+    tick_workflow_engine()

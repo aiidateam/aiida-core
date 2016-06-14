@@ -7,11 +7,12 @@ if not is_dbenv_loaded():
 from unittest import TestCase
 from aiida.workflows2.process import Process
 from aiida.workflows2.db_types import Int
+import uuid
 
 
 class BadOutput(Process):
-    @staticmethod
-    def _define(spec):
+    @classmethod
+    def _define(cls, spec):
         spec.dynamic_output()
 
     def _run(self):
@@ -19,8 +20,8 @@ class BadOutput(Process):
 
 
 class DummyProcess(Process):
-    @staticmethod
-    def _define(spec):
+    @classmethod
+    def _define(cls, spec):
         spec.dynamic_input()
         spec.dynamic_output()
 
@@ -49,7 +50,7 @@ class TestProcess(TestCase):
 
     def test_pid_uuid(self):
         with ProcessScope(DummyProcess(store_provenance=False)) as p:
-            self.assertEqual(p._calc.uuid, p.pid)
+            self.assertEqual(uuid.UUID(p._calc.uuid), p.pid)
 
     def test_input_link_creation(self):
         inputs = ["1", "2", "3", "4"]

@@ -3,7 +3,7 @@
 import plum.port as port
 from aiida.common.lang import override
 from aiida.workflows2.process import Process, DictSchema
-from aiida.workflows2.legacy.wait_on import WaitOnJobCalculation
+from aiida.workflows2.legacy.wait_on import wait_on_job_calculation
 from aiida.orm.computer import Computer
 from voluptuous import Any
 
@@ -66,8 +66,7 @@ class JobProcess(Process):
 
     def _run(self, **kwargs):
         self._calc.submit()
-        return WaitOnJobCalculation(
-            self.calculation_finished.__name__, self._calc.pk)
+        return wait_on_job_calculation(self.calculation_finished, self._calc.pk)
 
     def calculation_finished(self):
         assert not self._calc._is_running()

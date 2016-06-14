@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import plum.port as port
+import plum.process
 from aiida.common.lang import override
 from aiida.workflows2.process import Process, DictSchema
 from aiida.workflows2.legacy.wait_on import wait_on_job_calculation
@@ -68,11 +69,23 @@ class JobProcess(Process):
         self._calc.submit()
         return wait_on_job_calculation(self.calculation_finished, self._calc.pk)
 
-    def calculation_finished(self):
+    def calculation_finished(self, wait_on):
         assert not self._calc._is_running()
 
-        for label, node in self._calc.get_outputs_dict():
+        for label, node in self._calc.get_outputs_dict().iteritems():
             self.out(label, node)
+
+        if self._calc.has_failed():
+            raise RuntimeError(
+                "Calculation failed with state '{}'".
+                    format(self._calc.get_state()))
+
+    @override
+    def _on_output_emitted(self, output_port, value, dynamic):
+        # Skip over parent _on_output_emitted beause it will try to store stuff
+        # which is already done for us by the Calculation
+        plum.process.Process._on_output_emitted(
+            self, output_port, value, dynamic)
 
     @override
     def create_db_record(self):
@@ -98,6 +111,7 @@ class JobProcess(Process):
             if input is None or name is self.OPTIONS_INPUT_LABEL:
                 continue
 
+            # Call the 'use' methods to set up the data-calc links
             if isinstance(self.spec().get_input(name), port.InputGroupPort):
                 additional =\
                     self._CALC_CLASS._use_methods[name]['additional_parameter']
@@ -108,13 +122,16 @@ class JobProcess(Process):
             else:
                 getattr(calc, 'use_{}'.format(name))(input)
 
+        # Get the computer from the code if necessary
         if calc.get_computer() is None and 'code' in self.inputs:
             code = self.inputs['code']
             if not code.is_local():
                 calc.set_computer(code.get_remote_computer())
 
         if self._parent:
-            calc.add_link_from(self._parent._current_calc, "CALL", LinkType.CALL)
+            calc.add_link_from(self._parent._current_calc, "CALL",
+                               LinkType.CALL)
 
         self._calc = calc
-        self._calc.store_all()
+        if self._store_provenance:
+            self._calc.store_all()

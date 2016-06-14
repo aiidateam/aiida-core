@@ -1,4 +1,3 @@
-
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
 if not is_dbenv_loaded():
@@ -62,7 +61,8 @@ def run_si_scf(codename, pseudo_family):
     StructureData = DataFactory("structure")
     structure = StructureData(cell=the_cell)
     structure.append_atom(position=(0., 0., 0.), symbols="Si")
-    structure.append_atom(position=(alat / 4., alat / 4., alat / 4.), symbols="Si")
+    structure.append_atom(position=(alat / 4., alat / 4., alat / 4.),
+                          symbols="Si")
     inputs.structure = structure
 
     # Kpoints
@@ -87,9 +87,10 @@ def run_si_scf(codename, pseudo_family):
     # Pseudopotentials
     inputs.pseudo = get_pseudos(structure, pseudo_family)
 
-    #calc.set_extra("element", "Si")
-    #calc.submit()
+    # calc.set_extra("element", "Si")
+    # calc.submit()
     asyncd(JobCalc, **inputs)
+
 
 if __name__ == "__main__":
     import argparse

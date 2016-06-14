@@ -179,6 +179,8 @@ class Process(plum.process.Process):
             self._convert_to_nodes(saved_instance_state[self._INPUTS])
         super(Process, self).on_recreate(pid, saved_instance_state)
 
+        # This fills out the parent
+        util.ProcessStack.push(self)
         if self.KEY_CALC_ID in saved_instance_state:
             self._calc = load_node(saved_instance_state[self.KEY_CALC_ID])
             self._pid = self._calc.pk
@@ -219,8 +221,7 @@ class Process(plum.process.Process):
         if not value.is_stored:
             if self._store_provenance:
                 value.store()
-            value.add_link_from(self._calc, output_port,
-                                LinkType.CREATE)
+            value.add_link_from(self._calc, output_port, LinkType.CREATE)
         value.add_link_from(self._calc, output_port, LinkType.RETURN)
 
     #################################################################

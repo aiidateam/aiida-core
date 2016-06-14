@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 import inspect
 from plum.wait_ons import Checkpoint
 from plum.wait import WaitOn
+from plum.persistence.bundle import Bundle
 from aiida.workflows2.process import Process, ProcessSpec
 from aiida.common.lang import override
 
@@ -28,6 +29,7 @@ class _FragmentedWorkfunctionSpec(ProcessSpec):
 
 class FragmentedWorkfunction(Process):
     _spec_type = _FragmentedWorkfunctionSpec
+    CONTEXT = 'context'
 
     @classmethod
     def _define(cls, spec):
@@ -70,15 +72,21 @@ class FragmentedWorkfunction(Process):
         def setdefault(self, key, default=None):
             return self._content.setdefault(key, default)
 
+        def save_instance_state(self, out_state):
+            for k, v in self._content:
+                out_state[k] = v
+
     def __init__(self, store_provenance=True):
         super(FragmentedWorkfunction, self).__init__(store_provenance)
         self._context = None
         self._stepper = None
 
-    def save_instance_state(self, bundle):
-        super(FragmentedWorkfunction, self).save_instance_state(bundle)
-        for key, val in self._context._get_dict().iteritems():
-            bundle[key] = val
+    def save_instance_state(self, out_state):
+        super(FragmentedWorkfunction, self).save_instance_state(out_state)
+        # Ask the context to save itself
+        context_state = Bundle()
+        self._context.save_instance_state(context_state)
+        out_state[self.CONTEXT] = context_state
 
     @property
     def context(self):
@@ -100,9 +108,13 @@ class FragmentedWorkfunction(Process):
 
     # Internal messages #################################
     @override
-    def on_create(self, pid, saved_instance_state=None):
-        super(FragmentedWorkfunction, self).on_create(pid, saved_instance_state)
+    def on_create(self, pid, inputs=None):
+        super(FragmentedWorkfunction, self).on_create(pid, inputs)
         self._context = self.Context()
+
+    @override
+    def on_recreate(self, pid, saved_instance_state):
+        self._context = self.Context(saved_instance_state[self.CONTEXT])
 
     @override
     def on_continue(self, wait_on):
@@ -169,11 +181,21 @@ class _Step(object):
     def __str__(self):
         pass
 
+    @staticmethod
+    def check_command(command):
+        assert isinstance(command.im_self, Process)
+        args = inspect.getargspec(command)[0]
+        assert len(args) == 2,\
+            "Command function must take two arguments: self and context"
+
 
 class _Block(_Step):
     class Stepper(Stepper):
         def __init__(self, workflow, commands):
             super(_Block.Stepper, self).__init__(workflow)
+
+            for c in commands:
+                _Step.check_command(c)
             self._commands = commands
             self._current_stepper = None
             self._pos = 0

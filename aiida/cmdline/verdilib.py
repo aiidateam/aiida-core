@@ -697,7 +697,7 @@ def exec_from_cmdline(argv):
         print_usage(execname)
         sys.exit(1)
 
-    # # We now set the internal variable, if needed
+    # We now set the internal variable, if needed
     if profile is not None:
         settings_profile.AIIDADB_PROFILE = profile
     # I set the process to verdi

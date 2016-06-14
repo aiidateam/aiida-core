@@ -129,7 +129,8 @@ class AbstractQueryBuilder(object):
                     "".format(kwargs.keys(), valid_keys)
             )
 
-    def __repr__(self):
+
+    def __str__(self):
         from aiida.common.setup import get_profile_config
         from aiida.backends import settings
         from aiida.common.exceptions import ConfigurationError
@@ -828,10 +829,13 @@ class AbstractQueryBuilder(object):
 
 
 
-    def _build_projections(self, tag):
-        items_to_project = self._projections.get(tag, [])
+    def _build_projections(self, tag, items_to_project=None):
 
-        # Sort of spaghetti, but possible speedup
+        if items_to_project is None:
+            items_to_project = self._projections.get(tag, [])
+
+        # Return here if there is nothing to project,
+        # reduces number of key in return dictionary
         if not items_to_project:
             return
 
@@ -1641,17 +1645,18 @@ class AbstractQueryBuilder(object):
         # Mapping between enitites and the tag used/ given by user:
         self.tag_to_projected_entity_dict = {}
 
+
+        self.nr_of_projections = 0
+
         if not any(self._projections.values()):
             # If user has not set projection,
             # I will simply project the last item specified!
             # Don't change, path traversal querying
             # relies on this behavior!
-            self.add_projection(self._path[-1]['tag'], '*')
-
-        self.nr_of_projections = 0
-
-        for vertice in self._path:
-            self._build_projections(vertice['tag'])
+            self._build_projections(self._path[-1]['tag'], items_to_project=[{'*':{}}])
+        else:
+            for vertice in self._path:
+                self._build_projections(vertice['tag'])
 
 
         ##################### LINK-PROJECTIONS #########################

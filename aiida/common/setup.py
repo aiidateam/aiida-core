@@ -568,6 +568,7 @@ def create_configuration(profile='default'):
         if updating_existing_prof:
             print("The backend of already stored profiles can not be "
                   "changed. The current backend is {}.".format(aiida_backend))
+            this_new_confs['AIIDADB_BACKEND'] = aiida_backend
         else:
             backend_possibilities = ['django', 'sqlalchemy']
             if len(backend_possibilities) > 0:
@@ -607,7 +608,7 @@ def create_configuration(profile='default'):
         # Setting the database engine
         db_possibilities = []
         if aiida_backend == 'django':
-            db_possibilities.extend(['postgres', 'sqlite', 'mysql'])
+            db_possibilities.extend(['postgresql_psycopg2', 'sqlite', 'mysql'])
         elif aiida_backend == 'sqlalchemy':
             db_possibilities.extend(['postgres'])
         if len(db_possibilities) > 0:
@@ -638,7 +639,7 @@ def create_configuration(profile='default'):
             this_new_confs['AIIDADB_USER'] = ""
             this_new_confs['AIIDADB_PASS'] = ""
 
-        elif 'postgres' in this_new_confs['AIIDADB_ENGINE']:
+        elif 'postgresql_psycopg2' in this_new_confs['AIIDADB_ENGINE']:
             this_new_confs['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
 
             old_host = this_existing_confs.get('AIIDADB_HOST', 'localhost')

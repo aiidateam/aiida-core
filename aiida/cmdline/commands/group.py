@@ -5,6 +5,7 @@ import sys
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.common.exceptions import NotExistent
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -432,6 +433,9 @@ class Group(VerdiCommandWithSubcommands):
         parser.add_argument('-c', '--contains', metavar='STRING', default=None,
                             help="add a filter to show only groups for which the name contains STRING",
                             action='store', type=str)
+	parser.add_argument('-n', '--node', metavar='PK', default=None,
+                            help="Show only the groups that contain the node specified by PK",
+                            action='store', type=int)
         parser.set_defaults(all_users=False)
         parser.set_defaults(with_description=False)
 
@@ -465,9 +469,24 @@ class Group(VerdiCommandWithSubcommands):
             n_days_ago = (timezone.now() -
                           datetime.timedelta(days=parsed_args.past_days))
 
+
+        # Depending on --nodes option use or not key "nodes"  
         from aiida.orm.implementation import Group
-        res = Group.query(user=user, type_string=type_string,
-                          past_days=n_days_ago, name_filters=name_filters)
+        from aiida.orm import load_node
+
+	node_pk = parsed_args.node
+        if node_pk is not None:
+            try:
+	        node = load_node(node_pk)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+            res = Group.query(user=user, type_string=type_string, nodes=node,
+                              past_days=n_days_ago, name_filters=name_filters)
+        else:
+            res = Group.query(user=user, type_string=type_string,
+                              past_days=n_days_ago, name_filters=name_filters)
+
 
         groups = tuple([(str(g.pk), g.name, len(g.nodes), g.user.email.strip(),
                          g.description) for g in res])

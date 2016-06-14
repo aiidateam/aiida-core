@@ -1,7 +1,7 @@
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-if not is_dbenv_loaded():
-    load_dbenv()
+#if not is_dbenv_loaded():
+#    load_dbenv()
 
 from aiida.orm import DataFactory
 from aiida.orm.code import Code

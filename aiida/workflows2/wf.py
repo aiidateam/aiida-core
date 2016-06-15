@@ -36,7 +36,12 @@ def wf(func):
         if run_async:
             return future
         else:
-            return future.result()
+            results = future.result()
+            # Check if there is just one value returned
+            if len(results) == 1 and FuncProc.SINGLE_RETURN_LINKNAME in results:
+                return results[FuncProc.SINGLE_RETURN_LINKNAME]
+            else:
+                return results
 
     wrapped_function._is_workfunction = True
     return wrapped_function

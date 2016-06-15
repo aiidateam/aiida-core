@@ -27,11 +27,11 @@ def Bool(value):
 
 
 def Float(value):
-    return NumericType(typevalue=(bool, value))
+    return NumericType(typevalue=(float, value))
 
 
 def Str(value):
-    return SimpleData(typevalue=(float, value))
+    return SimpleData(typevalue=(str, value))
 
 
 def to_db_type(value):

@@ -41,4 +41,6 @@ def run(process_class, *args, **inputs):
     if util.is_workfunction(process_class):
         return process_class(*args, **inputs)
     elif issubclass(process_class, Process):
-        return execution_engine.run(process_class, inputs)
+        return execution_engine.submit(process_class, inputs).result()
+    else:
+        raise ValueError("Unsupported type supplied for process_class.")

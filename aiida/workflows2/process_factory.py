@@ -49,10 +49,6 @@ class ProcessFactory(plum.process_factory.ProcessFactory):
         return proc, wait_on
 
     @override
-    def destroy_process(self, process):
-        pass
-
-    @override
     def create_checkpoint(self, process, wait_on):
         cp = Checkpoint()
 

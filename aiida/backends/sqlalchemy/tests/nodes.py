@@ -461,9 +461,9 @@ class TestNodeBasic(SqlAlchemyTests):
         # I modify an attribute and add a new one; I mirror it in the dictionary
         # for later checking
         b_expected_attributes = copy.deepcopy(attrs_to_set)
-        b._set_val('integer', 489)
+        b._set_attr('integer', 489)
         b_expected_attributes['integer'] = 489
-        b._set_val('new', 'cvb')
+        b._set_attr('new', 'cvb')
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from plum.engine.serial import SerialEngine
 from aiida.workflows2.execution_engine import ExecutionEngine
 from aiida.workflows2.process_factory import ProcessFactory
 from plum.persistence.pickle_persistence import PicklePersistence

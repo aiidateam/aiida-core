@@ -285,6 +285,7 @@ class Process(plum.process.Process):
 
 
 class FunctionProcess(Process):
+    SINGLE_RETURN_LINKNAME = '_return'
     _func_args = None
 
     @staticmethod
@@ -351,5 +352,14 @@ class FunctionProcess(Process):
         for arg in self._func_args:
             args.append(kwargs.pop(arg))
         outs = self._func(*args)
-        for name, value in outs.iteritems():
-            self.out(name, value)
+        if isinstance(outs, Data):
+            self.out(self.SINGLE_RETURN_LINKNAME, outs)
+        elif isinstance(outs, collections.Mapping):
+            for name, value in outs.iteritems():
+                self.out(name, value)
+        else:
+            raise TypeError(
+                "TypeError: Workfunction returned unsupported type '{}'\n"
+                "Must be a Data type or a Mapping of string: Data".
+                format(outs.__class__))
+

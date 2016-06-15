@@ -202,7 +202,7 @@ class TestAttributeDictSerialize(unittest.TestCase):
 
         d1 = AttributeDict({'x': 1, 'y': 2})
         d2 = json.loads(json.dumps(d1))
-        # Note that here I am comparing a dictionary (d2) with a 
+        # Note that here I am comparing a dictionary (d2) with a
         # AttributeDict (d2) and they still compare to equal
         self.assertEquals(d1, d2)
 
@@ -236,14 +236,14 @@ class TestFFAD(unittest.TestCase):
         a['a'] = 1
         a.b = 2
         # Not a valid key.
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             a['d'] = 2
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AttributeError):
             a.e = 5
 
     def test_insertion_on_init(self):
         a = TestFFADExample({'a': 1, 'b': 2})
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             # 'd' is not a valid key
             a = TestFFADExample({'a': 1, 'd': 2})
 
@@ -257,7 +257,7 @@ class TestFFAD(unittest.TestCase):
         a = TestFFADExample({'a': 1, 'b': 2})
         b = pickle.loads(pickle.dumps(a))
         b.c = 3
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             b['d'] = 2
 
     def test_class_attribute(self):

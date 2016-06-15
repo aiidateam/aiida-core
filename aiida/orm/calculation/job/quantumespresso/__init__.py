@@ -142,8 +142,7 @@ class BasePwCpInputGenerator(object):
             },
         }
 
-    def _prepare_for_submission(self, tempfolder,
-                                inputdict):
+    def _prepare_for_submission(self, tempfolder, inputdict):
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.

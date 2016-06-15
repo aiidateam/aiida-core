@@ -134,8 +134,7 @@ class JobProcess(Process):
                 calc.set_computer(code.get_remote_computer())
 
         if self._parent:
-            calc.add_link_from(self._parent._current_calc, "CALL",
-                               LinkType.CALL)
+            calc.add_link_from(self._parent._calc, "CALL", LinkType.CALL)
 
         self._calc = calc
         if self._store_provenance:

@@ -149,7 +149,7 @@ class FixedFieldsAttributeDict(AttributeDict):
             if key not in self._valid_fields:
                 errmsg = "'{}' is not a valid key for object '{}'".format(
                     key, self.__class__.__name__)
-                raise ValueError(errmsg)
+                raise KeyError(errmsg)
         super(FixedFieldsAttributeDict, self).__init__(init)
 
     def __setitem__(self, item, value):

@@ -78,7 +78,7 @@ class EquationOfStates(FragmentedWorkfunction):
         spec.inputs("pseudo_family")
         spec.outline(
             cls.init,
-            while_(cls.keep_scaling)(
+            while_(cls.not_finished)(
                 cls.run_pw,
                 cls.up_scale
             ),
@@ -87,8 +87,9 @@ class EquationOfStates(FragmentedWorkfunction):
 
     def init(self, ctx):
         ctx.scale = self.inputs.start
+        ctx.results = {}
 
-    def keep_scaling(self, ctx):
+    def not_finished(self, ctx):
         return ctx.scale < self.inputs.end
 
     def run_pw(self, ctx):
@@ -124,10 +125,12 @@ class EquationOfStates(FragmentedWorkfunction):
         inputs._options.resources({"num_machines": 1})
         inputs._options.max_wallclock_seconds(30 * 60)
 
-        fut = async(JobCalc, inputs)
+        fut = self.submit(JobCalc, inputs)
         print ctx.scale.value, fut.pid
 
-        ResultToContext(r1=fut)
+        context_assign(r1=result(f1, f2).structure)
+
+        ctx.results[ctx.scale.value] = fut
 
     def up_scale(self, ctx):
         ctx.scale = ctx.scale + self.inputs.delta

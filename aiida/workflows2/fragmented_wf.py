@@ -263,7 +263,6 @@ class _Conditional(object):
     while(condition):
       body
     """
-
     def __init__(self, parent, condition):
         self._parent = parent
         self._condition = condition

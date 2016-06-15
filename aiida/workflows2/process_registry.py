@@ -1,6 +1,8 @@
 
 import plum.persistence.pickle_persistence
 import plum.process_registry
+import aiida.orm
+import aiida.common.exceptions as exceptions
 import plum.process
 from aiida.common.lang import override
 
@@ -28,22 +30,32 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
         # Is it finished?
         if pid in self._finished:
             return True
+
         # Is it running?
         if pid in self._running_processes:
             return False
-        # TODO: check the database
-        return False
+
+        try:
+            return aiida.orm.load_node(pid).is_finished()
+        except exceptions.NotExistent:
+            pass
+
+        raise ValueError("Could not find a Process with id '{}'".format(pid))
 
     @override
     def get_output(self, pid, port):
-        try:
-            return self._finished[pid][port]
-        except KeyError:
-            raise ValueError("Process not finished.")
+        return self.get_outputs()[port]
 
     @override
     def get_outputs(self, pid):
-        return self._finished[pid]
+        if pid in self._finished:
+            return self._finished[pid]
+        else:
+            try:
+                aiida.orm.load_node(pid).get_outputs_dict()
+            except exceptions.NotExistent:
+                pass
+        raise ValueError("Could not find a Process with id '{}'".format(pid))
 
     # Process messages
     @override

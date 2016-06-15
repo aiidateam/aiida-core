@@ -177,7 +177,6 @@ class Graph(VerdiCommandWithSubcommands):
             for node in last_nodes:
                 inputs = node.get_inputs(also_labels=True)
                 for linkname, inp in inputs:
-                    print "{}: {}".format(linkname,inp)
                     links.append((inp.pk, node.pk, linkname))
                     if inp.pk not in nodes:
                         nodes[inp.pk] = draw_node_settings(inp)
@@ -191,7 +190,6 @@ class Graph(VerdiCommandWithSubcommands):
             for node in last_nodes:
                 outputs = node.get_outputs(also_labels=True)
                 for linkname, out in outputs:
-                    print "{}: {}".format(linkname,out)
                     links.append((node.pk, out.pk, linkname))
                     if out.pk not in nodes:
                         nodes[out.pk] = draw_node_settings(out)

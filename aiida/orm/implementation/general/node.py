@@ -537,7 +537,7 @@ class AbstractNode(object):
         """
         return True
 
-    def get_inputs_dict(self, only_in_db=False):
+    def get_inputs_dict(self, only_in_db=False, link_type=None):
         """
         Return a dictionary where the key is the label of the input link, and
         the value is the input node.
@@ -547,8 +547,9 @@ class AbstractNode(object):
                 returns all inputs of all link types.
         :return: a dictionary {label:object}
         """
-        return dict(self.get_inputs(
-                also_labels=True, only_in_db=only_in_db))
+        return dict(
+            self.get_inputs(
+                also_labels=True, only_in_db=only_in_db, link_type=link_type))
 
     def get_outputs_dict(self):
         """
@@ -583,7 +584,8 @@ class AbstractNode(object):
         return new_outputs
 
     @abstractmethod
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False):
+    def get_inputs(self, type=None, also_labels=False, only_in_db=False,
+                   link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
 

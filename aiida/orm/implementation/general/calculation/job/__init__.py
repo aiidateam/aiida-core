@@ -1278,8 +1278,9 @@ class AbstractJobCalculation(object):
         else:
             # Do not set the state, but let the parser do its job
             # self._set_state(calc_states.FAILED)
-            self.logger.warning("Calculation {} killed by the user "
-                                "(it was {})".format(self.pk,
+            self.logger.warning(
+                "Calculation {} killed by the user "
+                "(it was {})".format(self.pk,
                                                      calc_states.WITHSCHEDULER))
 
     def _presubmit(self, folder, use_unstored_links=False):
@@ -1311,7 +1312,8 @@ class AbstractJobCalculation(object):
         from aiida.orm.utils import load_node
 
         computer = self.get_computer()
-        inputdict = self.get_inputs_dict(only_in_db=not use_unstored_links)
+        inputdict = self.get_inputs_dict(
+            only_in_db=not use_unstored_links, link_type=LinkType.INPUT)
 
         codes = [_ for _ in inputdict.itervalues() if isinstance(_, Code)]
 

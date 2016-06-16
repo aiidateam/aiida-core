@@ -125,6 +125,12 @@ class NumericType(SimpleData):
         else:
             return self.value >= other
 
+    def __float__(self):
+        return float(self.value)
+
+    def __int__(self):
+        return int(self.value)
+
 
 def Float(value=None):
     return NumericType(typevalue=(float, value))

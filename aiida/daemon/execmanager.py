@@ -443,17 +443,19 @@ def submit_calc(calc, authinfo, transport=None):
         computer = calc.get_computer()
 
         with SandboxFolder() as folder:
-            calcinfo, script_filename = calc._presubmit(folder,
-                                                        use_unstored_links=False)
+            calcinfo, script_filename = calc._presubmit(
+                folder, use_unstored_links=False)
 
             codes_info = calcinfo.codes_info
-            input_codes = [ load_node(_.code_uuid, parent_class=Code) for _ in codes_info ]
+            input_codes = [load_node(_.code_uuid, parent_class=Code)
+                           for _ in codes_info ]
 
             for code in input_codes:
                 if not code.can_run_on(computer):
-                    raise InputValidationError("The selected code {} for calculation "
-                                               "{} cannot run on computer {}".format(
-                        code.pk, calc.pk, computer.name))
+                    raise InputValidationError(
+                        "The selected code {} for calculation "
+                        "{} cannot run on computer {}".
+                        format(code.pk, calc.pk, computer.name))
 
             # After this call, no modifications to the folder should be done
             calc._store_raw_input_folder(folder.abspath)
@@ -467,27 +469,30 @@ def submit_calc(calc, authinfo, transport=None):
             remote_working_directory = authinfo.get_workdir().format(
                 username=remote_user)
             if not remote_working_directory.strip():
-                raise ConfigurationError("[submission of calc {}] "
-                                         "No remote_working_directory configured for computer "
-                                         "'{}'".format(calc.pk, computer.name))
+                raise ConfigurationError(
+                    "[submission of calc {}] "
+                    "No remote_working_directory configured for computer "
+                    "'{}'".format(calc.pk, computer.name))
 
             # If it already exists, no exception is raised
             try:
                 t.chdir(remote_working_directory)
             except IOError:
-                execlogger.debug("[submission of calc {}] "
-                                 "Unable to chdir in {}, trying to create it".format(
-                    calc.pk, remote_working_directory),
-                                 extra=logger_extra)
+                execlogger.debug(
+                    "[submission of calc {}] "
+                    "Unable to chdir in {}, trying to create it".
+                    format(calc.pk, remote_working_directory),
+                    extra=logger_extra)
                 try:
                     t.makedirs(remote_working_directory)
                     t.chdir(remote_working_directory)
                 except (IOError, OSError) as e:
-                    raise ConfigurationError("[submission of calc {}] "
-                                             "Unable to create the remote directory {} on "
-                                             "computer '{}': {}".format(calc.pk,
-                                                                        remote_working_directory, computer.name,
-                                                                        e.message))
+                    raise ConfigurationError(
+                        "[submission of calc {}] "
+                        "Unable to create the remote directory {} on "
+                        "computer '{}': {}".
+                        format(calc.pk, remote_working_directory, computer.name,
+                               e.message))
             # Store remotely with sharding (here is where we choose
             # the folder structure of remote jobs; then I store this
             # in the calculation properties using _set_remote_dir

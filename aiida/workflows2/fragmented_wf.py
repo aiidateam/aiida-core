@@ -50,6 +50,12 @@ class FragmentedWorkfunction(Process):
         def _get_dict(self):
             return self._content
 
+        def __getitem__(self, item):
+            return self._content[item]
+
+        def __setitem__(self, key, value):
+            self._content.__setattr__(key, value)
+
         def __getattr__(self, name):
             try:
                 return self._content[name]
@@ -134,7 +140,7 @@ class ResultToContext(object):
         for value in kwargs.itervalues():
             assert isinstance(value, Future),\
                 "Values to be stored must be futures"
-        self.to_assign = kwargs
+        self.to_assign = {name: fut.pid for name, fut in kwargs.iteritems()}
 
 
 class _ResultToContext(WaitOn):
@@ -147,7 +153,7 @@ class _ResultToContext(WaitOn):
     def __init__(self, callback_name, **kwargs):
         super(_ResultToContext, self).__init__(callback_name)
         self._to_assign = kwargs
-        self._ready_values = None
+        self._ready_values = {}
 
     def is_ready(self, registry):
         # Check all the processes have finished
@@ -165,8 +171,8 @@ class _ResultToContext(WaitOn):
         out_state[self.PIDS] = self._to_assign
 
     def assign(self, context):
-        for name, fut in self._ready_values.iteritems():
-            setattr(context, name, fut.result())
+        for name, value in self._ready_values.iteritems():
+            setattr(context, name, value)
 
 
 class Stepper(object):
@@ -193,7 +199,7 @@ class _Step(object):
 
     @staticmethod
     def check_command(command):
-        assert isinstance(command.im_self, Process)
+        assert issubclass(command.im_class, Process)
         args = inspect.getargspec(command)[0]
         assert len(args) == 2,\
             "Command function must take two arguments: self and context"

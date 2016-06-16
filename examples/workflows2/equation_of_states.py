@@ -1,14 +1,19 @@
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-from aiida.workflows2.wf import wf
+if not is_dbenv_loaded():
+    load_dbenv()
+
 from aiida.orm import load_node
 from aiida.orm.utils import DataFactory
-from aiida.workflows2.db_types import Float
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
+from aiida.workflows2.db_types import Float, Str
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.workflows2.run import async
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, while_,\
+from aiida.workflows2.run import run
+from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, \
     ResultToContext
+from examples.workflows2.common import generate_scf_input_params
+from examples.workflows2.diamond_fcc import rescale
+from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 
 
 # Set up the factories
@@ -16,127 +21,49 @@ ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
 
 
-def get_pseudos(structure, family_name):
-    """
-    Set the pseudo to use for all atomic kinds, picking pseudos from the
-    family with name family_name.
-
-    :note: The structure must already be set.
-
-    :param family_name: the name of the group containing the pseudos
-    """
-    from collections import defaultdict
-    from aiida.orm.data.upf import get_pseudos_from_structure
-
-    # A dict {kind_name: pseudo_object}
-    kind_pseudo_dict = get_pseudos_from_structure(structure, family_name)
-
-    # We have to group the species by pseudo, I use the pseudo PK
-    # pseudo_dict will just map PK->pseudo_object
-    pseudo_dict = {}
-    # Will contain a list of all species of the pseudo with given PK
-    pseudo_species = defaultdict(list)
-
-    for kindname, pseudo in kind_pseudo_dict.iteritems():
-        pseudo_dict[pseudo.pk] = pseudo
-        pseudo_species[pseudo.pk].append(kindname)
-
-    pseudos = {}
-    for pseudo_pk in pseudo_dict:
-        pseudo = pseudo_dict[pseudo_pk]
-        kinds = pseudo_species[pseudo_pk]
-        for kind in kinds:
-            pseudos[kind] = pseudo
-
-    return pseudos
-
-
-@wf
-def rescale(structure, scale):
-    """
-    Inline calculation to rescale a structure
-
-    :param structure: An AiiDA structure to rescale
-    :param scale: The scale factor
-    :return: a dictionary of the form {'rescaled_structure': rescaled_structure}
-    """
-    the_ase = structure.get_ase()
-    new_ase = the_ase.copy()
-    new_ase.set_cell(the_ase.get_cell() * scale.value, scale_atoms=True)
-    new_structure = DataFactory('structure')(ase=new_ase)
-    return {'rescaled_structure': new_structure}
+PwProcess = PwCalculation.process()
 
 
 class EquationOfStates(FragmentedWorkfunction):
     @classmethod
     def _define(cls, spec):
-        spec.input("structure", type=StructureData)
-        spec.input("start", type=Float)
-        spec.input("delta", type=Float)
-        spec.input("end", type=Float)
-        spec.input("code", type=Code)
-        spec.inputs("pseudo_family")
+        spec.input("structure", valid_type=StructureData)
+        spec.input("start", valid_type=Float, default=Float(0.96))
+        spec.input("delta", valid_type=Float, default=Float(0.02))
+        spec.input("end", valid_type=Float, default=Float(1.04))
+        spec.input("code", valid_type=Str)
+        spec.input("pseudo_family", valid_type=Str)
         spec.outline(
-            cls.init,
-            while_(cls.not_finished)(
-                cls.run_pw,
-                cls.up_scale
-            ),
+            cls.run_pw,
             cls.plot_eos
         )
 
-    def init(self, ctx):
-        ctx.scale = self.inputs.start
-        ctx.results = {}
-
-    def not_finished(self, ctx):
-        return ctx.scale < self.inputs.end
-
     def run_pw(self, ctx):
-        result_dict = rescale(self.inputs.structure, ctx.scale)
+        calcs = {}
 
-        JobCalc = PwCalculation.process()
-        inputs = JobCalc.get_inputs_template()
+        scale = self.inputs.start.value
+        while scale <= self.inputs.end:
+            scaled = rescale(self.inputs.structure, Float(scale))
 
-        # Calculation parameters
-        parameters_dict = {
-            u'CONTROL': {
-                u'calculation': u'scf',
-                u'max_seconds': 3492,
-                u'restart_mode': u'from_scratch',
-                u'tstress': False},
-            u'ELECTRONS': {u'conv_thr': 1e-06},
-            u'SYSTEM': {
-                u'ecutrho': 200.0,
-                u'ecutwfc': 30.0
-            }
-        }
-        inputs.parameters = ParameterData(dict=parameters_dict)
+            inputs = generate_scf_input_params(
+                scaled, self.inputs.code, self.inputs.pseudo_family)
 
-        # Kpoints
-        inputs.kpoints = KpointsData()
-        inputs.kpoints.set_kpoints_mesh([4, 4, 4])
+            # Launch the code
+            future = self.submit(PwProcess, inputs)
+            #print scale.value, future.pid
+            # Store the future
+            calcs["s_{}".format(scale)] = future
+            scale += self.inputs.delta.value
 
-        inputs.code = inputs.code
-        inputs.structure(result_dict['rescaled_structure'])
-        inputs.pseuso = get_pseudos(inputs.structure, inputs.pseudo_family)
-
-        # Submission options
-        inputs._options.resources({"num_machines": 1})
-        inputs._options.max_wallclock_seconds(30 * 60)
-
-        fut = self.submit(JobCalc, inputs)
-        print ctx.scale.value, fut.pid
-
-        context_assign(r1=result(f1, f2).structure)
-
-        ctx.results[ctx.scale.value] = fut
-
-    def up_scale(self, ctx):
-        ctx.scale = ctx.scale + self.inputs.delta
+        # Ask the workflow to continue when the results are ready and store them
+        # in the context
+        return ResultToContext(**calcs)
 
     def plot_eos(self, ctx):
-        pass
+        for label in ctx:
+            if "s_" in label:
+                print "{} {}".format(
+                    label, ctx[label]['output_parameters'].dict.energy)
 
 
 if __name__ == "__main__":
@@ -158,11 +85,6 @@ if __name__ == "__main__":
     start, end, delta = args.range.split(':')
 
     # Get the structure from the calculation
-    EquationOfStates.run(inputs={
-        'structure': load_node(args.structure_pk),
-        'start': Float(start),
-        'end': Float(end),
-        'delta': Float(delta),
-        'code': Code.get_from_string(args.code),
-        'pseudo_family': args.pseudo
-    })
+    run(EquationOfStates, structure=load_node(args.structure_pk),
+        start=Float(start), end=Float(end), delta=Float(delta),
+        code=Str(args.code), pseudo_family=Str(args.pseudo))

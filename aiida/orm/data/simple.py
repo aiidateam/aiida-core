@@ -65,3 +65,13 @@ class NumericType(SimpleData):
 
     def __ge__(self, other):
         return self.value.__ge__(other)
+
+
+class Float(NumericType):
+    def __init__(self, value):
+        super(Float, self).__init__(typevalue=(float, value))
+
+
+class Str(SimpleData):
+    def __init__(self, value):
+        super(Str, self).__init__(typevalue=(str, value))

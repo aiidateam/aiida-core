@@ -41,16 +41,14 @@ def get_pseudos(structure, family_name):
     return pseudos
 
 
-@wf
-def run_scf(structure, codename, pseudo_family):
-    # Calculation settings
-    JobCalc = PwCalculation.process()
-    inputs = JobCalc.get_inputs_template()
+def generate_scf_input_params(structure, codename, pseudo_family):
+    # The inputs
+    inputs = PwCalculation.process().get_inputs_template()
 
     # The structure
     inputs.structure = structure
 
-    inputs.code = Code.get_from_string(str(codename))
+    inputs.code = Code.get_from_string(codename.value)
     # calc.label = "PW test"
     # calc.description = "My first AiiDA calculation of Silicon with Quantum ESPRESSO"
     inputs._options.resources = {"num_machines": 1}
@@ -78,5 +76,11 @@ def run_scf(structure, codename, pseudo_family):
     # Pseudopotentials
     inputs.pseudo = get_pseudos(structure, str(pseudo_family))
 
+    return inputs
+
+@wf
+def run_scf(structure, codename, pseudo_family):
+    JobCalc = PwCalculation.process()
+    inputs = generate_scf_input_params(structure, codename, pseudo_family)
     return run(JobCalc, **inputs)
 

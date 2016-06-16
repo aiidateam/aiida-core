@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from aiida.orm import Data
-from aiida.orm.data.simple import NumericType, SimpleData
+from aiida.orm.data.simple import NumericType, SimpleData, Float, Str
 
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -24,14 +24,6 @@ def Int(value):
 
 def Bool(value):
     return SimpleData(typevalue=(bool, value))
-
-
-def Float(value):
-    return NumericType(typevalue=(float, value))
-
-
-def Str(value):
-    return SimpleData(typevalue=(str, value))
 
 
 def to_db_type(value):

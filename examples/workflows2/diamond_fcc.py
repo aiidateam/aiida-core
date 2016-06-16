@@ -11,6 +11,7 @@ from aiida.workflows2.wf import wf
 from aiida.workflows2.run import async
 from examples.workflows2.common import run_scf
 
+
 @wf
 def create_diamond_fcc(element):
     """
@@ -51,12 +52,14 @@ def calc_energies(codename, pseudo_family):
     for element, scale in [("Si", 5.41), ("C", 3.5)]:
         structure = create_diamond_fcc(Str(element))
         structure = rescale(structure, Float(scale))
+        print("Running {} scf calculation.".format(element))
         futures[element] = async(run_scf, structure, codename, pseudo_family)
 
-    # Giovanni: is this the best way to get the energy?
-    # ['output_parameters'].dict.energy
-    return {element: Float(future.result()['output_parameters'].dict.energy)
+    print("Waiting for calculations to finish.")
+    outs = {element: Float(future.result()['output_parameters'].dict.energy)
             for element, future in futures.iteritems()}
+    print("Calculations finished.")
+    return outs
 
 
 if __name__ == "__main__":

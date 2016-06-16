@@ -1,5 +1,5 @@
 import unittest
-from aiida.orm.data.simple import Float
+from aiida.orm.data.simple import Float, NumericType
 
 
 class TestFloat(unittest.TestCase):
@@ -16,16 +16,16 @@ class TestFloat(unittest.TestCase):
         b = Float(5)
         # Check adding two db Floats
         res = a + b
-        self.assertIsInstance(res, Float)
+        self.assertIsInstance(res, NumericType)
         self.assertEqual(res, 9.0)
 
         # Check adding db Float and native (both ways)
         res = a + 5.0
-        self.assertIsInstance(res, Float)
+        self.assertIsInstance(res, NumericType)
         self.assertEqual(res, 9.0)
 
         res = 5.0 + a
-        self.assertIsInstance(res, Float)
+        self.assertIsInstance(res, NumericType)
         self.assertEqual(res, 9.0)
 
         # Inplace
@@ -42,16 +42,16 @@ class TestFloat(unittest.TestCase):
         b = Float(5)
         # Check adding two db Floats
         res = a * b
-        self.assertIsInstance(res, Float)
+        self.assertIsInstance(res, NumericType)
         self.assertEqual(res, 20.0)
 
         # Check adding db Float and native (both ways)
         res = a * 5.0
-        self.assertIsInstance(res, Float)
+        self.assertIsInstance(res, NumericType)
         self.assertEqual(res, 20)
 
         res = 5.0 * a
-        self.assertIsInstance(res, Float)
+        self.assertIsInstance(res, NumericType)
         self.assertEqual(res, 20.0)
 
         # Inplace

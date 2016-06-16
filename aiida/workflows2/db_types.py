@@ -11,8 +11,8 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
 _TYPE_MAPPING = {
-    int: Int,
-    float: Float,
+    int: NumericType,
+    float: NumericType,
     bool: SimpleData,
     str: SimpleData
 }

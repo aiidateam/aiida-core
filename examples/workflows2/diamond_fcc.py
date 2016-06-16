@@ -9,7 +9,7 @@ from aiida.orm import DataFactory
 from aiida.workflows2.db_types import Float, Str
 from aiida.workflows2.wf import wf
 from aiida.workflows2.run import async
-from examples.workflows2.common import run_scf
+from common import run_scf
 
 
 @wf
@@ -41,7 +41,7 @@ def rescale(structure, scale):
     """
     the_ase = structure.get_ase()
     new_ase = the_ase.copy()
-    new_ase.set_cell(the_ase.get_cell() * scale.value, scale_atoms=True)
+    new_ase.set_cell(the_ase.get_cell() * float(scale), scale_atoms=True)
     new_structure = DataFactory('structure')(ase=new_ase)
     return new_structure
 

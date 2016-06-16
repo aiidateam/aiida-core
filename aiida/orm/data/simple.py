@@ -13,6 +13,8 @@ class SimpleData(Data):
         self._type = _type
         if value:
             self.value = value
+        else:
+            self.value = _type()
 
     @property
     def value(self):
@@ -31,45 +33,104 @@ class SimpleData(Data):
 
 class NumericType(SimpleData):
     def __add__(self, other):
-        return self.value.__add__(other)
-
-    def __sub__(self, other):
-        return self.value.__sub__(other)
-
-    def __mul__(self, other):
-        return self.value.__mul__(other)
+        if isinstance(other, NumericType):
+            return self.__class__(self.value + other.value)
+        else:
+            return self.__class__(self.value + other)
 
     def __iadd__(self, other):
-        return self.value.__iadd__(other)
+        assert not self.is_stored
+        if isinstance(other, NumericType):
+            self.value += other.value
+        else:
+            self.value += other
+        return self
+
+    def __radd__(self, other):
+        assert not isinstance(other, NumericType)
+        return self.__class__(other + self.value)
+
+    def __sub__(self, other):
+        if isinstance(other, NumericType):
+            return self.__class__(self.value - other.value)
+        else:
+            return self.__class__(self.value - other)
 
     def __isub__(self, other):
-        return self.value.__isub__(other)
+        assert not self.is_stored
+        if isinstance(other, NumericType):
+            self.value -= other.value
+        else:
+            self.value -= other
+        return self
+
+    def __rsub__(self, other):
+        assert not isinstance(other, NumericType)
+        return self.__class__(other - self.value)
+
+    def __mul__(self, other):
+        if isinstance(other, NumericType):
+            return self.__class__(self.value * other.value)
+        else:
+            return self.__class__(self.value * other)
 
     def __imul__(self, other):
-        return self.value.__imul__(other)
+        assert not self.is_stored
+        if isinstance(other, NumericType):
+            self.value *= other.value
+        else:
+            self.value *= other
+        return self
+
+    def __rmul__(self, other):
+        assert not isinstance(other, NumericType)
+        return self.__class__(other * self.value)
 
     def __lt__(self, other):
-        return self.value.__lt__(other)
+        if isinstance(other, NumericType):
+            return self.value < other.value
+        else:
+            return self.value < other
 
     def __le__(self, other):
-        return self.value.__le__(other)
+        if isinstance(other, NumericType):
+            return self.value <= other.value
+        else:
+            return self.value <= other
 
     def __eq__(self, other):
-        return self.value.__eq__(other)
+        if isinstance(other, NumericType):
+            return self.value == other.value
+        else:
+            return self.value == other
 
     def __ne__(self, other):
-        return self.value.__ne__(other)
+        if isinstance(other, NumericType):
+            return self.value != other.value
+        else:
+            return self.value != other
 
     def __gt__(self, other):
-        return self.value.__gt__(other)
+        if isinstance(other, NumericType):
+            return self.value > other.value
+        else:
+            return self.value > other
 
     def __ge__(self, other):
-        return self.value.__ge__(other)
+        if isinstance(other, NumericType):
+            return self.value >= other.value
+        else:
+            return self.value >= other
 
 
 class Float(NumericType):
-    def __init__(self, value):
+    def __init__(self, value=None):
         super(Float, self).__init__(typevalue=(float, value))
+
+
+class Int(NumericType):
+    def __init__(self, value=None):
+        super(Int, self).__init__(typevalue=(int, value))
 
 
 class Str(SimpleData):

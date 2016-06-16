@@ -10,7 +10,8 @@ import aiida.workflows2.util as util
 import voluptuous
 from abc import ABCMeta
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
-from aiida.common.lang import override
+import aiida.common.exceptions as exceptions
+from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.orm import Node
 from aiida.orm import load_node
@@ -97,6 +98,7 @@ class Process(plum.process.Process):
     __metaclass__ = ABCMeta
 
     KEY_CALC_ID = 'calc_id'
+    KEY_PARENT_CALC_PID = 'parent_calc_pid'
 
     @classmethod
     def get_inputs_template(cls):
@@ -123,7 +125,7 @@ class Process(plum.process.Process):
     def __init__(self, store_provenance=True):
         super(Process, self).__init__()
         self._calc = None
-        self.parent = None
+        self._parent_pid = None
         self._store_provenance = store_provenance
 
     @override
@@ -168,7 +170,12 @@ class Process(plum.process.Process):
     def on_create(self, pid, inputs=None):
         super(Process, self).on_create(pid, inputs)
 
-        # This fills out the parent
+        # Get the parent from the top of the process stack
+        try:
+            self._parent_pid = util.ProcessStack.top().pid
+        except IndexError:
+            pass
+
         util.ProcessStack.push(self)
         self._pid = self._create_and_setup_db_record()
 
@@ -179,13 +186,14 @@ class Process(plum.process.Process):
             self._convert_to_nodes(saved_instance_state[self._INPUTS])
         super(Process, self).on_recreate(pid, saved_instance_state)
 
-        # This fills out the parent
-        util.ProcessStack.push(self)
         if self.KEY_CALC_ID in saved_instance_state:
             self._calc = load_node(saved_instance_state[self.KEY_CALC_ID])
             self._pid = self._calc.pk
         else:
             self._pid = self._create_and_setup_db_record()
+
+        if self.KEY_PARENT_CALC_PID in saved_instance_state:
+            self._parent_pid = saved_instance_state[self.KEY_PARENT_CALC_PID]
 
     def _create_and_setup_db_record(self):
         self._calc = self.create_db_record()
@@ -229,6 +237,8 @@ class Process(plum.process.Process):
     def _setup_db_record(self):
         assert self.inputs is not None
 
+        parent_calc = self.get_parent_calc()
+
         # First get a dictionary of all the inputs to link, this is needed to
         # deal with things like input groups
         to_link = {}
@@ -250,14 +260,14 @@ class Process(plum.process.Process):
                 if self._store_provenance:
                     input.store()
                 # If the input isn't stored then assume our parent created it
-                if self._parent:
-                    input.add_link_from(self._parent.calc, "CREATE",
+                if parent_calc:
+                    input.add_link_from(parent_calc, "CREATE",
                                         link_type=LinkType.CREATE)
 
             self.calc.add_link_from(input, name)
 
-        if self._parent:
-            self.calc.add_link_from(self._parent.calc, "CALL",
+        if parent_calc:
+            self.calc.add_link_from(parent_calc, "CALL",
                                     link_type=LinkType.CALL)
 
         if self._store_provenance:
@@ -270,6 +280,31 @@ class Process(plum.process.Process):
         node = None  # Here we should find the old node
         for k, v in node.get_output_dict():
             self.out(k, v)
+
+    @protected
+    def get_parent_calc(self):
+        # Can't get it if we don't know our parent
+        if self._parent_pid is None:
+            return None
+
+        parent_calc = None
+        # First try and get the process from the registry in case it is running
+        if self.process_registry is not None:
+            try:
+                parent_process =\
+                    self.process_registry.get_running_process(self._parent_pid)
+                return parent_process.calc
+            except ValueError:
+                pass
+
+        # Ok, maybe the pid is actually a pk...
+        try:
+            return load_node(pk=self._parent_pid)
+        except exceptions.NotExistent:
+            pass
+
+        # Out of options
+        return None
 
     @property
     def calc(self):

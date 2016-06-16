@@ -100,6 +100,8 @@ class JobProcess(Process):
     def _setup_db_record(self):
         from aiida.common.links import LinkType
 
+        parent_calc = self.get_parent_calc()
+
         # Link and store the retrospective provenance for this process
         calc = self.create_db_record()  # (unstored)
         assert (not calc.is_stored)
@@ -133,8 +135,8 @@ class JobProcess(Process):
             if not code.is_local():
                 calc.set_computer(code.get_remote_computer())
 
-        if self._parent:
-            calc.add_link_from(self._parent._calc, "CALL", LinkType.CALL)
+        if parent_calc:
+            calc.add_link_from(parent_calc, "CALL", LinkType.CALL)
 
         self._calc = calc
         if self._store_provenance:

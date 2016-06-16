@@ -64,7 +64,7 @@ def generate_scf_input_params(structure, codename, pseudo_family):
     # Calculation parameters
     parameters_dict = {
         "CONTROL": {"calculation": "scf",
-                    "tstress": True,
+                    "tstress": True,  #  Important that this stays to get stress
                     "tprnfor": True,},
         "SYSTEM": {"ecutwfc": 30.,
                    "ecutrho": 200.,},

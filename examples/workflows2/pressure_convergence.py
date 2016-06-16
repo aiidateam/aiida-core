@@ -11,8 +11,8 @@ from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, \
     ResultToContext, while_
-from examples.workflows2.common import generate_scf_input_params
-from examples.workflows2.diamond_fcc import rescale
+from common import generate_scf_input_params
+from diamond_fcc import rescale
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 
 
@@ -25,6 +25,9 @@ PwProcess = PwCalculation.process()
 
 
 class PressureConvergence(FragmentedWorkfunction):
+    """
+    TODO: Write comment about this not being a good algorithm to achieve this.
+    """
     @classmethod
     def _define(cls, spec):
         spec.input("structure", valid_type=StructureData)
@@ -55,11 +58,12 @@ class PressureConvergence(FragmentedWorkfunction):
         return ResultToContext(results=future)
 
     def extract_results(self, ctx):
-        ctx.structure = None  # TODO: get result
-        ctx.pressure = None  # TODO get result
+        from numpy import trace
+        ctx.structure = ctx.results['structure']
+        ctx.pressure = trace(ctx.results['output_parameters'].dict.stress)/3.0
 
     def not_converged(self, ctx):
-        return abs(ctx._pressure.value - self.inputs.target_pressure) > \
+        return abs(ctx.pressure - self.inputs.target_pressure.value) > \
                self.inputs.tolerance.value
 
     def minimise(self, ctx):

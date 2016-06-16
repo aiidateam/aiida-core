@@ -80,7 +80,7 @@ class FragmentedWorkfunction(Process):
             return self._content.setdefault(key, default)
 
         def save_instance_state(self, out_state):
-            for k, v in self._content:
+            for k, v in self._content.iteritems():
                 out_state[k] = v
 
     def __init__(self, store_provenance=True):
@@ -121,17 +121,15 @@ class FragmentedWorkfunction(Process):
 
     @override
     def on_recreate(self, pid, saved_instance_state):
+        super(FragmentedWorkfunction, self).on_recreate(
+            pid, saved_instance_state)
         self._context = self.Context(saved_instance_state[self.CONTEXT])
 
     @override
     def on_continue(self, wait_on):
+        super(FragmentedWorkfunction, self).on_continue(wait_on)
         if isinstance(wait_on, _ResultToContext):
             wait_on.assign(self._context)
-
-    @override
-    def on_stop(self):
-        super(FragmentedWorkfunction, self).on_stop()
-        self._last_step = None
     #####################################################
 
 
@@ -199,10 +197,11 @@ class _Step(object):
 
     @staticmethod
     def check_command(command):
-        assert issubclass(command.im_class, Process)
-        args = inspect.getargspec(command)[0]
-        assert len(args) == 2,\
-            "Command function must take two arguments: self and context"
+        if not isinstance(command, _Step):
+            assert issubclass(command.im_class, Process)
+            args = inspect.getargspec(command)[0]
+            assert len(args) == 2,\
+                "Command function must take two arguments: self and context"
 
 
 class _Block(_Step):

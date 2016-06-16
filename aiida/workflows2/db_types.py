@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from aiida.orm import Data
-from aiida.orm.data.simple import NumericType, SimpleData, Float, Str
+from aiida.orm.data.simple import NumericType, SimpleData, Float, Int, Str
 
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -11,15 +11,11 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
 _TYPE_MAPPING = {
-    int: SimpleData,
-    float: SimpleData,
+    int: Int,
+    float: Float,
     bool: SimpleData,
     str: SimpleData
 }
-
-
-def Int(value):
-    return NumericType(typevalue=(int, value))
 
 
 def Bool(value):

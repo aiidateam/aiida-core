@@ -7,43 +7,39 @@ if not is_dbenv_loaded():
 from unittest import TestCase
 from aiida.workflows2.process import Process
 from aiida.workflows2.db_types import Int
+from workflows2.common import ProcessScope, DummyProcess, BadOutput
+from aiida.common.lang import override
 import uuid
+import threading
 
 
-class BadOutput(Process):
-    @classmethod
-    def _define(cls, spec):
-        spec.dynamic_output()
-
-    def _run(self):
-        self.out("bad_output", 5)
-
-
-class DummyProcess(Process):
-    @classmethod
-    def _define(cls, spec):
-        spec.dynamic_input()
-        spec.dynamic_output()
-
+class ProcessStackTest(Process):
+    @override
     def _run(self):
         pass
 
+    @override
+    def on_create(self, pid, inputs=None):
+        super(ProcessStackTest, self).on_create(pid, inputs)
+        self._thread_id = threading.current_thread().ident
 
-class ProcessScope(object):
-    def __init__(self, process, pid=None, inputs=None):
-        self._process = process
-        self._pid = pid
-        self._inputs = inputs
+    @override
+    def on_recreate(self, pid, saved_instance_state):
+        super(ProcessStackTest, self).on_recreate(pid, saved_instance_state)
+        self._thread_id = threading.current_thread().ident
 
-    def __enter__(self):
-        self._process.on_create(self._pid, self._inputs)
-        return self._process
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._process.on_stop()
+    @override
+    def on_stop(self):
+        # The therad must match the one used in on_create because process
+        # stack is using thread local storage to keep track of who called who
+        super(ProcessStackTest, self).on_stop()
+        assert self._thread_id is threading.current_thread().ident
 
 
 class TestProcess(TestCase):
+    def test_process_stack(self):
+        ProcessStackTest.run()
+
     def test_inputs(self):
         with self.assertRaises(AssertionError):
             BadOutput.run()
@@ -66,5 +62,4 @@ class TestProcess(TestCase):
 
             # Make sure there are no other inputs
             self.assertFalse(inputs)
-
 

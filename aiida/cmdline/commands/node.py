@@ -231,7 +231,7 @@ class _Show(VerdiCommand):
     Show node information (pk, uuid, class, inputs and outputs)
     """
 
-    def run(self, profile=None, *args):
+    def run(self,*args):
         """
         Show node information.
         """

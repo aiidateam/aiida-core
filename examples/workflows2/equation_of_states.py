@@ -11,8 +11,8 @@ from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, \
     ResultToContext
-from examples.workflows2.common import generate_scf_input_params
-from examples.workflows2.diamond_fcc import rescale
+from common import generate_scf_input_params
+from diamond_fcc import rescale
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 
 
@@ -41,9 +41,9 @@ class EquationOfStates(FragmentedWorkfunction):
     def run_pw(self, ctx):
         calcs = {}
 
-        scale = self.inputs.start.value
+        scale = self.inputs.start
         while scale <= self.inputs.end:
-            scaled = rescale(self.inputs.structure, Float(scale))
+            scaled = rescale(self.inputs.structure, scale)
 
             inputs = generate_scf_input_params(
                 scaled, self.inputs.code, self.inputs.pseudo_family)
@@ -53,7 +53,7 @@ class EquationOfStates(FragmentedWorkfunction):
             #print scale.value, future.pid
             # Store the future
             calcs["s_{}".format(scale)] = future
-            scale += self.inputs.delta.value
+            scale += self.inputs.delta
 
         # Ask the workflow to continue when the results are ready and store them
         # in the context

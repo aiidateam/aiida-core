@@ -11,8 +11,8 @@ from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, \
     ResultToContext, while_
-from examples.workflows2.common import generate_scf_input_params
-from examples.workflows2.diamond_fcc import rescale
+from common import generate_scf_input_params
+from diamond_fcc import rescale
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 
 

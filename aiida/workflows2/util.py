@@ -13,10 +13,6 @@ class ProcessStack(object):
     # Use thread-local storage for the stack
     _thread_local = local()
 
-    @staticmethod
-    def scoped(process):
-        return ProcessStack(process)
-
     @classmethod
     def top(cls):
         return cls.stack()[-1]
@@ -42,14 +38,8 @@ class ProcessStack(object):
         process = cls.stack().pop()
         process._parent = None
 
-    def __init__(self, process):
-        self._process = process
-
-    def __enter__(self):
-        self.push(self._process)
-
-    def __exit__(self, type, value, traceback):
-        self.pop()
+    def __init__(self):
+        raise NotImplementedError("Can't instantiate the ProcessStack")
 
 
 def load_class(classstring):

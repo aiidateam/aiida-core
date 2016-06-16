@@ -22,6 +22,9 @@ def async(process_class, *args, **kwargs):
 
 
 def asyncd(process_class, _jobs_store=None, **kwargs):
+    assert not util.is_workfunction(process_class),\
+        "You cannot submit a workfunction to the daemon"
+
     if _jobs_store is None:
         _jobs_store = defaults.storage
     proc = defaults.factory.create_process(process_class, inputs=kwargs)

@@ -488,7 +488,7 @@ class AbstractQueryBuilder(object):
                         "\n\n\n"
                         "You already specified joining specification {}\n"
                         "But you now also want to specify {}"
-                        "\n\n\n".format(joining_keyword, k)
+                        "\n\n\n".format(joining_keyword, key)
                     )
             else:
                 joining_keyword = key

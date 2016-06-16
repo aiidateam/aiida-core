@@ -5,7 +5,7 @@ if not is_dbenv_loaded():
 
 from aiida.orm import load_node
 from aiida.orm.utils import DataFactory
-from aiida.workflows2.db_types import Float, Str
+from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run
@@ -31,11 +31,11 @@ class PressureConvergence(FragmentedWorkfunction):
     @classmethod
     def _define(cls, spec):
         spec.input("structure", valid_type=StructureData)
-        spec.input("target_pressure", valid_type=Float, default=Float(0))
-        spec.input("step", valid_type=Float, default=Float(0.01))
-        spec.input("tolerance", valid_type=Float, default=Float(0.1))
-        spec.input("code", valid_type=Str)
-        spec.input("pseudo_family", valid_type=Str)
+        spec.input("target_pressure", valid_type=NumericType, default=Float(0))
+        spec.input("step", valid_type=NumericType, default=Float(0.01))
+        spec.input("tolerance", valid_type=NumericType, default=Float(0.1))
+        spec.input("code", valid_type=SimpleData)
+        spec.input("pseudo_family", valid_type=SimpleData)
         spec.outline(
             cls.init,
             cls.extract_results,
@@ -45,6 +45,7 @@ class PressureConvergence(FragmentedWorkfunction):
             ),
             cls.finish
         )
+        spec.dynamic_output()
 
     def init(self, ctx):
         # Get some inputs
@@ -79,4 +80,3 @@ class PressureConvergence(FragmentedWorkfunction):
 
     def finish(self, ctx):
         self.out("structure", ctx.structure)
-

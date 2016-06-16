@@ -53,7 +53,7 @@ class EquationOfStates(FragmentedWorkfunction):
             #print scale.value, future.pid
             # Store the future
             calcs["s_{}".format(scale)] = future
-            scale += self.inputs.delta
+            scale = scale + self.inputs.delta
 
         # Ask the workflow to continue when the results are ready and store them
         # in the context

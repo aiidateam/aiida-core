@@ -18,12 +18,12 @@ class ProcessStack(object):
         return cls.stack()[-1]
 
     @classmethod
-    def stack(self):
+    def stack(cls):
         try:
-            return self._thread_local.wf_stack
+            return cls._thread_local.wf_stack
         except AttributeError:
-            self._thread_local.wf_stack = []
-            return self._thread_local.wf_stack
+            cls._thread_local.wf_stack = []
+            return cls._thread_local.wf_stack
 
     @classmethod
     def push(cls, process):

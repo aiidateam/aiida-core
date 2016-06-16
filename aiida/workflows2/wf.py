@@ -23,7 +23,7 @@ def wf(func):
         # Do this here so that it doesn't enter as an input to the process
         run_async = kwargs.pop('__async', False)
 
-        # Build up the Process representing this function
+        # Build up the Process repreresenting this function
         FuncProc = FunctionProcess.build(func, **kwargs)
 
         inputs = {}

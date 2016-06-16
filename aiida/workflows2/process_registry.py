@@ -1,10 +1,11 @@
 
 import plum.persistence.pickle_persistence
 import plum.process_registry
+import plum.process
 import aiida.orm
 import aiida.common.exceptions as exceptions
-import plum.process
 from aiida.common.lang import override
+from aiida.workflows2.util import ProcessStack
 
 
 class ProcessRegistry(plum.process_registry.ProcessRegistry,
@@ -13,6 +14,14 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
         self._running_processes = {}
         self._finished = {}
         self._persistence_engine = persistence_engine
+
+    @property
+    def current_pid(self):
+        return ProcessStack.top().pid
+
+    @property
+    def current_calc_node(self):
+        return ProcessStack.top().calc
 
     @override
     def register_running_process(self, process):

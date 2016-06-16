@@ -225,13 +225,12 @@ class _Repo(VerdiCommandWithSubcommands):
             else:
                 raise
 
-
 class _Show(VerdiCommand):
     """
     Show node information (pk, uuid, class, inputs and outputs)
     """
 
-    def run(self,*args):
+    def run(self, *args):
         """
         Show node information.
         """
@@ -261,6 +260,15 @@ class _Show(VerdiCommand):
                             default=False,
                             help="Do not add UUID of children nodes to the "
                                  "output. Default behaviour.")
+        parser.add_argument('--print-groups', action='store_true',
+                            dest='print_groups', default=False,
+                            help="Show groups containing the nodes.")
+        parser.add_argument('--no-print-groups', '--dont-print-groups',
+                            action='store_false', dest='print_groups',
+                            default=False,
+                            help="Do not show groups containing the nodes"
+                                 "output. Default behaviour.")
+
         args = list(args)
         parsed_args = parser.parse_args(args)
 
@@ -275,12 +283,19 @@ class _Show(VerdiCommand):
             try:
                 n = load_node(pk)
                 self.print_node_info(n, depth=parsed_args.depth, indent=indent,
-                                     print_uuid=parsed_args.print_uuid)
+                                     print_uuid=parsed_args.print_uuid,
+                                     print_groups=parsed_args.print_groups)
             except NotExistent as e:
                 print >> sys.stderr, e.message
                 sys.exit(1)
+        
+            if len(parsed_args.pk)>1:
+                print ""
 
-    def print_node_info(self, node, level=0, depth=0, indent="", print_uuid=False,
+
+
+    def print_node_info(self, node, level=0, depth=0, indent="",
+                        print_uuid=False, print_groups=False,
                         seen=[]):
         ind_this = "".join([indent for i in range(level)])
         ind_next = "{}{}".format(ind_this, indent)
@@ -323,6 +338,28 @@ class _Show(VerdiCommand):
                 self.print_node_info(v, level=level + 1, depth=depth - 1,
                                      indent=indent, print_uuid=print_uuid,
                                      seen=seen + [node.pk])
+
+        if print_groups:
+
+            from aiida.orm.querybuilder import QueryBuilder
+            from aiida.orm.group import Group
+            from aiida.orm.node import Node
+
+            qb = QueryBuilder()
+            qb.append(Node, tag='node', filters={'id': {'==': node.pk}})
+            qb.append(Group, tag='groups', group_of='node', project=['id', 'name'])
+
+            print "{}#### GROUPS:".format(ind_next)
+
+            if qb.count()==0:
+                print "No groups found containing node {}".format(node.pk)
+            else:
+                res = qb.iterdict()
+                for gr in res:
+                    gr_specs = "{} {}".format(gr['groups']['name'], gr['groups']['id'])
+                    print gr_specs
+
+
 
 
 # the classes _Label and _Description are written here,

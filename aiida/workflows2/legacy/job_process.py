@@ -75,15 +75,15 @@ class JobProcess(Process):
         return wait_on
 
     def calculation_finished(self, wait_on):
-        assert not self._calc._is_running()
+        assert not self.calc._is_running()
 
-        for label, node in self._calc.get_outputs_dict().iteritems():
+        for label, node in self.calc.get_outputs_dict().iteritems():
             self.out(label, node)
 
-        if self._calc.has_failed():
+        if self.calc.has_failed():
             raise RuntimeError(
-                "Calculation failed with state '{}'".
-                    format(self._calc.get_state()))
+                "Calculation (pk={}) failed with state '{}'".
+                    format(self.calc.pk, self.calc.get_state()))
 
     @override
     def _on_output_emitted(self, output_port, value, dynamic):

@@ -324,9 +324,9 @@ def _get_calculation(node):
     """
     from aiida.common.exceptions import MultipleObjectsError
     from aiida.orm.calculation import Calculation
-    if len(node.get_inputs(type=Calculation)) == 1:
-        return node.get_inputs(type=Calculation)[0]
-    elif len(node.get_inputs(type=Calculation)) == 0:
+    if len(node.get_inputs(node_type=Calculation)) == 1:
+        return node.get_inputs(node_type=Calculation)[0]
+    elif len(node.get_inputs(node_type=Calculation)) == 0:
         return None
     else:
         raise MultipleObjectsError("Node {} seems to have more than one "
@@ -400,8 +400,8 @@ def _collect_calculation_data(calc):
     from aiida.orm.calculation.inline import InlineCalculation
     import os
     calcs_now = []
-    for d in calc.get_inputs(type=Data):
-        for c in d.get_inputs(type=Calculation):
+    for d in calc.get_inputs(node_type=Data):
+        for c in d.get_inputs(node_type=Calculation):
             calcs = _collect_calculation_data(c)
             calcs_now.extend(calcs)
 

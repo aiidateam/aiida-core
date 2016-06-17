@@ -245,7 +245,7 @@ class Node(AbstractNode):
                                   "name (raw message was {})"
                                   "".format(e))
 
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False,
+    def get_inputs(self, node_type=None, also_labels=False, only_in_db=False,
                    link_type=None):
 
         link_filter = {'output': self.dbnode}
@@ -266,10 +266,10 @@ class Node(AbstractNode):
                                         "cache for node pk= {}!".format(k, self.id))
                 inputs_list.append((k, v))
 
-        if type is None:
+        if node_type is None:
             filtered_list = inputs_list
         else:
-            filtered_list = [i for i in inputs_list if isinstance(i[1], type)]
+            filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
 
         if also_labels:
             return list(filtered_list)

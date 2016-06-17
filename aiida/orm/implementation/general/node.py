@@ -584,12 +584,12 @@ class AbstractNode(object):
         return new_outputs
 
     @abstractmethod
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False,
+    def get_inputs(self, node_type=None, also_labels=False, only_in_db=False,
                    link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
 
-        :param type: If specified, should be a class, and it filters only
+        :param node_type: If specified, should be a class, and it filters only
             elements of that specific type (or a subclass of 'type')
         :param also_labels: If False (default) only return a list of input nodes.
                 If True, return a list of tuples, where each tuple has the

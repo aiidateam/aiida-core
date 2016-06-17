@@ -213,11 +213,132 @@ not the Fortran string ``.false.``!
     
     parameters = ParameterData(dict={...}).store()
 
-
 The experienced QE user will have noticed also that a couple of variables
 are missing: the prefix, the pseudo directory and the scratch directory are
 reserved to the plugin which will use default values, and there are specific
 AiiDA methods to restart from a previous calculation.
+
+Input parameters validation
+///////////////////////////
+The dictionary provided above is the standard format for storing the inputs
+of Quantum ESPRESSO pw.x in the database. It is important to store the inputs
+of different calculations in a consistent way because otherwise later querying
+becomes impossible (e.g. if different units are used for the same flags,
+if the same input is provided in different formats, ...).
+
+In the PW input plugin, we provide a function that will help you in
+both validating the input, and creating the input in the expected format 
+without remembering in which namelists the keywords are located.
+
+You can access this function as follows. First, you define the input dictionary::
+
+  test_dict = {
+            'CONTROL': {
+                'calculation': 'scf',
+                },
+            'SYSTEM': {
+                'ecutwfc': 30.,
+                },
+            'ELECTRONS': {
+                'conv_thr': 1.e-6,
+                }}
+
+Then, you can verify if the input is correct by using the 
+:py:func:`~aiida.orm.calculation.job.quantumespresso.helpers.pw_input_helper` function, 
+conveniently exposes also as a ``input_helper`` class method of the ``PwCalculation`` class::
+
+  resdict = CalculationFactory('quantumespresso.pw').input_helper(test_dict, structure=s)
+
+If the input is invalid, the function will raise a ``InputValidationError``
+exception, and the error message will have a verbose explanation of the possible
+errors, and in many cases it will suggest how to fix them. Otherwise, in ``resdict``
+you will find the same dictionary you passed in input, potentially slightly modified
+to fix some small mistakes (e.g., if you pass an integer value where a float is expected,
+the type will be converted). You can then use the output for the input ParameterData node::
+
+  parameters = ParameterData(dict=resdict)
+
+As an example, if you pass an incorrect input, e.g. the following where we have introduced 
+a few errors::
+
+  test_dict = {
+            'CONTROL': {
+                'calculation': 'scf',
+                },
+            'SYSTEM': {
+                'ecutwfc': 30.,
+		'cosab': 10.,
+		'nosym': 1,
+                },
+            'ELECTRONS': {
+                'convthr': 1.e-6,
+                'ecutrho': 100.
+                }}
+
+After running the ``input_helper`` method, you will get an exception with a message
+similar to the following::
+
+  QEInputValidationError: Errors! 4 issues found:
+  * You should not provide explicitly keyword 'cosab'.
+  * Problem parsing keyword convthr. Maybe you wanted to specify one of these: conv_thr, nconstr, forc_conv_thr?
+  * Expected a boolean for keyword nosym, found <type 'int'> instead
+  * Error, keyword 'ecutrho' specified in namelist 'ELECTRONS', but it should be instead in 'SYSTEM'
+
+As you see, a quite large number of checks are done, and if a name is not provided, a list of 
+similar valid names is provided (e.g. for the wrong keyword "convthr" above).
+
+There are a few additional options that are useful:
+  
+  - If you don't want to remember the namelists, you can pass a 'flat' dictionary, without
+    namelists, and add the ``flat_mode=True`` option to ``input_helper``. Beside the usual
+    validation, the function will reconstruct the correct dictionary to pass as input for
+    the AiiDA QE calculation. Example::
+
+      test_dict_flat = {
+          'calculation': 'scf',
+          'ecutwfc': 30.,
+          'conv_thr': 1.e-6,
+          }
+      resdict = CalculationFactory('quantumespresso.pw').input_helper(
+          test_dict_flat, structure=s, flat_mode = True)
+
+    and after running, ``resdict`` will contain::
+     
+       test_dict = {
+            'CONTROL': {
+                'calculation': 'scf',
+                },
+            'SYSTEM': {
+                'ecutwfc': 30.,
+                },
+            'ELECTRONS': {
+                'conv_thr': 1.e-6,
+                }}
+
+    where the namelists have been automatically generated.
+
+
+  - You can pass a string with a specific version number for a feature that was added
+    only in a given version. For instance::
+
+     resdict = CalculationFactory('quantumespresso.pw').input_helper(
+         test_dict, structure=s,version='5.3.0')
+
+    If the specific version is not among those for which we have a list of valid parameters,
+    the error message will tell you which versions are available.
+
+
+.. note:: We will try to maintain the input_helper every time a new version of Quantum ESPRESSO
+   is released, but consider the ``input_helper`` function as a utility, rather than the 
+   official way to provide the input -- the only officially supported way to provide
+   an input to pw.x is through a direct dictionary, as described earlier in the section "Parameters".
+   This applies in particular if you are using very old versions of QE, or customized versions
+   that accept different parameters.
+
+
+
+Other inputs
+------------
 
 The k-points have to be saved in another kind of data, namely KpointsData::
                 

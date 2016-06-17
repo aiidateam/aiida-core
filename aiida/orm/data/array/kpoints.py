@@ -312,17 +312,20 @@ class KpointsData(ArrayData):
         """
         Set a kpoints mesh using a kpoints density, expressed as the maximum
         distance between adjacent points along a reciprocal axis
-        :param distance: distance (in 1/Angstrom) between adjacent kpoints, i.e.
-            the number of kpoints along each reciprocal axis i is |b_i|/distance
-            where |b_i| is the norm of the reciprocal cell vector.
+
+        :param distance: distance (in 1/Angstrom) between adjacent 
+            kpoints, i.e. the number of kpoints along each reciprocal
+            axis i is :math:`|b_i|/distance`
+            where :math:`|b_i|` is the norm of the reciprocal cell vector.
         :param (optional) offset: a list of three floats between 0 and 1.
             [0.,0.,0.] is Gamma centered mesh
             [0.5,0.5,0.5] is half shifted
             Default = [0.,0.,0.].
         :param (optional) force_parity: if True, force each integer in the mesh
-            to be even (except for the non-periodic directions). Default = False.
+            to be even (except for the non-periodic directions). 
+
         :note: a cell should be defined first.
-        :note: the number of kpoints per non-periodic axes is always 1.
+        :note: the number of kpoints along non-periodic axes is always 1.
         """
         try:
             rec_cell = self.reciprocal_cell

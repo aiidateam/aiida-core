@@ -478,7 +478,7 @@ A kind of template for writing such parser for the calculation class
                                        .format(calc_states.PARSING) )
 
             # retrieve the whole list of input links
-            calc_input_parameterdata = self._calc.get_inputs(type=ParameterData,
+            calc_input_parameterdata = self._calc.get_inputs(node_type=ParameterData,
                                                              also_labels=True)
 
             # then look for parameterdata only

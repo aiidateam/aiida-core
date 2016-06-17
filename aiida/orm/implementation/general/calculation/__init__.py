@@ -308,5 +308,5 @@ class AbstractCalculation(object):
         was not set.
         """
         from aiida.orm.code import Code
-        return dict(self.get_inputs(type=Code, also_labels=True)).get(
+        return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
             self._use_methods['code']['linkname'], None)

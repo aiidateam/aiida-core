@@ -75,6 +75,8 @@ class AbstractNode(object):
 
             return newcls
 
+    _SEALED_KEY = '_sealed'
+
     # Name to be used for the Repository section
     _section_name = 'node'
 
@@ -169,6 +171,14 @@ class AbstractNode(object):
     @property
     def is_stored(self):
         return not self._to_be_stored
+
+    @property
+    def is_sealed(self):
+        return self.get_attr(self._SEALED_KEY, False)
+
+    def seal(self):
+        assert not self.is_sealed, "This node is already sealed."
+        self._set_attr(self._SEALED_KEY, True)
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -377,6 +387,7 @@ class AbstractNode(object):
         :param link_type: The type of link, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
+        assert not self.is_sealed, "Cannot add incoming links to a sealed node"
         assert src, "You must provide a valid Node to link"
 
         # Check that the label does not already exist
@@ -411,12 +422,13 @@ class AbstractNode(object):
         Add a link in the cache.
         """
         if label is None:
-            raise ModificationNotAllowed("Cannot store a link in the cache if "
-                                         "no explicit label is provided. You can avoid "
-                                         "to provide an input link name only if "
-                                         "both nodes are already stored: in this case, "
-                                         "the link will be directly stored in the DB "
-                                         "and a default name will be provided")
+            raise ModificationNotAllowed(
+                "Cannot store a link in the cache if "
+                "no explicit label is provided. You can avoid "
+                "to provide an input link name only if "
+                "both nodes are already stored: in this case, "
+                "the link will be directly stored in the DB "
+                "and a default name will be provided")
 
         if label in self._inputlinks_cache:
             raise UniquenessError("Input link with name '{}' already present "
@@ -657,7 +669,9 @@ class AbstractNode(object):
         :raise ValidationError: if the key is not valid (e.g. it contains the
             separator symbol).
         """
-        pass
+        if self.is_sealed and key not in self._updatable_attributes:
+            raise ModificationNotAllowed(
+                "Cannot change the attributes of a sealed node.")
 
     @abstractmethod
     def _del_attr(self, key):
@@ -668,7 +682,9 @@ class AbstractNode(object):
         :raise AttributeError: if key does not exist.
         :raise ModificationNotAllowed: if the Node was already stored.
         """
-        pass
+        if self.is_sealed:
+            raise ModificationNotAllowed(
+                "Cannot delete the attributes of a sealed node.")
 
     def _del_all_attrs(self):
         """
@@ -682,12 +698,12 @@ class AbstractNode(object):
             self._del_attr(attr_name)
 
     @abstractmethod
-    def get_attr(self, key, *args):
+    def get_attr(self, key, default=None):
         """
         Get the attribute.
 
         :param key: name of the attribute
-        :param optional value: if no attribute key is found, returns value
+        :param optional default: if no attribute key is found, returns default
 
         :return: attribute value
 

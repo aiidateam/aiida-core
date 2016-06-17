@@ -255,7 +255,8 @@ class AbstractCalculation(object):
             raise ValueError(
                 "Calculation cannot have links of type {} as output".format(link_type))
 
-        return super(AbstractCalculation, self)._linking_as_output(dest, link_type)
+        return super(AbstractCalculation, self)._linking_as_output(
+            dest, link_type)
 
     def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
         """
@@ -284,7 +285,8 @@ class AbstractCalculation(object):
             raise ValueError(
                 "Calculation cannot have links of type {} as input".format(link_type))
 
-        return super(AbstractCalculation, self).add_link_from(src, label, link_type)
+        return super(AbstractCalculation, self).add_link_from(
+            src, label, link_type)
 
     def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
         """

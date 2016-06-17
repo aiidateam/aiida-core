@@ -61,3 +61,7 @@ passlib
 
 # Email validation for verdi install
 validate_email
+
+# For composable command line options
+click==6.6
+

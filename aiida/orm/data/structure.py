@@ -194,8 +194,8 @@ def validate_weights_tuple(weights_tuple, threshold):
     Each element of the list must be >= 0, and the sum must be <= 1.
     """
     w_sum = sum(weights_tuple)
-    if ( any(i < 0. for i in weights_tuple) or
-             (w_sum - 1. > threshold) ):
+    if (any(i < 0. for i in weights_tuple) or
+            (w_sum - 1. > threshold)):
         raise ValueError("The weight list is not valid (each element "
                          "must be positive, and the sum must be <= 1).")
 
@@ -303,9 +303,10 @@ def get_formula_from_symbol_list(_list, separator=""):
         if isinstance(elem[1], basestring):
             list_str.append("{}{}".format(elem[1], multiplicity_str))
         elif elem[0] > 1:
-            list_str.append("({}){}".format(get_formula_from_symbol_list(elem[1],
-                                                                         separator=separator),
-                                            multiplicity_str))
+            list_str.append(
+                "({}){}".format(get_formula_from_symbol_list(elem[1],
+                                                             separator=separator),
+                                multiplicity_str))
         else:
             list_str.append("{}{}".format(get_formula_from_symbol_list(elem[1],
                                                                        separator=separator),
@@ -416,8 +417,9 @@ def get_formula_group(symbol_list, separator=""):
 
         while (not has_finished) and (group_size <= n / 2):
             # try to group as much as possible by groups of size group_size
-            the_symbol_list, has_grouped = group_together_symbols(the_symbol_list,
-                                                                  group_size)
+            the_symbol_list, has_grouped = group_together_symbols(
+                the_symbol_list,
+                group_size)
             has_finished = has_grouped
             group_size += 1
             # stop as soon as we managed to group something
@@ -520,7 +522,7 @@ def get_formula(symbol_list, mode='hill', separator=""):
 
     else:
         raise ValueError('Mode should be hill, hill_compact, group, '
-                          'reduce, count or count_compact')
+                         'reduce, count or count_compact')
 
     if mode in ['hill_compact', 'count_compact']:
 
@@ -530,17 +532,17 @@ def get_formula(symbol_list, mode='hill', separator=""):
             a list of integers
             """
             from fractions import gcd
-            if len(int_list)==1:
+            if len(int_list) == 1:
                 return int_list[0]
-            elif len(int_list)==2:
-                return gcd(int_list[0],int_list[1])
+            elif len(int_list) == 2:
+                return gcd(int_list[0], int_list[1])
             else:
-                the_int_list=int_list[2:]
-                the_int_list.append(gcd(int_list[0],int_list[1]))
+                the_int_list = int_list[2:]
+                the_int_list.append(gcd(int_list[0], int_list[1]))
                 return gcd_list(the_int_list)
 
         the_gcd = gcd_list([e[0] for e in the_symbol_list])
-        the_symbol_list = [[e[0]/the_gcd,e[1]] for e in the_symbol_list]
+        the_symbol_list = [[e[0] / the_gcd, e[1]] for e in the_symbol_list]
 
     return get_formula_from_symbol_list(the_symbol_list, separator=separator)
 
@@ -606,7 +608,8 @@ def symop_ortho_from_fract(cell):
     return numpy.array([
         [a, b * cg, c * cb],
         [0, b * sg, c * (ca - cb * cg) / sg],
-        [0, 0, c * math.sqrt(sg * sg - ca * ca - cb * cb + 2 * ca * cb * cg) / sg]
+        [0, 0,
+         c * math.sqrt(sg * sg - ca * ca - cb * cb + 2 * ca * cb * cg) / sg]
     ])
 
 
@@ -669,11 +672,11 @@ def ase_refine_cell(aseatoms, **kwargs):
                          scaled_positions=unique_positions,
                          cell=cell, pbc=True)
 
-    return unique_atoms,{'hm': sym_dataset['international'],
-                         'hall': sym_dataset['hall'],
-                         'tables': sym_dataset['number'],
-                         'rotations': sym_dataset['rotations'],
-                         'translations':sym_dataset['translations']}
+    return unique_atoms, {'hm': sym_dataset['international'],
+                          'hall': sym_dataset['hall'],
+                          'tables': sym_dataset['number'],
+                          'rotations': sym_dataset['rotations'],
+                          'translations': sym_dataset['translations']}
 
 
 @optional_inline
@@ -768,12 +771,12 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
         """
-        box = [ max([x.coords.tolist()[0] for x in mol.sites]) -
-                min([x.coords.tolist()[0] for x in mol.sites]) + 2*margin,
-                max([x.coords.tolist()[1] for x in mol.sites]) -
-                min([x.coords.tolist()[1] for x in mol.sites]) + 2*margin,
-                max([x.coords.tolist()[2] for x in mol.sites]) -
-                min([x.coords.tolist()[2] for x in mol.sites]) + 2*margin ]
+        box = [max([x.coords.tolist()[0] for x in mol.sites]) -
+               min([x.coords.tolist()[0] for x in mol.sites]) + 2 * margin,
+               max([x.coords.tolist()[1] for x in mol.sites]) -
+               min([x.coords.tolist()[1] for x in mol.sites]) + 2 * margin,
+               max([x.coords.tolist()[2] for x in mol.sites]) -
+               min([x.coords.tolist()[2] for x in mol.sites]) + 2 * margin]
         self.set_pymatgen_structure(mol.get_boxed_structure(*box))
         self.pbc = [False, False, False]
 
@@ -790,9 +793,10 @@ class StructureData(Data):
         self.pbc = [True, True, True]
         self.clear_kinds()
         for site in struct.sites:
-            self.append_atom(symbols=[x[0].symbol for x in site.species_and_occu.items()],
-                             weights=[x[1] for x in site.species_and_occu.items()],
-                             position=site.coords.tolist())
+            self.append_atom(
+                symbols=[x[0].symbol for x in site.species_and_occu.items()],
+                weights=[x[1] for x in site.species_and_occu.items()],
+                position=site.coords.tolist())
 
     def _validate(self):
         """
@@ -883,12 +887,12 @@ class StructureData(Data):
         cif = CifData(ase=self.get_ase())
         return cif._prepare_cif()
 
-    def _prepare_tcod(self,**kwargs):
+    def _prepare_tcod(self, **kwargs):
         """
         Write the given structure to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self,**kwargs)
+        return export_cif(self, **kwargs)
 
     def _prepare_xyz(self):
         """
@@ -920,8 +924,8 @@ class StructureData(Data):
         for sym, position in atoms:
             self.append_atom(symbols=sym, position=position)
 
-
-    def _adjust_default_cell(self, vacuum_factor = 1.0, vacuum_addition = 10.0, pbc = [False, False, False]):
+    def _adjust_default_cell(self, vacuum_factor=1.0, vacuum_addition=10.0,
+                             pbc=(False, False, False)):
         """
         If the structure was imported from an xyz file, it lacks a defined cell,
         and the default cell is taken ([[1,0,0], [0,1,0], [0,0,1]]),
@@ -932,34 +936,31 @@ class StructureData(Data):
         from ase.visualize import view
         from aiida.common.utils import get_extremas_from_positions
 
-
-
         # First, set PBC
         # All the checks are done in get_valid_pbc called by set_pbc, no need to check anything here
         self.set_pbc(pbc)
 
-        #Calculating the minimal cell:
+        # Calculating the minimal cell:
         positions = np.array([site.position for site in self.sites])
-        position_min, position_max   = get_extremas_from_positions(positions)
+        position_min, position_max = get_extremas_from_positions(positions)
 
         # Translate the structure to the origin, such that the minimal values in each dimension
         # amount to (0,0,0)
-        positions   -=  position_min
+        positions -= position_min
         for index, site in enumerate(self.get_attr('sites')):
             site['position'] = list(positions[index])
 
         # The orthorhombic cell that (just) accomodates the whole structure is now given by the
         # extremas of position in each dimension:
-        minimal_orthorhombic_cell_dimensions  =  np.array(get_extremas_from_positions(positions)[1])
-        minimal_orthorhombic_cell_dimensions  = np.dot(vacuum_factor, minimal_orthorhombic_cell_dimensions)
+        minimal_orthorhombic_cell_dimensions = np.array(
+            get_extremas_from_positions(positions)[1])
+        minimal_orthorhombic_cell_dimensions = np.dot(vacuum_factor,
+                                                      minimal_orthorhombic_cell_dimensions)
         minimal_orthorhombic_cell_dimensions += vacuum_addition
 
         # Transform the vector (a, b, c ) to [[a,0,0], [0,b,0], [0,0,c]]
         newcell = np.diag(minimal_orthorhombic_cell_dimensions)
         self.set_cell(newcell.tolist())
-
-
-
 
     def get_symbols_set(self):
         """
@@ -1039,7 +1040,6 @@ class StructureData(Data):
         """
         return [this_site.kind_name for this_site in self.sites]
 
-
     def get_composition(self):
         """
         Returns the chemical composition of this structure as a dictionary,
@@ -1051,14 +1051,13 @@ class StructureData(Data):
         :returns: a dictionary with the composition
         """
         symbols_list = [self.get_kind(s.kind_name).get_symbols_string()
-                       for s in self.sites]
+                        for s in self.sites]
         composition = {
-                symbol: symbols_list.count(symbol)
-                for symbol
-                in set(symbols_list)
+            symbol: symbols_list.count(symbol)
+            for symbol
+            in set(symbols_list)
             }
         return composition
-
 
     def get_ase(self):
         """
@@ -1136,13 +1135,14 @@ class StructureData(Data):
 
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
-        self._set_attr('kinds', self.get_attr('kinds', []) + [new_kind.get_raw()])
+        self._set_attr('kinds',
+                       self.get_attr('kinds', []) + [new_kind.get_raw()])
         # Note, this is a dict (with integer keys) so it allows for empty
         # spots!
         if not hasattr(self, '_internal_kind_tags'):
             self._internal_kind_tags = {}
         self._internal_kind_tags[len(
-            self.get_attr('kinds'))-1] = kind._internal_tag
+            self.get_attr('kinds')) - 1] = kind._internal_tag
 
     def append_site(self, site):
         """
@@ -1168,7 +1168,8 @@ class StructureData(Data):
 
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
-        self._set_attr('sites', self.get_attr('sites', []) + [new_site.get_raw()])
+        self._set_attr('sites',
+                       self.get_attr('sites', []) + [new_site.get_raw()])
 
     def append_atom(self, **kwargs):
         """
@@ -1500,15 +1501,17 @@ class StructureData(Data):
             # test consistency of th enew input
             n_sites = len(self.sites)
             if n_sites != len(new_positions) and conserve_particle:
-                raise ValueError("the new positions should be as many as the previous structure.")
+                raise ValueError(
+                    "the new positions should be as many as the previous structure.")
 
             new_sites = []
             for i in range(n_sites):
                 try:
                     this_pos = [float(j) for j in new_positions[i]]
                 except ValueError:
-                    raise ValueError("Expecting a list of floats. Found instead {}"
-                                     .format(new_positions[i]))
+                    raise ValueError(
+                        "Expecting a list of floats. Found instead {}"
+                        .format(new_positions[i]))
 
                 if len(this_pos) != 3:
                     raise ValueError("Expecting a list of lists of length 3. "
@@ -1532,8 +1535,9 @@ class StructureData(Data):
         :return: a tuple of three booleans, each one tells if there are periodic
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
-        #return copy.deepcopy(self._pbc)
-        return (self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
+        # return copy.deepcopy(self._pbc)
+        return (
+        self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
 
     @pbc.setter
     def pbc(self, value):
@@ -1543,11 +1547,12 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, "
-                                         "it has already been stored")
+            raise ModificationNotAllowed(
+                "The StructureData object cannot be modified, "
+                "it has already been stored")
         the_pbc = get_valid_pbc(value)
 
-        #self._pbc = the_pbc
+        # self._pbc = the_pbc
         self._set_attr('pbc1', the_pbc[0])
         self._set_attr('pbc2', the_pbc[1])
         self._set_attr('pbc3', the_pbc[2])
@@ -1635,7 +1640,8 @@ class StructureData(Data):
         try:
             conv_f = getattr(structure, '_get_cif_{}_inline'.format(converter))
         except AttributeError:
-            raise ValueError("No such converter '{}' available".format(converter))
+            raise ValueError(
+                "No such converter '{}' available".format(converter))
         ret_dict = conv_f(struct=self, parameters=param, store=store)
         return ret_dict['cif']
 
@@ -2003,8 +2009,8 @@ class Kind(object):
 
         if self._internal_tag != other_kind._internal_tag:
             return (False, "Internal tags are different ({} vs. {})"
-                           "".format(self._internal_tag, other_kind._internal_tag))
-
+                           "".format(self._internal_tag,
+                                     other_kind._internal_tag))
 
         # If we got here, the two Site objects are similar enough
         # to be considered of the same kind
@@ -2078,7 +2084,6 @@ class Kind(object):
         else:
             raise ValueError("This kind has more than one symbol (it is an "
                              "alloy): {}".format(self._symbols))
-
 
     @property
     def symbols(self):
@@ -2334,7 +2339,8 @@ class Site(object):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def __str__(self):
-        return "kind name '{}' @ {},{},{}".format(self.kind_name, self.position[0],
+        return "kind name '{}' @ {},{},{}".format(self.kind_name,
+                                                  self.position[0],
                                                   self.position[1],
                                                   self.position[2])
 
@@ -2456,7 +2462,7 @@ def get_structuredata_from_qeinput(filepath=None, text=None):
     """, re.X | re.M)
 
     # Matches each vector inside the cell block
-    cell_vector_regex =  re.compile(r"""
+    cell_vector_regex = re.compile(r"""
         ^                        # Linestart
         [ \t]*                   # Optional white space
         (?P<x>                   # Get x
@@ -2476,7 +2482,8 @@ def get_structuredata_from_qeinput(filepath=None, text=None):
         """, re.X | re.M)
 
     # Finds the ibrav
-    ibrav_regex = re.compile('ibrav [ \t]* \= [ \t]*(?P<ibrav>\-?[ \t]* \d{1,2})', re.X)
+    ibrav_regex = re.compile(
+        'ibrav [ \t]* \= [ \t]*(?P<ibrav>\-?[ \t]* \d{1,2})', re.X)
 
     # Match the block where atomic species are defined:
     atomic_species_block_regex = re.compile("""
@@ -2534,14 +2541,14 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         txt = text
     else:
         raise InputValidationError(
-                'Provide either a filepath or text to be parsed'
-            )
+            'Provide either a filepath or text to be parsed'
+        )
 
     #########  THE CELL ################
 
     # get ibrav and check if it is valid
     ibrav = int(ibrav_regex.search(txt).group('ibrav'))
-    valid_ibravs = range(15) + [-5,-9,-12]
+    valid_ibravs = range(15) + [-5, -9, -12]
     if ibrav not in valid_ibravs:
         raise InputValidationError(
             'I found ibrav = {} in input, \n'
@@ -2569,14 +2576,14 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
                 'Valid cell units are: {}'.format(cell_unit, valid_cell_units)
             )
         # cell was matched, transform to np.array:
-        cell =  np.array(
+        cell = np.array(
             [
-                [float(match.group(i).replace('D','e').replace('d','e'))
-                    for i in ('x','y','z')
-                ]
+                [float(match.group(i).replace('D', 'e').replace('d', 'e'))
+                 for i in ('x', 'y', 'z')
+                 ]
                 for match
                 in cell_vector_regex.finditer(match.group('cell'))
-            ]
+                ]
         )
 
         # Now, we do the convert the cell to the right units (we want angstrom):
@@ -2595,13 +2602,13 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
             if a:
                 conversion = a
             elif celldm1:
-                conversion = bohr_to_ang*celldm1
+                conversion = bohr_to_ang * celldm1
             else:
                 raise InputValidationError(
                     'You have to define lattice vector'
                     'celldm(1) or A'
                 )
-        cell = conversion*cell
+        cell = conversion * cell
 
     # Ok, user was not nice and used ibrav > 0 to define cell using
     # either the keys celldm(n) n = 1,2,...,6  (celldm - system)
@@ -2617,10 +2624,10 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
             raise InputValidationError(
                 'Both A and celldm(1) specified'
             )
-        elif not(celldm1 or a):
+        elif not (celldm1 or a):
             raise Exception('You have to define lattice vector'
-                    'celldm(1) or A'
-                )
+                            'celldm(1) or A'
+                            )
         # So, depending on what is defined for the first lattice vector,
         # I define the keys that I will look for to find the other
         # geometry definitions
@@ -2636,7 +2643,7 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
                 # I will do all my calculations in ABC-system and
                 # therefore need a conversion factor
                 # if celldm system is chosen:
-                a = bohr_to_ang*celldm1
+                a = bohr_to_ang * celldm1
                 length_conversion = a
             else:
                 keys_in_qeinput = (
@@ -2646,34 +2653,34 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
                     'cosAC',
                     'cosBC',
                 )
-                length_conversion =  1.
+                length_conversion = 1.
             # Not all geometry definitions are needs,
             # but some are necessary depending on ibrav
             # and will be matched here:
-            if abs(ibrav)  > 7:
+            if abs(ibrav) > 7:
                 i = 0
-                b = length_conversion*get_fortfloat(keys_in_qeinput[i],txt)
-            if abs(ibrav) > 3 and ibrav not in (-5,5):
+                b = length_conversion * get_fortfloat(keys_in_qeinput[i], txt)
+            if abs(ibrav) > 3 and ibrav not in (-5, 5):
                 i = 1
-                c = length_conversion*get_fortfloat(keys_in_qeinput[i],txt)
-            if ibrav in (12,13,14):
+                c = length_conversion * get_fortfloat(keys_in_qeinput[i], txt)
+            if ibrav in (12, 13, 14):
                 i = 2
-                cosg = get_fortfloat(keys_in_qeinput[i],txt)
-                sing = np.sqrt(1. - cosg**2)
+                cosg = get_fortfloat(keys_in_qeinput[i], txt)
+                sing = np.sqrt(1. - cosg ** 2)
             if ibrav in (-12, 14):
                 i = 3
-                cosb = get_fortfloat(keys_in_qeinput[i],txt)
-                sinb = np.sqrt(1. - cosb**2)
+                cosb = get_fortfloat(keys_in_qeinput[i], txt)
+                sinb = np.sqrt(1. - cosb ** 2)
             if ibrav in (5, 14):
                 i = 4
-                cosa = 1.*get_fortfloat(keys_in_qeinput[i],txt)
-                    # The multiplication with 1.
-                    # raises Exception here if None was returned by get_fortfloat
+                cosa = 1. * get_fortfloat(keys_in_qeinput[i], txt)
+                # The multiplication with 1.
+                # raises Exception here if None was returned by get_fortfloat
         except Exception as e:
             raise InputValidationError(
                 '\nException {} raised when searching for\n'
                 'key {} in qeinput, necessary when ibrav = {}'.format(
-                    e,keys_in_qeinput[i], ibrav
+                    e, keys_in_qeinput[i], ibrav
                 )
             )
     # Calculating the cell according to ibrav.
@@ -2686,26 +2693,26 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     elif ibrav == 2:
         #  2          cubic F (fcc)
         #  v1 = (a/2)(-1,0,1),  v2 = (a/2)(0,1,1), v3 = (a/2)(-1,1,0)
-        cell = 0.5*a*np.array([
+        cell = 0.5 * a * np.array([
             [-1., 0., 1.],
-            [ 0., 1., 1.],
+            [0., 1., 1.],
             [-1., 1., 0.],
         ])
     elif ibrav == 3:
         # cubic I (bcc)
         #  v1 = (a/2)(1,1,1),  v2 = (a/2)(-1,1,1),  v3 = (a/2)(-1,-1,1)
-        cell = 0.5*a*np.array([
-            [ 1., 1., 1.],
+        cell = 0.5 * a * np.array([
+            [1., 1., 1.],
             [-1., 1., 1.],
-            [-1.,-1., 0.],
+            [-1., -1., 0.],
         ])
     elif ibrav == 4:
         # 4          Hexagonal and Trigonal P        celldm(3)=c/a
         # v1 = a(1,0,0),  v2 = a(-1/2,sqrt(3)/2,0),  v3 = a(0,0,c/a)
-        cell = a*np.array([
-            [ 1. , 0.             , 0. ],
-            [-0.5, 0.5*np.sqrt(3.), 0. ],
-            [ 0. , 0.             , c/a]
+        cell = a * np.array([
+            [1., 0., 0.],
+            [-0.5, 0.5 * np.sqrt(3.), 0.],
+            [0., 0., c / a]
         ])
     elif ibrav == 5:
         # 5          Trigonal R, 3fold axis c        celldm(4)=cos(alpha)
@@ -2715,12 +2722,12 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         # where c=cos(alpha) is the cosine of the angle alpha between
         # any pair of crystallographic vectors, tx, ty, tz are:
         # tx=sqrt((1-c)/2), ty=sqrt((1-c)/6), tz=sqrt((1+2c)/3)
-        tx = np.sqrt((1.-cosa)/2.)
-        ty = np.sqrt((1.-cosa)/6.)
-        tz = np.sqrt((1.+2.*cosa)/3.)
-        cell = a*np.array([
-            [ tx, -ty, tz],
-            [ 0.,2*ty, tz],
+        tx = np.sqrt((1. - cosa) / 2.)
+        ty = np.sqrt((1. - cosa) / 6.)
+        tz = np.sqrt((1. + 2. * cosa) / 3.)
+        cell = a * np.array([
+            [tx, -ty, tz],
+            [0., 2 * ty, tz],
             [-tx, -ty, tz]
         ])
     elif ibrav == -5:
@@ -2734,71 +2741,71 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         # Note: if you prefer x,y,z as axis in the cubic limit,
         # set  u = tz + 2*sqrt(2)*ty,  v = tz - sqrt(2)*ty
         # See also the note in flib/latgen.f90
-        tx = np.sqrt((1.-c)/2.)
-        ty = np.sqrt((1.-c)/6.)
-        tz = np.sqrt((1.+2.*c)/3.)
-        u =  tz - 2.*np.sqrt(2.)*ty
-        v =  tz + np.sqrt(2.)*ty
-        cell = a/np.sqrt(3.)*np.array([
-            [ u, v, v],
-            [ v, u, v],
-            [ v, v, u]
+        tx = np.sqrt((1. - c) / 2.)
+        ty = np.sqrt((1. - c) / 6.)
+        tz = np.sqrt((1. + 2. * c) / 3.)
+        u = tz - 2. * np.sqrt(2.) * ty
+        v = tz + np.sqrt(2.) * ty
+        cell = a / np.sqrt(3.) * np.array([
+            [u, v, v],
+            [v, u, v],
+            [v, v, u]
         ])
     elif ibrav == 6:
         # 6          Tetragonal P (st)               celldm(3)=c/a
         # v1 = a(1,0,0),  v2 = a(0,1,0),  v3 = a(0,0,c/a)
-        cell = a*np.array([
-            [ 1., 0., 0.],
-            [ 0., 1., 0.],
-            [ 0., 0.,c/a]
+        cell = a * np.array([
+            [1., 0., 0.],
+            [0., 1., 0.],
+            [0., 0., c / a]
         ])
     elif ibrav == 7:
         # 7          Tetragonal I (bct)              celldm(3)=c/a
         # v1=(a/2)(1,-1,c/a),  v2=(a/2)(1,1,c/a),  v3=(a/2)(-1,-1,c/a)
-        cell = 0.5*a*np.array([
-            [ 1.,-1.,c/a],
-            [ 1., 1.,c/a],
-            [-1.,-1.,c/a]
+        cell = 0.5 * a * np.array([
+            [1., -1., c / a],
+            [1., 1., c / a],
+            [-1., -1., c / a]
         ])
     elif ibrav == 8:
         # 8  Orthorhombic P       celldm(2)=b/a
         #                         celldm(3)=c/a
         #  v1 = (a,0,0),  v2 = (0,b,0), v3 = (0,0,c)
-        cell = np.diag([a,b,c])
+        cell = np.diag([a, b, c])
     elif ibrav == 9:
         #   9   Orthorhombic base-centered(bco) celldm(2)=b/a
         #                                         celldm(3)=c/a
         #  v1 = (a/2, b/2,0),  v2 = (-a/2,b/2,0),  v3 = (0,0,c)
         cell = np.array([
-            [ 0.5*a, 0.5*b, 0.],
-            [-0.5*a, 0.5*b, 0.],
-            [ 0.   , 0.   , c ]
+            [0.5 * a, 0.5 * b, 0.],
+            [-0.5 * a, 0.5 * b, 0.],
+            [0., 0., c]
         ])
     elif ibrav == -9:
         # -9          as 9, alternate description
         #  v1 = (a/2,-b/2,0),  v2 = (a/2,-b/2,0),  v3 = (0,0,c)
         cell = np.array([
-            [ 0.5*a, 0.5*b, 0.],
-            [ 0.5*a,-0.5*b, 0.],
-            [ 0.   , 0.   , c ]
+            [0.5 * a, 0.5 * b, 0.],
+            [0.5 * a, -0.5 * b, 0.],
+            [0., 0., c]
         ])
     elif ibrav == 10:
         # 10          Orthorhombic face-centered      celldm(2)=b/a
         #                                         celldm(3)=c/a
         #  v1 = (a/2,0,c/2),  v2 = (a/2,b/2,0),  v3 = (0,b/2,c/2)
         cell = np.array([
-            [ 0.5*a, 0.   , 0.5*c],
-            [ 0.5*a, 0.5*b, 0.   ],
-            [ 0.   , 0.5*b, 0.5*c]
+            [0.5 * a, 0., 0.5 * c],
+            [0.5 * a, 0.5 * b, 0.],
+            [0., 0.5 * b, 0.5 * c]
         ])
     elif ibrav == 11:
         # 11          Orthorhombic body-centered      celldm(2)=b/a
         #                                        celldm(3)=c/a
         #  v1=(a/2,b/2,c/2),  v2=(-a/2,b/2,c/2),  v3=(-a/2,-b/2,c/2)
         cell = np.array([
-            [ 0.5*a, 0.5*b, 0.5*c],
-            [-0.5*a, 0.5*b, 0.5*c],
-            [-0.5*a,-0.5*b, 0.5*c]
+            [0.5 * a, 0.5 * b, 0.5 * c],
+            [-0.5 * a, 0.5 * b, 0.5 * c],
+            [-0.5 * a, -0.5 * b, 0.5 * c]
         ])
     elif ibrav == 12:
         # 12      Monoclinic P, unique axis c     celldm(2)=b/a
@@ -2807,9 +2814,9 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         #  v1=(a,0,0), v2=(b*cos(gamma),b*sin(gamma),0),  v3 = (0,0,c)
         #  where gamma is the angle between axis a and b.
         cell = np.array([
-            [     a, 0.   , 0.   ],
-            [b*cosg,b*sing, 0.   ],
-            [ 0.   , 0.   , c    ]
+            [a, 0., 0.],
+            [b * cosg, b * sing, 0.],
+            [0., 0., c]
         ])
     elif ibrav == -12:
         # -12          Monoclinic P, unique axis b     celldm(2)=b/a
@@ -2818,9 +2825,9 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         #  v1 = (a,0,0), v2 = (0,b,0), v3 = (c*cos(beta),0,c*sin(beta))
         #  where beta is the angle between axis a and c
         cell = np.array([
-            [ a      , 0. , 0.    ],
-            [ 0.     , b  , 0.    ],
-            [ c*cosb , 0. , c*sinb]
+            [a, 0., 0.],
+            [0., b, 0.],
+            [c * cosb, 0., c * sinb]
         ])
     elif ibrav == 13:
         # 13          Monoclinic base-centered        celldm(2)=b/a
@@ -2831,9 +2838,9 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         #  v3 = (  a/2,         0,                  c/2),
         #  where gamma is the angle between axis a and b
         cell = np.array([
-            [ 0.5*a  , 0.     ,-0.5*c ],
-            [ b*cosg , b*sing , 0.    ],
-            [ 0.5*a  , 0.     , 0.5*c ]
+            [0.5 * a, 0., -0.5 * c],
+            [b * cosg, b * sing, 0.],
+            [0.5 * a, 0., 0.5 * c]
         ])
     elif ibrav == 14:
         #  14       Triclinic                     celldm(2)= b/a,
@@ -2850,12 +2857,13 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         #     beta is the angle between axis a and c
         #    gamma is the angle between axis a and b
         cell = np.array([
-            [ a      , 0.     ,-0.5*c ],
-            [ b*cosg , b*sing , 0.    ],
+            [a, 0., -0.5 * c],
+            [b * cosg, b * sing, 0.],
             [
-                c*cosb,
-                c*(cosa - cosb *cosg ) / sing,
-                c*np.sqrt(1.+2.*cosa*cosb*cosg-cosa**2-cosb**2-cosg**2)/sing
+                c * cosb,
+                c * (cosa - cosb * cosg) / sing,
+                c * np.sqrt(
+                    1. + 2. * cosa * cosb * cosg - cosa ** 2 - cosb ** 2 - cosg ** 2) / sing
             ]
         ])
 
@@ -2870,8 +2878,8 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     for match in atomic_species_regex.finditer(atomic_species):
         try:
             symbols = valid_elements_regex.search(
-                    match.group('pseudo')
-                ).group('ele')
+                match.group('pseudo')
+            ).group('ele')
         except Exception as e:
             raise InputValidationError(
                 'I could not read an element name in {}'.format(match.group(0))
@@ -2879,11 +2887,10 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         name = match.group('tag')
         mass = match.group('mass')
         structuredata.append_kind(Kind(
-            name    = name,
-            symbols = symbols,
-            mass    = mass,
+            name=name,
+            symbols=symbols,
+            mass=mass,
         ))
-
 
     ################## POSITIONS #######################
 
@@ -2896,32 +2903,28 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         raise InputValidationError(
             '\nFound atom unit {}, which is not\n'
             'among the valid units: {}'.format(
-                atom_unit,
-                ', '.join(valid_units)
+                atom_unit, ', '.join(valid_atom_units)
             )
         )
 
     if atom_unit == 'crystal_sg':
-        raise NotImplementedError(
-            'crystal_sg is not implemented'
-        )
-    position_block      =   atom_block_match.group('positions')
+        raise NotImplementedError('crystal_sg is not implemented')
+    position_block = atom_block_match.group('positions')
 
     if not position_block:
-        raise InputValidationError(
-            'Could not read CARD POSITIONS'
-        )
+        raise InputValidationError('Could not read CARD POSITIONS')
 
-    symbols, positions  =   [],[]
+    symbols, positions = [], []
 
     for atom_match in pos_regex.finditer(position_block):
         symbols.append(atom_match.group('sym'))
         try:
             positions.append(
                 [
-                    float(atom_match.group(c).replace('D','e').replace('d','e'))
-                    for c in ('x','y','z')
-                ]
+                    float(
+                        atom_match.group(c).replace('D', 'e').replace('d', 'e'))
+                    for c in ('x', 'y', 'z')
+                    ]
             )
         except Exception as e:
             raise InputValidationError(
@@ -2932,19 +2935,15 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     positions = np.array(positions)
 
     if atom_unit == 'bohr':
-        positions = bohr_to_ang*positions
+        positions = bohr_to_ang * positions
     elif atom_unit == 'crystal':
         positions = np.dot(positions, cell)
     elif atom_unit == 'alat':
-        positions = np.linalg.norm(cell[0])*positions
+        positions = np.linalg.norm(cell[0]) * positions
 
     ######### DEFINE SITES ######################
 
     positions = positions.tolist()
-    [structuredata.append_site(Site(
-            kind_name = sym,
-            position  = pos,
-        ))
-        for sym, pos in zip(symbols, positions)
-    ]
+    [structuredata.append_site(Site(kind_name=sym, position=pos,))
+     for sym, pos in zip(symbols, positions)]
     return structuredata

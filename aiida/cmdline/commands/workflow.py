@@ -32,7 +32,6 @@ class Workflow(VerdiCommandWithSubcommands):
             'logshow': (self.print_logshow, self.complete_none),
         }
 
-
     def workflow_list(self, *args):
         """
         Return a list of workflows on screen
@@ -120,7 +119,6 @@ class Workflow(VerdiCommandWithSubcommands):
         print "### WORKFLOW pk: {} ###".format(pk)
         print "\n".join(w.get_report())
 
-
     def workflow_kill(self, *args):
         """
         Kill a workflow.
@@ -161,8 +159,9 @@ class Workflow(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         if not force:
-            sys.stderr.write("Are you sure to kill {} workflow{}? [Y/N] ".format(
-                len(wfs), "" if len(wfs) == 1 else "s"))
+            sys.stderr.write(
+                "Are you sure to kill {} workflow{}? [Y/N] ".format(
+                    len(wfs), "" if len(wfs) == 1 else "s"))
             if not wait_for_confirmation():
                 sys.exit(0)
 
@@ -186,7 +185,6 @@ class Workflow(VerdiCommandWithSubcommands):
 
         print >> sys.stderr, "{} workflow{} killed.".format(counter,
                                                             "" if counter <= 1 else "s")
-
 
     def print_logshow(self, *args):
         from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -213,7 +211,8 @@ class Workflow(VerdiCommandWithSubcommands):
             print "*** {}{}: {}".format(wf_pk, label_string, state)
 
             if wf.get_report():
-                print "Print the report with 'verdi workflow report {}'".format(wf_pk)
+                print "Print the report with 'verdi workflow report {}'".format(
+                    wf_pk)
             else:
                 print "*** Report is empty"
 

@@ -23,10 +23,8 @@ from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
 from aiida.backends import settings as settings_profile
 
-
-
-## Import here from other files; once imported, it will be found and
-## used as a command-line parameter
+# Import here from other files; once imported, it will be found and
+# used as a command-line parameter
 from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.calculation import Calculation
 from aiida.cmdline.commands.code import Code
@@ -41,6 +39,7 @@ from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.profile import Profile
 from aiida.cmdline.commands.workflow import Workflow
+from aiida.cmdline.commands.workflow2 import Workflow2
 from aiida.cmdline.commands.comment import Comment
 from aiida.cmdline.commands.shell import Shell
 from aiida.cmdline import execname
@@ -56,12 +55,14 @@ class ProfileParsingException(AiidaException):
     Exception raised when parsing the profile command line option, if only
     -p is provided, and no profile is specified
     """
+
     def __init__(self, *args, **kwargs):
-        self.minus_p_provided=kwargs.pop('minus_p_provided', False)
+        self.minus_p_provided = kwargs.pop('minus_p_provided', False)
 
         super(ProfileParsingException, self).__init__(*args, **kwargs)
 
-def parse_profile(argv,merge_equal=False):
+
+def parse_profile(argv, merge_equal=False):
     """
     Parse the argv to see if a profile has been specified, return it with the
     command position shift (index where the commands start)
@@ -89,8 +90,8 @@ def parse_profile(argv,merge_equal=False):
         internal_argv = list(argv)
         shift = 0
 
-    profile = None # Use default profile if nothing is specified
-    command_position = 1 # If there is no profile option
+    profile = None  # Use default profile if nothing is specified
+    command_position = 1  # If there is no profile option
     try:
         profile_switch = internal_argv[1]
     except IndexError:
@@ -207,6 +208,7 @@ class Completion(VerdiCommand):
 
     Returning without printing will use the default bash completion.
     """
+
     # TODO: manage completion at a deeper level
 
     def run(self, *args):
@@ -220,13 +222,12 @@ class Completion(VerdiCommand):
             return
 
         try:
-            profile, command_position = parse_profile(args[1:],merge_equal=True)
+            profile, command_position = parse_profile(args[1:],
+                                                      merge_equal=True)
         except ProfileParsingException as e:
             cword_offset = 0
         else:
             cword_offset = command_position - 1
-
-
 
         if cword == 1 + cword_offset:
             print " ".join(sorted(short_doc.keys()))
@@ -237,7 +238,7 @@ class Completion(VerdiCommand):
                 # args[1] is the executable (verdi)
                 # args[2] is the command for verdi
                 # args[3:] are the following subargs
-                command = args[2+cword_offset]
+                command = args[2 + cword_offset]
             except IndexError:
                 return
             try:
@@ -273,9 +274,10 @@ class Help(VerdiCommand):
         except IndexError:
             print get_listparams()
             print ""
-            print ("Before each command you can specify the AiiDA profile to use,"
-                   " with 'verdi -p <profile> <command>' or "
-                   "'verdi --profile=<profile> <command>'")
+            print (
+            "Before each command you can specify the AiiDA profile to use,"
+            " with 'verdi -p <profile> <command>' or "
+            "'verdi --profile=<profile> <command>'")
             print ""
             print ("Use '{} help <command>' for more information "
                    "on a specific command.".format(execname))
@@ -345,7 +347,8 @@ class Install(VerdiCommand):
         try:
             created_conf = create_configuration(profile=gprofile)
         except ValueError as e:
-            print >> sys.stderr, "Error during configuration: {}".format(e.message)
+            print >> sys.stderr, "Error during configuration: {}".format(
+                e.message)
             sys.exit(1)
 
         # set default DB profiles
@@ -416,7 +419,7 @@ class Install(VerdiCommand):
                 from aiida.backends.sqlalchemy.models.computer import (
                     DbComputer)
                 from aiida.backends.sqlalchemy.models.group import (
-                    DbGroup,table_groups_nodes)
+                    DbGroup, table_groups_nodes)
                 from aiida.backends.sqlalchemy.models.lock import DbLock
                 from aiida.backends.sqlalchemy.models.log import DbLog
                 from aiida.backends.sqlalchemy.models.node import (
@@ -461,7 +464,8 @@ class Install(VerdiCommand):
         email = get_configured_user_email()
         print "Starting user configuration for {}...".format(email)
         if email == DEFAULT_AIIDA_USER:
-            print "You set up AiiDA using the default Daemon email ({}),".format(email)
+            print "You set up AiiDA using the default Daemon email ({}),".format(
+                email)
             print "therefore no further user configuration will be asked."
         else:
             # Ask to configure the new user
@@ -514,19 +518,22 @@ class Run(VerdiCommand):
         parser.add_argument('-e', '--exclude', type=str, nargs='+', default=[],
                             help=('Autogroup only specific calculation classes.'
                                   " Select them by their module name.")
-        )
-        parser.add_argument('-E', '--excludesubclasses', type=str, nargs='+', default=[],
+                            )
+        parser.add_argument('-E', '--excludesubclasses', type=str, nargs='+',
+                            default=[],
                             help=('Autogroup only specific calculation classes.'
                                   " Select them by their module name.")
-        )
-        parser.add_argument('-i', '--include', type=str, nargs='+', default=['all'],
+                            )
+        parser.add_argument('-i', '--include', type=str, nargs='+',
+                            default=['all'],
                             help=('Autogroup only specific data classes.'
                                   " Select them by their module name.")
-        )
-        parser.add_argument('-I', '--includesubclasses', type=str, nargs='+', default=[],
+                            )
+        parser.add_argument('-I', '--includesubclasses', type=str, nargs='+',
+                            default=[],
                             help=('Autogroup only specific code classes.'
                                   " Select them by their module name.")
-        )
+                            )
         parser.add_argument('scriptname', metavar='ScriptName', type=str,
                             help='The name of the script you want to execute')
         parser.add_argument('new_args', metavar='ARGS',
@@ -554,13 +561,16 @@ class Run(VerdiCommand):
                 import datetime
 
                 now = datetime.datetime.now()
-                automatic_group_name = "Verdi autogroup on " + now.strftime("%Y-%m-%d %H:%M:%S")
+                automatic_group_name = "Verdi autogroup on " + now.strftime(
+                    "%Y-%m-%d %H:%M:%S")
 
             aiida_verdilib_autogroup = Autogroup()
             aiida_verdilib_autogroup.set_exclude(parsed_args.exclude)
             aiida_verdilib_autogroup.set_include(parsed_args.include)
-            aiida_verdilib_autogroup.set_exclude_with_subclasses(parsed_args.excludesubclasses)
-            aiida_verdilib_autogroup.set_include_with_subclasses(parsed_args.includesubclasses)
+            aiida_verdilib_autogroup.set_exclude_with_subclasses(
+                parsed_args.excludesubclasses)
+            aiida_verdilib_autogroup.set_include_with_subclasses(
+                parsed_args.includesubclasses)
             aiida_verdilib_autogroup.set_group_name(automatic_group_name)
             ## Note: this is also set in the exec environment!
             ## This is the intended behavior
@@ -591,6 +601,7 @@ class Run(VerdiCommand):
                 raise
             finally:
                 f.close()
+
 
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST
@@ -656,13 +667,14 @@ def exec_from_cmdline(argv):
     from aiida.cmdline import verdilib
     import inspect
 
-    #List of command names that should be hidden or not completed.
+    # List of command names that should be hidden or not completed.
     hidden_commands = ['completion', 'completioncommand', 'listparams']
 
     # Retrieve the list of commands
     verdilib_namespace = verdilib.__dict__
 
-    list_commands = {v.get_command_name(): v for v in verdilib_namespace.itervalues()
+    list_commands = {v.get_command_name(): v for v in
+                     verdilib_namespace.itervalues()
                      if inspect.isclass(v) and not v == VerdiCommand and
                      issubclass(v, VerdiCommand)
                      and not v.__name__.startswith('_')
@@ -718,7 +730,7 @@ def exec_from_cmdline(argv):
         else:
             print >> sys.stderr, ("{}: '{}' is not a valid command. "
                                   "See '{} help' for more help.".format(
-                                      execname, command, execname))
+                execname, command, execname))
             get_command_suggestion(command)
             sys.exit(1)
     except ProfileConfigurationError as e:

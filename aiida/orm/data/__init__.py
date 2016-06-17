@@ -1,30 +1,29 @@
-# -*- coding: utf-8 -*-
-
 from aiida.orm.node import Node
 from aiida.common.links import LinkType
+from aiida.common.lang import override
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
-"""
-Specifications of the Data class:
-AiiDA Data objects are subclasses of Node and should have
-
-Multiple inheritance must be suppoted, i.e. Data should have methods for querying and
-be able to inherit other library objects such as ASE for structures.
-
-Architecture note:
-The code plugin is responsible for converting a raw data object produced by code
-to AiiDA standard object format. The data object then validates itself according to its
-method. This is done independently in order to allow cross-validation of plugins.
-"""
-
 
 class Data(Node):
     """
     This class is base class for all data objects.
+
+    Specifications of the Data class:
+    AiiDA Data objects are subclasses of Node and should have
+
+    Multiple inheritance must be suppoted, i.e. Data should have methods for
+    querying and be able to inherit other library objects such as ASE for
+    structures.
+
+    Architecture note:
+    The code plugin is responsible for converting a raw data object produced by
+    code to AiiDA standard object format. The data object then validates itself
+    according to its method. This is done independently in order to allow
+    cross-validation of plugins.
     """
     _updatable_attributes = tuple()
 
@@ -79,6 +78,7 @@ class Data(Node):
         """
         self.source = source
 
+    @override
     def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.orm.calculation import Calculation
 
@@ -92,6 +92,7 @@ class Data(Node):
 
         return super(Data, self).add_link_from(src, label, link_type)
 
+    @override
     def _linking_as_output(self, dest, link_type):
         """
         Raise a ValueError if a link from self to dest is not allowed.
@@ -105,6 +106,7 @@ class Data(Node):
 
         return super(Data, self)._linking_as_output(dest, link_type)
 
+    @override
     def _exportstring(self, fileformat, **kwargs):
         """
         Converts a Data object to other text format.
@@ -129,6 +131,7 @@ class Data(Node):
 
         return func(**kwargs)
 
+    @override
     def export(self, fname, fileformat=None):
         """
         Save a Data object to a file.
@@ -142,6 +145,12 @@ class Data(Node):
         filecontent = self._exportstring(fileformat)
         with open(fname, 'w') as f:  # writes in cwd, if fname is not absolute
             f.write(filecontent)
+
+    @override
+    def store(self, with_transaction=True):
+        # A Data node is automatically sealed when it is stored
+        self.seal()
+        super(Data, self).store(with_transaction=with_transaction)
 
     def _get_exporters(self):
         """
@@ -230,10 +239,11 @@ class Data(Node):
             func = converters[object_format]
         except KeyError:
             if len(converters.keys()) > 0:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(
+                raise ValueError(
+                    "The format {} is not implemented for {}. "
+                    "Currently implemented are: {}.".format(
                     object_format, self.__class__.__name__,
-                    ",".join(converters.keys())))
+                        ",".join(converters.keys())))
             else:
                 raise ValueError("The format {} is not implemented for {}. "
                                  "No formats are implemented yet.".format(

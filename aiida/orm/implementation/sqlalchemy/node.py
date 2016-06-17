@@ -20,6 +20,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError,
                                      ValidationError)
 from aiida.common.links import LinkType
+from aiida.common.lang import override
 
 from aiida.orm.implementation.general.node import AbstractNode
 from aiida.orm.implementation.sqlalchemy.computer import Computer
@@ -301,17 +302,17 @@ class Node(AbstractNode):
                 "Node with uuid={} was already stored".format(self.uuid))
 
     def _set_attr(self, key, value):
+        super(Node, self)._set_attr(key, value)
+
         if self._to_be_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
         else:
-            if key in self._updatable_attributes:
-                self.dbnode.set_attr(key, value)
-                self._increment_version_number_db()
-            else:
-                raise ModificationNotAllowed(
-                    "Cannot set an attribute after saving a node")
+            self.dbnode.set_attr(key, value)
+            self._increment_version_number_db()
 
     def _del_attr(self, key):
+        super(Node, self)._del_attr(key)
+
         if self._to_be_stored:
             try:
                 del self._attrs_cache[key]
@@ -326,30 +327,25 @@ class Node(AbstractNode):
                 raise ModificationNotAllowed("Cannot delete an attribute after "
                                              "saving a node")
 
-    def get_attr(self, key, *args):
+    @override
+    def get_attr(self, key, default=None):
         exception = AttributeError("Attribute '{}' does not exist".format(key))
-        if len(args) > 1:
-            raise ValueError("After the key name you can pass at most one"
-                             "value, that is the default value to be used "
-                             "if no attribute is found.")
-        has_default = len(args) == 1
-        if has_default:
-            default = args[0]
+        has_default = default is not None
         if self._to_be_stored:
             try:
                 return self._attrs_cache[key]
             except KeyError:
                 if has_default:
                     return default
-                raise exception
+                raise
         else:
             try:
                 return get_attr(self.dbnode.attributes, key)
-            except (KeyError, IndexError) as e:
+            except (KeyError, IndexError):
                 if has_default:
                     return default
                 else:
-                    raise exception
+                    raise
 
     def set_extra(self, key, value, exclusive=False):
         # TODO SP: validate key

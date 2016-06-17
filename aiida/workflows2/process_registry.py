@@ -2,7 +2,6 @@
 import plum.persistence.pickle_persistence
 import plum.process_registry
 import plum.process
-import aiida.orm
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override
 from aiida.workflows2.util import ProcessStack
@@ -23,6 +22,9 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
     def current_calc_node(self):
         return ProcessStack.top().calc
 
+    def get_running_pids(self):
+        return self._running_processes.viewkeys()
+
     @override
     def register_running_process(self, process):
         self._running_processes[process.pid] = process
@@ -36,6 +38,8 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
 
     @override
     def is_finished(self, pid):
+        import aiida.orm
+
         # Is it finished?
         if pid in self._finished:
             return True
@@ -57,6 +61,8 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
 
     @override
     def get_outputs(self, pid):
+        import aiida.orm
+
         if pid in self._finished:
             return self._finished[pid]
         else:

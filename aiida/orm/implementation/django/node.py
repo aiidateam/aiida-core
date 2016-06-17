@@ -12,6 +12,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
+from aiida.common.lang import override
 
 from aiida.backends.djsite.utils import get_automatic_user
 from aiida.backends.djsite.db.models import DbLink
@@ -294,20 +295,20 @@ class Node(AbstractNode):
 
     def _set_attr(self, key, value):
         from aiida.backends.djsite.db.models import DbAttribute
+        super(Node, self)._set_attr(key, value)
+
         DbAttribute.validate_key(key)
 
         if self._to_be_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
         else:
-            if key in self._updatable_attributes:
-                DbAttribute.set_value_for_node(self.dbnode, key, value)
-                self._increment_version_number_db()
-            else:
-                raise ModificationNotAllowed(
-                    "Cannot set an attribute after saving a node")
+            DbAttribute.set_value_for_node(self.dbnode, key, value)
+            self._increment_version_number_db()
 
     def _del_attr(self, key):
         from aiida.backends.djsite.db.models import DbAttribute
+        super(Node, self)._del_attr(key)
+
         if self._to_be_stored:
             try:
                 del self._attrs_cache[key]
@@ -325,12 +326,9 @@ class Node(AbstractNode):
                 raise ModificationNotAllowed("Cannot delete an attribute after "
                                              "saving a node")
 
-    def get_attr(self, key, *args):
+    @override
+    def get_attr(self, key, default=None):
         from aiida.backends.djsite.db.models import DbAttribute
-        if len(args) > 1:
-            raise ValueError("After the key name you can pass at most one"
-                             "value, that is the default value to be used "
-                             "if no attribute is found.")
         try:
             if self._to_be_stored:
                 try:
@@ -341,11 +339,11 @@ class Node(AbstractNode):
             else:
                 return DbAttribute.get_value_for_node(dbnode=self.dbnode,
                                                       key=key)
-        except AttributeError as e:
-            try:
-                return args[0]
-            except IndexError:
-                raise e
+        except AttributeError:
+            if default is None:
+                raise
+            else:
+                return default
 
     def set_extra(self, key, value, exclusive=False):
         from aiida.backends.djsite.db.models import DbExtra

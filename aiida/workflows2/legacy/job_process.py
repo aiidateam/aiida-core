@@ -4,8 +4,6 @@ import plum.port as port
 import plum.process
 from aiida.common.lang import override
 from aiida.workflows2.process import Process, DictSchema
-from aiida.workflows2.legacy.wait_on import wait_on_job_calculation
-from aiida.orm.computer import Computer
 from voluptuous import Any
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
@@ -21,6 +19,8 @@ class JobProcess(Process):
 
     @classmethod
     def build(cls, calc_class):
+        from aiida.orm.data import Data
+        from aiida.orm.computer import Computer
 
         def _define(spec):
             # Calculation options
@@ -54,7 +54,7 @@ class JobProcess(Process):
                                valid_type=v['valid_types'], required=False)
 
             # Outputs
-            spec.dynamic_output()
+            spec.dynamic_output(valid_type=Data)
 
         return type(calc_class.__name__, (JobProcess,),
                     {'_define': staticmethod(_define),
@@ -66,6 +66,8 @@ class JobProcess(Process):
         super(JobProcess, self).__init__(store_provenance)
 
     def _run(self, **kwargs):
+        from aiida.workflows2.legacy.wait_on import wait_on_job_calculation
+
         # I create this here because there is a check to make sure the callback
         # function is defined correctly which may cause an assertion, in which
         # case we shouldn't submit

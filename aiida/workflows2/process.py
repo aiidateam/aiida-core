@@ -13,9 +13,6 @@ from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
-from aiida.orm import Node
-from aiida.orm import load_node
-from aiida.orm.data import Data
 from aiida.utils.calculation import add_source_info
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -101,6 +98,13 @@ class Process(plum.process.Process):
     KEY_PARENT_CALC_PID = 'parent_calc_pid'
 
     @classmethod
+    def _define(cls, spec):
+        from aiida.orm import Node
+
+        spec.dynamic_input(valid_type=Node)
+        spec.dynamic_output(valid_type=Node)
+
+    @classmethod
     def get_inputs_template(cls):
         return cls.spec().get_inputs_template()
 
@@ -139,6 +143,8 @@ class Process(plum.process.Process):
         bundle[self.KEY_CALC_ID] = self.pid
 
     def _convert_to_ids(self, nodes):
+        from aiida.orm import Node
+
         input_ids = {}
         for label, node in nodes.iteritems():
             if node is None:
@@ -155,14 +161,23 @@ class Process(plum.process.Process):
                 input_ids[label] = self._convert_to_ids(node)
         return input_ids
 
-    def _convert_to_nodes(self, ids):
-        # Replace the node pks for real nodes
+    def _load_nodes_from(self, pks_mapping):
+        """
+        Take a dictionary of of {label: pk} or nested dictionary i.e.
+        {label: {label: pk}} and convert to the equivalent dictionary but
+        with nodes instead of the ids.
+
+        :param pks_mapping: The dictionary of node pks.
+        :return: A dictionary with the loaded nodes.
+        """
+        from aiida.orm import load_node
+
         nodes = {}
-        for label, id in ids.iteritems():
-            if isinstance(id, collections.Mapping):
-                nodes[label] = self._convert_to_nodes(id)
+        for label, pk in pks_mapping.iteritems():
+            if isinstance(pk, collections.Mapping):
+                nodes[label] = self._load_nodes_from(pk)
             else:
-                nodes[label] = load_node(id)
+                nodes[label] = load_node(pk=pk)
         return nodes
 
     # Messages #####################################################
@@ -181,9 +196,11 @@ class Process(plum.process.Process):
 
     @override
     def on_recreate(self, pid, saved_instance_state):
+        from aiida.orm import load_node
+
         # Replace the node pks for real nodes
         saved_instance_state[self._INPUTS] = \
-            self._convert_to_nodes(saved_instance_state[self._INPUTS])
+            self._load_nodes_from(saved_instance_state[self._INPUTS])
         super(Process, self).on_recreate(pid, saved_instance_state)
 
         if self.KEY_CALC_ID in saved_instance_state:
@@ -195,16 +212,15 @@ class Process(plum.process.Process):
         if self.KEY_PARENT_CALC_PID in saved_instance_state:
             self._parent_pid = saved_instance_state[self.KEY_PARENT_CALC_PID]
 
-    def _create_and_setup_db_record(self):
-        self._calc = self.create_db_record()
-        self._setup_db_record()
-        if self._store_provenance:
-            assert self._calc.is_stored
+    @override
+    def on_fail(self, exception):
+        super(Process, self).on_fail(exception)
+        self.calc.seal()
 
-        if self._calc.pk is not None:
-            return self._calc.pk
-        else:
-            return uuid.UUID(self._calc.uuid)
+    @override
+    def on_finish(self, retval):
+        super(Process, self).on_finish(retval)
+        self.calc.seal()
 
     @override
     def on_stop(self):
@@ -221,21 +237,36 @@ class Process(plum.process.Process):
         :param dynamic: Was the output port a dynamic one (i.e. not known
         beforehand?)
         """
+        from aiida.orm.data import Data
+
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
         assert isinstance(value, Data), \
             "Values outputted from process must be instances of AiiDA Data" \
             "types.  Got: {}".format(value.__class__)
 
         if not value.is_stored:
+            value.add_link_from(self._calc, output_port, LinkType.CREATE)
             if self._store_provenance:
                 value.store()
-            value.add_link_from(self._calc, output_port, LinkType.CREATE)
         value.add_link_from(self._calc, output_port, LinkType.RETURN)
 
     #################################################################
 
+    def _create_and_setup_db_record(self):
+        self._calc = self.create_db_record()
+        self._setup_db_record()
+        if self._store_provenance:
+            assert self._calc.is_stored
+
+        if self._calc.pk is not None:
+            return self._calc.pk
+        else:
+            return uuid.UUID(self._calc.uuid)
+
     def _setup_db_record(self):
         assert self.inputs is not None
+        assert not self.calc.is_sealed,\
+            "Calculation cannot be sealed when setting up the database record"
 
         parent_calc = self.get_parent_calc()
 
@@ -257,12 +288,12 @@ class Process(plum.process.Process):
 
         for name, input in to_link.iteritems():
             if not input.is_stored:
-                if self._store_provenance:
-                    input.store()
                 # If the input isn't stored then assume our parent created it
                 if parent_calc:
                     input.add_link_from(parent_calc, "CREATE",
                                         link_type=LinkType.CREATE)
+                if self._store_provenance:
+                    input.store()
 
             self.calc.add_link_from(input, name)
 
@@ -299,6 +330,7 @@ class Process(plum.process.Process):
 
         # Ok, maybe the pid is actually a pk...
         try:
+            from aiida.orm import load_node
             return load_node(pk=self._parent_pid)
         except exceptions.NotExistent:
             pass
@@ -344,6 +376,7 @@ class FunctionProcess(Process):
         :return: A Process class that represents the function
         """
         import inspect
+        from aiida.orm.data import Data
 
         args, varargs, keywords, defaults = inspect.getargspec(func)
 
@@ -352,14 +385,14 @@ class FunctionProcess(Process):
                 default = None
                 if defaults and len(defaults) - len(args) + i >= 0:
                     default = defaults[i]
-                spec.input(args[i], default=default)
+                spec.input(args[i], valid_type=Data, default=default)
                 # Make sure to get rid of the argument from the keywords dict
                 kwargs.pop(args[i], None)
 
             for k, v in kwargs.iteritems():
                 spec.input(k)
             # We don't know what a function will return so keep it dynamic
-            spec.dynamic_output()
+            spec.dynamic_output(valid_type=Data)
 
         return type(func.__name__, (FunctionProcess,),
                     {'_func': staticmethod(func),
@@ -383,6 +416,8 @@ class FunctionProcess(Process):
         return calc
 
     def _run(self, **kwargs):
+        from aiida.orm.data import Data
+
         args = []
         for arg in self._func_args:
             args.append(kwargs.pop(arg))

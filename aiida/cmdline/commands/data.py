@@ -794,7 +794,105 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
             'export': (self.export, self.complete_none),
         }
 
+    # def query_new(self, args):
     def query(self, args):
+        """
+        Perform the query and return information for the list.
+
+        :param args: a namespace with parsed command line parameters.
+        :return: table (list of lists) with information, describing nodes.
+            Each row describes a single hit.
+        """
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.implementation import User
+        from aiida.orm.implementation import Group
+        from aiida.orm.data.structure import (get_formula, get_symbols_string)
+        from aiida.orm.data.array.bands import BandsData
+        from aiida.orm.data.structure import StructureData
+
+        qb = QueryBuilder()
+        if args.all_users is False:
+            au = get_automatic_user()
+            user = User(dbuser=au)
+            qb.append(User, tag="creator", filters={"email": user.email})
+        else:
+            qb.append(User, tag="creator")
+
+        bdata_filters = {}
+        self.query_past_days_qb(bdata_filters, args)
+        qb.append(BandsData, tag="bdata", created_by="creator",
+                  filters=bdata_filters,
+                  project=["id", "label", "ctime"]
+                  )
+
+        group_filters = {}
+        self.query_group_qb(group_filters, args)
+        if group_filters:
+            qb.append(Group, tag="group", filters=group_filters,
+                      group_of="bdata")
+
+        qb.append(StructureData, tag="sdata", ancestor_of="bdata",
+                  # Is this really needed - Double join is not possible.
+                  # created_by="creator",
+                  project=["id", "attributes.kinds", "attributes.sites"])
+
+        qb.order_by({BandsData: {'ctime': 'asc'}})
+
+        list_data = qb.distinct()
+
+        entry_list = []
+        if list_data.count() > 0:
+            for [bid, blabel, bdate, sid, akinds, asites] in list_data.iterall():
+
+                # If symbols are defined there is a filtering of the structures
+                # based on the element
+                # When QueryBuilder will support this (attribute)s filtering,
+                # it will be pushed in the query.
+                if args.element is not None:
+                    all_symbols = [_["symbols"][0] for _ in akinds]
+                    if not any([s in args.element for s in all_symbols]
+                               ):
+                        continue
+
+                if args.element_only is not None:
+                    all_symbols = [_["symbols"][0] for _ in akinds]
+                    if not all(
+                            [s in all_symbols for s in args.element_only]
+                            ):
+                        continue
+
+                # We want only the StructureData that have attributes
+                if akinds is None or asites is None:
+                    continue
+
+                symbol_dict = {}
+                for k in akinds:
+                    symbols = k['symbols']
+                    weights = k['weights']
+                    symbol_dict[k['name']] = get_symbols_string(symbols,
+                                                                weights)
+
+                try:
+                    symbol_list = []
+                    for s in asites:
+                        symbol_list.append(symbol_dict[s['kind_name']])
+                    formula = get_formula(symbol_list,
+                                          mode=args.formulamode)
+                # If for some reason there is no kind with the name
+                # referenced by the site
+                except KeyError:
+                    formula = "<<UNKNOWN>>"
+                entry_list.append([str(bid), str(formula),
+                                   bdate.strftime('%d %b %Y'), blabel])
+
+        return entry_list
+
+    # def query(self, args):
+    def query_old(self, args):
         """
         Perform the query and return information for the list.
 

@@ -75,7 +75,8 @@ class KpointsData(ArrayData):
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
         # return copy.deepcopy(self._pbc)
-        return (self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
+        return (
+        self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
 
     @pbc.setter
     def pbc(self, value):
@@ -300,11 +301,11 @@ class KpointsData(ArrayData):
             return mesh, offset
         else:
             kpoints = numpy.mgrid[0:mesh[0], 0:mesh[1], 0:mesh[2]]
-            kpoints = kpoints.reshape(3,-1).T
+            kpoints = kpoints.reshape(3, -1).T
             offset_kpoints = kpoints + numpy.array(offset)
-            offset_kpoints[:,0] /= mesh[0]
-            offset_kpoints[:,1] /= mesh[1]
-            offset_kpoints[:,2] /= mesh[2]
+            offset_kpoints[:, 0] /= mesh[0]
+            offset_kpoints[:, 1] /= mesh[1]
+            offset_kpoints[:, 2] /= mesh[2]
             return offset_kpoints
 
     def set_kpoints_mesh_from_density(self, distance, offset=[0., 0., 0.],
@@ -332,13 +333,14 @@ class KpointsData(ArrayData):
                                  "having defined a cell")
         # I first round to the fifth digit |b|/distance (to avoid that e.g.
         # 3.00000001 becomes 4)
-        kpointsmesh = [max(int(numpy.ceil(round(numpy.linalg.norm(b)/distance,5))),1)
-                       if pbc else 1 for pbc,b in zip(self.pbc,rec_cell)]
+        kpointsmesh = [
+            max(int(numpy.ceil(round(numpy.linalg.norm(b) / distance, 5))), 1)
+            if pbc else 1 for pbc, b in zip(self.pbc, rec_cell)]
         if force_parity:
             kpointsmesh = [k + (k % 2) if pbc else 1
-                           for pbc,k in zip(self.pbc,kpointsmesh)]
-        self.set_kpoints_mesh(kpointsmesh,offset=offset)
-    
+                           for pbc, k in zip(self.pbc, kpointsmesh)]
+        self.set_kpoints_mesh(kpointsmesh, offset=offset)
+
     @property
     def _dimension(self):
         """
@@ -365,9 +367,10 @@ class KpointsData(ArrayData):
                 # replace empty list by Gamma point
                 kpoints = numpy.array([[0., 0., 0.]])
             else:
-                raise ValueError("empty kpoints list is valid only in zero dimension"
-                                 "; instead here with have {} dimensions"
-                                 "".format(self._dimension))
+                raise ValueError(
+                    "empty kpoints list is valid only in zero dimension"
+                    "; instead here with have {} dimensions"
+                    "".format(self._dimension))
 
         if len(kpoints.shape) <= 1:
             # list of scalars is accepted only in the 0D and 1D cases
@@ -434,7 +437,8 @@ class KpointsData(ArrayData):
         from aiida.common.exceptions import ModificationNotAllowed
 
         # check that it is a 'dim'x #kpoints dimensional array
-        the_kpoints, the_weights = self._validate_kpoints_weights(kpoints, weights)
+        the_kpoints, the_weights = self._validate_kpoints_weights(kpoints,
+                                                                  weights)
 
         # if k-points have less than 3 coordinates (low dimensionality), fill
         # with constant values the non-periodic dimensions
@@ -446,7 +450,8 @@ class KpointsData(ArrayData):
 
             if len(fill_values) < 3 - the_kpoints.shape[1]:
                 raise ValueError("fill_values should be either a scalar or a "
-                                 "length-{} list".format(3 - the_kpoints.shape[1]))
+                                 "length-{} list".format(
+                    3 - the_kpoints.shape[1]))
             else:
                 tmp_kpoints = numpy.zeros((the_kpoints.shape[0], 0))
                 i_kpts = 0
@@ -458,22 +463,27 @@ class KpointsData(ArrayData):
                     # - if it's non-periodic, fill with one of the values in
                     # fill_values
                     if self.pbc[idim]:
-                        tmp_kpoints = numpy.hstack((tmp_kpoints,
-                                                    the_kpoints[:, i_kpts].reshape((the_kpoints.shape[0], 1))))
+                        tmp_kpoints = numpy.hstack(
+                            (tmp_kpoints, the_kpoints[:, i_kpts].reshape((
+                                the_kpoints.shape[0], 1))))
                         i_kpts += 1
                     else:
-                        tmp_kpoints = numpy.hstack((tmp_kpoints,
-                                                    numpy.ones((the_kpoints.shape[0], 1)) * fill_values[i_fill]))
+                        tmp_kpoints = numpy.hstack(
+                            (tmp_kpoints,numpy.ones(
+                                (the_kpoints.shape[0], 1)
+                            ) * fill_values[i_fill]))
                         i_fill += 1
                 the_kpoints = tmp_kpoints
 
         # change reference and always store in crystal coords
         if cartesian:
-            the_kpoints = self._change_reference(the_kpoints, to_cartesian=False)
+            the_kpoints = self._change_reference(the_kpoints,
+                                                 to_cartesian=False)
 
         # check that we did not saved a mesh already
         if self.get_attr('mesh', None) is not None:
-            raise ModificationNotAllowed("KpointsData has already a mesh stored")
+            raise ModificationNotAllowed(
+                "KpointsData has already a mesh stored")
 
         # store
         self.set_array('kpoints', the_kpoints)
@@ -496,12 +506,12 @@ class KpointsData(ArrayData):
         except KeyError:
             raise AttributeError("Before the get, first set a list of kpoints")
 
-        #try:
+        # try:
         #    if not all(self.pbc):
         #        for i in range(3):
         #            if not self.pbc[i]:
         #                kpoints[:,i] = 0.
-        #except AttributeError:
+        # except AttributeError:
         #    # no pbc data found -> assume (True,True,True)
         #    pass
         # note that this operation may lead to duplicates if the kpoints were
@@ -539,7 +549,8 @@ class KpointsData(ArrayData):
             rec_cell = self.reciprocal_cell
         except AttributeError:
             # rec_cell = numpy.eye(3)
-            raise AttributeError("Cannot use cartesian coordinates without having defined a cell")
+            raise AttributeError(
+                "Cannot use cartesian coordinates without having defined a cell")
 
         trec_cell = numpy.transpose(numpy.array(rec_cell))
         if to_cartesian:

@@ -20,7 +20,6 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError,
                                      ValidationError)
 from aiida.common.links import LinkType
-from aiida.common.lang import override
 
 from aiida.orm.implementation.general.node import AbstractNode
 from aiida.orm.implementation.sqlalchemy.computer import Computer
@@ -33,6 +32,9 @@ __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For fu
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
+
+
+_NO_DEFAULT = (None)
 
 
 class Node(AbstractNode):
@@ -246,7 +248,7 @@ class Node(AbstractNode):
                                   "name (raw message was {})"
                                   "".format(e))
 
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False,
+    def get_inputs(self, node_type=None, also_labels=False, only_in_db=False,
                    link_type=None):
 
         link_filter = {'output': self.dbnode}
@@ -267,10 +269,10 @@ class Node(AbstractNode):
                                         "cache for node pk= {}!".format(k, self.id))
                 inputs_list.append((k, v))
 
-        if type is None:
+        if node_type is None:
             filtered_list = inputs_list
         else:
-            filtered_list = [i for i in inputs_list if isinstance(i[1], type)]
+            filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
 
         if also_labels:
             return list(filtered_list)
@@ -302,8 +304,6 @@ class Node(AbstractNode):
                 "Node with uuid={} was already stored".format(self.uuid))
 
     def _set_attr(self, key, value):
-        super(Node, self)._set_attr(key, value)
-
         if self._to_be_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
         else:
@@ -311,8 +311,6 @@ class Node(AbstractNode):
             self._increment_version_number_db()
 
     def _del_attr(self, key):
-        super(Node, self)._del_attr(key)
-
         if self._to_be_stored:
             try:
                 del self._attrs_cache[key]
@@ -320,32 +318,28 @@ class Node(AbstractNode):
                 raise AttributeError(
                     "Attribute {} does not exist".format(key))
         else:
-            if key in self._updatable_attributes:
-                self.dbnode.del_attr(key)
-                self._increment_version_number_db()
-            else:
-                raise ModificationNotAllowed("Cannot delete an attribute after "
-                                             "saving a node")
+            self.dbnode.del_attr(key)
+            self._increment_version_number_db()
 
-    @override
-    def get_attr(self, key, default=None):
+    def get_attr(self, key, default=_NO_DEFAULT):
         exception = AttributeError("Attribute '{}' does not exist".format(key))
-        has_default = default is not None
+
+        has_default = default is not _NO_DEFAULT
         if self._to_be_stored:
             try:
                 return self._attrs_cache[key]
             except KeyError:
                 if has_default:
                     return default
-                raise
+                raise exception
         else:
             try:
                 return get_attr(self.dbnode.attributes, key)
-            except (KeyError, IndexError):
+            except (KeyError, IndexError) as e:
                 if has_default:
                     return default
                 else:
-                    raise
+                    raise exception
 
     def set_extra(self, key, value, exclusive=False):
         # TODO SP: validate key

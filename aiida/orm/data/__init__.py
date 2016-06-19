@@ -1,6 +1,7 @@
 from aiida.orm.node import Node
 from aiida.common.links import LinkType
 from aiida.common.lang import override
+from aiida.common.exceptions import ModificationNotAllowed
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -79,6 +80,39 @@ class Data(Node):
         self.source = source
 
     @override
+    def _set_attr(self, key, value):
+        """
+        Set a new attribute to the Node (in the DbAttribute table).
+
+        :param str key: key name
+        :param value: its value
+        :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
+            because the node was already stored, and the attribute is not listed
+            as updatable).
+
+        :raise ValidationError: if the key is not valid (e.g. it contains the
+            separator symbol).
+        """
+        if self.is_stored:
+            raise ModificationNotAllowed(
+                "Cannot change the attributes of a stored data node.")
+        super(Data, self)._set_attr(key, value)
+
+    @override
+    def _del_attr(self, key):
+        """
+        Delete an attribute.
+
+        :param key: attribute to delete.
+        :raise AttributeError: if key does not exist.
+        :raise ModificationNotAllowed: if the Node was already stored.
+        """
+        if self.is_stored:
+            raise ModificationNotAllowed(
+                "Cannot delete the attributes of a stored data node.")
+        super(Data, self)._del_attr(key)
+
+    @override
     def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.orm.calculation import Calculation
 
@@ -145,12 +179,6 @@ class Data(Node):
         filecontent = self._exportstring(fileformat)
         with open(fname, 'w') as f:  # writes in cwd, if fname is not absolute
             f.write(filecontent)
-
-    @override
-    def store(self, with_transaction=True):
-        # A Data node is automatically sealed when it is stored
-        self.seal()
-        super(Data, self).store(with_transaction=with_transaction)
 
     def _get_exporters(self):
         """
@@ -242,7 +270,7 @@ class Data(Node):
                 raise ValueError(
                     "The format {} is not implemented for {}. "
                     "Currently implemented are: {}.".format(
-                    object_format, self.__class__.__name__,
+                        object_format, self.__class__.__name__,
                         ",".join(converters.keys())))
             else:
                 raise ValueError("The format {} is not implemented for {}. "

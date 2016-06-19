@@ -7,12 +7,188 @@ from aiida.orm.utils import load_node
 from aiida.orm.node import Node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
+from aiida.orm.data import Data
 from aiida.backends.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
+
+
+class TestDataNode(AiidaTestCase):
+    """
+    These tests check the features of Data nodes that differ from the base Node
+    """
+    boolval = True
+    intval = 123
+    floatval = 4.56
+    stringval = "aaaa"
+    # A recursive dictionary
+    dictval = {'num': 3, 'something': 'else', 'emptydict': {},
+               'recursive': {'a': 1, 'b': True, 'c': 1.2, 'd': [1, 2, None],
+                             'e': {'z': 'z', 'x': None, 'xx': {}, 'yy': []}}}
+    listval = [1, "s", True, None]
+    emptydict = {}
+    emptylist = []
+
+    def test_attr_after_storing(self):
+        a = Data()
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a.store()
+
+        # And now I try to edit/delete the keys; I should not be able to do it
+        # after saving. I try only for a couple of attributes
+        with self.assertRaises(ModificationNotAllowed):
+            a._del_attr('bool')
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('integer', 13)
+
+    def test_modify_attr_after_store(self):
+        a = Data()
+        a.store()
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('i', 12)
+
+
+class TestCalcNode(AiidaTestCase):
+    """
+    These tests check the features of Calculation nodes that differ from the
+    base Node type
+    """
+    boolval = True
+    intval = 123
+    floatval = 4.56
+    stringval = "aaaa"
+    # A recursive dictionary
+    dictval = {'num': 3, 'something': 'else', 'emptydict': {},
+               'recursive': {'a': 1, 'b': True, 'c': 1.2, 'd': [1, 2, None],
+                             'e': {'z': 'z', 'x': None, 'xx': {}, 'yy': []}}}
+    listval = [1, "s", True, None]
+    emptydict = {}
+    emptylist = []
+
+    def test_updatable_not_copied(self):
+        """
+        Checks the versioning.
+        """
+        from aiida.orm.test import myNodeWithFields
+
+        # Has 'state' as updatable attribute
+        a = myNodeWithFields()
+        a._set_attr('state', 267)
+        a.store()
+        b = a.copy()
+
+        # updatable attributes are not copied
+        with self.assertRaises(AttributeError):
+            b.get_attr('state')
+
+
+    def test_delete_updatable_attributes(self):
+        """
+        Checks the versioning.
+        """
+        from aiida.orm.test import myNodeWithFields
+
+        # Has 'state' as updatable attribute
+        a = myNodeWithFields()
+        attrs_to_set = {
+            'bool': self.boolval,
+            'integer': self.intval,
+            'float': self.floatval,
+            'string': self.stringval,
+            'dict': self.dictval,
+            'list': self.listval,
+            'state': 267,  # updatable
+        }
+
+        for k, v in attrs_to_set.iteritems():
+            a._set_attr(k, v)
+
+        # Check before storing
+        self.assertEquals(267, a.get_attr('state'))
+
+        a.store()
+
+        # Check after storing
+        self.assertEquals(267, a.get_attr('state'))
+
+        # Even if I stored many attributes, this should stay at 1
+        self.assertEquals(a.dbnode.nodeversion, 1)
+
+        # I should be able to delete the attribute
+        a._del_attr('state')
+
+        # I check increment on new version
+        self.assertEquals(a.dbnode.nodeversion, 2)
+
+        with self.assertRaises(AttributeError):
+            # I check that I cannot modify this attribute
+            _ = a.get_attr('state')
+
+
+    def test_versioning_and_updatable_attributes(self):
+        """
+        Checks the versioning.
+        """
+        from aiida.orm.test import myNodeWithFields
+
+        # Has 'state' as updatable attribute
+        a = myNodeWithFields()
+        attrs_to_set = {
+            'bool': self.boolval,
+            'integer': self.intval,
+            'float': self.floatval,
+            'string': self.stringval,
+            'dict': self.dictval,
+            'list': self.listval,
+            'state': 267,
+        }
+
+        for k, v in attrs_to_set.iteritems():
+            a._set_attr(k, v)
+
+        # Check before storing
+        self.assertEquals(267, a.get_attr('state'))
+
+        a.store()
+
+        # Check after storing
+        self.assertEquals(267, a.get_attr('state'))
+
+        # Even if I stored many attributes, this should stay at 1
+        self.assertEquals(a.dbnode.nodeversion, 1)
+
+        # I check increment on new version
+        a.set_extra('a', 'b')
+        self.assertEquals(a.dbnode.nodeversion, 2)
+
+        # I check that I can set this attribute
+        a._set_attr('state', 999)
+
+        # I check increment on new version
+        self.assertEquals(a.dbnode.nodeversion, 3)
+
+        with self.assertRaises(ModificationNotAllowed):
+            # I check that I cannot modify this attribute
+            a._set_attr('otherattribute', 222)
+
+        # I check that the counter was not incremented
+        self.assertEquals(a.dbnode.nodeversion, 3)
+
+        # In both cases, the node version must increase
+        a.label = 'test'
+        self.assertEquals(a.dbnode.nodeversion, 4)
+
+        a.description = 'test description'
+        self.assertEquals(a.dbnode.nodeversion, 5)
+
+        b = a.copy()
+        # updatable attributes are not copied
+        with self.assertRaises(AttributeError):
+            b.get_attr('state')
 
 
 class TestTransitiveNoLoops(AiidaTestCase):
@@ -731,7 +907,7 @@ class TestNodeBasic(AiidaTestCase):
         shutil.rmtree(directory)
 
     def test_attr_after_storing(self):
-        a = Node()
+        a = Data()
         a._set_attr('none', None)
         a._set_attr('bool', self.boolval)
         a._set_attr('integer', self.intval)
@@ -750,13 +926,6 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.stringval, a.get_attr('string'))
         self.assertEquals(self.dictval, a.get_attr('dict'))
         self.assertEquals(self.listval, a.get_attr('list'))
-
-        # And now I try to edit/delete the keys; I should not be able to do it
-        # after saving. I try only for a couple of attributes
-        with self.assertRaises(ModificationNotAllowed):
-            a._del_attr('bool')
-        with self.assertRaises(ModificationNotAllowed):
-            a._set_attr('integer', 13)
 
     def test_attr_with_reload(self):
         a = Node()
@@ -789,8 +958,6 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.dictval, b.get_attr('dict'))
         self.assertEquals(self.listval, b.get_attr('list'))
 
-        with self.assertRaises(ModificationNotAllowed):
-            a._set_attr('i', 12)
 
     def test_attrs_and_extras_wrong_keyname(self):
         """
@@ -974,66 +1141,12 @@ class TestNodeBasic(AiidaTestCase):
         # I check increment on new version
         self.assertEquals(a.dbnode.nodeversion, 3)
 
-        with self.assertRaises(ModificationNotAllowed):
-            # I check that I cannot modify this attribute
-            a._set_attr('otherattribute', 222)
-
-        # I check that the counter was not incremented
-        self.assertEquals(a.dbnode.nodeversion, 3)
-
         # In both cases, the node version must increase
         a.label = 'test'
         self.assertEquals(a.dbnode.nodeversion, 4)
 
         a.description = 'test description'
         self.assertEquals(a.dbnode.nodeversion, 5)
-
-        b = a.copy()
-        # updatable attributes are not copied
-        with self.assertRaises(AttributeError):
-            b.get_attr('state')
-
-    def test_delete_updatable_attributes(self):
-        """
-        Checks the versioning.
-        """
-        from aiida.orm.test import myNodeWithFields
-
-        # Has 'state' as updatable attribute
-        a = myNodeWithFields()
-        attrs_to_set = {
-            'bool': self.boolval,
-            'integer': self.intval,
-            'float': self.floatval,
-            'string': self.stringval,
-            'dict': self.dictval,
-            'list': self.listval,
-            'state': 267,  # updatable
-        }
-
-        for k, v in attrs_to_set.iteritems():
-            a._set_attr(k, v)
-
-        # Check before storing
-        self.assertEquals(267, a.get_attr('state'))
-
-        a.store()
-
-        # Check after storing
-        self.assertEquals(267, a.get_attr('state'))
-
-        # Even if I stored many attributes, this should stay at 1
-        self.assertEquals(a.dbnode.nodeversion, 1)
-
-        # I should be able to delete the attribute
-        a._del_attr('state')
-
-        # I check increment on new version
-        self.assertEquals(a.dbnode.nodeversion, 2)
-
-        with self.assertRaises(AttributeError):
-            # I check that I cannot modify this attribute
-            _ = a.get_attr('state')
 
     def test_delete_extras(self):
         """

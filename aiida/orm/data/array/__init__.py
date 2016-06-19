@@ -29,7 +29,6 @@ class ArrayData(Data):
         super(ArrayData, self).__init__(*args, **kwargs)
         self._cached_arrays = {}
 
-
     def delete_array(self, name):
         """
         Delete an array from the node. Can only be called before storing.
@@ -40,8 +39,9 @@ class ArrayData(Data):
 
         fname = '{}.npy'.format(name)
         if fname not in self.get_folder_list():
-            raise KeyError("Array with name '{}' not found in node pk= {}".format(
-                name, self.pk))
+            raise KeyError(
+                "Array with name '{}' not found in node pk= {}".format(
+                    name, self.pk))
 
         # remove both file and attribute
         self.remove_path(fname)
@@ -56,22 +56,21 @@ class ArrayData(Data):
         """
         Return a list of all arrays stored in the node, listing the files (and
         not relying on the properties).
-        
+
         .. deprecated:: 0.7
            Use :meth:`get_arraynames` instead.
         """
         import warnings
-        
-        warnings.warn(
-            "arraynames is deprecated, use get_arraynames instead", 
-            DeprecationWarning)
+
+        warnings.warn("arraynames is deprecated, use get_arraynames instead",
+                      DeprecationWarning)
         return self.get_arraynames()
 
     def get_arraynames(self):
         """
-        Return a list of all arrays stored in the node, listing the files (and 
+        Return a list of all arrays stored in the node, listing the files (and
         not relying on the properties).
-        
+
         .. versionadded:: 0.7
            Renamed from arraynames
         """
@@ -83,7 +82,6 @@ class ArrayData(Data):
         not relying on the properties).
         """
         return [i[:-4] for i in self.get_folder_list() if i.endswith('.npy')]
-
 
     def _arraynames_from_properties(self):
         """
@@ -128,7 +126,6 @@ class ArrayData(Data):
 
             array = numpy.load(self.get_abs_path(fname))
             return array
-
 
         # Return with proper caching, but only after storing. Before, instead,
         # always re-read from disk
@@ -184,8 +181,8 @@ class ArrayData(Data):
 
         # Mainly for convenience, for querying purposes (both stores the fact
         # that there is an array with that name, and its shape)
-        self._set_attr("{}{}".format(self.array_prefix, name), list(array.shape))
-
+        self._set_attr("{}{}".format(self.array_prefix, name),
+                       list(array.shape))
 
     def _validate(self):
         """
@@ -200,7 +197,8 @@ class ArrayData(Data):
         properties = self._arraynames_from_properties()
 
         if set(files) != set(properties):
-            raise ValidationError("Mismatch of files and properties for ArrayData"
-                                  " node (pk= {}): {} vs. {}".format(self.pk,
-                                                                     files, properties))
+            raise ValidationError(
+                "Mismatch of files and properties for ArrayData"
+                " node (pk= {}): {} vs. {}".format(self.pk,
+                                                   files, properties))
         super(ArrayData, self)._validate()

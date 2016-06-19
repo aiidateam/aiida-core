@@ -21,6 +21,7 @@ def simplify(string):
     """
     return "\n".join(s.strip() for s in string.split())
 
+
 class TestCalcStatus(AiidaTestCase):
     """
     Test the functionality of calculation states.
@@ -36,7 +37,7 @@ class TestCalcStatus(AiidaTestCase):
                            resources={
                                'num_machines': 1,
                                'num_mpiprocs_per_machine': 1}
-        )
+                           )
         # Should be in the NEW state before storing
         self.assertEquals(c.get_state(), calc_states.NEW)
 
@@ -81,7 +82,6 @@ class TestSinglefileData(AiidaTestCase):
 
         from aiida.orm.data.singlefile import SinglefileData
 
-
         file_content = 'some text ABCDE'
         with tempfile.NamedTemporaryFile() as f:
             filename = f.name
@@ -117,7 +117,8 @@ class TestCifData(AiidaTestCase):
     Tests for CifData class.
     """
     from aiida.orm.data.cif import has_pycifrw
-    from aiida.orm.data.structure import has_ase,has_pymatgen,has_pyspglib,get_pymatgen_version
+    from aiida.orm.data.structure import has_ase, has_pymatgen, has_pyspglib, \
+        get_pymatgen_version
     from distutils.version import StrictVersion
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
@@ -316,7 +317,7 @@ O 0.5 0.5 0.5
                      not has_pymatgen() or
                      StrictVersion(get_pymatgen_version()) <
                      StrictVersion('3.0.13'), "Unable to import pymatgen"
-                     "Unable to import ase, pycifrw or pymatgen")
+                                              "Unable to import ase, pycifrw or pymatgen")
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """
         Checking the number of atoms per primitive/conventional cell
@@ -462,15 +463,15 @@ _publ_section_title                     'Test CIF'
 
         self.assertEquals(
             symop_string_from_symop_matrix_tr(
-                [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),"x,y,z")
+                [[1, 0, 0], [0, 1, 0], [0, 0, 1]]), "x,y,z")
 
         self.assertEquals(
             symop_string_from_symop_matrix_tr(
-                [[1, 0, 0], [0, -1, 0], [0, 1, 1]]),"x,-y,y+z")
+                [[1, 0, 0], [0, -1, 0], [0, 1, 1]]), "x,-y,y+z")
 
         self.assertEquals(
             symop_string_from_symop_matrix_tr(
-                [[-1, 0, 0], [0, 1, 0], [0, 0, 1]],[1,-1,0]),"-x+1,y-1,z")
+                [[-1, 0, 0], [0, 1, 0], [0, 0, 1]], [1, -1, 0]), "-x+1,y-1,z")
 
     def test_parse_formula(self):
         from aiida.orm.data.cif import parse_formula
@@ -548,7 +549,6 @@ _publ_section_title                     'Test CIF'
 
         self.assertEqual(a.has_attached_hydrogens(), True)
 
-
     @unittest.skipIf(not has_ase() or not has_pycifrw() or
                      not has_pyspglib(),
                      "Unable to import ase, pycifrw or pyspglib")
@@ -583,9 +583,9 @@ _publ_section_title                     'Test CIF'
 
         ret_dict = refine_inline(a)
         b = ret_dict['cif']
-        self.assertEqual(b.values.keys(),['test'])
-        self.assertEqual(b.values['test']['_chemical_formula_sum'],'C O2')
-        self.assertEqual(b.values['test']['_symmetry_equiv_pos_as_xyz'],[
+        self.assertEqual(b.values.keys(), ['test'])
+        self.assertEqual(b.values['test']['_chemical_formula_sum'], 'C O2')
+        self.assertEqual(b.values['test']['_symmetry_equiv_pos_as_xyz'], [
             'x,y,z',
             '-x,-y,-z',
             '-y,x,z',
@@ -632,6 +632,7 @@ _publ_section_title                     'Test CIF'
         # Invalid literal for float()
         with self.assertRaises(ValueError):
             parse_formula("H0.5.2 O")
+
 
 class TestKindValidSymbols(AiidaTestCase):
     """
@@ -802,7 +803,6 @@ class TestKindTestGeneral(AiidaTestCase):
         c = Kind(symbols='Ba', weights=None)
         self.assertFalse(c.is_alloy())
         self.assertFalse(c.has_vacancies())
-
 
     def test_automatic_name(self):
         """
@@ -1161,7 +1161,8 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(1., 1., 1.), symbols='Ti', name='Ti2')
         # The name already exists, but the properties are different!
         with self.assertRaises(ValueError):
-            a.append_atom(position=(1., 1., 1.), symbols='Ti', mass=100., name='Ti2')
+            a.append_atom(position=(1., 1., 1.), symbols='Ti', mass=100.,
+                          name='Ti2')
         # Should not complain, should create a new type
         a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=150.)
 
@@ -1207,7 +1208,8 @@ class TestStructureData(AiidaTestCase):
         from aiida.orm.data.structure import StructureData
         import ase
 
-        asecell = ase.Atoms('Fe5', cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
+        asecell = ase.Atoms('Fe5',
+                            cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
         asecell.set_positions([
             [0, 0, 0],
             [1, 0, 0],
@@ -1276,7 +1278,8 @@ class TestStructureData(AiidaTestCase):
         # The name does not exist
         a.append_atom(position=(0., 0., 0.), symbols='Ti', name='Ti2')
         # The name already exists, but the properties are identical => OK
-        a.append_atom(position=(0., 0., 0.), symbols=['O', 'H'], weights=[0.9, 0.1], mass=15.)
+        a.append_atom(position=(0., 0., 0.), symbols=['O', 'H'],
+                      weights=[0.9, 0.1], mass=15.)
 
         self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
 
@@ -1291,86 +1294,92 @@ class TestStructureData(AiidaTestCase):
         import math
         import numpy
 
-        a = ase.Atoms(cell=[10,10,10])
-        a.append(ase.Atom('C',[0,0,0]))
-        a.append(ase.Atom('C',[5,0,0]))
-        b,sym = ase_refine_cell(a)
+        a = ase.Atoms(cell=[10, 10, 10])
+        a.append(ase.Atom('C', [0, 0, 0]))
+        a.append(ase.Atom('C', [5, 0, 0]))
+        b, sym = ase_refine_cell(a)
         sym.pop('rotations')
         sym.pop('translations')
-        self.assertEquals(b.get_chemical_symbols(),['C'])
-        self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,5]])
-        self.assertEquals(sym,{'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
+        self.assertEquals(b.get_chemical_symbols(), ['C'])
+        self.assertEquals(b.cell.tolist(), [[10, 0, 0], [0, 10, 0], [0, 0, 5]])
+        self.assertEquals(sym,
+                          {'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
 
-        a = ase.Atoms(cell=[10,2*math.sqrt(75),10])
-        a.append(ase.Atom('C',[0,0,0]))
-        a.append(ase.Atom('C',[5,math.sqrt(75),0]))
-        b,sym = ase_refine_cell(a)
+        a = ase.Atoms(cell=[10, 2 * math.sqrt(75), 10])
+        a.append(ase.Atom('C', [0, 0, 0]))
+        a.append(ase.Atom('C', [5, math.sqrt(75), 0]))
+        b, sym = ase_refine_cell(a)
         sym.pop('rotations')
         sym.pop('translations')
-        self.assertEquals(b.get_chemical_symbols(),['C'])
-        self.assertEquals(numpy.round(b.cell,2).tolist(),
-                          [[10,0,0],[-5,8.66,0],[0,0,10]])
-        self.assertEquals(sym,{'hall': '-P 6 2', 'hm': 'P6/mmm', 'tables': 191})
+        self.assertEquals(b.get_chemical_symbols(), ['C'])
+        self.assertEquals(numpy.round(b.cell, 2).tolist(),
+                          [[10, 0, 0], [-5, 8.66, 0], [0, 0, 10]])
+        self.assertEquals(sym,
+                          {'hall': '-P 6 2', 'hm': 'P6/mmm', 'tables': 191})
 
-        a = ase.Atoms(cell=[[10,0,0],[-10,10,0],[0,0,10]])
-        a.append(ase.Atom('C',[5,5,5]))
-        a.append(ase.Atom('F',[0,0,0]))
-        b,sym = ase_refine_cell(a)
+        a = ase.Atoms(cell=[[10, 0, 0], [-10, 10, 0], [0, 0, 10]])
+        a.append(ase.Atom('C', [5, 5, 5]))
+        a.append(ase.Atom('F', [0, 0, 0]))
+        b, sym = ase_refine_cell(a)
         sym.pop('rotations')
         sym.pop('translations')
-        self.assertEquals(b.get_chemical_symbols(),['C','F'])
-        self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
+        self.assertEquals(b.get_chemical_symbols(), ['C', 'F'])
+        self.assertEquals(b.cell.tolist(), [[10, 0, 0], [0, 10, 0], [0, 0, 10]])
         self.assertEquals(b.get_scaled_positions().tolist(),
-                          [[0.5,0.5,0.5],[0,0,0]])
-        self.assertEquals(sym,{'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
+                          [[0.5, 0.5, 0.5], [0, 0, 0]])
+        self.assertEquals(sym,
+                          {'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
 
-        a = ase.Atoms(cell=[[10,0,0],[-10,10,0],[0,0,10]])
-        a.append(ase.Atom('C',[0,0,0]))
-        a.append(ase.Atom('F',[5,5,5]))
-        b,sym = ase_refine_cell(a)
+        a = ase.Atoms(cell=[[10, 0, 0], [-10, 10, 0], [0, 0, 10]])
+        a.append(ase.Atom('C', [0, 0, 0]))
+        a.append(ase.Atom('F', [5, 5, 5]))
+        b, sym = ase_refine_cell(a)
         sym.pop('rotations')
         sym.pop('translations')
-        self.assertEquals(b.get_chemical_symbols(),['C','F'])
-        self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
+        self.assertEquals(b.get_chemical_symbols(), ['C', 'F'])
+        self.assertEquals(b.cell.tolist(), [[10, 0, 0], [0, 10, 0], [0, 0, 10]])
         self.assertEquals(b.get_scaled_positions().tolist(),
-                          [[0,0,0],[0.5,0.5,0.5]])
-        self.assertEquals(sym,{'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
+                          [[0, 0, 0], [0.5, 0.5, 0.5]])
+        self.assertEquals(sym,
+                          {'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
 
-        a = ase.Atoms(cell=[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
-        a.append(ase.Atom('Ba',[1.5334848,1.3999986,2.00042276]))
-        b,sym = ase_refine_cell(a)
+        a = ase.Atoms(cell=[[12.132, 0, 0], [0, 6.0606, 0], [0, 0, 8.0956]])
+        a.append(ase.Atom('Ba', [1.5334848, 1.3999986, 2.00042276]))
+        b, sym = ase_refine_cell(a)
         sym.pop('rotations')
         sym.pop('translations')
-        self.assertEquals(b.cell.tolist(),[[6.0606,0,0],[0,8.0956,0],[0,0,12.132]])
-        self.assertEquals(b.get_scaled_positions().tolist(),[[0,0,0]])
+        self.assertEquals(b.cell.tolist(),
+                          [[6.0606, 0, 0], [0, 8.0956, 0], [0, 0, 12.132]])
+        self.assertEquals(b.get_scaled_positions().tolist(), [[0, 0, 0]])
 
-        a = ase.Atoms(cell=[10,10,10])
-        a.append(ase.Atom('C',[5,5,5]))
-        a.append(ase.Atom('O',[2.5,5,5]))
-        a.append(ase.Atom('O',[7.5,5,5]))
-        b,sym = ase_refine_cell(a)
+        a = ase.Atoms(cell=[10, 10, 10])
+        a.append(ase.Atom('C', [5, 5, 5]))
+        a.append(ase.Atom('O', [2.5, 5, 5]))
+        a.append(ase.Atom('O', [7.5, 5, 5]))
+        b, sym = ase_refine_cell(a)
         sym.pop('rotations')
         sym.pop('translations')
-        self.assertEquals(b.get_chemical_symbols(),['C','O'])
-        self.assertEquals(sym,{'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
+        self.assertEquals(b.get_chemical_symbols(), ['C', 'O'])
+        self.assertEquals(sym,
+                          {'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
 
         # Generated from COD entry 1507756
         # (http://www.crystallography.net/cod/1507756.cif@87343)
         from ase.lattice.spacegroup import crystal
-        a = crystal(['Ba','Ti','O','O'],
+        a = crystal(['Ba', 'Ti', 'O', 'O'],
                     [
-                      [0,0,0],
-                      [0.5,0.5,0.482],
-                      [0.5,0.5,0.016],
-                      [0.5,0,0.515]
+                        [0, 0, 0],
+                        [0.5, 0.5, 0.482],
+                        [0.5, 0.5, 0.016],
+                        [0.5, 0, 0.515]
                     ],
-                    cell=[3.9999,3.9999,4.0170],
+                    cell=[3.9999, 3.9999, 4.0170],
                     spacegroup=99)
-        b,sym = ase_refine_cell(a)
+        b, sym = ase_refine_cell(a)
         sym.pop('rotations')
         sym.pop('translations')
-        self.assertEquals(b.get_chemical_symbols(),['Ba','Ti','O','O'])
-        self.assertEquals(sym,{'hall': 'P 4 -2', 'hm': 'P4mm', 'tables': 99})
+        self.assertEquals(b.get_chemical_symbols(), ['Ba', 'Ti', 'O', 'O'])
+        self.assertEquals(sym, {'hall': 'P 4 -2', 'hm': 'P4mm', 'tables': 99})
 
     def test_get_formula(self):
         """
@@ -1578,7 +1587,6 @@ class TestStructureDataReload(AiidaTestCase):
         for i in range(3):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
 
-
     def test_copy(self):
         """
         Start from a StructureData object, copy it and see if it is preserved
@@ -1674,7 +1682,7 @@ class TestStructureDataFromAse(AiidaTestCase):
              (0.5, 0.5, 0.5),
              (0.6, 0.6, 0.6),
              (0.7, 0.7, 0.7),
-            )
+             )
         )
 
         a.set_tags((0, 1, 2, 3, 4, 5, 6, 7))
@@ -1700,7 +1708,7 @@ class TestStructureDataFromAse(AiidaTestCase):
              (0.1, 0.1, 0.1),
              (0.2, 0.2, 0.2),
              (0.3, 0.3, 0.3),
-            )
+             )
         )
 
         a.set_tags((0, 1, 0, 1))
@@ -1720,7 +1728,6 @@ class TestStructureDataFromAse(AiidaTestCase):
         c_tags = list(c.get_tags())
         e_tags = list(e.get_tags())
         self.assertEqual(c_tags, e_tags)
-
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_3(self):
@@ -1753,7 +1760,6 @@ class TestStructureDataFromAse(AiidaTestCase):
                                                      'Cu', 'Cu'])
         self.assertEquals(list(b.get_tags()), [0, 1, 0, 2, 3, 4, 5, 6])
 
-
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_4(self):
         from aiida.orm.data.structure import StructureData
@@ -1780,13 +1786,14 @@ class TestStructureDataFromAse(AiidaTestCase):
         kindnames = set([k.name for k in s.kinds])
         self.assertEquals(kindnames, set(['Fe', 'Fe1', 'Fe4']))
 
+
 class TestStructureDataFromPymatgen(AiidaTestCase):
     """
     Tests the creation of StructureData from a pymatgen Structure and
     Molecule objects.
     """
     from distutils.version import StrictVersion
-    from aiida.orm.data.structure import has_pymatgen,get_pymatgen_version
+    from aiida.orm.data.structure import has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen() or
                      StrictVersion(get_pymatgen_version()) <
@@ -1885,16 +1892,21 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             self.assertEquals(struct.get_site_kindnames(),
                               ['H', 'H', 'H', 'H', 'C'])
             self.assertEquals(struct.pbc, (False, False, False))
-            self.assertEquals([round(x, 2) for x in list(struct.sites[0].position)],
-                              [5.77, 5.89, 6.81])
-            self.assertEquals([round(x, 2) for x in list(struct.sites[1].position)],
-                              [6.8, 5.89, 5.36])
-            self.assertEquals([round(x, 2) for x in list(struct.sites[2].position)],
-                              [5.26, 5.0, 5.36])
-            self.assertEquals([round(x, 2) for x in list(struct.sites[3].position)],
-                              [5.26, 6.78, 5.36])
-            self.assertEquals([round(x, 2) for x in list(struct.sites[4].position)],
-                              [5.77, 5.89, 5.73])
+            self.assertEquals(
+                [round(x, 2) for x in list(struct.sites[0].position)],
+                [5.77, 5.89, 6.81])
+            self.assertEquals(
+                [round(x, 2) for x in list(struct.sites[1].position)],
+                [6.8, 5.89, 5.36])
+            self.assertEquals(
+                [round(x, 2) for x in list(struct.sites[2].position)],
+                [5.26, 5.0, 5.36])
+            self.assertEquals(
+                [round(x, 2) for x in list(struct.sites[3].position)],
+                [5.26, 6.78, 5.36])
+            self.assertEquals(
+                [round(x, 2) for x in list(struct.sites[4].position)],
+                [5.77, 5.89, 5.73])
 
 
 class TestPymatgenFromStructureData(AiidaTestCase):
@@ -1903,7 +1915,8 @@ class TestPymatgenFromStructureData(AiidaTestCase):
     StructureData.
     """
     from distutils.version import StrictVersion
-    from aiida.orm.data.structure import has_ase,has_pymatgen,get_pymatgen_version
+    from aiida.orm.data.structure import has_ase, has_pymatgen, \
+        get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen() or
                      StrictVersion(get_pymatgen_version()) <
@@ -1939,7 +1952,7 @@ class TestPymatgenFromStructureData(AiidaTestCase):
              (0.1, 0.1, 0.1),
              (0.2, 0.2, 0.2),
              (0.3, 0.3, 0.3),
-            )
+             )
         )
 
         a_struct = StructureData(ase=aseatoms)
@@ -1974,7 +1987,7 @@ class TestPymatgenFromStructureData(AiidaTestCase):
              (0.1, 0.1, 0.1),
              (0.2, 0.2, 0.2),
              (0.3, 0.3, 0.3),
-            )
+             )
         )
 
         a_struct = StructureData(ase=aseatoms)
@@ -2011,9 +2024,9 @@ class TestArrayData(AiidaTestCase):
         third = numpy.random.rand(6, 6)
         n.set_array('third', third)
 
-
         # Check if the arrays are there
-        self.assertEquals(set(['first', 'second', 'third']), set(n.arraynames()))
+        self.assertEquals(set(['first', 'second', 'third']),
+                          set(n.arraynames()))
         self.assertAlmostEquals(abs(first - n.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n.get_array('second')).max(), 0.)
         self.assertAlmostEquals(abs(third - n.get_array('third')).max(), 0.)
@@ -2056,7 +2069,6 @@ class TestArrayData(AiidaTestCase):
         self.assertEquals(first.shape, n.get_shape('first'))
         self.assertEquals(second.shape, n.get_shape('second'))
 
-
         # Same checks, after reloading
         n2 = ArrayData(dbnode=n.dbnode)
         self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
@@ -2072,7 +2084,6 @@ class TestArrayData(AiidaTestCase):
         self.assertAlmostEquals(abs(second - n2.get_array('second')).max(), 0.)
         self.assertEquals(first.shape, n2.get_shape('first'))
         self.assertEquals(second.shape, n2.get_shape('second'))
-
 
         # Check that I cannot modify the node after storing
         with self.assertRaises(ModificationNotAllowed):
@@ -2158,7 +2169,8 @@ class TestTrajectoryData(AiidaTestCase):
 
         # I set the node
         n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
-                         positions=positions, times=times, velocities=velocities)
+                         positions=positions, times=times,
+                         velocities=velocities)
 
         # Generic checks
         self.assertEqual(n.numsites, 3)
@@ -2336,14 +2348,16 @@ class TestTrajectoryData(AiidaTestCase):
 
         # I set the node
         n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
-                         positions=positions, times=times, velocities=velocities)
+                         positions=positions, times=times,
+                         velocities=velocities)
 
         from_step = n.get_step_structure(1)
         from_get_aiida_structure = n._get_aiida_structure(index=1)
 
         for struc in [from_step, from_get_aiida_structure]:
             self.assertEqual(len(struc.sites), 3)  # 3 sites
-            self.assertAlmostEqual(abs(numpy.array(struc.cell) - cells[1]).sum(), 0)
+            self.assertAlmostEqual(
+                abs(numpy.array(struc.cell) - cells[1]).sum(), 0)
             newpos = numpy.array([s.position for s in struc.sites])
             self.assertAlmostEqual(abs(newpos - positions[1]).sum(), 0)
             newkinds = [s.kind_name for s in struc.sites]
@@ -2377,17 +2391,20 @@ class TestTrajectoryData(AiidaTestCase):
 
             # Checks
             self.assertEqual(len(struc.sites), 3)  # 3 sites
-            self.assertAlmostEqual(abs(numpy.array(struc.cell) - cells[1]).sum(), 0)
+            self.assertAlmostEqual(
+                abs(numpy.array(struc.cell) - cells[1]).sum(), 0)
             newpos = numpy.array([s.position for s in struc.sites])
             self.assertAlmostEqual(abs(newpos - positions[1]).sum(), 0)
             newkinds = [s.kind_name for s in struc.sites]
             # Kinds are in the same order as given in the custm_kinds list
             self.assertEqual(newkinds, symbols.tolist())
-            newatomtypes = [struc.get_kind(s.kind_name).symbols[0] for s in struc.sites]
+            newatomtypes = [struc.get_kind(s.kind_name).symbols[0] for s in
+                            struc.sites]
             # Atoms remain in the same order as given in the positions list
             self.assertEqual(newatomtypes, ['He', 'Os', 'Cu'])
             # Check the mass of the kind of the second atom ('O' _> symbol Os, mass 100)
-            self.assertAlmostEqual(struc.get_kind(struc.sites[1].kind_name).mass, 100.)
+            self.assertAlmostEqual(
+                struc.get_kind(struc.sites[1].kind_name).mass, 100.)
 
     def test_conversion_from_structurelist(self):
         """
@@ -2442,6 +2459,7 @@ class TestKpointsData(AiidaTestCase):
     """
     Tests the TrajectoryData objects.
     """
+
     # TODO: I should find a way to check the special points, case by case
 
     def test_mesh(self):
@@ -2458,7 +2476,8 @@ class TestKpointsData(AiidaTestCase):
         k.set_kpoints_mesh(input_mesh)
         mesh, offset = k.get_kpoints_mesh()
         self.assertEqual(mesh, tuple(input_mesh))
-        self.assertEqual(offset, (0., 0., 0.))  # must be a tuple of three 0 by default
+        self.assertEqual(offset,
+                         (0., 0., 0.))  # must be a tuple of three 0 by default
 
         # a too long list should fail
         with self.assertRaises(ValueError):
@@ -2493,7 +2512,7 @@ class TestKpointsData(AiidaTestCase):
                                    (0.2, 0.0, 0.0),
                                    (0.0, 0.2, 0.0),
                                    (0.0, 0.0, 0.2),
-        ])
+                                   ])
 
         # set kpoints list
         k.set_kpoints(input_klist)
@@ -2542,14 +2561,14 @@ class TestKpointsData(AiidaTestCase):
                                    (0.2, 0.0, 0.0),
                                    (0.0, 0.2, 0.0),
                                    (0.0, 0.0, 0.2),
-        ])
+                                   ])
 
         # define a cell
         alat = 4.
         cell = numpy.array([[alat, 0., 0.],
                             [0., alat, 0.],
                             [0., 0., alat],
-        ])
+                            ])
 
         k.set_cell(cell)
 

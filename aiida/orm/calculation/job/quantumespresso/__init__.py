@@ -764,7 +764,7 @@ class BasePwCpInputGenerator(object):
             raise ValueError('remotedata must be a RemoteData')
 
         # complain if another remotedata is already found
-        input_remote = self.get_inputs(type=RemoteData)
+        input_remote = self.get_inputs(node_type=RemoteData)
         if input_remote:
             raise ValidationError("Cannot set several parent calculation to a "
                                   "{} calculation".format(

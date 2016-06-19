@@ -80,6 +80,11 @@ class AbstractCalculation(object):
     You will typically use one of its subclasses, often a JobCalculation for
     calculations run via a scheduler.
     """
+    _SEALED_KEY = '_sealed'
+
+    # A tuple with attributes that can be updated even after
+    # the call of the store() method
+    _updatable_attributes = tuple()
 
     # Nodes that can be added as input using the use_* methods
     @classproperty
@@ -273,6 +278,9 @@ class AbstractCalculation(object):
         from aiida.orm.data import Data
         from aiida.orm.code import Code
 
+        assert not self.is_sealed,\
+            "Cannot add incoming links to a sealed calculation node"
+
         if link_type is LinkType.INPUT:
             if not isinstance(src, (Data, Code)):
                 raise ValueError(
@@ -302,7 +310,8 @@ class AbstractCalculation(object):
             raise ValueError("Nodes entering in calculation can only be of "
                              "type data or code")
 
-        return super(AbstractCalculation, self)._replace_link_from(src, label, link_type)
+        return super(AbstractCalculation, self)._replace_link_from(
+            src, label, link_type)
 
     def get_code(self):
         """
@@ -310,5 +319,13 @@ class AbstractCalculation(object):
         was not set.
         """
         from aiida.orm.code import Code
-        return dict(self.get_inputs(type=Code, also_labels=True)).get(
+        return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
             self._use_methods['code']['linkname'], None)
+
+    @property
+    def is_sealed(self):
+        return self.get_attr(self._SEALED_KEY, False)
+
+    def seal(self):
+        assert not self.is_sealed, "This node is already sealed."
+        self._set_attr(self._SEALED_KEY, True)

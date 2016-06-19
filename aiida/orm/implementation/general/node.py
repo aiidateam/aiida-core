@@ -75,18 +75,12 @@ class AbstractNode(object):
 
             return newcls
 
-    _SEALED_KEY = '_sealed'
-
     # Name to be used for the Repository section
     _section_name = 'node'
 
     # The name of the subfolder in which to put the files/directories
     # added with add_path
     _path_subfolder_name = 'path'
-
-    # A tuple with attributes that can be updated even after
-    # the call of the store() method
-    _updatable_attributes = tuple()
 
     # A list of tuples, saying which attributes cannot be set at the same time
     # See documentation in the set() method.
@@ -171,14 +165,6 @@ class AbstractNode(object):
     @property
     def is_stored(self):
         return not self._to_be_stored
-
-    @property
-    def is_sealed(self):
-        return self.get_attr(self._SEALED_KEY, False)
-
-    def seal(self):
-        assert not self.is_sealed, "This node is already sealed."
-        self._set_attr(self._SEALED_KEY, True)
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -387,7 +373,6 @@ class AbstractNode(object):
         :param link_type: The type of link, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
-        assert not self.is_sealed, "Cannot add incoming links to a sealed node"
         assert src, "You must provide a valid Node to link"
 
         # Check that the label does not already exist
@@ -669,9 +654,7 @@ class AbstractNode(object):
         :raise ValidationError: if the key is not valid (e.g. it contains the
             separator symbol).
         """
-        if self.is_sealed and key not in self._updatable_attributes:
-            raise ModificationNotAllowed(
-                "Cannot change the attributes of a sealed node.")
+        pass
 
     @abstractmethod
     def _del_attr(self, key):
@@ -682,9 +665,7 @@ class AbstractNode(object):
         :raise AttributeError: if key does not exist.
         :raise ModificationNotAllowed: if the Node was already stored.
         """
-        if self.is_sealed:
-            raise ModificationNotAllowed(
-                "Cannot delete the attributes of a sealed node.")
+        pass
 
     def _del_all_attrs(self):
         """

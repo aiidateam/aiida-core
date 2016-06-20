@@ -33,7 +33,7 @@ def get_first_deriv(stress):
     p = trace(stress)/3.
     # Pressure is -dE/dV; moreover p in kbar, we need to convert
     # it to eV/angstrom^3 to be consisten
-    dE = -p * kbar_to_eV_over_ang3
+    dE = -p * GPa_to_eV_over_ang3
     return dE
 
 

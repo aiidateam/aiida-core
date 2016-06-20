@@ -762,7 +762,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
                 print >> sys.stdout, ("File {} is already present in the "
                                       "destination folder".format(u.filename))
 
-
     def _import_upf(self, filename, **kwargs):
         """
         Importer from UPF.
@@ -794,7 +793,6 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
             'export': (self.export, self.complete_none),
         }
 
-    # def query_new(self, args):
     def query(self, args):
         """
         Perform the query and return information for the list.
@@ -836,22 +834,29 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
                       group_of="bdata")
 
         qb.append(StructureData, tag="sdata", ancestor_of="bdata",
-                  # Is this really needed - Double join is not possible.
-                  # created_by="creator",
+                  # We don't care about the creator of StructureData
                   project=["id", "attributes.kinds", "attributes.sites"])
 
-        qb.order_by({BandsData: {'ctime': 'asc'}})
+        qb.order_by({StructureData: {'ctime': 'desc'}})
 
         list_data = qb.distinct()
 
         entry_list = []
+        already_visited_bdata = set()
         if list_data.count() > 0:
             for [bid, blabel, bdate, sid, akinds, asites] in list_data.iterall():
 
-                # If symbols are defined there is a filtering of the structures
-                # based on the element
-                # When QueryBuilder will support this (attribute)s filtering,
-                # it will be pushed in the query.
+                # We process only one StructureData per BandsData.
+                # We want to process the closest StructureData to
+                # every BandsData.
+                # We hope that the StructureData with the latest
+                # creation time is the closest one.
+                # This will be updated when the QueryBuilder supports
+                # order_by by the distance of two nodes.
+                if already_visited_bdata.__contains__(bid):
+                    continue
+                already_visited_bdata.add(bid)
+
                 if args.element is not None:
                     all_symbols = [_["symbols"][0] for _ in akinds]
                     if not any([s in args.element for s in all_symbols]
@@ -889,141 +894,6 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
                 entry_list.append([str(bid), str(formula),
                                    bdate.strftime('%d %b %Y'), blabel])
 
-        return entry_list
-
-    # def query(self, args):
-    def query_old(self, args):
-        """
-        Perform the query and return information for the list.
-
-        :param args: a namespace with parsed command line parameters.
-        :return: table (list of lists) with information, describing nodes.
-            Each row describes a single hit.
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-        from collections import defaultdict
-        from aiida.orm import DataFactory
-        from django.db.models import Q
-        from aiida.backends.utils import get_automatic_user
-        from aiida.common.utils import grouper
-        from aiida.orm.data.structure import (get_formula, get_symbols_string)
-        from aiida.backends.djsite.db import models
-        from aiida.backends.djsite.db.models import DbPath
-
-        query_group_size = 100  # we group the attribute query in chunks of this size
-
-        StructureData = DataFactory('structure')
-        BandsData = DataFactory('array.bands')
-
-        # First, I run a query to get all BandsData of the past N days
-        q_object = None
-        if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
-        else:
-            q_object = Q()
-
-        self.query_past_days(q_object, args)
-        self.query_group(q_object, args)
-
-        bands_list = BandsData.query(q_object).distinct().order_by('ctime')
-
-        bands_list_data = bands_list.values_list('pk', 'label', 'ctime')
-
-        # split data in chunks
-        grouped_bands_list_data = grouper(query_group_size,
-                                          [(_[0], _[1], _[2]) for _ in bands_list_data])
-
-        entry_list = []
-
-        for this_chunk in grouped_bands_list_data:
-            # gather all banddata pks
-            pks = [_[0] for _ in this_chunk]
-
-            # get all the StructureData that are parents of the selected bandsdatas
-            q_object = Q(child__in=pks)
-            if args.all_users is False:
-                q_object.add(Q(child__user=get_automatic_user()), Q.AND)
-            q_object.add(Q(parent__type='data.structure.StructureData.'), Q.AND)
-            structure_list = DbPath.objects.filter(q_object).distinct()
-            structure_list_data = structure_list.values_list('parent_id', 'child_id', 'depth')
-
-            # select the pks of all structure involved
-            # the right structure is chosen as the closest structure in the graph
-            struc_pks = []
-            for band_pk in pks:
-                try:
-                    struc_pks.append(min([_ for _ in structure_list_data if _[1] == band_pk],
-                                         key=lambda x: x[-1]
-                    )[0]
-                    )
-                except ValueError:  # no structure in input
-                    struc_pks.append(None)
-
-            # query for the attributes needed for the structure formula
-            attr_query = Q(key__startswith='kinds') | Q(key__startswith='sites')
-            attrs = models.DbAttribute.objects.filter(attr_query,
-                                                      dbnode__in=struc_pks).values_list(
-                'dbnode__pk', 'key', 'datatype', 'tval', 'fval',
-                'ival', 'bval', 'dval')
-
-            results = defaultdict(dict)
-            for attr in attrs:
-                results[attr[0]][attr[1]] = {"datatype": attr[2],
-                                             "tval": attr[3],
-                                             "fval": attr[4],
-                                             "ival": attr[5],
-                                             "bval": attr[6],
-                                             "dval": attr[7]}
-            # organize all of it in a dictionary
-            deser_data = {}
-            for k in results:
-                deser_data[k] = models.deserialize_attributes(results[k],
-                                                              sep=models.DbAttribute._sep)
-
-            # prepare the printout
-            for ((band_pk, label, date), struc_pk) in zip(this_chunk, struc_pks):
-                if struc_pk is not None:
-                    # Exclude structures by the elements
-                    if args.element is not None:
-                        all_kinds = [k['symbols'] for k in deser_data[struc_pk]['kinds']]
-                        all_symbols = [item for sublist in all_kinds for item in sublist]
-                        if not any([s in args.element for s in all_symbols]
-                        ):
-                            continue
-                    if args.element_only is not None:
-                        all_kinds = [k['symbols'] for k in deser_data[struc_pk]['kinds']]
-                        all_symbols = [item for sublist in all_kinds for item in sublist]
-                        if not all([s in all_symbols for s in args.element_only]
-                        ):
-                            continue
-
-                    # build the formula
-                    symbol_dict = {k['name']: get_symbols_string(k['symbols'],
-                                                                 k['weights'])
-                                   for k in deser_data[struc_pk]['kinds']}
-                    try:
-                        symbol_list = [symbol_dict[s['kind_name']]
-                                       for s in deser_data[struc_pk]['sites']]
-                        formula = get_formula(symbol_list,
-                                              mode=args.formulamode)
-                    # If for some reason there is no kind with the name
-                    # referenced by the site
-                    except KeyError:
-                        formula = "<<UNKNOWN>>"
-                        # cycle if we imposed the filter on elements
-                        if args.element is not None or args.element_only is not None:
-                            continue
-                else:
-                    formula = "<<UNKNOWN>>"
-                    # cycle if we imposed the filter on elements
-                    if args.element is not None or args.element_only is not None:
-                        continue
-
-                entry_list.append([str(band_pk),
-                                   str(formula),
-                                   date.strftime('%d %b %Y'),
-                                   label])
         return entry_list
 
     def append_list_cmdline_arguments(self, parser):
@@ -1205,8 +1075,9 @@ class _Structure(VerdiCommandWithSubcommands,
                 # When QueryBuilder will support this (attribute)s filtering,
                 # it will be pushed in the query.
                 if args.element is not None:
-                    elements = [_["symbols"] for _ in akinds]
-                    if args.element not in elements:
+                    all_symbols = [_["symbols"][0] for _ in akinds]
+                    if not any([s in args.element for s in all_symbols]
+                               ):
                         continue
 
                     if args.elementonly:
@@ -1455,7 +1326,6 @@ class _Structure(VerdiCommandWithSubcommands,
         except ValueError as e:
             print e
 
-
     def _import_pwi(self, filename, **kwargs):
         """
         Imports a structure from a quantumespresso input file.
@@ -1483,8 +1353,6 @@ class _Structure(VerdiCommandWithSubcommands,
 
         except ValueError as e:
             print e
-
-
 
     def _deposit_tcod(self, node, parameter_data=None, **kwargs):
         """

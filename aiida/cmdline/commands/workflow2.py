@@ -2,9 +2,9 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.workflows2.defaults import registry
 import click
 import sys
+from tabulate import tabulate
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -22,19 +22,29 @@ class Workflow2(VerdiCommandWithSubcommands):
         }
 
     def list(self, *args):
-        sys.argv = sys.argv[2:]
-        return do_list()
+        ctx = do_list.make_context('list', sys.argv[3:])
+        with ctx:
+            result = do_list.invoke(ctx)
 
 
-@click.command()
-@click.option('--verbose')
-def do_list(verbose):
+@click.command('list')
+@click.option('-p', '--past-days', type=int,
+              help="add a filter to show only workflows created in the past N"
+                   " days")
+def do_list(past_days):
     """
-    Return a list of workflows on screen
+    Return a list of running workflows on screen
     """
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    from aiida.workflows2.defaults import storage
 
     if not is_dbenv_loaded():
-        load_dbenv()
+        pass
+    load_dbenv()
 
-    print("\n".join(registry.get_running_pids()))
+    cps = storage.load_all_checkpoints()
+    table = []
+    for cp in cps:
+        table.append([cp.pid, cp.process_class.__name__, cp.wait_on_instance_state])
+
+    print(tabulate(table, headers=["PID", "Process class", "Wait on"]))

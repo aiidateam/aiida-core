@@ -65,3 +65,6 @@ validate_email
 # For composable command line options
 click==6.6
 
+# Pretty-print tables
+tabulate==0.7.5
+

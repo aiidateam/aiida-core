@@ -30,6 +30,18 @@ class SimpleData(Data):
     def __repr__(self):
         return self.value.__repr__()
 
+    def __eq__(self, other):
+        if isinstance(other, SimpleData):
+            return self.value == other.value
+        else:
+            return self.value == other
+
+    def __ne__(self, other):
+        if isinstance(other, SimpleData):
+            return self.value != other.value
+        else:
+            return self.value != other
+
     def new(self, value=None):
         return self.__class__(typevalue=(self._type, value))
 
@@ -101,18 +113,6 @@ class NumericType(SimpleData):
         else:
             return self.value <= other
 
-    def __eq__(self, other):
-        if isinstance(other, NumericType):
-            return self.value == other.value
-        else:
-            return self.value == other
-
-    def __ne__(self, other):
-        if isinstance(other, NumericType):
-            return self.value != other.value
-        else:
-            return self.value != other
-
     def __gt__(self, other):
         if isinstance(other, NumericType):
             return self.value > other.value
@@ -141,4 +141,4 @@ def Int(value=None):
 
 
 def Str(value=None):
-    return NumericType(typevalue=(str, value))
+    return SimpleData(typevalue=(str, value))

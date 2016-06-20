@@ -71,15 +71,15 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Equation of states example.')
     parser.add_argument('--structure', type=int, dest='structure_pk',
-                        help='The structure pk to use.')
+                        help='The structure pk to use.', required=True)
     parser.add_argument('--range', type=str, dest='range',
                         help='The scale range of the equation of states '
                              'calculation written as [start]:[end]:[delta]',
-                             default='0.96:0.1.04:0.02')
+                             default='0.96:1.04:0.02')
     parser.add_argument('--pseudo', type=str, dest='pseudo',
-                        help='The pseudopotential family')
+                        help='The pseudopotential family', required=True)
     parser.add_argument('--code', type=str, dest='code',
-                        help='The codename to use')
+                        help='The codename to use', required=True)
 
     args = parser.parse_args()
     start, end, delta = args.range.split(':')

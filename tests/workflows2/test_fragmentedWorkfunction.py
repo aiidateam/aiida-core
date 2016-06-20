@@ -15,6 +15,9 @@ from unittest import TestCase
 from aiida.workflows2.fragmented_wf import *
 from aiida.workflows2.fragmented_wf import _FragmentedWorkfunctionSpec
 from aiida.workflows2.db_types import to_db_type
+from aiida.workflows2.wf import wf
+from aiida.workflows2.run import async
+from aiida.orm.data.simple import Str
 
 # This is nasty, use a global variable to track the finishing of steps but in a
 # test it's kind of OK.
@@ -22,6 +25,8 @@ finished_steps = {}
 
 
 class Wf(FragmentedWorkfunction):
+    finished_steps = {}
+
     @classmethod
     def _define(cls, spec):
         spec.input("value")
@@ -44,13 +49,13 @@ class Wf(FragmentedWorkfunction):
 
     def __init__(self, store_provenance=False):
         super(Wf, self).__init__(store_provenance)
-        self.finished_steps = finished_steps
-        self.finished_steps.update({
+        # Reset the finished step
+        self.finished_steps = {
             k: False for k in
             [self.s1.__name__, self.s2.__name__, self.s3.__name__,
              self.s4.__name__, self.s5.__name__, self.s6.__name__,
              self.isA.__name__, self.isB.__name__, self.ltN.__name__]
-        })
+        }
 
     def s1(self, ctx):
         self._set_finished(inspect.stack()[0][3])
@@ -90,9 +95,7 @@ class Wf(FragmentedWorkfunction):
 
 
 class TestFragmentedWorkfunction(TestCase):
-    def test__run(self):
-        global finished_steps
-
+    def test_run(self):
         A = to_db_type('A')
         B = to_db_type('B')
         C = to_db_type('C')
@@ -101,7 +104,7 @@ class TestFragmentedWorkfunction(TestCase):
         # Try the if(..) part
         Wf.run(inputs={'value': A, 'n': three})
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in Wf.finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -132,8 +135,42 @@ class TestFragmentedWorkfunction(TestCase):
         with self.assertRaises(ValueError):
             Wf.spec()
 
+    def test_context(self):
+        A = Str("a")
+        B = Str("b")
+
+        @wf
+        def a():
+            return A
+
+        @wf
+        def b():
+            return B
+
+        class Wf(FragmentedWorkfunction):
+            @classmethod
+            def _define(cls, spec):
+                spec.outline(cls.s1, cls.s2, cls.s3)
+
+            def s1(self, ctx):
+                fa = async(a)
+                fb = async(b)
+                return ResultToContext(r1=fa, r2=fb)
+
+            def s2(self, ctx):
+                assert ctx.r1['_return'] == A
+                assert ctx.r2['_return'] == B
+                fb = async(b)
+                # Try overwriting r1
+                return ResultToContext(r1=fb)
+
+            def s3(self, ctx):
+                assert ctx.r1['_return'] == B
+                assert ctx.r2['_return'] == B
+
+        Wf.run()
+
     def test_str(self):
-        # print(str(_Wf.spec().get_outline()))
         self.assertIsInstance(str(Wf.spec()), basestring)
 
     def test_malformed_outline(self):

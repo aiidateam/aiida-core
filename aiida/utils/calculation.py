@@ -19,17 +19,19 @@ def add_source_info(node, func):
     # Note: if you pass a lambda function, the name will be <lambda>; moreover
     # if you define a function f, and then do "h=f", h.__name__ will
     # still return 'f'!
-    function_name = func.__name__
+    node._set_attr("function_name", func.__name__)
 
     # Try to get the source code
-    source_code, first_line = inspect.getsourcelines(func)
+    try:
+        source_code, first_line = inspect.getsourcelines(func)
+        node._set_attr("source_code", "".join(source_code))
+        node._set_attr("first_line_source_code", first_line)
+    except (IOError, OSError):
+        pass
     try:
         with open(inspect.getsourcefile(func)) as f:
             source = f.read()
-    except IOError:
-        source = None
-
-    node._set_attr("source_code", "".join(source_code))
-    node._set_attr("first_line_source_code", first_line)
-    node._set_attr("source_file", source)
-    node._set_attr("function_name", function_name)
+        # MU: Do we really want to store the whole file?
+        node._set_attr("source_file", source)
+    except (IOError, OSError):
+        pass

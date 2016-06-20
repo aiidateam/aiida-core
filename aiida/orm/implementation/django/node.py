@@ -12,6 +12,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
+from aiida.common.lang import override
 
 from aiida.backends.djsite.utils import get_automatic_user
 from aiida.backends.djsite.db.models import DbLink
@@ -240,7 +241,7 @@ class Node(AbstractNode):
         from aiida.backends.djsite.db.models import DbLink
 
         link_filter = {'output': self.dbnode}
-        if link_type:
+        if link_type is not None:
             link_filter['type'] = link_type.value
         inputs_list = [(i.label, i.input.get_aiida_class()) for i in
                        DbLink.objects.filter(**link_filter).distinct()]
@@ -267,10 +268,15 @@ class Node(AbstractNode):
         else:
             return [i[1] for i in filtered_list]
 
-    def get_outputs(self, type=None, also_labels=False):
+    @override
+    def get_outputs(self, type=None, also_labels=False, link_type=None):
         from aiida.backends.djsite.db.models import DbLink
+
+        link_filter = {'input': self.dbnode}
+        if link_type is not None:
+            link_filter['type'] = link_type.value
         outputs_list = ((i.label, i.output.get_aiida_class()) for i in
-                        DbLink.objects.filter(input=self.dbnode).distinct())
+                        DbLink.objects.filter(**link_filter).distinct())
 
         if type is None:
             if also_labels:

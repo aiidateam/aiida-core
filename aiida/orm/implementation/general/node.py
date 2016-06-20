@@ -551,7 +551,7 @@ class AbstractNode(object):
             self.get_inputs(
                 also_labels=True, only_in_db=only_in_db, link_type=link_type))
 
-    def get_outputs_dict(self):
+    def get_outputs_dict(self, link_type=None):
         """
         Return a dictionary where the key is the label of the output link, and
         the value is the input node.
@@ -562,7 +562,7 @@ class AbstractNode(object):
 
         :return: a dictionary {linkname:object}
         """
-        all_outputs = self.get_outputs(also_labels=True)
+        all_outputs = self.get_outputs(also_labels=True, link_type=link_type)
 
         all_linknames = [i[0] for i in all_outputs]
         linknames_set = list(set(all_linknames))
@@ -604,7 +604,7 @@ class AbstractNode(object):
         pass
 
     @abstractmethod
-    def get_outputs(self, type=None, also_labels=False):
+    def get_outputs(self, type=None, also_labels=False, link_type=None):
         """
         Return a list of nodes that exit (directly) from this node
 

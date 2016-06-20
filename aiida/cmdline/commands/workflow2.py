@@ -6,6 +6,7 @@ import click
 import sys
 from tabulate import tabulate
 from aiida.workflows2.process import Process
+from aiida.common.links import LinkType
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
@@ -19,6 +20,10 @@ __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For fu
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
+
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
 
 _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(SealableMixin.SEALED_KEY)
 
@@ -51,7 +56,7 @@ class Workflow2(VerdiCommandWithSubcommands):
             do_checkpoint.invoke(ctx)
 
 
-@click.command('list')
+@click.command('list', context_settings=CONTEXT_SETTINGS)
 @click.option('-p', '--past-days', type=int,
               help="add a filter to show only workflows created in the past N"
                    " days")
@@ -83,7 +88,7 @@ def do_list(past_days, limit):
     print(tabulate(table, headers=["PID", "Creation time", "Type", "Sealed"]))
 
 
-@click.command('tree')
+@click.command('tree', context_settings=CONTEXT_SETTINGS)
 @click.option('--node-label', default=Process.PROCESS_LABEL_ATTR, type=str)
 @click.argument('pks', nargs=-1, type=int)
 def do_tree(pks, node_label):
@@ -95,10 +100,9 @@ def do_tree(pks, node_label):
         print(t.get_ascii(show_internal=True))
 
 
-@click.command('checkpoint')
+@click.command('checkpoint', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
 def do_checkpoint(pks):
-    from ete3 import Tree
     from aiida.workflows2.defaults import storage
 
     for pk in pks:
@@ -110,19 +114,14 @@ def do_checkpoint(pks):
             print("Unable to show checkpoint for calculation '{}'".format(pk))
 
 
-def _ctime(keyval):
-    return keyval[1].ctime
+def _ctime(node):
+    return node.ctime
 
 
 def _build_tree(node, node_label='type', show_pk=True):
-    children = []
-
-    called = {label: child
-              for label, child in node.get_outputs_dict().iteritems()
-              if label.startswith('CALL')}
-    for label, child in sorted(called.iteritems(), key=_ctime):
-        if label.startswith('CALL'):
-            children.append(_build_tree(child, node_label))
+    children =[]
+    for node in sorted(node.get_outputs(link_type=LinkType.CALL), key=_ctime):
+        children.append(_build_tree(node, node_label))
 
     out_values = []
     if children:

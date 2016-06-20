@@ -13,7 +13,8 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 # Have globals that can be used by all of AiiDA
 factory = ProcessFactory(store_provenance=True)
-storage = PicklePersistence(factory, '/tmp/to_run')
+storage = PicklePersistence(
+    factory, delete_at_end=False, directory='/tmp/to_run')
 registry = ProcessRegistry(storage)
 #execution_engine = ExecutionEngine(
 #    process_factory=factory, process_registry=registry)

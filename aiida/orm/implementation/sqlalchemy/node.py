@@ -20,6 +20,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError,
                                      ValidationError)
 from aiida.common.links import LinkType
+from aiida.common.lang import override
 
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
@@ -249,7 +250,7 @@ class Node(AbstractNode):
                    link_type=None):
 
         link_filter = {'output': self.dbnode}
-        if link_type:
+        if link_type is not None:
             link_filter['type'] = link_type.value
         inputs_list = [(i.label, i.input.get_aiida_class()) for i in
                        DbLink.query.filter_by(output=self.dbnode)
@@ -276,9 +277,14 @@ class Node(AbstractNode):
         else:
             return [i[1] for i in filtered_list]
 
-    def get_outputs(self, type=None, also_labels=False):
+    @override
+    def get_outputs(self, type=None, also_labels=False, link_type=None):
+
+        link_filter = {'input': self.dbnode}
+        if link_type is not None:
+            link_filter['type'] = link_type.value
         outputs_list = ((i.label, i.output.get_aiida_class()) for i in
-                        DbLink.query.filter_by(input=self.dbnode).distinct().all())
+                        DbLink.query.filter_by(**link_filter).distinct().all())
 
         if type is None:
             if also_labels:

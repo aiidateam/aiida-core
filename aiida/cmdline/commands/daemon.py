@@ -15,7 +15,7 @@ def is_daemon_user():
     """
     Return True if the user is the current daemon user, False otherwise.
     """
-    from aiida.backends.djsite.utils import get_daemon_user
+    from aiida.backends.utils import get_daemon_user
     from aiida.common.utils import get_configured_user_email
 
     daemon_user = get_daemon_user()
@@ -44,7 +44,6 @@ class Daemon(VerdiCommandWithSubcommands):
         command. Press CTRL+C to exit.
     """
 
-
     def __init__(self):
         """
         A dictionary with valid commands and functions to be called:
@@ -69,7 +68,6 @@ class Daemon(VerdiCommandWithSubcommands):
                 setup.DAEMON_SUBDIR,
                 setup.DAEMON_CONF_FILE
             ))
-
 
     def _get_pid_full_path(self):
         """
@@ -262,7 +260,7 @@ class Daemon(VerdiCommandWithSubcommands):
             print ("# Most recent daemon timestamp: [Never]")
 
         pid = self.get_daemon_pid()
-        if (pid == None):
+        if pid is None:
             print "Daemon not running (cannot find the PID for it)"
             return
 
@@ -373,28 +371,28 @@ class Daemon(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         from aiida.utils import timezone
-
-        from django.core.exceptions import ObjectDoesNotExist
-
-        from aiida.backends.djsite.db.models import DbUser
-        from aiida.backends.djsite.utils import get_daemon_user, set_daemon_user
-        from aiida.common.utils import get_configured_user_email
-        from aiida.backends.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.backends.utils import get_daemon_user, set_daemon_user
+        from aiida.common.utils import (get_configured_user_email,
+                                        query_yes_no, query_string)
+        from aiida.daemon.timestamps import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
+        from aiida.orm.user import User
 
         old_daemon_user = get_daemon_user()
         this_user = get_configured_user_email()
 
-        print "> Current default user: {}".format(this_user)
-        print "> Currently configured user who can run the daemon: {}".format(old_daemon_user)
+        print("> Current default user: {}".format(this_user))
+        print("> Currently configured user who can run the daemon: {}".format(
+            old_daemon_user))
         if old_daemon_user == this_user:
-            print "  (therefore, at the moment you are the user who can run the daemon)"
+            print("  (therefore, at the moment you are the user who can run "
+                  "the daemon)")
             pid = self.get_daemon_pid()
             if pid is not None:
-                print "The daemon is running! I will not proceed."
+                print("The daemon is running! I will not proceed.")
                 sys.exit(1)
         else:
-            print "  (therefore, you cannot run the daemon, at the moment)"
+            print("  (therefore, you cannot run the daemon, at the moment)")
 
         most_recent_timestamp = get_most_recent_daemon_timestamp()
 
@@ -406,35 +404,34 @@ class Daemon(VerdiCommandWithSubcommands):
 
         if most_recent_timestamp is not None:
             timestamp_delta = timezone.now() - most_recent_timestamp
-            last_check_string = ("[The most recent timestamp "
-                                 "from the daemon was {}]".format(
-                str_timedelta(timestamp_delta)))
+            last_check_string = (
+                "[The most recent timestamp from the daemon was {}]"
+                .format(str_timedelta(timestamp_delta)))
             print "* {:72s} *".format(last_check_string)
 
         print "*" * 76
 
-        answer = raw_input(
-            "Are you really sure that you want to change the "
-            "daemon user? [y/N] ")
-
-        if not (answer == 'y' or answer == 'Y'):
+        answer = query_yes_no("Are you really sure that you want to change "
+                              "the daemon user?", default="no")
+        if not answer:
             sys.exit(0)
 
         print ""
         print "Enter below the email of the new user who can run the daemon."
-        new_daemon_user = raw_input("New daemon user: ")
+        new_daemon_user_email = query_string("New daemon user: ", None)
 
-        try:
-            new_daemon_user_db = DbUser.objects.get(email=new_daemon_user)
-        except ObjectDoesNotExist:
+        found_users = User.search_for_users(email=new_daemon_user_email)
+        if len(found_users) == 0:
             print("ERROR! The user you specified ({}) does "
-                  "not exist in the database!!".format(new_daemon_user))
+                  "not exist in the database!!".format(new_daemon_user_email))
+            print("The available users are {}".format(
+                [_.email for _ in User.search_for_users()]))
             sys.exit(1)
 
-        set_daemon_user(new_daemon_user)
+        set_daemon_user(new_daemon_user_email)
 
-        print "The new user that can run the daemon is now {}.".format(
-            new_daemon_user_db.get_full_name())
+        print "The new user that can run the daemon is now {} {}.".format(
+            found_users[0].first_name, found_users[0].last_name)
 
     def _clean_sock_files(self):
         """
@@ -457,4 +454,3 @@ class Daemon(VerdiCommandWithSubcommands):
             # Ignore if errno = errno.ENOENT (2): no file found
             if e.errno != errno.ENOENT:  # No such file
                 raise
-

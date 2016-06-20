@@ -104,7 +104,7 @@ def set_daemon_user(user_email):
     """
     from aiida.backends.djsite.globalsettings import set_global_setting
 
-    set_global_setting('daemon|user', user_email,
+    set_global_setting("daemon|user", user_email,
                        description="The only user that is allowed to run the "
                                    "AiiDA daemon on this DB instance")
 

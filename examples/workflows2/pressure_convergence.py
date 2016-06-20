@@ -13,7 +13,7 @@ from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, \
     ResultToContext, while_
 from aiida.workflows2.wf import wf
 from common import generate_scf_input_params
-from diamond_fcc_new import rescale, create_diamond_fcc
+from diamond_fcc import rescale, create_diamond_fcc
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 
 GPa_to_eV_over_ang3 = 1./160.21766208

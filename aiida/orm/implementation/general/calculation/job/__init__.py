@@ -804,11 +804,11 @@ class AbstractJobCalculation(object):
     @classmethod
     def _list_calculations(
             cls, states=None, past_days=None, group=None,
-            group_pk=None, all_users=False, pks=[],
+            group_pk=None, all_users=False, pks=tuple(),
             relative_ctime=True, with_scheduler_state=False,
             order_by=None, limit=None):
         """
-        Return a string with a description of the AiiDA calculations.
+        Print a description of the AiiDA calculations.
 
         :param states: a list of string with states. If set, print only the
             calculations in the states "states", otherwise shows all.
@@ -836,8 +836,8 @@ class AbstractJobCalculation(object):
         """
 
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.common.custom_io import pretty_print
         from aiida.daemon.timestamps import get_last_daemon_timestamp
+        from tabulate import tabulate
 
         now = timezone.now()
 
@@ -846,21 +846,22 @@ class AbstractJobCalculation(object):
             for state in states:
                 if state not in calc_states:
                     return "Invalid state provided: {}.".format(state)
+
         # Let's check if there is something to order_by:
         valid_order_parameters = (None, 'id', 'ctime')
-        if order_by not in valid_order_parameters:
-            raise Exception("invalid order by parameter {}\n"
-                            "valid parameters are:\n"
-                            "".format(order_by, valid_order_parameters))
+        assert order_by in valid_order_parameters, \
+            "invalid order by parameter {}\n" \
+             "valid parameters are:\n".format(order_by, valid_order_parameters)
+
         # Limit:
-        if not (limit is None or isinstance(limit, int)):
-            raise Exception(
+        if limit is not None:
+            assert isinstance(limit, int),  \
                 "Limit (set to {}) has to be an integer or None".format(limit)
-            )
+
         # get the last daemon check:
         try:
-            last_daemon_check = get_last_daemon_timestamp('updater',
-                                                          when='stop')
+            last_daemon_check = \
+                get_last_daemon_timestamp('updater', when='stop')
         except ValueError:
             last_check_string = (
                 "# Last daemon state_updater check: "
@@ -868,9 +869,7 @@ class AbstractJobCalculation(object):
             )
         else:
             if last_daemon_check is None:
-                last_check_string = (
-                    "# Last daemon state_updater check: (Never)"
-                )
+                last_check_string = "# Last daemon state_updater check: (Never)"
             else:
                 last_check_string = (
                     "# Last daemon state_updater check: "
@@ -923,11 +922,9 @@ class AbstractJobCalculation(object):
             'id', 'state', 'attributes.state', 'ctime', 'type',
             'attributes.scheduler_state'
         ]
-        calc_list_data = [[
-            '# Pk', 'State', 'Creation',
-            'Sched. state',
-            'Computer', 'Type'
-        ]]
+        calc_list_header = ['PK', 'State', 'Creation', 'Sched. state',
+                            'Computer', 'Type']
+        calc_list_data = []
         qb = QueryBuilder()
         qb.append(
             cls,
@@ -962,10 +959,8 @@ class AbstractJobCalculation(object):
                     ctime = res['calculation']['ctime']
                     if relative_ctime:
                         calc_ctime = str_timedelta(
-                            timezone.delta(ctime, now),
-                            negative_to_zero=True,
-                            max_num_fields=1
-                        )
+                            timezone.delta(ctime, now), negative_to_zero=True,
+                            max_num_fields=1)
                     else:
                         calc_ctime = " ".join([
                             timezone.localtime(ctime).isoformat().split('T')[0],
@@ -974,9 +969,10 @@ class AbstractJobCalculation(object):
                     state = str(res['calculation']['state'])
                     if state == calc_states.IMPORTED:
                         attrstate = res['calculation']['attributes.state']
-                        if attrstate == None:
+                        if attrstate is None:
                             attrstate = 'UNKNOWN'
                         state = '{}/{}'.format(state, attrstate)
+
                     calc_list_data.append([
                         str(res['calculation']['id']),
                         state,
@@ -987,12 +983,14 @@ class AbstractJobCalculation(object):
                             res['calculation']['type']
                         ).rsplit(".", 1)[0].lstrip('calculation.job.')
                     ])
-                pretty_print(calc_list_data)
+
+                print(tabulate(calc_list_data, headers=calc_list_header))
                 calc_list_data = []
             except StopIteration:
-                pretty_print(calc_list_data)
+                print(tabulate(calc_list_data, headers=calc_list_header))
                 break
-        print "\n  Number of rows: {}\n".format(counter)
+
+        print "\nNumber of rows: {}\n".format(counter)
 
     @classmethod
     def _get_all_with_state(

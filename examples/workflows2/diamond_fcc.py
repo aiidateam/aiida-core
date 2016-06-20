@@ -10,7 +10,7 @@ from aiida.workflows2.db_types import Float, Str
 from aiida.workflows2.wf import wf
 from aiida.workflows2.run import async
 from common import run_scf
-
+from aiida.workflows2.defaults import registry
 
 @wf
 def create_diamond_fcc(element,alat):
@@ -49,6 +49,8 @@ def rescale(structure, scale):
 
 @wf
 def calc_energies(codename, pseudo_family):
+    print("Calculating energies, my pk is '{}'".format(registry.current_pid))
+
     futures = {}
     for element, scale in [("Si", 5.41)]:
         structure = create_diamond_fcc(Str(element), Float(1.))

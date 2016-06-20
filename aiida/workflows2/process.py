@@ -94,6 +94,8 @@ class Process(plum.process.Process):
     """
     __metaclass__ = ABCMeta
 
+    PROCESS_LABEL_ATTR = '_process_label'
+
     KEY_CALC_ID = 'calc_id'
     KEY_PARENT_CALC_PID = 'parent_calc_pid'
 
@@ -256,7 +258,7 @@ class Process(plum.process.Process):
         self._calc = self.create_db_record()
         self._setup_db_record()
         if self._store_provenance:
-            assert self._calc.is_stored
+            self._calc.store_all()
 
         if self._calc.pk is not None:
             return self._calc.pk
@@ -267,6 +269,9 @@ class Process(plum.process.Process):
         assert self.inputs is not None
         assert not self.calc.is_sealed,\
             "Calculation cannot be sealed when setting up the database record"
+
+        # Save the name of this process
+        self.calc._set_attr(self.PROCESS_LABEL_ATTR, self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()
 
@@ -300,9 +305,6 @@ class Process(plum.process.Process):
         if parent_calc:
             self.calc.add_link_from(parent_calc, "CALL",
                                     link_type=LinkType.CALL)
-
-        if self._store_provenance:
-            self.calc.store_all()
 
     def _can_fast_forward(self, inputs):
         return False
@@ -409,11 +411,12 @@ class FunctionProcess(Process):
         assert (len(args) == len(cls._func_args))
         return dict(zip(cls._func_args, args))
 
-    @classmethod
-    def create_db_record(cls):
-        calc = super(FunctionProcess, cls).create_db_record()
-        add_source_info(calc, cls._func)
-        return calc
+    @override
+    def _setup_db_record(self):
+        super(FunctionProcess, self)._setup_db_record()
+        add_source_info(self.calc, self._func)
+        # Save the name of the function
+        self.calc._set_attr(self.PROCESS_LABEL_ATTR, self._func.__name__)
 
     def _run(self, **kwargs):
         from aiida.orm.data import Data

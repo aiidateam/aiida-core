@@ -13,7 +13,7 @@ __version__ = "0.6.0"
 class SealableMixin(object):
 
     # The name of the attribute to indiate if the node is sealed or not.
-    _SEALED_KEY = '_sealed'
+    SEALED_KEY = '_sealed'
 
     def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
         """
@@ -35,11 +35,11 @@ class SealableMixin(object):
 
     @property
     def is_sealed(self):
-        return self.get_attr(self._SEALED_KEY, False)
+        return self.get_attr(self.SEALED_KEY, False)
 
     def seal(self):
         assert not self.is_sealed, "This node is already sealed."
-        self._set_attr(self._SEALED_KEY, True)
+        self._set_attr(self.SEALED_KEY, True)
 
 
 class SealableWithUpdatableAttributesMixin(SealableMixin):

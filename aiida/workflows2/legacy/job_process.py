@@ -141,5 +141,3 @@ class JobProcess(Process):
             calc.add_link_from(parent_calc, "CALL", LinkType.CALL)
 
         self._calc = calc
-        if self._store_provenance:
-            self._calc.store_all()

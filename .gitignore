@@ -8,3 +8,7 @@
 */*/.DS_Store
 */*/*/.DS_Store
 .metadata
+
+/venv*/
+/.idea/
+/aiida.egg-info/

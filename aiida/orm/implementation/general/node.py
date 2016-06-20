@@ -18,6 +18,9 @@ __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
 
+_NO_DEFAULT = tuple()
+
+
 class AbstractNode(object):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -581,12 +584,12 @@ class AbstractNode(object):
         return new_outputs
 
     @abstractmethod
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False,
+    def get_inputs(self, node_type=None, also_labels=False, only_in_db=False,
                    link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
 
-        :param type: If specified, should be a class, and it filters only
+        :param node_type: If specified, should be a class, and it filters only
             elements of that specific type (or a subclass of 'type')
         :param also_labels: If False (default) only return a list of input nodes.
                 If True, return a list of tuples, where each tuple has the
@@ -679,7 +682,7 @@ class AbstractNode(object):
             self._del_attr(attr_name)
 
     @abstractmethod
-    def get_attr(self, key, default=None):
+    def get_attr(self, key, default=_NO_DEFAULT):
         """
         Get the attribute.
 
@@ -688,8 +691,7 @@ class AbstractNode(object):
 
         :return: attribute value
 
-        :raise IndexError: If no attribute is found and there is no default
-        :raise ValueError: If more than two arguments are passed to get_attr
+        :raise AttributeError: If no attribute is found and there is no default
         """
         pass
 
@@ -786,7 +788,7 @@ class AbstractNode(object):
         pass
 
     @abstractmethod
-    def iterattrs(self, also_updatable=True):
+    def iterattrs(self):
         """
         Iterator over the attributes, returning tuples (key, value)
 

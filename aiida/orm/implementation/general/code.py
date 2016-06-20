@@ -4,6 +4,7 @@ from abc import abstractmethod
 from aiida.orm.implementation import Node
 from aiida.common.exceptions import (ValidationError, MissingPluginError)
 from aiida.common.links import LinkType
+from aiida.orm.mixins import SealableWithUpdatableAttributesMixin
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -11,7 +12,7 @@ __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
 
-class AbstractCode(Node):
+class AbstractCode(SealableWithUpdatableAttributesMixin, Node):
     """
     A code entity.
     It can either be 'local', or 'remote'.
@@ -32,10 +33,11 @@ class AbstractCode(Node):
         """
         This function is called by the init method
         """
-        self._updatable_attributes = ('input_plugin', 'append_text',
-                                      'prepend_text', 'hidden')
+        self._updatable_attributes = \
+            ('input_plugin', 'append_text', 'prepend_text', 'hidden')
 
-        self._set_incompatibilities = [('remote_computer_exec', 'local_executable')]
+        self._set_incompatibilities = [
+            ('remote_computer_exec', 'local_executable')]
 
     def _hide(self):
         """
@@ -81,8 +83,10 @@ class AbstractCode(Node):
             else:
                 computer_str = "[unknown]"
 
-        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str, self.label,
-                                                             computer_str, self.pk, self.uuid)
+        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str,
+                                                             self.label,
+                                                             computer_str,
+                                                             self.pk, self.uuid)
 
     @classmethod
     @abstractmethod
@@ -153,8 +157,9 @@ class AbstractCode(Node):
                 raise NotExistent("'{}' is not a valid code "
                                   "ID or label.".format(code_string))
             elif len(codes) > 1:
-                retstr = ("There are multiple codes with label '{}', having IDs: "
-                          "".format(code_string))
+                retstr = (
+                "There are multiple codes with label '{}', having IDs: "
+                "".format(code_string))
                 retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
                 retstr += ("Relabel them (using their ID), or refer to them "
                            "with their ID.")
@@ -186,15 +191,18 @@ class AbstractCode(Node):
 
         if self.is_local():
             if not self.get_local_executable():
-                raise ValidationError("You have to set which file is the local executable "
-                                      "using the set_exec_filename() method")
+                raise ValidationError(
+                    "You have to set which file is the local executable "
+                    "using the set_exec_filename() method")
                 # c[1] is True if the element is a file
             if self.get_local_executable() not in self.get_folder_list():
-                raise ValidationError("The local executable '{}' is not in the list of "
-                                      "files of this code".format(self.get_local_executable()))
+                raise ValidationError(
+                    "The local executable '{}' is not in the list of "
+                    "files of this code".format(self.get_local_executable()))
         else:
             if self.get_folder_list():
-                raise ValidationError("The code is remote but it has files inside")
+                raise ValidationError(
+                    "The code is remote but it has files inside")
             if not self.get_remote_computer():
                 raise ValidationError("You did not specify a remote computer")
             if not self.get_remote_exec_path():
@@ -212,7 +220,8 @@ class AbstractCode(Node):
         from aiida.orm.calculation import Calculation
 
         if not isinstance(dest, Calculation):
-            raise ValueError("The output of a code node can only be a calculation")
+            raise ValueError(
+                "The output of a code node can only be a calculation")
 
         return super(AbstractCode, self)._linking_as_output(dest, link_type)
 
@@ -408,11 +417,14 @@ class AbstractCode(Node):
             len(self.get_outputs())))
         if self.is_local():
             ret_lines.append(" * Type:           {}".format("local"))
-            ret_lines.append(" * Exec name:      {}".format(self.get_execname()))
+            ret_lines.append(
+                " * Exec name:      {}".format(self.get_execname()))
             ret_lines.append(" * List of files/folders:")
             for fname in self._get_folder_pathsubfolder.get_content_list():
                 ret_lines.append("   * [{}] {}".format(" dir" if
-                                                       self._get_folder_pathsubfolder.isdir(fname) else "file", fname))
+                                                       self._get_folder_pathsubfolder.isdir(
+                                                           fname) else "file",
+                                                       fname))
         else:
             ret_lines.append(" * Type:           {}".format("remote"))
             ret_lines.append(" * Remote machine: {}".format(
@@ -444,7 +456,8 @@ class AbstractCode(Node):
         try:
             code.store()
         except ValidationError as e:
-            raise ValidationError("Unable to store the computer: {}.".format(e.message))
+            raise ValidationError(
+                "Unable to store the computer: {}.".format(e.message))
         return code
 
 

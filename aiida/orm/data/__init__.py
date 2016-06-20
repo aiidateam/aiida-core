@@ -26,8 +26,6 @@ class Data(Node):
     according to its method. This is done independently in order to allow
     cross-validation of plugins.
     """
-    _updatable_attributes = tuple()
-
     _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version',
                           'extras', 'source_md5', 'description', 'license']
 
@@ -87,8 +85,7 @@ class Data(Node):
         :param str key: key name
         :param value: its value
         :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
-            because the node was already stored, and the attribute is not listed
-            as updatable).
+            because the node was already stored)
 
         :raise ValidationError: if the key is not valid (e.g. it contains the
             separator symbol).

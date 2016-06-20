@@ -21,7 +21,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      ValidationError)
 from aiida.common.links import LinkType
 
-from aiida.orm.implementation.general.node import AbstractNode
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
@@ -32,9 +32,6 @@ __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For fu
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
-
-
-_NO_DEFAULT = (None)
 
 
 class Node(AbstractNode):
@@ -335,7 +332,7 @@ class Node(AbstractNode):
         else:
             try:
                 return get_attr(self.dbnode.attributes, key)
-            except (KeyError, IndexError) as e:
+            except (KeyError, IndexError):
                 if has_default:
                     return default
                 else:
@@ -377,18 +374,16 @@ class Node(AbstractNode):
     def iterextras(self):
         return self.dbnode.extras.iteritems()
 
-    def iterattrs(self, also_updatable=True):
+    def iterattrs(self):
         # TODO: check what happens if someone stores the object while
         #        the iterator is being used!
-        updatable_list = [attr for attr in self._updatable_attributes]
-
         if self._to_be_stored:
             it_items = self._attrs_cache.iteritems()
         else:
             it_items = self.dbnode.attributes.iteritems()
+
         for k, v in it_items:
-            if also_updatable or not k in updatable_list:
-                yield (k, v)
+            yield (k, v)
 
     def get_attrs(self):
         return self.dbnode.attributes
@@ -490,7 +485,7 @@ class Node(AbstractNode):
         newobject.dbnode.description = self.dbnode.description  # Inherit description
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
-        for k, v in self.iterattrs(also_updatable=False):
+        for k, v in self.iterattrs():
             newobject._set_attr(k, v)
 
         for path in self.get_folder_list():

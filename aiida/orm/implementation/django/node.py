@@ -6,7 +6,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.general.node import AbstractNode
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.utils import get_new_uuid
@@ -20,9 +20,6 @@ __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For fu
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
-
-
-_NO_DEFAULT = (None)
 
 
 class Node(AbstractNode):
@@ -417,22 +414,16 @@ class Node(AbstractNode):
             for e in extraslist:
                 yield (e.key, e.getvalue())
 
-    def iterattrs(self, also_updatable=True):
+    def iterattrs(self):
         from aiida.backends.djsite.db.models import DbAttribute
         # TODO: check what happens if someone stores the object while
         #        the iterator is being used!
-        updatable_list = [attr for attr in self._updatable_attributes]
-
         if self._to_be_stored:
             for k, v in self._attrs_cache.iteritems():
-                if not also_updatable and k in updatable_list:
-                    continue
                 yield (k, v)
         else:
             all_attrs = DbAttribute.get_all_values_for_node(self.dbnode)
             for attr in all_attrs:
-                if not also_updatable and attr in updatable_list:
-                    continue
                 yield (attr, all_attrs[attr])
 
     def get_attrs(self):
@@ -554,7 +545,7 @@ class Node(AbstractNode):
         newobject.dbnode.description = self.dbnode.description  # Inherit description
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
-        for k, v in self.iterattrs(also_updatable=False):
+        for k, v in self.iterattrs():
             newobject._set_attr(k, v)
 
         for path in self.get_folder_list():

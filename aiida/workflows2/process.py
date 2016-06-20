@@ -98,6 +98,13 @@ class Process(plum.process.Process):
     KEY_PARENT_CALC_PID = 'parent_calc_pid'
 
     @classmethod
+    def _define(cls, spec):
+        from aiida.orm import Data
+
+        spec.dynamic_input(valid_type=Data)
+        spec.dynamic_output(valid_type=Data)
+
+    @classmethod
     def get_inputs_template(cls):
         return cls.spec().get_inputs_template()
 
@@ -207,10 +214,12 @@ class Process(plum.process.Process):
 
     @override
     def on_fail(self, exception):
+        super(Process, self).on_fail(exception)
         self.calc.seal()
 
     @override
     def on_finish(self, retval):
+        super(Process, self).on_finish(retval)
         self.calc.seal()
 
     @override
@@ -236,9 +245,9 @@ class Process(plum.process.Process):
             "types.  Got: {}".format(value.__class__)
 
         if not value.is_stored:
+            value.add_link_from(self._calc, output_port, LinkType.CREATE)
             if self._store_provenance:
                 value.store()
-            value.add_link_from(self._calc, output_port, LinkType.CREATE)
         value.add_link_from(self._calc, output_port, LinkType.RETURN)
 
     #################################################################
@@ -367,6 +376,7 @@ class FunctionProcess(Process):
         :return: A Process class that represents the function
         """
         import inspect
+        from aiida.orm.data import Data
 
         args, varargs, keywords, defaults = inspect.getargspec(func)
 
@@ -375,14 +385,14 @@ class FunctionProcess(Process):
                 default = None
                 if defaults and len(defaults) - len(args) + i >= 0:
                     default = defaults[i]
-                spec.input(args[i], default=default)
+                spec.input(args[i], valid_type=Data, default=default)
                 # Make sure to get rid of the argument from the keywords dict
                 kwargs.pop(args[i], None)
 
             for k, v in kwargs.iteritems():
                 spec.input(k)
             # We don't know what a function will return so keep it dynamic
-            spec.dynamic_output()
+            spec.dynamic_output(valid_type=Data)
 
         return type(func.__name__, (FunctionProcess,),
                     {'_func': staticmethod(func),

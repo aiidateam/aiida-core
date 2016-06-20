@@ -19,6 +19,7 @@ class JobProcess(Process):
 
     @classmethod
     def build(cls, calc_class):
+        from aiida.orm.data import Data
         from aiida.orm.computer import Computer
 
         def _define(spec):
@@ -53,7 +54,7 @@ class JobProcess(Process):
                                valid_type=v['valid_types'], required=False)
 
             # Outputs
-            spec.dynamic_output()
+            spec.dynamic_output(valid_type=Data)
 
         return type(calc_class.__name__, (JobProcess,),
                     {'_define': staticmethod(_define),
@@ -76,15 +77,15 @@ class JobProcess(Process):
         return wait_on
 
     def calculation_finished(self, wait_on):
-        assert not self._calc._is_running()
+        assert not self.calc._is_running()
 
-        for label, node in self._calc.get_outputs_dict().iteritems():
+        for label, node in self.calc.get_outputs_dict().iteritems():
             self.out(label, node)
 
-        if self._calc.has_failed():
+        if self.calc.has_failed():
             raise RuntimeError(
-                "Calculation failed with state '{}'".
-                    format(self._calc.get_state()))
+                "Calculation (pk={}) failed with state '{}'".
+                    format(self.calc.pk, self.calc.get_state()))
 
     @override
     def _on_output_emitted(self, output_port, value, dynamic):

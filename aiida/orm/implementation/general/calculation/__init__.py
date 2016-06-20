@@ -3,16 +3,13 @@
 import collections
 
 from aiida.common.utils import classproperty
-from aiida.common.exceptions import DbContentError
 from aiida.common.links import LinkType
+from aiida.orm.mixins import SealableWithUpdatableAttributesMixin
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
-
-
-
 
 
 def _parse_single_arg(function_name, additional_parameter,
@@ -72,7 +69,7 @@ def _parse_single_arg(function_name, additional_parameter,
         return None
 
 
-class AbstractCalculation(object):
+class AbstractCalculation(SealableWithUpdatableAttributesMixin):
     """
     This class provides the definition of an "abstract" AiiDA calculation.
     A calculation in this sense is any computation that converts data into data.
@@ -80,11 +77,8 @@ class AbstractCalculation(object):
     You will typically use one of its subclasses, often a JobCalculation for
     calculations run via a scheduler.
     """
-    _SEALED_KEY = '_sealed'
-
     # A tuple with attributes that can be updated even after
     # the call of the store() method
-    _updatable_attributes = tuple()
 
     # Nodes that can be added as input using the use_* methods
     @classproperty
@@ -140,7 +134,8 @@ class AbstractCalculation(object):
         Allow to list all valid attributes, adding also the use_* methods
         """
         return sorted(dir(type(self)) + list(['use_{}'.format(k)
-                                              for k in self._use_methods.iterkeys()]))
+                                              for k in
+                                              self._use_methods.iterkeys()]))
 
     def __getattr__(self, name):
         """
@@ -179,9 +174,11 @@ class AbstractCalculation(object):
 
                 # Type check
                 if not isinstance(parent_node, self.data['valid_types']):
-                    if isinstance(self.data['valid_types'], collections.Iterable):
+                    if isinstance(self.data['valid_types'],
+                                  collections.Iterable):
                         valid_types_string = ",".join([_.__name__ for _ in
-                                                       self.data['valid_types']])
+                                                       self.data[
+                                                           'valid_types']])
                     else:
                         valid_types_string = self.data['valid_types'].__name__
 
@@ -258,7 +255,8 @@ class AbstractCalculation(object):
                 raise ValueError("Call links can only link two calculations.")
         else:
             raise ValueError(
-                "Calculation cannot have links of type {} as output".format(link_type))
+                "Calculation cannot have links of type {} as output".format(
+                    link_type))
 
         return super(AbstractCalculation, self)._linking_as_output(
             dest, link_type)
@@ -278,9 +276,6 @@ class AbstractCalculation(object):
         from aiida.orm.data import Data
         from aiida.orm.code import Code
 
-        assert not self.is_sealed,\
-            "Cannot add incoming links to a sealed calculation node"
-
         if link_type is LinkType.INPUT:
             if not isinstance(src, (Data, Code)):
                 raise ValueError(
@@ -291,7 +286,8 @@ class AbstractCalculation(object):
                 raise ValueError("Call links can only link two calculations.")
         else:
             raise ValueError(
-                "Calculation cannot have links of type {} as input".format(link_type))
+                "Calculation cannot have links of type {} as input".format(
+                    link_type))
 
         return super(AbstractCalculation, self).add_link_from(
             src, label, link_type)
@@ -321,11 +317,3 @@ class AbstractCalculation(object):
         from aiida.orm.code import Code
         return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
             self._use_methods['code']['linkname'], None)
-
-    @property
-    def is_sealed(self):
-        return self.get_attr(self._SEALED_KEY, False)
-
-    def seal(self):
-        assert not self.is_sealed, "This node is already sealed."
-        self._set_attr(self._SEALED_KEY, True)

@@ -13,20 +13,21 @@ from common import run_scf
 
 
 @wf
-def create_diamond_fcc(element):
+def create_diamond_fcc(element,alat):
     """
     Workfunction to create a diamond crystal structure with a given element.
 
     :param element: The element to create the structure with.
     :return: The structure.
     """
-    the_cell = [[0., 0.5, 0.5],
+    from numpy import array
+    the_cell = array([[0., 0.5, 0.5],
                 [0.5, 0., 0.5],
-                [0.5, 0.5, 0.]]
+                [0.5, 0.5, 0.]]) * alat
     StructureData = DataFactory("structure")
     structure = StructureData(cell=the_cell)
     structure.append_atom(position=(0., 0., 0.), symbols=str(element))
-    structure.append_atom(position=(0.25, 0.25, 0.25), symbols=str(element))
+    structure.append_atom(position=(0.25 * alat, 0.25 * alat, 0.25 * alat), symbols=str(element))
     return structure
 
 
@@ -49,8 +50,8 @@ def rescale(structure, scale):
 @wf
 def calc_energies(codename, pseudo_family):
     futures = {}
-    for element, scale in [("Si", 5.41), ("C", 3.5)]:
-        structure = create_diamond_fcc(Str(element))
+    for element, scale in [("Si", 5.41)]:
+        structure = create_diamond_fcc(Str(element), Float(1.))
         structure = rescale(structure, Float(scale))
         print("Running {} scf calculation.".format(element))
         futures[element] = async(run_scf, structure, codename, pseudo_family)

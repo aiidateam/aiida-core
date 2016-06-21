@@ -29,7 +29,10 @@ def asyncd(process_class, _jobs_store=None, **kwargs):
         _jobs_store = defaults.storage
     proc = defaults.factory.create_process(process_class, inputs=kwargs)
     _jobs_store.save(proc)
-    return proc.pid
+    pid = proc.pid
+    proc.signal_on_destroy()
+
+    return pid
 
 
 def run(process_class, *args, **inputs):

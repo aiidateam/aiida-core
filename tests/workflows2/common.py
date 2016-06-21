@@ -36,6 +36,7 @@ class ProcessScope(object):
 
     def __enter__(self):
         self._process.on_create(self._pid, self._inputs)
+        self._process.on_start()
         return self._process
 
     def __exit__(self, exc_type, exc_val, exc_tb):

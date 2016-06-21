@@ -9,7 +9,7 @@ from aiida.orm import DataFactory
 from aiida.workflows2.db_types import Float, Str
 from aiida.workflows2.wf import wf
 from aiida.workflows2.run import async
-from common import run_scf
+from examples.workflows2.common import run_scf
 from aiida.workflows2.defaults import registry
 
 @wf

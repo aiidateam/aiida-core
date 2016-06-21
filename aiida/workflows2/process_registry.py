@@ -49,7 +49,7 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
             return False
 
         try:
-            return aiida.orm.load_node(pid).is_finished()
+            return (aiida.orm.load_node(pid).has_finished_ok() or aiida.orm.load_node(pid).has_failed())
         except exceptions.NotExistent:
             pass
 
@@ -69,8 +69,8 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
             try:
                 aiida.orm.load_node(pid).get_outputs_dict()
             except exceptions.NotExistent:
-                pass
-        raise ValueError("Could not find a Process with id '{}'".format(pid))
+                raise ValueError(
+                    "Could not find a Process with id '{}'".format(pid))
 
     # Process messages
     @override

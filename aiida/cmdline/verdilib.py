@@ -498,9 +498,10 @@ class Run(VerdiCommand):
     """
 
     def run(self, *args):
-        from aiida.backends.utils import load_dbenv
+        from aiida.backends.utils import load_dbenv,is_dbenv_loaded
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         import argparse
         from aiida.cmdline.commands.shell import default_modules_list
         import aiida.orm.autogroup

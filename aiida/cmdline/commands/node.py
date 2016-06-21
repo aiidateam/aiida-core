@@ -349,7 +349,7 @@ class _Tree(VerdiCommand):
     def _ctime(self, nodelab):
         return nodelab[1].ctime
 
-    def _build_tree(self, node, label=None, show_pk=True, max_depth=None,
+    def _build_tree(self, node, label_type=None, show_pk=True, max_depth=None,
                     follow_links=None, depth=0):
         if max_depth is not None and depth > max_depth:
             return
@@ -371,10 +371,7 @@ class _Tree(VerdiCommand):
             out_values.append(", ".join(children))
             out_values.append(")")
 
-        if label is None:
-            lab = label
-        else:
-            lab = node.__class__.__name__
+        lab = node.__class__.__name__
 
         if show_pk:
             lab += " [{}]".format(node.pk)

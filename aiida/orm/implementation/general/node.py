@@ -420,7 +420,7 @@ class AbstractNode(object):
 
         if label in self._inputlinks_cache:
             raise UniquenessError("Input link with name '{}' already present "
-                                  "in the internal cache")
+                                  "in the internal cache".format(label))
 
         self._inputlinks_cache[label] = (src, link_type)
 
@@ -455,8 +455,11 @@ class AbstractNode(object):
                     "A link from node with UUID={} and "
                     "the current node (UUID={}) already exists!".format(
                         src.uuid, self.uuid))
+            # I insert the link directly in the cache rather than calling
+            # _add_cachelink_from because this latter performs an undesired check 
+            self._inputlinks_cache[label] = (src, link_type)
 
-            self._add_cachelink_from(src, label, link_type)
+           # self._add_cachelink_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         """

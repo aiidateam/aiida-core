@@ -1066,7 +1066,6 @@ class AbstractJobCalculation(object):
             except:
                 raise Exception("{} is not a valid user".format(user))
 
-
         qb = QueryBuilder()
         qb.append(type="computer", tag='computer', filters=computerfilter)
         qb.append(cls, filters=calcfilter, tag='calc', has_computer='computer')
@@ -1083,9 +1082,6 @@ class AbstractJobCalculation(object):
             returnresult = qb.all()
             returnresult = zip(*returnresult)[0]
         return returnresult
-
-
-
 
     def _prepare_for_submission(self, tempfolder, inputdict):
         """

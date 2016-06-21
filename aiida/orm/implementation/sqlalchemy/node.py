@@ -34,6 +34,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
+
 class Node(AbstractNode):
 
     def __init__(self, **kwargs):
@@ -304,7 +305,6 @@ class Node(AbstractNode):
         else:
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
-
 
     def _set_attr(self, key, value):
         if self._to_be_stored:
@@ -742,3 +742,7 @@ class Node(AbstractNode):
     def has_parents(self):
         return session.query(literal(True)).filter(
             self.dbnode.parent_paths.exists()).scalar() or False
+
+    @property
+    def uuid(self):
+        return unicode(self.dbnode.uuid)

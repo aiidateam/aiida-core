@@ -876,11 +876,12 @@ class AbstractNode(object):
         pass
 
     @property
+    @abstractmethod
     def uuid(self):
         """
         :return: a string with the uuid
         """
-        return unicode(self.dbnode.uuid)
+        pass
 
     @property
     @abstractmethod

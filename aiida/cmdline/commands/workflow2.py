@@ -120,8 +120,8 @@ def _ctime(node):
 
 def _build_tree(node, node_label='type', show_pk=True):
     children =[]
-    for node in sorted(node.get_outputs(link_type=LinkType.CALL), key=_ctime):
-        children.append(_build_tree(node, node_label))
+    for child in sorted(node.get_outputs(link_type=LinkType.CALL), key=_ctime):
+        children.append(_build_tree(child, node_label))
 
     out_values = []
     if children:

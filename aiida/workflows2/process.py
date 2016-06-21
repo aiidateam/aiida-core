@@ -215,7 +215,7 @@ class Process(plum.process.Process):
 
     @override
     def on_start(self):
-        super(Process, self).on_restart()
+        super(Process, self).on_start()
         util.ProcessStack.push(self)
 
     @override
@@ -278,10 +278,6 @@ class Process(plum.process.Process):
         assert self.inputs is not None
         assert not self.calc.is_sealed,\
             "Calculation cannot be sealed when setting up the database record"
-
-        from aiida.workflows2.util import ProcessStack
-
-        s = ProcessStack
 
         # Save the name of this process
         self.calc._set_attr(self.PROCESS_LABEL_ATTR, self.__class__.__name__)
@@ -356,14 +352,6 @@ class Process(plum.process.Process):
     @property
     def calc(self):
         return self._calc
-
-    @property
-    def _parent(self):
-        return self.parent
-
-    @_parent.setter
-    def _parent(self, parent):
-        self.parent = parent
 
 
 class FunctionProcess(Process):

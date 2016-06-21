@@ -72,8 +72,8 @@ class JobProcess(Process):
         # callback function is defined correctly which may cause an assertion, in which
         # case we shouldn't submit
         wait_on = wait_on_job_calculation(
-            self.calculation_finished, self._calc.pk)
-        self._calc.submit()
+            self.calculation_finished, self.calc.pk)
+        self.calc.submit()
         return wait_on
 
     def calculation_finished(self, wait_on):

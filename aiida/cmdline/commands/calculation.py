@@ -277,8 +277,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent
-        from aiida.backends.utils import get_log_messages
-        from tabulate import tabulate
+        from aiida.cmdline.common import print_node_info
 
         if not is_dbenv_loaded():
             load_dbenv()
@@ -294,32 +293,7 @@ class Calculation(VerdiCommandWithSubcommands):
                 print "*** {}: Not a valid calculation".format(calc_pk)
                 continue
 
-            print "*** {} [{}]".format(calc_pk, calc.label)
-
-            code = calc.get_code()
-            if code is not None:
-                print "Using code: {}".format(code.label)
-
-            table = []
-            print "##### INPUTS:"
-            for k, v in calc.get_inputs_dict().iteritems():
-                if k == 'code': continue
-                table.append([k, v.pk, v.__class__.__name__])
-            print(tabulate(table, headers=table_headers))
-
-            table = []
-            print "##### OUTPUTS:"
-            for k, v in calc.get_outputs(also_labels=True):
-                table.append([k, v.pk, v.__class__.__name__])
-            print(tabulate(table))
-
-            log_messages = get_log_messages(calc)
-            if log_messages:
-                print ("##### NOTE! There are {} log messages for this "
-                       "calculation.".format(len(log_messages)))
-                print "      Use the 'calculation logshow' command to see them."
-            if len(args) > 1:
-                print ""
+            print_node_info(calc)
 
     def calculation_logshow(self, *args):
         from aiida.common.exceptions import NotExistent

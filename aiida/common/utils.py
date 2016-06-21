@@ -855,3 +855,7 @@ def are_dir_trees_equal(dir1, dir2):
         if not are_dir_trees_equal(new_dir1, new_dir2):
             return False
     return True
+
+
+def indent(txt, spaces=4):
+    return "\n".join(" "*spaces + ln for ln in txt.splitlines())

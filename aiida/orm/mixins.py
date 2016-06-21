@@ -38,8 +38,8 @@ class SealableMixin(object):
         return self.get_attr(self.SEALED_KEY, False)
 
     def seal(self):
-        assert not self.is_sealed, "This node is already sealed."
-        self._set_attr(self.SEALED_KEY, True)
+        if not self.is_sealed:
+            self._set_attr(self.SEALED_KEY, True)
 
 
 class SealableWithUpdatableAttributesMixin(SealableMixin):

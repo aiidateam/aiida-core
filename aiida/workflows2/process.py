@@ -353,14 +353,6 @@ class Process(plum.process.Process):
     def calc(self):
         return self._calc
 
-    @property
-    def _parent(self):
-        return self.parent
-
-    @_parent.setter
-    def _parent(self, parent):
-        self.parent = parent
-
 
 class FunctionProcess(Process):
     SINGLE_RETURN_LINKNAME = '_return'

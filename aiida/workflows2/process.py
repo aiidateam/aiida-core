@@ -193,7 +193,6 @@ class Process(plum.process.Process):
         except IndexError:
             pass
 
-        util.ProcessStack.push(self)
         self._pid = self._create_and_setup_db_record()
 
     @override
@@ -213,6 +212,16 @@ class Process(plum.process.Process):
 
         if self.KEY_PARENT_CALC_PID in saved_instance_state:
             self._parent_pid = saved_instance_state[self.KEY_PARENT_CALC_PID]
+
+    @override
+    def on_start(self):
+        super(Process, self).on_restart()
+        util.ProcessStack.push(self)
+
+    @override
+    def on_restart(self):
+        super(Process, self).on_restart()
+        util.ProcessStack.push(self)
 
     @override
     def on_fail(self, exception):
@@ -269,6 +278,10 @@ class Process(plum.process.Process):
         assert self.inputs is not None
         assert not self.calc.is_sealed,\
             "Calculation cannot be sealed when setting up the database record"
+
+        from aiida.workflows2.util import ProcessStack
+
+        s = ProcessStack
 
         # Save the name of this process
         self.calc._set_attr(self.PROCESS_LABEL_ATTR, self.__class__.__name__)

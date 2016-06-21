@@ -68,8 +68,8 @@ class JobProcess(Process):
     def _run(self, **kwargs):
         from aiida.workflows2.legacy.wait_on import wait_on_job_calculation
 
-        # I create this here because there is a check to make sure the callback
-        # function is defined correctly which may cause an assertion, in which
+        # I create this wait_on here because there is a check to make sure the
+        # callback function is defined correctly which may cause an assertion, in which
         # case we shouldn't submit
         wait_on = wait_on_job_calculation(
             self.calculation_finished, self._calc.pk)
@@ -89,7 +89,7 @@ class JobProcess(Process):
 
     @override
     def _on_output_emitted(self, output_port, value, dynamic):
-        # Skip over parent _on_output_emitted beause it will try to store stuff
+        # Skip over parent _on_output_emitted because it will try to store stuff
         # which is already done for us by the Calculation
         plum.process.Process._on_output_emitted(
             self, output_port, value, dynamic)

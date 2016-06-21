@@ -894,6 +894,15 @@ class AbstractNode(object):
 
     @property
     @abstractmethod
+    def id(self):
+        """
+        :return: the principal key (the ID) as an integer, or None if the
+           node was not stored yet
+        """
+        pass
+
+    @property
+    @abstractmethod
     def dbnode(self):
         """
         :return: the corresponding DbNode object.

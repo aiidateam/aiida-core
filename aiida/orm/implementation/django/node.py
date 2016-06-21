@@ -587,6 +587,10 @@ class Node(AbstractNode):
         return self.dbnode.pk
 
     @property
+    def id(self):
+        return self.dbnode.id
+
+    @property
     def dbnode(self):
         # I also update the internal _dbnode variable, if it was saved
         # from aiida.backends.djsite.db.models import DbNode

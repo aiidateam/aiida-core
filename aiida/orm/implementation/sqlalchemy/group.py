@@ -236,15 +236,15 @@ class Group(AbstractGroup):
 
         filters = []
 
-        if name:
+        if name is not None:
             filters.append(DbGroup.name == name)
-        if type_string:
+        if type_string is not None:
             filters.append(DbGroup.type == type_string)
-        if pk:
+        if pk is not None:
             filters.append(DbGroup.id == pk)
-        if uuid:
+        if uuid is not None:
             filters.append(DbGroup.uuid == uuid)
-        if past_days:
+        if past_days is not None:
             filters.append(DbGroup.time >= past_days)
         if nodes:
             if not isinstance(nodes, collections.Iterable):

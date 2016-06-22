@@ -447,7 +447,7 @@ class Group(VerdiCommandWithSubcommands):
                 # By default: only groups of this user
                 user = get_automatic_user()
 
-        type_string = None
+        type_string = ""
         if parsed_args.type is not None:
             try:
                 type_string = get_group_type_mapping()[parsed_args.type]

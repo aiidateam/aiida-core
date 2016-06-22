@@ -635,7 +635,7 @@ class Node(AbstractNode):
         Store a new node in the DB, also saving its repository directory
         and attributes.
 
-        Can be called only once. Afterwards, attributes cannot be
+        After being called attributes cannot be
         changed anymore! Instead, extras can be changed only AFTER calling
         this store() function.
 
@@ -650,7 +650,6 @@ class Node(AbstractNode):
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
         if self._to_be_stored:
-
             self._validate()
 
             self._check_are_parents_stored()
@@ -694,23 +693,19 @@ class Node(AbstractNode):
                     self._repository_folder.abspath, move=True, overwrite=True)
                 raise
 
-        else:
-            raise ModificationNotAllowed(
-                "Node with pk= {} was already stored".format(self.id))
+            # Set up autogrouping used be verdi run
+            autogroup = aiida.orm.autogroup.current_autogroup
+            grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
 
-        # Set up autogrouping used be verdi run
-        autogroup = aiida.orm.autogroup.current_autogroup
-        grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
+            if autogroup is not None:
+                if not isinstance(autogroup, aiida.orm.autogroup.Autogroup):
+                    raise ValidationError("current_autogroup is not an AiiDA Autogroup")
 
-        if autogroup is not None:
-            if not isinstance(autogroup, aiida.orm.autogroup.Autogroup):
-                raise ValidationError("current_autogroup is not an AiiDA Autogroup")
-
-            if autogroup.is_to_be_grouped(self):
-                group_name = autogroup.get_group_name()
-                if group_name is not None:
-                    g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
-                    g.add_nodes(self)
+                if autogroup.is_to_be_grouped(self):
+                    group_name = autogroup.get_group_name()
+                    if group_name is not None:
+                        g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
+                        g.add_nodes(self)
 
         return self
 

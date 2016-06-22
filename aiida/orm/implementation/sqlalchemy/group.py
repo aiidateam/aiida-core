@@ -111,10 +111,7 @@ class Group(AbstractGroup):
         return self.pk is not None
 
     def store(self):
-        if self.is_stored:
-            raise ModificationNotAllowed("Cannot restore a group that was "
-                                         "already stored")
-        else:
+        if not self.is_stored:
             try:
                 self._dbgroup.save(commit=True)
             except SQLAlchemyError:

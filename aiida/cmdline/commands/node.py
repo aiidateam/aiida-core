@@ -272,6 +272,9 @@ class _Show(VerdiCommand):
     def print_node_info(self, node, print_groups=False):
         from aiida.cmdline.common import print_node_info
 
+###TODO
+#Add a check here on the node type, otherwise it might try to access attributes such as code which are not necessarily there
+#####
         print_node_info(node)
 
         if print_groups:

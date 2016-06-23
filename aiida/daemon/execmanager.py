@@ -286,8 +286,8 @@ def submit_jobs():
                     execlogger.error("Submission of calc {} failed, "
                                      "computer pk= {} ({}) is not configured "
                                      "for aiidauser {}".format(
-                        calc.pk, dbcomputer.pk,
-                        dbcomputer.name, aiidauser.email),
+                        calc.pk, computer.pk, computer.get_name(),
+                        aiidauser.email),
                                      extra=logger_extra)
                 # Go to the next (dbcomputer,aiidauser) pair
                 continue

@@ -16,13 +16,13 @@ from common import generate_scf_input_params
 from diamond_fcc import rescale, create_diamond_fcc
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 
-GPa_to_eV_over_ang3 = 1./160.21766208
-
+GPa_to_eV_over_ang3 = 1. / 160.21766208
 
 # Set up the factories
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
 PwProcess = PwCalculation.process()
+
 
 def get_first_deriv(stress):
     """
@@ -30,7 +30,7 @@ def get_first_deriv(stress):
     """
     from numpy import trace
     # Get the pressure (GPa)
-    p = trace(stress)/3.
+    p = trace(stress) / 3.
     # Pressure is -dE/dV; moreover p in kbar, we need to convert
     # it to eV/angstrom^3 to be consisten
     dE = -p * GPa_to_eV_over_ang3
@@ -46,7 +46,7 @@ def get_volume_energy_and_derivative(output_parameters):
     V = output_parameters.dict.volume
     E = output_parameters.dict.energy
     dE = get_first_deriv(output_parameters.dict.stress)
-    
+
     return (V, E, dE)
 
 
@@ -63,17 +63,17 @@ def get_second_derivative(outp1, outp2):
     return (dE2 - dE1) / (V2 - V1)
 
 
-def get_abc(V,E,dE,ddE):
+def get_abc(V, E, dE, ddE):
     """
     Given the volume, energy, energy first derivative and energy
-    second derivative, return the a,b,c coefficients of 
+    second derivative, return the a,b,c coefficients of
     a parabola E = a*V^2 + b*V + c
     """
     a = ddE / 2.
     b = dE - ddE * V
-    c = E - V * dE + V**2 * ddE / 2.
+    c = E - V * dE + V ** 2 * ddE / 2.
 
-    return a,b,c
+    return a, b, c
 
 
 def get_structure(original_structure, new_volume):
@@ -81,7 +81,7 @@ def get_structure(original_structure, new_volume):
     Given a structure and a new volume, rescale the structure to the new volume
     """
     initial_volume = original_structure.get_cell_volume()
-    scale_factor = (new_volume/initial_volume)**(1./3.)        
+    scale_factor = (new_volume / initial_volume) ** (1. / 3.)
     scaled_structure = rescale(original_structure, Float(scale_factor))
     return scaled_structure
 
@@ -90,13 +90,15 @@ class PressureConvergence(FragmentedWorkfunction):
     """
     Converge to minimum using Newton's algorithm on the first derivative of the energy (minus the pressure).
     """
+
     @classmethod
     def _define(cls, spec):
         """
         Workfunction definition
         """
         spec.input("structure", valid_type=StructureData)
-        spec.input("volume_tolerance", valid_type=NumericType) #, default=Float(0.1))
+        spec.input("volume_tolerance",
+                   valid_type=NumericType)  # , default=Float(0.1))
         spec.input("code", valid_type=SimpleData)
         spec.input("pseudo_family", valid_type=SimpleData)
         spec.outline(
@@ -120,7 +122,7 @@ class PressureConvergence(FragmentedWorkfunction):
             self.inputs.structure, self.inputs.code, self.inputs.pseudo_family)
 
         initial_volume = self.inputs.structure.get_cell_volume()
-        new_volume = initial_volume + 4. # In ang^3
+        new_volume = initial_volume + 4.  # In ang^3
 
         scaled_structure = get_structure(self.inputs.structure, new_volume)
         inputs1 = generate_scf_input_params(
@@ -147,25 +149,26 @@ class PressureConvergence(FragmentedWorkfunction):
         # step 1 will be stored here by move_next_step
         ctx.steps = []
 
-    def move_next_step(self, ctx):        
+    def move_next_step(self, ctx):
         """
         Main routine that reads the two previous calculations r0 and r1,
         uses the Newton's algorithm on the pressure (i.e., fits the results
-        with a parabola and sets the next point to calculate to the parabola 
+        with a parabola and sets the next point to calculate to the parabola
         minimum).
         r0 gets replaced with r1, r1 will get replaced by the results of the
         new calculation.
         """
-        ddE = get_second_derivative(ctx.r0['output_parameters'], ctx.r1['output_parameters'])
+        ddE = get_second_derivative(ctx.r0['output_parameters'],
+                                    ctx.r1['output_parameters'])
         V, E, dE = get_volume_energy_and_derivative(ctx.r1['output_parameters'])
-        a,b,c = get_abc(V,E,dE,ddE)
+        a, b, c = get_abc(V, E, dE, ddE)
 
         new_step_data = {'V': V, 'E': E, 'dE': dE, 'ddE': ddE,
                          'a': a, 'b': b, 'c': c}
         ctx.steps.append(new_step_data)
-        
+
         # Minimum of a parabola
-        new_volume = -b/2./a
+        new_volume = -b / 2. / a
 
         # remove older step
         ctx.r0 = ctx.r1
@@ -175,19 +178,18 @@ class PressureConvergence(FragmentedWorkfunction):
         inputs = generate_scf_input_params(
             scaled_structure, self.inputs.code, self.inputs.pseudo_family)
 
-        # Run PW                                                                                                                     
+        # Run PW
         future = self.submit(PwProcess, inputs)
         # Replace r1
         return ResultToContext(r1=future)
-        
 
     def not_converged(self, ctx):
         """
         Return True if the worflow is not converged yet (i.e., the volume changed significantly)
         """
-        return abs(ctx.r1['output_parameters'].dict.volume - 
-                   ctx.r0['output_parameters'].dict.volume) > self.inputs.volume_tolerance
-
+        return abs(ctx.r1['output_parameters'].dict.volume -
+                   ctx.r0[
+                       'output_parameters'].dict.volume) > self.inputs.volume_tolerance
 
     def report(self, ctx):
         """
@@ -198,7 +200,7 @@ class PressureConvergence(FragmentedWorkfunction):
             'steps': ctx.steps,
             'step0': ctx.step0}))
         self.out("structure", ctx.last_structure)
-        
+
 
 if __name__ == "__main__":
     import argparse
@@ -210,11 +212,12 @@ if __name__ == "__main__":
                         help='The codename to use')
 
     structure = create_diamond_fcc(element=Str('Si'), alat=Float(5.2))
-    
+
     print "Initial structure:", structure
 
     args = parser.parse_args()
-    wf_results = run(PressureConvergence, structure=structure, code=Str(args.code), pseudo_family=Str(args.pseudo), volume_tolerance=Float(0.1))
+    wf_results = run(PressureConvergence, structure=structure,
+                     code=Str(args.code), pseudo_family=Str(args.pseudo),
+                     volume_tolerance=Float(0.1))
     print "Workflow results:"
     print wf_results
-

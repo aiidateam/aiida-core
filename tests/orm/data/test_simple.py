@@ -62,3 +62,10 @@ class TestFloat(unittest.TestCase):
         a = Float(4)
         a *= 5
         self.assertEqual(a, 20)
+
+    def test_power(self):
+        a = Float(4)
+        b = Float(2)
+
+        res = a ** b
+        self.assertEqual(res.value, 16.)

@@ -101,6 +101,12 @@ class NumericType(SimpleData):
         assert not isinstance(other, NumericType)
         return self.new(other * self.value)
 
+    def __pow__(self, power, modulo=None):
+        if isinstance(power, NumericType):
+            return self.new(self.value ** power.value)
+        else:
+            return self.new(self.value ** power)
+
     def __lt__(self, other):
         if isinstance(other, NumericType):
             return self.value < other.value

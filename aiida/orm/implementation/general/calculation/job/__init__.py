@@ -903,17 +903,17 @@ class AbstractJobCalculation(object):
             # Filter on the users, if not all users
             if not all_users:
                 user_id = get_automatic_user().id
-                calculation_filters['user_id'] = {'==':user_id}
+                calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:
                 n_days_ago = now - datetime.timedelta(days=past_days)
-                calculation_filters['ctime'] = {'>':n_days_ago}
+                calculation_filters['ctime'] = {'>' :n_days_ago}
 
             # Filter on the group, either name or by pks
             if group:
-                group_filters = {'name':{'like':'%{}%'.format(group)}}
+                group_filters = {'name': {'like':'%{}%'.format(group)}}
             elif group_pk:
-                group_filters = {'id':{'==':group_pk}}
+                group_filters = {'id': {'==': group_pk}}
             else:
                 group_filters = None
 
@@ -944,7 +944,7 @@ class AbstractJobCalculation(object):
 
         # ORDER
         if order_by is not None:
-            qb.order_by({'calculation':[order_by]})
+            qb.order_by({'calculation': [order_by]})
 
         # LIMIT
         if limit is not None:

@@ -670,37 +670,43 @@ class Code(VerdiCommandWithSubcommands):
         show_owner = parsed_args.show_owner
         reveal_filter = parsed_args.all_codes
 
-        from django.db.models import Q
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.code import Code
+        from aiida.orm.computer import Computer
+        from aiida.orm.user import User
         from aiida.backends.utils import get_automatic_user
 
-        django_filter = Q()
+        qb_user_filters = dict()
         if not all_users:
-            django_filter &= Q(user=get_automatic_user())
-        if computer_filter is not None:
-            django_filter &= Q(dbcomputer__name=computer_filter)
-        if plugin_filter is not None:
-            django_filter &= Q(dbattributes__key='input_plugin',
-                               dbattributes__datatype='txt',
-                               dbattributes__tval=plugin_filter)
-        if not reveal_filter:  # by default show calculations that are not hidden
-                               # or that do not have a hidden method
-            django_filter1 = ~Q(dbattributes__key='hidden')
-            django_filter2 = Q(dbattributes__key='hidden',
-                                dbattributes__datatype='bool',
-                                dbattributes__bval=False)
-            # The filters have to be joined in this order; the opposite order
-            # gives a different result (in filter 1, if passed after filter 2,
-            # it would also add the requirement that the dbattributes__id is the
-            # same of the previous query
-            django_reveal_filter = django_filter1 | django_filter2
-            django_filter &= django_reveal_filter
+            user = User(dbuser=get_automatic_user())
+            qb_user_filters['email'] = user.email
 
-        existing_codes = self.get_code_data(django_filter)
+        qb_computer_filters = dict()
+        if computer_filter is not None:
+            qb_computer_filters['name'] = computer_filter
+
+        qb_code_filters = dict()
+        if plugin_filter is not None:
+            qb_code_filters['attributes.input_plugin'] = plugin_filter
+
+        if not reveal_filter:
+            qb_code_filters['attributes.hidden'] = {"~==": True}
+
+        qb = QueryBuilder()
+        qb.append(Code, tag="code",
+                  filters=qb_code_filters,
+                  project=["id", "label"])
+        qb.append(Computer, computer_of="code",
+                  project=["name"],
+                  filters=qb_computer_filters)
+        qb.append(User, creator_of="code",
+                  project=["email"],
+                  filters=qb_user_filters)
 
         print "# List of configured codes:"
         print "# (use 'verdi code show CODEID' to see the details)"
-        if existing_codes:
-            for pk, label, computername, useremail in existing_codes:
+        if qb.count > 0:
+            for pk, label, computername, useremail in qb.iterall():
                 if show_owner:
                     owner_string = " ({})".format(useremail)
                 else:
@@ -713,7 +719,6 @@ class Code(VerdiCommandWithSubcommands):
                     pk, label, computernamestring, owner_string)
         else:
             print "# No codes found matching the specified criteria."
-
 
     def get_code_data(self, django_filter=None):
         """
@@ -732,7 +737,6 @@ class Code(VerdiCommandWithSubcommands):
         qb.append(type='user', creator_of=AiidaOrmCode, project=['email'])
 
         return sorted(qb.all())
-
 
     def get_code(self, code_id):
         """

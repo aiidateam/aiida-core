@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-import os
-import sys
 
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from aiida.cmdline import delayed_load_node as load_node
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -23,10 +18,24 @@ def print_node_summary(node):
     table.append(["description", node.description])
     table.append(["ctime", node.ctime])
     table.append(["mtime", node.mtime])
-    if node.get_computer() is not None:
-        table.append(["computer",
-                      "[{}] {}".format(node.get_computer().pk,
-                                       node.get_computer().name)])
+
+    try:
+        computer = node.get_computer()
+    except AttributeError:
+        pass
+    else:
+        if computer is not None:
+            table.append(["computer",
+                          "[{}] {}".format(node.get_computer().pk,
+                                           node.get_computer().name)])
+    try:
+        code = node.get_code()
+    except AttributeError:
+        pass
+    else:
+        if code is not None:
+            table.append(["code", code.label])
+
     print(tabulate(table))
 
 
@@ -38,10 +47,6 @@ def print_node_info(node, print_summary=True):
         print_node_summary(node)
 
     table_headers = ['Link label', 'PK', 'Type']
-
-    code = node.get_code()
-    if code is not None:
-        print "Using code: {}".format(code.label)
 
     table = []
     print "##### INPUTS:"

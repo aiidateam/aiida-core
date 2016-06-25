@@ -31,12 +31,12 @@ class BackupSetup(object):
     -    the backup folders.
     -    the script that initiates the backup.
     """
-    
+
     def __init__(self):
         # The backup directory names
         self._conf_backup_folder_rel = "backup"
         self._file_backup_folder_rel = "backup_dest"
-        
+
         # The backup configuration file (& template) names
         self._backup_info_filename = "backup_info.json"
         self._backup_info_tmpl_filename = "backup_info.json.tmpl"
@@ -45,7 +45,7 @@ class BackupSetup(object):
         self._script_filename = "start_backup.py"
 
         # Configuring the logging
-        logging.basicConfig(level=logging.INFO,
+        logging.basicConfig(
                 format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 
         # The logger of the backup script
@@ -65,15 +65,15 @@ class BackupSetup(object):
         else:
             backup_variables[Backup._oldest_object_bk_key] = str(
                 oldest_object_bk)
-        
+
         # Setting the backup directory
         backup_variables[Backup._backup_dir_key] = file_backup_folder_abs
-        
+
         # Setting the days_to_backup
         backup_variables[
             Backup._days_to_backup_key] = utils.ask_question(
             "Please provide the number of days to backup.", int, True)
-        
+
         # Setting the end date
         end_date_of_backup_key = utils.ask_question(
             "Please provide the end date of the backup " +
@@ -84,22 +84,22 @@ class BackupSetup(object):
         else:
             backup_variables[
                 Backup._end_date_of_backup_key] = str(end_date_of_backup_key)
-                
+
         # Setting the backup periodicity
         backup_variables[
             Backup._periodicity_key] = utils.ask_question(
             "Please periodicity (in days).", int, False)
-        
+
         # Setting the backup threshold
         backup_variables[
             Backup._backup_length_threshold_key] = utils.ask_question(
             "Please provide the backup threshold (in hours).", int, False)
-        
+
         return backup_variables
 
     def create_dir(self, question, dir_path):
         final_path = utils.query_string(question, dir_path)
-        
+
         if not os.path.exists(final_path):
             if utils.query_yes_no("The path {} doesn't exist. Should it be "
                               "created?".format(final_path), "yes"):
@@ -163,7 +163,7 @@ class BackupSetup(object):
         sys.stdout.write(info_str)
 
     def run(self):
-        
+
         conf_backup_folder_abs = self.create_dir(
             "Please provide the backup folder by providing the full path.",
             os.path.join(expanduser(AIIDA_CONFIG_FOLDER),
@@ -173,7 +173,7 @@ class BackupSetup(object):
             "Please provide the destination folder of the backup (normally in "
             "the previously provided backup folder).",
             os.path.join(conf_backup_folder_abs, self._file_backup_folder_rel))
-        
+
         # The template backup configuration file
         template_conf_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -187,7 +187,7 @@ class BackupSetup(object):
                 "Error copying the file {} ".format(template_conf_path) +
                 "to the directory {}.".format(conf_backup_folder_abs))
             raise
-        
+
         if utils.query_yes_no("A sample configuration file was copied to {}. "
                              "Would you like to ".format(
                                     conf_backup_folder_abs) +

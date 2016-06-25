@@ -456,7 +456,7 @@ class AbstractNode(object):
                     "the current node (UUID={}) already exists!".format(
                         src.uuid, self.uuid))
             # I insert the link directly in the cache rather than calling
-            # _add_cachelink_from because this latter performs an undesired check 
+            # _add_cachelink_from because this latter performs an undesired check
             self._inputlinks_cache[label] = (src, link_type)
 
            # self._add_cachelink_from(src, label, link_type)
@@ -1107,7 +1107,7 @@ class AbstractNode(object):
         Store a new node in the DB, also saving its repository directory
         and attributes.
 
-        Can be called only once. Afterwards, attributes cannot be
+        After being called attributes cannot be
         changed anymore! Instead, extras can be changed only AFTER calling
         this store() function.
 

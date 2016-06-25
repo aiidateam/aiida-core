@@ -151,10 +151,8 @@ class Computer(AbstractComputer):
         except IntegrityError:
             transaction.savepoint_rollback(sid)
             raise ValueError(
-                "Integrity error, probably the hostname already exists in the DB")
-
-        # self.logger.error("Trying to store an already saved computer")
-        # raise ModificationNotAllowed("The computer was already stored")
+                "Integrity error, probably the hostname already exists in the"
+                " DB")
 
         # This is useful because in this way I can do
         # c = Computer().store()

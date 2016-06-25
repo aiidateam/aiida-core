@@ -232,22 +232,19 @@ class Workflow(AbstractWorkflow):
         """
         Stores the DbWorkflow object data in the database
         """
-        if not self._to_be_stored:
-            self.logger.error("Trying to store an already saved workflow: "
-                              "pk= {}".format(self.pk))
-            raise ModificationNotAllowed(
-                "Workflow with pk= {} was already stored".format(self.pk))
+        if self._to_be_stored:
+            self._dbworkflowinstance.save()
 
-        self._dbworkflowinstance.save()
+            if hasattr(self, '_params'):
+                self.dbworkflowinstance.add_parameters(self._params, force=False)
 
-        if hasattr(self, '_params'):
-            self.dbworkflowinstance.add_parameters(self._params, force=False)
+            self._repo_folder =\
+                RepositoryFolder(section=self._section_name, uuid=self.uuid)
+            self.repo_folder.replace_with_folder(
+                self.get_temp_folder().abspath, move=True, overwrite=True)
 
-        self._repo_folder = RepositoryFolder(section=self._section_name, uuid=self.uuid)
-        self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
-
-        self._temp_folder = None
-        self._to_be_stored = False
+            self._temp_folder = None
+            self._to_be_stored = False
 
         # Important to allow to do w = WorkflowSubClass().store()
         return self

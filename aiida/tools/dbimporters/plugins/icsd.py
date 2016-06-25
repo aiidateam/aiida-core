@@ -451,7 +451,7 @@ class IcsdDbImporter(DbImporter):
         """
         :return: List of all supported query keywords.
         """
-        if db_parameters["querydb"]:
+        if self.db_parameters["querydb"]:
             return self.keywords_db.keys()
         else:
             return self.keywords.keys()

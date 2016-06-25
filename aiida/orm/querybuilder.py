@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
-
-
-from aiida.backends.settings import BACKEND
-
-if BACKEND == "sqlalchemy":
-    from aiida.backends.querybuild.querybuilder_sa import QueryBuilder
-elif BACKEND == "django":
-    from aiida.backends.querybuild.querybuilder_django import QueryBuilder
-else:
-    raise ConfigurationError("Invalid settings.BACKEND: {}".format(
-            BACKEND))
+from aiida.orm.implementation import QueryBuilder
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__authors__ = "Leonid Kahle."
+__version__ = "0.6.0"

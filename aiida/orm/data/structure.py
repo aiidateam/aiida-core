@@ -35,7 +35,7 @@ def _get_valid_cell(inputcell):
     """
     Return the cell in a valid format from a generic input.
 
-    :raise ValueError: whenever the format is not valid.    
+    :raise ValueError: whenever the format is not valid.
     """
     try:
         the_cell = tuple(tuple(float(c) for c in i) for i in inputcell)
@@ -134,10 +134,10 @@ def calc_cell_volume(cell):
 
     It is calculated as cell[0] . (cell[1] x cell[2]), where . represents
     a dot product and x a cross product.
-    
+
     :param cell: the cell vectors; the must be a 3x3 list of lists of floats,
             no other checks are done.
-    
+
     :returns: the cell volume.
     """
     # returns the volume of the primitive cell: |a1.(a2xa3)|
@@ -182,20 +182,20 @@ def _create_weights_tuple(weights):
 def validate_weights_tuple(weights_tuple, threshold):
     """
     Validates the weight of the atomic kinds.
-    
+
     :raise: ValueError if the weights_tuple is not valid.
 
     :param weights_tuple: the tuple to validate. It must be a
             a tuple of floats (as created by :func:_create_weights_tuple).
-    :param threshold: a float number used as a threshold to check that the sum 
+    :param threshold: a float number used as a threshold to check that the sum
             of the weights is <= 1.
-    
+
     If the sum is less than one, it means that there are vacancies.
     Each element of the list must be >= 0, and the sum must be <= 1.
     """
     w_sum = sum(weights_tuple)
-    if ( any(i < 0. for i in weights_tuple) or
-             (w_sum - 1. > threshold) ):
+    if (any(i < 0. for i in weights_tuple) or
+            (w_sum - 1. > threshold)):
         raise ValueError("The weight list is not valid (each element "
                          "must be positive, and the sum must be <= 1).")
 
@@ -203,7 +203,7 @@ def validate_weights_tuple(weights_tuple, threshold):
 def is_valid_symbol(symbol):
     """
     Validates the chemical symbol name.
-    
+
     :return: True if the symbol is a valid chemical symbol (with correct
         capitalization), False otherwise.
 
@@ -216,7 +216,7 @@ def is_valid_symbol(symbol):
 def validate_symbols_tuple(symbols_tuple):
     """
     Used to validate whether the chemical species are valid.
-    
+
     :param symbols_tuple: a tuple (or list) with the chemical symbols name.
     :raises: ValueError if any symbol in the tuple is not a valid chemical
         symbols (with correct capitalization).
@@ -235,7 +235,7 @@ def validate_symbols_tuple(symbols_tuple):
 def is_ase_atoms(ase_atoms):
     """
     Check if the ase_atoms parameter is actually a ase.Atoms object.
-    
+
     :param ase_atoms: an object, expected to be an ase.Atoms.
     :return: a boolean.
 
@@ -249,16 +249,16 @@ def is_ase_atoms(ase_atoms):
 
 
 def group_symbols(_list):
-    """ 
+    """
     Group a list of symbols to a list containing the number of consecutive
     identical symbols, and the symbol itself.
-    
+
     Examples:
-    
-    * ``['Ba','Ti','O','O','O','Ba']`` will return 
+
+    * ``['Ba','Ti','O','O','O','Ba']`` will return
       ``[[1,'Ba'],[1,'Ti'],[3,'O'],[1,'Ba']]``
-        
-    * ``[ [ [1,'Ba'],[1,'Ti'] ],[ [1,'Ba'],[1,'Ti'] ] ]`` will return 
+
+    * ``[ [ [1,'Ba'],[1,'Ti'] ],[ [1,'Ba'],[1,'Ti'] ] ]`` will return
       ``[[2, [ [1, 'Ba'], [1, 'Ti'] ] ]]``
 
     :param _list: a list of elements representing a chemical formula
@@ -280,7 +280,7 @@ def group_symbols(_list):
 
 
 def get_formula_from_symbol_list(_list, separator=""):
-    """ 
+    """
     Return a string with the formula obtained from the list of symbols.
     Examples:
     * ``[[1,'Ba'],[1,'Ti'],[3,'O']]`` will return ``'BaTiO3'``
@@ -303,9 +303,10 @@ def get_formula_from_symbol_list(_list, separator=""):
         if isinstance(elem[1], basestring):
             list_str.append("{}{}".format(elem[1], multiplicity_str))
         elif elem[0] > 1:
-            list_str.append("({}){}".format(get_formula_from_symbol_list(elem[1],
-                                                                         separator=separator),
-                                            multiplicity_str))
+            list_str.append(
+                "({}){}".format(get_formula_from_symbol_list(elem[1],
+                                                             separator=separator),
+                                multiplicity_str))
         else:
             list_str.append("{}{}".format(get_formula_from_symbol_list(elem[1],
                                                                        separator=separator),
@@ -334,7 +335,7 @@ def get_formula_group(symbol_list, separator=""):
     """
 
     def group_together(_list, group_size, offset):
-        """ 
+        """
         :param _list: a list
         :param group_size: size of the groups
         :param offset: beginning grouping after offset elements
@@ -342,7 +343,7 @@ def get_formula_group(symbol_list, separator=""):
             obtained by grouping list elements together
             The first elements (up to _list[offset-1]) are not grouped
         example:
-            ``group_together(['O','Ba','Ti','Ba','Ti'],2,1) = 
+            ``group_together(['O','Ba','Ti','Ba','Ti'],2,1) =
                 ['O',['Ba','Ti'],['Ba','Ti']]``
         """
 
@@ -379,8 +380,8 @@ def get_formula_group(symbol_list, separator=""):
 
     def group_together_symbols(_list, group_size):
         """
-        Successive application of group_together, group_symbols and 
-        cleanout_symbol_list, in order to group a symbol list, scanning all 
+        Successive application of group_together, group_symbols and
+        cleanout_symbol_list, in order to group a symbol list, scanning all
         possible offsets, for a given group size
         :param _list: the symbol list (see function group_symbols)
         :param group_size: the size of the groups
@@ -416,8 +417,9 @@ def get_formula_group(symbol_list, separator=""):
 
         while (not has_finished) and (group_size <= n / 2):
             # try to group as much as possible by groups of size group_size
-            the_symbol_list, has_grouped = group_together_symbols(the_symbol_list,
-                                                                  group_size)
+            the_symbol_list, has_grouped = group_together_symbols(
+                the_symbol_list,
+                group_size)
             has_finished = has_grouped
             group_size += 1
             # stop as soon as we managed to group something
@@ -425,7 +427,7 @@ def get_formula_group(symbol_list, separator=""):
 
         return the_symbol_list
 
-    # initial grouping of the chemical symbols        
+    # initial grouping of the chemical symbols
     old_symbol_list = [-1]
     new_symbol_list = group_symbols(symbol_list)
 
@@ -441,58 +443,58 @@ def get_formula_group(symbol_list, separator=""):
 def get_formula(symbol_list, mode='hill', separator=""):
     """
     Return a string with the chemical formula.
-    
+
     :param symbol_list: a list of symbols, e.g. ``['H','H','O']``
     :param mode: a string to specify how to generate the formula, can
         assume one of the following values:
-        
+
         * 'hill' (default): count the number of atoms of each species,
-          then use Hill notation, i.e. alphabetical order with C and H 
-          first if one or several C atom(s) is (are) present, e.g. 
-          ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
+          then use Hill notation, i.e. alphabetical order with C and H
+          first if one or several C atom(s) is (are) present, e.g.
+          ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'``
           ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
           From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
-            
+
         * 'hill_compact': same as hill but the number of atoms for each
           species is divided by the greatest common divisor of all of them, e.g.
-          ``['C','H','H','H','O','C','H','H','H','O','O','O']`` 
+          ``['C','H','H','H','O','C','H','H','H','O','O','O']``
           will return ``'CH3O2'``
-            
+
         * 'reduce': group repeated symbols e.g.
           ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
           'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
-        
+
         * 'group': will try to group as much as possible parts of the formula
-          e.g. 
+          e.g.
           ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
           'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
-        
+
         * 'count': same as hill (i.e. one just counts the number
-          of atoms of each species) without the re-ordering (take the 
+          of atoms of each species) without the re-ordering (take the
           order of the atomic sites), e.g.
-          ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+          ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']``
           will return ``'Ba2Ti2O6'``
 
-        * 'count_compact': same as count but the number of atoms 
-          for each species is divided by the greatest common divisor of 
+        * 'count_compact': same as count but the number of atoms
+          for each species is divided by the greatest common divisor of
           all of them, e.g.
-          ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+          ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']``
           will return ``'BaTiO3'``
 
     :param separator: a string used to concatenate symbols. Default empty.
-        
+
     :return: a string with the formula
-    
-    .. note:: in modes reduce, group, count and count_compact, the 
-        initial order in which the atoms were appended by the user is 
+
+    .. note:: in modes reduce, group, count and count_compact, the
+        initial order in which the atoms were appended by the user is
         used to group and/or order the symbols in the formula
     """
 
     if mode == 'group':
         return get_formula_group(symbol_list, separator=separator)
 
-    # for hill and count cases, simply count the occurences of each 
-    # chemical symbol (with some re-ordering in hill) 
+    # for hill and count cases, simply count the occurences of each
+    # chemical symbol (with some re-ordering in hill)
     elif mode in ['hill', 'hill_compact']:
         symbol_set = set(symbol_list)
         first_symbols = []
@@ -520,44 +522,44 @@ def get_formula(symbol_list, mode='hill', separator=""):
 
     else:
         raise ValueError('Mode should be hill, hill_compact, group, '
-                          'reduce, count or count_compact')
-                          
+                         'reduce, count or count_compact')
+
     if mode in ['hill_compact', 'count_compact']:
-        
+
         def gcd_list(int_list):
             """
             Recursive function to get the greatest common divisor of
             a list of integers
             """
             from fractions import gcd
-            if len(int_list)==1:
+            if len(int_list) == 1:
                 return int_list[0]
-            elif len(int_list)==2:
-                return gcd(int_list[0],int_list[1])
+            elif len(int_list) == 2:
+                return gcd(int_list[0], int_list[1])
             else:
-                the_int_list=int_list[2:]
-                the_int_list.append(gcd(int_list[0],int_list[1]))
+                the_int_list = int_list[2:]
+                the_int_list.append(gcd(int_list[0], int_list[1]))
                 return gcd_list(the_int_list)
-        
+
         the_gcd = gcd_list([e[0] for e in the_symbol_list])
-        the_symbol_list = [[e[0]/the_gcd,e[1]] for e in the_symbol_list]
+        the_symbol_list = [[e[0] / the_gcd, e[1]] for e in the_symbol_list]
 
     return get_formula_from_symbol_list(the_symbol_list, separator=separator)
 
 
 def get_symbols_string(symbols, weights):
     """
-    Return a string that tries to match as good as possible the symbols 
-    and weights. If there is only one symbol (no alloy) with 100% 
+    Return a string that tries to match as good as possible the symbols
+    and weights. If there is only one symbol (no alloy) with 100%
     occupancy, just returns the symbol name. Otherwise, groups the full
     string in curly brackets, and try to write also the composition
     (with 2 precision only).
-    If (sum of weights<1), we indicate it with the X symbol followed 
+    If (sum of weights<1), we indicate it with the X symbol followed
     by 1-sum(weights) (still with 2 digits precision, so it can be 0.00)
 
     :param symbols: the symbols as obtained from <kind>._symbols
     :param weights: the weights as obtained from <kind>._weights
-        
+
     .. note:: Note the difference with respect to the symbols and the
         symbol properties!
     """
@@ -606,7 +608,8 @@ def symop_ortho_from_fract(cell):
     return numpy.array([
         [a, b * cg, c * cb],
         [0, b * sg, c * (ca - cb * cg) / sg],
-        [0, 0, c * math.sqrt(sg * sg - ca * ca - cb * cb + 2 * ca * cb * cg) / sg]
+        [0, 0,
+         c * math.sqrt(sg * sg - ca * ca - cb * cb + 2 * ca * cb * cg) / sg]
     ])
 
 
@@ -669,11 +672,11 @@ def ase_refine_cell(aseatoms, **kwargs):
                          scaled_positions=unique_positions,
                          cell=cell, pbc=True)
 
-    return unique_atoms,{'hm': sym_dataset['international'],
-                         'hall': sym_dataset['hall'],
-                         'tables': sym_dataset['number'],
-                         'rotations': sym_dataset['rotations'],
-                         'translations':sym_dataset['translations']}
+    return unique_atoms, {'hm': sym_dataset['international'],
+                          'hall': sym_dataset['hall'],
+                          'tables': sym_dataset['number'],
+                          'rotations': sym_dataset['rotations'],
+                          'translations': sym_dataset['translations']}
 
 
 @optional_inline
@@ -702,7 +705,7 @@ def _get_cif_ase_inline(struct=None, parameters=None):
 class StructureData(Data):
     """
     This class contains the information about a given structure, i.e. a
-    collection of sites together with a cell, the 
+    collection of sites together with a cell, the
     boundary conditions (whether they are periodic or not) and other
     related useful information.
     """
@@ -768,12 +771,12 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
         """
-        box = [ max([x.coords.tolist()[0] for x in mol.sites]) -
-                min([x.coords.tolist()[0] for x in mol.sites]) + 2*margin,
-                max([x.coords.tolist()[1] for x in mol.sites]) -
-                min([x.coords.tolist()[1] for x in mol.sites]) + 2*margin,
-                max([x.coords.tolist()[2] for x in mol.sites]) -
-                min([x.coords.tolist()[2] for x in mol.sites]) + 2*margin ]
+        box = [max([x.coords.tolist()[0] for x in mol.sites]) -
+               min([x.coords.tolist()[0] for x in mol.sites]) + 2 * margin,
+               max([x.coords.tolist()[1] for x in mol.sites]) -
+               min([x.coords.tolist()[1] for x in mol.sites]) + 2 * margin,
+               max([x.coords.tolist()[2] for x in mol.sites]) -
+               min([x.coords.tolist()[2] for x in mol.sites]) + 2 * margin]
         self.set_pymatgen_structure(mol.get_boxed_structure(*box))
         self.pbc = [False, False, False]
 
@@ -790,9 +793,10 @@ class StructureData(Data):
         self.pbc = [True, True, True]
         self.clear_kinds()
         for site in struct.sites:
-            self.append_atom(symbols=[x[0].symbol for x in site.species_and_occu.items()],
-                             weights=[x[1] for x in site.species_and_occu.items()],
-                             position=site.coords.tolist())
+            self.append_atom(
+                symbols=[x[0].symbol for x in site.species_and_occu.items()],
+                weights=[x[1] for x in site.species_and_occu.items()],
+                position=site.coords.tolist())
 
     def _validate(self):
         """
@@ -852,7 +856,7 @@ class StructureData(Data):
 
     def _prepare_xsf(self):
         """
-        Write the given structure to a string of format XSF (for XCrySDen). 
+        Write the given structure to a string of format XSF (for XCrySDen).
         """
         if self.is_alloy() or self.has_vacancies():
             raise NotImplementedError("XSF for alloys or systems with "
@@ -883,12 +887,12 @@ class StructureData(Data):
         cif = CifData(ase=self.get_ase())
         return cif._prepare_cif()
 
-    def _prepare_tcod(self,**kwargs):
+    def _prepare_tcod(self, **kwargs):
         """
         Write the given structure to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self,**kwargs)
+        return export_cif(self, **kwargs)
 
     def _prepare_xyz(self):
         """
@@ -920,8 +924,8 @@ class StructureData(Data):
         for sym, position in atoms:
             self.append_atom(symbols=sym, position=position)
 
-
-    def _adjust_default_cell(self, vacuum_factor = 1.0, vacuum_addition = 10.0, pbc = [False, False, False]):
+    def _adjust_default_cell(self, vacuum_factor=1.0, vacuum_addition=10.0,
+                             pbc=(False, False, False)):
         """
         If the structure was imported from an xyz file, it lacks a defined cell,
         and the default cell is taken ([[1,0,0], [0,1,0], [0,0,1]]),
@@ -932,41 +936,38 @@ class StructureData(Data):
         from ase.visualize import view
         from aiida.common.utils import get_extremas_from_positions
 
-
-
         # First, set PBC
         # All the checks are done in get_valid_pbc called by set_pbc, no need to check anything here
         self.set_pbc(pbc)
 
-        #Calculating the minimal cell:
+        # Calculating the minimal cell:
         positions = np.array([site.position for site in self.sites])
-        position_min, position_max   = get_extremas_from_positions(positions)
+        position_min, position_max = get_extremas_from_positions(positions)
 
-        # Translate the structure to the origin, such that the minimal values in each dimension 
+        # Translate the structure to the origin, such that the minimal values in each dimension
         # amount to (0,0,0)
-        positions   -=  position_min
+        positions -= position_min
         for index, site in enumerate(self.get_attr('sites')):
             site['position'] = list(positions[index])
 
-        # The orthorhombic cell that (just) accomodates the whole structure is now given by the 
+        # The orthorhombic cell that (just) accomodates the whole structure is now given by the
         # extremas of position in each dimension:
-        minimal_orthorhombic_cell_dimensions  =  np.array(get_extremas_from_positions(positions)[1])
-        minimal_orthorhombic_cell_dimensions  = np.dot(vacuum_factor, minimal_orthorhombic_cell_dimensions)
+        minimal_orthorhombic_cell_dimensions = np.array(
+            get_extremas_from_positions(positions)[1])
+        minimal_orthorhombic_cell_dimensions = np.dot(vacuum_factor,
+                                                      minimal_orthorhombic_cell_dimensions)
         minimal_orthorhombic_cell_dimensions += vacuum_addition
 
         # Transform the vector (a, b, c ) to [[a,0,0], [0,b,0], [0,0,c]]
         newcell = np.diag(minimal_orthorhombic_cell_dimensions)
         self.set_cell(newcell.tolist())
 
-
-
-
     def get_symbols_set(self):
         """
         Return a set containing the names of all elements involved in
         this structure (i.e., for it joins the list of symbols for each
-        kind k in the structure). 
-         
+        kind k in the structure).
+
         :returns: a set of strings of element names.
         """
         return set(itertools.chain.from_iterable(
@@ -978,46 +979,46 @@ class StructureData(Data):
 
         :param mode: a string to specify how to generate the formula, can
             assume one of the following values:
-            
+
             * 'hill' (default): count the number of atoms of each species,
-              then use Hill notation, i.e. alphabetical order with C and H 
-              first if one or several C atom(s) is (are) present, e.g. 
-              ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
+              then use Hill notation, i.e. alphabetical order with C and H
+              first if one or several C atom(s) is (are) present, e.g.
+              ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'``
               ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
               From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
-                
+
             * 'hill_compact': same as hill but the number of atoms for each
               species is divided by the greatest common divisor of all of them, e.g.
-              ``['C','H','H','H','O','C','H','H','H','O','O','O']`` 
+              ``['C','H','H','H','O','C','H','H','H','O','O','O']``
               will return ``'CH3O2'``
-                
+
             * 'reduce': group repeated symbols e.g.
               ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
               'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
-            
+
             * 'group': will try to group as much as possible parts of the formula
-              e.g. 
+              e.g.
               ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
               'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
-            
+
             * 'count': same as hill (i.e. one just counts the number
-              of atoms of each species) without the re-ordering (take the 
+              of atoms of each species) without the re-ordering (take the
               order of the atomic sites), e.g.
-              ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+              ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']``
               will return ``'Ba2Ti2O6'``
 
-            * 'count_compact': same as count but the number of atoms 
-              for each species is divided by the greatest common divisor of 
+            * 'count_compact': same as count but the number of atoms
+              for each species is divided by the greatest common divisor of
               all of them, e.g.
-              ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+              ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']``
               will return ``'BaTiO3'``
 
         :param separator: a string used to concatenate symbols. Default empty.
-            
+
         :return: a string with the formula
-        
-        .. note:: in modes reduce, group, count and count_compact, the 
-            initial order in which the atoms were appended by the user is 
+
+        .. note:: in modes reduce, group, count and count_compact, the
+            initial order in which the atoms were appended by the user is
             used to group and/or order the symbols in the formula
         """
 
@@ -1034,11 +1035,10 @@ class StructureData(Data):
         .. note:: This is NOT necessarily a list of chemical symbols! Use
             ``[ self.get_kind(s.kind_name).get_symbols_string() for s in self.sites]``
             for chemical symbols
-        
+
         :return: a list of strings
         """
         return [this_site.kind_name for this_site in self.sites]
-
 
     def get_composition(self):
         """
@@ -1051,14 +1051,13 @@ class StructureData(Data):
         :returns: a dictionary with the composition
         """
         symbols_list = [self.get_kind(s.kind_name).get_symbols_string()
-                       for s in self.sites]
+                        for s in self.sites]
         composition = {
-                symbol: symbols_list.count(symbol)
-                for symbol
-                in set(symbols_list)
+            symbol: symbols_list.count(symbol)
+            for symbol
+            in set(symbols_list)
             }
         return composition
-
 
     def get_ase(self):
         """
@@ -1118,12 +1117,12 @@ class StructureData(Data):
         Append a kind to the
         :py:class:`StructureData <aiida.orm.data.structure.StructureData>`.
         It makes a copy of the kind.
-        
+
         :param kind: the site to append, must be a Kind object.
         """
         from aiida.common.exceptions import ModificationNotAllowed
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
@@ -1136,25 +1135,26 @@ class StructureData(Data):
 
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
-        self._set_attr('kinds', self.get_attr('kinds', []) + [new_kind.get_raw()])
+        self._set_attr('kinds',
+                       self.get_attr('kinds', []) + [new_kind.get_raw()])
         # Note, this is a dict (with integer keys) so it allows for empty
         # spots!
         if not hasattr(self, '_internal_kind_tags'):
             self._internal_kind_tags = {}
         self._internal_kind_tags[len(
-            self.get_attr('kinds'))-1] = kind._internal_tag
+            self.get_attr('kinds')) - 1] = kind._internal_tag
 
     def append_site(self, site):
         """
         Append a site to the
         :py:class:`StructureData <aiida.orm.data.structure.StructureData>`.
         It makes a copy of the site.
-        
+
         :param site: the site to append. It must be a Site object.
         """
         from aiida.common.exceptions import ModificationNotAllowed
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
@@ -1168,20 +1168,21 @@ class StructureData(Data):
 
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
-        self._set_attr('sites', self.get_attr('sites', []) + [new_site.get_raw()])
+        self._set_attr('sites',
+                       self.get_attr('sites', []) + [new_site.get_raw()])
 
     def append_atom(self, **kwargs):
         """
-        Append an atom to the Structure, taking care of creating the 
+        Append an atom to the Structure, taking care of creating the
         corresponding kind.
-        
+
         :param ase: the ase Atom object from which we want to create a new atom
                 (if present, this must be the only parameter)
         :param position: the position of the atom (three numbers in angstrom)
-        :param ... symbols, weights, name: any further parameter is passed 
+        :param ... symbols, weights, name: any further parameter is passed
                 to the constructor of the Kind object. For the 'name' parameter,
                 see the note below.
-                
+
         .. note :: Note on the 'name' parameter (that is, the name of the kind):
 
             * if specified, no checks are done on existing species. Simply,
@@ -1191,9 +1192,9 @@ class StructureData(Data):
               to store two different kinds with the same name.
 
             * if not specified, the name is automatically generated. Before
-              adding the kind, a check is done. If other species with the 
-              same properties already exist, no new kinds are created, but 
-              the site is added to the existing (identical) kind. 
+              adding the kind, a check is done. If other species with the
+              same properties already exist, no new kinds are created, but
+              the site is added to the existing (identical) kind.
               (Actually, the first kind that is encountered).
               Otherwise, the name is made unique first, by adding to the string
               containing the list of chemical symbols a number starting from 1,
@@ -1241,7 +1242,7 @@ class StructureData(Data):
                 # There is not an identical kind.
                 # By default, the name of 'kind' just contains the elements.
                 # I then check that the name of 'kind' does not already exist,
-                # and if it exists I add a number (starting from 1) until I 
+                # and if it exists I add a number (starting from 1) until I
                 # find a non-used name.
                 existing_names = [k.name for k in _kinds]
                 simplename = kind.name
@@ -1343,12 +1344,12 @@ class StructureData(Data):
     def clear_kinds(self):
         """
         Removes all kinds for the StructureData object.
-        
+
         .. note:: Also clear all sites!
         """
         from aiida.common.exceptions import ModificationNotAllowed
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
@@ -1363,7 +1364,7 @@ class StructureData(Data):
         """
         from aiida.common.exceptions import ModificationNotAllowed
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
@@ -1395,16 +1396,16 @@ class StructureData(Data):
     def get_kind(self, kind_name):
         """
         Return the kind object associated with the given kind name.
-        
+
         :param kind_name: String, the name of the kind you want to get
-        
+
         :return: The Kind object associated with the given kind_name, if
            a Kind with the given name is present in the structure.
-        
+
         :raise: ValueError if the kind_name is not present.
         """
         # Cache the kinds, if stored, for efficiency
-        if not self._to_be_stored:
+        if self.is_stored:
             try:
                 kinds_dict = self._kinds_cache
             except AttributeError:
@@ -1426,7 +1427,7 @@ class StructureData(Data):
 
         .. note:: This is NOT necessarily a list of chemical symbols! Use
             get_symbols_set for chemical symbols
-        
+
         :return: a list of strings.
         """
         return [k.name for k in self.kinds]
@@ -1435,7 +1436,7 @@ class StructureData(Data):
     def cell(self):
         """
         Returns the cell shape.
-        
+
         :return: a 3x3 list of lists.
         """
         return copy.deepcopy(self.get_attr('cell'))
@@ -1447,7 +1448,7 @@ class StructureData(Data):
     def set_cell(self, value):
         from aiida.common.exceptions import ModificationNotAllowed
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
@@ -1466,7 +1467,7 @@ class StructureData(Data):
         """
         from aiida.common.exceptions import ModificationNotAllowed
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed()
 
         self._set_attr('cell', new_cell)
@@ -1482,14 +1483,14 @@ class StructureData(Data):
 
         :raises ModificationNotAllowed: if object is stored already
         :raises ValueError: if positions are invalid
-        
+
         .. note:: it is assumed that the order of the new_positions is
             given in the same order of the one it's substituting, i.e. the
             kind of the site will not be checked.
         """
         from aiida.common.exceptions import ModificationNotAllowed
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed()
 
         if not conserve_particle:
@@ -1500,15 +1501,17 @@ class StructureData(Data):
             # test consistency of th enew input
             n_sites = len(self.sites)
             if n_sites != len(new_positions) and conserve_particle:
-                raise ValueError("the new positions should be as many as the previous structure.")
+                raise ValueError(
+                    "the new positions should be as many as the previous structure.")
 
             new_sites = []
             for i in range(n_sites):
                 try:
                     this_pos = [float(j) for j in new_positions[i]]
                 except ValueError:
-                    raise ValueError("Expecting a list of floats. Found instead {}"
-                                     .format(new_positions[i]))
+                    raise ValueError(
+                        "Expecting a list of floats. Found instead {}"
+                        .format(new_positions[i]))
 
                 if len(this_pos) != 3:
                     raise ValueError("Expecting a list of lists of length 3. "
@@ -1528,12 +1531,13 @@ class StructureData(Data):
     def pbc(self):
         """
         Get the periodic boundary conditions.
-        
+
         :return: a tuple of three booleans, each one tells if there are periodic
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
-        #return copy.deepcopy(self._pbc)
-        return (self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
+        # return copy.deepcopy(self._pbc)
+        return (
+        self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
 
     @pbc.setter
     def pbc(self, value):
@@ -1542,12 +1546,13 @@ class StructureData(Data):
     def set_pbc(self, value):
         from aiida.common.exceptions import ModificationNotAllowed
 
-        if not self._to_be_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, "
-                                         "it has already been stored")
+        if self.is_stored:
+            raise ModificationNotAllowed(
+                "The StructureData object cannot be modified, "
+                "it has already been stored")
         the_pbc = get_valid_pbc(value)
 
-        #self._pbc = the_pbc
+        # self._pbc = the_pbc
         self._set_attr('pbc1', the_pbc[0])
         self._set_attr('pbc2', the_pbc[1])
         self._set_attr('pbc3', the_pbc[2])
@@ -1599,14 +1604,14 @@ class StructureData(Data):
         """
         To understand if there are alloys in the structure.
 
-        :return: a boolean, True if at least one kind is an alloy 
+        :return: a boolean, True if at least one kind is an alloy
         """
         return any(s.is_alloy() for s in self.kinds)
 
     def has_vacancies(self):
         """
         To understand if there are vacancies in the structure.
-        
+
         :return: a boolean, True if at least one kind has a vacancy
         """
         return any(s.has_vacancies() for s in self.kinds)
@@ -1614,7 +1619,7 @@ class StructureData(Data):
     def get_cell_volume(self):
         """
         Returns the cell volume in Angstrom^3.
-        
+
         :return: a float.
         """
         return calc_cell_volume(self.cell)
@@ -1635,7 +1640,8 @@ class StructureData(Data):
         try:
             conv_f = getattr(structure, '_get_cif_{}_inline'.format(converter))
         except AttributeError:
-            raise ValueError("No such converter '{}' available".format(converter))
+            raise ValueError(
+                "No such converter '{}' available".format(converter))
         ret_dict = conv_f(struct=self, parameters=param, store=store)
         return ret_dict['cif']
 
@@ -1646,14 +1652,14 @@ class StructureData(Data):
         :return: a PhonopyAtoms object
         """
         from phonopy.structure.atoms import Atoms as PhonopyAtoms
-        
+
         atoms = PhonopyAtoms(symbols=[_.kind_name for _ in self.sites])
         # Phonopy internally uses scaled positions, so you must store cell first!
         atoms.set_cell(self.cell)
         atoms.set_positions([_.position for _ in self.sites])
-        
+
         return atoms
-        
+
     def _get_object_ase(self):
         """
         Converts
@@ -1771,7 +1777,7 @@ class Kind(object):
                    If not provided, the mass is set by the
                    self.reset_mass() function.
         :param name: a string that uniquely identifies the kind, and that
-                   is used to identify the sites. 
+                   is used to identify the sites.
         """
         # Internal variables
         self._mass = None
@@ -1871,10 +1877,10 @@ class Kind(object):
 
     def get_raw(self):
         """
-        Return the raw version of the site, mapped to a suitable dictionary. 
-        This is the format that is actually used to store each kind of the 
+        Return the raw version of the site, mapped to a suitable dictionary.
+        This is the format that is actually used to store each kind of the
         structure in the DB.
-        
+
         :return: a python dictionary with the kind.
         """
         return {
@@ -1904,15 +1910,15 @@ class Kind(object):
     def reset_mass(self):
         """
         Reset the mass to the automatic calculated value.
-        
+
         The mass can be set manually; by default, if not provided,
         it is the mass of the constituent atoms, weighted with their
         weight (after the weight has been normalized to one to take
         correctly into account vacancies).
-        
+
         This function uses the internal _symbols and _weights values and
         thus assumes that the values are validated.
-        
+
         It sets the mass to None if the sum of weights is zero.
         """
         w_sum = sum(self._weights)
@@ -1930,10 +1936,10 @@ class Kind(object):
     @property
     def name(self):
         """
-        Return the name of this kind. 
+        Return the name of this kind.
         The name of a kind is used to identify the species of a site.
 
-        :return: a string 
+        :return: a string
         """
         return self._name
 
@@ -1963,7 +1969,7 @@ class Kind(object):
     def compare_with(self, other_kind):
         """
         Compare with another Kind object to check if they are different.
-        
+
         .. note:: This does NOT check the 'type' attribute. Instead, it compares
             (with reasonable thresholds, where applicable): the mass, and the list
             of symbols and of weights. Moreover, it compares the
@@ -1974,7 +1980,7 @@ class Kind(object):
 
         :return: A tuple with two elements. The first one is True if the two sites
             are 'equivalent' (same mass, symbols and weights), False otherwise.
-            The second element of the tuple is a string, 
+            The second element of the tuple is a string,
             which is either None (if the first element was True), or contains
             a 'human-readable' description of the first difference encountered
             between the two sites.
@@ -2003,8 +2009,8 @@ class Kind(object):
 
         if self._internal_tag != other_kind._internal_tag:
             return (False, "Internal tags are different ({} vs. {})"
-                           "".format(self._internal_tag, other_kind._internal_tag))
-
+                           "".format(self._internal_tag,
+                                     other_kind._internal_tag))
 
         # If we got here, the two Site objects are similar enough
         # to be considered of the same kind
@@ -2052,8 +2058,8 @@ class Kind(object):
 
     def get_symbols_string(self):
         """
-        Return a string that tries to match as good as possible the symbols 
-        of this kind. If there is only one symbol (no alloy) with 100% 
+        Return a string that tries to match as good as possible the symbols
+        of this kind. If there is only one symbol (no alloy) with 100%
         occupancy, just returns the symbol name. Otherwise, groups the full
         string in curly brackets, and try to write also the composition
         (with 2 precision only).
@@ -2061,7 +2067,7 @@ class Kind(object):
         .. note:: If there is a vacancy (sum of weights<1), we indicate it
             with the X symbol followed by 1-sum(weights) (still with 2
             digits precision, so it can be 0.00)
-        
+
         .. note:: Note the difference with respect to the symbols and the
             symbol properties!
         """
@@ -2079,14 +2085,13 @@ class Kind(object):
             raise ValueError("This kind has more than one symbol (it is an "
                              "alloy): {}".format(self._symbols))
 
-
     @property
     def symbols(self):
         """
         List of symbols for this site. If the site is a single atom,
         pass a list of one element only, or simply the string for that atom.
         For alloys, a list of elements.
-        
+
         .. note:: Note that if you change the list of symbols, the kind
             name remains unchanged.
         """
@@ -2098,7 +2103,7 @@ class Kind(object):
         If value is a string, a single symbol is used. Otherwise, a list or
         tuple of strings is expected.
 
-        I set a copy of the list, so to avoid that the content changes 
+        I set a copy of the list, so to avoid that the content changes
         after the value is set.
         """
         symbols_tuple = _create_symbols_tuple(value)
@@ -2128,8 +2133,8 @@ class Kind(object):
     def is_alloy(self):
         """
         To understand if kind is an alloy.
-        
-        :return: True if the kind has more than one element (i.e., 
+
+        :return: True if the kind has more than one element (i.e.,
             len(self.symbols) != 1), False otherwise.
         """
         return len(self._symbols) != 1
@@ -2138,7 +2143,7 @@ class Kind(object):
         """
         Returns True if the sum of the weights is less than one.
         It uses the internal variable _sum_threshold as a threshold.
-        
+
         :return: a boolean
         """
         return has_vacancies(self._weights)
@@ -2164,7 +2169,7 @@ class Site(object):
 
         :param kind_name: a string that identifies the kind (species) of this site.
                 This has to be found in the list of kinds of the StructureData
-                object. 
+                object.
                 Validation will be done at the StructureData level.
         :param position: the absolute position (three floats) in angstrom
         """
@@ -2206,10 +2211,10 @@ class Site(object):
 
     def get_raw(self):
         """
-        Return the raw version of the site, mapped to a suitable dictionary. 
-        This is the format that is actually used to store each site of the 
+        Return the raw version of the site, mapped to a suitable dictionary.
+        This is the format that is actually used to store each site of the
         structure in the DB.
-        
+
         :return: a python dictionary with the site.
         """
         return {
@@ -2220,7 +2225,7 @@ class Site(object):
     def get_ase(self, kinds):
         """
         Return a ase.Atom object for this site.
-        
+
         :param kinds: the list of kinds from the StructureData object.
 
         .. note:: If any site is an alloy or has vacancies, a ValueError
@@ -2236,7 +2241,7 @@ class Site(object):
             # Skip alloys and vacancies
             if k.is_alloy() or k.has_vacancies():
                 tag_list.append(None)
-            # If the kind name is equal to the specie name, 
+            # If the kind name is equal to the specie name,
             # then no tag should be set
             elif unicode(k.name) == unicode(k.symbols[0]):
                 tag_list.append(None)
@@ -2293,7 +2298,7 @@ class Site(object):
     def kind_name(self):
         """
         Return the kind name of this site (a string).
-        
+
         The type of a site is used to decide whether two sites are identical
         (same mass, symbols, weights, ...) or not.
         """
@@ -2309,7 +2314,7 @@ class Site(object):
     @property
     def position(self):
         """
-        Return the position of this site in absolute coordinates, 
+        Return the position of this site in absolute coordinates,
         in angstrom.
         """
         return copy.deepcopy(self._position)
@@ -2317,7 +2322,7 @@ class Site(object):
     @position.setter
     def position(self, value):
         """
-        Set the position of this site in absolute coordinates, 
+        Set the position of this site in absolute coordinates,
         in angstrom.
         """
         try:
@@ -2334,7 +2339,8 @@ class Site(object):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def __str__(self):
-        return "kind name '{}' @ {},{},{}".format(self.kind_name, self.position[0],
+        return "kind name '{}' @ {},{},{}".format(self.kind_name,
+                                                  self.position[0],
                                                   self.position[1],
                                                   self.position[2])
 
@@ -2383,7 +2389,7 @@ def get_structuredata_from_qeinput(filepath=None, text=None):
                             )
                             ([E|e|d|D][+|-]?\d+)?       # optional exponents E+03, e-05
                         ){3}                            # I expect three float values
-                        ((\s+[0-1]){3}\s*)?             # Followed by optional ifpos 
+                        ((\s+[0-1]){3}\s*)?             # Followed by optional ifpos
                         \s*                             # Followed by optional white space
                         |
                         \#.*                            # If a line is commented out, that is also ok
@@ -2456,7 +2462,7 @@ def get_structuredata_from_qeinput(filepath=None, text=None):
     """, re.X | re.M)
 
     # Matches each vector inside the cell block
-    cell_vector_regex =  re.compile(r"""
+    cell_vector_regex = re.compile(r"""
         ^                        # Linestart
         [ \t]*                   # Optional white space
         (?P<x>                   # Get x
@@ -2476,7 +2482,8 @@ def get_structuredata_from_qeinput(filepath=None, text=None):
         """, re.X | re.M)
 
     # Finds the ibrav
-    ibrav_regex = re.compile('ibrav [ \t]* \= [ \t]*(?P<ibrav>\-?[ \t]* \d{1,2})', re.X)
+    ibrav_regex = re.compile(
+        'ibrav [ \t]* \= [ \t]*(?P<ibrav>\-?[ \t]* \d{1,2})', re.X)
 
     # Match the block where atomic species are defined:
     atomic_species_block_regex = re.compile("""
@@ -2513,17 +2520,17 @@ def get_structuredata_from_qeinput(filepath=None, text=None):
     valid_elements_regex = re.compile("""
         (?P<ele>
 H  | He |
-Li | Be | B  | C  | N  | O  | F  | Ne | 
-Na | Mg | Al | Si | P  | S  | Cl | Ar | 
-K  | Ca | Sc | Ti | V  | Cr | Mn | Fe | Co | Ni | Cu | Zn | Ga | Ge | As | Se | Br | Kr | 
-Rb | Sr | Y  | Zr | Nb | Mo | Tc | Ru | Rh | Pd | Ag | Cd | In | Sn | Sb | Te | I  | Xe | 
-Cs | Ba | Hf | Ta | W  | Re | Os | Ir | Pt | Au | Hg | Tl | Pb | Bi | Po | At | Rn | 
+Li | Be | B  | C  | N  | O  | F  | Ne |
+Na | Mg | Al | Si | P  | S  | Cl | Ar |
+K  | Ca | Sc | Ti | V  | Cr | Mn | Fe | Co | Ni | Cu | Zn | Ga | Ge | As | Se | Br | Kr |
+Rb | Sr | Y  | Zr | Nb | Mo | Tc | Ru | Rh | Pd | Ag | Cd | In | Sn | Sb | Te | I  | Xe |
+Cs | Ba | Hf | Ta | W  | Re | Os | Ir | Pt | Au | Hg | Tl | Pb | Bi | Po | At | Rn |
 Fr | Ra | Rf | Db | Sg | Bh | Hs | Mt |
 
 La | Ce | Pr | Nd | Pm | Sm | Eu | Gd | Tb | Dy | Ho | Er | Tm | Yb | Lu | # Lanthanides
 Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Actinides
         )
-        [^a-z]  # Any specification of an element is followed by some number 
+        [^a-z]  # Any specification of an element is followed by some number
                 # or capital letter or special character.
     """, re.X)
     # I need either a valid filepath or the text of the qeinput file:
@@ -2534,14 +2541,14 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         txt = text
     else:
         raise InputValidationError(
-                'Provide either a filepath or text to be parsed'
-            )
+            'Provide either a filepath or text to be parsed'
+        )
 
     #########  THE CELL ################
 
     # get ibrav and check if it is valid
     ibrav = int(ibrav_regex.search(txt).group('ibrav'))
-    valid_ibravs = range(15) + [-5,-9,-12]
+    valid_ibravs = range(15) + [-5, -9, -12]
     if ibrav not in valid_ibravs:
         raise InputValidationError(
             'I found ibrav = {} in input, \n'
@@ -2569,14 +2576,14 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
                 'Valid cell units are: {}'.format(cell_unit, valid_cell_units)
             )
         # cell was matched, transform to np.array:
-        cell =  np.array(
+        cell = np.array(
             [
-                [float(match.group(i).replace('D','e').replace('d','e'))
-                    for i in ('x','y','z')
-                ]
+                [float(match.group(i).replace('D', 'e').replace('d', 'e'))
+                 for i in ('x', 'y', 'z')
+                 ]
                 for match
                 in cell_vector_regex.finditer(match.group('cell'))
-            ]
+                ]
         )
 
         # Now, we do the convert the cell to the right units (we want angstrom):
@@ -2595,13 +2602,13 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
             if a:
                 conversion = a
             elif celldm1:
-                conversion = bohr_to_ang*celldm1
+                conversion = bohr_to_ang * celldm1
             else:
                 raise InputValidationError(
                     'You have to define lattice vector'
                     'celldm(1) or A'
                 )
-        cell = conversion*cell
+        cell = conversion * cell
 
     # Ok, user was not nice and used ibrav > 0 to define cell using
     # either the keys celldm(n) n = 1,2,...,6  (celldm - system)
@@ -2617,10 +2624,10 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
             raise InputValidationError(
                 'Both A and celldm(1) specified'
             )
-        elif not(celldm1 or a):
+        elif not (celldm1 or a):
             raise Exception('You have to define lattice vector'
-                    'celldm(1) or A'
-                )
+                            'celldm(1) or A'
+                            )
         # So, depending on what is defined for the first lattice vector,
         # I define the keys that I will look for to find the other
         # geometry definitions
@@ -2636,7 +2643,7 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
                 # I will do all my calculations in ABC-system and
                 # therefore need a conversion factor
                 # if celldm system is chosen:
-                a = bohr_to_ang*celldm1
+                a = bohr_to_ang * celldm1
                 length_conversion = a
             else:
                 keys_in_qeinput = (
@@ -2646,34 +2653,34 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
                     'cosAC',
                     'cosBC',
                 )
-                length_conversion =  1.
+                length_conversion = 1.
             # Not all geometry definitions are needs,
             # but some are necessary depending on ibrav
             # and will be matched here:
-            if abs(ibrav)  > 7:
+            if abs(ibrav) > 7:
                 i = 0
-                b = length_conversion*get_fortfloat(keys_in_qeinput[i],txt)
-            if abs(ibrav) > 3 and ibrav not in (-5,5):
+                b = length_conversion * get_fortfloat(keys_in_qeinput[i], txt)
+            if abs(ibrav) > 3 and ibrav not in (-5, 5):
                 i = 1
-                c = length_conversion*get_fortfloat(keys_in_qeinput[i],txt)
-            if ibrav in (12,13,14):
+                c = length_conversion * get_fortfloat(keys_in_qeinput[i], txt)
+            if ibrav in (12, 13, 14):
                 i = 2
-                cosg = get_fortfloat(keys_in_qeinput[i],txt)
-                sing = np.sqrt(1. - cosg**2)
+                cosg = get_fortfloat(keys_in_qeinput[i], txt)
+                sing = np.sqrt(1. - cosg ** 2)
             if ibrav in (-12, 14):
                 i = 3
-                cosb = get_fortfloat(keys_in_qeinput[i],txt)
-                sinb = np.sqrt(1. - cosb**2)
+                cosb = get_fortfloat(keys_in_qeinput[i], txt)
+                sinb = np.sqrt(1. - cosb ** 2)
             if ibrav in (5, 14):
                 i = 4
-                cosa = 1.*get_fortfloat(keys_in_qeinput[i],txt)  
-                    # The multiplication with 1.
-                    # raises Exception here if None was returned by get_fortfloat
+                cosa = 1. * get_fortfloat(keys_in_qeinput[i], txt)
+                # The multiplication with 1.
+                # raises Exception here if None was returned by get_fortfloat
         except Exception as e:
             raise InputValidationError(
                 '\nException {} raised when searching for\n'
                 'key {} in qeinput, necessary when ibrav = {}'.format(
-                    e,keys_in_qeinput[i], ibrav
+                    e, keys_in_qeinput[i], ibrav
                 )
             )
     # Calculating the cell according to ibrav.
@@ -2686,26 +2693,26 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     elif ibrav == 2:
         #  2          cubic F (fcc)
         #  v1 = (a/2)(-1,0,1),  v2 = (a/2)(0,1,1), v3 = (a/2)(-1,1,0)
-        cell = 0.5*a*np.array([
+        cell = 0.5 * a * np.array([
             [-1., 0., 1.],
-            [ 0., 1., 1.],
+            [0., 1., 1.],
             [-1., 1., 0.],
         ])
     elif ibrav == 3:
         # cubic I (bcc)
         #  v1 = (a/2)(1,1,1),  v2 = (a/2)(-1,1,1),  v3 = (a/2)(-1,-1,1)
-        cell = 0.5*a*np.array([
-            [ 1., 1., 1.],
+        cell = 0.5 * a * np.array([
+            [1., 1., 1.],
             [-1., 1., 1.],
-            [-1.,-1., 0.],
+            [-1., -1., 0.],
         ])
     elif ibrav == 4:
         # 4          Hexagonal and Trigonal P        celldm(3)=c/a
         # v1 = a(1,0,0),  v2 = a(-1/2,sqrt(3)/2,0),  v3 = a(0,0,c/a)
-        cell = a*np.array([
-            [ 1. , 0.             , 0. ],
-            [-0.5, 0.5*np.sqrt(3.), 0. ],
-            [ 0. , 0.             , c/a]
+        cell = a * np.array([
+            [1., 0., 0.],
+            [-0.5, 0.5 * np.sqrt(3.), 0.],
+            [0., 0., c / a]
         ])
     elif ibrav == 5:
         # 5          Trigonal R, 3fold axis c        celldm(4)=cos(alpha)
@@ -2715,12 +2722,12 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         # where c=cos(alpha) is the cosine of the angle alpha between
         # any pair of crystallographic vectors, tx, ty, tz are:
         # tx=sqrt((1-c)/2), ty=sqrt((1-c)/6), tz=sqrt((1+2c)/3)
-        tx = np.sqrt((1.-cosa)/2.)
-        ty = np.sqrt((1.-cosa)/6.)
-        tz = np.sqrt((1.+2.*cosa)/3.)
-        cell = a*np.array([
-            [ tx, -ty, tz],
-            [ 0.,2*ty, tz],
+        tx = np.sqrt((1. - cosa) / 2.)
+        ty = np.sqrt((1. - cosa) / 6.)
+        tz = np.sqrt((1. + 2. * cosa) / 3.)
+        cell = a * np.array([
+            [tx, -ty, tz],
+            [0., 2 * ty, tz],
             [-tx, -ty, tz]
         ])
     elif ibrav == -5:
@@ -2734,71 +2741,71 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         # Note: if you prefer x,y,z as axis in the cubic limit,
         # set  u = tz + 2*sqrt(2)*ty,  v = tz - sqrt(2)*ty
         # See also the note in flib/latgen.f90
-        tx = np.sqrt((1.-c)/2.)
-        ty = np.sqrt((1.-c)/6.)
-        tz = np.sqrt((1.+2.*c)/3.)
-        u =  tz - 2.*np.sqrt(2.)*ty
-        v =  tz + np.sqrt(2.)*ty
-        cell = a/np.sqrt(3.)*np.array([
-            [ u, v, v],
-            [ v, u, v],
-            [ v, v, u]
+        tx = np.sqrt((1. - c) / 2.)
+        ty = np.sqrt((1. - c) / 6.)
+        tz = np.sqrt((1. + 2. * c) / 3.)
+        u = tz - 2. * np.sqrt(2.) * ty
+        v = tz + np.sqrt(2.) * ty
+        cell = a / np.sqrt(3.) * np.array([
+            [u, v, v],
+            [v, u, v],
+            [v, v, u]
         ])
     elif ibrav == 6:
         # 6          Tetragonal P (st)               celldm(3)=c/a
         # v1 = a(1,0,0),  v2 = a(0,1,0),  v3 = a(0,0,c/a)
-        cell = a*np.array([
-            [ 1., 0., 0.],
-            [ 0., 1., 0.],
-            [ 0., 0.,c/a]
+        cell = a * np.array([
+            [1., 0., 0.],
+            [0., 1., 0.],
+            [0., 0., c / a]
         ])
     elif ibrav == 7:
         # 7          Tetragonal I (bct)              celldm(3)=c/a
         # v1=(a/2)(1,-1,c/a),  v2=(a/2)(1,1,c/a),  v3=(a/2)(-1,-1,c/a)
-        cell = 0.5*a*np.array([
-            [ 1.,-1.,c/a],
-            [ 1., 1.,c/a],
-            [-1.,-1.,c/a]
+        cell = 0.5 * a * np.array([
+            [1., -1., c / a],
+            [1., 1., c / a],
+            [-1., -1., c / a]
         ])
     elif ibrav == 8:
         # 8  Orthorhombic P       celldm(2)=b/a
         #                         celldm(3)=c/a
         #  v1 = (a,0,0),  v2 = (0,b,0), v3 = (0,0,c)
-        cell = np.diag([a,b,c])
+        cell = np.diag([a, b, c])
     elif ibrav == 9:
         #   9   Orthorhombic base-centered(bco) celldm(2)=b/a
         #                                         celldm(3)=c/a
         #  v1 = (a/2, b/2,0),  v2 = (-a/2,b/2,0),  v3 = (0,0,c)
         cell = np.array([
-            [ 0.5*a, 0.5*b, 0.],
-            [-0.5*a, 0.5*b, 0.],
-            [ 0.   , 0.   , c ]
+            [0.5 * a, 0.5 * b, 0.],
+            [-0.5 * a, 0.5 * b, 0.],
+            [0., 0., c]
         ])
     elif ibrav == -9:
         # -9          as 9, alternate description
         #  v1 = (a/2,-b/2,0),  v2 = (a/2,-b/2,0),  v3 = (0,0,c)
         cell = np.array([
-            [ 0.5*a, 0.5*b, 0.],
-            [ 0.5*a,-0.5*b, 0.],
-            [ 0.   , 0.   , c ]
+            [0.5 * a, 0.5 * b, 0.],
+            [0.5 * a, -0.5 * b, 0.],
+            [0., 0., c]
         ])
     elif ibrav == 10:
         # 10          Orthorhombic face-centered      celldm(2)=b/a
         #                                         celldm(3)=c/a
         #  v1 = (a/2,0,c/2),  v2 = (a/2,b/2,0),  v3 = (0,b/2,c/2)
         cell = np.array([
-            [ 0.5*a, 0.   , 0.5*c],
-            [ 0.5*a, 0.5*b, 0.   ],
-            [ 0.   , 0.5*b, 0.5*c]
+            [0.5 * a, 0., 0.5 * c],
+            [0.5 * a, 0.5 * b, 0.],
+            [0., 0.5 * b, 0.5 * c]
         ])
     elif ibrav == 11:
         # 11          Orthorhombic body-centered      celldm(2)=b/a
         #                                        celldm(3)=c/a
         #  v1=(a/2,b/2,c/2),  v2=(-a/2,b/2,c/2),  v3=(-a/2,-b/2,c/2)
         cell = np.array([
-            [ 0.5*a, 0.5*b, 0.5*c],
-            [-0.5*a, 0.5*b, 0.5*c],
-            [-0.5*a,-0.5*b, 0.5*c]
+            [0.5 * a, 0.5 * b, 0.5 * c],
+            [-0.5 * a, 0.5 * b, 0.5 * c],
+            [-0.5 * a, -0.5 * b, 0.5 * c]
         ])
     elif ibrav == 12:
         # 12      Monoclinic P, unique axis c     celldm(2)=b/a
@@ -2807,9 +2814,9 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         #  v1=(a,0,0), v2=(b*cos(gamma),b*sin(gamma),0),  v3 = (0,0,c)
         #  where gamma is the angle between axis a and b.
         cell = np.array([
-            [     a, 0.   , 0.   ],
-            [b*cosg,b*sing, 0.   ],
-            [ 0.   , 0.   , c    ]
+            [a, 0., 0.],
+            [b * cosg, b * sing, 0.],
+            [0., 0., c]
         ])
     elif ibrav == -12:
         # -12          Monoclinic P, unique axis b     celldm(2)=b/a
@@ -2818,9 +2825,9 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         #  v1 = (a,0,0), v2 = (0,b,0), v3 = (c*cos(beta),0,c*sin(beta))
         #  where beta is the angle between axis a and c
         cell = np.array([
-            [ a      , 0. , 0.    ],
-            [ 0.     , b  , 0.    ],
-            [ c*cosb , 0. , c*sinb]
+            [a, 0., 0.],
+            [0., b, 0.],
+            [c * cosb, 0., c * sinb]
         ])
     elif ibrav == 13:
         # 13          Monoclinic base-centered        celldm(2)=b/a
@@ -2831,9 +2838,9 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         #  v3 = (  a/2,         0,                  c/2),
         #  where gamma is the angle between axis a and b
         cell = np.array([
-            [ 0.5*a  , 0.     ,-0.5*c ],
-            [ b*cosg , b*sing , 0.    ],
-            [ 0.5*a  , 0.     , 0.5*c ]
+            [0.5 * a, 0., -0.5 * c],
+            [b * cosg, b * sing, 0.],
+            [0.5 * a, 0., 0.5 * c]
         ])
     elif ibrav == 14:
         #  14       Triclinic                     celldm(2)= b/a,
@@ -2850,12 +2857,13 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         #     beta is the angle between axis a and c
         #    gamma is the angle between axis a and b
         cell = np.array([
-            [ a      , 0.     ,-0.5*c ],
-            [ b*cosg , b*sing , 0.    ],
+            [a, 0., -0.5 * c],
+            [b * cosg, b * sing, 0.],
             [
-                c*cosb,
-                c*(cosa - cosb *cosg ) / sing,
-                c*np.sqrt(1.+2.*cosa*cosb*cosg-cosa**2-cosb**2-cosg**2)/sing
+                c * cosb,
+                c * (cosa - cosb * cosg) / sing,
+                c * np.sqrt(
+                    1. + 2. * cosa * cosb * cosg - cosa ** 2 - cosb ** 2 - cosg ** 2) / sing
             ]
         ])
 
@@ -2870,8 +2878,8 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     for match in atomic_species_regex.finditer(atomic_species):
         try:
             symbols = valid_elements_regex.search(
-                    match.group('pseudo')
-                ).group('ele')
+                match.group('pseudo')
+            ).group('ele')
         except Exception as e:
             raise InputValidationError(
                 'I could not read an element name in {}'.format(match.group(0))
@@ -2879,11 +2887,10 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         name = match.group('tag')
         mass = match.group('mass')
         structuredata.append_kind(Kind(
-            name    = name,
-            symbols = symbols,
-            mass    = mass,
+            name=name,
+            symbols=symbols,
+            mass=mass,
         ))
-
 
     ################## POSITIONS #######################
 
@@ -2896,32 +2903,28 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         raise InputValidationError(
             '\nFound atom unit {}, which is not\n'
             'among the valid units: {}'.format(
-                atom_unit,
-                ', '.join(valid_units)
+                atom_unit, ', '.join(valid_atom_units)
             )
         )
 
     if atom_unit == 'crystal_sg':
-        raise NotImplementedError(
-            'crystal_sg is not implemented'
-        )
-    position_block      =   atom_block_match.group('positions')
+        raise NotImplementedError('crystal_sg is not implemented')
+    position_block = atom_block_match.group('positions')
 
     if not position_block:
-        raise InputValidationError(
-            'Could not read CARD POSITIONS'
-        )
+        raise InputValidationError('Could not read CARD POSITIONS')
 
-    symbols, positions  =   [],[]
+    symbols, positions = [], []
 
     for atom_match in pos_regex.finditer(position_block):
         symbols.append(atom_match.group('sym'))
         try:
             positions.append(
                 [
-                    float(atom_match.group(c).replace('D','e').replace('d','e'))
-                    for c in ('x','y','z')
-                ]
+                    float(
+                        atom_match.group(c).replace('D', 'e').replace('d', 'e'))
+                    for c in ('x', 'y', 'z')
+                    ]
             )
         except Exception as e:
             raise InputValidationError(
@@ -2932,19 +2935,15 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     positions = np.array(positions)
 
     if atom_unit == 'bohr':
-        positions = bohr_to_ang*positions
+        positions = bohr_to_ang * positions
     elif atom_unit == 'crystal':
         positions = np.dot(positions, cell)
     elif atom_unit == 'alat':
-        positions = np.linalg.norm(cell[0])*positions
+        positions = np.linalg.norm(cell[0]) * positions
 
     ######### DEFINE SITES ######################
 
     positions = positions.tolist()
-    [structuredata.append_site(Site(
-            kind_name = sym,
-            position  = pos,
-        ))
-        for sym, pos in zip(symbols, positions)
-    ]
+    [structuredata.append_site(Site(kind_name=sym, position=pos,))
+     for sym, pos in zip(symbols, positions)]
     return structuredata

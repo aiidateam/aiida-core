@@ -23,10 +23,8 @@ from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
 from aiida.backends import settings as settings_profile
 
-
-
-## Import here from other files; once imported, it will be found and
-## used as a command-line parameter
+# Import here from other files; once imported, it will be found and
+# used as a command-line parameter
 from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.calculation import Calculation
 from aiida.cmdline.commands.code import Code
@@ -36,11 +34,14 @@ from aiida.cmdline.commands.data import Data
 from aiida.cmdline.commands.devel import Devel
 from aiida.cmdline.commands.exportfile import Export
 from aiida.cmdline.commands.group import Group
+from aiida.cmdline.commands.graph import Graph
 from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.profile import Profile
 from aiida.cmdline.commands.workflow import Workflow
+from aiida.cmdline.commands.workflow2 import Workflow2
 from aiida.cmdline.commands.comment import Comment
+from aiida.cmdline.commands.shell import Shell
 from aiida.cmdline import execname
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
@@ -54,12 +55,14 @@ class ProfileParsingException(AiidaException):
     Exception raised when parsing the profile command line option, if only
     -p is provided, and no profile is specified
     """
+
     def __init__(self, *args, **kwargs):
-        self.minus_p_provided=kwargs.pop('minus_p_provided', False)
+        self.minus_p_provided = kwargs.pop('minus_p_provided', False)
 
         super(ProfileParsingException, self).__init__(*args, **kwargs)
 
-def parse_profile(argv,merge_equal=False):
+
+def parse_profile(argv, merge_equal=False):
     """
     Parse the argv to see if a profile has been specified, return it with the
     command position shift (index where the commands start)
@@ -87,8 +90,8 @@ def parse_profile(argv,merge_equal=False):
         internal_argv = list(argv)
         shift = 0
 
-    profile = None # Use default profile if nothing is specified
-    command_position = 1 # If there is no profile option
+    profile = None  # Use default profile if nothing is specified
+    command_position = 1  # If there is no profile option
     try:
         profile_switch = internal_argv[1]
     except IndexError:
@@ -205,6 +208,7 @@ class Completion(VerdiCommand):
 
     Returning without printing will use the default bash completion.
     """
+
     # TODO: manage completion at a deeper level
 
     def run(self, *args):
@@ -218,13 +222,12 @@ class Completion(VerdiCommand):
             return
 
         try:
-            profile, command_position = parse_profile(args[1:],merge_equal=True)
+            profile, command_position = parse_profile(args[1:],
+                                                      merge_equal=True)
         except ProfileParsingException as e:
             cword_offset = 0
         else:
             cword_offset = command_position - 1
-
-
 
         if cword == 1 + cword_offset:
             print " ".join(sorted(short_doc.keys()))
@@ -235,7 +238,7 @@ class Completion(VerdiCommand):
                 # args[1] is the executable (verdi)
                 # args[2] is the command for verdi
                 # args[3:] are the following subargs
-                command = args[2+cword_offset]
+                command = args[2 + cword_offset]
             except IndexError:
                 return
             try:
@@ -271,9 +274,10 @@ class Help(VerdiCommand):
         except IndexError:
             print get_listparams()
             print ""
-            print ("Before each command you can specify the AiiDA profile to use,"
-                   " with 'verdi -p <profile> <command>' or "
-                   "'verdi --profile=<profile> <command>'")
+            print (
+            "Before each command you can specify the AiiDA profile to use,"
+            " with 'verdi -p <profile> <command>' or "
+            "'verdi --profile=<profile> <command>'")
             print ""
             print ("Use '{} help <command>' for more information "
                    "on a specific command.".format(execname))
@@ -313,6 +317,9 @@ class Install(VerdiCommand):
     def run(self, *args):
         from aiida.common.setup import (create_base_dirs, create_configuration,
                                         set_default_profile, DEFAULT_UMASK)
+        from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+        from aiida.backends.utils import set_backend_type, get_backend_type
+        from aiida.common.exceptions import InvalidOperation
 
         cmdline_args = list(args)
 
@@ -331,54 +338,134 @@ class Install(VerdiCommand):
 
         # create the directories to store the configuration files
         create_base_dirs()
-        profile = 'default' if settings_profile.AIIDADB_PROFILE is None \
-                            else settings_profile.AIIDADB_PROFILE
+        # gprofile = 'default' if profile is None else profile
+        gprofile = 'default' if settings_profile.AIIDADB_PROFILE is None \
+            else settings_profile.AIIDADB_PROFILE
+
+        created_conf = None
         # ask and store the configuration of the DB
         try:
-            create_configuration(profile=profile)
+            created_conf = create_configuration(profile=gprofile)
         except ValueError as e:
-            print >> sys.stderr, "Error during configuration: {}".format(e.message)
+            print >> sys.stderr, "Error during configuration: {}".format(
+                e.message)
             sys.exit(1)
 
         # set default DB profiles
-        set_default_profile('verdi', profile, force_rewrite=False)
-        set_default_profile('daemon', profile, force_rewrite=False)
+        set_default_profile('verdi', gprofile, force_rewrite=False)
+        set_default_profile('daemon', gprofile, force_rewrite=False)
 
         if only_user_config:
-            print "Only user configuration requested, skipping the migrate command"
+            print ("Only user configuration requested, "
+                   "skipping the migrate command")
         else:
             print "Executing now a migrate command..."
-            # The correct profile is selected within load_dbenv.
-            # Setting os.umask here since sqlite database gets created in
-            # this step.
-            old_umask = os.umask(DEFAULT_UMASK)
-            try:
-                pass_to_django_manage([execname, 'migrate'])
-            finally:
-                os.umask(old_umask)
+
+            backend_choice = created_conf['AIIDADB_BACKEND']
+            if backend_choice == BACKEND_DJANGO:
+                print("...for Django backend")
+                # The correct profile is selected within load_dbenv.
+                # Setting os.umask here since sqlite database gets created in
+                # this step.
+                old_umask = os.umask(DEFAULT_UMASK)
+
+                # This check should be done more properly
+                # try:
+                #     backend_type = get_backend_type()
+                # except KeyError:
+                #     backend_type = None
+                #
+                # if backend_type is not None and backend_type != BACKEND_DJANGO:
+                #     raise InvalidOperation("An already existing database found"
+                #                            "and a different than the selected"
+                #                            "backend was used for its "
+                #                            "management.")
+
+                try:
+                    pass_to_django_manage([execname, 'migrate'],
+                                          profile=gprofile)
+                finally:
+                    os.umask(old_umask)
+
+                set_backend_type(BACKEND_DJANGO)
+
+            elif backend_choice == BACKEND_SQLA:
+                print("...for SQLAlchemy backend")
+                from aiida.backends.sqlalchemy.models.base import Base
+                from aiida.backends.sqlalchemy.utils import get_engine
+                from aiida.common.setup import get_profile_config
+                from aiida import is_dbenv_loaded, load_dbenv
+
+                if not is_dbenv_loaded():
+                    load_dbenv()
+
+                # This check should be done more properly
+                # try:
+                #     backend_type = get_backend_type()
+                # except KeyError:
+                #     backend_type = None
+                #
+                # if backend_type is not None and backend_type != BACKEND_SQLA:
+                #     raise InvalidOperation("An already existing database found"
+                #                            "and a different than the selected"
+                #                            "backend was used for its "
+                #                            "management.")
+
+                # Those import are necessary for SQLAlchemy to correctly create
+                # the needed database tables.
+                from aiida.backends.sqlalchemy.models.authinfo import (
+                    DbAuthInfo)
+                from aiida.backends.sqlalchemy.models.comment import DbComment
+                from aiida.backends.sqlalchemy.models.computer import (
+                    DbComputer)
+                from aiida.backends.sqlalchemy.models.group import (
+                    DbGroup, table_groups_nodes)
+                from aiida.backends.sqlalchemy.models.lock import DbLock
+                from aiida.backends.sqlalchemy.models.log import DbLog
+                from aiida.backends.sqlalchemy.models.node import (
+                    DbLink, DbNode, DbPath, DbCalcState)
+                from aiida.backends.sqlalchemy.models.user import DbUser
+                from aiida.backends.sqlalchemy.models.workflow import (
+                    DbWorkflow, DbWorkflowData, DbWorkflowStep)
+                from aiida.backends.sqlalchemy.models.settings import DbSetting
+
+                Base.metadata.create_all(
+                    get_engine(get_profile_config(gprofile)))
+
+                set_backend_type(BACKEND_SQLA)
+
+            else:
+                raise InvalidOperation("Not supported backend selected.")
+
+        print "Database was created successfully"
 
         # I create here the default user
         print "Loading new environment..."
         if only_user_config:
-            from aiida.backends.utils import load_dbenv
+            from aiida.backends.utils import load_dbenv, is_dbenv_loaded
             # db environment has not been loaded in this case
-            load_dbenv()
+            if not is_dbenv_loaded():
+                load_dbenv()
 
         from aiida.common.setup import DEFAULT_AIIDA_USER
-        from aiida.backends.djsite.db import models
-        from aiida.backends.djsite.utils import get_configured_user_email
+        from aiida.orm.user import User
 
-        if not models.DbUser.objects.filter(email=DEFAULT_AIIDA_USER):
+        if not User.search_for_users(email=DEFAULT_AIIDA_USER):
             print "Installing default AiiDA user..."
-            # No password, so no access via API/AWI
-            models.DbUser.objects.create_superuser(email=DEFAULT_AIIDA_USER,
-                                                   password='',
-                                                   first_name="AiiDA",
-                                                   last_name="Daemon")
+            nuser = User(email=DEFAULT_AIIDA_USER)
+            nuser.first_name = "AiiDA"
+            nuser.last_name = "Daemon"
+            nuser.is_staff = True
+            nuser.is_active = True
+            nuser.is_superuser = True
+            nuser.force_save()
+
+        from aiida.common.utils import get_configured_user_email
         email = get_configured_user_email()
         print "Starting user configuration for {}...".format(email)
         if email == DEFAULT_AIIDA_USER:
-            print "You set up AiiDA using the default Daemon email ({}),".format(email)
+            print "You set up AiiDA using the default Daemon email ({}),".format(
+                email)
             print "therefore no further user configuration will be asked."
         else:
             # Ask to configure the new user
@@ -390,21 +477,6 @@ class Install(VerdiCommand):
         """
         No completion after 'verdi install'.
         """
-        print ""
-
-
-class Shell(VerdiCommand):
-    """
-    Run the interactive shell with the AiiDA environment loaded.
-
-    This command opens an ipython shell with the AiiDA environment loaded.
-    """
-
-    def run(self, *args):
-        pass_to_django_manage([execname, 'customshell'] + list(args))
-
-    def complete(self, subargs_idx, subargs):
-        # disable further completion
         print ""
 
 
@@ -426,12 +498,12 @@ class Run(VerdiCommand):
     """
 
     def run(self, *args):
-        from aiida.backends.utils import load_dbenv
+        from aiida.backends.utils import load_dbenv,is_dbenv_loaded
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         import argparse
-        import aiida.cmdline
-        from aiida.backends.djsite.db.management.commands.customshell import default_modules_list
+        from aiida.cmdline.commands.shell import default_modules_list
         import aiida.orm.autogroup
         from aiida.orm.autogroup import Autogroup
 
@@ -447,19 +519,22 @@ class Run(VerdiCommand):
         parser.add_argument('-e', '--exclude', type=str, nargs='+', default=[],
                             help=('Autogroup only specific calculation classes.'
                                   " Select them by their module name.")
-        )
-        parser.add_argument('-E', '--excludesubclasses', type=str, nargs='+', default=[],
+                            )
+        parser.add_argument('-E', '--excludesubclasses', type=str, nargs='+',
+                            default=[],
                             help=('Autogroup only specific calculation classes.'
                                   " Select them by their module name.")
-        )
-        parser.add_argument('-i', '--include', type=str, nargs='+', default=['all'],
+                            )
+        parser.add_argument('-i', '--include', type=str, nargs='+',
+                            default=['all'],
                             help=('Autogroup only specific data classes.'
                                   " Select them by their module name.")
-        )
-        parser.add_argument('-I', '--includesubclasses', type=str, nargs='+', default=[],
+                            )
+        parser.add_argument('-I', '--includesubclasses', type=str, nargs='+',
+                            default=[],
                             help=('Autogroup only specific code classes.'
                                   " Select them by their module name.")
-        )
+                            )
         parser.add_argument('scriptname', metavar='ScriptName', type=str,
                             help='The name of the script you want to execute')
         parser.add_argument('new_args', metavar='ARGS',
@@ -487,13 +562,16 @@ class Run(VerdiCommand):
                 import datetime
 
                 now = datetime.datetime.now()
-                automatic_group_name = "Verdi autogroup on " + now.strftime("%Y-%m-%d %H:%M:%S")
+                automatic_group_name = "Verdi autogroup on " + now.strftime(
+                    "%Y-%m-%d %H:%M:%S")
 
             aiida_verdilib_autogroup = Autogroup()
             aiida_verdilib_autogroup.set_exclude(parsed_args.exclude)
             aiida_verdilib_autogroup.set_include(parsed_args.include)
-            aiida_verdilib_autogroup.set_exclude_with_subclasses(parsed_args.excludesubclasses)
-            aiida_verdilib_autogroup.set_include_with_subclasses(parsed_args.includesubclasses)
+            aiida_verdilib_autogroup.set_exclude_with_subclasses(
+                parsed_args.excludesubclasses)
+            aiida_verdilib_autogroup.set_include_with_subclasses(
+                parsed_args.includesubclasses)
             aiida_verdilib_autogroup.set_group_name(automatic_group_name)
             ## Note: this is also set in the exec environment!
             ## This is the intended behavior
@@ -525,8 +603,6 @@ class Run(VerdiCommand):
             finally:
                 f.close()
 
-
-# print "Done."
 
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST
@@ -573,6 +649,7 @@ def print_usage(execname):
     print >> sys.stderr, get_listparams()
     print >> sys.stderr, "See '{} help' for more help.".format(execname)
 
+
 def exec_from_cmdline(argv):
     """
     The main function to be called. Pass as parameter the sys.argv.
@@ -591,13 +668,14 @@ def exec_from_cmdline(argv):
     from aiida.cmdline import verdilib
     import inspect
 
-    #List of command names that should be hidden or not completed.
+    # List of command names that should be hidden or not completed.
     hidden_commands = ['completion', 'completioncommand', 'listparams']
 
     # Retrieve the list of commands
     verdilib_namespace = verdilib.__dict__
 
-    list_commands = {v.get_command_name(): v for v in verdilib_namespace.itervalues()
+    list_commands = {v.get_command_name(): v for v in
+                     verdilib_namespace.itervalues()
                      if inspect.isclass(v) and not v == VerdiCommand and
                      issubclass(v, VerdiCommand)
                      and not v.__name__.startswith('_')
@@ -653,13 +731,10 @@ def exec_from_cmdline(argv):
         else:
             print >> sys.stderr, ("{}: '{}' is not a valid command. "
                                   "See '{} help' for more help.".format(
-                                      execname, command, execname))
+                execname, command, execname))
             get_command_suggestion(command)
             sys.exit(1)
     except ProfileConfigurationError as e:
         print >> sys.stderr, "The profile specified is not valid!"
         print >> sys.stderr, e.message
         sys.exit(1)
-
-
-

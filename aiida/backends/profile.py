@@ -41,9 +41,8 @@ def load_profile(process=None, profile=None):
         settings.AIIDADB_PROFILE = None
 
     if settings.AIIDADB_PROFILE is not None:
-        if profile is not None:
-            raise ValueError("You are specifying a profile, but the "
-                             "settings.AIIDADB_PROFILE is already set")
+        if profile is not None and profile != settings.AIIDADB_PROFILE:
+            raise ValueError("Error in profile loading.")
     else:
         if profile is not None:
             the_profile = profile
@@ -57,6 +56,7 @@ def load_profile(process=None, profile=None):
     # Check if AIIDADB_BACKEND is set and if not error (with message)
     # Migration script should put it in profile (config.json)
     settings.BACKEND = config.get("AIIDADB_BACKEND", BACKEND_DJANGO)
+
 
 def is_profile_loaded():
     """

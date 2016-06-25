@@ -11,7 +11,7 @@ Plugin to create a Quantum Espresso pw.x file.
 # TODO: many cards missing: check and implement
 #       e.g.: ['CONSTRAINTS', 'OCCUPATIONS']
 # TODO: implement pre... and post... hooks to add arbitrary strings before
-#       and after a namelist, and a 'final_string' (all optional); useful 
+#       and after a namelist, and a 'final_string' (all optional); useful
 #       for development when new cards are needed
 # TODO: all a lot of logger.debug stuff
 import os
@@ -38,9 +38,10 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
     def _init_internal_params(self):
         super(PwCalculation, self)._init_internal_params()
 
-        self._DATAFILE_XML = os.path.join(BasePwCpInputGenerator._OUTPUT_SUBFOLDER,
-                                          '{}.save'.format(BasePwCpInputGenerator._PREFIX),
-                                          BasePwCpInputGenerator._DATAFILE_XML_BASENAME)
+        self._DATAFILE_XML = os.path.join(
+            BasePwCpInputGenerator._OUTPUT_SUBFOLDER,
+            '{}.save'.format(BasePwCpInputGenerator._PREFIX),
+            BasePwCpInputGenerator._DATAFILE_XML_BASENAME)
 
         # Default PW output parser provided by AiiDA
         self._default_parser = 'quantumespresso.basicpw'
@@ -63,9 +64,11 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
                                   ('SYSTEM', 'celldm'),
                                   ('SYSTEM', 'nat'),  # set later
                                   ('SYSTEM', 'ntyp'),  # set later
-                                  ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
-                                  ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
-        ]
+                                  ('SYSTEM', 'a'), ('SYSTEM', 'b'),
+                                  ('SYSTEM', 'c'),
+                                  ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'),
+                                  ('SYSTEM', 'cosbc'),
+                                  ]
 
         self._use_kpoints = True
 
@@ -105,7 +108,5 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
         """
         from . import helpers
         return helpers.pw_input_helper(*args, **kwargs)
-    
-    
     
     

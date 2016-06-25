@@ -37,12 +37,12 @@ class TestTransitive(SqlAlchemyTests):
         n3 = Node().store()
         n4 = Node().store()
 
-        n2._add_link_from(n1)
-        n3._add_link_from(n2)
-        n4._add_link_from(n3)
+        n2.add_link_from(n1)
+        n3.add_link_from(n2)
+        n4.add_link_from(n3)
 
         with self.assertRaises(ValueError):  # This would generate a loop
-            n1._add_link_from(n4)
+            n1.add_link_from(n4)
 
     def test_creation_and_deletion(self):
         """
@@ -62,30 +62,30 @@ class TestTransitive(SqlAlchemyTests):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3._add_link_from(n2)
-        n2._add_link_from(n1)
-        n5._add_link_from(n3)
-        n5._add_link_from(n4)
-        n4._add_link_from(n2)
+        n3.add_link_from(n2)
+        n2.add_link_from(n1)
+        n5.add_link_from(n3)
+        n5.add_link_from(n4)
+        n4.add_link_from(n2)
 
-        n7._add_link_from(n6)
-        n8._add_link_from(n7)
+        n7.add_link_from(n6)
+        n8.add_link_from(n7)
 
         # Yet, no links from 1 to 8
         self.assertEquals(DbPath.query.filter_by(parent_id=n1.dbnode.id,
                                                  child_id=n8.dbnode.id).count(), 0)
 
-        n6._add_link_from(n5)
+        n6.add_link_from(n5)
         # Yet, now 2 links from 1 to 8
         self.assertEquals(DbPath.query.filter_by(parent_id=n1.dbnode.id,
                                                  child_id=n8.dbnode.id).count(), 2)
 
-        n7._add_link_from(n9)
+        n7.add_link_from(n9)
         # Still two links...
         self.assertEquals(DbPath.query.filter_by(parent_id=n1.dbnode.id,
                                                  child_id=n8.dbnode.id).count(), 2)
 
-        n9._add_link_from(n6)
+        n9.add_link_from(n6)
         # And now there should be 4 nodes
         self.assertEquals(DbPath.query.filter_by(parent_id=n1.dbnode.id,
                                                  child_id=n8.dbnode.id).count(), 4)
@@ -122,7 +122,7 @@ class TestTransitive(SqlAlchemyTests):
 
         # Finally, I reconnect in a different way the two graphs and
         # check that 1 and 8 are again connected
-        n4._add_link_from(n3)
+        n4.add_link_from(n3)
         self.assertEquals(DbPath.query.filter_by(parent_id=n1.dbnode.id,
                                                  child_id=n8.dbnode.id).count(), 1)
 
@@ -198,10 +198,10 @@ class TestQueryWithAiidaObjects(SqlAlchemyTests):
         a3 = Node().store()
         a4 = Node().store()
 
-        a2._add_link_from(a1)
-        a3._add_link_from(a2)
-        a4._add_link_from(a2)
-        a4._add_link_from(a3)
+        a2.add_link_from(a1)
+        a3.add_link_from(a2)
+        a4.add_link_from(a2)
+        a4.add_link_from(a3)
 
         # I check that I get the correct links
         self.assertEquals(set([n.uuid for n in a1.get_inputs()]),
@@ -237,10 +237,10 @@ class TestQueryWithAiidaObjects(SqlAlchemyTests):
 
         a4 = Node().store()
 
-        a2._add_link_from(a)
-        a3._add_link_from(a2)
-        a4._add_link_from(a2)
-        a4._add_link_from(a3)
+        a2.add_link_from(a)
+        a3.add_link_from(a2)
+        a4.add_link_from(a2)
+        a4.add_link_from(a3)
 
         b = Node.query(id=a2.id).all()
         self.assertEquals(len(b), 1)
@@ -849,7 +849,7 @@ class TestNodeBasic(SqlAlchemyTests):
 
         s1 = models.DbSetting.objects.get(key='pippo')
 
-        self.assertEqual(s1.getvalue(), [1, 2, 3])
+        self.assertEqual(s1.get_value(), [1, 2, 3])
 
         s2 = models.DbSetting(key='pippo')
 
@@ -863,11 +863,11 @@ class TestNodeBasic(SqlAlchemyTests):
         models.DbSetting.set_value(key='pippo', value="a")
         s1 = models.DbSetting.objects.get(key='pippo')
 
-        self.assertEqual(s1.getvalue(), "a")
+        self.assertEqual(s1.get_value(), "a")
 
     @unittest.skip("Settings not implemented yet")
     def test_settings_methods(self):
-        from aiida.common.globalsettings import (
+        from aiida.backends.djsite.globalsettings import (
             get_global_setting_description, get_global_setting,
             set_global_setting, del_global_setting)
 

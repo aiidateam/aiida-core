@@ -20,17 +20,15 @@ pytz==2014.10
 ## For the daemon
 django-celery == 3.1.16
 celery==3.1.17
-kombu==3.0.34
 billiard==3.3.0.19
-amqp==1.4.6
+amqp==1.4.9
 anyjson==0.3.3
 six==1.9
 supervisor==3.1.3
 meld3==1.0.0
 
-## ONLY if using mysql? 
-#sudo easy_install mysql-python
-#sudo apt-get install python-mysqldb on ubuntu 
+# For the AiiDA shell
+ipython
 
 ## Paramiko, for ssh connections
 paramiko==1.15.2
@@ -46,21 +44,29 @@ django-tastypie==0.12.1
 python-dateutil==2.4.0
 python-mimeparse==0.1.4
 
-##
-## Some optional requirements:
-## For the documentation
-#sphinx==1.2.3
-#pygments==2.0.2
-#docutils==0.12
-#jinja2==2.7.3
-#markupsafe==0.23
-## For a nicer documentation theme (from read the docs):
-#sphinx_rtd_theme
-
-## ICSD tools
-#PyMySQL>=0.6.1
-
 # SQLAlchemy support
 SQLAlchemy==1.0.12
 SQLAlchemy-Utils==0.31.2
 ultrajson==1.35
+
+# For workflows
+enum34==1.1.2
+git+https://bitbucket.org/aiida_team/plum.git@v0.4.3#egg=plum
+voluptuous==0.8.11
+
+# For the QueryBuilder in Django when testing:
+aldjemy
+# Password hashing
+passlib
+
+# Email validation for verdi install
+validate_email
+
+# For composable command line options
+click==6.6
+
+# Pretty-print tables
+tabulate==0.7.5
+
+# To get ASCII trees, may make this optional later
+ete3==3.0.0b35

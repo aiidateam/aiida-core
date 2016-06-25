@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# from aiida.common.utils import classproperty
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -7,6 +6,7 @@ __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
 from aiida.orm.implementation.calculation import InlineCalculation, make_inline
+
 
 def optional_inline(func):
     """
@@ -44,7 +44,5 @@ def optional_inline(func):
             return make_inline(func)(*args, **kwargs)[1]
         else:
             return func(*args, **kwargs)
-
-        return func(*args, **kwargs)
 
     return wrapped_function

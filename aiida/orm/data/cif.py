@@ -347,7 +347,7 @@ class CifData(SinglefileData):
     def from_md5(cls, md5):
         """
         Return a list of all CIF files that match a given MD5 hash.
-        
+
         .. note:: the hash has to be stored in a ``_md5`` attribute,
             otherwise the CIF file will not be found.
         """
@@ -358,13 +358,13 @@ class CifData(SinglefileData):
     def get_or_create(cls, filename, use_first=False, store_cif=True):
         """
         Pass the same parameter of the init; if a file with the same md5
-        is found, that CifData is returned. 
-        
+        is found, that CifData is returned.
+
         :param filename: an absolute filename on disk
         :param use_first: if False (default), raise an exception if more than \
                 one CIF file is found.\
                 If it is True, instead, use the first available CIF file.
-        :param bool store_cif: If false, the CifData objects are not stored in 
+        :param bool store_cif: If false, the CifData objects are not stored in
                 the database. default=True.
         :return (cif, created): where cif is the CifData object, and create is either\
             True if the object was created, or False if the object was retrieved\
@@ -565,7 +565,7 @@ class CifData(SinglefileData):
                         if abs(float(site)-1) > epsilon:
                             partial_occupancies = True
                     else:
-                        # bracket, cut string 
+                        # bracket, cut string
                         if abs(float(site[0:bracket])-1)> epsilon:
                             partial_occupancies = True
 
@@ -604,7 +604,7 @@ class CifData(SinglefileData):
         """
         # If values have been changed and node is not stored,
         # the file is updated.
-        if self._values and not self._is_stored:
+        if self._values and not self.is_stored:
             self.values = self._values
         with self._get_folder_pathsubfolder.open(self.filename) as f:
             return f.read()
@@ -615,7 +615,7 @@ class CifData(SinglefileData):
         """
         from aiida.tools.dbexporters.tcod import export_cif
         return export_cif(self,**kwargs)
-        
+
     def _get_object_ase(self):
         """
         Converts CifData to ase.Atoms

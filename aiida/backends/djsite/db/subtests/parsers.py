@@ -26,12 +26,13 @@ def _comparison_AlmostEqual(testclass, dbdata, comparisondata):
     they are all almost equal (within a default precision of 7 digits)
     """
     value = comparisondata['value']
-    if isinstance(dbdata, (list,tuple)) and isinstance(value, (list,tuple)):
+    if isinstance(dbdata, (list, tuple)) and isinstance(value, (list, tuple)):
         testclass.assertEqual(len(dbdata), len(value))
         for i in range(0, len(dbdata)):
             testclass.assertAlmostEqual(dbdata[i], value[i])
     else:
         testclass.assertAlmostEqual(dbdata, value)
+
 
 def _comparison_Equal(testclass, dbdata, comparisondata):
     """
@@ -39,11 +40,13 @@ def _comparison_Equal(testclass, dbdata, comparisondata):
     """
     testclass.assertEqual(dbdata, comparisondata['value'])
 
+
 def _comparison_LengthEqual(testclass, dbdata, comparisondata):
     """
     Check if the length of the object is equal to the value specified
     """
     testclass.assertEqual(len(dbdata), comparisondata['value'])
+
 
 ### End of comparison definition #####################################
 
@@ -77,7 +80,6 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     if not is_valid_folder_name(outfolder):
         raise ValueError("The testname is invalid; it can contain only "
                          "letters, digits or underscores")
-
 
     if os.path.exists(outfolder):
         raise ValueError("Out folder '{}' already exists".format(outfolder))
@@ -131,9 +133,9 @@ def read_test(outfolder):
                            ignore_unknown_nodes=True, silent=True)
 
     calc = None
-    for _,pk in imported['aiida.backends.djsite.db.models.DbNode']['new']:
+    for _, pk in imported['aiida.backends.djsite.db.models.DbNode']['new']:
         c = load_node(pk)
-        if issubclass(c.__class__,JobCalculation):
+        if issubclass(c.__class__, JobCalculation):
             calc = c
             break
 
@@ -148,7 +150,8 @@ def read_test(outfolder):
         raise ValueError("This test does provide a check file, but it cannot "
                          "be JSON-decoded!")
 
-    mod_path = 'aiida.backends.djsite.db.subtests.parser_tests.{}'.format(os.path.split(outfolder)[1])
+    mod_path = 'aiida.backends.djsite.db.subtests.parser_tests.{}'.format(
+        os.path.split(outfolder)[1])
 
     skip_test = False
     try:
@@ -205,7 +208,8 @@ class TestParsers(AiidaTestCase):
                 raise NotImplementedError
             else:
                 parser = Parser(calc)
-                successful, new_nodes_tuple = parser.parse_with_retrieved(retrieved_nodes)
+                successful, new_nodes_tuple = parser.parse_with_retrieved(
+                    retrieved_nodes)
                 self.assertTrue(successful, msg="The parser did not succeed")
                 parsed_output_nodes = dict(new_nodes_tuple)
 
@@ -224,43 +228,57 @@ class TestParsers(AiidaTestCase):
                             dbdata = test_node.get_attr(attr_test)
                         except AttributeError:
                             raise AssertionError("Attribute '{}' not found in "
-                                                 "parsed node '{}'".format(attr_test,
-                                                                           test_node_name))
+                                                 "parsed node '{}'".format(
+                                attr_test,
+                                test_node_name))
                         # Test data from the JSON
                         attr_test_listtests = tests[test_node_name][attr_test]
-                        for test_number, attr_test_data in enumerate(attr_test_listtests, start=1):
+                        for test_number, attr_test_data in enumerate(
+                                attr_test_listtests, start=1):
                             try:
                                 comparison = attr_test_data.pop('comparison')
                             except KeyError as e:
-                                raise ValueError("Missing '{}' in the '{}' field "
-                                                 "in '{}' in "
-                                                 "the test file".format(e.message,
-                                                                        attr_test, test_node_name))
+                                raise ValueError(
+                                    "Missing '{}' in the '{}' field "
+                                    "in '{}' in "
+                                    "the test file".format(e.message,
+                                                           attr_test,
+                                                           test_node_name))
 
                             try:
-                                comparison_test = globals()["_comparison_{}".format(comparison)]
+                                comparison_test = globals()[
+                                    "_comparison_{}".format(comparison)]
                             except KeyError:
-                                raise ValueError("Unsupported '{}' comparison in "
-                                                 "the '{}' field in '{}' in "
-                                                 "the test file".format(comparison,
-                                                      attr_test, test_node_name))
+                                raise ValueError(
+                                    "Unsupported '{}' comparison in "
+                                    "the '{}' field in '{}' in "
+                                    "the test file".format(comparison,
+                                                           attr_test,
+                                                           test_node_name))
 
                             if not isfunction(comparison_test):
-                                raise TypeError("Internal error: the variable _comparison_{} is not a "
-                                                "function!".format(comparison))
+                                raise TypeError(
+                                    "Internal error: the variable _comparison_{} is not a "
+                                    "function!".format(comparison))
 
                             try:
-                                comparison_test(testclass=self, dbdata=dbdata, comparisondata=attr_test_data)
+                                comparison_test(testclass=self, dbdata=dbdata,
+                                                comparisondata=attr_test_data)
                             except Exception as e:
                                 # I change both the message and the 'args'
                                 # (apparently, args[0] is used by str(e))
                                 # Probably, a 'better' way should be found to do this!
                                 e.message = "Failed test #{} for {}->{}: {}".format(
-                                       test_number, test_node_name, attr_test, e.message)
+                                    test_number, test_node_name, attr_test,
+                                    e.message)
                                 if e.args:
-                                    e.args = tuple(["Failed test #{} for {}->{}: {}".format(
-                                       test_number, test_node_name, attr_test, e.args[0])]
-                                       + list(e.args[1:]))
+                                    e.args = tuple([
+                                                       "Failed test #{} for {}->{}: {}".format(
+                                                           test_number,
+                                                           test_node_name,
+                                                           attr_test,
+                                                           e.args[0])]
+                                                   + list(e.args[1:]))
                                 raise e
 
         return base_test

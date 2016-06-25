@@ -213,8 +213,8 @@ class TestGroups(AiidaTestCase):
         g2 = Group(name='testgroupdescription2', description="g2")
 
         # Preliminary checks
-        self.assertTrue(g1._is_stored)
-        self.assertFalse(g2._is_stored)
+        self.assertTrue(g1.is_stored)
+        self.assertFalse(g2.is_stored)
         self.assertEquals(g1.description, "g1")
         self.assertEquals(g2.description, "g2")
 
@@ -224,14 +224,14 @@ class TestGroups(AiidaTestCase):
 
         # Test that the groups remained in their proper stored state and that
         # the description was updated
-        self.assertTrue(g1._is_stored)
-        self.assertFalse(g2._is_stored)
+        self.assertTrue(g1.is_stored)
+        self.assertFalse(g2.is_stored)
         self.assertEquals(g1.description, "new1")
         self.assertEquals(g2.description, "new2")
 
         # Store g2 and check that the description is OK
         g2.store()
-        self.assertTrue(g2._is_stored)
+        self.assertTrue(g2.is_stored)
         self.assertEquals(g2.description, "new2")
 
         # clean-up

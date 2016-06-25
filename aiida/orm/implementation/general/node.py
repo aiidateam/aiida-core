@@ -9,11 +9,16 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.folders import SandboxFolder
 from aiida.common.utils import combomethod
 
+from aiida.common.links import LinkType
+from aiida.common.pluginloader import get_query_type_string
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
+
+_NO_DEFAULT = tuple()
 
 
 class AbstractNode(object):
@@ -63,10 +68,9 @@ class AbstractNode(object):
                         '.'.join(newcls._plugin_type_string.split('.')[2:])
                 if newcls._plugin_type_string == 'node.Node.':
                     newcls._plugin_type_string = ''
-                newcls._query_type_string = "{}.".format(
-                    attrs['__module__'][len(prefix):])
-                if newcls._query_type_string == 'node.':
-                    newcls._query_type_string = ''
+                newcls._query_type_string = get_query_type_string(
+                        newcls._plugin_type_string
+                    )
             else:
                 raise InternalError("Class {} is not in a module under "
                                     "aiida.orm. (module is {})".format(
@@ -80,11 +84,6 @@ class AbstractNode(object):
     # The name of the subfolder in which to put the files/directories
     # added with add_path
     _path_subfolder_name = 'path'
-
-
-    # A tuple with attributes that can be updated even after
-    # the call of the store() method
-    _updatable_attributes = tuple()
 
     # A list of tuples, saying which attributes cannot be set at the same time
     # See documentation in the set() method.
@@ -162,17 +161,19 @@ class AbstractNode(object):
           loaded from the database.
           (It is not possible to assign a uuid to a new Node.)
         """
-        pass
+        self._to_be_stored = True
+        # Empty cache of input links in any case
+        self._inputlinks_cache = {}
 
     @property
-    def _is_stored(self):
+    def is_stored(self):
         return not self._to_be_stored
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def __str__(self):
-        if self._to_be_stored:
+        if not self.is_stored:
             return "uuid: {} (unstored)".format(self.uuid)
         else:
             return "uuid: {} (pk: {})".format(self.uuid, self.pk)
@@ -288,7 +289,6 @@ class AbstractNode(object):
                                  "callable!".format(k))
             method(v)
 
-
     @property
     def label(self):
         """
@@ -363,20 +363,21 @@ class AbstractNode(object):
         """
         return len(self._inputlinks_cache) != 0
 
-    def _add_link_from(self, src, label=None):
+    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
         :note: In subclasses, change only this. Moreover, remember to call
            the super() method in order to properly use the caching logic!
-        :note: There is no _add_link_to, in order to avoid that someone
-           redefines that method and forgets about using the caching mechanism.
-           Given that it is not restrictive, always use the _add_link_from!
 
         :param src: the source object
         :param str label: the name of the label to set the link from src.
                     Default = None.
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
         """
+        assert src, "You must provide a valid Node to link"
+
         # Check that the label does not already exist
 
         # This can happen also if both nodes are stored, e.g. if one first
@@ -385,40 +386,45 @@ class AbstractNode(object):
         if label in self._inputlinks_cache:
             raise UniquenessError("Input link with name '{}' already present "
                                   "in the internal cache".format(label))
+
         # See if I am pointing to already saved nodes and I am already
         # linking to a given node
-        if src.uuid in [_.uuid for _ in
-                        self._inputlinks_cache.values()]:
-            raise UniquenessError("A link from node with UUID={} and "
-                                  "the current node (UUID={}) already exists!".format(
-                src.uuid, self.uuid))
+        if src.uuid in [_[0].uuid for _ in self._inputlinks_cache.values()]:
+            raise UniquenessError(
+                "A link from node with UUID={} and "
+                "the current node (UUID={}) already exists!".format(
+                    src.uuid, self.uuid))
 
+        # Check if the source allows output links from this node
+        # (will raise ValueError if this is not the case)
+        src._linking_as_output(self, link_type)
 
         # If both are stored, write directly on the DB
-        if not self._to_be_stored and not src._to_be_stored:
-            self._add_dblink_from(src, label)
+        if self.is_stored and src.is_stored:
+            self._add_dblink_from(src, label, link_type)
         else:  # at least one is not stored: add to the internal cache
-            self._add_cachelink_from(src, label)
+            self._add_cachelink_from(src, label, link_type)
 
-    def _add_cachelink_from(self, src, label):
+    def _add_cachelink_from(self, src, label, link_type):
         """
         Add a link in the cache.
         """
         if label is None:
-            raise ModificationNotAllowed("Cannot store a link in the cache if "
-                                         "no explicit label is provided. You can avoid "
-                                         "to provide an input link name only if "
-                                         "both nodes are already stored: in this case, "
-                                         "the link will be directly stored in the DB "
-                                         "and a default name will be provided")
+            raise ModificationNotAllowed(
+                "Cannot store a link in the cache if "
+                "no explicit label is provided. You can avoid "
+                "to provide an input link name only if "
+                "both nodes are already stored: in this case, "
+                "the link will be directly stored in the DB "
+                "and a default name will be provided")
 
         if label in self._inputlinks_cache:
             raise UniquenessError("Input link with name '{}' already present "
-                                  "in the internal cache")
+                                  "in the internal cache".format(label))
 
-        self._inputlinks_cache[label] = src
+        self._inputlinks_cache[label] = (src, link_type)
 
-    def _replace_link_from(self, src, label):
+    def _replace_link_from(self, src, label, link_type=LinkType.UNSPECIFIED):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
@@ -429,8 +435,8 @@ class AbstractNode(object):
         :param str label: the name of the label to set the link from src.
         """
         # If both are stored, write directly on the DB
-        if not self._to_be_stored and not src._to_be_stored:
-            self._replace_dblink_from(src, label)
+        if self.is_stored and src.is_stored:
+            self._replace_dblink_from(src, label, link_type)
             # If the link was in the local cache, remove it
             # (this could happen if I first store the output node, then
             # the input node.
@@ -443,13 +449,17 @@ class AbstractNode(object):
             # linking to a given node
             # It is similar to the 'add' method, but if I am replacing the
             # same node, I will not complain (k!=label)
-            if src.uuid in [v.uuid for k, v in
+            if src.uuid in [v[0].uuid for k, v in
                             self._inputlinks_cache.iteritems() if k != label]:
-                raise UniquenessError("A link from node with UUID={} and "
-                                      "the current node (UUID={}) already exists!".format(
-                    src.uuid, self.uuid))
+                raise UniquenessError(
+                    "A link from node with UUID={} and "
+                    "the current node (UUID={}) already exists!".format(
+                        src.uuid, self.uuid))
+            # I insert the link directly in the cache rather than calling
+            # _add_cachelink_from because this latter performs an undesired check
+            self._inputlinks_cache[label] = (src, link_type)
 
-            self._inputlinks_cache[label] = src
+           # self._add_cachelink_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         """
@@ -460,6 +470,8 @@ class AbstractNode(object):
         :note: No error is raised if the link does not exist.
 
         :param str label: the name of the label to set the link from src.
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
         """
         # Try to remove from the local cache, no problem if none is present
         try:
@@ -468,20 +480,22 @@ class AbstractNode(object):
             pass
 
         # If both are stored, remove also from the DB
-        if not self._to_be_stored:
+        if self.is_stored:
             self._remove_dblink_from(label)
 
     @abstractmethod
-    def _replace_dblink_from(self, src, label):
+    def _replace_dblink_from(self, src, label, link_type):
         """
-        Replace an input link with the given label, or simply creates it
-        if it does not exist.
+        Replace an input link with the given label and type, or simply creates
+        it if it does not exist.
 
         :note: this function should not be called directly; it acts directly on
             the database.
 
         :param str src: the source object.
         :param str label: the label of the link from src to the current Node
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
         """
         pass
 
@@ -496,11 +510,13 @@ class AbstractNode(object):
         :note: No checks are done to verify that the link actually exists.
 
         :param str label: the label of the link from src to the current Node
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
         """
         pass
 
     @abstractmethod
-    def _add_dblink_from(self, src, label=None):
+    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
@@ -514,7 +530,7 @@ class AbstractNode(object):
         """
         pass
 
-    def _can_link_as_output(self, dest):
+    def _linking_as_output(self, dest, link_type):
         """
         Raise a ValueError if a link from self to dest is not allowed.
         Implement in subclasses.
@@ -524,16 +540,21 @@ class AbstractNode(object):
         """
         return True
 
-    def get_inputs_dict(self, only_in_db=False):
+    def get_inputs_dict(self, only_in_db=False, link_type=None):
         """
         Return a dictionary where the key is the label of the input link, and
         the value is the input node.
 
+        :param only_in_db: If true only get stored links, not cached
+        :param link_type: Only get inputs of this link type, if None then
+                returns all inputs of all link types.
         :return: a dictionary {label:object}
         """
-        return dict(self.get_inputs(also_labels=True, only_in_db=only_in_db))
+        return dict(
+            self.get_inputs(
+                also_labels=True, only_in_db=only_in_db, link_type=link_type))
 
-    def get_outputs_dict(self):
+    def get_outputs_dict(self, link_type=None):
         """
         Return a dictionary where the key is the label of the output link, and
         the value is the input node.
@@ -544,7 +565,7 @@ class AbstractNode(object):
 
         :return: a dictionary {linkname:object}
         """
-        all_outputs = self.get_outputs(also_labels=True)
+        all_outputs = self.get_outputs(also_labels=True, link_type=link_type)
 
         all_linknames = [i[0] for i in all_outputs]
         linknames_set = list(set(all_linknames))
@@ -565,13 +586,13 @@ class AbstractNode(object):
 
         return new_outputs
 
-
     @abstractmethod
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False):
+    def get_inputs(self, node_type=None, also_labels=False, only_in_db=False,
+                   link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
 
-        :param type: If specified, should be a class, and it filters only
+        :param node_type: If specified, should be a class, and it filters only
             elements of that specific type (or a subclass of 'type')
         :param also_labels: If False (default) only return a list of input nodes.
                 If True, return a list of tuples, where each tuple has the
@@ -580,11 +601,13 @@ class AbstractNode(object):
         :param only_in_db: Return only the inputs that are in the database,
                 ignoring those that are in the local cache. Otherwise, return
                 all links.
+        :param link_type: Only get inputs of this link type, if None then
+                returns all inputs of all link types.
         """
         pass
 
     @abstractmethod
-    def get_outputs(self, type=None, also_labels=False):
+    def get_outputs(self, type=None, also_labels=False, link_type=None):
         """
         Return a list of nodes that exit (directly) from this node
 
@@ -662,17 +685,16 @@ class AbstractNode(object):
             self._del_attr(attr_name)
 
     @abstractmethod
-    def get_attr(self, key, *args):
+    def get_attr(self, key, default=_NO_DEFAULT):
         """
         Get the attribute.
 
         :param key: name of the attribute
-        :param optional value: if no attribute key is found, returns value
+        :param optional default: if no attribute key is found, returns default
 
         :return: attribute value
 
-        :raise IndexError: If no attribute is found and there is no default
-        :raise ValueError: If more than two arguments are passed to get_attr
+        :raise AttributeError: If no attribute is found and there is no default
         """
         pass
 
@@ -769,7 +791,7 @@ class AbstractNode(object):
         pass
 
     @abstractmethod
-    def iterattrs(self, also_updatable=True):
+    def iterattrs(self):
         """
         Iterator over the attributes, returning tuples (key, value)
 
@@ -921,7 +943,7 @@ class AbstractNode(object):
 
         :return: the RepositoryFolder object.
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             return self._get_temp_folder()
         else:
             return self._repository_folder
@@ -965,7 +987,7 @@ class AbstractNode(object):
 
         :param str path: relative path to file/directory.
         """
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot delete a path after storing the node")
 
@@ -988,7 +1010,7 @@ class AbstractNode(object):
             meaning of a extras file. Decide also how to store. If in two
             separate subfolders, remember to reset the limit.
         """
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot insert a path after storing the node")
 
@@ -1085,7 +1107,7 @@ class AbstractNode(object):
         Store a new node in the DB, also saving its repository directory
         and attributes.
 
-        Can be called only once. Afterwards, attributes cannot be
+        After being called attributes cannot be
         changed anymore! Instead, extras can be changed only AFTER calling
         this store() function.
 
@@ -1152,7 +1174,7 @@ class AbstractNode(object):
     @combomethod
     def querybuild(self_or_cls, **kwargs):
         """
-        Instantiates and 
+        Instantiates and
         :returns: a QueryBuilder instance.
 
         The QueryBuilder's path has one vertice so far, namely this class.
@@ -1169,14 +1191,14 @@ class AbstractNode(object):
         """
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node as AiidaNode
-        isclass =  kwargs.pop('isclass')
+        isclass = kwargs.pop('isclass')
         qb = QueryBuilder()
         if isclass:
             qb.append(self_or_cls, **kwargs)
         else:
             filters = kwargs.pop('filters', {})
-            filters.update({'id':self_or_cls.pk})
-            qb.append(self_or_cls.__class__, filters = filters, **kwargs)
+            filters.update({'id': self_or_cls.pk})
+            qb.append(self_or_cls.__class__, filters=filters, **kwargs)
         return qb
 
 
@@ -1258,8 +1280,9 @@ class NodeInputManager(object):
         try:
             return self._node.get_inputs_dict()[name]
         except KeyError:
-            raise AttributeError("Node {} does not have an input with link {}"
-                                 .format(self._node.pk, name))
+            raise AttributeError(
+                "Node '{}' does not have an input with link '{}'"
+                .format(self._node.pk, name))
 
     def __getitem__(self, name):
         """
@@ -1270,8 +1293,9 @@ class NodeInputManager(object):
         try:
             return self._node.get_inputs_dict()[name]
         except KeyError:
-            raise KeyError("Node {} does not have an input with link {}"
+            raise KeyError("Node '{}' does not have an input with link '{}'"
                            .format(self._node.pk, name))
+
 
 class AttributeManager(object):
     """
@@ -1328,4 +1352,3 @@ class AttributeManager(object):
             return self._node.get_attr(name)
         except AttributeError as e:
             raise KeyError(e.message)
-

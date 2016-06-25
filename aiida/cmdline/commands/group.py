@@ -5,6 +5,7 @@ import sys
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.common.exceptions import NotExistent
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -81,9 +82,10 @@ class Group(VerdiCommandWithSubcommands):
         parser.add_argument('-f', '--force',
                             dest='force', action='store_true',
                             help="Force deletion of the group even if it "
-                            "is not empty. Note that this deletes only the "
-                            "group and not the nodes.")
-        parser.add_argument('GROUP', help="The name or PK of the group to delete")
+                                 "is not empty. Note that this deletes only the "
+                                 "group and not the nodes.")
+        parser.add_argument('GROUP',
+                            help="The name or PK of the group to delete")
         parser.set_defaults(force=False)
 
         args = list(args)
@@ -116,12 +118,12 @@ class Group(VerdiCommandWithSubcommands):
         num_nodes = len(group.nodes)
         if num_nodes > 0 and not force:
             print >> sys.stderr, ("Group '{}' is not empty (it contains {} "
-                "nodes). Pass the -f option if you really want to delete "
-                "it.".format(group_name, num_nodes))
+                                  "nodes). Pass the -f option if you really want to delete "
+                                  "it.".format(group_name, num_nodes))
             sys.exit(1)
 
         sys.stderr.write("Are you sure to kill the group with PK = {} ({})? "
-            "[Y/N] ".format(group_pk, group_name))
+                         "[Y/N] ".format(group_pk, group_name))
         if not wait_for_confirmation():
             sys.exit(0)
 
@@ -140,7 +142,8 @@ class Group(VerdiCommandWithSubcommands):
         from aiida.orm import Group as G
         from aiida.common.utils import str_timedelta
         from aiida.utils import timezone
-        from aiida.orm.node import from_type_to_pluginclassname
+        from aiida.common.pluginloader import from_type_to_pluginclassname
+        from tabulate import tabulate
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -148,7 +151,7 @@ class Group(VerdiCommandWithSubcommands):
         parser.add_argument('-r', '--raw',
                             dest='raw', action='store_true',
                             help="Show only a space-separated list of PKs of "
-                            "the calculations in the group")
+                                 "the calculations in the group")
         parser.add_argument('-u', '--uuid',
                             dest='uuid', action='store_true',
                             help="Show UUIDs together with PKs. Note: if the "
@@ -194,21 +197,32 @@ class Group(VerdiCommandWithSubcommands):
             desc = group.description
             now = timezone.now()
 
-            print "# Group name: {}".format(group.name)
-            print "# Group type: {}".format(type_string if type_string
-                                            else "<user-defined>")
-            print "# Group description: {}".format(desc if desc else
-                                                   "<no description>")
+            table = []
+            table.append(["Group name", group.name])
+            table.append(["Group type",
+                          type_string if type_string else "<user-defined>"])
+            table.append(["Group description",
+                          desc if desc else "<no description>"])
+            print(tabulate(table))
+
+            table = []
+            header = []
+            if parsed_args.uuid:
+                header.append('UUID')
+            header.extend(['PK', 'Type', 'Created'])
             print "# Nodes:"
-            uuid_string = ""
             for n in group.nodes:
+                row = []
                 if parsed_args.uuid:
-                    uuid_string = "{} - ".format(n.uuid)
-                print "* {}{} - {} - {}".format(
-                    uuid_string, n.pk,
-                    from_type_to_pluginclassname(n.dbnode.type).rsplit(".", 1)[1],
-                    str_timedelta(now - n.ctime, short=True,
-                                  negative_to_zero=True))
+                    row.append(n.uuid)
+                row.append(n.pk)
+                row.append(from_type_to_pluginclassname(n.dbnode.type).
+                           rsplit(".", 1)[1])
+
+                row.append(str_timedelta(now - n.ctime, short=True,
+                                         negative_to_zero=True))
+                table.append(row)
+            print(tabulate(table, headers=header))
 
     def group_addnodes(self, *args):
         """
@@ -231,7 +245,7 @@ class Group(VerdiCommandWithSubcommands):
                             dest='group',
                             required=True,
                             help="The name or PK of the group you want to add "
-                            "a node to.")
+                                 "a node to.")
         parser.add_argument('nodes', nargs='+',
                             help="The PK or UUID of the nodes to add")
         parser.set_defaults(raw=False)
@@ -267,22 +281,21 @@ class Group(VerdiCommandWithSubcommands):
             try:
                 node = int(node)
             except ValueError:
-                pass # I leave it as a string and let load_node complain
-                     # if it is not a UUID
+                pass  # I leave it as a string and let load_node complain
+                # if it is not a UUID
             try:
                 nodes.append(load_node(node))
             except NotExistent as e:
                 print >> sys.stderr, "Error: {}.".format(e.message)
                 sys.exit(1)
 
-
         sys.stderr.write("Are you sure to add {} nodes the group with PK = {} "
-                         "({})? [Y/N] ".format(len(nodes), group_pk, group_name))
+                         "({})? [Y/N] ".format(len(nodes), group_pk,
+                                               group_name))
         if not wait_for_confirmation():
             sys.exit(0)
 
         group.add_nodes(nodes)
-
 
     def group_removenodes(self, *args):
         """
@@ -305,12 +318,12 @@ class Group(VerdiCommandWithSubcommands):
                             dest='group',
                             required=True,
                             help="The name or PK of the group you want to "
-                            "remove a node from.")
+                                 "remove a node from.")
         parser.add_argument('nodes', nargs='+',
                             help="The PK or UUID of the nodes to remove. An "
-                            "error is raised if the node does not exist. "
-                            "No message is shown if the node does not belong "
-                            "to the group.")
+                                 "error is raised if the node does not exist. "
+                                 "No message is shown if the node does not belong "
+                                 "to the group.")
         parser.set_defaults(raw=False)
 
         args = list(args)
@@ -344,8 +357,8 @@ class Group(VerdiCommandWithSubcommands):
             try:
                 node = int(node)
             except ValueError:
-                pass # I leave it as a string and let load_node complain
-                     # if it is not a UUID
+                pass  # I leave it as a string and let load_node complain
+                # if it is not a UUID
             try:
                 nodes.append(load_node(node))
             except NotExistent as e:
@@ -354,12 +367,12 @@ class Group(VerdiCommandWithSubcommands):
 
         sys.stderr.write("Are you sure to remove {} nodes from the group "
                          "with PK = {} "
-                         "({})? [Y/N] ".format(len(nodes), group_pk, group_name))
+                         "({})? [Y/N] ".format(len(nodes), group_pk,
+                                               group_name))
         if not wait_for_confirmation():
             sys.exit(0)
 
         group.remove_nodes(nodes)
-
 
     def group_description(self, *args):
         """
@@ -375,11 +388,12 @@ class Group(VerdiCommandWithSubcommands):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Change the description of a given group.')
-        parser.add_argument('PK',type=int, help="The PK of the group for which "
-                            "you want to edit the description")
-        parser.add_argument('description',type=str,
+        parser.add_argument('PK', type=int,
+                            help="The PK of the group for which "
+                                 "you want to edit the description")
+        parser.add_argument('description', type=str,
                             help="The new description. If not provided, "
-                            "just show the current description.")
+                                 "just show the current description.")
 
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -393,8 +407,6 @@ class Group(VerdiCommandWithSubcommands):
 
         group.description = parsed_args.description
 
-
-
     def group_list(self, *args):
         """
         Print a list of groups in the DB.
@@ -402,8 +414,11 @@ class Group(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
+        import datetime
+        from aiida.utils import timezone
         from aiida.orm.group import get_group_type_mapping
-        from aiida.backends.utils import get_automatic_user, get_group_list
+        from aiida.backends.utils import get_automatic_user
+        from tabulate import tabulate
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -424,7 +439,8 @@ class Group(VerdiCommandWithSubcommands):
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only groups created in the past N days",
                             action='store', type=int)
-        parser.add_argument('-s', '--startswith', metavar='STRING', default=None,
+        parser.add_argument('-s', '--startswith', metavar='STRING',
+                            default=None,
                             help="add a filter to show only groups for which the name begins with STRING",
                             action='store', type=str)
         parser.add_argument('-e', '--endswith', metavar='STRING', default=None,
@@ -433,6 +449,9 @@ class Group(VerdiCommandWithSubcommands):
         parser.add_argument('-c', '--contains', metavar='STRING', default=None,
                             help="add a filter to show only groups for which the name contains STRING",
                             action='store', type=str)
+        parser.add_argument('-n', '--node', metavar='PK', default=None,
+                            help="Show only the groups that contain the node specified by PK",
+                            action='store', type=int)
         parser.set_defaults(all_users=False)
         parser.set_defaults(with_description=False)
 
@@ -448,9 +467,8 @@ class Group(VerdiCommandWithSubcommands):
                 # By default: only groups of this user
                 user = get_automatic_user()
 
-        if parsed_args.type is None:
-            type_string = ""
-        else:
+        type_string = None
+        if parsed_args.type is not None:
             try:
                 type_string = get_group_type_mapping()[parsed_args.type]
             except KeyError:
@@ -460,85 +478,43 @@ class Group(VerdiCommandWithSubcommands):
                 sys.exit(1)
 
         name_filters = dict((k, getattr(parsed_args, k))
-                            for k in ['startswith','endswith','contains'])
+                            for k in ['startswith', 'endswith', 'contains'])
 
-        groups = get_group_list(user, type_string,
-                                n_days_ago=parsed_args.past_days,
-                                name_filters=name_filters)
+        n_days_ago = None
+        if parsed_args.past_days:
+            n_days_ago = (timezone.now() -
+                          datetime.timedelta(days=parsed_args.past_days))
+
+        # Depending on --nodes option use or not key "nodes"
+        from aiida.orm.implementation import Group
+        from aiida.orm import load_node
+
+        node_pk = parsed_args.node
+        if node_pk is not None:
+            try:
+                node = load_node(node_pk)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+            res = Group.query(user=user, type_string=type_string, nodes=node,
+                              past_days=n_days_ago, name_filters=name_filters)
+        else:
+            res = Group.query(user=user, type_string=type_string,
+                              past_days=n_days_ago, name_filters=name_filters)
+
+        groups = tuple([(str(g.pk), g.name, len(g.nodes), g.user.email.strip(),
+                         g.description) for g in res])
 
 
-        # nice formatting
-        # gather all info
-
-        # get the max length
-        max_pks_len = max([len(i[0]) for i in groups]) if groups else 4
-        max_names_len = max([len(i[1]) for i in groups]) if groups else 4
-        max_nodes_len = max([len(str(i[2])) for i in groups]) if groups else 4
-        max_users_len = max([len(i[3]) for i in groups]) if groups else 4
-
-        tolerated_name_length = (80 - 11 - max_nodes_len -
-                                 max_users_len - max_pks_len - 1)
-
-        #print max_names_len, tolerated_name_length
-
-
+        table = []
         if parsed_args.with_description:
-            print "# Format: PK | GroupName | NumNodes | User | Description"
-
-            fmt_string = "* {:<" + str(max_pks_len) + "} | "
-            fmt_string += "{:<" + str(max_names_len) + "} | "
-            fmt_string += "{:" + str(max_nodes_len) + "d} | "
-            fmt_string += "{:" + str(max_users_len) + "s} | {}"
-
+            table_header = \
+                ["PK", "GroupName", "NumNodes", "User", "Description"]
             for pk, nam, nod, usr, desc in groups:
-                print fmt_string.format(pk, nam, nod, usr, desc)
+                table.append([pk, nam, nod, usr, desc])
 
         else:
-            print "# Format: PK | GroupName | NumNodes | User"
-
-            first_fmt_string = "* {:<" + str(max_pks_len) + "} | "
-            first_fmt_string += "{:<" + str(tolerated_name_length) + "} | "
-            first_fmt_string += "{:" + str(max_nodes_len) + "d} | "
-            first_fmt_string += "{:" + str(max_users_len) + "s}"
-
-            extra_fmt_string = "  " + " " * max_pks_len  + " | "
-            extra_fmt_string += "{:<" + str(tolerated_name_length) + "} | "
-            extra_fmt_string += " " * max_nodes_len + " | "
-            extra_fmt_string += " " * max_users_len
-
+            table_header = ["PK", "GroupName", "NumNodes", "User"]
             for pk, nam, nod, usr, _ in groups:
-                the_nams = [nam[i:i + tolerated_name_length] for i in range(0, len(nam), tolerated_name_length)]
-                print first_fmt_string.format(pk, the_nams[0], nod, usr)
-                for i in the_nams[1:]:
-                    print extra_fmt_string.format(i)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                table.append([pk, nam, nod, usr])
+        print(tabulate(table, headers=table_header))

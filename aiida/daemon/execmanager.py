@@ -5,8 +5,6 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
@@ -15,7 +13,9 @@ from aiida.common.exceptions import (
     ModificationNotAllowed,
 )
 from aiida.common import aiidalogger
+from aiida.common.links import LinkType
 from aiida.orm import load_node
+
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -42,10 +42,11 @@ def update_running_calcs_status(authinfo):
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida JobCalculation objects
-    calcs_to_inquire = JobCalculation._get_all_with_state(
+    calcs_to_inquire = list(JobCalculation._get_all_with_state(
         state=calc_states.WITHSCHEDULER,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
+    )
 
     # NOTE: no further check is done that machine and
     # aiidauser are correct for each calc in calcs
@@ -129,10 +130,11 @@ def update_running_calcs_status(authinfo):
                     # TODO: implement a counter, after N retrials
                     # set it to a status that
                     # requires the user intervention
-                    execlogger.warning("There was an exception for "
-                                       "calculation {} ({}): {}".format(
-                        c.pk, e.__class__.__name__, e.message),
-                                       extra=logger_extra)
+                    execlogger.warning(
+                        "There was an exception for "
+                        "calculation {} ({}): {}".format(
+                            c.pk, e.__class__.__name__, e.message
+                        ), extra=logger_extra)
                     continue
 
             for c in computed:
@@ -175,55 +177,30 @@ def update_running_calcs_status(authinfo):
     return computed
 
 
-def get_authinfo(computer, aiidauser):
-    from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
-
-    try:
-        authinfo = DbAuthInfo.objects.get(
-            # converts from name, Computer or DbComputer instance to
-            # a DbComputer instance
-            dbcomputer=DbComputer.get_dbcomputer(computer),
-            aiidauser=aiidauser)
-    except ObjectDoesNotExist:
-        raise AuthenticationError(
-            "The aiida user {} is not configured to use computer {}".format(
-                aiidauser.email, computer.name))
-    except MultipleObjectsReturned:
-        raise ConfigurationError(
-            "The aiida user {} is configured more than once to use "
-            "computer {}! Only one configuration is allowed".format(
-                aiidauser.email, computer.name))
-    return authinfo
-
-
 def retrieve_jobs():
     from aiida.orm import JobCalculation, Computer
-    from aiida.backends.djsite.db.models import DbComputer, DbUser
+    from aiida.backends.utils import get_authinfo
 
     # I create a unique set of pairs (computer, aiidauser)
-    computers_users_to_check = set(
+    computers_users_to_check = list(
         JobCalculation._get_all_with_state(
             state=calc_states.COMPUTED,
-            only_computer_user_pairs=True)
+            only_computer_user_pairs=True,
+            only_enabled=True)
     )
 
-    for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        if not Computer(dbcomputer=dbcomputer).is_enabled():
-            continue
-        aiidauser = DbUser.objects.get(id=aiidauser_id)
-
+    for computer, aiidauser in computers_users_to_check:
         execlogger.debug("({},{}) pair to check".format(
-            aiidauser.email, dbcomputer.name))
+            aiidauser.email, computer.name))
         try:
-            authinfo = get_authinfo(dbcomputer, aiidauser)
+            authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
             retrieve_computed_for_authinfo(authinfo)
         except Exception as e:
             msg = ("Error while retrieving calculation status for "
                    "aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
                 aiidauser.email,
-                dbcomputer.name,
+                computer.name,
                 e.__class__.__name__, e.message))
             execlogger.error(msg)
             # Continue with next computer
@@ -235,34 +212,33 @@ def update_jobs():
     """
     calls an update for each set of pairs (machine, aiidauser)
     """
-    from aiida.orm import JobCalculation, Computer
-    from aiida.backends.djsite.db.models import DbComputer, DbUser
+    from aiida.orm import JobCalculation, Computer, User
+    from aiida.backends.utils import get_authinfo
+
 
     # I create a unique set of pairs (computer, aiidauser)
-    computers_users_to_check = set(
+    computers_users_to_check = list(
         JobCalculation._get_all_with_state(
             state=calc_states.WITHSCHEDULER,
-            only_computer_user_pairs=True)
+            only_computer_user_pairs=True,
+            only_enabled=True
+        )
     )
 
-    for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        if not Computer(dbcomputer=dbcomputer).is_enabled():
-            continue
-        aiidauser = DbUser.objects.get(id=aiidauser_id)
+    for computer, aiidauser in computers_users_to_check:
 
         execlogger.debug("({},{}) pair to check".format(
-            aiidauser.email, dbcomputer.name))
+            aiidauser.email, computer.name))
 
         try:
-            authinfo = get_authinfo(dbcomputer, aiidauser)
+            authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
             computed_calcs = update_running_calcs_status(authinfo)
         except Exception as e:
             msg = ("Error while updating calculation status "
                    "for aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
                 aiidauser.email,
-                dbcomputer.name,
+                computer.name,
                 e.__class__.__name__, e.message))
             execlogger.error(msg)
             # Continue with next computer
@@ -273,37 +249,33 @@ def submit_jobs():
     """
     Submit all jobs in the TOSUBMIT state.
     """
-    from aiida.orm import JobCalculation, Computer
-    from aiida.backends.djsite.db.models import DbComputer, DbUser
+    from aiida.orm import JobCalculation, Computer, User
     from aiida.utils.logger import get_dblogger_extra
+    from aiida.backends.utils import get_authinfo
 
-
-    # I create a unique set of pairs (computer, aiidauser)
-    computers_users_to_check = set(
-        JobCalculation._get_all_with_state(
+    computers_users_to_check = list(JobCalculation._get_all_with_state(
             state=calc_states.TOSUBMIT,
-            only_computer_user_pairs=True)
+            only_computer_user_pairs=True,
+            only_enabled=True
+        )
     )
 
-    for dbcomputer_id, aiidauser_id in computers_users_to_check:
-        dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
-        if not Computer(dbcomputer=dbcomputer).is_enabled():
-            continue
-        aiidauser = DbUser.objects.get(id=aiidauser_id)
-
+    for computer, aiidauser in computers_users_to_check:
+        #~ user = User.search_for_users(id=dbuser_id)
+        #~ computer = Computer.get(dbcomputer_id)
         execlogger.debug("({},{}) pair to submit".format(
-            aiidauser.email, dbcomputer.name))
+            aiidauser.email, computer.name))
 
         try:
             try:
-                authinfo = get_authinfo(dbcomputer, aiidauser)
+                authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
             except AuthenticationError:
+                # TODO!!
                 # Put each calculation in the SUBMISSIONFAILED state because
                 # I do not have AuthInfo to submit them
                 calcs_to_inquire = JobCalculation._get_all_with_state(
                     state=calc_states.TOSUBMIT,
-                    computer=dbcomputer,
-                    user=aiidauser)
+                    computer=computer, user=aiidauser)
                 for calc in calcs_to_inquire:
                     try:
                         calc._set_state(calc_states.SUBMISSIONFAILED)
@@ -311,12 +283,12 @@ def submit_jobs():
                         # Someone already set it, just skip
                         pass
                     logger_extra = get_dblogger_extra(calc)
-                    execlogger.error("Submission of calc {} failed, "
-                                     "computer pk= {} ({}) is not configured "
-                                     "for aiidauser {}".format(
-                        calc.pk, dbcomputer.pk,
-                        dbcomputer.name, aiidauser.email),
-                                     extra=logger_extra)
+                    execlogger.error(
+                        "Submission of calc {} failed, "
+                        "computer pk= {} ({}) is not configured "
+                        "for aiidauser {}".format(
+                            calc.pk, computer.pk, computer.name, aiidauser.email
+                        ), extra=logger_extra)
                 # Go to the next (dbcomputer,aiidauser) pair
                 continue
 
@@ -328,8 +300,9 @@ def submit_jobs():
                    "for aiidauser={} on computer={}, "
                    "error type is {}, traceback: {}".format(
                 aiidauser.email,
-                dbcomputer.name,
+                computer.name,
                 e.__class__.__name__, traceback.format_exc()))
+            print msg
             execlogger.error(msg)
             # Continue with next computer
             continue
@@ -351,10 +324,10 @@ def submit_jobs_with_authinfo(authinfo):
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida JobCalculation objects
-    calcs_to_inquire = JobCalculation._get_all_with_state(
+    calcs_to_inquire = list(JobCalculation._get_all_with_state(
         state=calc_states.TOSUBMIT,
         computer=authinfo.dbcomputer,
-        user=authinfo.aiidauser)
+        user=authinfo.aiidauser))
 
     # I avoid to open an ssh connection if there are
     # no calcs with state WITHSCHEDULER
@@ -470,17 +443,19 @@ def submit_calc(calc, authinfo, transport=None):
         computer = calc.get_computer()
 
         with SandboxFolder() as folder:
-            calcinfo, script_filename = calc._presubmit(folder,
-                                                        use_unstored_links=False)
+            calcinfo, script_filename = calc._presubmit(
+                folder, use_unstored_links=False)
 
             codes_info = calcinfo.codes_info
-            input_codes = [ load_node(_.code_uuid, parent_class=Code) for _ in codes_info ]
+            input_codes = [load_node(_.code_uuid, parent_class=Code)
+                           for _ in codes_info ]
 
             for code in input_codes:
                 if not code.can_run_on(computer):
-                    raise InputValidationError("The selected code {} for calculation "
-                                               "{} cannot run on computer {}".format(
-                        code.pk, calc.pk, computer.name))
+                    raise InputValidationError(
+                        "The selected code {} for calculation "
+                        "{} cannot run on computer {}".
+                        format(code.pk, calc.pk, computer.name))
 
             # After this call, no modifications to the folder should be done
             calc._store_raw_input_folder(folder.abspath)
@@ -494,27 +469,30 @@ def submit_calc(calc, authinfo, transport=None):
             remote_working_directory = authinfo.get_workdir().format(
                 username=remote_user)
             if not remote_working_directory.strip():
-                raise ConfigurationError("[submission of calc {}] "
-                                         "No remote_working_directory configured for computer "
-                                         "'{}'".format(calc.pk, computer.name))
+                raise ConfigurationError(
+                    "[submission of calc {}] "
+                    "No remote_working_directory configured for computer "
+                    "'{}'".format(calc.pk, computer.name))
 
             # If it already exists, no exception is raised
             try:
                 t.chdir(remote_working_directory)
             except IOError:
-                execlogger.debug("[submission of calc {}] "
-                                 "Unable to chdir in {}, trying to create it".format(
-                    calc.pk, remote_working_directory),
-                                 extra=logger_extra)
+                execlogger.debug(
+                    "[submission of calc {}] "
+                    "Unable to chdir in {}, trying to create it".
+                    format(calc.pk, remote_working_directory),
+                    extra=logger_extra)
                 try:
                     t.makedirs(remote_working_directory)
                     t.chdir(remote_working_directory)
                 except (IOError, OSError) as e:
-                    raise ConfigurationError("[submission of calc {}] "
-                                             "Unable to create the remote directory {} on "
-                                             "computer '{}': {}".format(calc.pk,
-                                                                        remote_working_directory, computer.name,
-                                                                        e.message))
+                    raise ConfigurationError(
+                        "[submission of calc {}] "
+                        "Unable to create the remote directory {} on "
+                        "computer '{}': {}".
+                        format(calc.pk, remote_working_directory, computer.name,
+                               e.message))
             # Store remotely with sharding (here is where we choose
             # the folder structure of remote jobs; then I store this
             # in the calculation properties using _set_remote_dir
@@ -612,7 +590,8 @@ def submit_calc(calc, authinfo, transport=None):
 
             remotedata = RemoteData(computer=computer,
                                     remote_path=workdir)
-            remotedata._add_link_from(calc, label='remote_folder')
+            remotedata.add_link_from(calc, label='remote_folder',
+                                     link_type=LinkType.CREATE)
             remotedata.store()
 
             job_id = s.submit_from_script(t.getcwd(), script_filename)
@@ -665,11 +644,11 @@ def retrieve_computed_for_authinfo(authinfo):
     if not authinfo.enabled:
         return
 
-    calcs_to_retrieve = JobCalculation._get_all_with_state(
+    calcs_to_retrieve = list(JobCalculation._get_all_with_state(
         state=calc_states.COMPUTED,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
-
+    )
     retrieved = []
 
     # I avoid to open an ssh connection if there are no
@@ -703,8 +682,9 @@ def retrieve_computed_for_authinfo(authinfo):
                     t.chdir(workdir)
 
                     retrieved_files = FolderData()
-                    retrieved_files._add_link_from(calc,
-                                                   label=calc._get_linkname_retrieved())
+                    retrieved_files.add_link_from(
+                        calc, label=calc._get_linkname_retrieved(),
+                        link_type=LinkType.CREATE)
 
                     # First, retrieve the files of folderdata
                     with SandboxFolder() as folder:
@@ -783,7 +763,8 @@ def retrieve_computed_for_authinfo(authinfo):
                             SinglefileSubclass = DataFactory(subclassname)
                             singlefile = SinglefileSubclass()
                             singlefile.set_file(filename)
-                            singlefile._add_link_from(calc, label=linkname)
+                            singlefile.add_link_from(calc, label=linkname,
+                                                     link_type=LinkType.CREATE)
                             singlefiles.append(singlefile)
 
                     # Finally, store
@@ -812,7 +793,8 @@ def retrieve_computed_for_authinfo(authinfo):
                         successful, new_nodes_tuple = parser.parse_from_calc()
 
                         for label, n in new_nodes_tuple:
-                            n._add_link_from(calc, label=label)
+                            n.add_link_from(calc, label=label,
+                                            link_type=LinkType.CREATE)
                             n.store()
 
                     if successful:

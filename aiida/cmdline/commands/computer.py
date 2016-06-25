@@ -148,6 +148,7 @@ class Computer(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
         computer_names = self.get_computer_names()
+        print computer_names
         return "\n".join(computer_names)
 
     def computer_list(self, *args):
@@ -276,7 +277,6 @@ class Computer(VerdiCommandWithSubcommands):
                             bold_sequence, name, nobold_sequence,
                             enabled_str, configured_str, end_color)
 
-
         else:
             print "# No computers configured yet. Use 'verdi computer setup'"
 
@@ -311,7 +311,7 @@ class Computer(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.backends.djsite.db.models import DbNode
+        # from aiida.backends.djsite.db.models import DbNode
         from aiida.orm.computer import Computer
 
         parser = argparse.ArgumentParser(
@@ -328,8 +328,8 @@ class Computer(VerdiCommandWithSubcommands):
             print "No computer {} was found".format(computer_name)
             sys.exit(1)
 
-        calculation_on_computer = DbNode.objects.filter(dbcomputer__name=computer_name,
-                                                        type__startswith='calculation')
+        calculation_on_computer = computer.get_calculations_on_computer()
+
         if calculation_on_computer:
             # Note: this is an artificial comment.
             # If you comment the following lines, you will be able to overwrite
@@ -477,9 +477,10 @@ class Computer(VerdiCommandWithSubcommands):
 
         from aiida.common.exceptions import (
             NotExistent, ValidationError)
-        from aiida.backends.djsite.utils import (
-            get_automatic_user, get_configured_user_email)
-        from aiida.backends.djsite.db.models import DbAuthInfo, DbUser
+        from aiida.backends.utils import get_automatic_user
+        from aiida.common.utils import get_configured_user_email
+        from aiida.backends.settings import BACKEND
+        from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
         import argparse
 
@@ -498,33 +499,60 @@ class Computer(VerdiCommandWithSubcommands):
         user_email = parsed_args.user
         computername = parsed_args.computer
 
+
         try:
             computer = self.get_computer(name=computername)
         except NotExistent:
             print >> sys.stderr, "No computer exists with name '{}'".format(
                 computername)
             sys.exit(1)
-
         if user_email is None:
             user = get_automatic_user()
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            from aiida.orm.querybuilder import QueryBuilder
+            qb = QueryBuilder()
+            qb.append(type="user", filters={'email':user_email})
+            user = qb.first()
+            if user is None:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
 
-        try:
-            authinfo = DbAuthInfo.objects.get(
-                dbcomputer=computer.dbcomputer,
-                aiidauser=user)
+        if BACKEND == BACKEND_DJANGO:
+            from aiida.backends.djsite.db.models import DbAuthInfo
 
-            old_authparams = authinfo.get_auth_params()
-        except ObjectDoesNotExist:
-            authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
-            old_authparams = {}
+            try:
+                authinfo = DbAuthInfo.objects.get(
+                    dbcomputer=computer.dbcomputer,
+                    aiidauser=user)
 
+                old_authparams = authinfo.get_auth_params()
+            except ObjectDoesNotExist:
+                authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
+                old_authparams = {}
+
+        elif BACKEND==BACKEND_SQLA:
+            from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+            from aiida.backends.sqlalchemy import session
+
+
+            authinfo = session.query(DbAuthInfo).filter(
+                    DbAuthInfo.dbcomputer==computer.dbcomputer
+                ).filter(
+                    DbAuthInfo.aiidauser==user
+                ).first()
+            if authinfo is None:
+                authinfo = DbAuthInfo(
+                        dbcomputer=computer.dbcomputer,
+                        aiidauser=user
+                    )
+                old_authparams = {}
+            else:
+                old_authparams = authinfo.get_auth_params()
+        else:
+            raise Exception(
+                    "Unknown backend {}".format(BACKEND)
+                )
         Transport = computer.get_transport_class()
 
         print ("Configuring computer '{}' for the AiiDA user '{}'".format(
@@ -887,7 +915,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.backends.djsite.db.models import DbUser
+        from aiida.orm.implementation import User
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -922,22 +950,22 @@ class Computer(VerdiCommandWithSubcommands):
                 computer.set_enabled_state(True)
                 print "Computer '{}' enabled.".format(computername)
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            user_list = User.search_for_users(email=user_email)
+            if user_list is None or len(user_list) == 0:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
+            user = user_list[0]
             try:
-                dbauthinfo = computer.get_dbauthinfo(user)
+                dbauthinfo = computer.get_dbauthinfo(user._dbuser)
                 if not dbauthinfo.enabled:
                     dbauthinfo.enabled = True
                     dbauthinfo.save()
                     print "Computer '{}' enabled for user {}.".format(
                         computername, user.get_full_name())
                 else:
-                    print "Computer '{}' was already enabled for user {}.".format(
-                        computername, user.get_full_name())
+                    print "Computer '{}' was already enabled for user {} {}.".format(
+                        computername, user.first_name, user.last_name)
             except NotExistent:
                 print >> sys.stderr, ("User with email '{}' is not configured "
                                       "for computer '{}' yet.".format(
@@ -957,9 +985,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         import argparse
 
-        from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.backends.djsite.db.models import DbUser
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -994,12 +1020,12 @@ class Computer(VerdiCommandWithSubcommands):
                 computer.set_enabled_state(False)
                 print "Computer '{}' disabled.".format(computername)
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            user_list = User.search_for_users(email=user_email)
+            if user_list is None or len(user_list) == 0:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
+            user = user_list[0]
             try:
                 dbauthinfo = computer.get_dbauthinfo(user)
                 if dbauthinfo.enabled:
@@ -1008,13 +1034,12 @@ class Computer(VerdiCommandWithSubcommands):
                     print "Computer '{}' disabled for user {}.".format(
                         computername, user.get_full_name())
                 else:
-                    print "Computer '{}' was already disabled for user {}.".format(
-                        computername, user.get_full_name())
+                    print("Computer '{}' was already disabled for user {} {}."
+                        .format(computername, user.first_name, user.last_name))
             except NotExistent:
                 print >> sys.stderr, ("User with email '{}' is not configured "
                                       "for computer '{}' yet.".format(
                     user_email, computername))
-
 
     def get_computer_names(self):
         """
@@ -1022,9 +1047,13 @@ class Computer(VerdiCommandWithSubcommands):
 
         ToDo: use an API or cache the results, sometime it is quite slow!
         """
-        from aiida.orm.computer import Computer as AiidaOrmComputer
-
-        return AiidaOrmComputer.list_names()
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(type='computer', project=['name'])
+        if qb.count() > 0:
+            return zip(*qb.all())[0]
+        else:
+            return None
 
     def get_computer(self, name):
         """

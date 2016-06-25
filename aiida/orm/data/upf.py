@@ -96,8 +96,8 @@ def upload_upf_family(folder, group_name, group_description,
     from aiida.common import aiidalogger
     from aiida.orm import Group
     from aiida.common.exceptions import UniquenessError, NotExistent
-    from aiida.backends.djsite.utils import get_automatic_user
-
+    from aiida.backends.utils import get_automatic_user
+    from aiida.orm import QueryBuilder
     if not os.path.isdir(folder):
         raise ValueError("folder must be a directory")
 
@@ -133,10 +133,14 @@ def upload_upf_family(folder, group_name, group_description,
 
     for f in files:
         md5sum = aiida.common.utils.md5_file(f)
-        existing_upf = UpfData.query(dbattributes__key="md5",
-                                     dbattributes__tval=md5sum)
+        qb = QueryBuilder()
+        qb.append(UpfData, filters={'attributes.md5':{'==':md5sum}})
+        existing_upf = qb.first()
+        
+        #~ existing_upf = UpfData.query(dbattributes__key="md5",
+                                     #~ dbattributes__tval=md5sum)
 
-        if len(existing_upf) == 0:
+        if existing_upf is None:
             # return the upfdata instances, not stored
             pseudo, created = UpfData.get_or_create(f, use_first=True,
                                                     store_upf=False)
@@ -145,9 +149,13 @@ def upload_upf_family(folder, group_name, group_description,
             pseudo_and_created.append((pseudo, created))
         else:
             if stop_if_existing:
-                raise ValueError("A UPF with identical MD5 to " + f + " cannot be added with stop_if_existing")
-            pseudo = existing_upf[0]
-            pseudo_and_created.append((pseudo, False))
+                raise ValueError(
+                        "A UPF with identical MD5 to "
+                        " {} cannot be added with stop_if_existing"
+                        "".format(f)
+                    )
+            existing_upf = existing_upf[0]
+            pseudo_and_created.append((existing_upf, False))
 
     # check whether pseudo are unique per element
     elements = [(i[0].element, i[0].md5sum) for i in pseudo_and_created]

@@ -225,7 +225,11 @@ class Group(AbstractGroup):
             if node in self._dbgroup.dbnodes:
                 list_nodes.append(node)
 
-        list(map(self._dbgroup.dbnodes.remove, list_nodes))
+        for node in list_nodes:
+            print "deleting node ", node
+            self._dbgroup.dbnodes.remove(node)
+
+        sa.session.commit()
 
     @classmethod
     def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,

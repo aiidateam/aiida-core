@@ -239,12 +239,12 @@ class Group(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        group = parsed_args.group
+        group_arg = parsed_args.group
         try:
-            group_pk = int(group)
+            group_pk = int(group_arg)
         except ValueError:
             group_pk = None
-            group_name = group
+            group_name = group_arg
 
         if group_pk is not None:
             try:
@@ -275,14 +275,12 @@ class Group(VerdiCommandWithSubcommands):
                 print >> sys.stderr, "Error: {}.".format(e.message)
                 sys.exit(1)
 
-
         sys.stderr.write("Are you sure to add {} nodes the group with PK = {} "
                          "({})? [Y/N] ".format(len(nodes), group_pk, group_name))
         if not wait_for_confirmation():
             sys.exit(0)
 
         group.add_nodes(nodes)
-
 
     def group_removenodes(self, *args):
         """

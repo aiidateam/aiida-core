@@ -191,7 +191,7 @@ class VerdiCommandWithSubcommands(VerdiCommand):
         elif subargs_idx >= 1:
             try:
                 first_subarg = subargs[0]
-            except  IndexError:
+            except IndexError:
                 first_subarg = ''
             try:
                 complete_function = self.valid_subcommands[first_subarg][1]

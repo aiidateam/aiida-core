@@ -43,16 +43,6 @@ def get_log_messages(obj):
     return log_messages
 
 
-def get_valid_job_calculation(user=None, pk_list=[], n_days_after=None,
-                              n_days_before=None, computers=None):
-    """
-    Get a list of valid job calculation from the user.
-
-    Currently, this also select the associated computer with it.
-    """
-    pass
-
-
 def get_computers_work_dir(calculations, user):
     """
     Get a list of computers and their remotes working directory.

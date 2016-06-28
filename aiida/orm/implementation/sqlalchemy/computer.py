@@ -31,6 +31,10 @@ class Computer(AbstractComputer):
     def pk(self):
         return self._dbcomputer.id
 
+    @property
+    def id(self):
+        return self._dbcomputer.id
+
     def __init__(self, **kwargs):
         uuid = kwargs.pop('uuid', None)
 

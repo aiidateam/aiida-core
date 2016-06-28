@@ -25,6 +25,10 @@ class Computer(AbstractComputer):
     def pk(self):
         return self._dbcomputer.pk
 
+    @property
+    def id(self):
+        return self._dbcomputer.pk
+
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbComputer
         super(Computer, self).__init__()

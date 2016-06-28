@@ -160,6 +160,13 @@ class AbstractComputer(object):
         """
         pass
 
+    @abstractproperty
+    def id(self):
+        """
+        Return the principal key in the DB.
+        """
+        pass
+
     @abstractmethod
     def __init__(self, **kwargs):
         pass

@@ -32,7 +32,6 @@ class Workflow(VerdiCommandWithSubcommands):
             'logshow': (self.print_logshow, self.complete_none),
         }
 
-
     def workflow_list(self, *args):
         """
         Return a list of workflows on screen
@@ -50,24 +49,29 @@ class Workflow(VerdiCommandWithSubcommands):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='List AiiDA workflows.')
-        parser.add_argument('-s', '--short', help="show shorter output "
-                                                  "(only subworkflows and steps, no calculations)",
-                            action='store_true')
-        parser.add_argument('-a', '--all-states', help="show all existing "
-                                                       "AiiDA workflows, not only running ones",
-                            action='store_true')
-        parser.add_argument('-d', '--depth', metavar='M', help="add a filter "
-                                                               "to show only steps down to a depth of M levels in "
-                                                               "subworkflows (0 means only the parent "
-                                                               "workflows are shown)",
-                            action='store', type=int, default=16)
-        parser.add_argument('-p', '--past-days', metavar='N', help="add a "
-                                                                   "filter to show only workflows created in the past N days",
-                            action='store', type=int)
-        parser.add_argument('pks', type=int, nargs='*',
-                            help="a list of workflows to show. If empty, "
-                                 "all running workflows are shown. If non-empty, "
-                                 "automatically sets --all and ignores the -p option.")
+        parser.add_argument(
+            '-s', '--short', action='store_true',
+            help="show shorter output "
+                 "(only subworkflows and steps, no calculations)")
+        parser.add_argument(
+            '-a', '--all-states', action='store_true',
+            help="show all existing "
+                 "AiiDA workflows, not only running ones", )
+        parser.add_argument(
+            '-d', '--depth', metavar='M', action='store', type=int, default=16,
+            help="add a filter "
+                 "to show only steps down to a depth of M levels in "
+                 "subworkflows (0 means only the parent "
+                 "workflows are shown)")
+        parser.add_argument(
+            '-p', '--past-days', metavar='N', action='store', type=int,
+            help="add a "
+                 "filter to show only workflows created in the past N days")
+        parser.add_argument(
+            'pks', type=int, nargs='*',
+            help="a list of workflows to show. If empty, "
+                 "all running workflows are shown. If non-empty, "
+                 "automatically sets --all and ignores the -p option.")
 
         tab_size = 2  # how many spaces to use for indentation of subworkflows
 
@@ -120,7 +124,6 @@ class Workflow(VerdiCommandWithSubcommands):
         print "### WORKFLOW pk: {} ###".format(pk)
         print "\n".join(w.get_report())
 
-
     def workflow_kill(self, *args):
         """
         Kill a workflow.
@@ -161,8 +164,9 @@ class Workflow(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         if not force:
-            sys.stderr.write("Are you sure to kill {} workflow{}? [Y/N] ".format(
-                len(wfs), "" if len(wfs) == 1 else "s"))
+            sys.stderr.write(
+                "Are you sure to kill {} workflow{}? [Y/N] ".format(
+                    len(wfs), "" if len(wfs) == 1 else "s"))
             if not wait_for_confirmation():
                 sys.exit(0)
 
@@ -186,7 +190,6 @@ class Workflow(VerdiCommandWithSubcommands):
 
         print >> sys.stderr, "{} workflow{} killed.".format(counter,
                                                             "" if counter <= 1 else "s")
-
 
     def print_logshow(self, *args):
         from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -213,7 +216,8 @@ class Workflow(VerdiCommandWithSubcommands):
             print "*** {}{}: {}".format(wf_pk, label_string, state)
 
             if wf.get_report():
-                print "Print the report with 'verdi workflow report {}'".format(wf_pk)
+                print "Print the report with 'verdi workflow report {}'".format(
+                    wf_pk)
             else:
                 print "*** Report is empty"
 

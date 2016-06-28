@@ -4,12 +4,13 @@ import sys
 import os
 
 from aiida.common.exceptions import ConfigurationError
-
+import aiida.optional as optional
 
 # get_property is used to read properties stored in the config json
 from aiida.common.setup import (get_config, get_secret_key, get_property,
                                 get_profile_config, parse_repository_uri)
 from aiida.backends import settings
+
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 
@@ -25,11 +26,13 @@ sys.path = [BASE_DIR] + sys.path
 try:
     confs = get_config()
 except ConfigurationError:
-    raise ConfigurationError("Please run the AiiDA Installation, no config found")
+    raise ConfigurationError(
+        "Please run the AiiDA Installation, no config found")
 
 if settings.AIIDADB_PROFILE is None:
-    raise ConfigurationError("settings.AIIDADB_PROFILE not defined, did you load django"
-                             "through the AiiDA load_dbenv()?")
+    raise ConfigurationError(
+        "settings.AIIDADB_PROFILE not defined, did you load django"
+        "through the AiiDA load_dbenv()?")
 
 profile_conf = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)
 
@@ -49,8 +52,10 @@ DATABASES = {
         'NAME': DBNAME,  # Or path to database file if using sqlite3.
         'USER': DBUSER,  # Not used with sqlite3.
         'PASSWORD': DBPASS,  # Not used with sqlite3.
-        'HOST': DBHOST,  # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': DBPORT,  # Set to empty string for default. Not used with sqlite3.
+        'HOST': DBHOST,
+        # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': DBPORT,
+        # Set to empty string for default. Not used with sqlite3.
     }
 }
 
@@ -59,7 +64,7 @@ DATABASES = {
 if 'sqlite' in DBENGINE:
     DATABASES['default']['OPTIONS'] = {'timeout': 60}
 
-## Checks on the REPOSITORY_* variables
+# Checks on the REPOSITORY_* variables
 try:
     REPOSITORY_URI
 except NameError:
@@ -136,7 +141,7 @@ USE_TZ = True
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
 MEDIA_ROOT = ''
-#MEDIA_ROOT = '%s/templates/' % BASE_DIR
+# MEDIA_ROOT = '%s/templates/' % BASE_DIR
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
@@ -206,7 +211,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -218,9 +223,10 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
     'aiida.backends.djsite.db',
-    'kombu.transport.django',
-    'djcelery',
-)
+    # ~ 'djcelery',
+]
+if optional.KOMBU_FOUND:
+    INSTALLED_APPS.append('kombu.transport.django')
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -278,11 +284,11 @@ LOGGING = {
             'level': get_property('logging.aiida_loglevel'),
             'propagate': False,
         },
-        'celery': {
-            'handlers': ['console'],
-            'level': get_property('logging.celery_loglevel'),
-            'propagate': False,
-        },
+        # ~ 'celery': {
+        # ~ 'handlers': ['console'],
+        # ~ 'level': get_property('logging.celery_loglevel'),
+        # ~ 'propagate': False,
+        # ~ },
         'paramiko': {
             'handlers': ['console'],
             'level': get_property('logging.paramiko_loglevel'),
@@ -300,50 +306,50 @@ TASTYPIE_DEFAULT_FORMATS = ['json']
 # -------------------------
 # AiiDA-Deamon configuration
 # -------------------------
-#from celery.schedules import crontab
-from datetime import timedelta
-import djcelery
-
-djcelery.setup_loader()
-
-BROKER_URL = "django://"
-CELERY_RESULT_BACKEND = "database"
-# Avoid to store the results in the database, it uses a lot of resources
-# and we do not need results
-CELERY_IGNORE_RESULT = True
-#CELERY_STORE_ERRORS_EVEN_IF_IGNORED=True
-#CELERYD_HIJACK_ROOT_LOGGER = False
-
-CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
-
-# Used internally, in the functions that get the last daemon timestamp.
-# Key: internal name, left: actual celery name. Can be the same
-djcelery_tasks = {
-    'submitter': 'submitter',
-    'updater': 'updater',
-    'retriever': 'retriever',
-    'workflow': 'workflow_stepper',
-}
-
-# Choose here how often the tasks should be run. Note that if the previous task
-# is still running, the new one does not start thanks to the DbLock feature
-# that we added.
-CELERYBEAT_SCHEDULE = {
-    djcelery_tasks['submitter']: {
-        'task': 'aiida.backends.djsite.db.tasks.submitter',
-        'schedule': timedelta(seconds=30),
-    },
-    djcelery_tasks['updater']: {
-        'task': 'aiida.backends.djsite.db.tasks.updater',
-        'schedule': timedelta(seconds=30),
-    },
-    djcelery_tasks['retriever']: {
-        'task': 'aiida.backends.djsite.db.tasks.retriever',
-        'schedule': timedelta(seconds=30),
-    },
-    djcelery_tasks['workflow']: {
-        'task': 'aiida.backends.djsite.db.tasks.workflow_stepper',
-        'schedule': timedelta(seconds=5),
-    },
-}
-
+# from celery.schedules import crontab
+# ~ from datetime import timedelta
+# ~ import djcelery
+# ~
+# ~ djcelery.setup_loader()
+# ~
+# ~ BROKER_URL = "django://"
+# ~ CELERY_RESULT_BACKEND = "database"
+# ~ # Avoid to store the results in the database, it uses a lot of resources
+# ~ # and we do not need results
+# ~ CELERY_IGNORE_RESULT = True
+# ~ #CELERY_STORE_ERRORS_EVEN_IF_IGNORED=True
+# ~ #CELERYD_HIJACK_ROOT_LOGGER = False
+# ~
+# ~ CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
+# ~
+# ~ # Used internally, in the functions that get the last daemon timestamp.
+# ~ # Key: internal name, left: actual celery name. Can be the same
+# ~ djcelery_tasks = {
+# ~ 'submitter': 'submitter',
+# ~ 'updater': 'updater',
+# ~ 'retriever': 'retriever',
+# ~ 'workflow': 'workflow_stepper',
+# ~ }
+# ~
+# ~ # Choose here how often the tasks should be run. Note that if the previous task
+# ~ # is still running, the new one does not start thanks to the DbLock feature
+# ~ # that we added.
+# ~ CELERYBEAT_SCHEDULE = {
+# ~ djcelery_tasks['submitter']: {
+# ~ 'task': 'aiida.backends.djsite.db.tasks.submitter',
+# ~ 'schedule': timedelta(seconds=30),
+# ~ },
+# ~ djcelery_tasks['updater']: {
+# ~ 'task': 'aiida.backends.djsite.db.tasks.updater',
+# ~ 'schedule': timedelta(seconds=30),
+# ~ },
+# ~ djcelery_tasks['retriever']: {
+# ~ 'task': 'aiida.backends.djsite.db.tasks.retriever',
+# ~ 'schedule': timedelta(seconds=30),
+# ~ },
+# ~ djcelery_tasks['workflow']: {
+# ~ 'task': 'aiida.backends.djsite.db.tasks.workflow_stepper',
+# ~ 'schedule': timedelta(seconds=5),
+# ~ },
+# ~ }
+# ~

@@ -6,14 +6,16 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.general.node import AbstractNode
-from aiida.orm.implementation.django.computer import Computer
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
+from aiida.common.links import LinkType
+from aiida.common.lang import override
 
 from aiida.backends.djsite.utils import get_automatic_user
+from aiida.backends.djsite.db.models import DbLink
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -22,7 +24,6 @@ __authors__ = "The AiiDA team."
 
 
 class Node(AbstractNode):
-
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
         from aiida.backends.djsite.db.models import DbNode
@@ -55,13 +56,11 @@ class Node(AbstractNode):
 
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbNode
-        self._to_be_stored = False
+        super(Node, self).__init__()
+
         self._temp_folder = None
 
         dbnode = kwargs.pop('dbnode', None)
-
-        # Empty cache of input links in any case
-        self._inputlinks_cache = {}
 
         # Set the internal parameters
         # Can be redefined in the subclasses
@@ -106,7 +105,6 @@ class Node(AbstractNode):
 
             self._to_be_stored = True
 
-
             # As creating the temp folder may require some time on slow
             # filesystems, we defer its creation
             self._temp_folder = None
@@ -127,7 +125,6 @@ class Node(AbstractNode):
             if not cls._plugin_type_string.endswith('.'):
                 raise InternalError("The plugin type string does not "
                                     "finish with a dot??")
-
 
             # If it is 'calculation.Calculation.', we want to filter
             # for things that start with 'calculation.' and so on
@@ -158,31 +155,24 @@ class Node(AbstractNode):
                 self._dbnode.save()
                 self._increment_version_number_db()
 
-    def _replace_dblink_from(self, src, label):
+    def _replace_dblink_from(self, src, label, link_type):
         try:
-            self._add_dblink_from(src, label)
+            self._add_dblink_from(src, label, link_type)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             with transaction.commit_on_success():
                 self._remove_dblink_from(label)
-                self._add_dblink_from(src, label)
+                self._add_dblink_from(src, label, link_type)
 
     def _remove_dblink_from(self, label):
-        from aiida.backends.djsite.db.models import DbLink
-        DbLink.objects.filter(output=self.dbnode,
-                              label=label).delete()
+        DbLink.objects.filter(output=self.dbnode, label=label).delete()
 
-    def _add_dblink_from(self, src, label=None):
-        from aiida.backends.djsite.db.models import DbLink, DbPath
+    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+        from aiida.backends.djsite.db.models import DbPath
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
-
-        # Check if the source allows output links from this node
-        # (will raise ValueError if
-        # this is not the case)
-        src._can_link_as_output(self)
 
         if self._to_be_stored:
             raise ModificationNotAllowed(
@@ -193,15 +183,16 @@ class Node(AbstractNode):
                 "Cannot call the internal _add_dblink_from if the "
                 "source node is not stored")
 
-        # Check for cycles. This works if the transitive closure is enabled; if it
-        # isn't, this test will never fail, but then having a circular link is not
-        # meaningful but does not pose a huge threat
-        #
-        # I am linking src->self; a loop would be created if a DbPath exists already
-        # in the TC table from self to src
-        if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode)) > 0:
-            raise ValueError(
-                "The link you are attempting to create would generate a loop")
+        if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
+            # Check for cycles. This works if the transitive closure is enabled; if it
+            # isn't, this test will never fail, but then having a circular link is not
+            # meaningful but does not pose a huge threat
+            #
+            # I am linking src->self; a loop would be created if a DbPath exists already
+            # in the TC table from self to src
+            if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode)) > 0:
+                raise ValueError(
+                    "The link you are attempting to create would generate a loop")
 
         if label is None:
             autolabel_idx = 1
@@ -222,61 +213,70 @@ class Node(AbstractNode):
                                         " adds of links "
                                         "to the same nodes! Are you really doing that??")
                 try:
-                    # transactions are needed here for Postgresql:
-                    # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
-                    sid = transaction.savepoint()
-                    DbLink.objects.create(input=src.dbnode, output=self.dbnode,
-                                          label="link_{}".format(autolabel_idx))
-                    transaction.savepoint_commit(sid)
+                    self._do_create_link(src, "link_{}".format(autolabel_idx), link_type)
                     break
-                except IntegrityError as e:
-                    transaction.savepoint_rollback(sid)
+                except UniquenessError:
                     # Retry loop until you find a new loop
                     autolabel_idx += 1
         else:
-            try:
-                # transactions are needed here for Postgresql:
-                # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
-                sid = transaction.savepoint()
-                DbLink.objects.create(input=src.dbnode, output=self.dbnode,
-                                      label=label)
-                transaction.savepoint_commit(sid)
-            except IntegrityError as e:
-                transaction.savepoint_rollback(sid)
-                raise UniquenessError("There is already a link with the same "
-                                      "name (raw message was {})"
-                                      "".format(e.message))
+            self._do_create_link(src, label, link_type)
 
-    def get_inputs(self, type=None, also_labels=False, only_in_db=False):
+    def _do_create_link(self, src, label, link_type):
+        sid = None
+        try:
+            # transactions are needed here for Postgresql:
+            # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
+            sid = transaction.savepoint()
+            DbLink.objects.create(input=src.dbnode, output=self.dbnode,
+                                  label=label, type=link_type.value)
+            transaction.savepoint_commit(sid)
+        except IntegrityError as e:
+            transaction.savepoint_rollback(sid)
+            raise UniquenessError("There is already a link with the same "
+                                  "name (raw message was {})"
+                                  "".format(e.message))
+
+    def get_inputs(self, node_type=None, also_labels=False, only_in_db=False,
+                   link_type=None):
         from aiida.backends.djsite.db.models import DbLink
+
+        link_filter = {'output': self.dbnode}
+        if link_type is not None:
+            link_filter['type'] = link_type.value
         inputs_list = [(i.label, i.input.get_aiida_class()) for i in
-                       DbLink.objects.filter(output=self.dbnode).distinct()]
+                       DbLink.objects.filter(**link_filter).distinct()]
 
         if not only_in_db:
             # Needed for the check
             input_list_keys = [i[0] for i in inputs_list]
 
-            for k, v in self._inputlinks_cache.iteritems():
-                if k in input_list_keys:
+            for label, v in self._inputlinks_cache.iteritems():
+                src = v[0]
+                if label in input_list_keys:
                     raise InternalError("There exist a link with the same name "
                                         "'{}' both in the DB and in the internal "
-                                        "cache for node pk= {}!".format(k, self.pk))
-                inputs_list.append((k, v))
+                                        "cache for node pk= {}!".format(label, self.pk))
+                inputs_list.append((label, src))
 
-        if type is None:
+        if node_type is None:
             filtered_list = inputs_list
         else:
-            filtered_list = [i for i in inputs_list if isinstance(i[1], type)]
+            filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
 
         if also_labels:
             return list(filtered_list)
         else:
             return [i[1] for i in filtered_list]
 
-    def get_outputs(self, type=None, also_labels=False):
+    @override
+    def get_outputs(self, type=None, also_labels=False, link_type=None):
         from aiida.backends.djsite.db.models import DbLink
+
+        link_filter = {'input': self.dbnode}
+        if link_type is not None:
+            link_filter['type'] = link_type.value
         outputs_list = ((i.label, i.output.get_aiida_class()) for i in
-                        DbLink.objects.filter(input=self.dbnode).distinct())
+                        DbLink.objects.filter(**link_filter).distinct())
 
         if type is None:
             if also_labels:
@@ -305,12 +305,8 @@ class Node(AbstractNode):
         if self._to_be_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
         else:
-            if key in self._updatable_attributes:
-                DbAttribute.set_value_for_node(self.dbnode, key, value)
-                self._increment_version_number_db()
-            else:
-                raise ModificationNotAllowed(
-                    "Cannot set an attribute after saving a node")
+            DbAttribute.set_value_for_node(self.dbnode, key, value)
+            self._increment_version_number_db()
 
     def _del_attr(self, key):
         from aiida.backends.djsite.db.models import DbAttribute
@@ -321,37 +317,28 @@ class Node(AbstractNode):
                 raise AttributeError(
                     "DbAttribute {} does not exist".format(key))
         else:
-            if key in self._updatable_attributes:
-                if not DbAttribute.has_key(self.dbnode, key):
-                    raise AttributeError("DbAttribute {} does not exist".format(
-                        key))
-                DbAttribute.del_value_for_node(self.dbnode, key)
-                self._increment_version_number_db()
-            else:
-                raise ModificationNotAllowed("Cannot delete an attribute after "
-                                             "saving a node")
+            if not DbAttribute.has_key(self.dbnode, key):
+                raise AttributeError("DbAttribute {} does not exist".format(
+                    key))
+            DbAttribute.del_value_for_node(self.dbnode, key)
+            self._increment_version_number_db()
 
-    def get_attr(self, key, *args):
+    def get_attr(self, key, default=_NO_DEFAULT):
         from aiida.backends.djsite.db.models import DbAttribute
-        if len(args) > 1:
-            raise ValueError("After the key name you can pass at most one"
-                             "value, that is the default value to be used "
-                             "if no attribute is found.")
         try:
             if self._to_be_stored:
                 try:
                     return self._attrs_cache[key]
                 except KeyError:
-                    raise AttributeError("DbAttribute '{}' does "
-                                         "not exist".format(key))
+                    raise AttributeError(
+                        "DbAttribute '{}' does not exist".format(key))
             else:
-                return DbAttribute.get_value_for_node(dbnode=self.dbnode,
-                                                      key=key)
-        except AttributeError as e:
-            try:
-                return args[0]
-            except IndexError:
-                raise e
+                return DbAttribute.get_value_for_node(
+                    dbnode=self.dbnode, key=key)
+        except AttributeError:
+            if default is _NO_DEFAULT:
+                raise
+            return default
 
     def set_extra(self, key, value, exclusive=False):
         from aiida.backends.djsite.db.models import DbExtra
@@ -433,22 +420,16 @@ class Node(AbstractNode):
             for e in extraslist:
                 yield (e.key, e.getvalue())
 
-    def iterattrs(self, also_updatable=True):
+    def iterattrs(self):
         from aiida.backends.djsite.db.models import DbAttribute
         # TODO: check what happens if someone stores the object while
         #        the iterator is being used!
-        updatable_list = [attr for attr in self._updatable_attributes]
-
         if self._to_be_stored:
             for k, v in self._attrs_cache.iteritems():
-                if not also_updatable and k in updatable_list:
-                    continue
                 yield (k, v)
         else:
             all_attrs = DbAttribute.get_all_values_for_node(self.dbnode)
             for attr in all_attrs:
-                if not also_updatable and attr in updatable_list:
-                    continue
                 yield (attr, all_attrs[attr])
 
     def get_attrs(self):
@@ -477,6 +458,28 @@ class Node(AbstractNode):
                                  user=user,
                                  content=content)
 
+    def get_comment_obj(self, id=None, user=None):
+        from aiida.backends.djsite.db.models import DbComment
+        import operator
+        from django.db.models import Q
+        query_list = []
+
+        # If an id is specified then we add it to the query
+        if id is not None:
+            query_list.append(Q(pk=id))
+
+        # If a user is specified then we add it to the query
+        if user is not None:
+            query_list.append(Q(user=user))
+
+        dbcomments = DbComment.objects.filter(
+            reduce(operator.and_, query_list))
+        comments = []
+        from aiida.orm.implementation.django.comment import Comment
+        for dbcomment in dbcomments:
+            comments.append(Comment(dbcomment=dbcomment))
+        return comments
+
     def get_comments(self, pk=None):
         from aiida.backends.djsite.db.models import DbComment
         if pk is not None:
@@ -487,9 +490,9 @@ class Node(AbstractNode):
             except TypeError:
                 if not isinstance(pk, int):
                     raise ValueError('pk must be an integer or a list of integers')
-            return list(DbComment.objects.filter(dbnode=self._dbnode, pk=pk
-                                                 ).order_by('pk').values('pk', 'user__email',
-                                                                         'ctime', 'mtime', 'content'))
+            return list(DbComment.objects.filter(
+                dbnode=self._dbnode, pk=pk).order_by('pk').values(
+                'pk', 'user__email', 'ctime', 'mtime', 'content'))
 
         return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
             'pk').values('pk', 'user__email', 'ctime', 'mtime', 'content'))
@@ -548,7 +551,7 @@ class Node(AbstractNode):
         newobject.dbnode.description = self.dbnode.description  # Inherit description
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
-        for k, v in self.iterattrs(also_updatable=False):
+        for k, v in self.iterattrs():
             newobject._set_attr(k, v)
 
         for path in self.get_folder_list():
@@ -594,15 +597,16 @@ class Node(AbstractNode):
                 "Node with pk= {} was already stored".format(self.pk))
 
         # For each parent, check that all its inputs are stored
-        for link in self._inputlinks_cache:
+        for label in self._inputlinks_cache:
             try:
-                parent_node = self._inputlinks_cache[link]
+                parent_node = self._inputlinks_cache[label][0]
                 parent_node._check_are_parents_stored()
             except ModificationNotAllowed:
-                raise ModificationNotAllowed("Parent node (UUID={}) has "
-                                             "unstored parents, cannot proceed (only direct parents "
-                                             "can be unstored and will be stored by store_all, not "
-                                             "grandparents or other ancestors".format(parent_node.uuid))
+                raise ModificationNotAllowed(
+                    "Parent node (UUID={}) has "
+                    "unstored parents, cannot proceed (only direct parents "
+                    "can be unstored and will be stored by store_all, not "
+                    "grandparents or other ancestors".format(parent_node.uuid))
 
         with context_man:
             # Always without transaction: either it is the context_man here,
@@ -626,9 +630,10 @@ class Node(AbstractNode):
                 "_store_input_nodes can be called only if the node is "
                 "unstored (node {} is stored, instead)".format(self.pk))
 
-        for link in self._inputlinks_cache:
-            if self._inputlinks_cache[link]._to_be_stored:
-                self._inputlinks_cache[link].store(with_transaction=False)
+        for label in self._inputlinks_cache:
+            parent = self._inputlinks_cache[label][0]
+            if not parent.is_stored:
+                parent.store(with_transaction=False)
 
     def _check_are_parents_stored(self):
         """
@@ -638,14 +643,13 @@ class Node(AbstractNode):
           stored.
         """
         # Preliminary check to verify that inputs are stored already
-        for link in self._inputlinks_cache:
-            if self._inputlinks_cache[link]._to_be_stored:
+        for label in self._inputlinks_cache:
+            if not self._inputlinks_cache[label][0].is_stored:
                 raise ModificationNotAllowed(
                     "Cannot store the input link '{}' because the "
                     "source node is not stored. Either store it first, "
                     "or call _store_input_links with the store_parents "
-                    "parameter set to True".format(link))
-
+                    "parameter set to True".format(label))
 
     def _store_cached_input_links(self, with_transaction=True):
         """
@@ -686,22 +690,22 @@ class Node(AbstractNode):
             # stored
             links_to_store = list(self._inputlinks_cache.keys())
 
-            for link in links_to_store:
-                self._add_dblink_from(self._inputlinks_cache[link], link)
+            for label in links_to_store:
+                src, link_type = self._inputlinks_cache[label]
+                self._add_dblink_from(src, label, link_type)
             # If everything went smoothly, clear the entries from the cache.
             # I do it here because I delete them all at once if no error
             # occurred; otherwise, links will not be stored and I
             # should not delete them from the cache (but then an exception
             # would have been raised, and the following lines are not executed)
-            for link in links_to_store:
-                del self._inputlinks_cache[link]
+            self._inputlinks_cache.clear()
 
     def store(self, with_transaction=True):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
 
-        Can be called only once. Afterwards, attributes cannot be
+        After being called attributes cannot be
         changed anymore! Instead, extras can be changed only AFTER calling
         this store() function.
 
@@ -776,23 +780,19 @@ class Node(AbstractNode):
                     self._repository_folder.abspath, move=True, overwrite=True)
                 raise
 
-        else:
-            raise ModificationNotAllowed(
-                "Node with pk= {} was already stored".format(self.pk))
+            # Set up autogrouping used be verdi run
+            autogroup = aiida.orm.autogroup.current_autogroup
+            grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
+            if autogroup is not None:
+                if not isinstance(autogroup, aiida.orm.autogroup.Autogroup):
+                    raise ValidationError("current_autogroup is not an AiiDA Autogroup")
+                if autogroup.is_to_be_grouped(self):
+                    group_name = autogroup.get_group_name()
+                    if group_name is not None:
+                        from aiida.orm import Group
 
-        # Set up autogrouping used be verdi run
-        autogroup = aiida.orm.autogroup.current_autogroup
-        grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
-        if autogroup is not None:
-            if not isinstance(autogroup, aiida.orm.autogroup.Autogroup):
-                raise ValidationError("current_autogroup is not an AiiDA Autogroup")
-            if autogroup.is_to_be_grouped(self):
-                group_name = autogroup.get_group_name()
-                if group_name is not None:
-                    from aiida.orm import Group
-
-                    g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
-                    g.add_nodes(self)
+                        g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
+                        g.add_nodes(self)
 
         # This is useful because in this way I can do
         # n = Node().store()

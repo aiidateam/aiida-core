@@ -3,7 +3,6 @@
 This module implements a generic output plugin, that is general enough
 to allow the reading of the outputs of a calculation.
 """
-from aiida.common.datastructures import calc_states
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -117,7 +116,6 @@ class Parser(object):
 
         return out_parameterdata[0]
 
-
     def get_result_keys(self):
         """
         Return an iterator of list of strings of valid result keys,
@@ -159,4 +157,3 @@ class Parser(object):
         # and convert in the right units)
 
         return value
-

@@ -4,17 +4,14 @@ from abc import abstractmethod, abstractproperty
 import logging
 import os
 
-
 from aiida.transport import Transport, TransportFactory
 from aiida.scheduler import Scheduler, SchedulerFactory
-
 
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError,
     MissingPluginError, ValidationError)
 
 from aiida.common.utils import classproperty
-
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -77,30 +74,30 @@ class AbstractComputer(object):
              "Fully-qualified hostname",
              "The fully qualified host-name of this computer",
              False,
-            ),
+             ),
             ("description",
              "Description",
              "A human-readable description of this computer",
              False,
-            ),
+             ),
             ("enabled_state",
              "Enabled",
              "True or False; if False, the computer is disabled and calculations\n"
              "associated with it will not be submitted",
              False,
-            ),
+             ),
             ("transport_type",
              "Transport type",
              "The name of the transport to be used. Valid names are: {}".format(
                  ",".join(Transport.get_valid_transports())),
              False,
-            ),
+             ),
             ("scheduler_type",
              "Scheduler type",
              "The name of the scheduler to be used. Valid names are: {}".format(
                  ",".join(Scheduler.get_valid_schedulers())),
              False,
-            ),
+             ),
             ("workdir",
              "AiiDA work directory",
              "The absolute path of the directory on the computer where AiiDA will\n"
@@ -108,7 +105,7 @@ class AbstractComputer(object):
              "can use the {username} replacement, that will be replaced by your\n"
              "username on the remote computer",
              False,
-            ),
+             ),
             # Must be called after the scheduler!
             ("mpirun_command",
              "mpirun command",
@@ -117,28 +114,28 @@ class AbstractComputer(object):
              "replaced by the total number of cpus, or the other scheduler-dependent\n"
              "replacement fields (see the scheduler docs for more information)",
              False,
-            ),
+             ),
             ("default_mpiprocs_per_machine",
              "Default number of CPUs per machine",
              "Enter here the default number of CPUs per machine (node) that \n"
              "should be used if nothing is otherwise specified. Leave empty \n"
              "if you do not want to provide a default value.\n",
              False,
-            ),
+             ),
             ("prepend_text",
              "Text to prepend to each command execution",
              "This is a multiline string, whose content will be prepended inside\n"
              "the submission script before the real execution of the job. It is\n"
              "your responsibility to write proper bash code!",
              True,
-            ),
+             ),
             ("append_text",
              "Text to append to each command execution",
              "This is a multiline string, whose content will be appended inside\n"
              "the submission script after the real execution of the job. It is\n"
              "your responsibility to write proper bash code!",
              True,
-            ),
+             ),
         ]
 
     def __int__(self):
@@ -238,7 +235,6 @@ class AbstractComputer(object):
             return ""
         else:
             return str(def_cpus_per_machine)
-
 
     def _set_default_mpiprocs_per_machine_string(self, string):
         """
@@ -492,7 +488,6 @@ class AbstractComputer(object):
         except ValueError as e:
             raise ValidationError("Error in the string: '{}'".format(e.message))
 
-
     def validate(self):
         """
         Check if the attributes and files retrieved from the DB are valid.
@@ -574,7 +569,6 @@ class AbstractComputer(object):
            times, differently from AiiDA Node objects).
         """
         pass
-
 
     def _del_property(self, k, raise_exception=True):
         olddata = self._get_metadata()
@@ -697,6 +691,10 @@ class AbstractComputer(object):
         pass
 
     @abstractmethod
+    def get_calculations_on_computer(self):
+        pass
+
+    @abstractmethod
     def is_enabled(self):
         pass
 
@@ -738,7 +736,6 @@ class AbstractComputer(object):
         """
         pass
 
-
     @abstractmethod
     def set_enabled_state(self, enabled):
         pass
@@ -766,7 +763,6 @@ class AbstractComputer(object):
         except MissingPluginError as e:
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
                 self.name, self.get_transport_type(), e.message))
-
 
     def get_scheduler(self):
         try:

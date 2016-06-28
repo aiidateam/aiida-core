@@ -5,11 +5,13 @@ Tests for TestTcodDbExporter
 from django.utils import unittest
 
 from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.common.links import LinkType
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
+
 
 class FakeObject(object):
     """
@@ -18,6 +20,7 @@ class FakeObject(object):
     ``inp`` and ``out`` to access also fake NodeInputManager and
     NodeOutputManager.
     """
+
     def __init__(self, dictionary):
         self._dictionary = dictionary
 
@@ -61,18 +64,18 @@ class TestTcodDbExporter(AiidaTestCase):
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         self.assertEquals(cif_encode_contents(
-            "Å{};a".format("".join("a" for i in range(0,69)))),
-                         ('=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba',
-                          'quoted-printable'))
+            "Å{};a".format("".join("a" for i in range(0, 69)))),
+            ('=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba',
+             'quoted-printable'))
         self.assertEquals(cif_encode_contents('angstrom ÅÅÅ'),
                           ('YW5nc3Ryb20gw4XDhcOF', 'base64'))
         self.assertEquals(cif_encode_contents(
-            "".join("a" for i in range(0,2048)))[1],
-            None)
+            "".join("a" for i in range(0, 2048)))[1],
+                          None)
         self.assertEquals(cif_encode_contents(
-            "".join("a" for i in range(0,2049)))[1],
-            'quoted-printable')
+            "".join("a" for i in range(0, 2049)))[1],
+                          'quoted-printable')
         self.assertEquals(cif_encode_contents('datatest')[1], None)
         self.assertEquals(cif_encode_contents('data_test')[1], 'base64')
 
@@ -87,7 +90,7 @@ class TestTcodDbExporter(AiidaTestCase):
         sf = SandboxFolder()
         sf.get_subfolder('out', create=True)
         sf.get_subfolder('pseudo', create=True)
-        sf.get_subfolder('save' ,create=True)
+        sf.get_subfolder('save', create=True)
         sf.get_subfolder('save/1', create=True)
         sf.get_subfolder('save/2', create=True)
 
@@ -104,26 +107,26 @@ class TestTcodDbExporter(AiidaTestCase):
         f = StringIO.StringIO("test")
         sf.create_file_from_filelike(f, 'save/1/log.log')
 
-        md5  = '098f6bcd4621d373cade4e832627b4f6'
+        md5 = '098f6bcd4621d373cade4e832627b4f6'
         sha1 = 'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3'
         self.assertEquals(
             _collect_files(sf.abspath),
             [{'name': '_.out', 'contents': 'test', 'md5': md5,
-                      'sha1': sha1, 'type': 'file'},
+              'sha1': sha1, 'type': 'file'},
              {'name': '_aiidasubmit.sh', 'contents': 'test', 'md5': md5,
-                      'sha1': sha1, 'type': 'file'},
+              'sha1': sha1, 'type': 'file'},
              {'name': 'aiida.in', 'contents': 'test', 'md5': md5,
-                      'sha1': sha1, 'type': 'file'},
+              'sha1': sha1, 'type': 'file'},
              {'name': 'aiida.out', 'contents': 'test', 'md5': md5,
-                      'sha1': sha1, 'type': 'file'},
+              'sha1': sha1, 'type': 'file'},
              {'name': 'out/', 'type': 'folder'},
              {'name': 'out/out', 'contents': 'test', 'md5': md5,
-                      'sha1': sha1, 'type': 'file'},
+              'sha1': sha1, 'type': 'file'},
              {'name': 'pseudo/', 'type': 'folder'},
              {'name': 'save/', 'type': 'folder'},
              {'name': 'save/1/', 'type': 'folder'},
              {'name': 'save/1/log.log', 'contents': 'test', 'md5': md5,
-                      'sha1': sha1, 'type': 'file'},
+              'sha1': sha1, 'type': 'file'},
              {'name': 'save/2/', 'type': 'folder'}])
 
     @unittest.skipIf(not has_ase() or not has_pyspglib() or not has_pycifrw(),
@@ -138,7 +141,6 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.orm.data.folder import FolderData
         from aiida.common.folders import SandboxFolder
         from aiida.common.datastructures import calc_states
-        import os
         import tempfile
 
         with tempfile.NamedTemporaryFile() as f:
@@ -174,9 +176,9 @@ class TestTcodDbExporter(AiidaTestCase):
         code.store()
 
         calc = JobCalculation(computer=self.computer)
-        calc.set_resources( {'num_machines': 1,
-                          'num_mpiprocs_per_machine': 1} )
-        calc._add_link_from(code, "code")
+        calc.set_resources({'num_machines': 1,
+                            'num_mpiprocs_per_machine': 1})
+        calc.add_link_from(code, "code")
         calc.set_environment_variables({'PATH': '/dev/null', 'USER': 'unknown'})
 
         with tempfile.NamedTemporaryFile(prefix="Fe") as f:
@@ -184,14 +186,14 @@ class TestTcodDbExporter(AiidaTestCase):
             f.flush()
             upf = UpfData(file=f.name)
             upf.store()
-            calc._add_link_from(upf, "upf")
+            calc.add_link_from(upf, "upf")
 
         with tempfile.NamedTemporaryFile() as f:
             f.write("data_test")
             f.flush()
             cif = CifData(file=f.name)
             cif.store()
-            calc._add_link_from(cif, "cif")
+            calc.add_link_from(cif, "cif")
 
         calc.store()
         calc._set_state(calc_states.SUBMITTING)
@@ -200,25 +202,25 @@ class TestTcodDbExporter(AiidaTestCase):
 
         fd = FolderData()
         with open(fd._get_folder_pathsubfolder.get_abs_path(
-                    calc._SCHED_OUTPUT_FILE), 'w') as f:
+                calc._SCHED_OUTPUT_FILE), 'w') as f:
             f.write("standard output")
             f.flush()
 
         with open(fd._get_folder_pathsubfolder.get_abs_path(
-                    calc._SCHED_ERROR_FILE), 'w') as f:
+                calc._SCHED_ERROR_FILE), 'w') as f:
             f.write("standard error")
             f.flush()
 
         fd.store()
-        fd._add_link_from(calc, calc._get_linkname_retrieved())
+        fd.add_link_from(calc, calc._get_linkname_retrieved(), LinkType.CREATE)
 
-        pd._add_link_from(calc,"calc")
+        pd.add_link_from(calc, "calc", LinkType.CREATE)
         pd.store()
 
         with self.assertRaises(ValueError):
             export_cif(c, parameters=pd)
 
-        c._add_link_from(calc,"calc")
+        c.add_link_from(calc, "calc", LinkType.CREATE)
         export_cif(c, parameters=pd)
 
         values = export_values(c, parameters=pd)
@@ -231,31 +233,30 @@ class TestTcodDbExporter(AiidaTestCase):
 
     def test_pw_translation(self):
         from aiida.tools.dbexporters.tcod \
-             import translate_calculation_specific_values
+            import translate_calculation_specific_values
         from aiida.tools.dbexporters.tcod_plugins.pw \
-             import PwTcodtranslator as PWT
+            import PwTcodtranslator as PWT
         from aiida.tools.dbexporters.tcod_plugins.cp \
-             import CpTcodtranslator as CPT
+            import CpTcodtranslator as CPT
         from aiida.orm.code import Code
         from aiida.orm.data.array import ArrayData
         from aiida.orm.data.array.kpoints import KpointsData
         from aiida.orm.data.parameter import ParameterData
-        from tcodexporter import FakeObject
         import numpy
 
         code = Code()
         code._set_attr('remote_exec_path', '/test')
 
         kpoints = KpointsData()
-        kpoints.set_kpoints_mesh([2,3,4], offset=[0.25, 0.5, 0.75])
+        kpoints.set_kpoints_mesh([2, 3, 4], offset=[0.25, 0.5, 0.75])
 
         calc = FakeObject({
-            "inp": { "parameters": ParameterData(dict={}),
-                     "kpoints": kpoints, "code": code },
-            "out": { "output_parameters": ParameterData(dict={}) }
+            "inp": {"parameters": ParameterData(dict={}),
+                    "kpoints": kpoints, "code": code},
+            "out": {"output_parameters": ParameterData(dict={})}
         })
         res = translate_calculation_specific_values(calc, PWT)
-        self.assertEquals(res,{
+        self.assertEquals(res, {
             '_integration_grid_X': 2,
             '_integration_grid_Y': 3,
             '_integration_grid_Z': 4,
@@ -267,15 +268,15 @@ class TestTcodDbExporter(AiidaTestCase):
         })
 
         calc = FakeObject({
-            "inp": { "parameters": ParameterData(dict={
-                'SYSTEM': { 'ecutwfc': 40, 'occupations': 'smearing' }
-            }) },
-            "out": { "output_parameters": ParameterData(dict={
+            "inp": {"parameters": ParameterData(dict={
+                'SYSTEM': {'ecutwfc': 40, 'occupations': 'smearing'}
+            })},
+            "out": {"output_parameters": ParameterData(dict={
                 'number_of_electrons': 10,
-            }) }
+            })}
         })
-        res = translate_calculation_specific_values(calc,PWT)
-        self.assertEquals(res,{
+        res = translate_calculation_specific_values(calc, PWT)
+        self.assertEquals(res, {
             '_dft_cell_valence_electrons': 10,
             '_tcod_software_package': 'Quantum ESPRESSO',
             '_dft_BZ_integration_smearing_method': 'Gaussian',
@@ -285,50 +286,50 @@ class TestTcodDbExporter(AiidaTestCase):
         })
 
         calc = FakeObject({
-            "inp": { "parameters": ParameterData(dict={}) },
-            "out": { "output_parameters": ParameterData(dict={
+            "inp": {"parameters": ParameterData(dict={})},
+            "out": {"output_parameters": ParameterData(dict={
                 'energy_xc': 5,
-            }) }
+            })}
         })
         with self.assertRaises(ValueError):
             translate_calculation_specific_values(calc, PWT)
 
         calc = FakeObject({
-            "inp": { "parameters": ParameterData(dict={}) },
-            "out": { "output_parameters": ParameterData(dict={
+            "inp": {"parameters": ParameterData(dict={})},
+            "out": {"output_parameters": ParameterData(dict={
                 'energy_xc': 5,
                 'energy_xc_units': 'meV'
-            }) }
+            })}
         })
         with self.assertRaises(ValueError):
             translate_calculation_specific_values(calc, PWT)
 
         energies = {
-            'energy'             : -3701.7004199449257,
+            'energy': -3701.7004199449257,
             'energy_one_electron': -984.0078459766,
-            'energy_xc'          : -706.6986753641559,
-            'energy_ewald'       : -2822.6335103043157,
-            'energy_hartree'     : 811.6396117001462,
-            'fermi_energy'       : 10.25208617898623,
+            'energy_xc': -706.6986753641559,
+            'energy_ewald': -2822.6335103043157,
+            'energy_hartree': 811.6396117001462,
+            'fermi_energy': 10.25208617898623,
         }
         dct = energies
         for key in energies.keys():
             dct["{}_units".format(key)] = 'eV'
         calc = FakeObject({
-            "inp": { "parameters": ParameterData(dict={
-                'SYSTEM': { 'smearing': 'mp' }
-            }) },
-            "out": { "output_parameters": ParameterData(dict=dct) }
+            "inp": {"parameters": ParameterData(dict={
+                'SYSTEM': {'smearing': 'mp'}
+            })},
+            "out": {"output_parameters": ParameterData(dict=dct)}
         })
         res = translate_calculation_specific_values(calc, PWT)
-        self.assertEquals(res,{
-            '_tcod_total_energy'     : energies['energy'],
-            '_dft_1e_energy'         : energies['energy_one_electron'],
+        self.assertEquals(res, {
+            '_tcod_total_energy': energies['energy'],
+            '_dft_1e_energy': energies['energy_one_electron'],
             '_dft_correlation_energy': energies['energy_xc'],
-            '_dft_ewald_energy'      : energies['energy_ewald'],
-            '_dft_hartree_energy'    : energies['energy_hartree'],
-            '_dft_fermi_energy'      : energies['fermi_energy'],
-            '_tcod_software_package' : 'Quantum ESPRESSO',
+            '_dft_ewald_energy': energies['energy_ewald'],
+            '_dft_hartree_energy': energies['energy_hartree'],
+            '_dft_fermi_energy': energies['fermi_energy'],
+            '_tcod_software_package': 'Quantum ESPRESSO',
             '_dft_BZ_integration_smearing_method': 'Methfessel-Paxton',
             '_dft_BZ_integration_MP_order': 1,
         })
@@ -337,27 +338,27 @@ class TestTcodDbExporter(AiidaTestCase):
         for key in energies.keys():
             dct["{}_units".format(key)] = 'eV'
         calc = FakeObject({
-            "inp": { "parameters": ParameterData(dict={
-                'SYSTEM': { 'smearing': 'unknown-method' }
-            }) },
-            "out": { "output_parameters": ParameterData(dict=dct) }
+            "inp": {"parameters": ParameterData(dict={
+                'SYSTEM': {'smearing': 'unknown-method'}
+            })},
+            "out": {"output_parameters": ParameterData(dict=dct)}
         })
         res = translate_calculation_specific_values(calc, CPT)
-        self.assertEquals(res,{'_dft_cell_valence_electrons': 10,
-                               '_tcod_software_package':
-                               'Quantum ESPRESSO'})
+        self.assertEquals(res, {'_dft_cell_valence_electrons': 10,
+                                '_tcod_software_package':
+                                    'Quantum ESPRESSO'})
 
         ad = ArrayData()
-        ad.set_array("forces", numpy.array([[[1,2,3], [4,5,6]]]))
+        ad.set_array("forces", numpy.array([[[1, 2, 3], [4, 5, 6]]]))
         calc = FakeObject({
-            "inp": { "parameters": ParameterData(dict={
-                'SYSTEM': { 'smearing': 'unknown-method' }
-            }) },
-            "out": { "output_parameters": ParameterData(dict={}),
-                     "output_array": ad }
+            "inp": {"parameters": ParameterData(dict={
+                'SYSTEM': {'smearing': 'unknown-method'}
+            })},
+            "out": {"output_parameters": ParameterData(dict={}),
+                    "output_array": ad}
         })
         res = translate_calculation_specific_values(calc, PWT)
-        self.assertEquals(res,{
+        self.assertEquals(res, {
             '_tcod_software_package': 'Quantum ESPRESSO',
             '_dft_BZ_integration_smearing_method': 'other',
             '_dft_BZ_integration_smearing_method_other': 'unknown-method',
@@ -371,66 +372,66 @@ class TestTcodDbExporter(AiidaTestCase):
 
     def test_nwcpymatgen_translation(self):
         from aiida.tools.dbexporters.tcod \
-             import translate_calculation_specific_values
+            import translate_calculation_specific_values
         from aiida.tools.dbexporters.tcod_plugins.nwcpymatgen \
-             import NwcpymatgenTcodtranslator as NPT
+            import NwcpymatgenTcodtranslator as NPT
         from aiida.orm.data.parameter import ParameterData
         from tcodexporter import FakeObject
 
         calc = FakeObject({
-            "out": { "output":
+            "out": {"output":
                 ParameterData(dict={
-                  "basis_set": {
-                    "H": {
-                      "description": "6-31g",
-                      "functions": "2",
-                      "shells": "2",
-                      "types": "2s"
+                    "basis_set": {
+                        "H": {
+                            "description": "6-31g",
+                            "functions": "2",
+                            "shells": "2",
+                            "types": "2s"
+                        },
+                        "O": {
+                            "description": "6-31g",
+                            "functions": "9",
+                            "shells": "5",
+                            "types": "3s2p"
+                        }
                     },
-                    "O": {
-                      "description": "6-31g",
-                      "functions": "9",
-                      "shells": "5",
-                      "types": "3s2p"
-                    }
-                  },
-                  "corrections": {},
-                  "energies": [
-                    -2057.99011937535
-                  ],
-                  "errors": [],
-                  "frequencies": None,
-                  "has_error": False,
-                  "job_type": "NWChem SCF Module"
+                    "corrections": {},
+                    "energies": [
+                        -2057.99011937535
+                    ],
+                    "errors": [],
+                    "frequencies": None,
+                    "has_error": False,
+                    "job_type": "NWChem SCF Module"
                 }),
                 "job_info": ParameterData(dict={
-                  "0 permanent": ".", 
-                  "0 scratch": ".", 
-                  "argument  1": "aiida.in", 
-                  "compiled": "Sun_Dec_22_04:02:59_2013", 
-                  "data base": "./aiida.db", 
-                  "date": "Mon May 11 17:10:07 2015", 
-                  "ga revision": "10379", 
-                  "global": "200.0 Mbytes (distinct from heap & stack)", 
-                  "hardfail": "no", 
-                  "heap": "100.0 Mbytes", 
-                  "hostname": "theospc11", 
-                  "input": "aiida.in", 
-                  "nproc": "6", 
-                  "nwchem branch": "6.3", 
-                  "nwchem revision": "24277", 
-                  "prefix": "aiida.", 
-                  "program": "/usr/bin/nwchem", 
-                  "source": "/build/buildd/nwchem-6.3+r1", 
-                  "stack": "100.0 Mbytes", 
-                  "status": "startup", 
-                  "time left": "-1s", 
-                  "total": "400.0 Mbytes", 
-                  "verify": "yes",
+                    "0 permanent": ".",
+                    "0 scratch": ".",
+                    "argument  1": "aiida.in",
+                    "compiled": "Sun_Dec_22_04:02:59_2013",
+                    "data base": "./aiida.db",
+                    "date": "Mon May 11 17:10:07 2015",
+                    "ga revision": "10379",
+                    "global": "200.0 Mbytes (distinct from heap & stack)",
+                    "hardfail": "no",
+                    "heap": "100.0 Mbytes",
+                    "hostname": "theospc11",
+                    "input": "aiida.in",
+                    "nproc": "6",
+                    "nwchem branch": "6.3",
+                    "nwchem revision": "24277",
+                    "prefix": "aiida.",
+                    "program": "/usr/bin/nwchem",
+                    "source": "/build/buildd/nwchem-6.3+r1",
+                    "stack": "100.0 Mbytes",
+                    "status": "startup",
+                    "time left": "-1s",
+                    "total": "400.0 Mbytes",
+                    "verify": "yes",
                 })
-        }})
+            }})
         res = translate_calculation_specific_values(calc, NPT)
-        self.assertEquals(res,{
+        self.assertEquals(res, {
             '_tcod_software_package': 'NWChem',
             '_tcod_software_package_version': '6.3',
             '_tcod_software_package_compilation_date': '2013-12-22T04:02:59',
@@ -479,21 +480,21 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.tools.dbexporters.tcod import export_values
         from ase import Atoms
 
-        a = Atoms('BaTiO3', cell=(4.,4.,4.))
+        a = Atoms('BaTiO3', cell=(4., 4., 4.))
         a.set_scaled_positions(
-            ((0.0,0.0,0.0),
-             (0.5,0.5,0.5),
-             (0.5,0.5,0.0),
-             (0.5,0.0,0.5),
-             (0.0,0.5,0.5),
+            ((0.0, 0.0, 0.0),
+             (0.5, 0.5, 0.5),
+             (0.5, 0.5, 0.0),
+             (0.5, 0.0, 0.5),
+             (0.0, 0.5, 0.5),
              )
-            )
+        )
 
-        a.set_chemical_symbols(['Ba','Ti','O','O','O'])
+        a.set_chemical_symbols(['Ba', 'Ti', 'O', 'O', 'O'])
         val = export_values(StructureData(ase=a), reduce_symmetry=True, store=True)['0']
-        self.assertEqual(val['_atom_site_label'],['Ba1','Ti1','O1'])
-        self.assertEqual(val['_symmetry_space_group_name_H-M'],'Pm-3m')
-        self.assertEqual(val['_symmetry_space_group_name_Hall'],'-P 4 2 3')
+        self.assertEqual(val['_atom_site_label'], ['Ba1', 'Ti1', 'O1'])
+        self.assertEqual(val['_symmetry_space_group_name_H-M'], 'Pm-3m')
+        self.assertEqual(val['_symmetry_space_group_name_Hall'], '-P 4 2 3')
 
     def test_cmdline_parameters(self):
         """
@@ -502,7 +503,7 @@ class TestTcodDbExporter(AiidaTestCase):
         """
         from aiida.tools.dbexporters.tcod \
             import extend_with_cmdline_parameters, \
-                   deposition_cmdline_parameters
+            deposition_cmdline_parameters
         import argparse
 
         parser = argparse.ArgumentParser()
@@ -533,26 +534,26 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.tools.dbexporters.tcod import export_values
 
         cells = [
-            [[2.,0.,0.,],
-             [0.,2.,0.,],
-             [0.,0.,2.,]],
-            [[3.,0.,0.,],
-             [0.,3.,0.,],
-             [0.,0.,3.,]]
+            [[2., 0., 0., ],
+             [0., 2., 0., ],
+             [0., 0., 2., ]],
+            [[3., 0., 0., ],
+             [0., 3., 0., ],
+             [0., 0., 3., ]]
         ]
         symbols = [['H', 'O', 'C'], ['H', 'O', 'C']]
         positions = [
-            [[0.,0.,0.],
-             [0.5,0.5,0.5],
-             [1.5,1.5,1.5]],
-            [[0.,0.,0.],
-             [0.75,0.75,0.75],
-             [1.25,1.25,1.25]]
+            [[0., 0., 0.],
+             [0.5, 0.5, 0.5],
+             [1.5, 1.5, 1.5]],
+            [[0., 0., 0.],
+             [0.75, 0.75, 0.75],
+             [1.25, 1.25, 1.25]]
         ]
         structurelist = []
-        for i in range(0,2):
+        for i in range(0, 2):
             struct = StructureData(cell=cells[i])
-            for j,symbol in enumerate(symbols[i]):
+            for j, symbol in enumerate(symbols[i]):
                 struct.append_atom(symbols=symbol, position=positions[i][j])
             structurelist.append(struct)
 
@@ -608,20 +609,20 @@ class TestTcodDbExporter(AiidaTestCase):
         td.store()
         v = export_values(td, trajectory_index=1)
         self.assertEqual(sorted(v['0'].keys()),
-                         expected_tags+tcod_file_tags)
+                         expected_tags + tcod_file_tags)
 
         # Not stored, but expected to be stored:
         td = TrajectoryData(structurelist=structurelist)
         v = export_values(td, trajectory_index=1, store=True)
         self.assertEqual(sorted(v['0'].keys()),
-                         expected_tags+tcod_file_tags)
+                         expected_tags + tcod_file_tags)
 
         # Both stored and expected to be stored:
         td = TrajectoryData(structurelist=structurelist)
         td.store()
         v = export_values(td, trajectory_index=1, store=True)
         self.assertEqual(sorted(v['0'].keys()),
-                         expected_tags+tcod_file_tags)
+                         expected_tags + tcod_file_tags)
 
         # Stored, but asked not to include DB dump:
         td = TrajectoryData(structurelist=structurelist)
@@ -643,56 +644,56 @@ class TestTcodDbExporter(AiidaTestCase):
                                                       decode_textfield_ncr)
             encoded = encode_textfield_ncr(inp)
             decoded = decode_textfield_ncr(out)
-            decoded_universal = decode_textfield(out,'ncr')
-            self.assertEquals(encoded,out)
-            self.assertEquals(decoded,inp)
-            self.assertEquals(decoded_universal,inp)
+            decoded_universal = decode_textfield(out, 'ncr')
+            self.assertEquals(encoded, out)
+            self.assertEquals(decoded, inp)
+            self.assertEquals(decoded_universal, inp)
 
         def test_quoted_printable(self, inp, out):
             from aiida.tools.dbexporters.tcod import (encode_textfield_quoted_printable,
                                                       decode_textfield_quoted_printable)
             encoded = encode_textfield_quoted_printable(inp)
             decoded = decode_textfield_quoted_printable(out)
-            decoded_universal = decode_textfield(out,'quoted-printable')
-            self.assertEquals(encoded,out)
-            self.assertEquals(decoded,inp)
-            self.assertEquals(decoded_universal,inp)
+            decoded_universal = decode_textfield(out, 'quoted-printable')
+            self.assertEquals(encoded, out)
+            self.assertEquals(decoded, inp)
+            self.assertEquals(decoded_universal, inp)
 
         def test_base64(self, inp, out):
             from aiida.tools.dbexporters.tcod import (encode_textfield_base64,
                                                       decode_textfield_base64)
             encoded = encode_textfield_base64(inp)
             decoded = decode_textfield_base64(out)
-            decoded_universal = decode_textfield(out,'base64')
-            self.assertEquals(encoded,out)
-            self.assertEquals(decoded,inp)
-            self.assertEquals(decoded_universal,inp)
+            decoded_universal = decode_textfield(out, 'base64')
+            self.assertEquals(encoded, out)
+            self.assertEquals(decoded, inp)
+            self.assertEquals(decoded_universal, inp)
 
         def test_gzip_base64(self, text):
             from aiida.tools.dbexporters.tcod import (encode_textfield_gzip_base64,
                                                       decode_textfield_gzip_base64)
             encoded = encode_textfield_gzip_base64(text)
             decoded = decode_textfield_gzip_base64(encoded)
-            decoded_universal = decode_textfield(encoded,'gzip+base64')
-            self.assertEquals(text,decoded)
-            self.assertEquals(text,decoded_universal)
+            decoded_universal = decode_textfield(encoded, 'gzip+base64')
+            self.assertEquals(text, decoded)
+            self.assertEquals(text, decoded_universal)
 
-        test_ncr(self,'.','&#46;')
-        test_ncr(self,'?','&#63;')
-        test_ncr(self,';\n','&#59;\n')
-        test_ncr(self,'line\n;line','line\n&#59;line')
-        test_ncr(self,'tabbed\ttext','tabbed&#9;text')
-        test_ncr(self,'angstrom Å','angstrom &#195;&#133;')
-        test_ncr(self,'<html>&#195;&#133;</html>',
-                      '<html>&#38;#195;&#38;#133;</html>')
+        test_ncr(self, '.', '&#46;')
+        test_ncr(self, '?', '&#63;')
+        test_ncr(self, ';\n', '&#59;\n')
+        test_ncr(self, 'line\n;line', 'line\n&#59;line')
+        test_ncr(self, 'tabbed\ttext', 'tabbed&#9;text')
+        test_ncr(self, 'angstrom Å', 'angstrom &#195;&#133;')
+        test_ncr(self, '<html>&#195;&#133;</html>',
+                 '<html>&#38;#195;&#38;#133;</html>')
 
-        test_quoted_printable(self,'.','=2E')
-        test_quoted_printable(self,'?','=3F')
-        test_quoted_printable(self,';\n','=3B\n')
-        test_quoted_printable(self,'line\n;line','line\n=3Bline')
-        test_quoted_printable(self,'tabbed\ttext','tabbed=09text')
-        test_quoted_printable(self,'angstrom Å','angstrom =C3=85')
-        test_quoted_printable(self,'line\rline\x00','line\rline=00')
+        test_quoted_printable(self, '.', '=2E')
+        test_quoted_printable(self, '?', '=3F')
+        test_quoted_printable(self, ';\n', '=3B\n')
+        test_quoted_printable(self, 'line\n;line', 'line\n=3Bline')
+        test_quoted_printable(self, 'tabbed\ttext', 'tabbed=09text')
+        test_quoted_printable(self, 'angstrom Å', 'angstrom =C3=85')
+        test_quoted_printable(self, 'line\rline\x00', 'line\rline=00')
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         test_quoted_printable(self,

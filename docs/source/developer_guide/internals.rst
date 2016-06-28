@@ -10,7 +10,7 @@ The :py:class:`~aiida.orm.node.Node` class is the basic class that represents al
 
 Methods & properties
 ********************
-In the sequel the most important methods and properties of the :py:class:`~aiida.orm.node.Node` class will be described. 
+In the sequel the most important methods and properties of the :py:class:`~aiida.orm.node.Node` class will be described.
 
 Node subclasses organization
 ============================
@@ -34,7 +34,7 @@ General purpose methods
 
 - :py:meth:`~aiida.orm.node.Node.ctime` and :py:meth:`~aiida.orm.node.Node.mtime` provide the creation and the modification time of the node.
 
-- :py:meth:`~aiida.orm.node.Node._is_stored` informs whether a node is already stored to the database.
+- :py:meth:`~aiida.orm.node.Node.is_stored` informs whether a node is already stored to the database.
 
 - :py:meth:`~aiida.orm.node.Node.query` queries the database by filtering for the results for similar nodes (if the used object is a subclass of :py:class:`~aiida.orm.node.Node`) or with no filtering if it is a :py:class:`~aiida.orm.node.Node` class. Note that for this check ``_plugin_type_string`` should be properly set.
 
@@ -93,7 +93,7 @@ Link management methods
 
 - :py:meth:`~aiida.orm.node.Node._has_cached_links` shows if there are cached links to other nodes.
 
-- :py:meth:`~aiida.orm.node.Node._add_link_from` adds a link to the current node from the 'src' node with the given label. Depending on whether the nodes are stored or node, the linked are written to the database or to the cache.
+- :py:meth:`~aiida.orm.node.Node.add_link_from` adds a link to the current node from the 'src' node with the given label. Depending on whether the nodes are stored or node, the linked are written to the database or to the cache.
 
 - :py:meth:`~aiida.orm.node.Node._add_cachelink_from` adds a link to the cache.
 
@@ -114,9 +114,9 @@ Assume that the user wants to see the available links of a node in order to unde
 	In [1]: # Let's load a node with a specific pk
 
 	In [2]: c = load_node(139168)
-	
+
 	In [3]: c.get_inputs_dict()
-	Out[3]: 
+	Out[3]:
 	{u'code': <Code: Remote code 'cp-5.1' on daint, pk: 75709, uuid: 3c9cdb7f-0cda-402e-b898-4dd0d06aa5a4>,
 	 u'parameters': <ParameterData: uuid: 94efe64f-7f7e-46ea-922a-fe64a7fba8a5 (pk: 139166)>,
 	 u'parent_calc_folder': <RemoteData: uuid: becb4894-c50c-4779-b84f-713772eaceff (pk: 139118)>,
@@ -125,9 +125,9 @@ Assume that the user wants to see the available links of a node in order to unde
 	 u'pseudo_Ti': <UpfData: uuid: e5744077-8615-4927-9f97-c5f7b36ba421 (pk: 1660)>,
 	 u'settings': <ParameterData: uuid: a5a828b8-fdd8-4d75-b674-2e2d62792de0 (pk: 139167)>,
 	 u'structure': <StructureData: uuid: 3096f83c-6385-48c4-8cb2-24a427ce11b1 (pk: 139001)>}
-	 
+
 	In [4]: c.get_outputs_dict()
-	Out[4]: 
+	Out[4]:
 	{u'output_parameters': <ParameterData: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>,
 	 u'output_parameters_139257': <ParameterData: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>,
 	 u'output_trajectory': <TrajectoryData: uuid: 7c5b65bc-22bb-4b87-ac92-e8a78cf145c3 (pk: 139256)>,
@@ -140,7 +140,7 @@ Assume that the user wants to see the available links of a node in order to unde
 
 *Understanding link names*
 
-The nodes may have input and output links. Every input link of a ``node`` should have a unique name and this unique name is mapped to a specific ``node``. On the other hand, given a ``node`` ``c``, many output ``nodes`` may share the same output link name. To differentiate between the output nodes of ``c`` that have the same link name, the ``pk`` of the output node is added next to the link name (please see the input & output nodes in the above example). 
+The nodes may have input and output links. Every input link of a ``node`` should have a unique name and this unique name is mapped to a specific ``node``. On the other hand, given a ``node`` ``c``, many output ``nodes`` may share the same output link name. To differentiate between the output nodes of ``c`` that have the same link name, the ``pk`` of the output node is added next to the link name (please see the input & output nodes in the above example).
 
 
 Input/output related methods
@@ -159,7 +159,7 @@ The input/output links of the node can be accessed by the following methods.
 
 *Methods to get the output data*
 
-- :py:meth:`~aiida.orm.node.Node.get_outputs_dict` returns a dictionary where the key is the label of the output link, and the value is the input node.
+- :py:meth:`~aiida.orm.node.Node.get_outputs_dict` returns a dictionary where the key is the label of the output link, and the value is the output node.
 
 - :py:meth:`~aiida.orm.node.Node.get_outputs` returns a list of output nodes.
 
@@ -177,26 +177,26 @@ The user can easily use the :py:meth:`~aiida.orm.node.NodeInputManager` and the 
 
 	In [3]: c
 	Out[3]: <CpCalculation: uuid: 49084dcf-c708-4422-8bcf-808e4c3382c2 (pk: 139168)>
-	
+
 	In [4]: # Let's traverse the inputs of this node.
-	
+
 	In [5]: # By typing c.inp. we get all the input links
-	
+
 	In [6]: c.inp.
-	c.inp.code                c.inp.parent_calc_folder  c.inp.pseudo_O            c.inp.settings            
-	c.inp.parameters          c.inp.pseudo_Ba           c.inp.pseudo_Ti           c.inp.structure  
-	
+	c.inp.code                c.inp.parent_calc_folder  c.inp.pseudo_O            c.inp.settings
+	c.inp.parameters          c.inp.pseudo_Ba           c.inp.pseudo_Ti           c.inp.structure
+
 	In [7]: # We may follow any of these links to access other nodes. For example, let's follow the parent_calc_folder
-	
+
 	In [8]: c.inp.parent_calc_folder
 	Out[8]: <RemoteData: uuid: becb4894-c50c-4779-b84f-713772eaceff (pk: 139118)>
 
 	In [9]: # Let's assign to r the node reached by the parent_calc_folder link
-	 
+
 	In [10]: r = c.inp.parent_calc_folder
 
 	In [11]: r.inp.__dir__()
-	Out[11]: 
+	Out[11]:
 	['__class__',
 	 '__delattr__',
 	 '__dict__',
@@ -222,7 +222,7 @@ The user can easily use the :py:meth:`~aiida.orm.node.NodeInputManager` and the 
 	 u'remote_folder']
 
 	In [12]: r.out.
-	r.out.parent_calc_folder         r.out.parent_calc_folder_139168  
+	r.out.parent_calc_folder         r.out.parent_calc_folder_139168
 
 	In [13]: # By following the same link from node r, you will get node c
 
@@ -291,7 +291,7 @@ Store & deletion
 
 - :py:meth:`~aiida.orm.node.Node.__del__` deletes temporary folder and it should be called when an in-memory object is deleted.
 
- 
+
 DbNode
 ++++++
 

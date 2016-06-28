@@ -125,6 +125,10 @@ class Comment(VerdiCommandWithSubcommands):
             print "{}".format(i['content'])
             print ""
 
+        # If there is nothing to print, print a message
+        if not to_print:
+            print "No comment found."
+
     def comment_remove(self, *args):
         """
         Remove comments. The user can only remove its own comments
@@ -132,12 +136,10 @@ class Comment(VerdiCommandWithSubcommands):
         # Note: in fact, the user can still manually delete any comment
         import argparse
         from aiida.backends.utils import get_automatic_user
-        from aiida.common.exceptions import ModificationNotAllowed
 
         if not is_dbenv_loaded():
             load_dbenv()
         user = get_automatic_user()
-        from aiida.backends.djsite.db.models import DbComment
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -158,10 +160,8 @@ class Comment(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         node = load_node(parsed_args.pk)
-        all_comments = node.get_comments(parsed_args.id)  # Filter those with desired id, if present
 
         allowed_trues = ['1', 't', 'true', 'y', 'yes']
-
         if parsed_args.all:
             sys.stdout.write("Delete all comments of user {}? ".format(user))
             inpread = sys.stdin.readline()
@@ -171,9 +171,10 @@ class Comment(VerdiCommandWithSubcommands):
                 print "Not deleting comment. Aborting."
                 sys.exit(1)
             else:
-                comments = DbComment.objects.filter(dbnode=node, user=user)
+                comments = node.get_comment_obj(user=user)
                 for comment in comments:
                     comment.delete()
+                print("Deleted {} comments.".format(len(comments)))
 
         else:
             sys.stdout.write("Delete comment? ")
@@ -184,12 +185,9 @@ class Comment(VerdiCommandWithSubcommands):
                 print "Not deleting comment. Aborting."
                 sys.exit(1)
             else:
-                comments = DbComment.objects.filter(dbnode=node,
-                                                    pk=parsed_args.id, user=user)
-                if not list(comments):
-                    print "No deletable comment found."
-                for comment in comments:
-                    comment.delete()
+                from aiida.orm.implementation import Comment as CommentOrm
+                c = CommentOrm(id=parsed_args.id, user=user)
+                c.delete()
 
     def comment_update(self, *args):
         """

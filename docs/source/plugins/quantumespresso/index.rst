@@ -1,3 +1,6 @@
+
+.. _sec.quantumespresso:
+
 Quantum Espresso
 ----------------
 

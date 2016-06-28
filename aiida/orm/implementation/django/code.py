@@ -6,16 +6,16 @@ from django.db import transaction
 
 from aiida.orm.implementation.general.code import AbstractCode
 from aiida.orm.implementation import Computer
-from aiida.common.exceptions import NotExistent, MultipleObjectsError, InvalidOperation
-
+from aiida.common.exceptions import NotExistent, MultipleObjectsError, \
+    InvalidOperation
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
-class Code(AbstractCode):
 
+class Code(AbstractCode):
     @classmethod
     def get_from_string(cls, code_string):
         """
@@ -63,8 +63,9 @@ class Code(AbstractCode):
                 raise NotExistent("'{}' is not a valid code "
                                   "ID or label.".format(code_string))
             elif len(codes) > 1:
-                retstr = ("There are multiple codes with label '{}', having IDs: "
-                          "".format(code_string))
+                retstr = (
+                "There are multiple codes with label '{}', having IDs: "
+                "".format(code_string))
                 retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
                 retstr += ("Relabel them (using their ID), or refer to them "
                            "with their ID.")
@@ -114,13 +115,15 @@ class Code(AbstractCode):
         computer, remote_exec_path = tuple(remote_computer_exec)
 
         if not os.path.isabs(remote_exec_path):
-            raise ValueError("exec_path must be an absolute path (on the remote machine)")
+            raise ValueError(
+                "exec_path must be an absolute path (on the remote machine)")
 
         remote_dbcomputer = computer
         if isinstance(remote_dbcomputer, Computer):
             remote_dbcomputer = remote_dbcomputer.dbcomputer
         if not (isinstance(remote_dbcomputer, DbComputer)):
-            raise TypeError("computer must be either a Computer or DbComputer object")
+            raise TypeError(
+                "computer must be either a Computer or DbComputer object")
 
         self._set_remote()
 
@@ -159,10 +162,12 @@ class Code(AbstractCode):
             if isinstance(dbcomputer, Computer):
                 dbcomputer = dbcomputer.dbcomputer
             if not isinstance(dbcomputer, DbComputer):
-                raise ValueError("computer must be either a Computer or DbComputer object")
+                raise ValueError(
+                    "computer must be either a Computer or DbComputer object")
             dbcomputer = DbComputer.get_dbcomputer(computer)
             return (dbcomputer.pk ==
                     self.get_remote_computer().dbcomputer.pk)
+
 
 def delete_code(code):
     """

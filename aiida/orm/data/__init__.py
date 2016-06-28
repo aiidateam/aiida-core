@@ -1,34 +1,31 @@
-# -*- coding: utf-8 -*-
-from aiida.common.exceptions import ValidationError
-
 from aiida.orm.node import Node
+from aiida.common.links import LinkType
+from aiida.common.lang import override
+from aiida.common.exceptions import ModificationNotAllowed
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
-'''
-Specifications of the Data class:
-AiiDA Data objects are subclasses of Node and should have
-
-Multiple inheritance must be suppoted, i.e. Data should have methods for querying and
-be able to inherit other library objects such as ASE for structures.
-
-Architecture note:
-The code plugin is responsible for converting a raw data object produced by code
-to AiiDA standard object format. The data object then validates itself according to its
-method. This is done independently in order to allow cross-validation of plugins.
-
-'''
-
 
 class Data(Node):
     """
     This class is base class for all data objects.
-    """
-    _updatable_attributes = tuple()
 
+    Specifications of the Data class:
+    AiiDA Data objects are subclasses of Node and should have
+
+    Multiple inheritance must be suppoted, i.e. Data should have methods for
+    querying and be able to inherit other library objects such as ASE for
+    structures.
+
+    Architecture note:
+    The code plugin is responsible for converting a raw data object produced by
+    code to AiiDA standard object format. The data object then validates itself
+    according to its method. This is done independently in order to allow
+    cross-validation of plugins.
+    """
     _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version',
                           'extras', 'source_md5', 'description', 'license']
 
@@ -70,7 +67,7 @@ class Data(Node):
         unknown_attrs = list(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
             raise KeyError("Unknown source parameters: "
-                                 "{}".format(", ".join(unknown_attrs)))
+                           "{}".format(", ".join(unknown_attrs)))
 
         self._set_attr('source', source)
 
@@ -80,18 +77,54 @@ class Data(Node):
         """
         self.source = source
 
-    def _add_link_from(self, src, label=None):
+    @override
+    def _set_attr(self, key, value):
+        """
+        Set a new attribute to the Node (in the DbAttribute table).
+
+        :param str key: key name
+        :param value: its value
+        :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
+            because the node was already stored)
+
+        :raise ValidationError: if the key is not valid (e.g. it contains the
+            separator symbol).
+        """
+        if self.is_stored:
+            raise ModificationNotAllowed(
+                "Cannot change the attributes of a stored data node.")
+        super(Data, self)._set_attr(key, value)
+
+    @override
+    def _del_attr(self, key):
+        """
+        Delete an attribute.
+
+        :param key: attribute to delete.
+        :raise AttributeError: if key does not exist.
+        :raise ModificationNotAllowed: if the Node was already stored.
+        """
+        if self.is_stored:
+            raise ModificationNotAllowed(
+                "Cannot delete the attributes of a stored data node.")
+        super(Data, self)._del_attr(key)
+
+    @override
+    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.orm.calculation import Calculation
 
-        if len(self.get_inputs()) > 0:
-            raise ValueError("At most one node can enter a data node")
+        if link_type is LinkType.CREATE and \
+                        len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
+            raise ValueError("At most one CREATE node can enter a data node")
 
         if not isinstance(src, Calculation):
-            raise ValueError("Links entering a data object can only be of type calculation")
+            raise ValueError(
+                "Links entering a data object can only be of type calculation")
 
-        return super(Data, self)._add_link_from(src, label)
+        return super(Data, self).add_link_from(src, label, link_type)
 
-    def _can_link_as_output(self, dest):
+    @override
+    def _linking_as_output(self, dest, link_type):
         """
         Raise a ValueError if a link from self to dest is not allowed.
 
@@ -99,10 +132,12 @@ class Data(Node):
         """
         from aiida.orm.calculation import Calculation
         if not isinstance(dest, Calculation):
-            raise ValueError("The output of a data node can only be a calculation")
+            raise ValueError(
+                "The output of a data node can only be a calculation")
 
-        return super(Data, self)._can_link_as_output(dest)
+        return super(Data, self)._linking_as_output(dest, link_type)
 
+    @override
     def _exportstring(self, fileformat, **kwargs):
         """
         Converts a Data object to other text format.
@@ -127,6 +162,7 @@ class Data(Node):
 
         return func(**kwargs)
 
+    @override
     def export(self, fname, fileformat=None):
         """
         Save a Data object to a file.
@@ -228,10 +264,11 @@ class Data(Node):
             func = converters[object_format]
         except KeyError:
             if len(converters.keys()) > 0:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(
-                    object_format, self.__class__.__name__,
-                    ",".join(converters.keys())))
+                raise ValueError(
+                    "The format {} is not implemented for {}. "
+                    "Currently implemented are: {}.".format(
+                        object_format, self.__class__.__name__,
+                        ",".join(converters.keys())))
             else:
                 raise ValueError("The format {} is not implemented for {}. "
                                  "No formats are implemented yet.".format(

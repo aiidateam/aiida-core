@@ -3,7 +3,7 @@ Installation and Deployment of AiiDA
 ====================================
 
 If you are updating from a previous version and you don't want to
-reinstall everything from scratch, read the instructions 
+reinstall everything from scratch, read the instructions
 :ref:`here<updating_aiida>`.
 
 Supported architecture
@@ -14,7 +14,7 @@ is tested (and developed) in Mac OS X and Linux (Ubuntu), but other Unix
 flavours *should* work as well.
 
 Moreover, on the clusters (computational resources) side, it expects to find
-a Unix system, and the default shell is **required** to be ``bash``. 
+a Unix system, and the default shell is **required** to be ``bash``.
 
 Installing python
 +++++++++++++++++
@@ -26,13 +26,13 @@ python installed on your computer. To check, open a terminal and type::
     python -V
 
 that will print something like this::
-    
+
     Python 2.7.3
-    
+
 If you don't have python installed, or your version is outdated, please install
-a suitable version of python (either refer to the manual of your Linux 
+a suitable version of python (either refer to the manual of your Linux
 distribution, or for instance you can download the ActiveState Python from
-ActiveState_. Choose the appropriate distribution corresponding to your 
+ActiveState_. Choose the appropriate distribution corresponding to your
 architecture, and with version 2.7.x.x).
 
 .. _ActiveState: http://www.activestate.com/activepython/downloads
@@ -51,7 +51,7 @@ use<database/index>`.
 Other core dependencies
 -----------------------
 
-Before continuing, you still need to install a few more programs. Some of them 
+Before continuing, you still need to install a few more programs. Some of them
 are mandatory, while others are optional (but often strongly suggested), also
 depending for instance on the :doc:`type of database <database/index>`
 that you plan to use.
@@ -70,13 +70,13 @@ of packages to install- or ``yum`` in RedHat/Fedora).
 * To support  SQLite:
 
   * `SQLite3 development files`_ (required later to compile the library,
-    when configuring the python sqlite module; see below for the Ubuntu 
+    when configuring the python sqlite module; see below for the Ubuntu
     module required to install these files)
 
 * To support  PostgreSQL:
 
   * `PostgreSQL development files`_ (required later to compile the library,
-    when configuring the python psycopg2 module; see below for the Ubuntu 
+    when configuring the python psycopg2 module; see below for the Ubuntu
     module required to install these files)
 
 .. _git: http://git-scm.com/
@@ -95,11 +95,11 @@ names may change in different releases)::
   example above is 9.1) of the
   postgresql server that you installed (in this case, to install the server of
   the same version, use the ``sudo apt-get install postgresql-9.1`` command).
-  
+
   If you want to use postgreSQL, use a version greater than 9.1
   (the greatest that your distribution supports).
 
-For Mac OS X, you may either already have some of the dependencies above 
+For Mac OS X, you may either already have some of the dependencies above
 (e.g., git), or you can download binary packages to install (e.g., for
 PostgreSQL you can download and install the binary package from the
 official website).
@@ -139,17 +139,17 @@ Then, install the python dependencies is as simple as this::
 the packages as a normal user, without the need of using ``sudo`` or
 becoming root). Check that every package is installed correctly.
 
-There are some additional dependencies need to be installed if you are 
-using PostgreSQL or MySql as backend database. No additional dependency 
+There are some additional dependencies need to be installed if you are
+using PostgreSQL or MySql as backend database. No additional dependency
 is required for SQLite.
 
 For PostgreSQL::
 
-  pip install psycopg2==2.6
+  pip install --user psycopg2==2.6
 
 For MySQL::
 
-  pip install MySQL-python==1.2.5
+  pip install --user MySQL-python==1.2.5
 
 
 .. note:: This step should work seamlessly, but there are a number of reasons
@@ -161,7 +161,7 @@ For MySQL::
     OSError: [Errno 13] Permission denied: '/usr/local/bin/easy_install'
 
   then try again as root::
-    
+
     sudo pip install -U -r requirements.txt
 
 If everything went smoothly, congratulations! Now the code is installed!
@@ -180,7 +180,7 @@ However, we need still a few steps to properly configure AiiDA for your user.
 .. note:: Several users reported the need to install also ``libqp-dev``::
 
     apt-get install libqp-dev
-    
+
   But under Ubuntu 12.04 this is not needed.
 
 .. note:: If the installation fails while installing the packages related
@@ -224,7 +224,7 @@ Path configuration
 
 The main interface to AiiDA is through its command-line tool, called ``verdi``.
 For it to work, it must be on the system path, and moreover the AiiDA python
-code must be found on the python path. 
+code must be found on the python path.
 
 To do this, add the following to your ``~/.bashrc`` file (create it if not already present)::
 
@@ -242,26 +242,26 @@ in a new window.
   ``pip install`` step, you will need to add one more directory to your ``PATH``
   variable in the ``~/.bashrc`` file.
   For Linux systems, the path to add is usually ``~/.local/bin``::
-  
+
   	export PATH=~/git/aiida/bin:~/.local/bin:${PATH}
-  
+
   For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
-  
+
   	export PATH=~/git/aiida/bin:~/Library/Python/2.7/bin:${PATH}
-  
+
   To verify if this is the correct path to add, navigate to this location and
   you should find the executable ``supervisord`` in the directory.
 
 To verify if the path setup is OK:
 
-* type ``verdi`` on your terminal, and check if the program starts (it should 
+* type ``verdi`` on your terminal, and check if the program starts (it should
   provide a list of valid commands). If it doesn't, check if you correctly set
   up the ``PATH`` environmente variable above.
 * go in your home folder or in another folder different from the AiiDA folder,
   run ``python`` or ``ipython`` and try to import a module, e.g. typing::
 
     import aiida
-    
+
   If the setup is ok, you shouldn't get any error. If you do get an
   ``ImportError`` instead, check if you correctly set up the ``PYTHONPATH``
   environment variable in the steps above.
@@ -274,25 +274,25 @@ Bash completion
 ``TAB`` of your keyboard to get a list of sensible commands to type.
 We strongly suggest to enable bash completion by adding also the following
 line to your ``.bashrc``, **after** the previous lines::
-   
+
    eval "$(verdi completioncommand)"
 
 If you feel that the bash loading time is becoming too slow, you can instead
 run the::
 
     verdi completioncommand
-    
+
 on a shell, and copy-paste the output directly inside your ``.bashrc`` file,
 **instead** of the ``eval "$(verdi completioncommand)"`` line.
-    
+
 Remember, after any modification to the ``.bashrc`` file, to source it,
-or to open a new shell window. 
+or to open a new shell window.
 
 .. note:: remember to check that your ``.bashrc`` is sourced also from your
   ``.profile`` or ``.bash_profile`` script. E.g., if not already present,
   you can add to your ``~/.bash_profile`` the following lines::
 
-    if [ -f ~/.bashrc ] 
+    if [ -f ~/.bashrc ]
     then
         . ~/.bashrc
     fi
@@ -305,9 +305,9 @@ AiiDA first setup
 Run the following command::
 
     verdi install
-    
+
 to configure AiiDA. The command will guide you through a process to configure
-the database, the repository location, and it will finally (automatically) run 
+the database, the repository location, and it will finally (automatically) run
 a django ``migrate`` command, if needed, that creates the required tables
 in the database and installs the database triggers.
 
@@ -316,11 +316,11 @@ to get correct dates and times for your calculations.
 
 AiiDA will do its best to try and understand the local timezone (if properly
 configured on your machine), and will suggest a set of sensible values.
-Choose the timezone that fits best to you (that is, the nearest city in your 
+Choose the timezone that fits best to you (that is, the nearest city in your
 timezone - for Lausanne, for instance, we choose ``Europe/Zurich``) and type
 it at the prompt.
 
-If the automatic zone detection did not work for you,  type instead another 
+If the automatic zone detection did not work for you,  type instead another
 valid string.
 A list of valid strings can be found at
 http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
@@ -337,19 +337,19 @@ the "Default user email" is asked.
 
 We suggest here to use your institution email, that will be used to associate
 the calculations to you.
- 
-.. note:: In AiiDA, the user email is used as 
-  username, and also as unique identifier when importing/exporting data from 
+
+.. note:: In AiiDA, the user email is used as
+  username, and also as unique identifier when importing/exporting data from
   AiiDA.
-   
+
 .. note:: Even if you choose an email different from the default one
   (``aiida@localhost``), a user with email ``aiida@localhost`` will be
   set up,
   with its password set to ``None`` (disabling access via this user
   via API or Web interface).
-  
+
   The existence of a default user is internally useful for multi-user
-  setups, where only one user 
+  setups, where only one user
   runs the daemon, even if many users can simultaneously access the DB.
   See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
   for more details (only for advanced users).
@@ -378,19 +378,19 @@ Then, the following prompts will help you configure the database. Typical settin
 
 .. note:: When the "Database engine" is asked, use 'sqlite3' **only if** you want
   to try out AiiDA without setting up a database.
-  
+
   **However, keep in mind that for serious use, SQLite has serious
   limitations!!** For instance, when many calculations are managed at the same
   time, the database file is locked by SQLite to avoid corruption, but this
   can lead to timeouts that do not allow to AiiDA to properly store the
   calculations in the DB.
-  
+
   **Therefore, for production use of AiiDA, we strongly suggest to setup a
   "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
-  field, type either 'postgres' or 'mysql' according to the database you 
+  field, type either 'postgres' or 'mysql' according to the database you
   chose to use. See :doc:`here<database/index>` for the documentation
   to setup such databases (including info on how to proceed with ``verdi install``
-  in this case). 
+  in this case).
 
 At the end, AiiDA will also ask to configure your user, if you set up a user
 different from ``aiida@localhost``.
@@ -401,29 +401,29 @@ the database. Double-check your settings before reporting an error.
 .. note:: The repository will contain the same number of folders
   as the number of nodes plus the number of workflows. For very large databases,
   some operations on the repository folder, such as rsync or scanning its content,
-  might be very slow, and if they are performed reguarly this will slow down 
-  the computer due to an intensive use of the hard drive. 
-  Check out our :ref:`tips<repo_troubleshooting>` in the 
+  might be very slow, and if they are performed reguarly this will slow down
+  the computer due to an intensive use of the hard drive.
+  Check out our :ref:`tips<repo_troubleshooting>` in the
   troubeshooting section in case this happens.
-   
+
 
 Start the daemon
 -----------------
 If you configured your user account with your personal email (or if in
 general there are more than just one user) you will not be able to
 start the daemon with the command ``verdi daemon start`` before its configuration.
-  
+
   *If you are working in a single-user mode, and you are sure that nobody else
   is going to run the daemon*, you can configure your user as the (only)
   one who can run the daemon.
-  
+
 To configure the deamon, run::
-    
+
     verdi daemon configureuser
-   
+
 and (after having read and understood the warning text that appears) insert
 the email that you used above during the ``verdi install`` phase.
-  
+
 
 To try AiiDA and start the daemon, run::
 
@@ -446,7 +446,7 @@ To stop the daemon, use::
 
 A log of the warning/error messages of the daemon
 can be found in ``in ~/.aiida/daemon/log/``, and can also be seen using
-the ``verdi daemon logshow`` command. The daemon is 
+the ``verdi daemon logshow`` command. The daemon is
 a fundamental component of AiiDA, and it is in charge of submitting new
 calculations, checking their status on the cluster, retrieving and parsing
 the results of finished calculations, and managing the workflow steps.
@@ -454,7 +454,7 @@ the results of finished calculations, and managing the workflow steps.
 **Congratulations, your setup is complete!**
 
 Before going on, however, you will need to setup *at least one computer* (i.e.,
-on computational resource as a cluster or a supercomputer, on which you want 
+on computational resource as a cluster or a supercomputer, on which you want
 to run your calculations) *and one code*. The documentation for these steps can
 be found :doc:`here<setup/computerandcodes>`.
 
@@ -509,11 +509,11 @@ Further comments and troubleshooting
 * For some reasons, on some machines (notably often on Mac OS X) there is no
   default locale defined, and when you run ``verdi install`` for the first
   time it fails (see also `this issue`_ of django).  To solve the problem, first
-  remove the sqlite database that was created. 
-  
+  remove the sqlite database that was created.
+
   Then, run in your terminal (or maybe even better, add to your ``.bashrc``, but
   then remember to open a new shell window!)::
-  
+
      export LANG="en_US.UTF-8"
      export LC_ALL="en_US.UTF-8"
 
@@ -521,8 +521,8 @@ Further comments and troubleshooting
 
 .. _this issue: https://code.djangoproject.com/ticket/16017
 
-* [*Only for developers*] The developer tests of the *SSH* transport plugin are 
-  performed connecting to ``localhost``. The tests will fail if 
+* [*Only for developers*] The developer tests of the *SSH* transport plugin are
+  performed connecting to ``localhost``. The tests will fail if
   a passwordless ssh connection is not set up. Therefore, if you want to run
   the tests:
 
@@ -592,27 +592,27 @@ To perform the update:
 Updating from 0.4.1 to 0.5.0
 ----------------------------
 * Stop your daemon (using ``verdi daemon stop``)
-* Store your aiida source folder somewhere in case you did some 
+* Store your aiida source folder somewhere in case you did some
   modifications to some files
-* Replace the aiida folder with the new one (either from the tar.gz or, 
-  if you are using git, by doing a ``git pull``). If you use the same 
+* Replace the aiida folder with the new one (either from the tar.gz or,
+  if you are using git, by doing a ``git pull``). If you use the same
   folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
   variables
-* Run a ``verdi`` command, e.g., ``verdi calculation list``. This should 
+* Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
   raise an exception, and in the exception message you will see the
   command to run to update the schema version of the DB (v.0.5.0
   is using a newer version of the schema).
-  The command will look like 
+  The command will look like
   ``python manage.py --aiida-profile=default migrate``, but please read the
   message for the correct command to run.
-* If you run ``verdi calculation list`` again now, it should work without 
+* If you run ``verdi calculation list`` again now, it should work without
   error messages.
 * You can now restart your daemon and work as usual.
 
-.. note:: If you modified or added files, you need to put them back in place. 
-  Note that if you were working on a plugin, the plugin interface changed: 
+.. note:: If you modified or added files, you need to put them back in place.
+  Note that if you were working on a plugin, the plugin interface changed:
   you need to change the CalcInfo returning also a CodeInfo, as specified
-  :ref:`here<qeplugin-prepare-input>` and also accept a ``Code`` object 
+  :ref:`here<qeplugin-prepare-input>` and also accept a ``Code`` object
   among the inputs (also described in the same page).
 
 

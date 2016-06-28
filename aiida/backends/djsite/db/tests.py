@@ -23,9 +23,10 @@ __authors__ = "The AiiDA team."
 
 tests_to_run = settings_profile.__dict__.get('aiida_test_list', None)
 if tests_to_run is None:
-    # This is intended as a safety mechanism. This should help to ensure that tests are
-    # run only after setting the flag in the djsite.settings.settings module, and
-    # more importantly only after changing the DB and REPO to be test ones.
+    # This is intended as a safety mechanism. This should help to ensure that
+    # tests are  run only after setting the flag in the djsite.settings.settings
+    # module, and more importantly only after changing the DB and REPO to be
+    # test ones.
     raise InternalError("aiida_test_list is not set, but you are trying to run the tests...")
 
 actually_run_tests = []

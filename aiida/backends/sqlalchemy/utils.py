@@ -30,6 +30,8 @@ from aiida.common.exceptions import InvalidOperation, ConfigurationError
 from aiida.common.setup import (get_profile_config, DEFAULT_USER_CONFIG_FIELD)
 
 from aiida.backends import sqlalchemy, settings
+from aiida.backends.utils import check_schema_version
+
 from aiida.backends.profile import (is_profile_loaded,
                                     load_profile)
 
@@ -40,8 +42,44 @@ from aiida.backends.profile import (is_profile_loaded,
 #     """
 #     return sqlalchemy.session is not None
 
+def get_session(config):
+    """
+    :param config: the configuration for the set profile
+
+    :returns: A sqlalchemy session (connection to DB)
+    """
+    Session = sessionmaker(bind=get_engine(config))
+    return Session()
+
+
+def get_engine(config):
+    engine_url = (
+        "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+        "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+    ).format(**config)
+
+    engine = create_engine(engine_url,
+                           json_serializer=dumps_json,
+                           json_deserializer=loads_json)
+
+    return engine
+
 
 def load_dbenv(process=None, profile=None, connection=None):
+    """
+    Load the database environment (Django) and perform some checks.
+
+    :param process: the process that is calling this command ('verdi', or
+        'daemon')
+    :param profile: the string with the profile to use. If not specified,
+        use the default one specified in the AiiDA configuration file.
+    """
+    _load_dbenv_noschemacheck(process=process, profile=profile)
+    # Check schema version and the existence of the needed tables
+    # check_schema_version()
+
+
+def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
     """
     Load the SQLAlchemy database.
     """
@@ -51,38 +89,36 @@ def load_dbenv(process=None, profile=None, connection=None):
     # These should be on top of the file, but because of a circular import they need to be
     # here.
     from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-    from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
+    # from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
     from aiida.backends.sqlalchemy.models.comment import DbComment
     from aiida.backends.sqlalchemy.models.computer import DbComputer
-    from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes, table_groups_users
+    from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes #, table_groups_users
     from aiida.backends.sqlalchemy.models.lock import DbLock
     from aiida.backends.sqlalchemy.models.log import DbLog
-    from aiida.backends.sqlalchemy.models.node import DbLink, DbNode, DbPath
+    from aiida.backends.sqlalchemy.models.node import (
+            DbLink, DbNode, DbPath, DbCalcState)
     from aiida.backends.sqlalchemy.models.user import DbUser
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
 
     if not connection:
-        engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-                      "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
-        engine = create_engine(engine_url,
-                               json_serializer=dumps_json,
-                               json_deserializer=loads_json)
-        Session = sessionmaker(bind=engine)
-        sqlalchemy.session = Session()
+        sqlalchemy.session = get_session(config)
     else:
         Session = sessionmaker()
         sqlalchemy.session = Session(bind=connection)
 
 _aiida_autouser_cache = None
 
+
 def get_automatic_user():
+    from aiida.common.utils import get_configured_user_email
     global _aiida_autouser_cache
 
     if _aiida_autouser_cache is not None:
         return _aiida_autouser_cache
 
     from aiida.backends.sqlalchemy.models.user import DbUser
-
+    from aiida.common.utils import get_configured_user_email
+    
     email = get_configured_user_email()
 
     _aiida_autouser_cache = DbUser.query.filter(DbUser.email == email).first()
@@ -92,21 +128,20 @@ def get_automatic_user():
             email))
     return _aiida_autouser_cache
 
-def get_configured_user_email():
+
+def get_daemon_user():
     """
-    Return the email (that is used as the username) configured during the
-    first verdi install.
+    Return the username (email) of the user that should run the daemon,
+    or the default AiiDA user in case no explicit configuration is found
+    in the DbSetting table.
     """
+    from aiida.backends.sqlalchemy.globalsettings import get_global_setting
+    from aiida.common.setup import DEFAULT_AIIDA_USER
+
     try:
-        profile_conf = get_profile_config(settings.AIIDADB_PROFILE,
-                                          set_test_location=False)
-        email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
-    # I do not catch the error in case of missing configuration, because
-    # it is already a ConfigurationError
+        return get_global_setting('daemon|user')
     except KeyError:
-        raise ConfigurationError("No 'default_user' key found in the "
-                                 "AiiDA configuration file")
-    return email
+        return DEFAULT_AIIDA_USER
 
 
 def dumps_json(d):
@@ -126,6 +161,7 @@ def dumps_json(d):
     return json_dumps(f(d))
 
 date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
+
 
 def loads_json(s):
     """
@@ -173,6 +209,7 @@ def install_tc(session):
                               links_table_output_field, closure_table_name,
                               closure_table_parent_field,
                               closure_table_child_field))
+
 
 def get_pg_tc(links_table_name,
               links_table_input_field,
@@ -355,3 +392,47 @@ CREATE TRIGGER autoupdate_tc
                             closure_table_name=closure_table_name,
                             closure_table_parent_field=closure_table_parent_field,
                             closure_table_child_field=closure_table_child_field)
+
+
+def check_schema_version():
+    """
+    Check if the version stored in the database is the same of the version
+    of the code.
+
+    :note: if the DbSetting table does not exist, this function does not
+      fail. The reason is to avoid to have problems before running the first
+      migrate call.
+
+    :note: if no version is found, the version is set to the version of the
+      code. This is useful to have the code automatically set the DB version
+      at the first code execution.
+
+    :raise ConfigurationError: if the two schema versions do not match.
+      Otherwise, just return.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.backends import sqlalchemy as sa
+    from sqlalchemy.engine import reflection
+    from aiida.backends.sqlalchemy.models import SCHEMA_VERSION
+    from aiida.backends.utils import (
+        get_db_schema_version, set_db_schema_version,get_current_profile)
+
+    # Do not do anything if the table does not exist yet
+    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    if 'db_dbsetting' not in inspector.get_table_names():
+        return
+
+    code_schema_version = SCHEMA_VERSION
+    db_schema_version = get_db_schema_version()
+
+    if db_schema_version is None:
+        # No code schema defined yet, I set it to the code version
+        set_db_schema_version(code_schema_version)
+        db_schema_version = get_db_schema_version()
+
+    if code_schema_version != db_schema_version:
+        raise ConfigurationError(
+            "The code schema version is {}, but the version stored in the"
+            "database (DbSetting table) is {}, stopping.\n".
+            format(code_schema_version, db_schema_version)
+        )

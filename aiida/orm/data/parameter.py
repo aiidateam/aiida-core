@@ -14,7 +14,7 @@ class ParameterData(Data):
 
     Usual rules for attribute names apply (in particular, keys cannot start with
     an underscore). If this is the case, a ValueError will be raised.
-    
+
     You can then change/delete/add more attributes before storing with the
     usual methods of aiida.orm.Node
     """
@@ -22,14 +22,14 @@ class ParameterData(Data):
     def set_dict(self, dict):
         """
         Replace the current dictionary with another one.
-        
+
         :param dict: The dictionary to set.
         """
         import copy
         from aiida.common.exceptions import ModificationNotAllowed
-        
+
         old_dict = copy.deepcopy(self.get_dict())
-        
+
         try:
             # Delete existing attributes
             self._del_all_attrs()
@@ -48,12 +48,12 @@ class ParameterData(Data):
     def update_dict(self, dict):
         """
         Update the current dictionary with the keys provided in the dictionary.
-        
+
         :param dict: a dictionary with the keys to substitute. It works like
-          dict.update(), adding new keys and overwriting existing keys.        
+          dict.update(), adding new keys and overwriting existing keys.
         """
         for k, v in dict.iteritems():
-            self._set_attr(k, v)        
+            self._set_attr(k, v)
 
     def get_dict(self):
         """
@@ -71,7 +71,8 @@ class ParameterData(Data):
     def add_path(self, *args, **kwargs):
         from aiida.common.exceptions import ModificationNotAllowed
 
-        raise ModificationNotAllowed("Cannot add files or directories to a ParameterData object")
+        raise ModificationNotAllowed(
+            "Cannot add files or directories to a ParameterData object")
 
         # def validate(self):
         #        # There should be nothing specific to check
@@ -82,11 +83,9 @@ class ParameterData(Data):
         """
         To be used to get direct access to the underlying dictionary with the
         syntax node.dict.key or node.dict['key'].
-        
+
         :return: an instance of the AttributeResultManager.
         """
         from aiida.orm.node import AttributeManager
-        
+
         return AttributeManager(self)
-
-

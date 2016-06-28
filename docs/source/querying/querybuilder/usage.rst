@@ -167,7 +167,7 @@ There are several relationships that entities in Aiida can have:
 +------------------+---------------+------------------+-------------------------------------------------+
 | Computer         | Node          | *has_computer*   | The node of a computer                          |
 +------------------+---------------+------------------+-------------------------------------------------+
-| Node             | User          | *creater_of*     | The creator of a node is a user                 |
+| Node             | User          | *creator_of*     | The creator of a node is a user                 |
 +------------------+---------------+------------------+-------------------------------------------------+
 | User             | Node          | *created_by*     | The node was created by a user                  |
 +------------------+---------------+------------------+-------------------------------------------------+

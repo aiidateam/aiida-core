@@ -610,7 +610,7 @@ def create_configuration(profile='default'):
         if aiida_backend == 'django':
             db_possibilities.extend(['postgresql_psycopg2', 'sqlite', 'mysql'])
         elif aiida_backend == 'sqlalchemy':
-            db_possibilities.extend(['postgres'])
+            db_possibilities.extend(['postgresql_psycopg2'])
         if len(db_possibilities) > 0:
             db_engine = this_existing_confs.get('AIIDADB_ENGINE', db_possibilities[0])
             readline.set_startup_hook(lambda: readline.insert_text(

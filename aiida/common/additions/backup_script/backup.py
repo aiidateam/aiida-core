@@ -78,7 +78,6 @@ class Backup(object):
 
         # Configuring the logging
         logging.basicConfig(
-            level=logging.INFO,
             format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 
         # The logger of the backup script
@@ -150,13 +149,13 @@ class Backup(object):
             # If it is not parsable...
             except ValueError:
                 self._logger.error(
-                              "We did not manage to parse the start timestamp "
-                              "of the last backup.")
+                    "We did not manage to parse the start timestamp "
+                    "of the last backup.")
                 raise
 
         # Setting the backup directory & normalizing it
         self._backup_dir = os.path.normpath(
-                                backup_variables.get(self._backup_dir_key))
+            backup_variables.get(self._backup_dir_key))
         if (not self._ignore_backup_dir_existence_check and
                 not os.path.isdir(self._backup_dir)):
             self._logger.error("The given backup directory doesn't exist.")
@@ -165,8 +164,8 @@ class Backup(object):
         # You can not set an end-of-backup date and end days from the backup
         # that you should stop.
         if (backup_variables.get(self._days_to_backup_key) is not None and
-                backup_variables.get(
-                    self._end_date_of_backup_key) is not None):
+                    backup_variables.get(
+                        self._end_date_of_backup_key) is not None):
             self._logger.error("Only one end of backup date can be set.")
             raise BackupError("Only one backup end can be set (date or "
                               "days from backup start.")
@@ -181,7 +180,7 @@ class Backup(object):
                     curr_timezone = str(dtimezone.get_current_timezone())
                     self._end_date_of_backup = \
                         ptimezone(str(curr_timezone)).localize(
-                                         self._end_date_of_backup)
+                            self._end_date_of_backup)
                     self._logger.info("No timezone defined in the end date of "
                                       "backup timestamp. Setting current "
                                       "timezone ({}).".format(curr_timezone))
@@ -215,8 +214,8 @@ class Backup(object):
 
         # Parse the backup length threshold
         try:
-            hours_th= int(backup_variables.get(
-                                           self._backup_length_threshold_key))
+            hours_th = int(backup_variables.get(
+                self._backup_length_threshold_key))
             self._backup_length_threshold = datetime.timedelta(hours=hours_th)
         except ValueError:
             self._logger.error("The backup length threshold should be "
@@ -271,7 +270,7 @@ class Backup(object):
         # If the end of the backup is after the given end by the user,
         # adapt it accordingly
         if (self._internal_end_date_of_backup is not None and
-                backup_end_for_this_round > self._internal_end_date_of_backup):
+                    backup_end_for_this_round > self._internal_end_date_of_backup):
             backup_end_for_this_round = self._internal_end_date_of_backup
 
         # If the end of the backup is after then current time,
@@ -293,11 +292,11 @@ class Backup(object):
 
         # Construct the queries & query sets
         query_sets = [DbNode.objects.filter(
-                        mtime__gte=start_of_backup,
-                        mtime__lte=backup_end_for_this_round),
-                      DbWorkflow.objects.filter(
-                        mtime__gte=start_of_backup,
-                        mtime__lte=backup_end_for_this_round)]
+            mtime__gte=start_of_backup,
+            mtime__lte=backup_end_for_this_round),
+            DbWorkflow.objects.filter(
+                mtime__gte=start_of_backup,
+                mtime__lte=backup_end_for_this_round)]
 
         # Set the new start of the backup
         self._oldest_object_bk = backup_end_for_this_round
@@ -328,24 +327,24 @@ class Backup(object):
             for item in query_set.iterator():
                 if type(item) == DbWorkflow:
                     source_dir = os.path.normpath(RepositoryFolder(
-                                    section=Workflow._section_name,
-                                    uuid=item.uuid).abspath)
+                        section=Workflow._section_name,
+                        uuid=item.uuid).abspath)
                 elif type(item) == DbNode:
                     source_dir = os.path.normpath(RepositoryFolder(
-                                    section=Node._section_name,
-                                    uuid=item.uuid).abspath)
+                        section=Node._section_name,
+                        uuid=item.uuid).abspath)
                 else:
                     # Raise exception
                     self._logger.error(
                         "Unexpected item type to backup: {}"
-                        .format(type(item)))
+                            .format(type(item)))
                     raise BackupError(
                         "Unexpected item type to backup: {}"
-                        .format(type(item)))
+                            .format(type(item)))
 
                 # Get the relative directory without the / which
                 # separates the repository_path from the relative_dir.
-                relative_dir = source_dir[(len(repository_path)+1):]
+                relative_dir = source_dir[(len(repository_path) + 1):]
                 destination_dir = os.path.join(self._backup_dir, relative_dir)
 
                 # Remove the destination directory if it already exists
@@ -357,11 +356,11 @@ class Backup(object):
                     shutil.copytree(source_dir, destination_dir, True, None)
                 except EnvironmentError as e:
                     self._logger.warning(
-                        "Problem copying directory {} " .format(source_dir) +
+                        "Problem copying directory {} ".format(source_dir) +
                         "to {}. ".format(destination_dir) +
                         "More information: {} (Error no: {})".format(
-                                                             e.strerror,
-                                                             e.errno))
+                            e.strerror,
+                            e.errno))
                     # Raise envEr
 
                 # Extract the needed parent directories
@@ -369,23 +368,24 @@ class Backup(object):
                 copy_counter += 1
 
                 if (self._logger.getEffectiveLevel() <= logging.INFO and
-                        (datetime.datetime.now() -
-                         last_progress_print).seconds > 60):
+                            (datetime.datetime.now() -
+                                 last_progress_print).seconds > 60):
                     last_progress_print = datetime.datetime.now()
-                    percent_progress = (copy_counter*100 / dir_no_to_copy)
+                    percent_progress = (copy_counter * 100 / dir_no_to_copy)
                     self._logger.info(
-                         "Copied {} ".format(copy_counter) +
-                         "directories [{}]".format(item.__class__.__name__,) +
-                         " ({}/100)".format(percent_progress))
+                        "Copied {} ".format(copy_counter) +
+                        "directories [{}]".format(item.__class__.__name__, ) +
+                        " ({}/100)".format(percent_progress))
 
                 if (self._logger.getEffectiveLevel() <= logging.INFO and
-                        percent_progress < (copy_counter*100/dir_no_to_copy)):
-                    percent_progress = (copy_counter*100/dir_no_to_copy)
+                            percent_progress < (
+                                        copy_counter * 100 / dir_no_to_copy)):
+                    percent_progress = (copy_counter * 100 / dir_no_to_copy)
                     last_progress_print = datetime.datetime.now()
                     self._logger.info(
-                         "Copied {} ".format(copy_counter) +
-                         "directories [{}]".format(item.__class__.__name__,) +
-                         " ({}/100)".format(percent_progress))
+                        "Copied {} ".format(copy_counter) +
+                        "directories [{}]".format(item.__class__.__name__, ) +
+                        " ({}/100)".format(percent_progress))
 
         self._logger.info("{} directories copied".format(copy_counter))
 
@@ -397,9 +397,9 @@ class Backup(object):
                                 os.path.join(self._backup_dir, tempRelPath))
             except OSError as e:
                 self._logger.warning(
-                         "Problem setting permissions to directory " +
-                         "{}.".format(os.path.join(self._backup_dir,
-                                                   tempRelPath)))
+                    "Problem setting permissions to directory " +
+                    "{}.".format(os.path.join(self._backup_dir,
+                                              tempRelPath)))
                 self._logger.warning(os.path.join(repository_path, tempRelPath))
                 self._logger.warning("More information: " +
                                      "{} (Error no: {})".format(e.strerror,
@@ -412,7 +412,7 @@ class Backup(object):
         self._logger.info("End of backup")
         self._logger.info("Backed up objects with modification timestamp "
                           "less or equal to {}".format(
-                                self._oldest_object_bk))
+            self._oldest_object_bk))
 
     @staticmethod
     def _extract_parent_dirs(given_rel_dir, parent_dir_set):
@@ -444,7 +444,6 @@ class Backup(object):
 
 
 class BackupError(Exception):
-
     def __init__(self, value):
         self.value = value
 

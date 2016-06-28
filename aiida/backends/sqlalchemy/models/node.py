@@ -184,7 +184,8 @@ class DbNode(Base):
     @staticmethod
     def _set_attr(d, key, value):
         if '.' in key:
-            raise ValueError("We don't know how to treat key with dot in it yet")
+            raise ValueError(
+                "We don't know how to treat key with dot in it yet")
 
         d[key] = value
 
@@ -363,9 +364,9 @@ recent_states = select([
 # Use a mapper to create a "table"
 state_mapper = mapper(
     DbCalcState,
-    recent_states, 
+    recent_states,
     primary_key= recent_states.c.dbnode_id,
-    non_primary=True, 
+    non_primary=True,
 )
 
 # State_instance is a relationship that returns the row of DbCalcState

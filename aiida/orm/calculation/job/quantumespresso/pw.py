@@ -11,7 +11,7 @@ Plugin to create a Quantum Espresso pw.x file.
 # TODO: many cards missing: check and implement
 #       e.g.: ['CONSTRAINTS', 'OCCUPATIONS']
 # TODO: implement pre... and post... hooks to add arbitrary strings before
-#       and after a namelist, and a 'final_string' (all optional); useful 
+#       and after a namelist, and a 'final_string' (all optional); useful
 #       for development when new cards are needed
 # TODO: all a lot of logger.debug stuff
 import os
@@ -38,9 +38,10 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
     def _init_internal_params(self):
         super(PwCalculation, self)._init_internal_params()
 
-        self._DATAFILE_XML = os.path.join(BasePwCpInputGenerator._OUTPUT_SUBFOLDER,
-                                          '{}.save'.format(BasePwCpInputGenerator._PREFIX),
-                                          BasePwCpInputGenerator._DATAFILE_XML_BASENAME)
+        self._DATAFILE_XML = os.path.join(
+            BasePwCpInputGenerator._OUTPUT_SUBFOLDER,
+            '{}.save'.format(BasePwCpInputGenerator._PREFIX),
+            BasePwCpInputGenerator._DATAFILE_XML_BASENAME)
 
         # Default PW output parser provided by AiiDA
         self._default_parser = 'quantumespresso.basicpw'
@@ -63,9 +64,11 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
                                   ('SYSTEM', 'celldm'),
                                   ('SYSTEM', 'nat'),  # set later
                                   ('SYSTEM', 'ntyp'),  # set later
-                                  ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
-                                  ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
-        ]
+                                  ('SYSTEM', 'a'), ('SYSTEM', 'b'),
+                                  ('SYSTEM', 'c'),
+                                  ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'),
+                                  ('SYSTEM', 'cosbc'),
+                                  ]
 
         self._use_kpoints = True
 
@@ -90,3 +93,20 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
 
         return retdict
    
+    @classmethod
+    def input_helper(cls, *args, **kwargs):
+        """
+        Validate if the keywords are valid Quantum ESPRESSO pw.x keywords, and
+        also helps in preparing the input parameter dictionary in a 
+        'standardized' form (e.g., converts ints to floats when required,
+        or if the flag flat_mode is specified, puts the keywords in the right
+        namelists).
+        
+        This function calls 
+        :py:func:`aiida.orm.calculation.job.quantumespresso.helpers.pw_input_helper`,
+        see its docstring for further information.
+        """
+        from . import helpers
+        return helpers.pw_input_helper(*args, **kwargs)
+    
+    

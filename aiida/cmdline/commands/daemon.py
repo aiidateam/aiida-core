@@ -10,6 +10,8 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
+from aiida.backends.utils import is_dbenv_loaded
+
 
 def is_daemon_user():
     """
@@ -50,9 +52,6 @@ class Daemon(VerdiCommandWithSubcommands):
         start, stop, status and restart.
         """
         from aiida.common import setup
-        from aiida.backends.utils import load_dbenv
-
-        load_dbenv(process='daemon')
 
         self.valid_subcommands = {
             'start': (self.daemon_start, self.complete_none),
@@ -106,6 +105,10 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         Start the daemon
         """
+        if not is_dbenv_loaded():
+            from aiida.backends.utils import load_dbenv
+            load_dbenv(process='daemon')
+
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(
@@ -232,6 +235,9 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         Print the status of the daemon
         """
+        if not is_dbenv_loaded():
+            from aiida.backends.utils import load_dbenv
+            load_dbenv(process='daemon')
 
         if args:
             print >> sys.stderr, (
@@ -301,6 +307,10 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         Show the log of the daemon, press CTRL+C to quit.
         """
+        if not is_dbenv_loaded():
+            from aiida.backends.utils import load_dbenv
+            load_dbenv(process='daemon')
+
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(
@@ -327,6 +337,10 @@ class Daemon(VerdiCommandWithSubcommands):
         Restart the daemon. Before restarting, wait for the daemon to really
         shut down.
         """
+        if not is_dbenv_loaded():
+            from aiida.backends.utils import load_dbenv
+            load_dbenv(process='daemon')
+
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(
@@ -364,6 +378,10 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         Configure the user that can run the daemon.
         """
+        if not is_dbenv_loaded():
+            from aiida.backends.utils import load_dbenv
+            load_dbenv(process='daemon')
+
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(

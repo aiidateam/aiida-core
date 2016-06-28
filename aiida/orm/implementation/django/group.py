@@ -15,7 +15,6 @@ from django.db import transaction, IntegrityError
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
 
-
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
@@ -23,7 +22,6 @@ __version__ = "0.6.0"
 
 
 class Group(AbstractGroup):
-
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbGroup
         dbgroup = kwargs.pop('dbgroup', None)
@@ -47,7 +45,8 @@ class Group(AbstractGroup):
             name = kwargs.pop('name', None)
             if name is None:
                 raise ValueError("You have to specify a group name")
-            group_type = kwargs.pop('type_string', "")  # By default, an user group
+            group_type = kwargs.pop('type_string',
+                                    "")  # By default, an user group
             user = kwargs.pop('user', get_automatic_user())
             description = kwargs.pop('description', "")
             self._dbgroup = DbGroup(name=name, description=description,
@@ -70,7 +69,7 @@ class Group(AbstractGroup):
         self.dbgroup.description = value
 
         # Update the entry in the DB, if the group is already stored
-        if self._is_stored:
+        if self.is_stored:
             self.dbgroup.save()
 
     @property
@@ -104,14 +103,11 @@ class Group(AbstractGroup):
             return self._dbnode.pk
 
     @property
-    def _is_stored(self):
+    def is_stored(self):
         return self.pk is not None
 
     def store(self):
-        if self._is_stored:
-            raise ModificationNotAllowed("Cannot restore a group that was "
-                                         "already stored")
-        else:
+        if not self.is_stored:
             sid = transaction.savepoint()
             try:
                 self.dbgroup.save()
@@ -126,7 +122,7 @@ class Group(AbstractGroup):
 
     def add_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
-        if not self._is_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
 
@@ -183,7 +179,7 @@ class Group(AbstractGroup):
 
     def remove_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
-        if not self._is_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("Cannot remove nodes from a group "
                                          "before storing")
 

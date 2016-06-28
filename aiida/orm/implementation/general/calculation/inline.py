@@ -7,6 +7,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
+
 class InlineCalculation(Calculation):
     """
     Subclass used for calculations that are automatically generated

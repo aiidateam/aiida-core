@@ -161,7 +161,7 @@ class QueryBuilder(AbstractQueryBuilder):
                 "Filtering by type is not implemented\n"
                 "in the Django-Backend"
             )
-        if operator == 'has_key':
+        if operator in ('has_key', 'contains'):
             raise NotImplementedError(
                 "Filtering by a key is not implemented in the Django-backend"
             )

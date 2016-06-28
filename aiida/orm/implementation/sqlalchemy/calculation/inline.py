@@ -2,10 +2,13 @@
 
 from aiida.backends.sqlalchemy import session
 
-from aiida.orm.implementation.general.calculation.inline import InlineCalculation
+from aiida.orm.implementation.general.calculation.inline import \
+    InlineCalculation
 
 from aiida.orm.data import Data
 from aiida.common.exceptions import ModificationNotAllowed
+from aiida.common.links import LinkType
+from aiida.utils.calculation import add_source_info
 
 # TODO: right now this is a basic copy from the django version, only with the
 # transaction part ported to sqla. This might be a good idea to abstract just
@@ -16,13 +19,12 @@ __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
-def make_inline(func):
 
+def make_inline(func):
     def wrapped_function(*args, **kwargs):
         """
         This wrapper function is the actual function that is called.
         """
-        import inspect
 
         # Note: if you pass a lambda function, the name will be <lambda>; moreover
         # if you define a function f, and then do "h=f", h.__name__ will
@@ -43,27 +45,18 @@ def make_inline(func):
             if not isinstance(v, Data):
                 raise TypeError("Input data to a wrapped inline calculation "
                                 "must be Data nodes")
-                #kwargs should always be strings, no need to check
-                #if not isinstance(k, basestring):
+                # kwargs should always be strings, no need to check
+                # if not isinstance(k, basestring):
                 #    raise TypeError("")
 
         # Create the calculation (unstored)
         c = InlineCalculation()
         # Add data input nodes as links
         for k, v in kwargs.iteritems():
-            c._add_link_from(v, label=k)
+            c.add_link_from(v, label=k)
 
         # Try to get the source code
-        source_code, first_line = inspect.getsourcelines(func)
-        try:
-            with open(inspect.getsourcefile(func)) as f:
-                source = f.read()
-        except IOError:
-            source = None
-        c._set_attr("source_code", "".join(source_code))
-        c._set_attr("first_line_source_code", first_line)
-        c._set_attr("source_file", source)
-        c._set_attr("function_name", function_name)
+        add_source_info(c, func)
 
         # Run the wrapped function
         retval = func(**kwargs)
@@ -80,7 +73,7 @@ def make_inline(func):
                 raise TypeError("One of the values (for key '{}') of the "
                                 "dictionary returned by the wrapped function "
                                 "is not a Data node".format(k))
-            if v._is_stored:
+            if v.is_stored:
                 raise ModificationNotAllowed(
                     "One of the values (for key '{}') of the "
                     "dictionary returned by the wrapped function "
@@ -90,8 +83,7 @@ def make_inline(func):
 
         # Add link to output data nodes
         for k, v in retval.iteritems():
-            v._add_link_from(c, label=k)
-
+            v.add_link_from(c, label=k, link_type=LinkType.RETURN)
 
         # I call store_all for the Inline calculation;
         # this will store also the inputs, if neeced.
@@ -102,6 +94,6 @@ def make_inline(func):
             v.store(with_transaction=False)
 
         # Return the calculation and the return values
-        return (c, retval)
+        return c, retval
 
     return wrapped_function

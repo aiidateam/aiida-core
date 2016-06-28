@@ -67,3 +67,19 @@ def localtime(value, timezone=None):
         # This method is available for pytz time zones.
         value = timezone.normalize(value)
     return value
+
+
+def delta(from_time, to_time=None):
+    if to_time is None:
+        to_time = now()
+
+    try:
+        x0 = make_aware(from_time)
+    except ValueError:
+        x0 = from_time
+    try:
+        x1 = make_aware(to_time)
+    except ValueError:
+        x1 = to_time
+
+    return x1 - x0

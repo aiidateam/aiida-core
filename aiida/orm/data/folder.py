@@ -32,7 +32,7 @@ class FolderData(Data):
 
         # TODO: implement the logic on the folder? Or set a 'locked' flag on folders?
 
-        if self._to_be_stored:
+        if not self.is_stored:
             self._get_folder_pathsubfolder.replace_with_folder(folder, move=False, overwrite=overwrite)
         else:
             raise ModificationNotAllowed("You cannot change the files after the node has been stored")

@@ -10,7 +10,6 @@ from aiida.common.datastructures import wf_states
 from aiida.utils import timezone
 from aiida.utils.logger import get_dblogger_extra
 
-
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
@@ -31,12 +30,14 @@ def get_group_list(user, type_string, n_days_ago=None,
                          **name_filters)
 
     return tuple([
-        (str(g.pk), g.name, len(g.nodes), g.user.email.strip(), g.description)
-        for g in groups
-    ])
+                     (str(g.pk), g.name, len(g.nodes), g.user.email.strip(),
+                      g.description)
+                     for g in groups
+                     ])
 
 
-def get_workflow_list(pk_list=[], user=None, all_states=False, n_days_ago=None):
+def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
+                      n_days_ago=None):
     """
     Get a list of workflow.
     """
@@ -76,7 +77,7 @@ def get_log_messages(obj):
     return log_messages
 
 
-def get_valid_job_calculation(user=None, pk_list=[], n_days_after=None,
+def get_valid_job_calculation(user=None, pk_list=tuple(), n_days_after=None,
                               n_days_before=None, computers=None):
     """
     Get a list of valid job calculation from the user.
@@ -91,7 +92,7 @@ def get_valid_job_calculation(user=None, pk_list=[], n_days_after=None,
                     calc_states.PARSINGFAILED, calc_states.FAILED]
 
     attributes_filter = DbAttribute.objects.filter(key='state',
-                                                          tval__in=valid_states)
+                                                   tval__in=valid_states)
     # NOTE: IMPORTED state is not a dbattribute so won't be filtered out
     # at this stage, but this case should be sorted out later when we try
     # to access the remote_folder (if directory is not accessible, we skip)
@@ -135,7 +136,8 @@ def get_computers_work_dir(calculations, user):
     remotes = {}
     for computer in computers:
         remotes[computer.name] = {
-            'transport': get_authinfo(computer=computer, aiidauser=user).get_transport(),
+            'transport': get_authinfo(computer=computer,
+                                      aiidauser=user).get_transport(),
             'computer': computer,
         }
 

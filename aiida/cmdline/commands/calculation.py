@@ -151,12 +151,13 @@ class Calculation(VerdiCommandWithSubcommands):
                                      calc_states.COMPUTED,
                                      calc_states.RETRIEVING,
                                      calc_states.PARSING,
-                            ])
+                                     ])
 
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only calculations created in the past N days",
                             action='store', type=int)
-        parser.add_argument('-g', '--group', '--group-name', metavar='GROUPNAME',
+        parser.add_argument('-g', '--group', '--group-name',
+                            metavar='GROUPNAME',
                             help="add a filter to show only calculations within a given group",
                             action='store', type=str)
         parser.add_argument('-G', '--group-pk', metavar='GROUPPK',
@@ -175,9 +176,9 @@ class Calculation(VerdiCommandWithSubcommands):
         parser.add_argument('-t', '--absolute-time',
                             dest='relative_ctime', action='store_false',
                             help="Print the absolute creation time, rather than the relative creation time")
-        #~ parser.add_argument('-w', '--with-scheduler-state',
-                            #~ action='store_true',
-                            #~ help='Print the scheduler state (slow)')
+        # ~ parser.add_argument('-w', '--with-scheduler-state',
+        # ~ action='store_true',
+        # ~ help='Print the scheduler state (slow)')
         parser.add_argument('-l', '--limit',
                             type=int,
                             default=None,
@@ -198,16 +199,16 @@ class Calculation(VerdiCommandWithSubcommands):
 
         try:
             C._list_calculations(
-                    states=parsed_args.states,
-                    past_days=parsed_args.past_days,
-                    pks=parsed_args.pks,
-                    all_users=parsed_args.all_users,
-                    group=parsed_args.group,
-                    group_pk=parsed_args.group_pk,
-                    relative_ctime=parsed_args.relative_ctime,
-                    # with_scheduler_state=parsed_args.with_scheduler_state,
-                    order_by=parsed_args.order_by,
-                    limit=parsed_args.limit
+                states=parsed_args.states,
+                past_days=parsed_args.past_days,
+                pks=parsed_args.pks,
+                all_users=parsed_args.all_users,
+                group=parsed_args.group,
+                group_pk=parsed_args.group_pk,
+                relative_ctime=parsed_args.relative_ctime,
+                # with_scheduler_state=parsed_args.with_scheduler_state,
+                order_by=parsed_args.order_by,
+                limit=parsed_args.limit
             )
         except Exception as e:
             import traceback
@@ -220,10 +221,10 @@ class Calculation(VerdiCommandWithSubcommands):
             print traceback.tb_lineno(sys.exc_info()[2])
             ex_type, ex, tb = sys.exc_info()
             print '6', traceback.print_tb(tb)
-            #~ print >> sys.stderr, "Error ({}): {}".format(
-                    #~ e.__class__.__name__,
-                    #~ e.message
-                #~ )
+            # ~ print >> sys.stderr, "Error ({}): {}".format(
+            # ~ e.__class__.__name__,
+            # ~ e.message
+            # ~ )
 
     def calculation_res(self, *args):
         """
@@ -276,11 +277,12 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent
-        from aiida.backends.utils import get_log_messages
+        from aiida.cmdline.common import print_node_info
 
         if not is_dbenv_loaded():
             load_dbenv()
 
+        table_headers = ['Link label', 'PK', 'Type']
         for calc_pk in args:
             try:
                 calc = load_node(int(calc_pk))
@@ -290,24 +292,8 @@ class Calculation(VerdiCommandWithSubcommands):
             except NotExistent:
                 print "*** {}: Not a valid calculation".format(calc_pk)
                 continue
-            print "*** {} [{}]".format(calc_pk, calc.label)
-            code = calc.get_code()
-            if code is not None:
-                print "Using code: {}".format(code.label)
-            print "##### INPUTS:"
-            for k, v in calc.get_inputs_dict().iteritems():
-                if k=='code': continue
-                print k, v.pk, v.__class__.__name__
-            print "##### OUTPUTS:"
-            for k, v in calc.get_outputs(also_labels=True):
-                print k, v.pk, v.__class__.__name__
-            log_messages = get_log_messages(calc)
-            if log_messages:
-                print ("##### NOTE! There are {} log messages for this "
-                       "calculation.".format(len(log_messages)))
-                print "      Use the 'calculation logshow' command to see them."
-            if len(args) > 1:
-                print ""
+
+            print_node_info(calc)
 
     def calculation_logshow(self, *args):
         from aiida.common.exceptions import NotExistent
@@ -638,7 +624,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.calculation.job import JobCalculation as Calc
-        from aiida.common.exceptions import NotExistent, InvalidOperation, RemoteOperationError
+        from aiida.common.exceptions import NotExistent, InvalidOperation, \
+            RemoteOperationError
 
         import argparse
 
@@ -647,14 +634,17 @@ class Calculation(VerdiCommandWithSubcommands):
             description='Kill AiiDA calculations.')
         parser.add_argument('calcs', metavar='PK', type=int, nargs='+',
                             help='The principal key (PK) of the calculations to kill')
-        parser.add_argument('-f', '--force', help='Force the kill of calculations',
+        parser.add_argument('-f', '--force',
+                            help='Force the kill of calculations',
                             action="store_true")
         args = list(args)
         parsed_args = parser.parse_args(args)
 
         if not parsed_args.force:
-            sys.stderr.write("Are you sure to kill {} calculation{}? [Y/N] ".format(
-                len(parsed_args.calcs), "" if len(parsed_args.calcs) == 1 else "s"))
+            sys.stderr.write(
+                "Are you sure to kill {} calculation{}? [Y/N] ".format(
+                    len(parsed_args.calcs),
+                    "" if len(parsed_args.calcs) == 1 else "s"))
             if not wait_for_confirmation():
                 sys.exit(0)
 
@@ -723,18 +713,17 @@ class Calculation(VerdiCommandWithSubcommands):
         user = get_automatic_user()
 
         if (parsed_args.pk is not None and
-            (parsed_args.past_days is not None) or
-            (parsed_args.older_than is not None)):
-
+                (parsed_args.past_days is not None) or
+                (parsed_args.older_than is not None)):
             print >> sys.stderr, ("You cannot specify both a list of "
-                                    "calculation pks and the -p or -o "
-                                    "options")
+                                  "calculation pks and the -p or -o "
+                                  "options")
             sys.exit(0)
 
         if ((parsed_args.past_days is None) and
                 (parsed_args.older_than is None)):
             print >> sys.stderr, ("Either a list of calculation pks or the "
-                                    "-p and/or -o options should be specified")
+                                  "-p and/or -o options should be specified")
             sys.exit(0)
 
         calc_list = get_valid_job_calculation(
@@ -746,8 +735,9 @@ class Calculation(VerdiCommandWithSubcommands):
         )
 
         if not parsed_args.force:
-            sys.stderr.write("Are you sure you want to clean the work directory? "
-                             "[Y/N] ")
+            sys.stderr.write(
+                "Are you sure you want to clean the work directory? "
+                "[Y/N] ")
             if not wait_for_confirmation():
                 sys.exit(0)
 
@@ -759,27 +749,31 @@ class Calculation(VerdiCommandWithSubcommands):
         # dbattrs_and_dbcomp_pks = [ (_[1],_[2]) for _ in calc_list_data ]
 
         # get all computers associated to the calc uuids above, and load them
-        dbcomputers = [ _[1] for _ in calc_list_data]
-        computers = [ Computer.get(_) for _ in dbcomputers ]
+        dbcomputers = [_[1] for _ in calc_list_data]
+        computers = [Computer.get(_) for _ in dbcomputers]
 
         # now build a dictionary with the info of folders to delete
         remotes = {}
         for computer in computers:
             # initialize a key of info for a given computer
-            remotes[computer.name] = {'transport': get_authinfo(computer=computer,
-                                                                aiidauser=user).get_transport(),
-                                      'computer': computer,
-            }
+            remotes[computer.name] = {
+                'transport': get_authinfo(computer=computer,
+                                          aiidauser=user).get_transport(),
+                'computer': computer,
+                }
             # select the calc pks done on this computer
-            this_calc_pks = [_[0] for _ in calc_list_data if _[1] == computer.pk]
-            this_calc_uuids = [_[2] for _ in calc_list_data if _[1] == computer.pk]
+            this_calc_pks = [_[0] for _ in calc_list_data if
+                             _[1] == computer.pk]
+            this_calc_uuids = [_[2] for _ in calc_list_data if
+                               _[1] == computer.pk]
 
             # now get the paths of remote folder
             # look in the DbAttribute table,
             # for Attribute which have a key called remote_workdir,
             # and the dbnode_id referring to the given calcs
-            dbattrs = models.DbAttribute.objects.filter(dbnode_id__in=this_calc_pks,
-                                                        key='remote_workdir')
+            dbattrs = models.DbAttribute.objects.filter(
+                dbnode_id__in=this_calc_pks,
+                key='remote_workdir')
 
             remote_workdirs = [_[0] for _ in dbattrs.values_list('tval')]
             remotes[computer.name]['remotes'] = remote_workdirs
@@ -793,7 +787,8 @@ class Calculation(VerdiCommandWithSubcommands):
             t = dic['transport']
             with t:
                 remote_user = remote_user = t.whoami()
-                aiida_workdir = dic['computer'].get_workdir().format(username=remote_user)
+                aiida_workdir = dic['computer'].get_workdir().format(
+                    username=remote_user)
                 t.chdir(aiida_workdir)
                 # Hardcoding the sharding equal to 3 parts!
                 existing_folders = t.glob('*/*/*')
@@ -807,4 +802,4 @@ class Calculation(VerdiCommandWithSubcommands):
                         print "Deleted work directories: {}".format(counter)
 
             print >> sys.stderr, "{} remote folder{} cleaned.".format(counter,
-                                                 "" if counter == 1 else "s")
+                                                                      "" if counter == 1 else "s")

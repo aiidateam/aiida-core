@@ -146,8 +146,10 @@ class Computer(AbstractComputer):
 
         try:
             self.dbcomputer.save(commit=True)
-        except SQLAlchemyError as e:
-            raise ValueError("Integrity error, probably the hostname already exists in the DB")
+        except SQLAlchemyError:
+            raise ValueError(
+                "Integrity error, probably the hostname already exists in the"
+                " DB")
 
         return self
 

@@ -5,8 +5,6 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
@@ -15,6 +13,7 @@ from aiida.common.exceptions import (
     ModificationNotAllowed,
 )
 from aiida.common import aiidalogger
+from aiida.common.links import LinkType
 from aiida.orm import load_node
 
 
@@ -131,10 +130,11 @@ def update_running_calcs_status(authinfo):
                     # TODO: implement a counter, after N retrials
                     # set it to a status that
                     # requires the user intervention
-                    execlogger.warning("There was an exception for "
-                                       "calculation {} ({}): {}".format(
-                        c.pk, e.__class__.__name__, e.message),
-                                       extra=logger_extra)
+                    execlogger.warning(
+                        "There was an exception for "
+                        "calculation {} ({}): {}".format(
+                            c.pk, e.__class__.__name__, e.message
+                        ), extra=logger_extra)
                     continue
 
             for c in computed:
@@ -443,17 +443,19 @@ def submit_calc(calc, authinfo, transport=None):
         computer = calc.get_computer()
 
         with SandboxFolder() as folder:
-            calcinfo, script_filename = calc._presubmit(folder,
-                                                        use_unstored_links=False)
+            calcinfo, script_filename = calc._presubmit(
+                folder, use_unstored_links=False)
 
             codes_info = calcinfo.codes_info
-            input_codes = [ load_node(_.code_uuid, parent_class=Code) for _ in codes_info ]
+            input_codes = [load_node(_.code_uuid, parent_class=Code)
+                           for _ in codes_info ]
 
             for code in input_codes:
                 if not code.can_run_on(computer):
-                    raise InputValidationError("The selected code {} for calculation "
-                                               "{} cannot run on computer {}".format(
-                        code.pk, calc.pk, computer.name))
+                    raise InputValidationError(
+                        "The selected code {} for calculation "
+                        "{} cannot run on computer {}".
+                        format(code.pk, calc.pk, computer.name))
 
             # After this call, no modifications to the folder should be done
             calc._store_raw_input_folder(folder.abspath)
@@ -467,27 +469,30 @@ def submit_calc(calc, authinfo, transport=None):
             remote_working_directory = authinfo.get_workdir().format(
                 username=remote_user)
             if not remote_working_directory.strip():
-                raise ConfigurationError("[submission of calc {}] "
-                                         "No remote_working_directory configured for computer "
-                                         "'{}'".format(calc.pk, computer.name))
+                raise ConfigurationError(
+                    "[submission of calc {}] "
+                    "No remote_working_directory configured for computer "
+                    "'{}'".format(calc.pk, computer.name))
 
             # If it already exists, no exception is raised
             try:
                 t.chdir(remote_working_directory)
             except IOError:
-                execlogger.debug("[submission of calc {}] "
-                                 "Unable to chdir in {}, trying to create it".format(
-                    calc.pk, remote_working_directory),
-                                 extra=logger_extra)
+                execlogger.debug(
+                    "[submission of calc {}] "
+                    "Unable to chdir in {}, trying to create it".
+                    format(calc.pk, remote_working_directory),
+                    extra=logger_extra)
                 try:
                     t.makedirs(remote_working_directory)
                     t.chdir(remote_working_directory)
                 except (IOError, OSError) as e:
-                    raise ConfigurationError("[submission of calc {}] "
-                                             "Unable to create the remote directory {} on "
-                                             "computer '{}': {}".format(calc.pk,
-                                                                        remote_working_directory, computer.name,
-                                                                        e.message))
+                    raise ConfigurationError(
+                        "[submission of calc {}] "
+                        "Unable to create the remote directory {} on "
+                        "computer '{}': {}".
+                        format(calc.pk, remote_working_directory, computer.name,
+                               e.message))
             # Store remotely with sharding (here is where we choose
             # the folder structure of remote jobs; then I store this
             # in the calculation properties using _set_remote_dir
@@ -585,7 +590,8 @@ def submit_calc(calc, authinfo, transport=None):
 
             remotedata = RemoteData(computer=computer,
                                     remote_path=workdir)
-            remotedata._add_link_from(calc, label='remote_folder')
+            remotedata.add_link_from(calc, label='remote_folder',
+                                     link_type=LinkType.CREATE)
             remotedata.store()
 
             job_id = s.submit_from_script(t.getcwd(), script_filename)
@@ -676,8 +682,9 @@ def retrieve_computed_for_authinfo(authinfo):
                     t.chdir(workdir)
 
                     retrieved_files = FolderData()
-                    retrieved_files._add_link_from(calc,
-                                                   label=calc._get_linkname_retrieved())
+                    retrieved_files.add_link_from(
+                        calc, label=calc._get_linkname_retrieved(),
+                        link_type=LinkType.CREATE)
 
                     # First, retrieve the files of folderdata
                     with SandboxFolder() as folder:
@@ -756,7 +763,8 @@ def retrieve_computed_for_authinfo(authinfo):
                             SinglefileSubclass = DataFactory(subclassname)
                             singlefile = SinglefileSubclass()
                             singlefile.set_file(filename)
-                            singlefile._add_link_from(calc, label=linkname)
+                            singlefile.add_link_from(calc, label=linkname,
+                                                     link_type=LinkType.CREATE)
                             singlefiles.append(singlefile)
 
                     # Finally, store
@@ -785,7 +793,8 @@ def retrieve_computed_for_authinfo(authinfo):
                         successful, new_nodes_tuple = parser.parse_from_calc()
 
                         for label, n in new_nodes_tuple:
-                            n._add_link_from(calc, label=label)
+                            n.add_link_from(calc, label=label,
+                                            link_type=LinkType.CREATE)
                             n.store()
 
                     if successful:

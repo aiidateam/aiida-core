@@ -16,7 +16,7 @@ aiida_folder = os.path.split(os.path.abspath(__file__))[0]
 fname = os.path.join(aiida_folder, 'aiida', '__init__.py')
 with open(fname) as aiida_init:
     ns = {}
-    exec(aiida_init.read(), ns)
+    exec (aiida_init.read(), ns)
     aiida_version = ns['__version__']
 
 if os.path.exists('CHANGELOG_EPFL.txt'):
@@ -41,13 +41,13 @@ setup(
     # for a useful dicussion
     install_requires=[
         'django', 'django_extensions', 'pytz', 'django-celery',
-        'celery', 'kombu', 'billiard', 'amqp', 'anyjson', 'six', 'supervisor',
+        'celery', 'billiard', 'anyjson', 'six', 'supervisor',
         'meld3', 'paramiko', 'ecdsa', 'pycrypto', 'numpy', 'django-tastypie',
-        'python-dateutil', 'python-mimeparse',
-        ],
+        'python-dateutil', 'python-mimeparse', 'plum', 'enum34', 'voluptuous',
+        'click',
+    ],
     packages=find_packages(),
     scripts=[os.path.join(bin_folder, f) for f in os.listdir(bin_folder)
              if not os.path.isdir(os.path.join(bin_folder, f))],
     long_description=open(os.path.join(aiida_folder, 'README.rst')).read(),
 )
-

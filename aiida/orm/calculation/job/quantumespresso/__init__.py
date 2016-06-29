@@ -142,114 +142,15 @@ class BasePwCpInputGenerator(object):
             },
         }
 
-    def _prepare_for_submission(self, tempfolder, inputdict):
+    def _generate_PWCPinputdata(self,parameters,settings_dict,pseudos,structure,kpoints=None):
         """
-        This is the routine to be called when you want to create
-        the input files and related stuff with a plugin.
-
-        :param tempfolder: a aiida.common.folders.Folder subclass where
-                           the plugin should put all its files.
-        :param inputdict: a dictionary with the input nodes, as they would
-                be returned by get_inputs_dict (without the Code!)
+        This method creates the content of an input file
+        in the PW/CP format.
+        :
         """
         from aiida.common.utils import get_unique_filename, get_suggestion
         import re
-
-        local_copy_list = []
-        remote_copy_list = []
-        remote_symlink_list = []
-
-        try:
-            parameters = inputdict.pop(self.get_linkname('parameters'))
-        except KeyError:
-            raise InputValidationError(
-                "No parameters specified for this calculation")
-        if not isinstance(parameters, ParameterData):
-            raise InputValidationError(
-                "parameters is not of type ParameterData")
-
-        try:
-            structure = inputdict.pop(self.get_linkname('structure'))
-        except KeyError:
-            raise InputValidationError(
-                "No structure specified for this calculation")
-        if not isinstance(structure, StructureData):
-            raise InputValidationError("structure is not of type StructureData")
-
-        if self._use_kpoints:
-            try:
-                kpoints = inputdict.pop(self.get_linkname('kpoints'))
-            except KeyError:
-                raise InputValidationError(
-                    "No kpoints specified for this calculation")
-            if not isinstance(kpoints, KpointsData):
-                raise InputValidationError("kpoints is not of type KpointsData")
-
-        # Settings can be undefined, and defaults to an empty dictionary
-        settings = inputdict.pop(self.get_linkname('settings'), None)
-        if settings is None:
-            settings_dict = {}
-        else:
-            if not isinstance(settings, ParameterData):
-                raise InputValidationError("settings, if specified, must be of "
-                                           "type ParameterData")
-            # Settings converted to uppercase
-            settings_dict = _uppercase_dict(settings.get_dict(),
-                                            dict_name='settings')
-
-        pseudos = {}
-        # I create here a dictionary that associates each kind name to a pseudo
-        for link in inputdict.keys():
-            if link.startswith(self._get_linkname_pseudo_prefix()):
-                kindstring = link[len(self._get_linkname_pseudo_prefix()):]
-                kinds = kindstring.split('_')
-                the_pseudo = inputdict.pop(link)
-                if not isinstance(the_pseudo, UpfData):
-                    raise InputValidationError(
-                        "Pseudo for kind(s) {} is not of "
-                        "type UpfData".format(",".join(kinds)))
-                for kind in kinds:
-                    if kind in pseudos:
-                        raise InputValidationError("Pseudo for kind {} passed "
-                                                   "more than one time".format(
-                            kind))
-                    pseudos[kind] = the_pseudo
-
-        parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'),
-                                           None)
-        if parent_calc_folder is not None:
-            if not isinstance(parent_calc_folder, RemoteData):
-                raise InputValidationError("parent_calc_folder, if specified, "
-                                           "must be of type RemoteData")
-
-        vdw_table = inputdict.pop(self.get_linkname('vdw_table'), None)
-        if vdw_table is not None:
-            if not isinstance(vdw_table, SinglefileData):
-                raise InputValidationError("vdw_table, if specified, "
-                                           "must be of type SinglefileData")
-
-        try:
-            code = inputdict.pop(self.get_linkname('code'))
-        except KeyError:
-            raise InputValidationError("No code specified for this calculation")
-
-        # Here, there should be no more parameters...
-        if inputdict:
-            raise InputValidationError("The following input data nodes are "
-                                       "unrecognized: {}".format(
-                inputdict.keys()))
-
-        # Check structure, get species, check peudos
-        kindnames = [k.name for k in structure.kinds]
-        if set(kindnames) != set(pseudos.keys()):
-            err_msg = ("Mismatch between the defined pseudos and the list of "
-                       "kinds of the structure. Pseudos: {}; kinds: {}".format(
-                ",".join(pseudos.keys()), ",".join(list(kindnames))))
-            raise InputValidationError(err_msg)
-
-        ##############################
-        # END OF INITIAL INPUT CHECK #
-        ##############################
+        local_copy_list_to_append = []
 
         # I put the first-level keys as uppercase (i.e., namelist and card names)
         # and the second-level keys as lowercase
@@ -301,12 +202,6 @@ class BasePwCpInputGenerator(object):
                                      "\n".format(*vector))
 
         # ------------- ATOMIC_SPECIES ------------
-        # I create the subfolder that will contain the pseudopotentials
-        tempfolder.get_subfolder(self._PSEUDO_SUBFOLDER, create=True)
-        # I create the subfolder with the output data (sometimes Quantum
-        # Espresso codes crash if an empty folder is not already there
-        tempfolder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
-
         atomic_species_card_list = []
 
         # Keep track of the filenames to avoid to overwrite files
@@ -337,25 +232,12 @@ class BasePwCpInputGenerator(object):
                                                pseudo_filenames.values())
                 pseudo_filenames[ps.pk] = filename
                 # I add this pseudo file to the list of files to copy
-                local_copy_list.append((ps.get_file_abs_path(),
+                local_copy_list_to_append.append((ps.get_file_abs_path(),
                                         os.path.join(self._PSEUDO_SUBFOLDER,
                                                      filename)))
             kind_names.append(kind.name)
             atomic_species_card_list.append("{} {} {}\n".format(
                 kind.name.ljust(6), kind.mass, filename))
-
-        # If present, add also the Van der Waals table to the pseudo dir
-        # Note that the name of the table is not checked but should be the
-        # one expected by QE.
-        if vdw_table:
-            local_copy_list.append(
-                (
-                    vdw_table.get_file_abs_path(),
-                    os.path.join(self._PSEUDO_SUBFOLDER,
-                                 os.path.split(vdw_table.get_file_abs_path())[
-                                     1])
-                )
-            )
 
         # I join the lines, but I resort them using the alphabetical order of
         # species, given by the kind_names list. I also store the mapping_species
@@ -423,7 +305,7 @@ class BasePwCpInputGenerator(object):
             input_params['SYSTEM'] = {}
         input_params['SYSTEM']['ibrav'] = 0
         input_params['SYSTEM']['nat'] = len(structure.sites)
-        input_params['SYSTEM']['ntyp'] = len(kindnames)
+        input_params['SYSTEM']['ntyp'] = len(structure.kinds)
 
         # ============ I prepare the k-points =============
         if self._use_kpoints:
@@ -534,33 +416,158 @@ class BasePwCpInputGenerator(object):
                                            "namelists using the NAMELISTS inside the 'settings' input "
                                            "node".format(sugg_string))
 
-        input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
-
-        with open(input_filename, 'w') as infile:
-            for namelist_name in namelists_toprint:
-                infile.write("&{0}\n".format(namelist_name))
-                # namelist content; set to {} if not present, so that we leave an
-                # empty namelist
-                namelist = input_params.pop(namelist_name, {})
-                for k, v in sorted(namelist.iteritems()):
-                    infile.write(
-                        get_input_data_text(k, v, mapping=mapping_species))
-                infile.write("/\n")
-
-            # Write cards now
-            infile.write(atomic_species_card)
-            infile.write(atomic_positions_card)
-            if self._use_kpoints:
-                infile.write(kpoints_card)
-            infile.write(cell_parameters_card)
-            # TODO: write CONSTRAINTS
-            # TODO: write OCCUPATIONS
-
-        if input_params:
+        inputfile = ""
+        for namelist_name in namelists_toprint:
+            inputfile += "&{0}\n".format(namelist_name)
+            # namelist content; set to {} if not present, so that we leave an 
+            # empty namelist
+            namelist = input_params.pop(namelist_name, {})
+            for k, v in sorted(namelist.iteritems()):
+                inputfile += get_input_data_text(k, v, mapping=mapping_species)
+            inputfile += "/\n"
+    
+        # Write cards now
+        inputfile += atomic_species_card
+        inputfile += atomic_positions_card
+        if self._use_kpoints:
+            inputfile += kpoints_card
+        inputfile += cell_parameters_card
+        #TODO: write CONSTRAINTS
+        #TODO: write OCCUPATIONS
+            
+        if input_params:            
             raise InputValidationError(
                 "The following namelists are specified in input_params, but are "
                 "not valid namelists for the current type of calculation: "
                 "{}".format(",".join(input_params.keys())))
+
+        return inputfile, local_copy_list_to_append
+
+    def _prepare_for_submission(self, tempfolder,
+                                inputdict):
+        """
+        This is the routine to be called when you want to create
+        the input files and related stuff with a plugin.
+
+        :param tempfolder: a aiida.common.folders.Folder subclass where
+                           the plugin should put all its files.
+        :param inputdict: a dictionary with the input nodes, as they would
+                be returned by get_inputs_dict (without the Code!)
+        """
+        local_copy_list = []
+        remote_copy_list = []
+        remote_symlink_list = []
+
+        try:
+            parameters = inputdict.pop(self.get_linkname('parameters'))
+        except KeyError:
+            raise InputValidationError("No parameters specified for this calculation")
+        if not isinstance(parameters, ParameterData):
+            raise InputValidationError("parameters is not of type ParameterData")
+
+        try:
+            structure = inputdict.pop(self.get_linkname('structure'))
+        except KeyError:
+            raise InputValidationError("No structure specified for this calculation")
+        if not isinstance(structure, StructureData):
+            raise InputValidationError("structure is not of type StructureData")
+
+        if self._use_kpoints:
+            try:
+                kpoints = inputdict.pop(self.get_linkname('kpoints'))
+            except KeyError:
+                raise InputValidationError("No kpoints specified for this calculation")
+            if not isinstance(kpoints, KpointsData):
+                raise InputValidationError("kpoints is not of type KpointsData")
+        else:
+            kpoints = None
+
+        # Settings can be undefined, and defaults to an empty dictionary
+        settings = inputdict.pop(self.get_linkname('settings'), None)
+        if settings is None:
+            settings_dict = {}
+        else:
+            if not isinstance(settings, ParameterData):
+                raise InputValidationError("settings, if specified, must be of "
+                                           "type ParameterData")
+            # Settings converted to uppercase
+            settings_dict = _uppercase_dict(settings.get_dict(),
+                                            dict_name='settings')
+
+        pseudos = {}
+        # I create here a dictionary that associates each kind name to a pseudo
+        for link in inputdict.keys():
+            if link.startswith(self._get_linkname_pseudo_prefix()):
+                kindstring = link[len(self._get_linkname_pseudo_prefix()):]
+                kinds = kindstring.split('_')
+                the_pseudo = inputdict.pop(link)
+                if not isinstance(the_pseudo, UpfData):
+                    raise InputValidationError("Pseudo for kind(s) {} is not of "
+                                               "type UpfData".format(",".join(kinds)))
+                for kind in kinds:
+                    if kind in pseudos:
+                        raise InputValidationError("Pseudo for kind {} passed "
+                                                   "more than one time".format(kind))
+                    pseudos[kind] = the_pseudo
+
+        parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'), None)
+        if parent_calc_folder is not None:
+            if not isinstance(parent_calc_folder, RemoteData):
+                raise InputValidationError("parent_calc_folder, if specified, "
+                                           "must be of type RemoteData")
+
+        vdw_table = inputdict.pop(self.get_linkname('vdw_table'), None)
+        if vdw_table is not None:
+            if not isinstance(vdw_table, SinglefileData):
+                raise InputValidationError("vdw_table, if specified, "
+                                           "must be of type SinglefileData")
+
+        try:
+            code = inputdict.pop(self.get_linkname('code'))
+        except KeyError:
+            raise InputValidationError("No code specified for this calculation")
+
+        # Here, there should be no more parameters...
+        if inputdict:
+            raise InputValidationError("The following input data nodes are "
+                                       "unrecognized: {}".format(inputdict.keys()))
+
+        # Check structure, get species, check peudos
+        kindnames = [k.name for k in structure.kinds]
+        if set(kindnames) != set(pseudos.keys()):
+            err_msg = ("Mismatch between the defined pseudos and the list of "
+                       "kinds of the structure. Pseudos: {}; kinds: {}".format(
+                ",".join(pseudos.keys()), ",".join(list(kindnames))))
+            raise InputValidationError(err_msg)
+
+        ##############################
+        # END OF INITIAL INPUT CHECK #
+        ##############################
+        # I create the subfolder that will contain the pseudopotentials
+        tempfolder.get_subfolder(self._PSEUDO_SUBFOLDER, create=True)
+        # I create the subfolder with the output data (sometimes Quantum
+        # Espresso codes crash if an empty folder is not already there
+        tempfolder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
+
+        # If present, add also the Van der Waals table to the pseudo dir
+        # Note that the name of the table is not checked but should be the
+        # one expected by QE.
+        if vdw_table:
+            local_copy_list.append(
+                (
+                vdw_table.get_file_abs_path(),
+                os.path.join(self._PSEUDO_SUBFOLDER,
+                    os.path.split(vdw_table.get_file_abs_path())[1])
+                )
+                )
+
+        input_filecontent, local_copy_pseudo_list = self._generate_PWCPinputdata(parameters,settings_dict,pseudos,
+                                                                                 structure,kpoints)
+        local_copy_list += local_copy_pseudo_list
+
+        input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
+        with open(input_filename, 'w') as infile:
+            infile.write(input_filecontent)
 
         # operations for restart
         symlink = settings_dict.pop('PARENT_FOLDER_SYMLINK',
@@ -604,6 +611,10 @@ class BasePwCpInputGenerator(object):
                     settings_dict['CMDLINE'].append('-environ')
             except KeyError:
                 settings_dict['CMDLINE'] = ['-environ']
+            # To create a mapping from the species to an incremental fortran 1-based index
+            # we use the alphabetical order as in the inputdata generation
+            mapping_species = {sp_name: (idx+1) for idx, sp_name in 
+                               enumerate(sorted([kind.name for kind in structure.kinds]))}
             environ_input_filename = tempfolder.get_abs_path(
                 self._ENVIRON_INPUT_FILE_NAME)
             with open(environ_input_filename, 'w') as environ_infile:
@@ -729,7 +740,7 @@ class BasePwCpInputGenerator(object):
         from collections import defaultdict
 
         try:
-            structure = self.get_inputs_dict()[self.get_linkname('structure')]
+            structure = self._get_reference_structure()
         except AttributeError:
             raise ValueError("Structure is not set yet! Therefore, the method "
                              "use_pseudos_from_family cannot automatically set "
@@ -753,6 +764,17 @@ class BasePwCpInputGenerator(object):
             kinds = pseudo_species[pseudo_pk]
             # I set the pseudo for all species, sorting alphabetically
             self.use_pseudo(pseudo, sorted(kinds))
+
+    def _get_reference_structure(self):
+        """
+        Used to get the reference structure to obtain which 
+        pseudopotentials to use from a given family using 
+        use_pseudos_from_family. 
+        
+        :note: this method can be redefined in a given subclass
+               to specify which is the reference structure to consider.
+        """
+        return self.get_inputs_dict()[self.get_linkname('structure')]
 
     def _set_parent_remotedata(self, remotedata):
         """

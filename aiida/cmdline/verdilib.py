@@ -450,11 +450,11 @@ class Install(VerdiCommand):
                 load_dbenv()
 
         from aiida.common.setup import DEFAULT_AIIDA_USER
-        from aiida.orm.user import User
+        from aiida.orm.user import User as AiiDAUser
 
-        if not User.search_for_users(email=DEFAULT_AIIDA_USER):
+        if not AiiDAUser.search_for_users(email=DEFAULT_AIIDA_USER):
             print "Installing default AiiDA user..."
-            nuser = User(email=DEFAULT_AIIDA_USER)
+            nuser = AiiDAUser(email=DEFAULT_AIIDA_USER)
             nuser.first_name = "AiiDA"
             nuser.last_name = "Daemon"
             nuser.is_staff = True

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+import HTMLParser
 import sys
 
-from aiida.backends.utils import load_dbenv
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
 
@@ -42,9 +42,6 @@ def deserialize_attributes(attributes_data, conversion_data):
 
 def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
                       foreign_ids_reverse_mappings):
-    import datetime
-    import pytz
-
     try:
         field_info = fields_info[k]
     except KeyError:
@@ -257,7 +254,6 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
                 raise ValidationError("SHA1 sum for extracted file '{}' is "
                                       "different from given in the CIF "
                                       "file".format(dest_path))
-
 
 def import_data(in_path,ignore_unknown_nodes=False,
                 silent=False):
@@ -715,9 +711,6 @@ def import_data(in_path,ignore_unknown_nodes=False,
     return ret_dict
 
 
-import HTMLParser
-
-
 class HTMLGetLinksParser(HTMLParser.HTMLParser):
     def __init__(self, filter_extension=None):
         """
@@ -871,7 +864,6 @@ def get_all_fields_info():
     :return: a tuple with two elements, the all_fiekds_info dictionary, and the
       unique_identifiers dictionary.
     """
-    import importlib
 
     import django.db.models.fields as djf
     import django_extensions
@@ -988,7 +980,6 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
       license
     """
     import json
-    import os
     import operator
     from collections import defaultdict
 
@@ -996,8 +987,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
 
     import aiida
     from aiida.backends.djsite.db import models
-    from aiida.orm import Node, Calculation, load_node
-    from aiida.orm.data import Data
+    from aiida.orm import Node, Calculation
     from aiida.common.exceptions import LicensingException
     from aiida.common.folders import RepositoryFolder
 

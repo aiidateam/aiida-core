@@ -786,6 +786,9 @@ class Code(VerdiCommandWithSubcommands):
 
         code = set_params.create_code()
 
+        # Enforcing the code to be not hidden.
+        code._reveal()
+
         try:
             code.store()
         except ValidationError as e:

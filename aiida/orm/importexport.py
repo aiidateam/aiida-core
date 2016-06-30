@@ -10,6 +10,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.6.0"
 __authors__ = "The AiiDA team."
 
+
 IMPORTGROUP_TYPE = 'aiida.import'
 
 

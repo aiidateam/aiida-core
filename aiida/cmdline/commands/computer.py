@@ -727,12 +727,13 @@ class Computer(VerdiCommandWithSubcommands):
         if user_email is None:
             user = User(dbuser=get_automatic_user())
         else:
-            try:
-                user = User(email=user_email)
-            except ObjectDoesNotExist:
+            user_list = User.search_for_users(email=user_email)
+            # If no user is found
+            if not user_list:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
+            user = user_list[0]
 
         print "Testing computer '{}' for user {}...".format(computername,
                                                             user.email)

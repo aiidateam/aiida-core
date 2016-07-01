@@ -720,3 +720,7 @@ class Node(AbstractNode):
     def has_parents(self):
         return session.query(literal(True)).filter(
             self.dbnode.parent_paths.exists()).scalar() or False
+
+    @property
+    def uuid(self):
+        return unicode(self.dbnode.uuid)

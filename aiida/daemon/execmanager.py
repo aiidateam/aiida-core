@@ -283,12 +283,12 @@ def submit_jobs():
                         # Someone already set it, just skip
                         pass
                     logger_extra = get_dblogger_extra(calc)
-                    execlogger.error(
-                        "Submission of calc {} failed, "
-                        "computer pk= {} ({}) is not configured "
-                        "for aiidauser {}".format(
-                            calc.pk, computer.pk, computer.name, aiidauser.email
-                        ), extra=logger_extra)
+                    execlogger.error("Submission of calc {} failed, "
+                                     "computer pk= {} ({}) is not configured "
+                                     "for aiidauser {}".format(
+                        calc.pk, computer.pk, computer.get_name(),
+                        aiidauser.email),
+                                     extra=logger_extra)
                 # Go to the next (dbcomputer,aiidauser) pair
                 continue
 

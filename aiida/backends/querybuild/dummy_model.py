@@ -149,6 +149,7 @@ class DbComputer(Base):
     scheduler_type = Column(String(255))
 
     transport_params = Column(String(255))
+    _metadata = Column('metadata', String(255), default="{}")
 
     def get_aiida_class(self):
         from aiida.backends.djsite.db.models import DbComputer as DjangoSchemaDbComputer
@@ -156,7 +157,8 @@ class DbComputer(Base):
             id=self.id, uuid=self.uuid, name=self.name,
             hostname=self.hostname, description=self.description,
             enabled=self.enabled, transport_type=self.transport_type,
-            scheduler_type=self.scheduler_type, transport_params=self.transport_params
+            scheduler_type=self.scheduler_type, transport_params=self.transport_params,
+            metadata=self._metadata
         )
         return djcomputer.get_aiida_class()
 

@@ -678,120 +678,161 @@ class Calculation(VerdiCommandWithSubcommands):
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
-            description='Clean work directory (i.e. remote folder) of AiiDA calculations.')
-        parser.add_argument('-k', '--pk', metavar='PK', type=int, nargs='+',
-                            help="The principal key (PK) of the calculations to "
-                                 "clean the workdir of")
-        parser.add_argument('-f', '--force', action='store_true',
+            description="Clean work directory (i.e. remote folder) of AiiDA "
+                        "calculations.")
+        parser.add_argument("-k", "--pk", metavar="PK", type=int, nargs="+",
+                            help="The principal key (PK) of the calculations "
+                                 "to clean the workdir of", dest="pk")
+        parser.add_argument("-f", "--force", action="store_true",
                             help="Force the cleaning (no prompt)")
-        parser.add_argument('-p', '--past-days', metavar='N',
-                            help="Add a filter to clean workdir of calculations "
-                                 "modified during the past N days",
-                            type=int, action='store')
-        parser.add_argument('-o', '--older-than', metavar='N',
-                            help="Add a filter to clean workdir of calculations "
-                                 "that have been modified on a date before "
-                                 "N days ago",
-                            type=int, action='store')
-        parser.add_argument('-c', '--computers', metavar='label', nargs='+',
-                            help="Add a filter to clean workdir of calculations "
-                                 "on this computer(s) only",
-                            type=str, action='store')
+        parser.add_argument("-p", "--past-days", metavar="N",
+                            help="Add a filter to clean workdir of "
+                                 "calculations modified during the past N "
+                                 "days", type=int, action="store",
+                            dest="past_days")
+        parser.add_argument("-o", "--older-than", metavar="N",
+                            help="Add a filter to clean workdir of "
+                                 "calculations that have been modified on a "
+                                 "date before N days ago", type=int,
+                            action="store", dest="older_than")
+        parser.add_argument("-c", "--computers", metavar="label", nargs="+",
+                            help="Add a filter to clean workdir of "
+                                 "calculations on this computer(s) only",
+                            type=str, action="store", dest="computer")
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.cmdline import wait_for_confirmation
-        from aiida.backends.utils import get_automatic_user
-        from aiida.execmanager import get_authinfo
-        from aiida.backends.djsite.db import models
-        from aiida.backends.djsite.cmdline import get_valid_job_calculation
-        from aiida.orm.computer import Computer
 
-        args = list(args)
+        from aiida.backends.utils import get_automatic_user
+        from aiida.backends.utils import get_authinfo
+        from aiida.common.utils import query_yes_no
+        from aiida.orm.computer import Computer as OrmComputer
+        from aiida.orm.user import User as OrmUser
+        from aiida.orm.calculation import Calculation as OrmCalculation
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.utils import timezone
+        import datetime
+
         parsed_args = parser.parse_args(args)
 
-        user = get_automatic_user()
+        # If a pk is given then the -o & -p options should not be specified
+        if parsed_args.pk is not None:
+            if ((parsed_args.past_days is not None) or
+                    (parsed_args.older_than is not None)):
+                print("You cannot specify both a list of calculation pks and "
+                      "the -p or -o options")
+                return
+        # If no pk is given then at least one of the -o & -p options should be
+        # specified
+        else:
+            if ((parsed_args.past_days is None) and
+                    (parsed_args.older_than is None)):
+                print("You should specify at least a list of calculations or "
+                      "the -p, -o options")
+                return
 
-        if (parsed_args.pk is not None and
-                (parsed_args.past_days is not None) or
+        # At this point we know that either the pk or the -p -o options are
+        # specified
+
+        # We also check that not both -o & -p options are specified
+        if ((parsed_args.past_days is not None) and
                 (parsed_args.older_than is not None)):
-            print >> sys.stderr, ("You cannot specify both a list of "
-                                  "calculation pks and the -p or -o "
-                                  "options")
-            sys.exit(0)
+            print("Not both of the -p, -o options can be specified in the "
+                  "same time")
+            return
 
-        if ((parsed_args.past_days is None) and
-                (parsed_args.older_than is None)):
-            print >> sys.stderr, ("Either a list of calculation pks or the "
-                                  "-p and/or -o options should be specified")
-            sys.exit(0)
+        qb_user_filters = dict()
+        user = OrmUser(dbuser=get_automatic_user())
+        qb_user_filters["email"] = user.email
 
-        calc_list = get_valid_job_calculation(
-            user=user,
-            pk_list=parsed_args.pk,
-            n_days_after=parsed_args.past_days,
-            n_days_before=parsed_args.older_than,
-            computers=parsed_args.computers
-        )
+        qb_computer_filters = dict()
+        if parsed_args.computer is not None:
+            qb_computer_filters["name"] = {"in": parsed_args.computer}
+
+        qb_calc_filters = dict()
+        if parsed_args.past_days is not None:
+            pd_ts = timezone.now() - datetime.timedelta(
+                days=parsed_args.past_days)
+            qb_calc_filters["mtime"] = {">": pd_ts}
+        if parsed_args.older_than is not None:
+            ot_ts = timezone.now() - datetime.timedelta(
+                days=parsed_args.older_than)
+            qb_calc_filters["mtime"] = {"<": ot_ts}
+        if parsed_args.pk is not None:
+            print("parsed_args.pk: ", parsed_args.pk)
+            qb_calc_filters["id"] = {"in": parsed_args.pk}
+
+        qb = QueryBuilder()
+        qb.append(OrmCalculation, tag="calc",
+                  filters=qb_calc_filters,
+                  project=["id", "uuid", "attributes.remote_workdir"])
+        qb.append(OrmComputer, computer_of="calc",
+                  project=["*"],
+                  filters=qb_computer_filters)
+        qb.append(OrmUser, creator_of="calc",
+                  project=["*"],
+                  filters=qb_user_filters)
+
+        no_of_calcs = qb.count()
+        if no_of_calcs == 0:
+            print("No calculations found with the given criteria.")
+            return
+
+        print("Found {} calculations with the given criteria.".format(
+            no_of_calcs))
 
         if not parsed_args.force:
-            sys.stderr.write(
-                "Are you sure you want to clean the work directory? "
-                "[Y/N] ")
-            if not wait_for_confirmation():
-                sys.exit(0)
+            if not query_yes_no("Are you sure you want to clean the work "
+                                "directory?", "no"):
+                return
 
         # get the uuids of all calculations matching the filters
-        calc_list_data = calc_list.values_list('pk', 'dbcomputer', 'uuid')
-
-        # also, get the pks of dbcomputers and the pks of dbattributes
-        # (the remote_workdir path is in the dbattribute)
-        # dbattrs_and_dbcomp_pks = [ (_[1],_[2]) for _ in calc_list_data ]
+        calc_list_data = qb.dict()
 
         # get all computers associated to the calc uuids above, and load them
-        dbcomputers = [_[1] for _ in calc_list_data]
-        computers = [Computer.get(_) for _ in dbcomputers]
+        # we group them by uuid to avoid computer duplicates
+        comp_uuid_to_computers = {_["computer"]["*"].uuid: _["computer"]["*"] for _ in calc_list_data}
 
         # now build a dictionary with the info of folders to delete
         remotes = {}
-        for computer in computers:
+        for computer in comp_uuid_to_computers.values():
             # initialize a key of info for a given computer
-            remotes[computer.name] = {
-                'transport': get_authinfo(computer=computer,
-                                          aiidauser=user).get_transport(),
-                'computer': computer,
-                }
+            remotes[computer.name] = {'transport': get_authinfo(
+                computer=computer, aiidauser=user._dbuser).get_transport(),
+                                      'computer': computer,
+            }
+
             # select the calc pks done on this computer
-            this_calc_pks = [_[0] for _ in calc_list_data if
-                             _[1] == computer.pk]
-            this_calc_uuids = [_[2] for _ in calc_list_data if
-                               _[1] == computer.pk]
+            this_calc_pks = [_["calc"]["id"] for _ in calc_list_data
+                             if _["computer"]["*"].id == computer.id]
 
-            # now get the paths of remote folder
-            # look in the DbAttribute table,
-            # for Attribute which have a key called remote_workdir,
-            # and the dbnode_id referring to the given calcs
-            dbattrs = models.DbAttribute.objects.filter(
-                dbnode_id__in=this_calc_pks,
-                key='remote_workdir')
+            this_calc_uuids = [unicode(_["calc"]["uuid"])
+                               for _ in calc_list_data
+                               if _["computer"]["*"].id == computer.id]
 
-            remote_workdirs = [_[0] for _ in dbattrs.values_list('tval')]
+            remote_workdirs = [_["calc"]["attributes.remote_workdir"]
+                               for _ in calc_list_data
+                               if _["calc"]["id"] in this_calc_pks
+                               if _["calc"]["attributes.remote_workdir"]
+                               is not None]
+
             remotes[computer.name]['remotes'] = remote_workdirs
             remotes[computer.name]['uuids'] = this_calc_uuids
 
         # now proceed to cleaning
-
         for computer, dic in remotes.iteritems():
-            print "Cleaning the work directory on computer {}.".format(computer)
+            print("Cleaning the work directory on computer {}.".format(computer))
             counter = 0
             t = dic['transport']
             with t:
                 remote_user = remote_user = t.whoami()
                 aiida_workdir = dic['computer'].get_workdir().format(
                     username=remote_user)
+
                 t.chdir(aiida_workdir)
                 # Hardcoding the sharding equal to 3 parts!
                 existing_folders = t.glob('*/*/*')
+
                 folders_to_delete = [i for i in existing_folders if
                                      i.replace("/", "") in dic['uuids']]
 
@@ -799,7 +840,6 @@ class Calculation(VerdiCommandWithSubcommands):
                     t.rmtree(folder)
                     counter += 1
                     if counter % 20 == 0 and counter > 0:
-                        print "Deleted work directories: {}".format(counter)
+                        print("Deleted work directories: {}".format(counter))
 
-            print >> sys.stderr, "{} remote folder{} cleaned.".format(counter,
-                                                                      "" if counter == 1 else "s")
+            print("{} remote folder(s) cleaned.".format(counter))

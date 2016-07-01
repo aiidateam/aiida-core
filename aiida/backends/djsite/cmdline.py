@@ -77,50 +77,6 @@ def get_log_messages(obj):
     return log_messages
 
 
-def get_valid_job_calculation(user=None, pk_list=tuple(), n_days_after=None,
-                              n_days_before=None, computers=None):
-    """
-    Get a list of valid job calculation from the user.
-
-    Currently, this also select the associated computer with it.
-    """
-
-    from aiida.orm.calculation.job import JobCalculation
-    from aiida.backends.djsite.db.models import DbAttribute
-
-    valid_states = [calc_states.FINISHED, calc_states.RETRIEVALFAILED,
-                    calc_states.PARSINGFAILED, calc_states.FAILED]
-
-    attributes_filter = DbAttribute.objects.filter(key='state',
-                                                   tval__in=valid_states)
-    # NOTE: IMPORTED state is not a dbattribute so won't be filtered out
-    # at this stage, but this case should be sorted out later when we try
-    # to access the remote_folder (if directory is not accessible, we skip)
-
-    filters = Q(user=user) & Q(dbattributes_in=attributes_filter)
-
-    if pk_list:
-        fitlers &= Q(pk__in=pk_list)
-    else:
-        # Filter user, day, older_than, computer name
-        if n_days_ago is not None:
-            t = timezone.now() - datetime.timedelta(days=n_days_after)
-            filters &= Q(mtime__gte=t)
-
-        if older_than is not None:
-            t = timezone.now() - datetime.timedelta(days=n_days_before)
-            filters &= Q(mtime__lte=n_days_before)
-
-        if computers is not None:
-            filters &= Q(dbcomputer__namme__in=computers)
-
-    calculations = (JobCalculation.query(filters)
-                    .distinct().order_by('mtime')
-                    .select_related("dbcomputer"))
-
-    return calculations
-
-
 def get_computers_work_dir(calculations, user):
     """
     Get a list of computers and their remotes working directory.

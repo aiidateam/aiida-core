@@ -856,6 +856,13 @@ def serialize_dict(datadict, remove_fields=[], rename_fields={},
         return ret_dict
 
 
+fields_to_export = {
+    'aiida.backends.djsite.db.models.DbNode':
+        ['description', 'public', 'nodeversion', 'uuid', 'mtime', 'user',
+         'ctime', 'dbcomputer', 'label', 'type'],
+}
+
+
 def get_all_fields_info_sqla():
     """
     Retrieve automatically the information on the fields and store them in a
@@ -867,13 +874,20 @@ def get_all_fields_info_sqla():
     """
 
     import django.db.models.fields as djf
-    import django_extensions
+    import sqlalchemy.orm as sorm
+    import sqlalchemy.sql.sqltypes as stypes
+    import sqlalchemy.dialects.postgresql.base as sbase
+    # import django_extensions
+    from sqlalchemy.orm import class_mapper
 
-    from aiida.backends.djsite.db import models
+    # from aiida.backends.djsite.db import models
+    from aiida.backends.sqlalchemy import models
 
     all_fields_info = {}
 
-    user_model_string = get_class_string(models.DbUser)
+    user_model_string = get_class_string(models.user.DbUser)
+
+    node_model_string = get_class_string(models.node.DbNode)
 
     # TODO: These will probably need to have a default value in the IMPORT!
     # TODO: maybe define this inside the Model!
@@ -881,12 +895,14 @@ def get_all_fields_info_sqla():
         user_model_string: ['password', 'is_staff',
                             'is_superuser', 'is_active',
                             'last_login', 'date_joined'],
+        node_model_string: ['state_instance', 'dbstates', 'workflow_step',
+                            'inputs', 'dbcomments', 'parents']
     }
 
     # I start only with DbNode
     export_models = set([get_class_string(Model) for Model in
-                         [models.DbNode, models.DbAttribute,
-                          models.DbLink, models.DbGroup]])
+                         [models.node.DbNode, models.node.DbLink,
+                          models.group.DbGroup]])
 
     while True:
         missing_models = export_models - set(all_fields_info.keys())
@@ -895,40 +911,116 @@ def get_all_fields_info_sqla():
 
         for model_name in missing_models:
             Model = get_object_from_string(model_name)
-
+            print "===================="
+            print "Model", Model
             thisinfo = {}
             exclude_fields = all_exclude_fields.get(model_name, [])
-            for field in Model._meta.fields:
-                if field.name in exclude_fields:
+            for field in class_mapper(Model).iterate_properties:
+                print "--------------------"
+                print field.key, field.__class__
+
+                if field.key not in exclude_fields:
                     continue
-                if isinstance(field, djf.AutoField):
-                    # Do not explicitly store the ID field
-                    pass
-                elif isinstance(field, (djf.CharField, djf.TextField,
-                                        djf.IntegerField, djf.FloatField,
-                                        djf.BooleanField, djf.NullBooleanField,
-                                        django_extensions.db.fields.UUIDField)):
-                    thisinfo[field.name] = {}
-                elif isinstance(field, djf.DateTimeField):
-                    # This information is needed on importing
-                    thisinfo[field.name] = {'convert_type': 'date'}
-                elif isinstance(field, django_extensions.db.fields.UUIDField):
-                    thisinfo[field.name] = {}
-                elif isinstance(field, djf.related.ForeignKey):
-                    rel_model_name = get_class_string(field.rel.to)
-                    related_name = field.rel.related_name
-                    thisinfo[field.name] = {
-                        # The 'values' method will return the id (an integer),
-                        # so no custom serializer is required
-                        'requires': rel_model_name,
-                        'related_name': related_name,
-                    }
+
+                if isinstance(field, sorm.relationships.RelationshipProperty):
+                    print "field.local_columns", field.local_columns
+                    print "field.mapper.entity", field.mapper.entity
+                    print "field.backref[0]", field.backref[0]
+                    rel_model_name = get_class_string(field.mapper.entity)
+                    related_name = field.key
+                    thisinfo[field.backref[0]] = {
+                            # The 'values' method will return the id (an integer),
+                            # so no custom serializer is required
+                            'requires': rel_model_name,
+                            'related_name': related_name,
+                        }
                     export_models.add(rel_model_name)
+                elif isinstance(field, sorm.properties.ColumnProperty):
+                    print field.columns[0].type
+                    print field.columns[0].type.__class__
+                    if isinstance(field.columns[0].type, (stypes.Integer,
+                                  stypes.Boolean, stypes.String,
+                                  stypes.Text, stypes.Float)):
+                        thisinfo[unicode(field.expression._label)] = {}
+                    elif isinstance(field.columns[0].type, stypes.DateTime):
+                        thisinfo[unicode(field.expression._label)] = {
+                            'convert_type': 'date'}
+                    elif isinstance(field.columns[0].type, sbase.UUID):
+                        thisinfo[unicode(field.expression._label)] = {}
                 else:
                     raise NotImplementedError(
-                        "Export not implemented for field of type {}.{}".format(
-                            get_class_string(field)))
+                        "Export not implemented for field {} of type {}."
+                            .format(field, field.__class__))
+
                 all_fields_info[model_name] = thisinfo
+
+
+
+                # if field.key in exclude_fields:
+                #     continue
+                # # if isinstance(field, sorm.AutoField):
+                # #     # Do not explicitly store the ID field
+                # #     pass
+                # elif isinstance(field, (sorm.CharField, djf.TextField,
+                #                         djf.IntegerField, djf.FloatField,
+                #                         djf.BooleanField, djf.NullBooleanField,
+                #                         django_extensions.db.fields.UUIDField)):
+                #     thisinfo[field.name] = {}
+                # elif isinstance(field, djf.DateTimeField):
+                #     # This information is needed on importing
+                #     thisinfo[field.name] = {'convert_type': 'date'}
+                # elif isinstance(field, django_extensions.db.fields.UUIDField):
+                #     thisinfo[field.name] = {}
+                # elif isinstance(field, djf.related.ForeignKey):
+                #     rel_model_name = get_class_string(field.rel.to)
+                #     related_name = field.rel.related_name
+                #     thisinfo[field.name] = {
+                #         # The 'values' method will return the id (an integer),
+                #         # so no custom serializer is required
+                #         'requires': rel_model_name,
+                #         'related_name': related_name,
+                #     }
+                #     export_models.add(rel_model_name)
+                # else:
+                #     raise NotImplementedError(
+                #         "Export not implemented for field of type {}.{}".format(
+                #             get_class_string(field)))
+                # all_fields_info[model_name] = thisinfo
+
+
+            # for field in Model._meta.fields:
+            #     if field.name in exclude_fields:
+            #         continue
+            #     if isinstance(field, djf.AutoField):
+            #         # Do not explicitly store the ID field
+            #         pass
+            #     elif isinstance(field, (djf.CharField, djf.TextField,
+            #                             djf.IntegerField, djf.FloatField,
+            #                             djf.BooleanField, djf.NullBooleanField,
+            #                             django_extensions.db.fields.UUIDField)):
+            #         thisinfo[field.name] = {}
+            #     elif isinstance(field, djf.DateTimeField):
+            #         # This information is needed on importing
+            #         thisinfo[field.name] = {'convert_type': 'date'}
+            #     elif isinstance(field, django_extensions.db.fields.UUIDField):
+            #         thisinfo[field.name] = {}
+            #     elif isinstance(field, djf.related.ForeignKey):
+            #         rel_model_name = get_class_string(field.rel.to)
+            #         related_name = field.rel.related_name
+            #         thisinfo[field.name] = {
+            #             # The 'values' method will return the id (an integer),
+            #             # so no custom serializer is required
+            #             'requires': rel_model_name,
+            #             'related_name': related_name,
+            #         }
+            #         export_models.add(rel_model_name)
+            #     else:
+            #         raise NotImplementedError(
+            #             "Export not implemented for field of type {}.{}".format(
+            #                 get_class_string(field)))
+            #     all_fields_info[model_name] = thisinfo
+
+    sys.exit()
 
     unique_identifiers = {}
     for k in all_fields_info:
@@ -995,10 +1087,12 @@ def get_all_fields_info():
 
         for model_name in missing_models:
             Model = get_object_from_string(model_name)
-
+            print "===================="
+            print "Model", Model
             thisinfo = {}
             exclude_fields = all_exclude_fields.get(model_name, [])
             for field in Model._meta.fields:
+                print "field.name", field.name
                 if field.name in exclude_fields:
                     continue
                 if isinstance(field, djf.AutoField):
@@ -1016,6 +1110,9 @@ def get_all_fields_info():
                     thisinfo[field.name] = {}
                 elif isinstance(field, djf.related.ForeignKey):
                     rel_model_name = get_class_string(field.rel.to)
+                    print "rel_model_name", rel_model_name
+                    if rel_model_name == "aiida.backends.djsite.models.node.DbCalcState":
+                        print "!!!!!!!!!!!!WWWWWWWWWWWWWWWWWWW"
                     related_name = field.rel.related_name
                     thisinfo[field.name] = {
                         # The 'values' method will return the id (an integer),
@@ -1080,8 +1177,8 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     :raises LicensingException: if any node is licensed under forbidden
       license
     """
-
-def spyros():
+#
+# def spyros():
     import json
     import operator
     from collections import defaultdict
@@ -1101,6 +1198,8 @@ def spyros():
     EXPORT_VERSION = '0.2'
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
+
+    sys.exit()
 
     entries_ids_to_add = defaultdict(list)
     # I store a list of the actual dbnodes

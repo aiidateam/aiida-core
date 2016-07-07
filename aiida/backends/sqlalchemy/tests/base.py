@@ -28,6 +28,7 @@ __version__ = "0.6.0"
 
 Session = sessionmaker()
 
+
 class SqlAlchemyTests(unittest.TestCase):
 
     # Specify the need to drop the table at the beginning of a test case

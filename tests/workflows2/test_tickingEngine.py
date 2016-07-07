@@ -18,8 +18,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 class DummyProcess(Process):
-    @staticmethod
-    def _define(spec):
+    @classmethod
+    def _define(cls, spec):
         spec.dynamic_input()
         spec.dynamic_output()
 

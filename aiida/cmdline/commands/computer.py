@@ -689,7 +689,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.backends.djsite.db.models import DbUser
+        from aiida.orm.user import User
         from aiida.backends.utils import get_automatic_user
         from aiida.orm.computer import Computer as OrmComputer
 
@@ -725,19 +725,20 @@ class Computer(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         if user_email is None:
-            user = get_automatic_user()
+            user = User(dbuser=get_automatic_user())
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            user_list = User.search_for_users(email=user_email)
+            # If no user is found
+            if not user_list:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
+            user = user_list[0]
 
         print "Testing computer '{}' for user {}...".format(computername,
                                                             user.email)
         try:
-            dbauthinfo = computer.get_dbauthinfo(user)
+            dbauthinfo = computer.get_dbauthinfo(user._dbuser)
         except NotExistent:
             print >> sys.stderr, ("User with email '{}' is not yet configured "
                                   "for computer '{}' yet.".format(

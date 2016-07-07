@@ -253,12 +253,12 @@ class Group(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        group = parsed_args.group
+        group_arg = parsed_args.group
         try:
-            group_pk = int(group)
+            group_pk = int(group_arg)
         except ValueError:
             group_pk = None
-            group_name = group
+            group_name = group_arg
 
         if group_pk is not None:
             try:
@@ -467,7 +467,7 @@ class Group(VerdiCommandWithSubcommands):
                 # By default: only groups of this user
                 user = get_automatic_user()
 
-        type_string = None
+        type_string = ""
         if parsed_args.type is not None:
             try:
                 type_string = get_group_type_mapping()[parsed_args.type]

@@ -144,6 +144,19 @@ def get_daemon_user():
         return DEFAULT_AIIDA_USER
 
 
+def set_daemon_user(user_email):
+    """
+    Return the username (email) of the user that should run the daemon,
+    or the default AiiDA user in case no explicit configuration is found
+    in the DbSetting table.
+    """
+    from aiida.backends.sqlalchemy.globalsettings import set_global_setting
+
+    set_global_setting("daemon|user", user_email,
+                       description="The only user that is allowed to run the "
+                                   "AiiDA daemon on this DB instance")
+
+
 def dumps_json(d):
     """
     Transforms all datetime object into isoformat and then returns the JSON

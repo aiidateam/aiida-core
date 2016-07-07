@@ -143,6 +143,20 @@ This will be the next example::
     )
     res = qb.all()
 
+In order to negate a filter, that is to apply the not operator, precede the filter 
+keyword with an exclamation mark.
+So, to ask for all calculations that are not in "FINISHED" or "RETRIEVING"::
+
+    qb = QueryBuilder()
+    qb.append(
+        JobCalculation,
+        filters={
+            'state':{'!in':['FINISHED', 'RETRIEVING']}
+        },
+    )
+    res = qb.all()
+
+
 This showed you how to 'filter' by properties of a node (and implicitly by type)
 So far we can do that for a single a single node in the database.
 But we sometimes need to query relationships in graph-like database.

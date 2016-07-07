@@ -1049,6 +1049,9 @@ class AbstractQueryBuilder(object):
         if operator.startswith('~'):
             negation = True
             operator = operator.lstrip('~')
+        elif operator.startswith('!'):
+            negation = True
+            operator = operator.lstrip('!')
         else:
             negation = False
         if operator in ('longer', 'shorter', 'of_length'):
@@ -1089,7 +1092,6 @@ class AbstractQueryBuilder(object):
                 expr = and_(*expressions_for_this_path)
             elif operator == 'or':
                  expr = or_(*expressions_for_this_path)
-            need_expr = False
 
         if expr is None:
             if is_attribute:
@@ -1123,7 +1125,7 @@ class AbstractQueryBuilder(object):
         """
         expressions = []
         for path_spec, filter_operation_dict in filter_spec.items():
-            if path_spec in  ('and', 'or', '~or', '~and'):
+            if path_spec in  ('and', 'or', '~or', '~and', '!and', '!or'):
                 subexpressions = [
                     self._build_filters(alias, sub_filter_spec)
                     for sub_filter_spec in filter_operation_dict
@@ -1132,9 +1134,9 @@ class AbstractQueryBuilder(object):
                     expressions.append(and_(*subexpressions))
                 elif path_spec == 'or':
                     expressions.append(or_(*subexpressions))
-                elif path_spec == '~and':
+                elif path_spec in ('~and', '!and'):
                     expressions.append(not_(and_(*subexpressions)))
-                elif path_spec == '~or':
+                elif path_spec in ('~or', '!or'):
                     expressions.append(not_(or_(*subexpressions)))
             else:
                 column_name = path_spec.split('.')[0]

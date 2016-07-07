@@ -56,9 +56,11 @@ class DbLink(Base):
             initially="DEFERRED"
         )
     )
+    type=Column(String(255))
     input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
     label = Column(String(255), index=True, nullable=False)
+
 
 class DbPath(Base):
     __tablename__ = "db_dbpath"

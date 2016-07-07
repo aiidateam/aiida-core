@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import sys
 
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from aiida.common.exceptions import MultipleObjectsError
 from aiida.cmdline.commands.node import _Label, _Description
-from aiida.cmdline import delayed_load_node as load_node
+from aiida.common.exceptions import MultipleObjectsError
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -118,6 +118,21 @@ class Listable(object):
             entry_list.append([str(obj.pk)])
         return entry_list
 
+    def query_past_days_qb(self, filters, args):
+        """
+        Subselect to filter data nodes by their age.
+
+        :param filters: the filters to be enriched.
+        :param args: a namespace with parsed command line parameters.
+        """
+        from aiida.utils import timezone
+        import datetime
+        if args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
+            filters.update({"ctime": {'>=': n_days_ago}})
+        return filters
+
     def query_past_days(self, q_object, args):
         """
         Subselect to filter data nodes by their age.
@@ -132,6 +147,18 @@ class Listable(object):
             now = timezone.now()
             n_days_ago = now - datetime.timedelta(days=args.past_days)
             q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+    def query_group_qb(self, filters, args):
+        """
+        Subselect to filter data nodes by their group.
+
+        :param q_object: a query object
+        :param args: a namespace with parsed command line parameters.
+        """
+        if args.group_name is not None:
+            filters.update({"name": {"in": args.group_name}})
+        if args.group_pk is not None:
+            filters.update({"id": {"in": args.group_pk}})
 
     def query_group(self, q_object, args):
         """
@@ -499,7 +526,7 @@ class Depositable(object):
         :param args: a namespace with parsed command line parameters.
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _deposit_xxx() method.
-        import argparse,os
+        import argparse
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Deposit data object.')
@@ -735,7 +762,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
                 print >> sys.stdout, ("File {} is already present in the "
                                       "destination folder".format(u.filename))
 
-
     def _import_upf(self, filename, **kwargs):
         """
         Importer from UPF.
@@ -777,128 +803,97 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         """
         if not is_dbenv_loaded():
             load_dbenv()
-        from collections import defaultdict
-        from aiida.orm import DataFactory
-        from django.db.models import Q
+
+        from aiida.orm.querybuilder import QueryBuilder
         from aiida.backends.utils import get_automatic_user
-        from aiida.common.utils import grouper
+        from aiida.orm.implementation import User
+        from aiida.orm.implementation import Group
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
-        from aiida.backends.djsite.db import models
-        from aiida.backends.djsite.db.models import DbPath
+        from aiida.orm.data.array.bands import BandsData
+        from aiida.orm.data.structure import StructureData
 
-        query_group_size = 100  # we group the attribute query in chunks of this size
-
-        StructureData = DataFactory('structure')
-        BandsData = DataFactory('array.bands')
-
-        # First, I run a query to get all BandsData of the past N days
-        q_object = None
+        qb = QueryBuilder()
         if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
+            au = get_automatic_user()
+            user = User(dbuser=au)
+            qb.append(User, tag="creator", filters={"email": user.email})
         else:
-            q_object = Q()
+            qb.append(User, tag="creator")
 
-        self.query_past_days(q_object, args)
-        self.query_group(q_object, args)
+        bdata_filters = {}
+        self.query_past_days_qb(bdata_filters, args)
+        qb.append(BandsData, tag="bdata", created_by="creator",
+                  filters=bdata_filters,
+                  project=["id", "label", "ctime"]
+                  )
 
-        bands_list = BandsData.query(q_object).distinct().order_by('ctime')
+        group_filters = {}
+        self.query_group_qb(group_filters, args)
+        if group_filters:
+            qb.append(Group, tag="group", filters=group_filters,
+                      group_of="bdata")
 
-        bands_list_data = bands_list.values_list('pk', 'label', 'ctime')
+        qb.append(StructureData, tag="sdata", ancestor_of="bdata",
+                  # We don't care about the creator of StructureData
+                  project=["id", "attributes.kinds", "attributes.sites"])
 
-        # split data in chunks
-        grouped_bands_list_data = grouper(query_group_size,
-                                          [(_[0], _[1], _[2]) for _ in bands_list_data])
+        qb.order_by({StructureData: {'ctime': 'desc'}})
+
+        list_data = qb.distinct()
 
         entry_list = []
+        already_visited_bdata = set()
+        if list_data.count() > 0:
+            for [bid, blabel, bdate, sid, akinds, asites] in list_data.iterall():
 
-        for this_chunk in grouped_bands_list_data:
-            # gather all banddata pks
-            pks = [_[0] for _ in this_chunk]
+                # We process only one StructureData per BandsData.
+                # We want to process the closest StructureData to
+                # every BandsData.
+                # We hope that the StructureData with the latest
+                # creation time is the closest one.
+                # This will be updated when the QueryBuilder supports
+                # order_by by the distance of two nodes.
+                if already_visited_bdata.__contains__(bid):
+                    continue
+                already_visited_bdata.add(bid)
 
-            # get all the StructureData that are parents of the selected bandsdatas
-            q_object = Q(child__in=pks)
-            if args.all_users is False:
-                q_object.add(Q(child__user=get_automatic_user()), Q.AND)
-            q_object.add(Q(parent__type='data.structure.StructureData.'), Q.AND)
-            structure_list = DbPath.objects.filter(q_object).distinct()
-            structure_list_data = structure_list.values_list('parent_id', 'child_id', 'depth')
-
-            # select the pks of all structure involved
-            # the right structure is chosen as the closest structure in the graph
-            struc_pks = []
-            for band_pk in pks:
-                try:
-                    struc_pks.append(min([_ for _ in structure_list_data if _[1] == band_pk],
-                                         key=lambda x: x[-1]
-                    )[0]
-                    )
-                except ValueError:  # no structure in input
-                    struc_pks.append(None)
-
-            # query for the attributes needed for the structure formula
-            attr_query = Q(key__startswith='kinds') | Q(key__startswith='sites')
-            attrs = models.DbAttribute.objects.filter(attr_query,
-                                                      dbnode__in=struc_pks).values_list(
-                'dbnode__pk', 'key', 'datatype', 'tval', 'fval',
-                'ival', 'bval', 'dval')
-
-            results = defaultdict(dict)
-            for attr in attrs:
-                results[attr[0]][attr[1]] = {"datatype": attr[2],
-                                             "tval": attr[3],
-                                             "fval": attr[4],
-                                             "ival": attr[5],
-                                             "bval": attr[6],
-                                             "dval": attr[7]}
-            # organize all of it in a dictionary
-            deser_data = {}
-            for k in results:
-                deser_data[k] = models.deserialize_attributes(results[k],
-                                                              sep=models.DbAttribute._sep)
-
-            # prepare the printout
-            for ((band_pk, label, date), struc_pk) in zip(this_chunk, struc_pks):
-                if struc_pk is not None:
-                    # Exclude structures by the elements
-                    if args.element is not None:
-                        all_kinds = [k['symbols'] for k in deser_data[struc_pk]['kinds']]
-                        all_symbols = [item for sublist in all_kinds for item in sublist]
-                        if not any([s in args.element for s in all_symbols]
-                        ):
-                            continue
-                    if args.element_only is not None:
-                        all_kinds = [k['symbols'] for k in deser_data[struc_pk]['kinds']]
-                        all_symbols = [item for sublist in all_kinds for item in sublist]
-                        if not all([s in all_symbols for s in args.element_only]
-                        ):
-                            continue
-
-                    # build the formula
-                    symbol_dict = {k['name']: get_symbols_string(k['symbols'],
-                                                                 k['weights'])
-                                   for k in deser_data[struc_pk]['kinds']}
-                    try:
-                        symbol_list = [symbol_dict[s['kind_name']]
-                                       for s in deser_data[struc_pk]['sites']]
-                        formula = get_formula(symbol_list,
-                                              mode=args.formulamode)
-                    # If for some reason there is no kind with the name
-                    # referenced by the site
-                    except KeyError:
-                        formula = "<<UNKNOWN>>"
-                        # cycle if we imposed the filter on elements
-                        if args.element is not None or args.element_only is not None:
-                            continue
-                else:
-                    formula = "<<UNKNOWN>>"
-                    # cycle if we imposed the filter on elements
-                    if args.element is not None or args.element_only is not None:
+                if args.element is not None:
+                    all_symbols = [_["symbols"][0] for _ in akinds]
+                    if not any([s in args.element for s in all_symbols]
+                               ):
                         continue
 
-                entry_list.append([str(band_pk),
-                                   str(formula),
-                                   date.strftime('%d %b %Y'),
-                                   label])
+                if args.element_only is not None:
+                    all_symbols = [_["symbols"][0] for _ in akinds]
+                    if not all(
+                            [s in all_symbols for s in args.element_only]
+                            ):
+                        continue
+
+                # We want only the StructureData that have attributes
+                if akinds is None or asites is None:
+                    continue
+
+                symbol_dict = {}
+                for k in akinds:
+                    symbols = k['symbols']
+                    weights = k['weights']
+                    symbol_dict[k['name']] = get_symbols_string(symbols,
+                                                                weights)
+
+                try:
+                    symbol_list = []
+                    for s in asites:
+                        symbol_list.append(symbol_dict[s['kind_name']])
+                    formula = get_formula(symbol_list,
+                                          mode=args.formulamode)
+                # If for some reason there is no kind with the name
+                # referenced by the site
+                except KeyError:
+                    formula = "<<UNKNOWN>>"
+                entry_list.append([str(bid), str(formula),
+                                   bdate.strftime('%d %b %Y'), blabel])
+
         return entry_list
 
     def append_list_cmdline_arguments(self, parser):
@@ -1040,93 +1035,78 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         if not is_dbenv_loaded():
             load_dbenv()
-        from collections import defaultdict
-        from aiida.orm import DataFactory
-        from django.db.models import Q
+
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.data.structure import StructureData
         from aiida.backends.utils import get_automatic_user
-        from aiida.common.utils import grouper
+        from aiida.orm.implementation import User
+        from aiida.orm.implementation import Group
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
-        from aiida.backends.djsite.db import models
 
-        query_group_size = 100  # we group the attribute query in chunks of this size
-
-        StructureData = DataFactory('structure')
-        q_object = None
+        qb = QueryBuilder()
         if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
+            au = get_automatic_user()
+            user = User(dbuser=au)
+            qb.append(User, tag="creator", filters={"email": user.email})
         else:
-            q_object = Q()
+            qb.append(User, tag="creator")
 
-        self.query_past_days(q_object, args)
-        self.query_group(q_object, args)
+        st_data_filters = {}
+        self.query_past_days_qb(st_data_filters, args)
+        qb.append(StructureData, tag="struc", created_by="creator",
+                  filters=st_data_filters,
+                  project=["id", "label", "attributes.kinds",
+                           "attributes.sites"])
 
-        if args.element is not None:
-            q1 = models.DbAttribute.objects.filter(key__startswith='kinds.',
-                                                   key__contains='.symbols.',
-                                                   tval=args.element[0])
-            struc_list = StructureData.query(q_object,
-                                             dbattributes__in=q1).distinct().order_by('ctime')
-            if args.elementonly:
-                print "Not implemented elementonly search"
-                sys.exit(1)
+        group_filters = {}
+        self.query_group_qb(group_filters, args)
+        if group_filters:
+            qb.append(Group, tag="group", filters=group_filters,
+                      group_of="struc")
 
-        else:
-            struc_list = StructureData.query(q_object).distinct().order_by('ctime')
-
-        struc_list_data = struc_list.values_list('pk', 'label')
-        # Used later for efficiency reasons
-        struc_list_data_dict = dict(struc_list_data)
+        struc_list_data = qb.distinct()
 
         entry_list = []
-        if struc_list:
-            struc_list_pks_grouped = grouper(query_group_size,
-                                             [_[0] for _ in struc_list_data])
+        if struc_list_data.count() > 0:
+            for [id, label, akinds, asites] in struc_list_data.iterall():
 
-            for struc_list_pks_part in struc_list_pks_grouped:
-                to_print = []
-                # get attributes needed for formula from another query
-                attr_query = Q(key__startswith='kinds') | Q(key__startswith='sites')
-                # key__endswith='kind_name')
-                attrs = models.DbAttribute.objects.filter(attr_query,
-                                                          dbnode__in=struc_list_pks_part).values_list(
-                    'dbnode__pk', 'key', 'datatype', 'tval', 'fval',
-                    'ival', 'bval', 'dval')
+                # If symbols are defined there is a filtering of the structures
+                # based on the element
+                # When QueryBuilder will support this (attribute)s filtering,
+                # it will be pushed in the query.
+                if args.element is not None:
+                    all_symbols = [_["symbols"][0] for _ in akinds]
+                    if not any([s in args.element for s in all_symbols]
+                               ):
+                        continue
 
-                results = defaultdict(dict)
-                for attr in attrs:
-                    results[attr[0]][attr[1]] = {
-                        "datatype": attr[2],
-                        "tval": attr[3],
-                        "fval": attr[4],
-                        "ival": attr[5],
-                        "bval": attr[6],
-                        "dval": attr[7]}
+                    if args.elementonly:
+                        print "Not implemented elementonly search"
+                        sys.exit(1)
 
-                deser_data = {}
-                for k in results:
-                    deser_data[k] = models.deserialize_attributes(results[k],
-                                                                  sep=models.DbAttribute._sep)
+                # We want only the StructureData that have attributes
+                if akinds is None or asites is None:
+                    continue
 
-                for s_pk in struc_list_pks_part:
-                    symbol_dict = {}
-                    for k in deser_data[s_pk]['kinds']:
-                        symbols = k['symbols']
-                        weights = k['weights']
-                        symbol_dict[k['name']] = get_symbols_string(symbols,
-                                                                    weights)
-                    try:
-                        symbol_list = []
-                        for s in deser_data[s_pk]['sites']:
-                            symbol_list.append(symbol_dict[s['kind_name']])
-                        formula = get_formula(symbol_list,
-                                              mode=args.formulamode)
-                    # If for some reason there is no kind with the name
-                    # referenced by the site
-                    except KeyError:
-                        formula = "<<UNKNOWN>>"
-                    entry_list.append([str(s_pk),
-                                       str(formula),
-                                       struc_list_data_dict[s_pk]])
+                symbol_dict = {}
+                for k in akinds:
+                    symbols = k['symbols']
+                    weights = k['weights']
+                    symbol_dict[k['name']] = get_symbols_string(symbols,
+                                                                weights)
+
+                try:
+                    symbol_list = []
+                    for s in asites:
+                        symbol_list.append(symbol_dict[s['kind_name']])
+                    formula = get_formula(symbol_list,
+                                          mode=args.formulamode)
+                # If for some reason there is no kind with the name
+                # referenced by the site
+                except KeyError:
+                    formula = "<<UNKNOWN>>"
+                entry_list.append([str(id), str(formula), label])
+
         return entry_list
 
     def append_list_cmdline_arguments(self, parser):
@@ -1346,7 +1326,6 @@ class _Structure(VerdiCommandWithSubcommands,
         except ValueError as e:
             print e
 
-
     def _import_pwi(self, filename, **kwargs):
         """
         Imports a structure from a quantumespresso input file.
@@ -1374,8 +1353,6 @@ class _Structure(VerdiCommandWithSubcommands,
 
         except ValueError as e:
             print e
-
-
 
     def _deposit_tcod(self, node, parameter_data=None, **kwargs):
         """

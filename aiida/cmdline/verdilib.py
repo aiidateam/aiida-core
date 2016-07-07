@@ -392,7 +392,8 @@ class Install(VerdiCommand):
             elif backend_choice == BACKEND_SQLA:
                 print("...for SQLAlchemy backend")
                 from aiida.backends.sqlalchemy.models.base import Base
-                from aiida.backends.sqlalchemy.utils import get_engine
+                from aiida.backends.sqlalchemy.utils import (get_engine,
+                                                             install_tc)
                 from aiida.common.setup import get_profile_config
                 from aiida import is_dbenv_loaded, load_dbenv
 
@@ -429,8 +430,9 @@ class Install(VerdiCommand):
                     DbWorkflow, DbWorkflowData, DbWorkflowStep)
                 from aiida.backends.sqlalchemy.models.settings import DbSetting
 
-                Base.metadata.create_all(
-                    get_engine(get_profile_config(gprofile)))
+                connection = get_engine(get_profile_config(gprofile))
+                Base.metadata.create_all(connection)
+                install_tc(connection)
 
                 set_backend_type(BACKEND_SQLA)
 
@@ -448,11 +450,11 @@ class Install(VerdiCommand):
                 load_dbenv()
 
         from aiida.common.setup import DEFAULT_AIIDA_USER
-        from aiida.orm.user import User
+        from aiida.orm.user import User as AiiDAUser
 
-        if not User.search_for_users(email=DEFAULT_AIIDA_USER):
+        if not AiiDAUser.search_for_users(email=DEFAULT_AIIDA_USER):
             print "Installing default AiiDA user..."
-            nuser = User(email=DEFAULT_AIIDA_USER)
+            nuser = AiiDAUser(email=DEFAULT_AIIDA_USER)
             nuser.first_name = "AiiDA"
             nuser.last_name = "Daemon"
             nuser.is_staff = True

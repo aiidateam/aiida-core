@@ -58,7 +58,7 @@ class User(VerdiCommandWithSubcommands):
         email = args[0]
 
         user_list = User.search_for_users(email=email)
-        if user_list is not None and len(user_list) > 1:
+        if user_list is not None and len(user_list) >= 1:
             user = user_list[0]
             print ""
             print ("An AiiDA user for email '{}' is already present "

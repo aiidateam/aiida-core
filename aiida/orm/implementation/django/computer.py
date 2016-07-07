@@ -19,10 +19,14 @@ __version__ = "0.6.0"
 class Computer(AbstractComputer):
     @property
     def uuid(self):
-        return self._dbcomputer.uuid
+        return unicode(self._dbcomputer.uuid)
 
     @property
     def pk(self):
+        return self._dbcomputer.pk
+
+    @property
+    def id(self):
         return self._dbcomputer.pk
 
     def __init__(self, **kwargs):

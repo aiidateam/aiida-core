@@ -147,4 +147,8 @@ def Int(value=None):
 
 
 def Str(value=None):
-    return SimpleData(typevalue=(str, value))
+    return _Str(typevalue=(str, value))
+
+
+class _Str(SimpleData):
+    pass

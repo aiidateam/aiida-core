@@ -100,18 +100,18 @@ class JobProcess(Process):
 
     @override
     def _setup_db_record(self):
+        """
+        Link up all the retrospective provenance for this JobCalculation
+        :return:
+        """
         from aiida.common.links import LinkType
 
         parent_calc = self.get_parent_calc()
 
-        # Link and store the retrospective provenance for this process
-        calc = self.create_db_record()  # (unstored)
-        assert (not calc.is_stored)
-
         # Set all the attributes using the setter methods
         for name, value in self.inputs.get(self.OPTIONS_INPUT_LABEL, {}).iteritems():
             if value is not None:
-                getattr(calc, "set_{}".format(name))(value)
+                getattr(self._calc, "set_{}".format(name))(value)
 
         # First get a dictionary of all the inputs to link, this is needed to
         # deal with things like input groups
@@ -126,18 +126,17 @@ class JobProcess(Process):
                     self._CALC_CLASS._use_methods[name]['additional_parameter']
 
                 for k, v in input.iteritems():
-                    getattr(calc, 'use_{}'.format(name))(v, **{additional: k})
+                    getattr(self._calc,
+                            'use_{}'.format(name))(v, **{additional: k})
 
             else:
-                getattr(calc, 'use_{}'.format(name))(input)
+                getattr(self._calc, 'use_{}'.format(name))(input)
 
         # Get the computer from the code if necessary
-        if calc.get_computer() is None and 'code' in self.inputs:
+        if self._calc.get_computer() is None and 'code' in self.inputs:
             code = self.inputs['code']
             if not code.is_local():
-                calc.set_computer(code.get_remote_computer())
+                self._calc.set_computer(code.get_remote_computer())
 
         if parent_calc:
-            calc.add_link_from(parent_calc, "CALL", LinkType.CALL)
-
-        self._calc = calc
+            self._calc.add_link_from(parent_calc, "CALL", LinkType.CALL)

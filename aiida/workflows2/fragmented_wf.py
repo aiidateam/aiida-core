@@ -273,12 +273,11 @@ class _Block(_Step):
 
         def load_position(self, bundle):
             self._pos = bundle[self._POSITION]
-            try:
+
+            # Do we have a stepper position to load?
+            if self._STEPPER_POS in bundle:
                 self._current_stepper =\
                     self._commands[self._pos].create_stepper(self._workflow)
-            except AttributeError:
-                pass
-            else:
                 self._current_stepper.load_position(bundle[self._STEPPER_POS])
 
     def __init__(self, commands):

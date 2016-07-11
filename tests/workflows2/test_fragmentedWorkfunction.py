@@ -12,19 +12,19 @@ if not is_dbenv_loaded():
 
 import inspect
 from unittest import TestCase
-from aiida.workflows2.fragmented_wf import *
+from aiida.workflows2.defaults import factory, registry, storage
+from aiida.workflows2.fragmented_wf import FragmentedWorkfunction,\
+    ResultToContext, _Block, _If, _While, if_, while_
 from aiida.workflows2.fragmented_wf import _FragmentedWorkfunctionSpec
 from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.wf import wf
 from aiida.workflows2.run import async
-from aiida.orm.data.simple import Str
-
-# This is nasty, use a global variable to track the finishing of steps but in a
-# test it's kind of OK.
-finished_steps = {}
+from aiida.orm.data.simple import Str, Int
+from plum.engine.ticking import TickingEngine
 
 
 class Wf(FragmentedWorkfunction):
+    # Keep track of which steps were completed by the workflow
     finished_steps = {}
 
     @classmethod
@@ -96,10 +96,10 @@ class Wf(FragmentedWorkfunction):
 
 class TestFragmentedWorkfunction(TestCase):
     def test_run(self):
-        A = to_db_type('A')
-        B = to_db_type('B')
-        C = to_db_type('C')
-        three = to_db_type(3)
+        A = Str('A')
+        B = Str('B')
+        C = Str('C')
+        three = Int(3)
 
         # Try the if(..) part
         Wf.run(inputs={'value': A, 'n': three})
@@ -174,6 +174,10 @@ class TestFragmentedWorkfunction(TestCase):
         self.assertIsInstance(str(Wf.spec()), basestring)
 
     def test_malformed_outline(self):
+        """
+        Test some malformed outlines
+        :return:
+        """
         spec = _FragmentedWorkfunctionSpec()
 
         with self.assertRaises(ValueError):
@@ -181,3 +185,50 @@ class TestFragmentedWorkfunction(TestCase):
 
         with self.assertRaises(ValueError):
             spec.outline(type)
+
+    def test_checkpointing(self):
+        A = Str('A')
+        B = Str('B')
+        C = Str('C')
+        three = Int(3)
+
+        # Try the if(..) part
+        finished_steps =\
+            self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
+        # Check the steps that should have been run
+        for step, finished in finished_steps.iteritems():
+            if step not in ['s3', 's4', 'isB']:
+                self.assertTrue(
+                    finished, "Step {} was not called by workflow".format(step))
+
+        # Try the elif(..) part
+        finished_steps =\
+            self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
+        # Check the steps that should have been run
+        for step, finished in finished_steps.iteritems():
+            if step not in ['isA', 's2', 's4']:
+                self.assertTrue(
+                    finished, "Step {} was not called by workflow".format(step))
+
+        # Try the else... part
+        finished_steps =\
+            self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
+        # Check the steps that should have been run
+        for step, finished in finished_steps.iteritems():
+            if step not in ['isA', 's2', 'isB', 's3']:
+                self.assertTrue(
+                    finished, "Step {} was not called by workflow".format(step))
+
+    def _run_with_checkpoints(self, wf_class, inputs=None):
+        finished_steps = {}
+
+        te = TickingEngine(process_factory=factory, process_registry=registry)
+        fut = te.submit(wf_class, inputs)
+        while not fut.done():
+            pid = fut.pid
+            te.tick()
+            finished_steps.update(wf_class.finished_steps)
+            if not fut.done():
+                te.cancel(pid)
+                fut = te.run_from(storage.load_checkpoint(pid))
+        return finished_steps

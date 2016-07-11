@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from plum.engine.serial import SerialEngine
+from plum.engine.parallel import MultithreadedEngine
 from aiida.workflows2.execution_engine import ExecutionEngine
 from aiida.workflows2.process_factory import ProcessFactory
 from plum.persistence.pickle_persistence import PicklePersistence
@@ -19,7 +20,7 @@ storage = PicklePersistence(
     finished_directory='/tmp/processes/finished',
     failed_directory='/tmp/processes/failed')
 registry = ProcessRegistry(storage)
-#execution_engine = ExecutionEngine(
-#    process_factory=factory, process_registry=registry)
+# execution_engine = MultithreadedEngine(process_factory=factory,
+#                                        process_registry=registry)
 execution_engine = SerialEngine(process_factory=factory,
                                 process_registry=registry)

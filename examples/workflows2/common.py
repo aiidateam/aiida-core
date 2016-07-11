@@ -49,8 +49,6 @@ def generate_scf_input_params(structure, codename, pseudo_family):
     inputs.structure = structure
 
     inputs.code = Code.get_from_string(codename.value)
-    # calc.label = "PW test"
-    # calc.description = "My first AiiDA calculation of Silicon with Quantum ESPRESSO"
     inputs._options.resources = {"num_machines": 1}
     inputs._options.max_wallclock_seconds = 30 * 60
 

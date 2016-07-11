@@ -426,14 +426,15 @@ class FunctionProcess(Process):
         for arg in self._func_args:
             args.append(kwargs.pop(arg))
         outs = self._func(*args)
-        if isinstance(outs, Data):
-            self.out(self.SINGLE_RETURN_LINKNAME, outs)
-        elif isinstance(outs, collections.Mapping):
-            for name, value in outs.iteritems():
-                self.out(name, value)
-        else:
-            raise TypeError(
-                "TypeError: Workfunction returned unsupported type '{}'\n"
-                "Must be a Data type or a Mapping of string: Data".
-                format(outs.__class__))
+        if outs is not None:
+            if isinstance(outs, Data):
+                self.out(self.SINGLE_RETURN_LINKNAME, outs)
+            elif isinstance(outs, collections.Mapping):
+                for name, value in outs.iteritems():
+                    self.out(name, value)
+            else:
+                raise TypeError(
+                    "Workfunction returned unsupported type '{}'\n"
+                    "Must be a Data type or a Mapping of string => Data".
+                    format(outs.__class__))
 

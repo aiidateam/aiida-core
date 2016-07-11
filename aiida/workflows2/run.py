@@ -50,3 +50,8 @@ def run(process_class, *args, **inputs):
         return execution_engine.submit(process_class, inputs).result()
     else:
         raise ValueError("Unsupported type supplied for process_class.")
+
+
+def restart(pid):
+    cp = defaults.storage.load_checkpoint(pid)
+    return defaults.execution_engine.run_from_and_block(cp)

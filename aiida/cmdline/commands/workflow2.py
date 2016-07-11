@@ -7,6 +7,7 @@ import sys
 from tabulate import tabulate
 from aiida.workflows2.process import Process
 from aiida.common.links import LinkType
+from aiida.utils.ascii_vis import build_tree
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -96,7 +97,7 @@ def do_tree(node_label, depth, pks):
 
     for pk in pks:
         node = load_node(pk=pk)
-        t = Tree("({});".format(_build_tree(node, node_label, max_depth=depth)),
+        t = Tree("({});".format(build_tree(node, node_label, max_depth=depth)),
                  format=1)
         print(t.get_ascii(show_internal=True))
 
@@ -118,39 +119,6 @@ def do_checkpoint(pks):
                 print(str(cp))
         except ValueError:
             print("Unable to show checkpoint for calculation '{}'".format(pk))
-
-
-def _ctime(node):
-    return node.ctime
-
-
-def _build_tree(node, node_label='type', show_pk=True, depth=0, max_depth=1):
-    out_values = []
-
-    if depth < max_depth:
-        children =[]
-        for child in sorted(node.get_outputs(link_type=LinkType.CALL), key=_ctime):
-            children.append(_build_tree(child, node_label, depth=depth + 1,
-                                        max_depth=max_depth))
-
-        if children:
-            out_values.append("(")
-            out_values.append(", ".join(children))
-            out_values.append(")")
-
-    try:
-        label = str(getattr(node, node_label))
-    except AttributeError:
-        try:
-            label = node.get_attr(node_label)
-        except AttributeError:
-            label = node.__class__.__name__
-    if show_pk:
-        label += " [{}]".format(node.pk)
-
-    out_values.append(label)
-
-    return "".join(out_values)
 
 
 def _build_query(order_by=None, limit=None, past_days=None):

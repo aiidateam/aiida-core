@@ -7,14 +7,15 @@ from aiida.workflows2.wf import wf
 from aiida.orm.data.simple import Int
 from aiida.workflows2.db_types import to_db_type, SimpleData
 
+
 @wf
 def sum(a, b):
-    return to_db_type(a.value + b.value)
+    return a + b
 
 
 @wf
 def prod(a, b):
-    return to_db_type(a.value * b.value)
+    return a * b
 
 
 @wf

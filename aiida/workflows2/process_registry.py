@@ -49,9 +49,18 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
             return False
 
         try:
-            return (aiida.orm.load_node(pid).has_finished_ok() or aiida.orm.load_node(pid).has_failed())
+            node = aiida.orm.load_node(pid)
         except exceptions.NotExistent:
-            pass
+            return False
+        else:
+            try:
+                return node.has_finished_ok() or node.has_failed()
+            except AttributeError:
+                pass
+            try:
+                return node.is_sealed
+            except AttributeError:
+                pass
 
         raise ValueError("Could not find a Process with id '{}'".format(pid))
 
@@ -67,7 +76,7 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
             return self._finished[pid]
         else:
             try:
-                aiida.orm.load_node(pid).get_outputs_dict()
+                return aiida.orm.load_node(pid).get_outputs_dict()
             except exceptions.NotExistent:
                 raise ValueError(
                     "Could not find a Process with id '{}'".format(pid))

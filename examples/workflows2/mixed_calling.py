@@ -12,8 +12,8 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 import time
-from aiida.workflows2.db_types import to_db_type
-from aiida.workflows2.run import async, asyncd
+from aiida.orm.data.simple import Int
+from aiida.workflows2.run import async
 from aiida.workflows2.wf import wf
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction,\
     ResultToContext
@@ -44,7 +44,7 @@ class F1(FragmentedWorkfunction):
         spec.outline(cls.s1, cls.s2)
 
     def s1(self, ctx):
-        p2 = asyncd(LongRunning, a=self.inputs.inp)
+        p2 = self.submit(LongRunning, inputs={'a': self.inputs.inp})
         ctx.a = 1 #  Do some work...
         return ResultToContext(r2=p2)
 
@@ -87,7 +87,7 @@ class F1WaitFor(FragmentedWorkfunction):
 
 
 if __name__ == '__main__':
-    five = to_db_type(5)
+    five = Int(5)
 
     r1 = f1(five)
     F1.run(inputs={'inp': five})

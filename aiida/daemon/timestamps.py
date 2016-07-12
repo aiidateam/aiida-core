@@ -56,7 +56,10 @@ def get_most_recent_daemon_timestamp():
             func.max(DbSetting.val[()].cast(TIMESTAMP))).filter(
             DbSetting.key.like("daemon|task%")).first()
 
-        return utc.localize(maxtimestamp)
+        if maxtimestamp is None:
+            return None
+        else:
+            return utc.localize(maxtimestamp)
 
 
 def set_daemon_timestamp(task_name, when):

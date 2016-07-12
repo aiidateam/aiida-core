@@ -864,6 +864,100 @@ fields_to_export = {
 
 
 def get_all_fields_info_sqla():
+
+    unique_identifiers = {
+        "aiida.backends.djsite.db.models.DbNode": "uuid",
+        "aiida.backends.djsite.db.models.DbLink": None,
+        "aiida.backends.djsite.db.models.DbGroup": "uuid",
+        "aiida.backends.djsite.db.models.DbAttribute": None,
+        "aiida.backends.djsite.db.models.DbComputer": "uuid",
+        "aiida.backends.djsite.db.models.DbUser": "email"
+    }
+
+    all_fields_info = dict()
+    all_fields_info["aiida.backends.djsite.db.models.DbLink"] = {
+            "input": {
+                "requires": "aiida.backends.djsite.db.models.DbNode",
+                "related_name": "output_links"
+            },
+            "type": {},
+            "output": {
+                "requires": "aiida.backends.djsite.db.models.DbNode",
+                "related_name": "input_links"
+            },
+            "label": {}
+        }
+    all_fields_info["aiida.backends.djsite.db.models.DbNode"] = {
+             "ctime" : {
+                "convert_type" : "date"
+             },
+             "uuid" : {},
+             "public" : {},
+             "mtime" : {
+                "convert_type" : "date"
+             },
+             "type" : {},
+             "label" : {},
+             "nodeversion" : {},
+             "user" : {
+                "requires" : "aiida.backends.djsite.db.models.DbUser",
+                "related_name" : "dbnodes"
+             },
+             "dbcomputer" : {
+                "requires" : "aiida.backends.djsite.db.models.DbComputer",
+                "related_name" : "dbnodes"
+             },
+             "description" : {}
+        }
+    all_fields_info["aiida.backends.djsite.db.models.DbUser"] = {
+             "last_name" : {},
+             "first_name" : {},
+             "institution" : {},
+             "email" : {}
+        }
+    all_fields_info["aiida.backends.djsite.db.models.DbComputer"] = {
+             "transport_type" : {},
+             "transport_params" : {},
+             "hostname" : {},
+             "description" : {},
+             "scheduler_type" : {},
+             "metadata" : {},
+             "enabled" : {},
+             "uuid" : {},
+             "name" : {}
+        }
+    all_fields_info["aiida.backends.djsite.db.models.DbGroup"] = {
+             "description" : {},
+             "user" : {
+                "related_name" : "dbgroups",
+                "requires" : "aiida.backends.djsite.db.models.DbUser"
+             },
+             "time" : {
+                "convert_type" : "date"
+             },
+             "type" : {},
+             "uuid" : {},
+             "name" : {}
+        }
+    all_fields_info["aiida.backends.djsite.db.models.DbAttribute"] = {
+             "dbnode" : {
+                "requires" : "aiida.backends.djsite.db.models.DbNode",
+                "related_name" : "dbattributes"
+             },
+             "key" : {},
+             "tval" : {},
+             "fval" : {},
+             "bval" : {},
+             "datatype" : {},
+             "dval" : {
+                "convert_type" : "date"
+             },
+             "ival" : {}
+        }
+    return all_fields_info, unique_identifiers
+
+
+def get_all_fields_info_sqla_old():
     """
     Retrieve automatically the information on the fields and store them in a
     dictionary, that will be also stored in the export data, in the metadata
@@ -1151,6 +1245,29 @@ def get_all_fields_info():
     return all_fields_info, unique_identifiers
 
 
+sqla_to_django_schema = {
+    "aiida.backends.sqlalchemy.models.node.DbNode": "aiida.backends.djsite.db.models.DbNode",
+    "aiida.backends.sqlalchemy.models.node.DbLink": "aiida.backends.djsite.db.models.DbLink",
+    "aiida.backends.sqlalchemy.models.group.DbGroup": "aiida.backends.djsite.db.models.DbGroup",
+    "aiida.backends.sqlalchemy.models.computer.DbComputer": "aiida.backends.djsite.db.models.DbComputer",
+    "aiida.backends.sqlalchemy.models.user.DbUser": "aiida.backends.djsite.db.models.DbUser"
+}
+
+django_to_sqla_schema = {
+    "aiida.backends.djsite.db.models.DbNode": "aiida.backends.sqlalchemy.models.node.DbNode",
+    "aiida.backends.djsite.db.models.DbLink": "aiida.backends.sqlalchemy.models.node.DbLink",
+    "aiida.backends.djsite.db.models.DbGroup": "aiida.backends.sqlalchemy.models.group.DbGroup",
+    "aiida.backends.djsite.db.models.DbComputer": "aiida.backends.sqlalchemy.models.computer.DbComputer",
+    "aiida.backends.djsite.db.models.DbUser": "aiida.backends.sqlalchemy.models.user.DbUser"
+}
+
+django_fields_to_sqla = {
+    "aiida.backends.sqlalchemy.models.node.DbNode": {
+        "dbcomputer" : "dbcomputer_id",
+        "user": "user_id"}
+}
+
+
 def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
                 allowed_licenses=None, forbidden_licenses=None,
                 silent=False):
@@ -1199,89 +1316,65 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
 
-    sys.exit()
 
     entries_ids_to_add = defaultdict(list)
     # I store a list of the actual dbnodes
     groups_entries = []
-    group_class_string = get_class_string(models.DbGroup)
+    group_class_string = get_class_string(models.group.DbGroup)
     for entry in what:
         class_string = get_class_string(entry)
         entries_ids_to_add[class_string].append(entry.pk)
         if class_string == group_class_string:
             groups_entries.append(entry)
 
-    if also_parents:
-        # It is a defaultdict, it will provide an empty list
-        given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
 
-        if given_nodes:
-            # Alsof add the parents (to any level) to the query
-            given_nodes = list(set(given_nodes +
-                                   list(models.DbNode.objects.filter(
-                                       children__in=given_nodes).values_list('pk', flat=True))))
-            entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
+    # The following has to be written better in QB syntax
 
-    if also_calc_outputs:
-        given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
-
-        if given_nodes:
-            # Add all (direct) outputs of a calculation object that was already
-            # selected
-            given_nodes = list(set(given_nodes +
-                                   list(models.DbNode.objects.filter(
-                                       inputs__pk__in=given_nodes,
-                                       inputs__type__startswith=Calculation._query_type_string
-                                   ).values_list('pk', flat=True)
-                                   )))
-            entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
+    # if also_parents:
+    #     # It is a defaultdict, it will provide an empty list
+    #     given_nodes = entries_ids_to_add[get_class_string(models.node.DbNode)]
+    #
+    #     if given_nodes:
+    #         # Alsof add the parents (to any level) to the query
+    #         given_nodes = list(set(given_nodes +
+    #                                list(models.DbNode.objects.filter(
+    #                                    children__in=given_nodes).values_list('pk', flat=True))))
+    #         entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
+    #
+    # if also_calc_outputs:
+    #     given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
+    #
+    #     if given_nodes:
+    #         # Add all (direct) outputs of a calculation object that was already
+    #         # selected
+    #         given_nodes = list(set(given_nodes +
+    #                                list(models.DbNode.objects.filter(
+    #                                    inputs__pk__in=given_nodes,
+    #                                    inputs__type__startswith=Calculation._query_type_string
+    #                                ).values_list('pk', flat=True)
+    #                                )))
+    #         entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
 
     # Initial query to fire the generation of the export data
-    entries_to_add = {k: [Q(id__in=v)] for k, v
-                      in entries_ids_to_add.iteritems()}
 
-    # Check the licenses of exported data.
-    if allowed_licenses is not None or forbidden_licenses is not None:
-        from inspect import isfunction
+    print entries_ids_to_add
+    for k, v in entries_ids_to_add.iteritems():
+        print k, v
 
-        node_licenses = list(aiida.backends.djsite.db.models.DbNode.objects.filter(
-            reduce(operator.and_, entries_to_add['aiida.backends.djsite.db.models.DbNode']),
-            dbattributes__key='source.license').values_list('pk', 'dbattributes__tval'))
-        for pk, license in node_licenses:
-            if allowed_licenses is not None:
-                try:
-                    if isfunction(allowed_licenses):
-                        try:
-                            if not allowed_licenses(license):
-                                raise LicensingException
-                        except Exception as e:
-                            raise LicensingException
-                    else:
-                        if license not in allowed_licenses:
-                            raise LicensingException
-                except LicensingException:
-                    raise LicensingException("Node {} is licensed "
-                                             "under {} license, which "
-                                             "is not in the list of "
-                                             "allowed licenses".format(
-                                              pk, license))
-            if forbidden_licenses is not None:
-                try:
-                    if isfunction(forbidden_licenses):
-                        try:
-                            if forbidden_licenses(license):
-                                raise LicensingException
-                        except Exception as e:
-                            raise LicensingException
-                    else:
-                        if license in forbidden_licenses:
-                            raise LicensingException
-                except LicensingException:
-                    raise LicensingException("Node {} is licensed "
-                                             "under {} license, which "
-                                             "is in the list of "
-                                             "forbidden licenses".format(
-                                              pk, license))
+    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm.node import Node
+
+    entries_to_add = dict()
+    for k, v in entries_ids_to_add.iteritems():
+        qb = QueryBuilder()
+        qb.append(Node, filters={"id": {"in": v}})
+        entries_to_add[k] = [inner_v[0] for inner_v in qb.all()]
+
+    print "entries_to_add ===>", entries_to_add
+    # sys.exit()
+
+    # entries_to_add = {k: [Q(id__in=v)]for k, v
+    #                   in entries_ids_to_add. iteritems()}
 
     ############################################################
     ##### Start automatic recursive export data generation #####
@@ -1291,7 +1384,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     export_data = {}
     while entries_to_add:
         new_entries_to_add = {}
-        for model_name, querysets in entries_to_add.iteritems():
+        for model_name, items in entries_to_add.iteritems():
             if not silent:
                 print "  - Model: {}".format(model_name)
             Model = get_object_from_string(model_name)
@@ -1307,13 +1400,79 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
             ## of .distinct(); then I get the final results with a further
             ## query.
             db_ids = set()
-            for queryset in querysets:
-                db_ids.update(Model.objects.filter(queryset).values_list(
-                    'id', flat=True))
-            dbentries = Model.objects.filter(id__in=db_ids)
-            entryvalues = dbentries.values(
-                'id', *all_fields_info[model_name].keys()
-            )
+            for item in items:
+                db_ids.add(item.id)
+
+            print sqla_to_django_schema[model_name]
+
+            print all_fields_info[sqla_to_django_schema[model_name]]
+            print all_fields_info[sqla_to_django_schema[model_name]].keys()
+
+            entity_keys = all_fields_info[sqla_to_django_schema[model_name]].keys()
+
+            print "OOOOOOOOO", vars(Model)
+            ovars = vars(Model)
+            # print "KKKKKK", ovars.keys()
+            # for key in entity_keys:
+            #     nkey = django_fields_to_sqla[model_name][key] if django_fields_to_sqla[model_name].has_key(key) else key
+            #     method = getattr(Model, key)
+            #     print "EEEEEEEEEE", nkey
+            #     print "LLLLLLLLLLLL", nkey.split('.')
+            #     print "WWWWWWWWWWWW ======> ", method
+            #     o = ovars[nkey]
+            #     print "OOOOOOOOOOOO", o
+                # print "TTTTTTTTTT", vars(Model)[key]
+                # print "VVVVVVVVVVVV ======> ", method()
+
+            # qb = QueryBuilder()
+            # project_keys = ["id"] + all_fields_info[sqla_to_django_schema[model_name]].keys()
+            # qb.append(Model,
+            #           filters={"id": {"in": db_ids}},
+            #           project=project_keys)
+            # print "lalalalal ", qb.all()
+            # print "lolololo", [inner_v[0] for inner_v in qb.all()]
+            # print "all_fields_info" , all_fields_info[sqla_to_django_schema[model_name]].keys()
+
+            qb = QueryBuilder()
+            qb.append(Model, filters={"id": {"in": db_ids}})
+            res = [inner_v[0].dbnode for inner_v in qb.all()]
+            print "resres", res
+            print qb.get_query().all()
+
+            cinstance = qb.get_query().first()
+            ovars = vars(cinstance)
+
+            for key in entity_keys:
+                nkey = (django_fields_to_sqla[model_name][key]
+                        if django_fields_to_sqla[model_name].has_key(key)
+                        else key)
+                # method = getattr(Model, key)
+                print "EEEEEEEEEE", nkey
+
+                o = ovars[nkey]
+                print "OOOOOOOOOOOO", o
+                # print "TTTTTTTTTT", vars(Model)[key]
+                # print "VVVVVVVVVVVV ======> ", method()
+
+            project_cols = ["id"]
+            for key in entity_keys:
+                nkey = (django_fields_to_sqla[model_name][key]
+                        if django_fields_to_sqla[model_name].has_key(key)
+                        else key)
+                project_cols.append(nkey)
+            qb = QueryBuilder()
+            qb.append(Model, filters={"id": {"in": db_ids}}, project=project_cols, tag="mod")
+
+            print "=================================================="
+            print "=================================================="
+            print qb.all()
+
+
+            entryvalues = [v["mod"] for v in qb.dict()]
+            print "entryvalues", entryvalues
+            # sys.exit()
+
+            # entryvalues = qb.get_query().all()
 
             # Only serialize new nodes (also to avoid infinite loops)
             if model_name in export_data:
@@ -1335,18 +1494,26 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
             if serialized:
                 foreign_fields = {k: v for k, v in
-                                  all_fields_info[model_name].iteritems()
+                                  all_fields_info[
+                                      sqla_to_django_schema[model_name]].iteritems()
+                                  # all_fields_info[model_name].iteritems()
                                   if 'requires' in v}
 
                 for k, v in foreign_fields.iteritems():
-                    related_queryobj = Q(**{'{}__in'.format(v['related_name']):
-                                                serialized.keys()})
+                    qb = QueryBuilder()
+                    qb.append(Node, tag='nodes', filters={"id": {"in": serialized.keys()}})
+                    related_queryobj = qb
                     try:
                         new_entries_to_add[v['requires']].append(related_queryobj)
                     except KeyError:
                         new_entries_to_add[v['requires']] = [related_queryobj]
 
         entries_to_add = new_entries_to_add
+
+
+    # Until here
+    sys.exit()
+
 
     ######################################
     # Manually manage links and attributes

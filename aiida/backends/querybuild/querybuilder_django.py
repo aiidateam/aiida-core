@@ -164,7 +164,13 @@ class QueryBuilder(AbstractQueryBuilder):
 
 
         elif operator=='has_key':
-            expr = alias.attributes.any(mapped_class.key==value)
+            if issubclass(mapped_class, DummyAttribute):
+                expr = alias.attributes.any(mapped_class.key == '.'.join(attr_key+[value]))
+            elif issubclass(mapped_class, DummyExtra):
+                expr = alias.extras.any(mapped_class.key == '.'.join(attr_key+[value]))
+            else:
+                raise Exception("I was given {} as an attribute base class".format(mapped_class))
+
         else:
             types_n_casts = []
             if isinstance(value_to_consider, basestring):

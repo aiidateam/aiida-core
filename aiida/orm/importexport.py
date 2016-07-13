@@ -1364,11 +1364,20 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.node import Node
 
+    model_name = get_class_string(models.node.DbNode)
+    project_cols = ["id"]
+    entity_keys = all_fields_info[sqla_to_django_schema[model_name]].keys()
+    for key in entity_keys:
+        nkey = (django_fields_to_sqla[model_name][key]
+                if django_fields_to_sqla[model_name].has_key(key)
+                else key)
+        project_cols.append(nkey)
+
     entries_to_add = dict()
     for k, v in entries_ids_to_add.iteritems():
         qb = QueryBuilder()
-        qb.append(Node, filters={"id": {"in": v}})
-        entries_to_add[k] = [inner_v[0] for inner_v in qb.all()]
+        qb.append(Node, filters={"id": {"in": v}}, project=project_cols)
+        entries_to_add[k] = qb
 
     print "entries_to_add ===>", entries_to_add
     # sys.exit()
@@ -1384,7 +1393,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     export_data = {}
     while entries_to_add:
         new_entries_to_add = {}
-        for model_name, items in entries_to_add.iteritems():
+        for model_name, partial_query in entries_to_add.iteritems():
             if not silent:
                 print "  - Model: {}".format(model_name)
             Model = get_object_from_string(model_name)
@@ -1399,9 +1408,10 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
             ## Now I instead create the list of UUIDs and do a set() instead
             ## of .distinct(); then I get the final results with a further
             ## query.
-            db_ids = set()
-            for item in items:
-                db_ids.add(item.id)
+
+            # db_ids = set()
+            # for item in partial_query:
+            #     db_ids.add(item.id)
 
             print sqla_to_django_schema[model_name]
 
@@ -1433,39 +1443,49 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
             # print "lolololo", [inner_v[0] for inner_v in qb.all()]
             # print "all_fields_info" , all_fields_info[sqla_to_django_schema[model_name]].keys()
 
-            qb = QueryBuilder()
-            qb.append(Model, filters={"id": {"in": db_ids}})
-            res = [inner_v[0].dbnode for inner_v in qb.all()]
-            print "resres", res
-            print qb.get_query().all()
-
-            cinstance = qb.get_query().first()
-            ovars = vars(cinstance)
-
-            for key in entity_keys:
-                nkey = (django_fields_to_sqla[model_name][key]
-                        if django_fields_to_sqla[model_name].has_key(key)
-                        else key)
-                # method = getattr(Model, key)
-                print "EEEEEEEEEE", nkey
-
-                o = ovars[nkey]
-                print "OOOOOOOOOOOO", o
-                # print "TTTTTTTTTT", vars(Model)[key]
-                # print "VVVVVVVVVVVV ======> ", method()
-
             project_cols = ["id"]
             for key in entity_keys:
                 nkey = (django_fields_to_sqla[model_name][key]
                         if django_fields_to_sqla[model_name].has_key(key)
                         else key)
                 project_cols.append(nkey)
-            qb = QueryBuilder()
-            qb.append(Model, filters={"id": {"in": db_ids}}, project=project_cols, tag="mod")
 
-            print "=================================================="
-            print "=================================================="
-            print qb.all()
+            if model_name == "aiida.backends.sqlalchemy.models.user.DbUser":
+                partial_query.append(Model, creator_of="nodes", project=project_cols)
+            elif model_name == "aiida.backends.djsite.db.models.DbComputer":
+                partial_query.append(Model, computer_of="nodes", project=project_cols)
+
+            res = [inner_v[0].dbnode for inner_v in partial_query.all()]
+            print "resres", res
+            print partial_query.get_query().all()
+
+            # cinstance = partial_query.get_query().first()
+            # ovars = vars(cinstance)
+            #
+            # for key in entity_keys:
+            #     nkey = (django_fields_to_sqla[model_name][key]
+            #             if django_fields_to_sqla[model_name].has_key(key)
+            #             else key)
+            #     # method = getattr(Model, key)
+            #     print "EEEEEEEEEE", nkey
+            #
+            #     o = ovars[nkey]
+            #     print "OOOOOOOOOOOO", o
+            #     # print "TTTTTTTTTT", vars(Model)[key]
+            #     # print "VVVVVVVVVVVV ======> ", method()
+
+            # project_cols = ["id"]
+            # for key in entity_keys:
+            #     nkey = (django_fields_to_sqla[model_name][key]
+            #             if django_fields_to_sqla[model_name].has_key(key)
+            #             else key)
+            #     project_cols.append(nkey)
+            # qb = QueryBuilder()
+            # qb.append(Model, filters={"id": {"in": db_ids}}, project=project_cols, tag="mod")
+            #
+            # print "=================================================="
+            # print "=================================================="
+            # print qb.all()
 
 
             entryvalues = [v["mod"] for v in qb.dict()]

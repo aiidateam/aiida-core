@@ -108,10 +108,13 @@ class Export(VerdiCommand):
         dbgroups_list = group_dict.values()
 
         # Getting the nodes that correspond to the ids that were found above
-        qb = QueryBuilder()
-        qb.append(Node, tag='node', project=['*'],
-                  filters={'id': {'in': node_id_set}})
-        node_list = [_[0] for _ in qb.all()]
+        if len(node_id_set) > 0:
+            qb = QueryBuilder()
+            qb.append(Node, tag='node', project=['*'],
+                      filters={'id': {'in': node_id_set}})
+            node_list = [_[0] for _ in qb.all()]
+        else:
+            node_list = list()
 
         # Check if any of the nodes wasn't found in the database.
         missing_nodes = node_id_set.difference(_.id for _ in node_list)

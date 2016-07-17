@@ -15,17 +15,13 @@ import threading
 
 class ProcessStackTest(Process):
     @override
-    def _run(self):
+    def _main(self):
         pass
 
     @override
-    def on_create(self, pid, inputs=None):
-        super(ProcessStackTest, self).on_create(pid, inputs)
-        self._thread_id = threading.current_thread().ident
-
-    @override
-    def on_recreate(self, pid, saved_instance_state):
-        super(ProcessStackTest, self).on_recreate(pid, saved_instance_state)
+    def on_create(self, pid, inputs, saved_instance_state):
+        super(ProcessStackTest, self).on_create(
+            pid, inputs, saved_instance_state)
         self._thread_id = threading.current_thread().ident
 
     @override

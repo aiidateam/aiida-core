@@ -5,10 +5,13 @@ import uuid
 
 import plum.port as port
 import plum.process
+import plum.process_monitor
+from plum.wait_ons import Checkpoint
 
+import aiida.orm
 import aiida.workflows2.util as util
 import voluptuous
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override, protected
@@ -98,13 +101,15 @@ class Process(plum.process.Process):
 
     KEY_CALC_ID = 'calc_id'
     KEY_PARENT_CALC_PID = 'parent_calc_pid'
+    KEY_QUEUE_UP = '_queue_up'
 
     @classmethod
     def _define(cls, spec):
-        from aiida.orm import Data
+        super(Process, cls)._define(spec)
 
-        spec.dynamic_input(valid_type=Data)
-        spec.dynamic_output(valid_type=Data)
+        spec.input(cls.KEY_QUEUE_UP, required=False)
+        spec.dynamic_input(valid_type=aiida.orm.Data)
+        spec.dynamic_output(valid_type=aiida.orm.Data)
 
     @classmethod
     def get_inputs_template(cls):
@@ -134,6 +139,10 @@ class Process(plum.process.Process):
         self._parent_pid = None
         self._store_provenance = store_provenance
 
+    @property
+    def calc(self):
+        return self._calc
+
     @override
     def save_instance_state(self, bundle):
         super(Process, self).save_instance_state(bundle)
@@ -143,6 +152,20 @@ class Process(plum.process.Process):
             assert self._calc.is_stored
 
         bundle[self.KEY_CALC_ID] = self.pid
+
+    @override
+    def _run(self, **kwargs):
+        if self.KEY_QUEUE_UP in kwargs:
+            return Checkpoint('_main')
+
+        self._main(**kwargs)
+
+    @abstractmethod
+    def _main(self, **kwargs):
+        pass
+
+    def run_after_queueing(self, wait_on):
+        return self._run
 
     def _convert_to_ids(self, nodes):
         from aiida.orm import Node
@@ -184,59 +207,35 @@ class Process(plum.process.Process):
 
     # Messages #####################################################
     @override
-    def on_create(self, pid, inputs=None):
-        super(Process, self).on_create(pid, inputs)
+    def on_create(self, pid, inputs, saved_instance_state):
+        super(Process, self).on_create(pid, inputs, saved_instance_state)
 
-        # Get the parent from the top of the process stack
-        try:
-            self._parent_pid = util.ProcessStack.top().pid
-        except IndexError:
-            pass
+        if saved_instance_state is None:
+            # Get the parent from the top of the process stack
+            try:
+                self._parent_pid = util.ProcessStack.top().pid
+            except IndexError:
+                pass
 
-        self._pid = self._create_and_setup_db_record()
-
-    @override
-    def on_recreate(self, pid, saved_instance_state):
-        from aiida.orm import load_node
-
-        # Replace the node pks for real nodes
-        saved_instance_state[self._INPUTS] = \
-            self._load_nodes_from(saved_instance_state[self._INPUTS])
-        super(Process, self).on_recreate(pid, saved_instance_state)
-
-        if self.KEY_CALC_ID in saved_instance_state:
-            self._calc = load_node(saved_instance_state[self.KEY_CALC_ID])
-            self._pid = self._calc.pk
-        else:
             self._pid = self._create_and_setup_db_record()
+        else:
+            from aiida.orm import load_node
 
-        if self.KEY_PARENT_CALC_PID in saved_instance_state:
-            self._parent_pid = saved_instance_state[self.KEY_PARENT_CALC_PID]
+            # Replace the node pks for real nodes
+            saved_instance_state[self._INPUTS] = \
+                self._load_nodes_from(saved_instance_state[self._INPUTS])
 
-    @override
-    def on_start(self):
-        super(Process, self).on_start()
+            if self.KEY_CALC_ID in saved_instance_state:
+                self._calc = load_node(saved_instance_state[self.KEY_CALC_ID])
+                self._pid = self._calc.pk
+            else:
+                self._pid = self._create_and_setup_db_record()
+
+            if self.KEY_PARENT_CALC_PID in saved_instance_state:
+                self._parent_pid = saved_instance_state[
+                    self.KEY_PARENT_CALC_PID]
+
         util.ProcessStack.push(self)
-
-    @override
-    def on_restart(self):
-        super(Process, self).on_restart()
-        util.ProcessStack.push(self)
-
-    @override
-    def on_fail(self, exception):
-        super(Process, self).on_fail(exception)
-        self.calc.seal()
-
-    @override
-    def on_finish(self, retval):
-        super(Process, self).on_finish(retval)
-        self.calc.seal()
-
-    @override
-    def on_stop(self):
-        super(Process, self).on_stop()
-        util.ProcessStack.pop()
 
     @override
     def _on_output_emitted(self, output_port, value, dynamic):
@@ -260,7 +259,6 @@ class Process(plum.process.Process):
             if self._store_provenance:
                 value.store()
         value.add_link_from(self._calc, output_port, LinkType.RETURN)
-
     #################################################################
 
     def _create_and_setup_db_record(self):
@@ -349,10 +347,6 @@ class Process(plum.process.Process):
         # Out of options
         return None
 
-    @property
-    def calc(self):
-        return self._calc
-
 
 class FunctionProcess(Process):
     SINGLE_RETURN_LINKNAME = '_return'
@@ -383,7 +377,9 @@ class FunctionProcess(Process):
 
         args, varargs, keywords, defaults = inspect.getargspec(func)
 
-        def _define(spec):
+        def _define(cls, spec):
+            FunctionProcess._define(spec)
+
             for i in range(len(args)):
                 default = None
                 if defaults and len(defaults) - len(args) + i >= 0:
@@ -399,7 +395,7 @@ class FunctionProcess(Process):
 
         return type(func.__name__, (FunctionProcess,),
                     {'_func': staticmethod(func),
-                     '_define': staticmethod(_define),
+                     '_define': classmethod(_define),
                      '_func_args': args})
 
     @classmethod
@@ -419,7 +415,7 @@ class FunctionProcess(Process):
         # Save the name of the function
         self.calc._set_attr(self.PROCESS_LABEL_ATTR, self._func.__name__)
 
-    def _run(self, **kwargs):
+    def _main(self, **kwargs):
         from aiida.orm.data import Data
 
         args = []
@@ -438,3 +434,30 @@ class FunctionProcess(Process):
                     "Must be a Data type or a Mapping of string => Data".
                     format(outs.__class__))
 
+
+class _ProcessFinaliser(plum.process_monitor.ProcessMonitorListener):
+    """
+    Take care of finalising a process when it finishes either through successful
+    completion or because of a failure caused by an exception.
+    """
+    def __init__(self):
+        plum.process_monitor.monitor.add_monitor_listener(self)
+
+    @override
+    def on_monitored_process_destroying(self, process):
+        process.calc.seal()
+        util.ProcessStack.pop(process)
+
+    @override
+    def on_monitored_process_failed(self, pid):
+        try:
+            calc_node = aiida.orm.load_node(pk=pid)
+        except ValueError:
+            pass
+        else:
+            calc_node.seal()
+        util.ProcessStack.pop(pid=pid)
+
+
+# Have a global singleton to take care of finalising all processes
+_finaliser = _ProcessFinaliser()

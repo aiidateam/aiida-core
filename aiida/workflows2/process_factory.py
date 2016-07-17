@@ -5,7 +5,7 @@ from plum.wait import WaitOn
 from plum.persistence.checkpoint import Checkpoint
 from aiida.common.lang import override
 from aiida.workflows2.legacy.job_process import JobProcess
-from aiida.workflows2.process import FunctionProcess
+from aiida.workflows2.process import Process, FunctionProcess
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -27,7 +27,7 @@ class ProcessFactory(plum.process_factory.ProcessFactory):
         assert(issubclass(process_class, Process))
 
         proc = process_class(self._store_provenance)
-        proc.on_create(None, inputs)
+        proc.perform_create(None, inputs, None)
 
         return proc
 
@@ -50,7 +50,9 @@ class ProcessFactory(plum.process_factory.ProcessFactory):
             return None, wait_on
         else:
             proc = checkpoint.process_class(self._store_provenance)
-        proc.on_recreate(None, checkpoint.process_instance_state)
+
+        inputs = checkpoint.process_instance_state[Process._INPUTS]
+        proc.perform_create(None, inputs, checkpoint.process_instance_state)
 
         return proc, wait_on
 

@@ -14,21 +14,24 @@ __version__ = "0.5.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
-def run_all_saved_processes(engine, registry):
+def run_all_saved_processes(engine, storage):
     futures = []
-    for cp in registry.load_all_checkpoints():
+    for cp in storage.load_all_checkpoints():
         futures.append(engine.run_from(cp))
     return futures
 
 
-def tick_workflow_engine(registry=None):
+def tick_workflow_engine(registry=None, storage=None):
     if registry is None:
-        import aiida.workflows2.defaults
-        registry = aiida.workflows2.defaults.registry
+        registry = defaults.registry
+    if storage is None:
+        storage = defaults.storage
 
     engine = TickingEngine(defaults.factory, registry)
-    run_all_saved_processes(engine, registry)
-    return engine.tick()
+    run_all_saved_processes(engine, storage)
+    work = engine.tick()
+    engine.shutdown()
+    return work != 0
 
 
 if __name__ == "__main__":

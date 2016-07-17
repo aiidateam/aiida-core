@@ -8,10 +8,11 @@ class DummyProcess(Process):
     """
     @classmethod
     def _define(cls, spec):
+        super(DummyProcess, cls)._define(spec)
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def _run(self):
+    def _main(self):
         pass
 
 
@@ -22,9 +23,10 @@ class BadOutput(Process):
     """
     @classmethod
     def _define(cls, spec):
+        super(BadOutput, cls)._define(spec)
         spec.dynamic_output()
 
-    def _run(self):
+    def _main(self):
         self.out("bad_output", 5)
 
 
@@ -35,10 +37,11 @@ class ProcessScope(object):
         self._inputs = inputs
 
     def __enter__(self):
-        self._process.on_create(self._pid, self._inputs)
-        self._process.on_start()
+        self._process.perform_create(self._pid, self._inputs, None)
+        self._process.perform_run(None, None)
         return self._process
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._process.on_stop()
-        self._process.on_destroy()
+        self._process.perform_finish(None)
+        self._process.perform_stop()
+        self._process.perform_destroy()

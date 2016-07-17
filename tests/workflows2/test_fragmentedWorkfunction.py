@@ -29,6 +29,7 @@ class Wf(FragmentedWorkfunction):
 
     @classmethod
     def _define(cls, spec):
+        super(Wf, cls)._define(spec)
         spec.input("value")
         spec.input("n")
         spec.dynamic_output()
@@ -129,6 +130,7 @@ class TestFragmentedWorkfunction(TestCase):
         class Wf(FragmentedWorkfunction):
             @classmethod
             def _define(cls, spec):
+                super(Wf, cls)._define(spec)
                 # Try defining an invalid outline
                 spec.outline(5)
 
@@ -150,6 +152,7 @@ class TestFragmentedWorkfunction(TestCase):
         class Wf(FragmentedWorkfunction):
             @classmethod
             def _define(cls, spec):
+                super(Wf, cls)._define(spec)
                 spec.outline(cls.s1, cls.s2, cls.s3)
 
             def s1(self, ctx):
@@ -229,6 +232,6 @@ class TestFragmentedWorkfunction(TestCase):
             te.tick()
             finished_steps.update(wf_class.finished_steps)
             if not fut.done():
-                te.cancel(pid)
+                te.stop(pid)
                 fut = te.run_from(storage.load_checkpoint(pid))
         return finished_steps

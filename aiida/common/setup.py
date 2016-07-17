@@ -23,6 +23,8 @@ DAEMON_SUBDIR = "daemon"
 LOG_SUBDIR = "daemon/log"
 DAEMON_CONF_FILE = "aiida_daemon.conf"
 
+WORKFLOWS_SUBDIR = "workflows"
+
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 
@@ -380,7 +382,7 @@ def set_default_profile(process, profile, force_rewrite = False):
         confs['default_profiles']
     except KeyError:
         confs['default_profiles'] = {}
-        
+
     if force_rewrite:
         confs['default_profiles'][process] = profile
     else:
@@ -421,7 +423,7 @@ def get_profiles_list():
 def get_profile_config(profile, conf_dict=None, set_test_location=True):
     """
     Return the profile specific configurations
-    
+
     :param conf_dict: if passed, use the provided dictionary rather than reading
         it from file.
     :param set_test_location: if True, sets a new folder for storing repository

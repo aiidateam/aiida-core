@@ -10,10 +10,7 @@ from plum.wait_ons import checkpoint
 from plum.persistence.pickle_persistence import PicklePersistence
 from aiida.orm import load_node
 
-
-class DummyProcess(Process):
-    def _run(self):
-        pass
+from workflows2.common import DummyProcess
 
 
 class ProcessEventsTester(Process):
@@ -22,7 +19,8 @@ class ProcessEventsTester(Process):
 
     @classmethod
     def _define(cls, spec):
-        for label in ["create", "recreate", "start", "wait", "continue_",
+        super(ProcessEventsTester, cls)._define(spec)
+        for label in ["create", "start", "wait", "continue_",
                       "finish", "emitted", "stop", "destroy"]:
             spec.optional_output(label)
 
@@ -31,15 +29,10 @@ class ProcessEventsTester(Process):
         self._emitted = False
 
     @override
-    def on_create(self, pid, inputs=None):
-        super(ProcessEventsTester, self).on_create(pid, inputs)
+    def on_create(self, pid, inputs, saved_instance_state):
+        super(ProcessEventsTester, self).on_create(
+            pid, inputs, saved_instance_state)
         self.out("create", Bool(True))
-
-    @override
-    def on_recreate(self, pid, saved_instance_state):
-        super(ProcessEventsTester, self).on_recreate(pid,
-                                                     saved_instance_state)
-        self.out("recreate", Bool(True))
 
     @override
     def on_start(self):
@@ -80,7 +73,7 @@ class ProcessEventsTester(Process):
         self.out("destroy", Bool(True))
 
     @override
-    def _run(self):
+    def _main(self):
         return checkpoint(self.finish)
 
     def finish(self, wait_on):
@@ -96,12 +89,14 @@ class TestDaemon(unittest.TestCase):
 
     def test_tick(self):
         import tempfile
-        storage = PicklePersistence(factory, tempfile.mkdtemp())
-        registry = ProcessRegistry(storage)
+        storage = PicklePersistence(factory, auto_persist=False,
+                                    directory=tempfile.mkdtemp())
+        registry = ProcessRegistry()
 
         pk = asyncd(ProcessEventsTester, _jobs_store=storage)
         # Tick the engine a number of times or until there is no more work
-        for i in range(0, 100):
-            if not daemon.tick_workflow_engine(registry):
-                break
+        i = 0
+        while daemon.tick_workflow_engine(registry, storage):
+            self.assertLess(i, 10, "Engine not done after 10 ticks")
+            i += 1
         self.assertTrue(registry.is_finished(pk))

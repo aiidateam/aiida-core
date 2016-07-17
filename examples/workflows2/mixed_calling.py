@@ -13,7 +13,7 @@ if not is_dbenv_loaded():
 
 import time
 from aiida.orm.data.simple import Int
-from aiida.workflows2.run import async
+from aiida.workflows2.run import async, run
 from aiida.workflows2.wf import wf
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction,\
     ResultToContext
@@ -90,6 +90,6 @@ if __name__ == '__main__':
     five = Int(5)
 
     r1 = f1(five)
-    F1.run(inputs={'inp': five})
-    R1 = F1WaitFor.run(inputs={'inp': five})['r1']
+    run(F1, inp=five)
+    R1 = run(F1WaitFor, inp=five)['r1']
 

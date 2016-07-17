@@ -65,7 +65,7 @@ class JobProcess(Process):
         # created internally by the execution manager
         super(JobProcess, self).__init__(store_provenance)
 
-    def _run(self, **kwargs):
+    def _main(self, **kwargs):
         from aiida.workflows2.legacy.wait_on import wait_on_job_calculation
 
         # I create this wait_on here because there is a check to make sure the

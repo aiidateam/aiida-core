@@ -4,6 +4,7 @@ from aiida.workflows2 import util as util
 from aiida.workflows2.defaults import execution_engine
 from aiida.workflows2.process import Process
 import aiida.workflows2.defaults as defaults
+import plum.wait_ons
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -27,12 +28,8 @@ def asyncd(process_class, _jobs_store=None, **kwargs):
 
     if _jobs_store is None:
         _jobs_store = defaults.storage
-    proc = defaults.factory.create_process(process_class, inputs=kwargs)
-    _jobs_store.save(proc)
-    pid = proc.pid
-    proc.signal_on_destroy()
 
-    return pid
+    return queue_up(process_class, kwargs, _jobs_store)
 
 
 def run(process_class, *args, **inputs):
@@ -55,3 +52,25 @@ def run(process_class, *args, **inputs):
 def restart(pid):
     cp = defaults.storage.load_checkpoint(pid)
     return defaults.execution_engine.run_from_and_block(cp)
+
+
+def queue_up(process_class, inputs, storage):
+    """
+    This queues up the Process so that it's executed by the daemon when it gets
+    around to it.
+
+    :param process_class: The process class to queue up.
+    :param inputs: The inputs to the process.
+    :return: The pid of the queued process.
+    """
+
+    proc = defaults.factory.create_process(process_class, inputs)
+    pid = proc.pid
+    proc.perform_run(None, defaults.registry)
+    cp = plum.wait_ons.Checkpoint('run_after_queueing')
+    proc.perform_wait(cp)
+    storage.save(proc, cp)
+    proc.perform_stop()
+    proc.perform_destroy()
+    del proc
+    return pid

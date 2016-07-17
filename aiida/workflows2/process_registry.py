@@ -2,17 +2,18 @@
 import plum.persistence.pickle_persistence
 import plum.process_registry
 import plum.process
+import plum.simple_registry
+import plum.process_monitor
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override
 from aiida.workflows2.util import ProcessStack
+from aiida.orm import load_node
 
 
 class ProcessRegistry(plum.process_registry.ProcessRegistry,
                       plum.process.ProcessListener):
-    def __init__(self, persistence_engine=None):
-        self._running_processes = {}
-        self._finished = {}
-        self._persistence_engine = persistence_engine
+    def __init__(self):
+        self._simple_registry = plum.simple_registry.SimpleRegistry()
 
     @property
     def current_pid(self):
@@ -23,30 +24,20 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
         return ProcessStack.top().calc
 
     def get_running_pids(self):
-        return self._running_processes.viewkeys()
-
-    @override
-    def register_running_process(self, process):
-        self._running_processes[process.pid] = process
-        process.add_process_listener(self)
-        if self._persistence_engine:
-            self._persistence_engine.persist_process(process)
+        return plum.process_monitor.monitor.get_pids()
 
     @override
     def get_running_process(self, pid):
-        return self._running_processes[pid]
+        return self._simple_registry.get_running_process(pid)
 
     @override
     def is_finished(self, pid):
         import aiida.orm
 
-        # Is it finished?
-        if pid in self._finished:
-            return True
-
-        # Is it running?
-        if pid in self._running_processes:
-            return False
+        try:
+            return self._simple_registry.is_finished(pid)
+        except KeyError:
+            pass
 
         try:
             node = aiida.orm.load_node(pid)
@@ -70,27 +61,14 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
 
     @override
     def get_outputs(self, pid):
-        import aiida.orm
-
-        if pid in self._finished:
-            return self._finished[pid]
-        else:
-            try:
-                return aiida.orm.load_node(pid).get_outputs_dict()
-            except exceptions.NotExistent:
-                raise ValueError(
-                    "Could not find a Process with id '{}'".format(pid))
-
-    # Process messages
-    @override
-    def on_process_finish(self, process, retval):
-        process.remove_process_listener(self)
-        del self._running_processes[process.pid]
-        self._finished[process.pid] = process.get_last_outputs()
-
-    def load_all_checkpoints(self):
-        if self._persistence_engine:
-            return self._persistence_engine.load_all_checkpoints()
-        return []
-
-
+        # Try getting them from processes that have run in this interpreter
+        try:
+            return self._simple_registry.get_outputs(pid)
+        except KeyError:
+            pass
+        # Try getting them from the node in the database
+        try:
+            return load_node(pid).get_outputs_dict()
+        except exceptions.NotExistent:
+            raise ValueError(
+                "Could not find a Process with id '{}'".format(pid))

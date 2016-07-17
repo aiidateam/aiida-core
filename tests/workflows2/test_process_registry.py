@@ -15,7 +15,7 @@ from aiida.orm.data.simple import Int
 
 class RegistryTester(Process):
     @override
-    def _run(self):
+    def _main(self):
         assert registry.current_pid == self.pid
         assert registry.current_calc_node is self.calc
         nested_tester()

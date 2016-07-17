@@ -20,10 +20,11 @@ from concurrent.futures import ThreadPoolExecutor
 class DummyProcess(Process):
     @classmethod
     def _define(cls, spec):
+        super(DummyProcess, cls)._define(spec)
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def _run(self, a):
+    def _main(self, a):
         self.out("ran", Bool(True))
 
 

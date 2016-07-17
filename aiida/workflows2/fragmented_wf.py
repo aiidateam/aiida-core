@@ -35,6 +35,7 @@ class FragmentedWorkfunction(Process):
 
     @classmethod
     def _define(cls, spec):
+        super(FragmentedWorkfunction, cls)._define(spec)
         # For now fragmented workflows can accept any input and emit any output
         # _If this changes in the future the spec should be updated here.
         spec.dynamic_input()
@@ -107,7 +108,7 @@ class FragmentedWorkfunction(Process):
         return self._context
 
     @override
-    def _run(self, **kwargs):
+    def _main(self, **kwargs):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
@@ -122,21 +123,20 @@ class FragmentedWorkfunction(Process):
 
     # Internal messages #################################
     @override
-    def on_create(self, pid, inputs=None):
-        super(FragmentedWorkfunction, self).on_create(pid, inputs)
-        self._context = self.Context()
+    def on_create(self, pid, inputs, saved_instance_state):
+        super(FragmentedWorkfunction, self).on_create(
+            pid, inputs, saved_instance_state)
 
-    @override
-    def on_recreate(self, pid, saved_instance_state):
-        super(FragmentedWorkfunction, self).on_recreate(
-            pid, saved_instance_state)
-        # Recreate the context
-        self._context = self.Context(saved_instance_state[self._CONTEXT])
-        # Recreate the stepper
-        if self._STEPPER_STATE in saved_instance_state:
-            self._stepper = self.spec().get_outline().create_stepper(self)
-            self._stepper.load_position(
-                saved_instance_state[self._STEPPER_STATE])
+        if saved_instance_state is None:
+            self._context = self.Context()
+        else:
+            # Recreate the context
+            self._context = self.Context(saved_instance_state[self._CONTEXT])
+            # Recreate the stepper
+            if self._STEPPER_STATE in saved_instance_state:
+                self._stepper = self.spec().get_outline().create_stepper(self)
+                self._stepper.load_position(
+                    saved_instance_state[self._STEPPER_STATE])
 
     @override
     def on_continue(self, wait_on):

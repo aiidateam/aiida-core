@@ -26,17 +26,38 @@ class ProcessStack(object):
             return cls._thread_local.wf_stack
 
     @classmethod
+    def pids(cls):
+        try:
+            return cls._thread_local.pids_stack
+        except AttributeError:
+            cls._thread_local.pids_stack = []
+            return cls._thread_local.pids_stack
+
+    @classmethod
     def push(cls, process):
         try:
             process._parent = cls.top()
         except IndexError:
             process._parent = None
         cls.stack().append(process)
+        cls.pids().append(process.pid)
 
     @classmethod
-    def pop(cls):
+    def pop(cls, process=None, pid=None):
+        assert process is not None or pid is not None
+        if process is not None:
+            assert process is cls.top(),\
+                "Can't pop a process that is not top of the stack"
+        elif pid is not None:
+            assert pid == cls.pids()[-1], \
+                "Can't pop a process that is not top of the stack"
+        else:
+            raise ValueError("Must supply process or pid")
+
         process = cls.stack().pop()
         process._parent = None
+
+        cls.pids().pop()
 
     def __init__(self):
         raise NotImplementedError("Can't instantiate the ProcessStack")

@@ -152,3 +152,10 @@ def Str(value=None):
 
 class StrType(SimpleData):
     pass
+
+
+class BoolType(SimpleData):
+    pass
+
+TRUE = BoolType(typevalue=(bool, True))
+FALSE = BoolType(typevalue=(bool, False))

@@ -1267,6 +1267,23 @@ django_fields_to_sqla = {
         "user": "user_id"}
 }
 
+def export_spyros(dbnodes, dbcomputers, dbgroups, folder, also_parents = True, also_calc_outputs=True,
+                allowed_licenses=None, forbidden_licenses=None,
+                silent=False):
+
+    exported_dbnode_ids = list()
+    exported_dbcomputer_ids = list()
+    exported_dbgroup_ids = list()
+
+    dbnodes_to_export = list()
+    # name of the referenced entity to the ids that have to be added
+    referenced_entities = dict()
+    while dbnodes_to_export:
+
+
+
+    pass
+
 
 def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
                 allowed_licenses=None, forbidden_licenses=None,
@@ -1335,7 +1352,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     #     given_nodes = entries_ids_to_add[get_class_string(models.node.DbNode)]
     #
     #     if given_nodes:
-    #         # Alsof add the parents (to any level) to the query
+    #         # Also add the parents (to any level) to the query
     #         given_nodes = list(set(given_nodes +
     #                                list(models.DbNode.objects.filter(
     #                                    children__in=given_nodes).values_list('pk', flat=True))))
@@ -1450,10 +1467,13 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
                         else key)
                 project_cols.append(nkey)
 
-            if model_name == "aiida.backends.sqlalchemy.models.user.DbUser":
-                partial_query.append(Model, creator_of="nodes", project=project_cols)
-            elif model_name == "aiida.backends.djsite.db.models.DbComputer":
-                partial_query.append(Model, computer_of="nodes", project=project_cols)
+            # if model_name == "aiida.backends.sqlalchemy.models.user.DbUser":
+            #     partial_query.append(Model, creator_of="nodes", project=project_cols)
+            # elif model_name == "aiida.backends.djsite.db.models.DbComputer":
+            #     partial_query.append(Model, computer_of="nodes", project=project_cols)
+            partial_query.append(Model, creator_of="nodes",
+                                 project=project_cols)
+
 
             res = [inner_v[0].dbnode for inner_v in partial_query.all()]
             print "resres", res
@@ -1521,7 +1541,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
                 for k, v in foreign_fields.iteritems():
                     qb = QueryBuilder()
-                    qb.append(Node, tag='nodes', filters={"id": {"in": serialized.keys()}})
+                    qb.append(Model, tag=str(Model), filters={"id": {"in": serialized.keys()}})
                     related_queryobj = qb
                     try:
                         new_entries_to_add[v['requires']].append(related_queryobj)
@@ -1700,7 +1720,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
         given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
 
         if given_nodes:
-            # Alsof add the parents (to any level) to the query
+            # Also add the parents (to any level) to the query
             given_nodes = list(set(given_nodes +
                                    list(models.DbNode.objects.filter(
                                        children__in=given_nodes).values_list('pk', flat=True))))

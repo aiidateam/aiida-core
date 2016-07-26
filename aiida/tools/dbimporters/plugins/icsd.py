@@ -696,10 +696,10 @@ class IcsdEntry(CifEntry):
         """
         :return: ASE structure corresponding to the cif file.
         """
-        import ase.io.cif
+        from aiida.orm.data.cif import CifData
         import StringIO
 
-        return ase.io.cif.read_cif(StringIO.StringIO(self.get_corrected_cif()))
+        return CifData.read_cif(StringIO.StringIO(self.get_corrected_cif()))
 
 
     def get_aiida_structure(self):

@@ -269,13 +269,13 @@ class CifEntry(DbEntry):
         .. note:: To be removed, as it is duplicated in
             :py:class:`aiida.orm.data.cif.CifData`.
         """
-        import ase.io.cif
         import StringIO
-
-        return ase.io.cif.read_cif(StringIO.StringIO(self.cif))
+        from aiida.orm.data.cif import CifData
+        return CifData.read_cif(StringIO.StringIO(self.cif))
 
     def get_cif_node(self, store=False):
         """
+
         Creates a CIF node, that can be used in AiiDA workflow.
 
         :return: :py:class:`aiida.orm.data.cif.CifData` object

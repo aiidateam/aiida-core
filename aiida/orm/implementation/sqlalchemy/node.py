@@ -261,11 +261,12 @@ class Node(AbstractNode):
             input_list_keys = [i[0] for i in inputs_list]
 
             for k, v in self._inputlinks_cache.iteritems():
+                src = v[0]
                 if k in input_list_keys:
                     raise InternalError("There exist a link with the same name "
                                         "'{}' both in the DB and in the internal "
                                         "cache for node pk= {}!".format(k, self.id))
-                inputs_list.append((k, v))
+                inputs_list.append((k, src))
 
         if node_type is None:
             filtered_list = inputs_list
@@ -528,7 +529,7 @@ class Node(AbstractNode):
         # For each parent, check that all its inputs are stored
         for link in self._inputlinks_cache:
             try:
-                parent_node = self._inputlinks_cache[link]
+                parent_node = self._inputlinks_cache[link][0]
                 parent_node._check_are_parents_stored()
             except ModificationNotAllowed:
                 raise ModificationNotAllowed("Parent node (UUID={}) has "
@@ -563,8 +564,9 @@ class Node(AbstractNode):
                 "unstored (node {} is stored, instead)".format(self.id))
 
         for link in self._inputlinks_cache:
-            if not self._inputlinks_cache[link].is_stored:
-                self._inputlinks_cache[link].store(with_transaction=False)
+            parent = self._inputlinks_cache[link][0]
+            if not parent.is_stored:
+                parent.store(with_transaction=False)
 
     def _check_are_parents_stored(self):
         """
@@ -575,7 +577,7 @@ class Node(AbstractNode):
         """
         # Preliminary check to verify that inputs are stored already
         for link in self._inputlinks_cache:
-            if not self._inputlinks_cache[link].is_stored:
+            if not self._inputlinks_cache[link][0].is_stored:
                 raise ModificationNotAllowed(
                     "Cannot store the input link '{}' because the "
                     "source node is not stored. Either store it first, "
@@ -720,3 +722,7 @@ class Node(AbstractNode):
     def has_parents(self):
         return session.query(literal(True)).filter(
             self.dbnode.parent_paths.exists()).scalar() or False
+
+    @property
+    def uuid(self):
+        return unicode(self.dbnode.uuid)

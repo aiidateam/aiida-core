@@ -898,15 +898,25 @@ class AbstractNode(object):
         pass
 
     @property
+    @abstractmethod
     def uuid(self):
         """
         :return: a string with the uuid
         """
-        return unicode(self.dbnode.uuid)
+        pass
 
     @property
     @abstractmethod
     def pk(self):
+        """
+        :return: the principal key (the ID) as an integer, or None if the
+           node was not stored yet
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def id(self):
         """
         :return: the principal key (the ID) as an integer, or None if the
            node was not stored yet

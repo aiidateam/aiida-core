@@ -88,7 +88,7 @@ if __name__ == "__main__":
     # run(EquationOfStates, structure=load_node(args.structure_pk),
     #     start=Float(start), end=Float(end), delta=Float(delta),
     #     code=Str(args.code), pseudo_family=Str(args.pseudo))
-    asyncd(EquationOfStates, structure=load_node(args.structure_pk),
+    run(EquationOfStates, structure=load_node(args.structure_pk),
         start=Float(start), end=Float(end), delta=Float(delta),
         code=Str(args.code), pseudo_family=Str(args.pseudo))
 

@@ -83,7 +83,7 @@ class Comment(AbstractComment):
 
     @property
     def uuid(self):
-        return self.dbcomment.uuid
+        return unicode(self.dbcomment.uuid)
 
     def get_ctime(self):
         return self.dbcomment.ctime

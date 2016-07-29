@@ -15,6 +15,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
+
 class Code(AbstractCode):
 
     @classmethod
@@ -163,6 +164,7 @@ class Code(AbstractCode):
             return (dbcomputer.id ==
                     self.get_remote_computer().dbcomputer.id)
 
+
 def delete_code(code):
     """
     Delete a code from the DB.
@@ -187,6 +189,12 @@ def delete_code(code):
             "has {} output links".format(len(existing_outputs)))
     else:
         repo_folder = code._repository_folder
-        with transaction.commit_on_success():
+        from aiida.backends.sqlalchemy import session
+        session.begin(subtransactions=True)
+        try:
             code.dbnode.delete()
             repo_folder.erase()
+            session.commit()
+        except:
+            session.rollback()
+            raise

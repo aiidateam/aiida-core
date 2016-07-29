@@ -433,7 +433,7 @@ def parse_namelists(txt):
                         "ntyp": 1}
             }
 
-    :rtype: dict
+    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -475,7 +475,8 @@ def parse_namelists(txt):
 
 def parse_atomic_positions(txt):
     """
-    Return dict containing info from the ATOMIC_POSITIONS card block in txt.
+    Return a dictionary containing info from the ATOMIC_POSITIONS card block
+    in txt.
 
     .. note:: If the units are unspecified, they will be returned as None.
 
@@ -503,7 +504,7 @@ def parse_atomic_positions(txt):
                               [True, True, True]]}
 
 
-    :rtype: dict
+    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -678,7 +679,7 @@ def parse_cell_parameters(txt):
 
 def parse_k_points(txt):
     """
-    Return dict containing info from the K_POINTS card block in txt.
+    Return a dictionary containing info from the K_POINTS card block in txt.
 
     .. note:: If the type of kpoints (where type = x in the card header,
            "K_POINTS x") is not present, type will be returned as 'tpiba', the
@@ -721,7 +722,7 @@ def parse_k_points(txt):
 
             {'type': 'gamma'}
 
-    :rtype: dict
+    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -784,7 +785,8 @@ def parse_k_points(txt):
 
 def parse_atomic_species(txt):
     """
-    Return dict containing info from the ATOMIC_SPECIES card block in txt.
+    Return a dictionary containing info from the ATOMIC_SPECIES card block
+    in txt.
 
     :param txt: A single string containing the QE input text to be parsed.
     :type txt: str
@@ -807,7 +809,7 @@ def parse_atomic_species(txt):
                                    'Al.pbe-nl-rrkjus_psl.1.0.0.UPF',
                                    'Si3 28.0855 Si.pbe-nl-rrkjus_psl.1.0.0.UPF']
 
-    :rtype: dict
+    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """

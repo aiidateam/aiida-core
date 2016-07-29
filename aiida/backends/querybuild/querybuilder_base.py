@@ -683,8 +683,8 @@ class AbstractQueryBuilder(object):
         :param tagspec:
             The tag, which has to exist already as a key
             in self._filters
-        :param dict filter_spec:
-            The specifications for the filter, has to be adictionary
+        :param filter_spec:
+            The specifications for the filter, has to be a dictionary
         """
 
 

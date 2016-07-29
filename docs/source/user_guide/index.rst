@@ -26,3 +26,4 @@ User's guide
    ../workflow/index
    ../dbimporters/index
    ../dbexporters/index
+   ../cmdline/scripting_and_shell.rst

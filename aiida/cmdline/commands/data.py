@@ -687,6 +687,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         parsed_args = parser.parse_args(args)
 
         from aiida.orm import DataFactory
+        from aiida.orm.data.upf import UPFGROUP_TYPE
 
         UpfData = DataFactory('upf')
         from aiida.orm.querybuilder import QueryBuilder
@@ -699,6 +700,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             Group,
             group_of=UpfData,
             project=["name", "description"],
+            filters={"type": {'==': UPFGROUP_TYPE}}
         )
 
         qb.distinct()

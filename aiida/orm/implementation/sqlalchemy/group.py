@@ -73,7 +73,7 @@ class Group(AbstractGroup):
         self._dbgroup.description = value
 
         # Update the entry in the DB, if the group is already stored
-        if self._is_stored:
+        if self.is_stored:
             self._dbgroup.save()
 
     @property

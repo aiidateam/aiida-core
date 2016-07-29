@@ -74,4 +74,5 @@ w = WorkflowXTiO3_EOS()
 w.set_params(params_dict)
 
 if not submit_test:
+    w.store()
     w.start()

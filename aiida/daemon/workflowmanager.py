@@ -10,15 +10,6 @@ __authors__ = "The AiiDA team."
 
 logger = aiidalogger.getChild('workflowmanager')
 
-
-def daemon_main_loop():
-    """
-    Support method to keep coherence with the Execution Manager, only launches ``execute_steps``
-    """
-
-    execute_steps()
-
-
 def execute_steps():
     """
     This method loops on the RUNNING workflows and handled the execution of the steps until

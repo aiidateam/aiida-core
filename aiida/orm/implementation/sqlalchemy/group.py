@@ -73,7 +73,7 @@ class Group(AbstractGroup):
         self._dbgroup.description = value
 
         # Update the entry in the DB, if the group is already stored
-        if self._is_stored:
+        if self.is_stored:
             self._dbgroup.save()
 
     @property
@@ -220,7 +220,11 @@ class Group(AbstractGroup):
             if node in self._dbgroup.dbnodes:
                 list_nodes.append(node)
 
-        list(map(self._dbgroup.dbnodes.remove, list_nodes))
+        for node in list_nodes:
+            print "deleting node ", node
+            self._dbgroup.dbnodes.remove(node)
+
+        sa.session.commit()
 
     @classmethod
     def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
@@ -230,15 +234,15 @@ class Group(AbstractGroup):
 
         filters = []
 
-        if name:
+        if name is not None:
             filters.append(DbGroup.name == name)
-        if type_string:
+        if type_string is not None:
             filters.append(DbGroup.type == type_string)
-        if pk:
+        if pk is not None:
             filters.append(DbGroup.id == pk)
-        if uuid:
+        if uuid is not None:
             filters.append(DbGroup.uuid == uuid)
-        if past_days:
+        if past_days is not None:
             filters.append(DbGroup.time >= past_days)
         if nodes:
             if not isinstance(nodes, collections.Iterable):

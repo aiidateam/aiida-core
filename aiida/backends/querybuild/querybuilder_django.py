@@ -29,7 +29,7 @@ from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotE
 from aiida.backends.querybuild.sa_init import (
     and_, or_, aliased,      # Queryfuncs
     cast, Float, Integer, Boolean, DateTime,
-    case, exists, join, select
+    case, exists, join, select, exists
 )
 class QueryBuilder(AbstractQueryBuilder):
 
@@ -90,6 +90,7 @@ class QueryBuilder(AbstractQueryBuilder):
             cls, operator, value, attr_key,
             column=None, column_name=None,
             alias=None):
+
         def get_attribute_db_column(mapped_class, dtype, castas=None):
             if dtype == 't':
                 mapped_entity = mapped_class.tval
@@ -114,11 +115,6 @@ class QueryBuilder(AbstractQueryBuilder):
                 mapped_entity = cast(mapped_entity, Float)
 
             return mapped_entity
-        if not attr_key:
-            raise InputValidationError(
-                    "Filters on attributes require a key\n"
-                    "for the Django-backend"
-                )
         if column:
             mapped_class = db_column.prop.mapper.class_
         else:
@@ -156,47 +152,56 @@ class QueryBuilder(AbstractQueryBuilder):
                 "Filtering by lengths of arrays or lists is not implemented\n"
                 "in the Django-Backend"
             )
-        if operator  == 'of_type':
+        elif operator  == 'of_type':
             raise NotImplementedError(
                 "Filtering by type is not implemented\n"
                 "in the Django-Backend"
             )
-        if operator in ('has_key', 'contains'):
+        elif operator == 'contains':
             raise NotImplementedError(
-                "Filtering by a key is not implemented in the Django-backend"
+                "Contains is not implemented in the Django-backend"
             )
 
 
-        types_n_casts = []
-        if isinstance(value_to_consider, basestring):
-            types_n_casts.append(('t', None))
-        elif isinstance(value_to_consider, bool):
-            types_n_casts.append(('b', None))
-        elif isinstance(value_to_consider, (int, float)):
-            types_n_casts.append(('f', None))
-            types_n_casts.append(('i', 'f'))
-        elif isinstance(value_to_consider, datetime.datetime):
-            types_n_casts.append(('d', None))
+        elif operator=='has_key':
+            if issubclass(mapped_class, DummyAttribute):
+                expr = alias.attributes.any(mapped_class.key == '.'.join(attr_key+[value]))
+            elif issubclass(mapped_class, DummyExtra):
+                expr = alias.extras.any(mapped_class.key == '.'.join(attr_key+[value]))
+            else:
+                raise Exception("I was given {} as an attribute base class".format(mapped_class))
 
-        expressions = []
-        for dtype, castas in types_n_casts:
-            try:
-                expressions.append(
-                    cls._get_filter_expr(
-                        operator, value, attr_key=[],
-                        column=get_attribute_db_column(mapped_class, dtype, castas=castas),
-                        is_attribute=False
+        else:
+            types_n_casts = []
+            if isinstance(value_to_consider, basestring):
+                types_n_casts.append(('t', None))
+            elif isinstance(value_to_consider, bool):
+                types_n_casts.append(('b', None))
+            elif isinstance(value_to_consider, (int, float)):
+                types_n_casts.append(('f', None))
+                types_n_casts.append(('i', 'f'))
+            elif isinstance(value_to_consider, datetime.datetime):
+                types_n_casts.append(('d', None))
+
+            expressions = []
+            for dtype, castas in types_n_casts:
+                try:
+                    expressions.append(
+                        cls._get_filter_expr(
+                            operator, value, attr_key=[],
+                            column=get_attribute_db_column(mapped_class, dtype, castas=castas),
+                            is_attribute=False
+                        )
                     )
-                )
-            except InputValidationError as e:
-                raise e
+                except InputValidationError as e:
+                    raise e
 
-        actual_attr_key = '.'.join(attr_key)
-        expr = column.any(and_(
-                mapped_class.key == actual_attr_key,
-                or_(*expressions)
+            actual_attr_key = '.'.join(attr_key)
+            expr = column.any(and_(
+                    mapped_class.key == actual_attr_key,
+                    or_(*expressions)
+                )
             )
-        )
         return expr
 
 

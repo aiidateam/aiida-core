@@ -4,6 +4,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.workflows2.wf import wf
+from aiida.orm.data.simple import Int
 from aiida.workflows2.db_types import to_db_type, SimpleData
 from aiida.workflows2.process import Process
 from aiida.workflows2.workflow import Workflow
@@ -19,44 +20,44 @@ def multiply(a, b):
 
 @wf
 def sum(a, b):
-    return {'sum': to_db_type(a.value + b.value)}
+    return to_db_type(a.value + b.value)
 
 
 @wf
 def prod(a, b):
-    return {'prod': to_db_type(a.value * b.value)}
+    return to_db_type(a.value * b.value)
 
 
 @wf
 def add_multiply_wf(a, b, c):
-    return {'result': prod(sum(a, b)['sum'], c)['prod']}
+    return prod(sum(a, b), c)
 
 
 class Add(Process):
-    @staticmethod
-    def _define(spec):
+    @classmethod
+    def _define(cls, spec):
         spec.input('a', default=0)
         spec.input('b', default=0)
         spec.output('value')
 
     def _run(self, a, b):
-        self._out('value', to_db_type(a.value + b.value))
+        self.out('value', to_db_type(a.value + b.value))
 
 
 class Mul(Process):
-    @staticmethod
-    def _define(spec):
+    @classmethod
+    def _define(cls, spec):
         spec.input('a', default=1)
         spec.input('b', default=1)
         spec.output('value')
 
     def _run(self, a, b):
-        self._out('value', to_db_type(a.value * b.value))
+        self.out('value', to_db_type(a.value * b.value))
 
 
 class MulAdd(Workflow):
-    @staticmethod
-    def _define(spec):
+    @classmethod
+    def _define(cls, spec):
         spec.process(Mul)
         spec.process(Add)
 
@@ -75,13 +76,12 @@ if __name__ == '__main__':
 
     print "WORKFUNCTION:"
 
-    simpledata = add_multiply_wf(two, three, four)['value']
+    simpledata = add_multiply_wf(two, three, four)
     print "output pk:", simpledata.pk
     print "output value:", simpledata.value
 
     print "PROCESS:"
-    workflow = MulAdd.create()
-    workflow(a=two, b=three, c=four)
-    simpledata = workflow.get_last_outputs()['value']
+    outs = MulAdd.run(inputs={'a': two, 'b': three, 'c': four})
+    simpledata = outs['value']
     print "output pk:", simpledata.pk
     print "output value:", simpledata.value

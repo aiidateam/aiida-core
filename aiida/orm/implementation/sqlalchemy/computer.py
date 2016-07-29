@@ -20,14 +20,19 @@ __license__ = "MIT license, see LICENSE.txt file"
 __authors__ = "The AiiDA team."
 __version__ = "0.6.0"
 
+
 class Computer(AbstractComputer):
 
     @property
     def uuid(self):
-        return self._dbcomputer.uuid
+        return unicode(self._dbcomputer.uuid)
 
     @property
     def pk(self):
+        return self._dbcomputer.id
+
+    @property
+    def id(self):
         return self._dbcomputer.id
 
     def __init__(self, **kwargs):

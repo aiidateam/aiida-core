@@ -3,6 +3,9 @@
 Quantum Espresso Projwfc user-tutorial
 ======================================
 
+.. note:: The Quantum Espresso Projwfc plugin referenced below is available in
+the EPFL version.
+
 .. toctree::
    :maxdepth: 2
 

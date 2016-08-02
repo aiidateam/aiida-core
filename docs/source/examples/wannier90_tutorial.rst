@@ -1,7 +1,9 @@
 .. _my-ref-to-wannier90-tutorial:
 
 Wannier90 user-tutorial
-=======================
+=========
+
+.. note:: The Wannier90 plugin referenced below is available in the EPFL version.
 
 Here we will review an example application of the wannier90 input plugin. In this example we will attempt to
 make MLWF for the oxygen 2p states in BaTiO3. This tutorial assumes that you are already familiar with the

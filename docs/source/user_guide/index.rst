@@ -15,6 +15,7 @@ User's guide
    ../examples/pwimmigrant_tutorial
    ../examples/ph_tutorial
    ../examples/cp_tutorial
+   ../examples/projwfc_tutorial
    ../parsers/resultmanager
    ../examples/pseudo_tutorial
    ../verdi/verdi_user_guide

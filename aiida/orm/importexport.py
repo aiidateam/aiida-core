@@ -1282,6 +1282,40 @@ def export_spyros(dbnodes, dbcomputers, dbgroups, folder, also_parents = True, a
         pass
 
 
+def fill_in_query(partial_query, originating_entity_str, current_entity_str):
+
+    all_fields_info, unique_identifiers = get_all_fields_info_sqla()
+    print current_entity_str
+    print all_fields_info[current_entity_str]
+
+    current_entity_mod = get_object_from_string(current_entity_str)
+
+    entity_prop = all_fields_info[sqla_to_django_schema[current_entity_mod]].keys()
+
+    project_cols = list()
+    for prop in entity_prop:
+        nprop = (django_fields_to_sqla[current_entity_str][prop]
+                 if django_fields_to_sqla[current_entity_str].has_key(prop)
+                 else prop)
+        project_cols.append(nprop)
+
+    partial_query.append(current_entity_mod, tag=str(current_entity_str),
+                         project=project_cols)
+
+    # prepare the recursion for the referenced entities
+    foreign_fields = {k: v for k, v in
+                      all_fields_info[
+                          sqla_to_django_schema[model_name]].iteritems()
+                      # all_fields_info[model_name].iteritems()
+                      if 'requires' in v}
+
+    for k, v in foreign_fields.iteritems():
+        ref_model_name = v['requires']
+        fill_in_query(partial_query, top_entity, top_entity_str,
+                      ref_model_name)
+
+
+
 def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
                 allowed_licenses=None, forbidden_licenses=None,
                 silent=False):
@@ -1379,7 +1413,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     from aiida.orm.node import Node
 
 
-    # The following is done for the nodes but we shoudl also do it for the
+    # The following is done for the nodes but we should also do it for the
     # other type of input given data
 
 
@@ -1412,7 +1446,22 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     if not silent:
         print "STORING DATABASE ENTRIES..."
     export_data = {}
-    while entries_to_add:
+    for top_entity_str, partial_query in entries_to_add.iteritems():
+
+        foreign_fields = {k: v for k, v in
+                          all_fields_info[
+                              sqla_to_django_schema[model_name]].iteritems()
+                          # all_fields_info[model_name].iteritems()
+                          if 'requires' in v}
+
+        for k, v in foreign_fields.iteritems():
+            ref_model_name = v['requires']
+            fill_in_query(partial_query, top_entity_str, ref_model_name)
+
+
+
+
+
         new_entries_to_add = {}
         for model_name, partial_query in entries_to_add.iteritems():
             if not silent:

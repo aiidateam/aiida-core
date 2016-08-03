@@ -3,6 +3,7 @@
 from aiida.backends.sqlalchemy import session
 
 from aiida.orm.implementation.general.calculation.inline import \
+
     InlineCalculation
 
 from aiida.orm.data import Data
@@ -14,10 +15,10 @@ from aiida.utils.calculation import add_source_info
 # transaction part ported to sqla. This might be a good idea to abstract just
 # the transaction part in some way, and have this be generic.
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 
 def make_inline(func):

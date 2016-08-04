@@ -1,3 +1,35 @@
+== v0.7.0 ==
+
+This release introduces a lot and significant changes & enhancements.
+
+We worked on our new backend and now AiiDA can be installed using SQLAlchemy too. Many of the verdi commands and functionalities have been tested and are working with this backend. The full JSON support provided by SQLAlchemy and the latest versions of PostgreSQL enable significant speed increase in attribute related queries. SQLAlchemy backend choice is a beta option since some last functionalities and commands need to be implemented or improved for this backend. Scripts are provided for the transition of databases from Django backend to SQLAlchemy backend.
+
+In this release we have included a new querying tool called QueryBuilder. It is a powerfull tool allowing users to write complex graph queries to explore the AiiDA graph database. It provides various features like selection of entity properties, filtering of results, combination of entities on specific properties as well as various ways to obtain the final result. It also provides the users an abstract way to query their data without enforcing them to write backend dependent queries.
+
+Last but not least we have included a new workflow engine which is available through the "verdi workflow2" command. The new workflows are easier to write (it is as close as writing python as possible), there is seamless mixing of short running tasks with long running (remote) tasks and they encourage users to write reusable workflows. Moreover, debugging of workflows has been done easier and it is possible both in-IDE and through logging.
+
+
+More details on the changes of this release:
+- Installation procedure works with SQLAlchemy backend too (SQLAlchemy option is still in beta).
+- Most of the verdi commands work with SQLAlchemy backend.
+- Transition script from Django schema of version 0.7.0 to SQLAlchemy schema of version 0.7.0.
+- AiiDA daemon redesigned and working with both backends (Django & SQLAlchemy).
+- Introducing new workflow engine that allows better debugging and easier to write workflows. It is available under the "verdi workflows2" command. Examples are also added.
+- Old workflows are still supported and available under the "verdi workflow" command.
+- Introducing new querying tool (called QueryBuilder). It allows to easily write complex graph queries that will be executed on the AiiDA graph database. Extensive documentation also added.
+- Unifying behaviour of verdi commands in both backends.
+- Upped to version 0.4.2 of plum (needed for workflows2)
+- Implemented the validator and input helper for Quantum ESPRESSO pw.x.
+- Improved the documentation for the pw (and cp) input plugins (for all the flags in the Settings node).
+- Fixed a wrong behavior in the QE pw/cp plugins when checking for the parser options and checking if there were further unknown flags in the Settings node. However, this does not solve yet completely the problem (see issue #219).
+- Implemented validator and input helper for Quantum ESPRESSO pw.x.
+- Added elements with Z=104-112, 114 and 116, in aiida.common.constants.
+- Added method set_kpoints_mesh_from_density in KpointsData class.
+- Improved incremental backup documentation.
+- Added backup related tests.
+- Added an option to test_pw.py to run also in serial.
+
+
 == v0.6.0 ==
 
 We performed a lot of changes to introduce in one of our following releases a second object-relational mapper (we will refer to it as back-end) for the management of the used DBMSs and more specifically of PostgreSQL. SQLAlchemy and the latest version of PostgreSQL allows AiiDA to store JSON documents directly to the database and also to query them. Moreover the JSON query optimization is left to the database including also the use of the JSON specific indexes. There was major code restructuring to accommodate the new back-end resulting to abstracting many classes of the orm package of AiiDA.

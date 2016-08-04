@@ -396,7 +396,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow's state
         :return: a state from wf_states in aiida.common.datastructures
         """
-        return self.dbworkflowinstance.state
+        return self.dbworkflowinstance.state.value
 
     def set_state(self, state):
         """
@@ -674,7 +674,7 @@ class Workflow(AbstractWorkflow):
         # arround
 
         # Retrieve the caller method
-        method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=get_automatic_user())
+        method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=get_automatic_user())
 
         # Attach calculations
         if caller_method in self.attach_calc_lazy_storage:
@@ -745,20 +745,28 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
 
     lines.append(pre_string)  # put an empty line before any workflow
     lines.append(pre_string + "+ Workflow {} ({}pk: {}) is {} [{}]".format(
-        w.module_class, wf_labelstring, w.id, w.state, str_timedelta(
+        w.module_class, wf_labelstring, w.id, w.state.value, str_timedelta(
             now - w.ctime, negative_to_zero=True)))
 
     # print information on the steps only if depth is higher than 0
     if depth > 0:
 
         # order all steps by time and  get all the needed values
-        steps_and_subwf_pks = w.steps.\
-            join(DbWorkflowStep.sub_workflows, DbWorkflowStep.calculations).\
-            order_by(DbWorkflowStep.time, DbWorkflow.ctime, DbNode.ctime).\
-            with_entities(
-                DbWorkflowStep.id, DbWorkflow.id, DbNode, DbWorkflowStep.name,
-                DbWorkflowStep.nextcall, DbWorkflowStep.state
-            )
+        step_list = sorted([ [_.time,_] for _ in w.steps ])
+        step_list = [ _[1] for _ in step_list ]
+        
+        steps_and_subwf_pks = []
+        for step in step_list:
+            wf_id = None
+            calc_id = None
+            if step.calculations:
+                for calc in step.calculations:
+                    steps_and_subwf_pks.append( [step.id, wf_id, calc.id, step.name, step.nextcall, step.state.value] )
+            if step.sub_workflows:
+                for www in step.sub_workflows:
+                    steps_and_subwf_pks.append( [step.id, www.id, calc_id, step.name, step.nextcall, step.state.value] )
+            if (not step.calculations) and (not step.sub_workflows): 
+                steps_and_subwf_pks.append( [step.id, wf_id, calc_id, step.name, step.nextcall, step.state.value] )
 
         # get the list of step pks (distinct), preserving the order
         steps_pk = []
@@ -786,19 +794,23 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
         # get all subworkflows for all steps
         #wflows = DbWorkflow.query.filter_by(DbWorkflow.parent_workflow_step.in_(steps_pk))
         # although the line above is equivalent to the following, has a bug of sqlalchemy.
-        import warnings
-        from sqlalchemy import exc as sa_exc
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=sa_exc.SAWarning)
-            wflows = DbWorkflow.parent_workflow_step.any(DbWorkflowStep.id.in_(steps_pk))
-            
+      #  import warnings
+       # from sqlalchemy import exc as sa_exc
+       # with warnings.catch_warnings():
+       #     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
+       #     wflows = DbWorkflow.parent_workflow_step.any(DbWorkflowStep.id.in_(steps_pk))
+        
+        wflows = DbWorkflow.query.join(DbWorkflow.parent_workflow_step).filter(DbWorkflowStep.id.in_(steps_pk)).all()
+
         # dictionary mapping pks into workflows
-        workflow_mapping = {_.pk: _ for _ in wflows}
-    
+        workflow_mapping = {_.id: _ for _ in wflows}
+        
         # get all calculations for all steps
-        calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
+        #calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
+        calcs_ids = [ _[2] for _ in  steps_and_subwf_pks if _[2] is not None] # extremely inefficient!
+        calcs = [ load_node(_) for _ in calcs_ids ]
         # dictionary mapping pks into calculations
-        calc_mapping = {_.pk: _ for _ in calcs}
+        calc_mapping = {_.id: _ for _ in calcs}
     
         for step_pk in steps_pk:
             lines.append(pre_string + "|" + '-' * (tab_size - 1) +

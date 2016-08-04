@@ -192,7 +192,7 @@ class DbWorkflow(Base):
         Return True if this is a subworkflow, False if it is a root workflow,
         launched by the user.
         """
-        return len(self.parent_workflow_step.all()) > 0
+        return len(self.parent_workflow_step) > 0
 
     def finish(self):
         self.state = wf_states.FINISHED
@@ -306,7 +306,7 @@ class DbWorkflowStep(Base):
                                 backref="workflow_step")
     sub_workflows = relationship("DbWorkflow",
                                  secondary=table_workflowstep_subworkflow,
-                                 backref=backref("parent_workflow_step", lazy="dynamic"))
+                                 backref="parent_workflow_step")
 
     __table_args__ = (
         UniqueConstraint('parent_id', 'name'),

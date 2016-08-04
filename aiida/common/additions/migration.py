@@ -69,3 +69,4 @@ class Migration(object):
 
 if __name__ == '__main__':
     Migration().perform_migration()
+    print("Migration finished.")

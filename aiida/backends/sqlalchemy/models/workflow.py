@@ -313,24 +313,22 @@ class DbWorkflowStep(Base):
     )
 
     def add_calculation(self, step_calculation):
-
         from aiida.orm import JobCalculation
         if (not isinstance(step_calculation, JobCalculation)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")
 
         try:
-            self.calculations.add(step_calculation)
+            self.calculations.append(step_calculation.dbnode)
         except:
             raise ValueError("Error adding calculation to step")
 
     def get_calculations(self, state=None):
-
-        from aiida.orm import JobCalculation
+        dbnodes = self.calculations
+        calcs = [ _.get_aiida_class() for _ in dbnodes ]
         if (state == None):
-            return JobCalculation.query(workflow_step=self)
+            return calcs
         else:
-            return JobCalculation.query(workflow_step=self).filter(
-                dbattributes__key="state", dbattributes__tval=state)
+            return [ _ for _ in calcs if _.get_state()==state]
 
     def remove_calculations(self):
         self.calculations.all().delete()
@@ -340,12 +338,12 @@ class DbWorkflowStep(Base):
         if (not issubclass(sub_wf.__class__, Workflow) and not isinstance(sub_wf, Workflow)):
             raise ValueError("Cannot add a workflow not of type Workflow")
         try:
-            self.sub_workflows.add(sub_wf.dbworkflowinstance)
+            self.sub_workflows.append(sub_wf.dbworkflowinstance)
         except:
             raise ValueError("Error adding calculation to step")
 
     def get_sub_workflows(self):
-        return self.sub_workflows(manager='aiidaobjects').all()
+        return [ _.get_aiida_class() for _ in self.sub_workflows ]
 
     def remove_sub_workflows(self):
         self.sub_workflows.all().delete()

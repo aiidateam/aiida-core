@@ -471,7 +471,7 @@ class Workflow(AbstractWorkflow):
         step_list = self.dbworkflowinstance.steps
         if state is not None:
             step_list = [ _ for _ in step_list if _.state==state ]
-        steps_and_times = [ [_.ctime,_] for _ in step_list ]
+        steps_and_times = [ [_.time,_] for _ in step_list ]
         steps_and_times = sorted(steps_and_times)
         steps = [_[1] for _ in steps_and_times]
         return steps
@@ -707,6 +707,10 @@ def kill_all():
     for w in w_list:
         Workflow.get_subclass_from_uuid(w.uuid).kill()
 
+def get_all_running_steps():
+    from aiida.common.datastructures import wf_states
+    from aiida.backends.sqlalchemy.models.workflow import DbWorkflowStep
+    return DbWorkflowStep.query.filter_by(state=wf_states.RUNNING).all()
 
 def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                       depth=16):
@@ -727,6 +731,8 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
 
     :return lines: list of lines to be outputed
     """
+    from aiida.orm import load_node
+    from aiida.common.datastructures import calc_states
     # Note: pre_string becomes larger at each call of get_workflow_info on the
     #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
 

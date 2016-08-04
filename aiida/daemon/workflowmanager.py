@@ -32,80 +32,76 @@ def execute_steps():
     from aiida.orm.workflow import Workflow
     from aiida.common.datastructures import wf_states
     from aiida.orm import JobCalculation
+    from aiida.orm.implementation import get_all_running_steps
 
     logger.info("Querying the worflow DB")
+    
+    running_steps = get_all_running_steps()
+    
+    for s in running_steps:
+        w = s.parent.get_aiida_class()
 
-    w_list = Workflow.query(user=get_automatic_user(), state=wf_states.RUNNING)
+        logger.info("[{0}] Found active step: {1}".format(w.uuid, s.name))
 
-    for w in w_list:
+        s_calcs_new = [c.uuid for c in s.get_calculations() if c._is_new()]
+        s_calcs_running = [c.uuid for c in s.get_calculations() if c._is_running()]
+        s_calcs_finished = [c.uuid for c in s.get_calculations() if c.has_finished_ok()]
+        s_calcs_failed = [c.uuid for c in s.get_calculations() if c.has_failed()]
+        s_calcs_num = len(s.get_calculations())
 
-        logger.info("Found active workflow: {0}".format(w.uuid))
+        s_sub_wf_running = [sw.uuid for sw in s.get_sub_workflows() if sw.is_running()]
+        s_sub_wf_finished = [sw.uuid for sw in s.get_sub_workflows() if sw.has_finished_ok()]
+        s_sub_wf_failed = [sw.uuid for sw in s.get_sub_workflows() if sw.has_failed()]
+        s_sub_wf_num = len(s.get_sub_workflows())
 
-        # Launch INITIALIZED Workflows
-        #
-        running_steps = w.get_steps(state=wf_states.RUNNING)
-        for s in running_steps:
+        if s_calcs_num == (len(s_calcs_finished) + len(s_calcs_failed)) and s_sub_wf_num == (
+            len(s_sub_wf_finished) + len(s_sub_wf_failed)):
 
-            logger.info("[{0}] Found active step: {1}".format(w.uuid, s.name))
+            logger.info("[{0}] Step: {1} ready to move".format(w.uuid, s.name))
 
-            s_calcs_new = [c.uuid for c in s.get_calculations() if c._is_new()]
-            s_calcs_running = [c.uuid for c in s.get_calculations() if c._is_running()]
-            s_calcs_finished = [c.uuid for c in s.get_calculations() if c.has_finished_ok()]
-            s_calcs_failed = [c.uuid for c in s.get_calculations() if c.has_failed()]
-            s_calcs_num = len(s.get_calculations())
+            s.set_state(wf_states.FINISHED)
+            
+            advance_workflow(w, s)
 
-            s_sub_wf_running = [sw.uuid for sw in s.get_sub_workflows() if sw.is_running()]
-            s_sub_wf_finished = [sw.uuid for sw in s.get_sub_workflows() if sw.has_finished_ok()]
-            s_sub_wf_failed = [sw.uuid for sw in s.get_sub_workflows() if sw.has_failed()]
-            s_sub_wf_num = len(s.get_sub_workflows())
+        elif len(s_calcs_new) > 0:
 
-            if s_calcs_num == (len(s_calcs_finished) + len(s_calcs_failed)) and s_sub_wf_num == (
-                len(s_sub_wf_finished) + len(s_sub_wf_failed)):
+            for uuid in s_calcs_new:
 
-                logger.info("[{0}] Step: {1} ready to move".format(w.uuid, s.name))
-
-                s.set_state(wf_states.FINISHED)
-                advance_workflow(w, s)
-
-            elif len(s_calcs_new) > 0:
-
-                for uuid in s_calcs_new:
-
-                    obj_calc = JobCalculation.get_subclass_from_uuid(uuid=uuid)
-                    try:
-                        obj_calc.submit()
-                        logger.info("[{0}] Step: {1} launched calculation {2}".format(w.uuid, s.name, uuid))
-                    except:
-                        logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.uuid, s.name, uuid))
+                obj_calc = JobCalculation.get_subclass_from_uuid(uuid=uuid)
+                try:
+                    obj_calc.submit()
+                    logger.info("[{0}] Step: {1} launched calculation {2}".format(w.uuid, s.name, uuid))
+                except:
+                    logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.uuid, s.name, uuid))
 
                         ## DO NOT STOP ANYMORE IF A CALCULATION FAILS
                         # elif s_calcs_failed:
                         #s.set_state(wf_states.ERROR)
+# 
+#         initialized_steps = get_all_steps(state=wf_states.INITIALIZED)
+#         for s in initialized_steps:
+# 
+#             import sys
+# 
+#             try:
+#                 w_class = Workflow.get_subclass_from_uuid(w.uuid)
+#                 getattr(w, s.name)()
+#                 return True
+# 
+#             except:
+# 
+#                 exc_type, exc_value, exc_traceback = sys.exc_info()
+#                 w.append_to_report(
+#                     "ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(
+#                         s.name))
+#                 w.append_to_report("full traceback: {0}".format(exc_traceback.format_exc()))
+# 
+#                 s.set_state(wf_states.ERROR)
+#                 w.set_state(wf_states.ERROR)
 
-        initialized_steps = w.get_steps(state=wf_states.INITIALIZED)
-        for s in initialized_steps:
-
-            import sys
-
-            try:
-                w_class = Workflow.get_subclass_from_uuid(w.uuid)
-                getattr(w, s.name)()
-                return True
-
-            except:
-
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                w.append_to_report(
-                    "ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(
-                        s.name))
-                w.append_to_report("full traceback: {0}".format(exc_traceback.format_exc()))
-
-                s.set_state(wf_states.ERROR)
-                w.set_state(wf_states.ERROR)
-
-    for w in w_list:
-        if w.get_steps(state=wf_states.ERROR):
-            w.set_state(wf_states.ERROR)
+#    for w in w_list:
+#        if w.get_steps(state=wf_states.ERROR):
+#            w.set_state(wf_states.ERROR)
 
 
 # # Launch INITIALIZED Workflows with all calculations and subworkflows

@@ -24,7 +24,7 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
     from aiida.common.datastructures import wf_states
                                              
     if pk_list:
-        q = DbWorkflow.query.filter(DbWorkflow.pk.in_(pk_list))
+        q = DbWorkflow.query.filter(DbWorkflow.id.in_(pk_list))
     else:
         q = DbWorkflow.query.filter() # (user=user)
 

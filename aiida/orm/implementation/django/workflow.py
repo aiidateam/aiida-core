@@ -569,6 +569,11 @@ def kill_all():
     for w in w_list:
         Workflow.get_subclass_from_uuid(w.uuid).kill()
 
+def get_all_running_steps():
+    from aiida.common.datastructures import wf_states
+    from aiida.backends.djsite.db.models import DbWorkflowStep
+    return DbWorkflowStep.objects.filter(state=wf_states.RUNNING)
+
 def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                       depth=16):
     """

@@ -576,7 +576,7 @@ def create_configuration(profile='default'):
                 valid_aiida_backend = False
                 while not valid_aiida_backend:
                     backend_ans = raw_input(
-                        'AiiDA backend (available: {}): '
+                        'AiiDA backend (available: {} - sqlalchemy is in beta mode): '
                             .format(', '.join(backend_possibilities)))
                     if backend_ans in backend_possibilities:
                         valid_aiida_backend = True
@@ -619,7 +619,7 @@ def create_configuration(profile='default'):
             valid_db_engine = False
             while not valid_db_engine:
                 db_engine_ans = raw_input(
-                    'Database engine (available: {}): '
+                    'Database engine (available: {} - mysql is deprecated): '
                     .format(', '.join(db_possibilities)))
                 if db_engine_ans in db_possibilities:
                     valid_db_engine = True

@@ -1239,8 +1239,8 @@ class AbstractJobCalculation(object):
             actually being submitted at the same time in another thread.
         """
         # TODO: Check if we want to add a status "KILLED" or something similar.
-        from aiida.common.exceptions import InvalidOperation, \
-            RemoteOperationError
+        from aiida.common.exceptions import (InvalidOperation,
+                                             RemoteOperationError)
 
         old_state = self.get_state()
 

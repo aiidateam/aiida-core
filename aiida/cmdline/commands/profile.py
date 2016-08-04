@@ -14,6 +14,7 @@ __authors__ = "The AiiDA team."
 
 valid_processes = ['verdi', 'daemon']
 
+
 class Profile(VerdiCommandWithSubcommands):
     """
     List AiiDA profiles, and set the default profile.

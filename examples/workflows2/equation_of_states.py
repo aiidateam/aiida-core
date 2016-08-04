@@ -15,8 +15,8 @@ from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run, asyncd
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, \
-    ResultToContext
+from aiida.workflows2.fragmented_wf import (FragmentedWorkfunction,
+                                            ResultToContext)
 from common import generate_scf_input_params
 from examples.workflows2.diamond_fcc import rescale
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation

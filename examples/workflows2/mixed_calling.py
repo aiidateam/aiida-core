@@ -15,8 +15,8 @@ import time
 from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.run import async, asyncd
 from aiida.workflows2.wf import wf
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction,\
-    ResultToContext
+from aiida.workflows2.fragmented_wf import (FragmentedWorkfunction,
+                                            ResultToContext)
 
 
 @wf

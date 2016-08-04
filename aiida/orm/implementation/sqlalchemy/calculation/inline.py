@@ -2,9 +2,8 @@
 
 from aiida.backends.sqlalchemy import session
 
-from aiida.orm.implementation.general.calculation.inline import \
-
-    InlineCalculation
+from aiida.orm.implementation.general.calculation.inline import (
+    InlineCalculation)
 
 from aiida.orm.data import Data
 from aiida.common.exceptions import ModificationNotAllowed

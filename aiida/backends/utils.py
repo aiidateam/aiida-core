@@ -63,7 +63,9 @@ def get_automatic_user():
 
 def get_workflow_list(*args, **kwargs):
     if settings.BACKEND == BACKEND_SQLA:
-        raise ValueError("This method doesn't exist for this backend")
+        from aiida.backends.sqlalchemy.cmdline import (
+            get_workflow_list as get_workflow_list_sqla)
+        return get_workflow_list_sqla(*args, **kwargs)
     elif settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.cmdline import (
             get_workflow_list as get_workflow_list_dj)

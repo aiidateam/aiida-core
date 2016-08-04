@@ -10,7 +10,6 @@ from sqlalchemy.types import Integer, String, DateTime, Text
 
 from sqlalchemy.dialects.postgresql import UUID
 
-
 from sqlalchemy_utils.types.choice import ChoiceType
 
 
@@ -50,6 +49,8 @@ class DbWorkflow(Base):
                    default=wf_states.INITIALIZED)
 
     report = Column(Text)
+    
+    data = relationship("DbWorkflowData", backref='parent')
 
     # XXX the next three attributes have "blank=False", but can be null. It may
     # be needed to add some validation for this, but only at commit time.
@@ -70,6 +71,7 @@ class DbWorkflow(Base):
         """
         Return the corresponding aiida instance of class aiida.worflow
         """
+        from aiida.orm.workflow import Workflow
         return Workflow.get_subclass_from_uuid(self.uuid)
 
     def set_state(self, state):
@@ -80,14 +82,40 @@ class DbWorkflow(Base):
         self.script_md5 = md5
         self.save()
 
+#    def add_data(self, dict, d_type):
+#        for k in dict.keys():
+#            p, create = self.data.get_or_create(name=k, data_type=d_type)
+#            p.set_value(dict[k])
+
     def add_data(self, dict, d_type):
         for k in dict.keys():
-            p, create = self.data.get_or_create(name=k, data_type=d_type)
+            p, create = self._get_or_create_data(name=k, data_type=d_type)
             p.set_value(dict[k])
+
+    def _get_or_create_data(self, name, data_type):
+        match_data = { name:_ for _ in self.data if _.name==name}
+        
+        if not match_data: # create case
+            dbdata = DbWorkflowData(parent_id=self.id, name=name, data_type=data_type)
+            self.data.append(dbdata)
+            return dbdata, True
+        else: # already existing case
+            return match_data[name], False
+
+    def _get_or_create_step(self, name, user):
+        match_step = [ _ for _ in self.steps if (_.name==name and _.user==user) ]
+        
+        if not match_step: # create case
+            dbstep = DbWorkflowStep(parent_id=self.id, name=name, user_id=user.id)
+            self.steps.append(dbstep)
+            return dbstep, True
+        else: # already existing case
+            return match_step[0], False
 
     def get_data(self, d_type):
         dict = {}
-        for p in self.data.filter(parent=self, data_type=d_type):
+        #for p in self.data.filter(parent=self, data_type=d_type):
+        for p in [ _ for _ in self.data if _.data_type==d_type]:
             dict[p.name] = p.get_value()
         return dict
 
@@ -147,6 +175,8 @@ class DbWorkflow(Base):
         self.save()
 
     def append_to_report(self, _text):
+        if self.report == None:
+            self.report = ''
         self.report += str(timezone.now()) + "] " + _text + "\n"
         self.save()
 
@@ -182,8 +212,7 @@ class DbWorkflowData(Base):
     id = Column(Integer, primary_key=True)
 
     parent_id = Column(Integer, ForeignKey('db_dbworkflow.id'))
-    parent = relationship("DbWorkflow", backref='data')
-
+    
     name = Column(String(255)) # Blank = false
     time = Column(DateTime(timezone=True), default=timezone.now)
     data_type = Column(String(255), default=wf_data_types.PARAMETER) # blank = false
@@ -197,8 +226,18 @@ class DbWorkflowData(Base):
         UniqueConstraint("parent_id", "name", "data_type"),
     )
 
+    def get_or_create(self, **kwargs): # this is to emulate the django method
+        from sqlalchemy.sql.expression import ClauseElement
+        instance = self.query().filter_by(kwargs).first()
+        if instance:
+            return instance, False
+        else:
+            params = dict((k, v) for k, v in kwargs.iteritems() if not isinstance(v, ClauseElement))
+            instance = model(**params)
+            session.add(instance)
+            return instance, True
+        
     def set_value(self, arg):
-
         from aiida.orm import Node
         try:
             if isinstance(arg, Node) or issubclass(arg.__class__, Node):
@@ -252,7 +291,10 @@ class DbWorkflowStep(Base):
     id = Column(Integer, primary_key=True)
 
     parent_id = Column(Integer, ForeignKey('db_dbworkflow.id'))
-    parent = relationship("DbWorkflow", backref=backref('steps', lazy='dynamic'))
+    parent = relationship("DbWorkflow", backref='steps')
+
+    user_id = Column(Integer, ForeignKey('db_dbuser.id'))
+    user = relationship('DbUser')
 
     name = Column(String(255)) # Blank = false
     time = Column(DateTime(timezone=True), default=timezone.now)

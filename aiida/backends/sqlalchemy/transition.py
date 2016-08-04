@@ -21,16 +21,27 @@ from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.utils import set_backend_type
 from aiida.common.utils import query_yes_no
 from aiida.backends.utils import set_db_schema_version
+from aiida.common.additions.migration import Migration
+import getpass
+import os
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
+import aiida.common.setup as setup
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.6.0"
+__version__ = "0.7.0"
+
+# Profile keys
+aiidadb_backend_key = "AIIDADB_BACKEND"
+
+# Profile values
+aiidadb_backend_value_sqla = "sqlalchemy"
 
 
 """
-This scipt transitions an Django database 0.5.* or 0.6.0 to an SQLAlchemy
-database 0.6.*
+This scipt transitions an Django database 0.6.0 to an SQLAlchemy
+database 0.7.0.
 
 It is supposed to be executed via ipython in the following way:
 
@@ -494,14 +505,14 @@ def set_correct_schema_version_and_backend():
     sa.session.commit()
 
 
-def transition(profile=None, group_size=1000, delete_table=False):
+def transition_db(profile=None, group_size=1000, delete_table=False):
     """
     Migrate the attributes, extra, and some other columns to use JSONMigrate
     the attributes, extra, and some other columns to use JSONB column type.
     """
-    cont = query_yes_no("Starting complete migration. Be sure to backup your "
-                        "database before continuing, and that no one else is "
-                        "using it. Do you want to continue?", "no")
+    cont = query_yes_no("Starting complete database transition. Be sure to "
+                        "backup your database before continuing, and that no "
+                        "one else is using it. Do you want to continue?", "no")
     if not cont:
         print("Answered no. Exiting")
         sys.exit(0)
@@ -522,4 +533,68 @@ def transition(profile=None, group_size=1000, delete_table=False):
 
     set_correct_schema_version_and_backend()
 
-    print("\nMigration finished")
+    print("\nDatabase transition finished.")
+
+
+def change_backend_to_sqla(profile=None):
+    """
+    Gets the main AiiDA configuration and searches if there is a backend
+    defined. If there isn't any then Django is added.
+    """
+    # Get the available configuration
+    conf = setup.get_config()  # Profile key
+
+    _profiles_key = "profiles"
+
+    # Identifying all the available profiles
+    if _profiles_key in conf.keys():
+        profiles = conf[_profiles_key]
+
+        if profile not in profiles.keys():
+            print("The provided profile name is not one of the available "
+                  "profiles. Exiting")
+            sys.exit(0)
+        curr_profile = profiles[profile]
+
+        if setup.aiidadb_backend_key in curr_profile.keys():
+            if curr_profile[aiidadb_backend_key] == aiidadb_backend_value_sqla:
+                print "This is already an SQLAlchemy profile. Exiting"
+                sys.exit(0)
+            curr_profile[aiidadb_backend_key] = \
+                aiidadb_backend_value_sqla
+        else:
+            print("No backend entry found in your configuration file. Are you "
+                  "sure that you are running a version 0.6.*?")
+            sys.exit(0)
+
+    # Returning the configuration
+    return conf
+
+
+def transition_config_files(profile=None):
+
+    print("Changing backend from Django to SQLAlchemy in config files")
+
+    # Backup the previous config
+    setup.backup_config()
+    # Get the AiiDA directory path
+    aiida_directory = os.path.expanduser(setup.AIIDA_CONFIG_FOLDER)
+    # Construct the log directory path
+    log_dir = os.path.join(aiida_directory, setup.LOG_SUBDIR)
+    # Update the configuration if needed
+    confs = change_backend_to_sqla(profile)
+    # Store the configuration
+    setup.store_config(confs)
+
+    print("Config file update finished.")
+
+
+def transition(profile=None, group_size=1000, delete_table=False):
+
+    transition_config_files(profile)
+    print("Proceeding to database tarbnsition.")
+    transition_db(profile, group_size, delete_table)
+    print("\nTransition finished")
+
+
+

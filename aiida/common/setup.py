@@ -8,9 +8,9 @@ import aiida
 from aiida.common.exceptions import ConfigurationError
 from aiida.common.utils import query_yes_no
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 DEFAULT_AIIDA_USER = "aiida@localhost"
@@ -576,7 +576,7 @@ def create_configuration(profile='default'):
                 valid_aiida_backend = False
                 while not valid_aiida_backend:
                     backend_ans = raw_input(
-                        'AiiDA backend (available: {}): '
+                        'AiiDA backend (available: {} - sqlalchemy is in beta mode): '
                             .format(', '.join(backend_possibilities)))
                     if backend_ans in backend_possibilities:
                         valid_aiida_backend = True
@@ -619,7 +619,7 @@ def create_configuration(profile='default'):
             valid_db_engine = False
             while not valid_db_engine:
                 db_engine_ans = raw_input(
-                    'Database engine (available: {}): '
+                    'Database engine (available: {} - mysql is deprecated): '
                     .format(', '.join(db_possibilities)))
                 if db_engine_ans in db_possibilities:
                     valid_db_engine = True

@@ -10,10 +10,10 @@ from aiida.common.setup import (get_config, get_secret_key, get_property,
                                 get_profile_config, get_default_profile,
                                 parse_repository_uri)
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 
 TIME_ZONE = "Europe/Paris"

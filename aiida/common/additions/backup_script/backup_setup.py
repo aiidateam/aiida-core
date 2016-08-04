@@ -13,13 +13,14 @@ from aiida.common import utils
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
 
 # Needed initialization for Django
+
 if not is_dbenv_loaded():
     load_dbenv()
 from backup import Backup
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 

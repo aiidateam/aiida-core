@@ -27,6 +27,11 @@ from aiida.common.hashing import make_hash
 
 
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
 class AbstractQueryBuilder(object):
     """
     QueryBuilderBase is the base class for QueryBuilder classes,
@@ -683,8 +688,8 @@ class AbstractQueryBuilder(object):
         :param tagspec:
             The tag, which has to exist already as a key
             in self._filters
-        :param dict filter_spec:
-            The specifications for the filter, has to be adictionary
+        :param filter_spec:
+            The specifications for the filter, has to be a dictionary
         """
 
 

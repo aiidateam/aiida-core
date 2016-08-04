@@ -77,7 +77,7 @@ database). The question is how to get the results from the query::
 Since we now know how to set an entity, we can start to filter by properties
 of that entity.
 Suppose we do not want to all JobCalculations, but only the ones in state
-``FINISHED''::
+'FINISHED'::
 
     qb = QueryBuilder()                 # An empty QueryBuilder instances
     qb.append(
@@ -145,7 +145,7 @@ This will be the next example::
 
 In order to negate a filter, that is to apply the not operator, precede the filter 
 keyword with an exclamation mark.
-So, to ask for all calculations that are not in "FINISHED" or "RETRIEVING"::
+So, to ask for all calculations that are not in 'FINISHED' or 'RETRIEVING'::
 
     qb = QueryBuilder()
     qb.append(

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 from aiida.workflows2.wf import wf
 from aiida.workflows2.run import run
@@ -5,6 +6,11 @@ from aiida.orm import DataFactory
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.orm.code import Code
 
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
 
 def get_pseudos(structure, family_name):
     """

@@ -7,10 +7,10 @@ from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 
 def make_inline(func):

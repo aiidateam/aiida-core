@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import gc
+import getpass
 import math
+import os
 import sys
 
 from sqlalchemy import ForeignKey
@@ -14,18 +16,12 @@ from sqlalchemy.schema import Column
 from sqlalchemy.sql.expression import func
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text, Float
 
+import aiida.common.setup as setup
 from aiida import is_dbenv_loaded
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.utils import set_backend_type
 from aiida.common.utils import query_yes_no
-from aiida.backends.utils import set_db_schema_version
-from aiida.common.additions.migration import Migration
-import getpass
-import os
-
-import aiida.common.setup as setup
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -41,7 +37,7 @@ aiidadb_backend_value_sqla = "sqlalchemy"
 
 """
 This scipt transitions an Django database 0.6.0 to an SQLAlchemy
-database 0.7.0.
+database 0.7.0. It also updates the needed config files.
 
 It is supposed to be executed via ipython in the following way:
 
@@ -585,6 +581,11 @@ def transition_config_files(profile=None):
     confs = change_backend_to_sqla(profile)
     # Store the configuration
     setup.store_config(confs)
+    # Construct the daemon directory path
+    daemon_dir = os.path.join(aiida_directory, setup.DAEMON_SUBDIR)
+    # Update the daemon directory
+    setup.install_daemon_files(aiida_directory, daemon_dir, log_dir,
+                               getpass.getuser())
 
     print("Config file update finished.")
 

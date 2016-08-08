@@ -13,8 +13,8 @@ __authors__ = "The AiiDA team."
 
 class Migration(object):
     """
-    This class converts the configuration from the AiiDA 0.6.0 version to
-    version 0.7.0.
+    This class converts the configuration from the AiiDA 0.6.0 version (Django)
+    to version 0.7.0 (Django).
 
     It is assumed that it is already (correctly) defined the place that the
     various configuration files are found in the aiida.common.setup.

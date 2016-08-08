@@ -550,21 +550,24 @@ Updating AiiDA from a previous version
 
   * If you encounter any problems and/or inconsistencies, delete any .pyc
     files that may have remained from the previous version. E.g. If you are
-    in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``
+    in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
   * The requirements file may have changed. Please be sure that you have
     installed all the needed requirements. This can be done by executing:
-    ``pip install --user -U -r requirements.txt``
+    ``pip install --user -U -r requirements.txt``.
 
 
 Updating from 0.6.0 Django to 0.7.0 Django
 ------------------------------------------
-* Stop your daemon (using ``verdi daemon stop``)
+In version 0.7 we have changed the Django database schema and we also have
+updated the AiiDA configuration files.
+
+* Stop your daemon (using ``verdi daemon stop``).
 * Store your aiida source folder somewhere in case you did some
-  modifications to some files
+  modifications to some files.
 * Replace the aiida folder with the new one (either from the tar.gz or,
   if you are using git, by doing a ``git pull``). If you use the same
   folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
-  variables
+  variables.
 * Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
   raise an exception, and in the exception message you will see the
   command to run to update the schema version of the DB (v.0.7.0
@@ -574,9 +577,11 @@ Updating from 0.6.0 Django to 0.7.0 Django
   message for the correct command to run.
 * If you run ``verdi calculation list`` again now, it should work without
   error messages.
+* To update the AiiDA configuration files, you should execute the migration
+  script (``python _your_aiida_folder_/aiida/common/additions/migration_06dj_to_07dj.py``).
 * You can now restart your daemon and work as usual.
 
-Updating from 0.6.0 Django to 0.7.0 SQlAlchemy
+Updating from 0.6.0 Django to 0.7.0 SQLAlchemy
 ----------------------------------------------
 The SQLAlchemy backend is in beta mode for version 0.7.0. Therefore some of
 the verdi commands may not work as expected or at all (these are very few).
@@ -590,16 +595,16 @@ that will update your config files and change your database to the new schema.
   version 0.6.0. Therefore if you use a previous version of AiiDA please
   update first to 0.6.0.
 
-* Stop your daemon (using ``verdi daemon stop``)
+* Stop your daemon (using ``verdi daemon stop``).
 * Store your aiida source folder somewhere in case you did some
-  modifications to some files
+  modifications to some files.
 * Replace the aiida folder with the new one (either from the tar.gz or,
   if you are using git, by doing a ``git pull``). If you use the same
   folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
-  variables
+  variables.
 * Go to you AiiDA folder and run ``ipython``. Then execute
-  ``from aiida.backends.sqlalchemy.transition import transition`` and
-  ``transition(profile="your_profile",group_size=10000)`` by replacing
+  ``from aiida.backends.sqlalchemy.transition_06dj_to_07sqla import transition``
+  and ``transition(profile="your_profile",group_size=10000)`` by replacing
   ``your_profile`` with the name of the profile that you would like to
   transition.
 * You can now exit ipython, restart your daemon and work as usual.
@@ -629,7 +634,7 @@ compatible with AiiDA version 0.6.0.
     (``verdi export``) with a previous version of AiiDA. Please use
     :download:`this script <examples/convert_exportfile_version.py>`
     to convert it to the new schema. (Usage: ``python
-    convert_exportfile_version.py input_file output_file``)
+    convert_exportfile_version.py input_file output_file``).
 
 
 To perform the update:

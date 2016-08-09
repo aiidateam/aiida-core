@@ -4,10 +4,11 @@ Quantum Espresso Projwfc user-tutorial
 ======================================
 
 .. note:: The Quantum Espresso Projwfc plugin referenced below is available in
-the EPFL version.
+          the EPFL version.
 
 .. toctree::
    :maxdepth: 2
+
 
 This chapter will show how to launch a single Projwfc (``projwfc.x``) calculation. It assumes you already familiar with the underlying code as well
 as how to use basic features of AiiDA. This tutorial assumes you are at least familiar with the concepts introduced during the :ref:`my-ref-to-ph-tutorial`, specifically you should be familiar with using a parent calculation.

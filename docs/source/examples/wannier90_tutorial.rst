@@ -1,7 +1,7 @@
 .. _my-ref-to-wannier90-tutorial:
 
 Wannier90 user-tutorial
-=========
+=======================
 
 .. note:: The Wannier90 plugin referenced below is available in the EPFL version.
 

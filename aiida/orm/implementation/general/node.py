@@ -368,13 +368,13 @@ class AbstractNode(object):
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
         :note: In subclasses, change only this. Moreover, remember to call
-           the super() method in order to properly use the caching logic!
+        the super() method in order to properly use the caching logic!
 
         :param src: the source object
         :param str label: the name of the label to set the link from src.
-                    Default = None.
-        :param link_type: The type of link, must be one of the enum values form
-          :class:`~aiida.common.links.LinkType`
+                          Default = None.
+        :param link_type: The type of link, must be one of the enum values
+                          from :class:`~aiida.common.links.LinkType`
         """
         assert src, "You must provide a valid Node to link"
 

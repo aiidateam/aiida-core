@@ -6,7 +6,7 @@ We worked on our new backend and now AiiDA can be installed using SQLAlchemy too
 
 In this release we have included a new querying tool called QueryBuilder. It is a powerfull tool allowing users to write complex graph queries to explore the AiiDA graph database. It provides various features like selection of entity properties, filtering of results, combination of entities on specific properties as well as various ways to obtain the final result. It also provides the users an abstract way to query their data without enforcing them to write backend dependent queries.
 
-Last but not least we have included a new workflow engine (in beta version) which is available through the "verdi workflow2" command. The new workflows are easier to write (it is as close as writing python as possible), there is seamless mixing of short running tasks with long running (remote) tasks and they encourage users to write reusable workflows. Moreover, debugging of workflows has been done easier and it is possible both in-IDE and through logging.
+Last but not least we have included a new workflow engine (in beta version) which is available through the "verdi workflow2" command. The new workflows are easier to write (it is as close as writing python as possible), there is seamless mixing of short running tasks with long running (remote) tasks and they encourage users to write reusable workflows. Moreover, debugging of workflows has been made easier and it is possible both in-IDE and through logging.
 
 
 More details on the changes of this release:
@@ -28,6 +28,10 @@ More details on the changes of this release:
 - Improved incremental backup documentation.
 - Added backup related tests.
 - Added an option to test_pw.py to run also in serial.
+- SSH transport, to connect to remote computers via SSH/SFTP.
+- Support for the SGE and SLURM schedulers.
+- Support for Quantum ESPRESSO Car-Parrinello calculations.
+- Support for data nodes to store electronic bands, phonon dispersion and generally arrays defined over the Brillouin zone.
 
 
 == v0.6.0 ==

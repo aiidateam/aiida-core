@@ -31,5 +31,5 @@ DUMMY_CONF_FILE = (
                               "default_user_email": "aiida@epfl.ch",
                               "TIMEZONE": "Europe/Zurich",
                               "AIIDADB_REPOSITORY_URI":
-                                  "file:///home/aiida/.aiida/repo/",
+                                  "file:///repository",
                               "AIIDADB_USER": "aiida"}}})

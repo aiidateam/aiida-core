@@ -227,7 +227,6 @@ sys.path.append( os.path.join( os.path.split(__file__)[0],
                                    os.pardir))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
 
-
 if not on_rtd:  # only import and set the theme if we're building docs locally
     try:
         import sphinx_rtd_theme
@@ -247,12 +246,6 @@ else:
     settings.IN_DOC_MODE = True
     settings.BACKEND = "django"
     settings.AIIDADB_PROFILE = "default"
-
-# Note by Andrea Cepellotti:
-# Sphinx tries to load every module that is trying to document
-# some of them requires the DJANGO_SETTINGS_MODULE variable to be set
-#from aiida import load_dbenv
-#load_dbenv()
 
 
 # -- Options for manual page output --------------------------------------------

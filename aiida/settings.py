@@ -64,5 +64,7 @@ if REPOSITORY_PROTOCOL == 'file':
                 "Please setup correctly the REPOSITORY_PATH variable to "
                 "a suitable directory on which you have write permissions. "
                 "(I was not able to create the directory.)")
+elif settings.IN_DOC_MODE:
+    pass
 else:
     raise ConfigurationError("Only file protocol supported")

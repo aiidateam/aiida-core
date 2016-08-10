@@ -65,6 +65,10 @@ def get_config():
     """
     import json
     from aiida.common.exceptions import ConfigurationError
+    from aiida.backends.settings import IN_DOC_MODE, DUMMY_CONF_FILE
+
+    if IN_DOC_MODE:
+        return DUMMY_CONF_FILE
 
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
@@ -235,6 +239,10 @@ def get_secret_key():
     Raise ConfigurationError if the secret key cannot be found/read from the disk.
     """
     from aiida.common.exceptions import ConfigurationError
+    from aiida.backends.settings import IN_DOC_MODE
+
+    if IN_DOC_MODE:
+        return ""
 
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     secret_key_full_name = os.path.join(aiida_dir, SECRET_KEY_FNAME)

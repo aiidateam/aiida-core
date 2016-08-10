@@ -75,7 +75,9 @@ except NameError:
 # Note: this variable might disappear in the future
 REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
 
-if REPOSITORY_PROTOCOL == 'file':
+if settings.IN_DOC_MODE:
+    pass
+elif REPOSITORY_PROTOCOL == 'file':
     if not os.path.isdir(REPOSITORY_PATH):
         try:
             # Try to create the local repository folders with needed parent

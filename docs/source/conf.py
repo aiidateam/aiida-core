@@ -244,9 +244,9 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 else:
     # Back-end settings for readthedocs online documentation.
     from aiida.backends import settings
+    settings.IN_DOC_MODE = True
     settings.BACKEND = "django"
     settings.AIIDADB_PROFILE = "default"
-
 
 # Note by Andrea Cepellotti:
 # Sphinx tries to load every module that is trying to document

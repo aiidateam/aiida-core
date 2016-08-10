@@ -52,7 +52,9 @@ except NameError:
 # Note: this variable might disappear in the future
 REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
 
-if REPOSITORY_PROTOCOL == 'file':
+if settings.IN_DOC_MODE:
+    pass
+elif REPOSITORY_PROTOCOL == 'file':
     if not os.path.isdir(REPOSITORY_PATH):
         try:
             # Try to create the local repository folders with needed parent
@@ -64,7 +66,5 @@ if REPOSITORY_PROTOCOL == 'file':
                 "Please setup correctly the REPOSITORY_PATH variable to "
                 "a suitable directory on which you have write permissions. "
                 "(I was not able to create the directory.)")
-elif settings.IN_DOC_MODE:
-    pass
 else:
     raise ConfigurationError("Only file protocol supported")

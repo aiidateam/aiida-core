@@ -9,10 +9,10 @@ from aiida.workflows2.process import Process, ProcessSpec
 from plum.engine.execution_engine import Future
 from aiida.common.lang import override
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "The AiiDA team"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class _FragmentedWorkfunctionSpec(ProcessSpec):
@@ -30,7 +30,8 @@ class _FragmentedWorkfunctionSpec(ProcessSpec):
 
 class FragmentedWorkfunction(Process):
     _spec_type = _FragmentedWorkfunctionSpec
-    CONTEXT = 'context'
+    _CONTEXT = 'context'
+    _STEPPER_STATE = 'stepper_state'
 
     @classmethod
     def _define(cls, spec):
@@ -93,7 +94,13 @@ class FragmentedWorkfunction(Process):
         # Ask the context to save itself
         context_state = Bundle()
         self._context.save_instance_state(context_state)
-        out_state[self.CONTEXT] = context_state
+        out_state[self._CONTEXT] = context_state
+
+        # Ask the stepper to save itself
+        if self._stepper is not None:
+            stepper_state = Bundle()
+            self._stepper.save_position(stepper_state)
+            out_state[self._STEPPER_STATE] = stepper_state
 
     @property
     def context(self):
@@ -123,7 +130,13 @@ class FragmentedWorkfunction(Process):
     def on_recreate(self, pid, saved_instance_state):
         super(FragmentedWorkfunction, self).on_recreate(
             pid, saved_instance_state)
-        self._context = self.Context(saved_instance_state[self.CONTEXT])
+        # Recreate the context
+        self._context = self.Context(saved_instance_state[self._CONTEXT])
+        # Recreate the stepper
+        if self._STEPPER_STATE in saved_instance_state:
+            self._stepper = self.spec().get_outline().create_stepper(self)
+            self._stepper.load_position(
+                saved_instance_state[self._STEPPER_STATE])
 
     @override
     def on_continue(self, wait_on):
@@ -183,6 +196,14 @@ class Stepper(object):
     def step(self):
         pass
 
+    @abstractmethod
+    def save_position(self, out_position):
+        pass
+
+    @abstractmethod
+    def load_position(self, bundle):
+        pass
+
 
 class _Step(object):
     __metaclass__ = ABCMeta
@@ -206,6 +227,9 @@ class _Step(object):
 
 class _Block(_Step):
     class Stepper(Stepper):
+        _POSITION = 'pos'
+        _STEPPER_POS = 'stepper_pos'
+
         def __init__(self, workflow, commands):
             super(_Block.Stepper, self).__init__(workflow)
 
@@ -237,6 +261,25 @@ class _Block(_Step):
                 self._current_stepper = None
 
             return self._pos == len(self._commands), retval
+
+        def save_position(self, out_position):
+            out_position[self._POSITION] = self._pos
+            # Save the position of the current step we're working (if it's not a
+            # direct function)
+            if self._current_stepper is not None:
+                stepper_pos = Bundle()
+                self._current_stepper.save_position(stepper_pos)
+                out_position[self._STEPPER_POS] = stepper_pos
+
+        def load_position(self, bundle):
+            self._pos = bundle[self._POSITION]
+            try:
+                self._current_stepper =\
+                    self._commands[self._pos].create_stepper(self._workflow)
+            except AttributeError:
+                pass
+            else:
+                self._current_stepper.load_position(bundle[self._STEPPER_POS])
 
     def __init__(self, commands):
         for command in commands:
@@ -292,6 +335,9 @@ class _Conditional(object):
 
 class _If(_Step):
     class Stepper(Stepper):
+        _POSITION = 'pos'
+        _STEPPER_POS = 'stepper_pos'
+
         def __init__(self, workflow, if_spec):
             super(_If.Stepper, self).__init__(workflow)
             self._if_spec = if_spec
@@ -313,6 +359,19 @@ class _If(_Step):
                 self._pos += 1
 
             return finished, retval
+
+        def save_position(self, out_position):
+            out_position[self._POSITION] = self._pos
+            if self._current_stepper is not None:
+                stepper_pos = Bundle()
+                self._current_stepper.save_position(stepper_pos)
+                out_position[self._STEPPER_POS] = stepper_pos
+
+        def load_position(self, bundle):
+            self._pos = bundle[self._POSITION]
+            if self._STEPPER_POS in bundle:
+                self._current_stepper = self._get_next_stepper()
+                self._current_stepper.load_position(bundle[self._STEPPER_POS])
 
         def _get_next_stepper(self):
             # Check the conditions until we find that that is true
@@ -367,6 +426,10 @@ class _If(_Step):
 
 class _While(_Conditional, _Step):
     class Stepper(Stepper):
+        _STEPPER_POS = 'stepper_pos'
+        _CHECK_CONDITION = 'check_condition'
+        _FINISHED = 'finished'
+
         def __init__(self, workflow, while_spec):
             super(_While.Stepper, self).__init__(workflow)
             self._spec = while_spec
@@ -383,7 +446,8 @@ class _While(_Conditional, _Step):
                 self._check_condition = False
                 # Should we go into the loop body?
                 if self._spec.is_true(self._workflow):
-                    self._stepper = self._spec.body.create_stepper(self._workflow)
+                    self._stepper =\
+                        self._spec.body.create_stepper(self._workflow)
                 else:  # Nope...
                     self._finished = True
                     return True, None
@@ -395,6 +459,21 @@ class _While(_Conditional, _Step):
 
             # Are we finished looping?
             return self._finished, retval
+
+        def save_position(self, out_position):
+            if self._stepper is not None:
+                stepper_pos = Bundle()
+                self._stepper.save_position(stepper_pos)
+                out_position[self._STEPPER_POS] = stepper_pos
+            out_position[self._CHECK_CONDITION] = self._check_condition
+            out_position[self._FINISHED] = self._finished
+
+        def load_position(self, bundle):
+            if self._STEPPER_POS in bundle:
+                self._stepper = self._spec.body.create_stepper(self._workflow)
+                self._stepper.load_position(bundle[self._STEPPER_POS])
+            self._finished = bundle[self._FINISHED]
+            self._check_condition = bundle[self._CHECK_CONDITION]
 
         @property
         def _body_stepper(self):

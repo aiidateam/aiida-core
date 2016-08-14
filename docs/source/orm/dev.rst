@@ -4,34 +4,34 @@ ORM documentation: generic aiida.orm
 .. toctree::
    :maxdepth: 3
 
-This section describes the aiida/django object-relational mapping.
+This section describes the aiida object-relational mapping.
 
-Some generic methods of the module aiida.orm
+Some generic methods of the module aiida.orm.utils
 
-.. automodule:: aiida.orm
+.. automodule:: aiida.orm.utils
    :members:
    :special-members: __init__
 
 Computer
 ++++++++
-.. automodule:: aiida.orm.computer
+.. automodule:: aiida.orm.implementation.general.computer
    :members:
 
 Node
 ++++
-.. automodule:: aiida.orm.node
+.. automodule:: aiida.orm.implementation.general.node
    :members:
    :special-members: __init__
 
 Workflow
 ++++++++
-.. automodule:: aiida.orm.workflow
+.. automodule:: aiida.orm.implementation.general.workflow
    :members:
 
 
 Code
 ++++
-.. automodule:: aiida.orm.code
+.. automodule:: aiida.orm.implementation.general.code
    :members:
    :special-members: __init__
 
@@ -106,7 +106,7 @@ TrajectoryData
 ORM documentation: Calculations
 ===============================
 
-.. automodule:: aiida.orm.calculation
+.. automodule:: aiida.orm.implementation.general.calculation
    :members:
    :special-members: __init__
 
@@ -114,7 +114,7 @@ ORM documentation: Calculations
    :members:
    :special-members: __init__
 
-.. automodule:: aiida.orm.calculation.job
+.. automodule:: aiida.orm.implementation.general.calculation.job
    :members:
    :special-members: __init__
 

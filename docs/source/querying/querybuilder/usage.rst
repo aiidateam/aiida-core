@@ -33,7 +33,7 @@ provide this information to QueryBuilder, who will build an SQL-query for you.
 There is more than one  possible API that you can use:
 
 #.  The appender-method
-#.  Using the queryhelp 
+#.  Using the queryhelp
 
 What you will use depends on the specific use case.
 The functionalities are the same, so it's up to you what to use.
@@ -67,7 +67,7 @@ database). The question is how to get the results from the query::
 
     all_r_generator = qb.iterdict()     # Return a generator of dictionaries
                                         # of all results
-    
+
     # Some more (for completeness)
     all_rows = qb.all()                 # Returns a list of lists
 
@@ -77,7 +77,7 @@ database). The question is how to get the results from the query::
 Since we now know how to set an entity, we can start to filter by properties
 of that entity.
 Suppose we do not want to all JobCalculations, but only the ones in state
-``FINISHED''::
+'FINISHED'::
 
     qb = QueryBuilder()                 # An empty QueryBuilder instances
     qb.append(
@@ -88,7 +88,7 @@ Suppose we do not want to all JobCalculations, but only the ones in state
     )
 
 How, can we have multiple filters?
-Suppose you are interested in all calculations in your database that are in 
+Suppose you are interested in all calculations in your database that are in
 state 'FINISHED' and were created in the last *n* days::
 
     from datetime import timedelta
@@ -110,7 +110,7 @@ state 'FINISHED' and were created in the last *n* days::
 Let's go through the above example.
 We have instantiated QueryBuilder instance.
 We appended to its path a JobCalculation (a remote calculation),
-and specified that we are only interested in  calculations 
+and specified that we are only interested in  calculations
 that have finished **and** that were created in the last *n* days.
 
 What if we want calculations that have finished **or** were created in the last
@@ -142,6 +142,20 @@ This will be the next example::
         },
     )
     res = qb.all()
+
+In order to negate a filter, that is to apply the not operator, precede the filter 
+keyword with an exclamation mark.
+So, to ask for all calculations that are not in 'FINISHED' or 'RETRIEVING'::
+
+    qb = QueryBuilder()
+    qb.append(
+        JobCalculation,
+        filters={
+            'state':{'!in':['FINISHED', 'RETRIEVING']}
+        },
+    )
+    res = qb.all()
+
 
 This showed you how to 'filter' by properties of a node (and implicitly by type)
 So far we can do that for a single a single node in the database.
@@ -245,7 +259,7 @@ all Node that are descendants of the structure::
         project=['type', 'id'],  # returns type (string) and id (string)
         tag='descendant'
     )
-    
+
     # Return the dictionaries:
     print "\n\nqb.iterdict()"
     for d in qb.iterdict():
@@ -301,7 +315,7 @@ of projections::
         project=['*'],      # returns the Aiida ORM instance
         tag='desc'
     )
-    
+
     # Return the dictionaries:
     print "\n\nqb.iterdict()"
     for d in qb.iterdict():
@@ -339,13 +353,43 @@ Output::
     qb.first()
     >>> [<PwCalculation: uuid: da720712-3ca3-490b-abf4-b0fb3174322e (pk: 7716)>]
 
-.. note:: 
-    Be aware that, for consistency, QueryBuilder.all / iterall always 
+.. note::
+    Be aware that, for consistency, QueryBuilder.all / iterall always
     returns a list of lists, and first always a list, even if you project
     on one entity!
 
 
-You should know by now that you can define additional properties of nodes 
+If you are not sure which keys to ask for, you can project with '**', and the QueryBuilder instance
+will return all column properties::
+
+    qb = QueryBuilder()
+    qb.append(
+        StructureData,
+        project=['**']
+    )
+
+Output::
+
+    qb.limit(1).dict()
+    >>> {'StructureData': {
+            u'user_id': 2,
+            u'description': u'',
+            u'ctime': datetime.datetime(2016, 2, 3, 18, 20, 17, 88239),
+            u'label': u'',
+            u'mtime': datetime.datetime(2016, 2, 3, 18, 20, 17, 116627),
+            u'id': 3028,
+            u'dbcomputer_id': None,
+            u'nodeversion': 1,
+            u'type': u'data.structure.StructureData.',
+            u'public': False,
+            u'uuid': u'93c0db51-8a39-4a0d-b14d-5a50e40a2cc4'
+        }}
+
+
+
+
+
+You should know by now that you can define additional properties of nodes
 in the *attributes* and the *extras* of a node.
 There will be many cases where you will either want to filter or project on
 those entities. The following example gives us a PwCalculation where the cutoff
@@ -368,7 +412,7 @@ The above examples filters by a certain attribute.
 Notice how you expand into the dictionary using the dot (.).
 That works the same for the extras.
 
-.. note:: 
+.. note::
     Comparisons in the attributes (extras) are also implicitly done by type.
 
 Let's do a last example. You are familiar with the :ref:`sec.quantumespresso` tutorial?
@@ -434,25 +478,25 @@ A shorter version of the previous example::
 Let's proceed to some more advanced stuff. If you've understood everything so far
 you're in good shape to query the database, so you can skip the rest if you want.
 
-.. ~ 
+.. ~
 .. ~ Let's get the id  ``pk'' and the ORM-instances of all structures in the database::
-.. ~ 
+.. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(StructureData, project=['id', '*'])
 .. ~     print list(qb.all())
-.. ~ 
-.. ~ This will return a list of result tuples, each one containing the pk and the corresponding 
+.. ~
+.. ~ This will return a list of result tuples, each one containing the pk and the corresponding
 .. ~ StructureData instance.
 .. ~ The following reverses the order inside the sublists::
-.. ~ 
+.. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(StructureData, project=['*', 'id'])
 .. ~     print list(qb.all())
-.. ~ 
+.. ~
 .. ~ What if you want to project a certain attributes.
 .. ~ That is trickier! You again need to tell the QueryBuilder the type.
 .. ~ Assuming you want to get the energies returned by all PwCalculation done in the last 3 days::
-.. ~ 
+.. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
 .. ~             JobCalculation,
@@ -463,22 +507,22 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~             project=[{'attributes.energy':{'cast':'f'}}],
 .. ~         )
 .. ~     print list(qb.all())
-.. ~ 
+.. ~
 .. ~ You need to specify the type of the quantity, in that case a float:
-.. ~ 
+.. ~
 .. ~ *   'f' for floats
 .. ~ *   'i' for integers
 .. ~ *   't' for texts (strings, characters)
 .. ~ *   'b' for booelans
 .. ~ *   'd' for dates
-.. ~ 
+.. ~
 .. ~ So again, be consisted when storing values in the database.
 .. ~ To sum up, a projection is technically a list of dictionaries.
 .. ~ If you don't have to cast the type, because the value is not stored as an attribute (or extra),
 .. ~ then the string is sufficient.
 .. ~ If you don't care about the order (ensured by passing a list), you can also put values in
 .. ~ one dictionary. Let's also get the units  of the energy::
-.. ~ 
+.. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
 .. ~             JobCalculation,
@@ -492,12 +536,12 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~             }
 .. ~          )
 .. ~     print list(qb.all())
-.. ~ 
-.. ~ 
+.. ~
+.. ~
 .. ~ You can do much more with projections! You might be interested in the maximum value of an attribute
 .. ~ among all results. This can be done much faster by the database than retrieving all results and
 .. ~ doing it in Python. Let's get the maximum energy::
-.. ~ 
+.. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
 .. ~             JobCalculation,
@@ -510,15 +554,15 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~             }
 .. ~          )
 .. ~     print list(qb.all())
-.. ~ 
+.. ~
 .. ~ The above query returns one row, the one with the maximum energy.
 .. ~ Other functions implemented are:
-.. ~ 
+.. ~
 .. ~ *   *min*: get the row with the minimum value
 .. ~ *   *count*: return the number of rows
-.. ~ 
+.. ~
 .. ~ To find out how many calculations resulted in energies above -5.0::
-.. ~ 
+.. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
 .. ~             JobCalculation,
@@ -584,7 +628,7 @@ You can also limit the number of rows returned with the method *limit*::
 
     # order by time descending
     qb.order_by({JobCalculation:{'ctime':'desc'}})
-    
+
     # Limit to results to the first 10 results:
     qb.limit(10)
 
@@ -596,7 +640,7 @@ The queryhelp
 
 As mentioned above, there are two possibilities to tell the QueryBuilder what to do.
 The second uses one big dictionary that we can call the queryhelp in the following.
-It has the same functionalities as the appender method. But you could save this dictionary in a 
+It has the same functionalities as the appender method. But you could save this dictionary in a
 JSON or in the database and use it over and over.
 Using the queryhelp, you have to specify the path, the filter and projections beforehand and
 instantiate the QueryBuilder with that dictionary::
@@ -788,36 +832,36 @@ What do you have to specify:
 .. ~     The value is another dictionary,
 .. ~     where the operator is a key and the value is the
 .. ~     value to check against.
-.. ~ 
+.. ~
 .. ~     .. note:: This follows (in some way) the MongoDB-syntax.
-.. ~ 
+.. ~
 .. ~     But what if the user wants to filter
 .. ~     by key-value pairs defined inside the structure?
 .. ~     In that case,
 .. ~     simply specify the path with the dot (`.`) being a separator.
 .. ~     If you want to get to the volume of the structure,
 .. ~     stored in the attributes, you can specify::
-.. ~ 
+.. ~
 .. ~         queryhelp = {
 .. ~             'path':[{'cls':StructureData}],  # or 'path':[StructureData]
 .. ~             'filters':{
 .. ~                 'attributes.volume': {'<':6.0}
 .. ~             }
 .. ~         }
-.. ~ 
+.. ~
 .. ~     The above queryhelp would build a query
 .. ~     that returns all structures with a volume below 6.0.
-.. ~ 
-.. ~     .. note::   
+.. ~
+.. ~     .. note::
 .. ~         A big advantage of SQLAlchemy is that it support
 .. ~         the storage of jsons.
 .. ~         It is convenient to dump the structure-data
 .. ~         into a json and store that as a column.
 .. ~         The querytool needs to be told how to query the json.
-.. ~ 
+.. ~
 .. ~ Let's get to a really complex use-case,
 .. ~ where we need to reconstruct a workflow:
-.. ~ 
+.. ~
 .. ~ #.  The MD-simulation with the parameters and structure used as input
 .. ~ #.  The trajectory that was returned as an output
 .. ~ #.  We are only interested in calculations with a convergence threshold
@@ -826,14 +870,14 @@ What do you have to specify:
 .. ~ #.  The MD simulation has to be in state "parsing" or "finished"
 .. ~ #.  We want the length of the trajectory
 .. ~ #.  We filter for structures that:
-.. ~ 
+.. ~
 .. ~     *   Have any lattice vector smaller than 3.0 or between 5.0 and 7.0
 .. ~     *   Contain Nitrogen
 .. ~     *   Have 4 atoms
 .. ~     *   Have less than 3 types of atoms (elements)
-.. ~ 
+.. ~
 .. ~ This would be the queryhelp::
-.. ~ 
+.. ~
 .. ~     queryhelp =  {
 .. ~         'path':[
 .. ~             ParameterData,
@@ -885,7 +929,7 @@ What do you have to specify:
 .. ~                         },
 .. ~                     },
 .. ~                 ],
-.. ~                 'attributes.sites':{   
+.. ~                 'attributes.sites':{
 .. ~                     'of_length':4
 .. ~                 },
 .. ~                 'attributes.kinds':{
@@ -949,7 +993,7 @@ The order does not matter, the following queryhelp would results in the same que
         }
     }
 
-If you dislike that way to label the link, you can choose the linklabel in the 
+If you dislike that way to label the link, you can choose the linklabel in the
 path when definining the entity to join::
 
     queryhelp = {
@@ -980,7 +1024,7 @@ path when definining the entity to join::
 
 
 You can set a limit and an offset in the queryhelp::
-    
+
     queryhelp = {
         'path':[Node],
         'limit':10,

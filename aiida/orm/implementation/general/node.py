@@ -12,9 +12,9 @@ from aiida.common.utils import combomethod
 from aiida.common.links import LinkType
 from aiida.common.pluginloader import get_query_type_string
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
@@ -368,13 +368,13 @@ class AbstractNode(object):
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
         :note: In subclasses, change only this. Moreover, remember to call
-           the super() method in order to properly use the caching logic!
+        the super() method in order to properly use the caching logic!
 
         :param src: the source object
         :param str label: the name of the label to set the link from src.
-                    Default = None.
-        :param link_type: The type of link, must be one of the enum values form
-          :class:`~aiida.common.links.LinkType`
+                          Default = None.
+        :param link_type: The type of link, must be one of the enum values
+                          from :class:`~aiida.common.links.LinkType`
         """
         assert src, "You must provide a valid Node to link"
 

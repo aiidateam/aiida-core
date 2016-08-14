@@ -1,6 +1,12 @@
+# -*- coding: utf-8 -*-
 from aiida.backends.djsite.db.testbase import AiidaTestCase
 from django.utils import unittest
 
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
 
 def is_postgres():
     from aiida.backends import settings
@@ -152,23 +158,23 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb2.count(), 3)
 
         qb3 = QueryBuilder()
-        qb3.append(Node, project='label', label='node1')
-        qb3.append(Node, project='label', label='node2')
+        qb3.append(Node, project='label', tag='node1')
+        qb3.append(Node, project='label', tag='node2')
         self.assertEqual(qb3.count(), 4)
 
         qb4 = QueryBuilder()
-        qb4.append(Calculation, label='node1')
-        qb4.append(Data, label='node2')
+        qb4.append(Calculation, tag='node1')
+        qb4.append(Data, tag='node2')
         self.assertEqual(qb4.count(), 2)
 
         qb5 = QueryBuilder()
-        qb5.append(Data, label='node1')
-        qb5.append(Calculation, label='node2')
+        qb5.append(Data, tag='node1')
+        qb5.append(Calculation, tag='node2')
         self.assertEqual(qb5.count(), 2)
 
         qb6 = QueryBuilder()
-        qb6.append(Data, label='node1')
-        qb6.append(Data, label='node2')
+        qb6.append(Data, tag='node1')
+        qb6.append(Data, tag='node2')
         self.assertEqual(qb6.count(), 0)
 
     @unittest.skipIf(not (is_django()), "Tests only works with Django backend")
@@ -179,6 +185,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.backends.querybuild.dummy_model import (
             DbNode, DbLink, DbAttribute, session
         )
+
         n0 = DbNode(
             label='hello',
             type='',
@@ -202,11 +209,11 @@ class TestQueryBuilder(AiidaTestCase):
             dbnode=n0
         )
 
-        l1 = DbLink(input=n0, output=n1, label='random_1')
-        l2 = DbLink(input=n1, output=n2, label='random_2')
+        l1 = DbLink(input=n0, output=n1, label='random_1', type='')
+        l2 = DbLink(input=n1, output=n2, label='random_2', type='')
 
         session.add_all([n0, n1, n2, l1, l2])
-        # ~ session.flush() # This is not writing to the DB
+
 
         qb1 = QueryBuilder()
         qb1.append(
@@ -221,11 +228,11 @@ class TestQueryBuilder(AiidaTestCase):
             'path': [
                 {
                     'cls': Node,
-                    'label': 'n1'
+                    'tag': 'n1'
                 },
                 {
                     'cls': Node,
-                    'label': 'n2',
+                    'tag': 'n2',
                     'output_of': 'n1'
                 }
             ],
@@ -250,6 +257,7 @@ class TestQueryBuilder(AiidaTestCase):
         resdict = resdict[0]
         self.assertTrue(isinstance(resdict['n1']['ctime'], datetime))
         self.assertEqual(resdict['n2']['label'], 'bar')
+
 
         qh = {
             'path': [

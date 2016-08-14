@@ -27,6 +27,11 @@ from aiida.common.hashing import make_hash
 
 
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
 class AbstractQueryBuilder(object):
     """
     QueryBuilderBase is the base class for QueryBuilder classes,
@@ -683,8 +688,8 @@ class AbstractQueryBuilder(object):
         :param tagspec:
             The tag, which has to exist already as a key
             in self._filters
-        :param dict filter_spec:
-            The specifications for the filter, has to be adictionary
+        :param filter_spec:
+            The specifications for the filter, has to be a dictionary
         """
 
 
@@ -841,18 +846,30 @@ class AbstractQueryBuilder(object):
             return
 
         alias = self._tag_to_alias_map[tag]
+
         self.tag_to_projected_entity_dict[tag] = {}
 
         for projectable_spec in items_to_project:
             for projectable_entity_name, extraspec in projectable_spec.items():
-                self._add_to_projections(
-                        alias, projectable_entity_name, **extraspec
-                    )
+                if projectable_entity_name == '**':
+                    # Need to expand
+                    entity_names = [str(c).replace(alias.__table__.name+'.','') for c in alias.__table__.columns]
+                    #~ for s in ('attributes', 'extras'):
+                        #~ try:
+                            #~ entity_names.remove(s)
+                        #~ except ValueError:
+                            #~ pass
+                else:
+                    entity_names = [projectable_entity_name]
+                for entity_name in entity_names:
+                    self._add_to_projections(
+                            alias, entity_name, **extraspec
+                        )
 
-                self.tag_to_projected_entity_dict[tag][
-                        projectable_entity_name
-                    ] = self.nr_of_projections
-                self.nr_of_projections += 1
+                    self.tag_to_projected_entity_dict[tag][
+                            entity_name
+                        ] = self.nr_of_projections
+                    self.nr_of_projections += 1
 
 
     def _get_tag_from_specification(self, specification):
@@ -1037,6 +1054,9 @@ class AbstractQueryBuilder(object):
         if operator.startswith('~'):
             negation = True
             operator = operator.lstrip('~')
+        elif operator.startswith('!'):
+            negation = True
+            operator = operator.lstrip('!')
         else:
             negation = False
         if operator in ('longer', 'shorter', 'of_length'):
@@ -1077,7 +1097,6 @@ class AbstractQueryBuilder(object):
                 expr = and_(*expressions_for_this_path)
             elif operator == 'or':
                  expr = or_(*expressions_for_this_path)
-            need_expr = False
 
         if expr is None:
             if is_attribute:
@@ -1111,7 +1130,7 @@ class AbstractQueryBuilder(object):
         """
         expressions = []
         for path_spec, filter_operation_dict in filter_spec.items():
-            if path_spec in  ('and', 'or', '~or', '~and'):
+            if path_spec in  ('and', 'or', '~or', '~and', '!and', '!or'):
                 subexpressions = [
                     self._build_filters(alias, sub_filter_spec)
                     for sub_filter_spec in filter_operation_dict
@@ -1120,9 +1139,9 @@ class AbstractQueryBuilder(object):
                     expressions.append(and_(*subexpressions))
                 elif path_spec == 'or':
                     expressions.append(or_(*subexpressions))
-                elif path_spec == '~and':
+                elif path_spec in ('~and', '!and'):
                     expressions.append(not_(and_(*subexpressions)))
-                elif path_spec == '~or':
+                elif path_spec in ('~or', '!or'):
                     expressions.append(not_(or_(*subexpressions)))
             else:
                 column_name = path_spec.split('.')[0]

@@ -1,4 +1,10 @@
+# -*- coding: utf-8 -*-
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
 
 if not is_dbenv_loaded():
     load_dbenv()
@@ -9,8 +15,8 @@ from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run, asyncd
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, \
-    ResultToContext
+from aiida.workflows2.fragmented_wf import (FragmentedWorkfunction,
+                                            ResultToContext)
 from common import generate_scf_input_params
 from examples.workflows2.diamond_fcc import rescale
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
@@ -88,7 +94,7 @@ if __name__ == "__main__":
     # run(EquationOfStates, structure=load_node(args.structure_pk),
     #     start=Float(start), end=Float(end), delta=Float(delta),
     #     code=Str(args.code), pseudo_family=Str(args.pseudo))
-    asyncd(EquationOfStates, structure=load_node(args.structure_pk),
+    run(EquationOfStates, structure=load_node(args.structure_pk),
         start=Float(start), end=Float(end), delta=Float(delta),
         code=Str(args.code), pseudo_family=Str(args.pseudo))
 

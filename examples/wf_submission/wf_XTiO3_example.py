@@ -4,9 +4,9 @@ from aiida.workflows.wf_XTiO3 import WorkflowXTiO3_EOS
 import sys
 from aiida.common.example_helpers import test_and_get_code
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 # This example runs a set of calculation for at various lattice parameter
@@ -74,4 +74,5 @@ w = WorkflowXTiO3_EOS()
 w.set_params(params_dict)
 
 if not submit_test:
+    w.store()
     w.start()

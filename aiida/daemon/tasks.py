@@ -1,9 +1,15 @@
+# -*- coding: utf-8 -*-
 from datetime import timedelta
 
 from aiida.backends import settings
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from celery import Celery
 from celery.task import periodic_task
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
 
 if not is_dbenv_loaded():
     load_dbenv(process="daemon")
@@ -98,26 +104,25 @@ def tick_workflows2():
     print "aiida.daemon.tasks.tick_workflows:  Ticking workflows"
     tick_workflow_engine()
 
-# ~ @periodic_task(
-# ~ run_every=timedelta(
-# ~ seconds=config.get(
-# ~ "DAEMON_INTERVALS_WFSTEP",
-# ~ DAEMON_INTERVALS_WFSTEP
-# ~ )
-# ~ )
-# ~ )
-# ~ def workflow_stepper():
-# ~ from aiida.daemon.workflowmanager import daemon_main_loop
-# ~ print "aiida.daemon.tasks.workflowmanager:  Checking for workflows to manage"
-# ~ set_daemon_timestamp(task_name='workflow', when='start')
-# ~ daemon_main_loop()
-# ~ set_daemon_timestamp(task_name='workflow', when='stop')
+@periodic_task(run_every=timedelta(seconds=config.get("DAEMON_INTERVALS_WFSTEP",
+                                                      DAEMON_INTERVALS_WFSTEP
+                                                      )
+                                   )
+               )
+def workflow_stepper(): # daemon for legacy workflow 
+    from aiida.daemon.workflowmanager import execute_steps
+    print "aiida.daemon.tasks.workflowmanager:  Checking for workflows to manage"
+    set_daemon_timestamp(task_name='workflow', when='start')
+    execute_steps()
+    set_daemon_timestamp(task_name='workflow', when='stop')
 
 
 def manual_tick_all():
     from aiida.daemon.execmanager import submit_jobs, update_jobs, retrieve_jobs
     from aiida.workflows2.daemon import tick_workflow_engine
+    from aiida.daemon.workflowmanager import execute_steps
     submit_jobs()
     update_jobs()
     retrieve_jobs()
+    execute_steps() # legacy workflows
     tick_workflow_engine()

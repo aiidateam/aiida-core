@@ -10,10 +10,10 @@ from aiida.common.setup import (get_config, get_secret_key, get_property,
                                 get_profile_config, get_default_profile,
                                 parse_repository_uri)
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 
 TIME_ZONE = "Europe/Paris"
@@ -52,7 +52,9 @@ except NameError:
 # Note: this variable might disappear in the future
 REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
 
-if REPOSITORY_PROTOCOL == 'file':
+if settings.IN_DOC_MODE:
+    pass
+elif REPOSITORY_PROTOCOL == 'file':
     if not os.path.isdir(REPOSITORY_PATH):
         try:
             # Try to create the local repository folders with needed parent

@@ -8,9 +8,9 @@ from aiida.cmdline.baseclass import (
 from aiida.cmdline.commands.node import _Label, _Description
 from aiida.common.exceptions import MultipleObjectsError
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
@@ -687,6 +687,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         parsed_args = parser.parse_args(args)
 
         from aiida.orm import DataFactory
+        from aiida.orm.data.upf import UPFGROUP_TYPE
 
         UpfData = DataFactory('upf')
         from aiida.orm.querybuilder import QueryBuilder
@@ -699,6 +700,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             Group,
             group_of=UpfData,
             project=["name", "description"],
+            filters={"type": {'==': UPFGROUP_TYPE}}
         )
 
         qb.distinct()

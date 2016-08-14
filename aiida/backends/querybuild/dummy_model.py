@@ -38,6 +38,11 @@ from aiida.utils import timezone
 
 
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
 Base = declarative_base()
 
 class DbLink(Base):
@@ -56,9 +61,11 @@ class DbLink(Base):
             initially="DEFERRED"
         )
     )
+    type=Column(String(255))
     input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
     label = Column(String(255), index=True, nullable=False)
+
 
 class DbPath(Base):
     __tablename__ = "db_dbpath"

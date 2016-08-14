@@ -18,9 +18,9 @@ from aiida.common.pluginloader import from_type_to_pluginclassname
 # 'rerunnable',
 # 'resourceLimits',
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 _input_subfolder = 'raw_input'
@@ -1239,8 +1239,8 @@ class AbstractJobCalculation(object):
             actually being submitted at the same time in another thread.
         """
         # TODO: Check if we want to add a status "KILLED" or something similar.
-        from aiida.common.exceptions import InvalidOperation, \
-            RemoteOperationError
+        from aiida.common.exceptions import (InvalidOperation,
+                                             RemoteOperationError)
 
         old_state = self.get_state()
 

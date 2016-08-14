@@ -3,21 +3,12 @@
 from aiida.common import aiidalogger
 from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 logger = aiidalogger.getChild('workflowmanager')
-
-
-def daemon_main_loop():
-    """
-    Support method to keep coherence with the Execution Manager, only launches ``execute_steps``
-    """
-
-    execute_steps()
-
 
 def execute_steps():
     """

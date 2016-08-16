@@ -1264,7 +1264,9 @@ django_to_sqla_schema = {
 django_fields_to_sqla = {
     "aiida.backends.sqlalchemy.models.node.DbNode": {
         "dbcomputer" : "dbcomputer_id",
-        "user": "user_id"}
+        "user": "user_id"},
+    "aiida.backends.sqlalchemy.models.computer.DbComputer": {
+        "metadata" : "_metadata"}
 }
 
 def export_spyros(dbnodes, dbcomputers, dbgroups, folder, also_parents = True, also_calc_outputs=True,
@@ -1281,38 +1283,94 @@ def export_spyros(dbnodes, dbcomputers, dbgroups, folder, also_parents = True, a
     while dbnodes_to_export:
         pass
 
+# relationship_dic = {
+#     "Node": {
+#         "Computer": "computer_of",
+#         "Group": "group_of",
+#         "User": "creator_of"
+#     },
+#     "Group": {
+#         "Node": "member_of"
+#     },
+#     "Computer": {
+#         "Node": "has_computer"
+#     },
+#     "User": {
+#         "Node": "created_by"
+#     }
+# }
+
+relationship_dic = {
+    "Node": {
+        "Computer": "has_computer",
+        "Group": "member_of",
+        "User": "created_by"
+    },
+    "Group": {
+        "Node": "group_of"
+    },
+    "Computer": {
+        "Node": "computer_of"
+    },
+    "User": {
+        "Node": "creator_of"
+    }
+}
+
 
 def fill_in_query(partial_query, originating_entity_str, current_entity_str):
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
     print current_entity_str
-    print all_fields_info[current_entity_str]
+    sqla_current_entity_str = sqla_to_django_schema[current_entity_str]
+    print all_fields_info[sqla_current_entity_str]
 
-    current_entity_mod = get_object_from_string(current_entity_str)
+    # current_entity_mod = get_object_from_string(current_entity_str)
 
-    entity_prop = all_fields_info[sqla_to_django_schema[current_entity_mod]].keys()
+    # entity_prop = all_fields_info[sqla_to_django_schema[current_entity_str]].keys()
+    entity_prop = all_fields_info[sqla_current_entity_str].keys()
 
+    # sqla_current_entity_str = django_to_sqla_schema[current_entity_str]
     project_cols = list()
     for prop in entity_prop:
-        nprop = (django_fields_to_sqla[current_entity_str][prop]
-                 if django_fields_to_sqla[current_entity_str].has_key(prop)
-                 else prop)
+        nprop = prop
+        if django_fields_to_sqla.has_key(current_entity_str):
+            if django_fields_to_sqla[current_entity_str].has_key(prop):
+                nprop = django_fields_to_sqla[current_entity_str][prop]
+
         project_cols.append(nprop)
 
+    # Here we should reference the entity of the main query
+    current_entity_mod = get_object_from_string(current_entity_str)
+
+    print("lalalalalal")
+    print(originating_entity_str)
+    print(current_entity_str)
+
+    aiida_current_entity_str = current_entity_str.split(".")[-1][2:]
+    print aiida_current_entity_str
+    aiida_originating_entity_str = originating_entity_str.split(".")[-1][2:]
+    print aiida_originating_entity_str
+
+    print relationship_dic[aiida_current_entity_str]
+    rel_string = relationship_dic[aiida_current_entity_str][aiida_originating_entity_str]
+    print rel_string
+    mydict= {rel_string: originating_entity_str}
+    print "mydict", mydict
+
     partial_query.append(current_entity_mod, tag=str(current_entity_str),
-                         project=project_cols)
+                         project=project_cols, **mydict)
 
     # prepare the recursion for the referenced entities
     foreign_fields = {k: v for k, v in
                       all_fields_info[
-                          sqla_to_django_schema[model_name]].iteritems()
+                          sqla_current_entity_str].iteritems()
                       # all_fields_info[model_name].iteritems()
                       if 'requires' in v}
 
     for k, v in foreign_fields.iteritems():
         ref_model_name = v['requires']
-        fill_in_query(partial_query, top_entity, top_entity_str,
-                      ref_model_name)
+        fill_in_query(partial_query, current_entity_str, ref_model_name)
 
 
 
@@ -1431,7 +1489,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     entries_to_add = dict()
     for k, v in entries_ids_to_add.iteritems():
         qb = QueryBuilder()
-        qb.append(Node, filters={"id": {"in": v}}, project=project_cols)
+        qb.append(Node, filters={"id": {"in": v}}, project=project_cols, tag=k)
         entries_to_add[k] = qb
 
     print "entries_to_add ===>", entries_to_add
@@ -1456,138 +1514,14 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
         for k, v in foreign_fields.iteritems():
             ref_model_name = v['requires']
-            fill_in_query(partial_query, top_entity_str, ref_model_name)
+            new_ref_model_name = django_to_sqla_schema[ref_model_name]
+            fill_in_query(partial_query, top_entity_str, new_ref_model_name)
 
 
-
-
-
-        new_entries_to_add = {}
-        for model_name, partial_query in entries_to_add.iteritems():
-            if not silent:
-                print "  - Model: {}".format(model_name)
-            Model = get_object_from_string(model_name)
-
-            print sqla_to_django_schema[model_name]
-
-            print all_fields_info[sqla_to_django_schema[model_name]]
-            print all_fields_info[sqla_to_django_schema[model_name]].keys()
-
-            entity_prop = all_fields_info[sqla_to_django_schema[model_name]].keys()
-
-            print "OOOOOOOOO", vars(Model)
-            ovars = vars(Model)
-
-            foreign_fields = {k: v for k, v in
-                              all_fields_info[
-                                  sqla_to_django_schema[model_name]].iteritems()
-                              # all_fields_info[model_name].iteritems()
-                              if 'requires' in v}
-
-            for k, v in foreign_fields.iteritems():
-                ref_model_name = v['requires']
-                ref_model = get_object_from_string(ref_model_name)
-                project_cols = list()
-                for prop in entity_prop:
-                    nprop = (django_fields_to_sqla[ref_model_name][prop]
-                             if django_fields_to_sqla[ref_model_name].has_key(prop)
-                             else prop)
-                    project_cols.append(nprop)
-
-                partial_query.append(ref_model, tag=str(k), project=project_cols)
-
-
-            # project_cols = ["id"]
-            # for prop in entity_prop:
-            #     nprop = (django_fields_to_sqla[model_name][prop]
-            #             if django_fields_to_sqla[model_name].has_key(prop)
-            #             else prop)
-            #     project_cols.append(nprop)
-            #
-            #
-            # if model_name == 'aiida.backends.sqlalchemy.models.node.DbNode':
-            #     partial_query.append(Model, project=project_cols)
-            # elif model_name == "aiida.backends.sqlalchemy.models.user.DbUser":
-            #     partial_query.append(Model, creator_of="nodes", project=project_cols)
-            # elif model_name == "aiida.backends.djsite.db.models.DbComputer":
-            #     partial_query.append(Model, computer_of="nodes", project=project_cols)
-
-
-            res = [inner_v[0].dbnode for inner_v in partial_query.all()]
-            print "resres", res
-            print partial_query.get_query().all()
-
-            # cinstance = partial_query.get_query().first()
-            # ovars = vars(cinstance)
-            #
-            # for key in entity_keys:
-            #     nkey = (django_fields_to_sqla[model_name][key]
-            #             if django_fields_to_sqla[model_name].has_key(key)
-            #             else key)
-            #     # method = getattr(Model, key)
-            #     print "EEEEEEEEEE", nkey
-            #
-            #     o = ovars[nkey]
-            #     print "OOOOOOOOOOOO", o
-            #     # print "TTTTTTTTTT", vars(Model)[key]
-            #     # print "VVVVVVVVVVVV ======> ", method()
-
-            # project_cols = ["id"]
-            # for key in entity_keys:
-            #     nkey = (django_fields_to_sqla[model_name][key]
-            #             if django_fields_to_sqla[model_name].has_key(key)
-            #             else key)
-            #     project_cols.append(nkey)
-            # qb = QueryBuilder()
-            # qb.append(Model, filters={"id": {"in": db_ids}}, project=project_cols, tag="mod")
-            #
-            # print "=================================================="
-            # print "=================================================="
-            # print qb.all()
-
-
-            entryvalues = [v["mod"] for v in qb.dict()]
-            print "entryvalues", entryvalues
-            # sys.exit()
-
-            # entryvalues = qb.get_query().all()
-
-            # # Only serialize new nodes (also to avoid infinite loops)
-            # if model_name in export_data:
-            #     serialized = {
-            #         str(v['id']): serialize_dict(v, remove_fields=['id'])
-            #         for v in entryvalues
-            #         if v['id'] not in export_data[model_name]
-            #     }
-            # else:
-            #     serialized = {
-            #         str(v['id']): serialize_dict(v, remove_fields=['id'])
-            #         for v in entryvalues
-            #     }
-            #
-            # try:
-            #     export_data[model_name].update(serialized)
-            # except KeyError:
-            #     export_data[model_name] = serialized
-
-            # if serialized:
-            #     foreign_fields = {k: v for k, v in
-            #                       all_fields_info[
-            #                           sqla_to_django_schema[model_name]].iteritems()
-            #                       # all_fields_info[model_name].iteritems()
-            #                       if 'requires' in v}
-            #
-            #     for k, v in foreign_fields.iteritems():
-            #         qb = QueryBuilder()
-            #         qb.append(Model, tag=str(Model), filters={"id": {"in": serialized.keys()}})
-            #         related_queryobj = qb
-            #         try:
-            #             new_entries_to_add[v['requires']].append(related_queryobj)
-            #         except KeyError:
-            #             new_entries_to_add[v['requires']] = [related_queryobj]
-
-        # entries_to_add = new_entries_to_add
-
+        print "===============> "
+        # print str(partial_query)
+        print partial_query.all()
+        sys.exit(0)
 
     # Until here
     sys.exit()

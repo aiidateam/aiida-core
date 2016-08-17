@@ -90,7 +90,7 @@ class Export(VerdiCommand):
         if parsed_args.group_pks is not None:
             for group_pk in parsed_args.group_pks:
                 try:
-                    group = Group.get(pk=group_pk)
+                    group = Group.get(pk=group_pk,type_string=None)
                 except (ValueError, NotExistent) as e:
                     print >> sys.stderr, e.message
                     sys.exit(1)

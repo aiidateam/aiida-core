@@ -10,6 +10,7 @@ from plum.wait_ons import Checkpoint
 
 import aiida.orm
 import aiida.workflows2.util as util
+from aiida.orm import load_node
 import voluptuous
 from abc import ABCMeta, abstractmethod
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
@@ -97,17 +98,16 @@ class Process(plum.process.Process):
     """
     __metaclass__ = ABCMeta
 
+    SINGLE_RETURN_LINKNAME = '_return'
     PROCESS_LABEL_ATTR = '_process_label'
 
     KEY_CALC_ID = 'calc_id'
     KEY_PARENT_CALC_PID = 'parent_calc_pid'
-    KEY_QUEUE_UP = '_queue_up'
 
     @classmethod
     def _define(cls, spec):
         super(Process, cls)._define(spec)
 
-        spec.input(cls.KEY_QUEUE_UP, required=False)
         spec.dynamic_input(valid_type=aiida.orm.Data)
         spec.dynamic_output(valid_type=aiida.orm.Data)
 
@@ -147,7 +147,7 @@ class Process(plum.process.Process):
     def save_instance_state(self, bundle):
         super(Process, self).save_instance_state(bundle)
 
-        bundle[self._INPUTS] = self._convert_to_ids(self.inputs)
+        # bundle[self._INPUTS] = self._convert_to_ids(self.inputs)
         if self._store_provenance:
             assert self._calc.is_stored
 
@@ -155,10 +155,7 @@ class Process(plum.process.Process):
 
     @override
     def _run(self, **kwargs):
-        if self.KEY_QUEUE_UP in kwargs:
-            return Checkpoint('_main')
-
-        self._main(**kwargs)
+        return self._main(**kwargs)
 
     @abstractmethod
     def _main(self, **kwargs):
@@ -166,6 +163,16 @@ class Process(plum.process.Process):
 
     def run_after_queueing(self, wait_on):
         return self._run
+
+    @override
+    def out(self, output_port, value=None):
+        if value is None:
+            # In this case assume that output_port is the actual value and there
+            # is just one return value
+            return super(Process, self).out(self.SINGLE_RETURN_LINKNAME,
+                                            output_port)
+        else:
+            return super(Process, self).out(output_port, value)
 
     def _convert_to_ids(self, nodes):
         from aiida.orm import Node
@@ -195,8 +202,6 @@ class Process(plum.process.Process):
         :param pks_mapping: The dictionary of node pks.
         :return: A dictionary with the loaded nodes.
         """
-        from aiida.orm import load_node
-
         nodes = {}
         for label, pk in pks_mapping.iteritems():
             if isinstance(pk, collections.Mapping):
@@ -219,8 +224,6 @@ class Process(plum.process.Process):
 
             self._pid = self._create_and_setup_db_record()
         else:
-            from aiida.orm import load_node
-
             # Replace the node pks for real nodes
             saved_instance_state[self._INPUTS] = \
                 self._load_nodes_from(saved_instance_state[self._INPUTS])
@@ -339,7 +342,6 @@ class Process(plum.process.Process):
 
         # Ok, maybe the pid is actually a pk...
         try:
-            from aiida.orm import load_node
             return load_node(pk=self._parent_pid)
         except exceptions.NotExistent:
             pass
@@ -349,7 +351,6 @@ class Process(plum.process.Process):
 
 
 class FunctionProcess(Process):
-    SINGLE_RETURN_LINKNAME = '_return'
     _func_args = None
 
     @staticmethod
@@ -451,7 +452,7 @@ class _ProcessFinaliser(plum.process_monitor.ProcessMonitorListener):
     @override
     def on_monitored_process_failed(self, pid):
         try:
-            calc_node = aiida.orm.load_node(pk=pid)
+            calc_node = load_node(pk=pid)
         except ValueError:
             pass
         else:

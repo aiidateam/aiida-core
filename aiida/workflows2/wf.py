@@ -22,6 +22,7 @@ def wf(func):
         """
         # Do this here so that it doesn't enter as an input to the process
         run_async = kwargs.pop('__async', False)
+        return_pid = kwargs.pop('_return_pid', False)
 
         # Build up the Process repreresenting this function
         FuncProc = FunctionProcess.build(func, **kwargs)
@@ -32,16 +33,26 @@ def wf(func):
         if args:
             inputs.update(FuncProc.args_to_dict(*args))
         future = execution_engine.submit(FuncProc, inputs)
+        pid = future.pid
 
         if run_async:
-            return future
+            if return_pid:
+                return future, pid
+            else:
+                return future
         else:
             results = future.result()
             # Check if there is just one value returned
             if len(results) == 1 and FuncProc.SINGLE_RETURN_LINKNAME in results:
-                return results[FuncProc.SINGLE_RETURN_LINKNAME]
+                if return_pid:
+                    return results[FuncProc.SINGLE_RETURN_LINKNAME], pid
+                else:
+                    return results[FuncProc.SINGLE_RETURN_LINKNAME]
             else:
-                return results
+                if return_pid:
+                    return results, pid
+                else:
+                    return results
 
     wrapped_function._is_workfunction = True
     return wrapped_function

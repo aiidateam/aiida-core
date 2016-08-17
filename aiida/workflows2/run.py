@@ -19,7 +19,12 @@ def async(process_class, *args, **kwargs):
     elif issubclass(process_class, Process):
         # No need to consider args as a Process can't deal with positional
         # arguments anyway
-        return execution_engine.submit(process_class, inputs=kwargs)
+        return_pid = kwargs.pop('_result_pid', False)
+        fut = execution_engine.submit(process_class, inputs=kwargs)
+        if return_pid:
+            return fut, fut.pid
+        else:
+            return fut
 
 
 def asyncd(process_class, _jobs_store=None, **kwargs):
@@ -44,7 +49,13 @@ def run(process_class, *args, **inputs):
     if util.is_workfunction(process_class):
         return process_class(*args, **inputs)
     elif issubclass(process_class, Process):
-        return execution_engine.submit(process_class, inputs).result()
+        return_pid = inputs.pop('_return_pid', False)
+        fut = execution_engine.submit(process_class, inputs)
+        result = fut.result()
+        if return_pid:
+            return result, fut.pid
+        else:
+            return result
     else:
         raise ValueError("Unsupported type supplied for process_class.")
 

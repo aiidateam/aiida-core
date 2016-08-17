@@ -10,7 +10,7 @@ from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run, asyncd
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, \
-    ResultToContext
+    ResultToContext, while_
 from examples.workflows2.diamond_fcc import rescale
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.workflows2.wf import wf
@@ -120,7 +120,7 @@ class EquationOfState(FragmentedWorkfunction):
         spec.input("pseudo_family", valid_type=SimpleData)
         spec.outline(
             cls.run_pw,
-            cls.plot_eos
+            cls.print_eos
         )
 
     def run_pw(self, ctx):
@@ -144,11 +144,50 @@ class EquationOfState(FragmentedWorkfunction):
         # in the context
         return ResultToContext(**calcs)
 
-    def plot_eos(self, ctx):
+    def print_eos(self, ctx):
         for label in ctx:
             if "s_" in label:
                 print "{} {}".format(
                     label, ctx[label]['output_parameters'].dict.energy)
+
+
+class EquationOfState2(FragmentedWorkfunction):
+    @classmethod
+    def _define(cls, spec):
+        spec.input("structure", valid_type=StructureData)
+        spec.input("code", valid_type=SimpleData)
+        spec.input("pseudo_family", valid_type=SimpleData)
+        spec.outline(
+            cls.init,
+            while_(cls.not_finished)(
+                cls.run_pw,
+                cls.print_result
+            )
+        )
+
+    def init(self, ctx):
+        ctx.scales = (0.96, 0.98, 1., 1.02, 1.04)
+        ctx.i = 0
+
+    def not_finished(self, ctx):
+        return ctx.i < len(ctx.scales)
+
+    def run_pw(self, ctx):
+        scale = ctx.scales[ctx.i]
+        scaled = rescale(self.inputs.structure, scale)
+
+        inputs = generate_scf_input_params(
+            scaled, self.inputs.code, self.inputs.pseudo_family)
+
+        # Launch the code
+        calc = self.submit(PwProcess, inputs)
+
+        ctx.i += 1
+        return ResultToContext(result=calc)
+
+    def print_result(self, ctx):
+        print ctx.scales[ctx.i],\
+            ctx.result['output_parameters'].dict.energy
 
 
 if __name__ == "__main__":

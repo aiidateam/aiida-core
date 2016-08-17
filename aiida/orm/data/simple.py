@@ -155,7 +155,8 @@ class StrType(SimpleData):
 
 
 class BoolType(SimpleData):
-    pass
+    def __int__(self):
+        return 0 if not self.value else 1
 
 TRUE = BoolType(typevalue=(bool, True))
 FALSE = BoolType(typevalue=(bool, False))

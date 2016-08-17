@@ -5,8 +5,10 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from unittest import TestCase
+from aiida.orm import load_node
 from aiida.workflows2.process import Process
 from aiida.workflows2.db_types import Int
+from aiida.workflows2.run import run
 from workflows2.common import ProcessScope, DummyProcess, BadOutput
 from aiida.common.lang import override
 import uuid
@@ -59,3 +61,6 @@ class TestProcess(TestCase):
             # Make sure there are no other inputs
             self.assertFalse(inputs)
 
+    def test_seal(self):
+        pid = run(DummyProcess, _return_pid=True)[1]
+        self.assertTrue(load_node(pk=pid).is_sealed)

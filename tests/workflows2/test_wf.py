@@ -6,16 +6,13 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.workflows2.wf import wf
-from aiida.workflows2.run import async
-from aiida.workflows2.db_types import to_db_type
-
-
-_True = to_db_type(True)
+from aiida.workflows2.run import async, run
+from aiida.orm.data.simple import TRUE
 
 
 @wf
 def simple_wf():
-    return {'result': _True}
+    return {'result': TRUE}
 
 @wf
 def return_input(inp):
@@ -24,9 +21,13 @@ def return_input(inp):
 
 class TestWf(unittest.TestCase):
     def test_blocking(self):
-        self.assertTrue(simple_wf()['result'].value)
-        self.assertTrue(return_input(_True)['result'].value)
+        self.assertTrue(simple_wf()['result'])
+        self.assertTrue(return_input(TRUE)['result'])
 
     def test_async(self):
-        self.assertTrue(async(simple_wf).result()['result'].value)
-        self.assertTrue(async(return_input, _True).result()['result'].value)
+        self.assertTrue(async(simple_wf).result()['result'])
+        self.assertTrue(async(return_input, TRUE).result()['result'])
+
+    def test_run(self):
+        self.assertTrue(run(simple_wf)['result'])
+        self.assertTrue(run(return_input, TRUE)['result'])

@@ -4,14 +4,15 @@ import os
 
 import aiida
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
-from aiida.orm import load_node
+from aiida.common.exceptions import InternalError
+# from aiida.orm.utils import load_node
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 def applyfunct_len(value):
@@ -68,13 +69,13 @@ class Devel(VerdiCommandWithSubcommands):
     Provides a set of tools for developers. For instance, it allows to run
     the django tests for the db application and the unittests of
     the AiiDA modules.
-    
+
     If you want to limit the tests to a specific subset of modules,
-    pass them as parameters. 
-    
+    pass them as parameters.
+
     An invalid parameter will make the code print the list of all
     valid parameters.
-    
+
     Note: the test called 'db' will run all db.* tests.
     """
     base_allowed_test_folders = [
@@ -87,7 +88,7 @@ class Devel(VerdiCommandWithSubcommands):
     _dbprefix = _dbrawprefix + "."
 
     def __init__(self, *args, **kwargs):
-        from aiida.djsite.db.testbase import db_test_list
+        from aiida.backends.djsite.db.testbase import db_test_list
 
         super(Devel, self).__init__(*args, **kwargs)
 
@@ -102,6 +103,7 @@ class Devel(VerdiCommandWithSubcommands):
             'listislands': (self.run_listislands, self.complete_none),
             'play': (self.run_play, self.complete_none),
             'getresults': (self.calculation_getresults, self.complete_none),
+            'tickd': (self.tick_daemon, self.complete_none)
         }
 
         # The content of the dict is:
@@ -128,7 +130,7 @@ class Devel(VerdiCommandWithSubcommands):
     def run_describeproperties(self, *args):
         """
         List all valid properties that can be stored in the AiiDA config file.
-        
+
         Only properties listed in the ``_property_table`` of
         ``aida.common.setup`` can be used.
         """
@@ -160,9 +162,10 @@ class Devel(VerdiCommandWithSubcommands):
         under development.
         """
         from aiida.common.exceptions import AiidaException
-        from aiida.orm import JobCalculation as OrmCalculation
-
         load_dbenv()
+        from aiida.orm import JobCalculation as OrmCalculation
+        from aiida.orm.utils import load_node
+
 
         class InternalError(AiidaException):
             def __init__(self, real_exception, message):
@@ -192,12 +195,12 @@ class Devel(VerdiCommandWithSubcommands):
                     parent_dict_name = new_key
                 except KeyError as e:
                     raise InternalError(e, "Unable to find the key '%s' in '%s' %s" % (
-                    new_key, parent_dict_name, get_suggestions(new_key, parent_dict.keys())))
+                        new_key, parent_dict_name, get_suggestions(new_key, parent_dict.keys())))
                 except Exception as e:
                     if e.__class__ is not InternalError:
                         raise InternalError(e,
                                             "Error retrieving the key '%s' withing '%s', maybe '%s' is not a dict?" % (
-                                            the_keys[1], the_keys[0], the_keys[0]))
+                                                the_keys[1], the_keys[0], the_keys[0]))
                     else:
                         raise
             return parent_dict
@@ -218,7 +221,7 @@ class Devel(VerdiCommandWithSubcommands):
                     raise InternalError(e, "%s is not a valid integer (in %s)." % (idx, parent_name))
                 except IndexError as e:
                     raise InternalError(e, "Index %s is out of bounds, length of list %s is %s" % (
-                    index, parent_name, len(parent_data)))
+                        index, parent_name, len(parent_data)))
                 except Exception as e:
                     raise InternalError(e, "Invalid index! Maybe %s is not a list?" % parent_name)
             return parent_data
@@ -238,7 +241,14 @@ class Devel(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         keys_to_retrieve = arguments[:sep_idx]
-        job_list = arguments[sep_idx + 1:]
+        job_list_str = arguments[sep_idx + 1:]
+
+        try:
+            job_list = [int(i) for i in job_list_str]
+        except ValueError:
+            print >> sys.stderr, "All PKs after -- must be valid integers."
+            sys.exit(1)
+
 
         sep = '\t'  # Default separator: a tab character
 
@@ -277,7 +287,7 @@ class Devel(VerdiCommandWithSubcommands):
 
         # load the data
         if print_header:
-            print "## Job list: %s" % " ".join(job_list)
+            print "## Job list: %s" % " ".join(job_list_str)
             print "#" + sep.join(str(i) for i in keys_to_retrieve)
         for job in job_list:
             values_to_print = []
@@ -295,7 +305,7 @@ class Devel(VerdiCommandWithSubcommands):
                 out_found = False
                 o = {}
 
-            io = {'extras': c.get_extras(), 'attrs': c.get_attrs(), 
+            io = {'extras': c.get_extras(), 'attrs': c.get_attrs(),
                   'i': i, 'o': o, 'pk': job, 'label': c.label,
                   'desc': c.description, 'state': c.get_state(),
                   'sched_state': c.get_scheduler_state(),
@@ -345,6 +355,13 @@ class Devel(VerdiCommandWithSubcommands):
             except Exception as e:
                 print >> sys.stderr, "# Error loading job # %s (%s): %s" % (job, type(e), e)
 
+    def tick_daemon(self, *args):
+        """
+        Call all the functions that the daemon would call if running once and
+        return.
+        """
+        from aiida.daemon.tasks import manual_tick_all
+        manual_tick_all()
 
     def run_listproperties(self, *args):
         """
@@ -384,7 +401,7 @@ class Devel(VerdiCommandWithSubcommands):
         load_dbenv()
         from django.db.models import Q
         from aiida.orm.node import Node
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         q_object = Q(user=get_automatic_user())
         q_object.add(Q(parents__isnull=True), Q.AND)
@@ -443,7 +460,7 @@ class Devel(VerdiCommandWithSubcommands):
         """
         Define a global AiiDA property in the config file in .aiida.
 
-        Only properties in the _property_table of aiida.common.setup can 
+        Only properties in the _property_table of aiida.common.setup can
         be modified.
         """
         from aiida.common.setup import set_property
@@ -462,9 +479,9 @@ class Devel(VerdiCommandWithSubcommands):
 
     def run_tests(self, *args):
         import unittest
-        import tempfile
         from aiida.common.setup import get_property
-        from aiida.djsite.settings import settings_profile
+        from aiida.backends import settings
+        from aiida.backends.djsite.settings import settings_profile
 
         db_test_list = []
         test_folders = []
@@ -473,7 +490,7 @@ class Devel(VerdiCommandWithSubcommands):
             for arg in args:
                 if arg in self.allowed_test_folders:
                     dbtests = self.allowed_test_folders[arg]
-                    # Anything that has been added is a DB test                    
+                    # Anything that has been added is a DB test
                     if dbtests is not None:
                         do_db = True
                         for dbtest in dbtests:
@@ -499,7 +516,7 @@ class Devel(VerdiCommandWithSubcommands):
                     # DB test
                     for dbtest in v:
                         db_test_list.append(dbtest)
-        
+
         for test_folder in test_folders:
             print "v" * 75
             print ">>> Tests for module {} <<<".format(test_folder.ljust(50))
@@ -515,7 +532,7 @@ class Devel(VerdiCommandWithSubcommands):
             ## Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory
             ## and not on disk.
             # if you define such a variable to False, it will use the same backend
-            # that you have already configured also for tests. Otherwise, 
+            # that you have already configured also for tests. Otherwise,
             # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
 
             # The prefix is then checked inside get_profile_config and stripped
@@ -526,8 +543,8 @@ class Devel(VerdiCommandWithSubcommands):
                 profile_prefix = 'test_'
 
             profile = "{}{}".format(profile_prefix,
-                                    settings_profile.AIIDADB_PROFILE if
-                                    settings_profile.AIIDADB_PROFILE is not None else 'default')
+                                    settings.AIIDADB_PROFILE if
+                                    settings.AIIDADB_PROFILE is not None else 'default')
             settings_profile.aiida_test_list = db_test_list
 
             print "v" * 75
@@ -543,7 +560,7 @@ class Devel(VerdiCommandWithSubcommands):
         # I remove the one on which I am, so if I wrote all of it but
         # did not press space, it will get completed
         other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
-        # I create a list of the tests that are not already written on the 
+        # I create a list of the tests that are not already written on the
         # command line
         remaining_tests = (
             set(self.allowed_test_folders) - set(other_subargs))
@@ -552,7 +569,7 @@ class Devel(VerdiCommandWithSubcommands):
 
 
     def get_querydict_from_keyvalue(self, key, separator_filter, value):
-        from aiida.orm import (Node, Code, Data, Calculation,
+        from aiida.orm import (Code, Data, Calculation,
                                DataFactory, CalculationFactory)
         from aiida.common.exceptions import MissingPluginError
         import re
@@ -716,7 +733,7 @@ class Devel(VerdiCommandWithSubcommands):
         ("<", "lt"),
         ("=", ""),
     ]
-    # TO ADD: startswith, istartswith, endswith, iendswith, ymdHMS, isnull, in, contains, 
+    # TO ADD: startswith, istartswith, endswith, iendswith, ymdHMS, isnull, in, contains,
 
     # TO ADD: support for other types
 
@@ -729,7 +746,7 @@ class Devel(VerdiCommandWithSubcommands):
         #        value = pieces[1]
 
         #import re
-        #sep_regex = "|".join([re.escape(k) for k in self.separators.keys()])        
+        #sep_regex = "|".join([re.escape(k) for k in self.separators.keys()])
         #regex = re.match(r'(.+)(' + sep_regex + r')(.+)',arg)
         #        key, sep, value = regex.groups()
 
@@ -751,13 +768,13 @@ class Devel(VerdiCommandWithSubcommands):
     def run_query(self, *args):
         load_dbenv()
         from django.db.models import Q
-        from aiida.djsite.db.models import DbNode
+        from aiida.backends.djsite.db.models import DbNode
 
         # django_query = Q()
         django_query = DbNode.objects.filter()
 
         try:
-            # NOT SURE THIS IS THE RIGHT WAY OF MANAGING NEGATION FOR 
+            # NOT SURE THIS IS THE RIGHT WAY OF MANAGING NEGATION FOR
             # ATTRIBUTES!!
             queries = [(self.parse_arg(arg[1:] if arg.startswith('!') else arg), arg.startswith('!')) for arg in args]
         except ValueError as e:

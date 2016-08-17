@@ -2,14 +2,15 @@
 """
 This module manages the UPF pseudopotentials in the local repository.
 """
-from aiida.orm.data.singlefile import SinglefileData
-from aiida.common.utils import classproperty
 import re
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Riccardo Sabatini"
+from aiida.orm.data.singlefile import SinglefileData
+from aiida.common.utils import classproperty
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 UPFGROUP_TYPE = 'data.upf.family'
 
@@ -95,8 +96,8 @@ def upload_upf_family(folder, group_name, group_description,
     from aiida.common import aiidalogger
     from aiida.orm import Group
     from aiida.common.exceptions import UniquenessError, NotExistent
-    from aiida.djsite.utils import get_automatic_user
-
+    from aiida.backends.utils import get_automatic_user
+    from aiida.orm import QueryBuilder
     if not os.path.isdir(folder):
         raise ValueError("folder must be a directory")
 
@@ -132,10 +133,14 @@ def upload_upf_family(folder, group_name, group_description,
 
     for f in files:
         md5sum = aiida.common.utils.md5_file(f)
-        existing_upf = UpfData.query(dbattributes__key="md5",
-                                     dbattributes__tval=md5sum)
+        qb = QueryBuilder()
+        qb.append(UpfData, filters={'attributes.md5':{'==':md5sum}})
+        existing_upf = qb.first()
+        
+        #~ existing_upf = UpfData.query(dbattributes__key="md5",
+                                     #~ dbattributes__tval=md5sum)
 
-        if len(existing_upf) == 0:
+        if existing_upf is None:
             # return the upfdata instances, not stored
             pseudo, created = UpfData.get_or_create(f, use_first=True,
                                                     store_upf=False)
@@ -144,9 +149,13 @@ def upload_upf_family(folder, group_name, group_description,
             pseudo_and_created.append((pseudo, created))
         else:
             if stop_if_existing:
-                raise ValueError("A UPF with identical MD5 to " + f + " cannot be added with stop_if_existing")
-            pseudo = existing_upf[0]
-            pseudo_and_created.append((pseudo, False))
+                raise ValueError(
+                        "A UPF with identical MD5 to "
+                        " {} cannot be added with stop_if_existing"
+                        "".format(f)
+                    )
+            existing_upf = existing_upf[0]
+            pseudo_and_created.append((existing_upf, False))
 
     # check whether pseudo are unique per element
     elements = [(i[0].element, i[0].md5sum) for i in pseudo_and_created]
@@ -302,7 +311,6 @@ class UpfData(SinglefileData):
         """
         import aiida.common.utils
         import os
-        from aiida.common.exceptions import ParsingError
 
         if not os.path.abspath(filename):
             raise ValueError("filename must be an absolute path")

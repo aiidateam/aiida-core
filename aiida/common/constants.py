@@ -4,10 +4,10 @@ This module defines the (physical) constants that are used throughout
 the code. Note that 
 """
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 bohr_to_ang = 0.52917720859
 ang_to_m = 1.e-10
@@ -19,7 +19,8 @@ timeau_to_sec = 2.418884326155573e-17
 invcm_to_THz = 0.0299792458
 
 # Element table, from NIST (http://www.nist.gov/pml/data/index.cfm)
-# Retrieved in October 2014
+# Retrieved in October 2014 for atomic numbers 1-103, and in May 2016
+# for atomic numbers 104-112, 114 and 116.
 elements = {
     1: {'mass': 1.00794, 'name': 'Hydrogen', 'symbol': 'H'},
     2: {'mass': 4.002602, 'name': 'Helium', 'symbol': 'He'},
@@ -124,4 +125,15 @@ elements = {
     101: {'mass': 258.0, 'name': 'Mendelevium', 'symbol': 'Md'},
     102: {'mass': 259.0, 'name': 'Nobelium', 'symbol': 'No'},
     103: {'mass': 262.0, 'name': 'Lawrencium', 'symbol': 'Lr'},
+    104: {'mass': 267.0, 'name': 'Rutherfordium', 'symbol': 'Rf'},
+    105: {'mass': 268.0, 'name': 'Dubnium', 'symbol': 'Db'},
+    106: {'mass': 271.0, 'name': 'Seaborgium', 'symbol': 'Sg'},
+    107: {'mass': 272.0, 'name': 'Bohrium', 'symbol': 'Bh'},
+    108: {'mass': 270.0, 'name': 'Hassium', 'symbol': 'Hs'},
+    109: {'mass': 276.0, 'name': 'Meitnerium', 'symbol': 'Mt'},
+    110: {'mass': 281.0, 'name': 'Darmstadtium', 'symbol': 'Ds'},
+    111: {'mass': 280.0, 'name': 'Roentgenium', 'symbol': 'Rg'},
+    112: {'mass': 285.0, 'name': 'Copernicium', 'symbol': 'Cn'},
+    114: {'mass': 289.0, 'name': 'Flerovium', 'symbol': 'Fl'},
+    116: {'mass': 293.0, 'name': 'Livermorium', 'symbol': 'Lv'},
 }

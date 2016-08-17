@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class VerdiCommand(object):
@@ -36,7 +36,7 @@ class VerdiCommand(object):
     def get_full_command_name(self, with_exec_name=True):
         """
         Return the current command name. Also tries to get the subcommand name.
-        
+
         :param with_exec_name: if True, return the full string, including the
           executable name ('verdi'). If False, omit it.
         """
@@ -49,7 +49,6 @@ class VerdiCommand(object):
         else:
             exec_name_part = ""
         return "{}{}".format(exec_name_part, self.get_command_name())
-
 
     @classmethod
     def get_command_name(cls):
@@ -75,7 +74,7 @@ class VerdiCommand(object):
         Method called when the user asks for the bash completion.
         Print a list of valid keywords.
         Returning without printing will use standard bash completion.
-        
+
         :param subargs_idx: the index of the subargs where the TAB key was pressed\
             (0 is the first element of subargs)
         :param subargs: a list of subarguments to this command
@@ -86,15 +85,14 @@ class VerdiCommand(object):
 class VerdiCommandRouter(VerdiCommand):
     _abstract = True
 
-    # Empty valid subcommands to start with; 
-    # These should be a dictionary with 'key' the name to type on the 
+    # Empty valid subcommands to start with;
+    # These should be a dictionary with 'key' the name to type on the
     # command line, and value a VerdiCommand class to call when that subcommand
     # is invoked.
     routed_subcommands = {}
 
     def no_subcommand(self, *args):
         import sys
-
 
         if self.routed_subcommands:
             print >> sys.stderr, ("You have to pass a valid subcommand to "
@@ -144,7 +142,8 @@ class VerdiCommandRouter(VerdiCommand):
                 first_subarg = ''
 
             try:
-                complete_function = self.routed_subcommands[first_subarg]().complete
+                complete_function = self.routed_subcommands[
+                    first_subarg]().complete
             except KeyError:
                 print ""
                 return
@@ -153,23 +152,23 @@ class VerdiCommandRouter(VerdiCommand):
 
 class VerdiCommandWithSubcommands(VerdiCommand):
     """
-    Used for commands with subcommands. Just define, in the __init__, 
+    Used for commands with subcommands. Just define, in the __init__,
     the self.valid_subcommands dictionary, in the format::
-    
+
      self.valid_subcommands = {
          'uploadfamily': (self.uploadfamily, self.complete_auto),
          'listfamilies': (self.listfamilies, self.complete_none),
          }
-        
-    where the key is the subcommand name to give on the command line, and 
+
+    where the key is the subcommand name to give on the command line, and
     the value is a tuple of length 2, the first is the function to call on
     execution, the second is the function to call on complete.
-    
+
     This class already defined the complete_auto and complete_none commands,
     that respectively call the default bash completion for filenames/folders,
     or do not give any completion suggestion.
     Other functions can of course be defined.
-    
+
     .. todo:: Improve the docstrings for commands with subcommands.
     """
     _abstract = True
@@ -192,7 +191,7 @@ class VerdiCommandWithSubcommands(VerdiCommand):
         elif subargs_idx >= 1:
             try:
                 first_subarg = subargs[0]
-            except  IndexError:
+            except IndexError:
                 first_subarg = ''
             try:
                 complete_function = self.valid_subcommands[first_subarg][1]
@@ -241,9 +240,9 @@ class VerdiCommandWithSubcommands(VerdiCommand):
     def get_full_command_name(self, *args, **kwargs):
         """
         Return the current command name. Also tries to get the subcommand name.
-    
+
         Also tries to see if the caller function was one specific submethod.
-        
+
         :param with_exec_name: if True, return the full string, including the
           executable name ('verdi'). If False, omit it.
         """

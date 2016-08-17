@@ -7,23 +7,23 @@ in a Brillouin zone, and how to operate on them.
 from aiida.orm.data.array import ArrayData
 import numpy
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Daniel Marchand, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class KpointsData(ArrayData):
     """
     Class to handle array of kpoints in the Brillouin zone. Provide methods to
-    generate either user-defined k-points or path of k-points along symmetry 
+    generate either user-defined k-points or path of k-points along symmetry
     lines.
-    Internally, all k-points are defined in terms of crystal (fractional) 
+    Internally, all k-points are defined in terms of crystal (fractional)
     coordinates.
     Cell and lattice vector coordinates are in Angstroms, reciprocal lattice
     vectors in Angstrom^-1 .
     :note: The methods setting and using the Bravais lattice info assume the
-    PRIMITIVE unit cell is provided in input to the set_cell or 
+    PRIMITIVE unit cell is provided in input to the set_cell or
     set_cell_from_structure methods.
     """
 
@@ -58,10 +58,9 @@ class KpointsData(ArrayData):
         from aiida.common.exceptions import ModificationNotAllowed
         from aiida.orm.data.structure import _get_valid_cell
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
-                "KpointsData cannot be modified, "
-                "it has already been stored")
+                "KpointsData cannot be modified, it has already been stored")
 
         the_cell = _get_valid_cell(value)
 
@@ -71,12 +70,13 @@ class KpointsData(ArrayData):
     def pbc(self):
         """
         The periodic boundary conditions along the vectors a1,a2,a3.
-        
+
         :return: a tuple of three booleans, each one tells if there are periodic
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
         # return copy.deepcopy(self._pbc)
-        return (self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
+        return (
+        self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
 
     @pbc.setter
     def pbc(self, value):
@@ -93,10 +93,9 @@ class KpointsData(ArrayData):
         from aiida.common.exceptions import ModificationNotAllowed
         from aiida.orm.data.structure import get_valid_pbc
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
-                "The KpointsData object cannot be modified, "
-                "it has already been stored")
+                "The KpointsData object cannot be modified, it has already been stored")
         the_pbc = get_valid_pbc(value)
         self._set_attr('pbc1', the_pbc[0])
         self._set_attr('pbc2', the_pbc[1])
@@ -188,7 +187,7 @@ class KpointsData(ArrayData):
         Set a cell to be used for symmetry analysis from an AiiDA structure.
         Inherits both the cell and the pbc's.
         To set manually a cell, use "set_cell"
-        
+
         :param structuredata: an instance of StructureData
         """
         from aiida.orm.data.structure import StructureData
@@ -204,8 +203,8 @@ class KpointsData(ArrayData):
         """
         Set a cell to be used for symmetry analysis.
         To set a cell from an AiiDA structure, use "set_cell_from_structure".
-        
-        :param cell: 3x3 matrix of cell vectors. Orientation: each row 
+
+        :param cell: 3x3 matrix of cell vectors. Orientation: each row
                      represent a lattice vector. Units are Angstroms.
         :param pbc: list of 3 booleans, True if in the nth crystal direction the
                     structure is periodic. Default = [True,True,True]
@@ -219,7 +218,7 @@ class KpointsData(ArrayData):
     def _load_cell_properties(self):
         """
         A function executed by the __init__ or by set_cell.
-        If a cell is set, properties like a1, a2, a3, cosalpha, reciprocal_cell are 
+        If a cell is set, properties like a1, a2, a3, cosalpha, reciprocal_cell are
         set as well, although they are not stored in the DB.
         :note: units are Angstrom for the cell parameters, 1/Angstrom for the
         reciprocal cell parameters.
@@ -248,8 +247,8 @@ class KpointsData(ArrayData):
         """
         Set KpointsData to represent a uniformily spaced mesh of kpoints in the
         Brillouin zone. This excludes the possibility of set/get kpoints
-        
-        :param mesh: a list of three integers, representing the size of the 
+
+        :param mesh: a list of three integers, representing the size of the
             kpoint mesh along b1,b2,b3.
         :param (optional) offset: a list of three floats between 0 and 1.
             [0.,0.,0.] is Gamma centered mesh
@@ -302,12 +301,48 @@ class KpointsData(ArrayData):
             return mesh, offset
         else:
             kpoints = numpy.mgrid[0:mesh[0], 0:mesh[1], 0:mesh[2]]
-            kpoints = kpoints.reshape(3,-1).T
+            kpoints = kpoints.reshape(3, -1).T
             offset_kpoints = kpoints + numpy.array(offset)
-            offset_kpoints[:,0] /= mesh[0]
-            offset_kpoints[:,1] /= mesh[1]
-            offset_kpoints[:,2] /= mesh[2]
+            offset_kpoints[:, 0] /= mesh[0]
+            offset_kpoints[:, 1] /= mesh[1]
+            offset_kpoints[:, 2] /= mesh[2]
             return offset_kpoints
+
+    def set_kpoints_mesh_from_density(self, distance, offset=[0., 0., 0.],
+                                      force_parity=False):
+        """
+        Set a kpoints mesh using a kpoints density, expressed as the maximum
+        distance between adjacent points along a reciprocal axis
+
+        :param distance: distance (in 1/Angstrom) between adjacent 
+            kpoints, i.e. the number of kpoints along each reciprocal
+            axis i is :math:`|b_i|/distance`
+            where :math:`|b_i|` is the norm of the reciprocal cell vector.
+        :param (optional) offset: a list of three floats between 0 and 1.
+            [0.,0.,0.] is Gamma centered mesh
+            [0.5,0.5,0.5] is half shifted
+            Default = [0.,0.,0.].
+        :param (optional) force_parity: if True, force each integer in the mesh
+            to be even (except for the non-periodic directions). 
+
+        :note: a cell should be defined first.
+        :note: the number of kpoints along non-periodic axes is always 1.
+        """
+        try:
+            rec_cell = self.reciprocal_cell
+        except AttributeError:
+            # rec_cell = numpy.eye(3)
+            raise AttributeError("Cannot define a mesh from a density without "
+                                 "having defined a cell")
+        # I first round to the fifth digit |b|/distance (to avoid that e.g.
+        # 3.00000001 becomes 4)
+        kpointsmesh = [
+            max(int(numpy.ceil(round(numpy.linalg.norm(b) / distance, 5))), 1)
+            if pbc else 1 for pbc, b in zip(self.pbc, rec_cell)]
+        if force_parity:
+            kpointsmesh = [k + (k % 2) if pbc else 1
+                           for pbc, k in zip(self.pbc, kpointsmesh)]
+        self.set_kpoints_mesh(kpointsmesh, offset=offset)
 
     @property
     def _dimension(self):
@@ -325,7 +360,7 @@ class KpointsData(ArrayData):
     def _validate_kpoints_weights(self, kpoints, weights):
         """
         Validate the list of kpoints and of weights before storage.
-        Kpoints and weights must be convertible respectively to an array of 
+        Kpoints and weights must be convertible respectively to an array of
         N x dimension and N floats
         """
         kpoints = numpy.array(kpoints)
@@ -335,9 +370,10 @@ class KpointsData(ArrayData):
                 # replace empty list by Gamma point
                 kpoints = numpy.array([[0., 0., 0.]])
             else:
-                raise ValueError("empty kpoints list is valid only in zero dimension"
-                                 "; instead here with have {} dimensions"
-                                 "".format(self._dimension))
+                raise ValueError(
+                    "empty kpoints list is valid only in zero dimension"
+                    "; instead here with have {} dimensions"
+                    "".format(self._dimension))
 
         if len(kpoints.shape) <= 1:
             # list of scalars is accepted only in the 0D and 1D cases
@@ -371,9 +407,9 @@ class KpointsData(ArrayData):
     def set_kpoints(self, kpoints, cartesian=False, labels=None, weights=None,
                     fill_values=0):
         """
-        Set the list of kpoints. If a mesh has already been stored, raise a 
+        Set the list of kpoints. If a mesh has already been stored, raise a
         ModificationNotAllowed
-        
+
         :param kpoints: a list of kpoints, each kpoint being a list of one, two
             or three coordinates, depending on self.pbc: if structure is 1D
             (only one True in self.pbc) one allows singletons or scalars for
@@ -388,12 +424,12 @@ class KpointsData(ArrayData):
 
             For 0D (all pbc are False), the list can be any of the above
             or empty - then only Gamma point is set.
-            The value of k for the non-periodic dimension(s) is set by 
+            The value of k for the non-periodic dimension(s) is set by
             fill_values
-        :param cartesian: if True, the coordinates given in input are treated 
+        :param cartesian: if True, the coordinates given in input are treated
             as in cartesian units. If False, the coordinates are crystal,
             i.e. in units of b1,b2,b3. Default = False
-        :param labels: optional, the list of labels to be set for some of the 
+        :param labels: optional, the list of labels to be set for some of the
             kpoints. See labels for more info
         :param weights: optional, a list of floats with the weight associated
             to the kpoint list
@@ -404,7 +440,8 @@ class KpointsData(ArrayData):
         from aiida.common.exceptions import ModificationNotAllowed
 
         # check that it is a 'dim'x #kpoints dimensional array
-        the_kpoints, the_weights = self._validate_kpoints_weights(kpoints, weights)
+        the_kpoints, the_weights = self._validate_kpoints_weights(kpoints,
+                                                                  weights)
 
         # if k-points have less than 3 coordinates (low dimensionality), fill
         # with constant values the non-periodic dimensions
@@ -416,7 +453,8 @@ class KpointsData(ArrayData):
 
             if len(fill_values) < 3 - the_kpoints.shape[1]:
                 raise ValueError("fill_values should be either a scalar or a "
-                                 "length-{} list".format(3 - the_kpoints.shape[1]))
+                                 "length-{} list".format(
+                    3 - the_kpoints.shape[1]))
             else:
                 tmp_kpoints = numpy.zeros((the_kpoints.shape[0], 0))
                 i_kpts = 0
@@ -428,22 +466,27 @@ class KpointsData(ArrayData):
                     # - if it's non-periodic, fill with one of the values in
                     # fill_values
                     if self.pbc[idim]:
-                        tmp_kpoints = numpy.hstack((tmp_kpoints,
-                                                    the_kpoints[:, i_kpts].reshape((the_kpoints.shape[0], 1))))
+                        tmp_kpoints = numpy.hstack(
+                            (tmp_kpoints, the_kpoints[:, i_kpts].reshape((
+                                the_kpoints.shape[0], 1))))
                         i_kpts += 1
                     else:
-                        tmp_kpoints = numpy.hstack((tmp_kpoints,
-                                                    numpy.ones((the_kpoints.shape[0], 1)) * fill_values[i_fill]))
+                        tmp_kpoints = numpy.hstack(
+                            (tmp_kpoints,numpy.ones(
+                                (the_kpoints.shape[0], 1)
+                            ) * fill_values[i_fill]))
                         i_fill += 1
                 the_kpoints = tmp_kpoints
 
         # change reference and always store in crystal coords
         if cartesian:
-            the_kpoints = self._change_reference(the_kpoints, to_cartesian=False)
+            the_kpoints = self._change_reference(the_kpoints,
+                                                 to_cartesian=False)
 
         # check that we did not saved a mesh already
         if self.get_attr('mesh', None) is not None:
-            raise ModificationNotAllowed("KpointsData has already a mesh stored")
+            raise ModificationNotAllowed(
+                "KpointsData has already a mesh stored")
 
         # store
         self.set_array('kpoints', the_kpoints)
@@ -455,8 +498,8 @@ class KpointsData(ArrayData):
     def get_kpoints(self, also_weights=False, cartesian=False):
         """
         Return the list of kpoints
-        
-        :param also_weights: if True, returns also the list of weights. 
+
+        :param also_weights: if True, returns also the list of weights.
             Default = False
         :param cartesian: if True, returns points in cartesian coordinates,
             otherwise, returns in crystal coordinates. Default = False.
@@ -466,18 +509,18 @@ class KpointsData(ArrayData):
         except KeyError:
             raise AttributeError("Before the get, first set a list of kpoints")
 
-        #try:
+        # try:
         #    if not all(self.pbc):
         #        for i in range(3):
         #            if not self.pbc[i]:
         #                kpoints[:,i] = 0.
-        #except AttributeError:
+        # except AttributeError:
         #    # no pbc data found -> assume (True,True,True)
         #    pass
         # note that this operation may lead to duplicates if the kpoints were
         # set thinking that everything is 3D.
         # Atm, it's up to the user to avoid duplication, if he cares.
-        # in the future, add the bravais_lattice for 2d and 1d cases, 
+        # in the future, add the bravais_lattice for 2d and 1d cases,
         # and do a set() on the kpoints lists (before storing)
 
         if cartesian:
@@ -496,7 +539,7 @@ class KpointsData(ArrayData):
 
     def _change_reference(self, kpoints, to_cartesian=True):
         """
-        Change reference system, from cartesian to crystal coordinates (units 
+        Change reference system, from cartesian to crystal coordinates (units
         of b1,b2,b3) or viceversa.
         :param kpoints: a list of (3) point coordinates
         :return kpoints: a list of (3) point coordinates in the new reference
@@ -509,7 +552,8 @@ class KpointsData(ArrayData):
             rec_cell = self.reciprocal_cell
         except AttributeError:
             # rec_cell = numpy.eye(3)
-            raise AttributeError("Cannot use cartesian coordinates without having defined a cell")
+            raise AttributeError(
+                "Cannot use cartesian coordinates without having defined a cell")
 
         trec_cell = numpy.transpose(numpy.array(rec_cell))
         if to_cartesian:
@@ -520,4 +564,3 @@ class KpointsData(ArrayData):
         # note: kpoints is a list Nx3, matrix is 3x3.
         # hence, first transpose kpoints, then multiply, finally transpose it back
         return numpy.transpose(numpy.dot(matrix, numpy.transpose(kpoints)))
-    

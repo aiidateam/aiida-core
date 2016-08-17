@@ -14,13 +14,14 @@ from aiida.common.folders import SandboxFolder
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import (FeatureNotAvailable, InvalidOperation,
                                      InputValidationError)
+from aiida.common.links import LinkType
 from aiida.tools.codespecific.quantumespresso import pwinputparser
 
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class PwimmigrantCalculation(PwCalculation):
@@ -357,7 +358,8 @@ class PwimmigrantCalculation(PwCalculation):
         self._set_state(calc_states.SUBMITTING)
         remotedata = RemoteData(computer=self.get_computer(),
                                 remote_path=self._get_remote_workdir())
-        remotedata._add_link_from(self, label='remote_folder')
+        remotedata.add_link_from(self, label='remote_folder',
+                                 link_type=LinkType.CREATE)
         remotedata.store()
 
     def prepare_for_retrieval_and_parsing(self, open_transport):

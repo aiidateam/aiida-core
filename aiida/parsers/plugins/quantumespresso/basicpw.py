@@ -13,10 +13,10 @@ from aiida.orm.data.array.kpoints import KpointsData
 
 # TODO: I don't like the generic class always returning a name for the link to the output structure
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class BasicpwParser(Parser):
@@ -166,12 +166,12 @@ class BasicpwParser(Parser):
                     cells = numpy.array([in_struc.cell] * len(positions))
 
                 symbols = numpy.array([str(i.kind_name) for i in in_struc.sites])
-                steps = numpy.arange(len(positions))  # a growing integer per step
+                stepids = numpy.arange(len(positions))  # a growing integer per step
                 # I will insert time parsing when they fix their issues about time 
                 # printing (logic is broken if restart is on)
 
                 traj = TrajectoryData()
-                traj.set_trajectory(steps=steps,
+                traj.set_trajectory(stepids=stepids,
                                     cells=cells,
                                     symbols=symbols,
                                     positions=positions,

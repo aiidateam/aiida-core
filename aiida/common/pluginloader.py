@@ -4,17 +4,60 @@ import importlib
 import aiida.common
 from aiida.common.exceptions import MissingPluginError
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 logger = aiida.common.aiidalogger.getChild('pluginloader')
 
 
+def from_type_to_pluginclassname(typestr):
+    """
+    Return the string to pass to the load_plugin function, starting from
+    the 'type' field of a Node.
+    """
+    # Fix for base class
+    from aiida.common.exceptions import DbContentError
+    if typestr == "":
+        typestr = "node.Node."
+    if not typestr.endswith("."):
+        raise DbContentError("The type name '{}' is not valid!".format(
+            typestr))
+    return typestr[:-1]  # Strip final dot
+
+def get_query_type_string(plugin_type_string):
+    """
+    Receives a plugin_type_string, an attribute of subclasses of Node.
+    Checks whether it is a valid type_string and manipulates the string
+    to return a string that in a query returns all instances of a class and
+    all instances of subclasses.
+
+    :param str plugin_type_string: The plugin_type_string
+
+    :returns: the query_type_string
+
+    """
+    from aiida.common.exceptions import DbContentError, InputValidationError
+    if not isinstance(plugin_type_string, basestring):
+        raise InputValidationError("You have to pass as argument")
+    # First case, an empty string for Node:
+    if plugin_type_string == '':
+        query_type_string = ''
+    # Anything else should have baseclass.Class., so at least 2 dots 
+    # and end with a dot:
+    elif not(plugin_type_string.endswith('.')) or plugin_type_string.count('.') == 1:
+        raise DbContentError(
+                "The type name '{}' is not valid!".format(plugin_type_string)
+            )
+    else:
+        query_type_string = '{}.'.format('.'.join(plugin_type_string.split('.')[:-2]))
+    return query_type_string
+
+
 def get_class_typestring(type_string):
     """
-    Given the type string, return three strings: the first one is 
+    Given the type string, return three strings: the first one is
     one of the first-level classes that the Node can be:
     "node", "calculation", "code", "data".
     The second string is the one that can be passed to the DataFactory or
@@ -38,7 +81,7 @@ def _existing_plugins_with_module(base_class, plugins_module_path,
                                   pkgname, basename, max_depth, suffix=None):
     """
         Recursive function to return the existing plugins within a given module.
-        
+
         :param base_class: Identify all subclasses of the base_class
         :param plugins_module_path: The path to the folder with the plugins
         :param pkgname: The name of the package in which you want to search
@@ -82,7 +125,7 @@ def _find_module(base_class, pkgname, this_basename, suffix=None):
     Given a base class object, looks for its subclasses inside the package
     with name pkgname (must be importable), and prepends to the class name
     the string 'this_basename'.
-       
+
     If the name of the class complies with the syntax
     AaaBbb
     where Aaa is the capitalized name of the containing module (aaa), and
@@ -140,7 +183,7 @@ def _find_module(base_class, pkgname, this_basename, suffix=None):
 def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
     """
     Return a list of strings of valid plugins.
-    
+
 
     :param base_class: Identify all subclasses of the base_class
     :param plugins_module_name: a string with the full module name separated
@@ -169,7 +212,7 @@ def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
 
 def load_plugin(base_class, plugins_module, plugin_type):
     """
-    Load a specific plugin for the given base class. 
+    Load a specific plugin for the given base class.
 
     This is general and works for any plugin used in AiiDA.
 
@@ -187,8 +230,8 @@ def load_plugin(base_class, plugins_module, plugin_type):
             that points to the folder with plugins. It must be importable by python.
         plugin_type
             the name of the plugin.
-            
-    Return: 
+
+    Return:
         the class of the required plugin.
 
     Raise:
@@ -203,6 +246,7 @@ def load_plugin(base_class, plugins_module, plugin_type):
 
     module_name = ".".join([plugins_module, plugin_type])
     real_plugin_module, plugin_name = module_name.rsplit('.', 1)
+
 
     try:
         pluginmod = importlib.import_module(real_plugin_module)
@@ -225,7 +269,7 @@ def load_plugin(base_class, plugins_module, plugin_type):
                 module_name, base_class.__name__)
             raise MissingPluginError(err_msg)
     except TypeError:
-        # This happens when we pass a non-class to issubclass; 
+        # This happens when we pass a non-class to issubclass;
         err_msg = "{} is not a class".format(
             module_name)
         raise MissingPluginError(err_msg)
@@ -234,7 +278,7 @@ def load_plugin(base_class, plugins_module, plugin_type):
 def BaseFactory(module, base_class, base_modname, suffix=None):
     """
     Return a given subclass of Calculation, loading the correct plugin.
-    
+
     :example: If `module='quantumespresso.pw'`, `base_class=JobCalculation`,
       `base_modname = 'aiida.orm.calculation.job'`, and `suffix='Calculation'`,
       the code will first look for a pw subclass of JobCalculation
@@ -247,7 +291,7 @@ def BaseFactory(module, base_class, base_modname, suffix=None):
       in a file 'ssh.py' in the plugins_module folder.
       To create the class name to look for, the code will attach the string
       passed in the base_modname (after the last dot) and the suffix parameter,
-      if passed, with the proper CamelCase capitalization. If suffix is not 
+      if passed, with the proper CamelCase capitalization. If suffix is not
       passed, the default suffix that is used is the base_class class name.
 
     :param module: a string with the module of the plugin to load, e.g.
@@ -276,4 +320,4 @@ def BaseFactory(module, base_class, base_modname, suffix=None):
                        "Error messages were: '{}', '{}'").format(
                 module, new_module, base_modname, e1, e2)
             raise MissingPluginError(err_msg)
-        
+

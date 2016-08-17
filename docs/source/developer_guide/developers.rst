@@ -28,8 +28,8 @@ end.
 Version number
 ++++++++++++++
 
-The AiiDA version number is stored in both ``aiida/__init__.py`` and
-``setup.py``.  Make sure to update both when changing version number.
+The AiiDA version number is stored in ``aiida/__init__.py``.  Make sure to
+update this when changing version number.
 
 Inline calculations
 +++++++++++++++++++
@@ -54,23 +54,23 @@ and output nodes are also stored.
 Database schema
 +++++++++++++++
 
-The Django database schema can be found in :py:mod:`aiida.djsite.db.models`.
+The Django database schema can be found in :py:mod:`aiida.backends.djsite.db.models`.
 
 If you need to change the database schema follow these steps:
 
-1. Make all the necessary changes to :py:mod:`aiida.djsite.db.models`
-2. Create a new migration file.  From ``aiida/djsite``, run::
+1. Make all the necessary changes to :py:mod:`aiida.backends.djsite.db.models`
+2. Create a new migration file.  From ``aiida/backends/djsite``, run::
 
      python manage.py makemigrations
 
-   This will create the migration file in ``aiida/djsite/db/migrations`` whose
+   This will create the migration file in ``aiida/backends/djsite/db/migrations`` whose
    name begins with a number followed by some description.  If the description
    is not appropriate then change to it to something better but retain the
    number.
 
 3. Open the generated file and make the following changes::
 
-    from aiida.djsite.db.migrations import update_schema_version
+    from aiida.backends.djsite.db.migrations import update_schema_version
     ...
     SCHEMA_VERSION = # choose an appropriate version number
                      # (hint: higher than the last migration!)
@@ -83,14 +83,14 @@ If you need to change the database schema follow these steps:
       ]
 
 5. Change the ``LATEST_MIGRATION`` variable in
-   ``aiida/djsite/db/migrations/__init__.py`` to the name of your migration
+   ``aiida/backends/djsite/db/migrations/__init__.py`` to the name of your migration
    file::
 
      LATEST_MIGRATION = '0003_my_db_update'
 
-   This let's AiiDA get the version number from your migration and check sure the
+   This let's AiiDA get the version number from your migration and make sure the
    database and the code are in sync.
-6. Migrate your database to the new version, (again from ``aiida/djsite``),
+6. Migrate your database to the new version, (again from ``aiida/backends/djsite``),
    run::
 
      python manage.py migrate
@@ -202,10 +202,10 @@ For each of the above types of tests, a different testing approach is followed
 2. In this case, we use the `testing functionality of
    Django <https://docs.djangoproject.com/en/dev/topics/testing/>`_,
    adapted to run smoothly with AiiDA.
-
-   To create a new group of tests, create a new python file under
-   ``aiida.djsite.db.substests``, and instead of inheriting each class directly
-   from ``unittest``, inherit from ``aiida.djsite.db.testbase.AiidaTestCase``.
+   
+   To create a new group of tests, create a new python file under 
+   ``aiida.backends.djsite.db.substests``, and instead of inheriting each class directly
+   from ``unittest``, inherit from ``aiida.backends.djsite.db.testbase.AiidaTestCase``.
    In this way:
 
    a. The Django testing functionality is used, and a temporary database is used
@@ -224,9 +224,9 @@ For each of the above types of tests, a different testing approach is followed
      data. (In the codes there are some checks to avoid that these classes
      are run without the correct environment being prepared by ``verdi
      devel tests``.)
-
-   Once you create a new file in ``aiida.djsite.db.substests``, you have to
-   add a new entry to the ``db_test_list`` inside ``aiida.djsite.db.testbase``
+   
+   Once you create a new file in ``aiida.backends.djsite.db.substests``, you have to
+   add a new entry to the ``db_test_list`` inside ``aiida.backends.djsite.db.testbase``
    module in order for ``verdi devel tests`` to find it. In particular,
    the key should be the name that you want to use on the command line of
    ``verdi devel tests`` to run the test, and the value should be the full
@@ -237,13 +237,13 @@ For each of the above types of tests, a different testing approach is followed
 
      db_test_list = {
        ...
-       'newtests': 'aiida.djsite.db.subtests.mynewtestsmodule',
+       'newtests': 'aiida.backends.djsite.db.subtests.mynewtestsmodule',
        ...
      }
 
    you will be able to run all all tests inside
-   ``aiida.djsite.db.subtests.mynewtestsmodule`` with the command::
-
+   ``aiida.backends.djsite.db.subtests.mynewtestsmodule`` with the command::
+   
      verdi devel tests db.newtests
 
    .. note:: If in the list of parameters to ``verdi devel tests`` you add
@@ -316,3 +316,31 @@ Basic usage
 #. Deactivate the virtual environment::
 
      deactivate
+
+Deprecated features, renaming, and adding new methods
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+In case a method is renamed or removed, this is the procedure to follow:
+
+1. (If you want to rename) move the code to the new function name.
+   Then, in the docstring, add something like::
+
+     .. versionadded:: 0.7
+        Renamed from OLDMETHODNAME
+
+2. Don't remove directly the old function, but just change the code to use
+   the new function, and add in the docstring::
+
+     .. deprecated:: 0.7
+        Use :meth:`NEWMETHODNAME` instead.
+
+   Moreover, at the beginning of the function, add something like::
+
+     import warnings
+        
+     warnings.warn(
+         "OLDMETHODNAME is deprecated, use NEWMETHODNAME instead", 
+         DeprecationWarning)
+
+   (of course, replace ``OLDMETHODNAME`` and ``NEWMETHODNAME`` with the
+   correct string, and adapt the strings to the correct content if you are
+   only removing a function, or just adding a new one).

@@ -10,10 +10,10 @@ from aiida.common.utils import get_repository_folder
 # Otherwise, tries to make everything only readable and writable by the user.
 # TODO: put it in a global variable, and check if it really works!
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 group_writable = True
 
@@ -24,13 +24,13 @@ class Folder(object):
     """
     A class to manage generic folders, avoiding to get out of
     specific given folder borders.
-    
+
     .. todo::
         fix this, os.path.commonprefix of /a/b/c and /a/b2/c will give
         a/b, check if this is wanted or if we want to put trailing slashes.
         (or if we want to use os.path.relpath and check for a string starting
         with os.pardir?)
-    
+
     .. todo::
         rethink whether the folder_limit option is still useful. If not, remove
         it alltogether (it was a nice feature, but unfortunately all the calls
@@ -87,7 +87,7 @@ class Folder(object):
         :param reset_limit: when doing ``b = a.get_subfolder('xxx', reset_limit=False)``,
                 the limit of b will be the same limit of a.
                 if True, the limit will be set to the boundaries of folder b.
-            
+
         :Returns: a Folder object pointing to the subfolder.
         """
         dest_abs_dir = os.path.abspath(os.path.join(
@@ -142,7 +142,7 @@ class Folder(object):
         Create a symlink inside the folder to the location 'src'.
 
         :param src: the location to which the symlink must point. Can be
-                either a relative or an absolute path. Should, however, 
+                either a relative or an absolute path. Should, however,
                 be relative to work properly also when the repository is
                 moved!
         :param name: the filename of the symlink to be created.
@@ -155,7 +155,7 @@ class Folder(object):
     def insert_path(self, src, dest_name=None, overwrite=True):
         """
         Copy a file to the folder.
-        
+
         :param src: the source filename to copy
         :param dest_name: if None, the same basename of src is used. Otherwise,
                 the destination filename will have this file name.
@@ -222,7 +222,7 @@ class Folder(object):
         :note: if the current file position in src_filelike is not 0,
           only the contents from the current file position to the end of the
           file will be copied in the new file.
-        
+
         :param src_filelike: the file-like object (e.g., if you have
             a string called s, you can pass ``StringIO.StringIO(s)``)
         :param dest_name: the destination filename will have this file name.
@@ -244,7 +244,7 @@ class Folder(object):
     def remove_path(self, filename):
         """
         Remove a file or folder from the folder.
-        
+
         :param filename: the relative path name to remove
         """
         # I get the full path of the filename, checking also that I don't
@@ -260,11 +260,11 @@ class Folder(object):
     def get_abs_path(self, relpath, check_existence=False):
         """
         Return an absolute path for a file or folder in this folder.
-        
+
         The advantage of using this method is that it checks that filename
-        is a valid filename within this folder, 
+        is a valid filename within this folder,
         and not something e.g. containing slashes.
-               
+
         :param filename: The file or directory.
         :param check_existence: if False, just return the file path.
             Otherwise, also check if the file or directory actually exists.
@@ -362,7 +362,7 @@ class Folder(object):
         """
         This routine copies or moves the source folder 'srcdir' to the local
         folder pointed by this Folder object.
-        
+
         :param srcdir: the source folder on the disk; this must be a string with
                 an absolute path
         :param move: if True, the srcdir is moved to the repository. Otherwise, it
@@ -414,9 +414,9 @@ class Folder(object):
 class SandboxFolder(Folder):
     """
     A class to manage the creation and management of a sandbox folder.
-    
+
     Note: this class must be used within a context manager, i.e.:
-    
+
     with SandboxFolder as f:
         ## do something with f
 
@@ -428,7 +428,7 @@ class SandboxFolder(Folder):
 
     def __init__(self):
         """
-        Initializes the object by creating a new temporary folder in the 
+        Initializes the object by creating a new temporary folder in the
         sandbox.
         """
         # First check if the sandbox folder already exists
@@ -486,7 +486,7 @@ class RepositoryFolder(Folder):
             unicode(uuid)[:2], unicode(uuid)[2:4], unicode(uuid)[4:])
         dest = os.path.join(entity_dir, unicode(subfolder))
 
-        # Internal variable of this class 
+        # Internal variable of this class
         self._subfolder = subfolder
 
         # This will also do checks on the folder limits

@@ -7,17 +7,18 @@ import sys
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 valid_processes = ['verdi', 'daemon']
+
 
 class Profile(VerdiCommandWithSubcommands):
     """
     List AiiDA profiles, and set the default profile.
-    
+
     Allow to see the list of AiiDA profiles, and to set the default profile
     (the to be used by any verdi command when no '-p' option is given).
     """
@@ -27,14 +28,14 @@ class Profile(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called.
         """
         self.valid_subcommands = {
-            'setdefault': (self.profile_setdefault, 
+            'setdefault': (self.profile_setdefault,
                            self.complete_processes_profiles),
             'list': (self.profile_list, self.complete_none),
         }
 
     def complete_processes_profiles(self, subargs_idx, subargs):
         from aiida.common.setup import get_profiles_list
-        
+
         if subargs_idx == 1:
             return "\n".join(get_profiles_list())
         elif subargs_idx == 0:
@@ -62,19 +63,19 @@ class Profile(VerdiCommandWithSubcommands):
                                   "the following list: {}.".format(
                     process, valid_processes_strlist))
             sys.exit(1)
-            
-        profile = args[1]        
+
+        profile = args[1]
         # set default DB profiles
         set_default_profile(process, profile, force_rewrite=True)
 
 
     def profile_list(self, *args):
         from aiida.common.setup import get_profiles_list, get_default_profile
-        from aiida.djsite.settings import settings_profile
+        from aiida.backends import settings
 
-        current_profile = settings_profile.AIIDADB_PROFILE
+        current_profile = settings.AIIDADB_PROFILE
         default_profile = get_default_profile(
-                settings_profile.CURRENT_AIIDADB_PROCESS)
+                settings.CURRENT_AIIDADB_PROCESS)
         default_daemon_profile = get_default_profile("daemon")
         if current_profile is None:
             current_profile = default_profile
@@ -106,7 +107,7 @@ class Profile(VerdiCommandWithSubcommands):
                 color_id = 31
             else:
                 symbol = "*"
-                
+
             if profile == default_profile:
                 color_id = 34
                 default_str = ' (DEFAULT)'
@@ -129,4 +130,4 @@ class Profile(VerdiCommandWithSubcommands):
             print "{}{} {}{}{} {}{}".format(
                 start_color, symbol,
                 bold_sequence, profile, default_str, nobold_sequence, end_color)
-        
+

@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 import sys
 
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 IMPORTGROUP_TYPE = 'aiida.import'
 
@@ -63,10 +63,10 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
         # Correctly manage nullable fields
         if v is not None:
             unique_id = import_unique_ids_mappings[requires][v]
-            # map to the PK/ID associated to the given entry, in the arrival DB, 
+            # map to the PK/ID associated to the given entry, in the arrival DB,
             # rather than in the export DB
 
-            # I store it in the FIELDNAME_id variable, that directly stores the 
+            # I store it in the FIELDNAME_id variable, that directly stores the
             # PK in the remote table, rather than requiring to create Model
             # instances for the foreing relations
             return ("{}_id".format(k),
@@ -115,7 +115,7 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes",
         raise ValueError("The input file format for import is not valid (not"
                          " a zip file)")
 
-            
+
 def extract_tar(infile, folder, nodes_export_subfolder="nodes",
                 silent=False):
     """
@@ -217,7 +217,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
     import CifFile
     from aiida.common.exceptions import ValidationError
     from aiida.common.utils import md5_file, sha1_file
-    from aiida.orm.data.cif import decode_textfield
+    from aiida.tools.dbexporters.tcod import decode_textfield
 
     values = CifFile.ReadCif(infile)
     values = values[values.keys()[0]] # taking the first datablock in CIF
@@ -264,7 +264,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls export_tree; otherwise, tries to
-    detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the 
+    detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
     correct function.
 
     :param in_path: the path to a file or folder that can be imported in AiiDA
@@ -276,18 +276,18 @@ def import_data(in_path,ignore_unknown_nodes=False,
     from itertools import chain
 
     from django.db import transaction
-    from django.utils import timezone
+    from aiida.utils import timezone
 
     from aiida.orm import Node, Group
     from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
-    from aiida.djsite.db import models
+    from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
 
 
     # This is the export version expected by this function
-    expected_export_version = '0.1'
+    expected_export_version = '0.2'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -326,10 +326,10 @@ def import_data(in_path,ignore_unknown_nodes=False,
         except IOError as e:
             raise ValueError("Unable to find the file {} in the import "
                              "file or folder".format(e.filename))
-    
+
         ######################
         # PRELIMINARY CHECKS #
-        ######################    
+        ######################
         if metadata['export_version'] != expected_export_version:
             raise ValueError("File export version is {}, but I can import only "
                              "version {}".format(metadata['export_version'],
@@ -337,7 +337,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
 
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
-        ##########################################################################    
+        ##########################################################################
         linked_nodes = set(chain.from_iterable((l['input'], l['output'])
                                                for l in data['links_uuid']))
         group_nodes = set(chain.from_iterable(data['groups_uuid'].itervalues()))
@@ -421,7 +421,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
 
         ###############
         # IMPORT DATA #
-        ###############    
+        ###############
         # DO ALL WITH A TRANSACTION
         with transaction.commit_on_success():
             foreign_ids_reverse_mappings = {}
@@ -518,10 +518,10 @@ def import_data(in_path,ignore_unknown_nodes=False,
                         destdir = RepositoryFolder(
                             section=Node._section_name,
                             uuid=o.uuid)
-                        # Replace the folder, possibly destroying existing 
+                        # Replace the folder, possibly destroying existing
                         # previous folders, and move the files (faster if we
-                        # are on the same filesystem, and 
-                        # in any case the source is a SandboxFolder) 
+                        # are on the same filesystem, and
+                        # in any case the source is a SandboxFolder)
                         destdir.replace_with_folder(subfolder.abspath,
                                                     move=True, overwrite=True)
 
@@ -537,7 +537,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
                 if model_name == get_class_string(models.DbNode):
                     if not silent:
                         print "SETTING THE IMPORTED STATES FOR NEW NODES..."
-                    # I set for all nodes, even if I should set it only 
+                    # I set for all nodes, even if I should set it only
                     # for calculations
                     for unique_id, new_pk in just_saved.iteritems():
                         imported_states.append(
@@ -578,7 +578,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
                                              "for DbNode with UUID = {}".format(
                                 unique_id))
 
-                        # Here I have to deserialize the attributes                        
+                        # Here I have to deserialize the attributes
                         deserialized_attributes = deserialize_attributes(
                             attributes, attributes_conversion)
                         models.DbAttribute.reset_values_for_node(
@@ -588,7 +588,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
 
             if not silent:
                 print "STORING NODE LINKS..."
-            ## TODO: check that we are not creating input links of an already 
+            ## TODO: check that we are not creating input links of an already
             ##       existing node...
             import_links = data['links_uuid']
             links_to_store = []
@@ -634,13 +634,13 @@ def import_data(in_path,ignore_unknown_nodes=False,
                                          "come the expected input {}".format(
                             out_id, link['label'], in_id))
                     except KeyError:
-                        # New link    
+                        # New link
                         links_to_store.append(models.DbLink(
                             input_id=in_id, output_id=out_id, label=link['label']))
-                        if 'aiida.djsite.db.models.DbLink' not in ret_dict:
-                            ret_dict['aiida.djsite.db.models.DbLink'] = { 'new': [] }
-                        ret_dict['aiida.djsite.db.models.DbLink']['new'].append((in_id,out_id))
-    
+                        if 'aiida.backends.djsite.db.models.DbLink' not in ret_dict:
+                            ret_dict['aiida.backends.djsite.db.models.DbLink'] = { 'new': [] }
+                        ret_dict['aiida.backends.djsite.db.models.DbLink']['new'].append((in_id,out_id))
+
             # Store new links
             if links_to_store:
                 if not silent:
@@ -769,7 +769,7 @@ def get_valid_import_links(url):
 def serialize_field(data, track_conversion=False):
     """
     Serialize a single field.
-    
+
     :todo: Generalize such that it the proper function is selected also during
         import
     """
@@ -820,20 +820,20 @@ def serialize_dict(datadict, remove_fields=[], rename_fields={},
     """
     Serialize the dict using the serialize_field function to serialize
     each field.
-    
-    :param remove_fields: a list of strings. 
-      If a field with key inside the remove_fields list is found, 
+
+    :param remove_fields: a list of strings.
+      If a field with key inside the remove_fields list is found,
       it is removed from the dict.
-      
+
       This is only used at level-0, no removal
       is possible at deeper levels.
-    
+
     :param rename_fields: a dictionary in the format
-      ``{"oldname": "newname"}``. 
+      ``{"oldname": "newname"}``.
 
       If the "oldname" key is found, it is replaced with the
       "newname" string in the output dictionary.
-      
+
       This is only used at level-0, no renaming
       is possible at deeper levels.
     :param track_conversion: if True, a tuple is returned, where the first
@@ -867,7 +867,7 @@ def get_all_fields_info():
     Retrieve automatically the information on the fields and store them in a
     dictionary, that will be also stored in the export data, in the metadata
     file.
-    
+
     :return: a tuple with two elements, the all_fiekds_info dictionary, and the
       unique_identifiers dictionary.
     """
@@ -876,7 +876,7 @@ def get_all_fields_info():
     import django.db.models.fields as djf
     import django_extensions
 
-    from aiida.djsite.db import models
+    from aiida.backends.djsite.db import models
 
     all_fields_info = {}
 
@@ -966,9 +966,9 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
                 silent=False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
-    
+
     :todo: limit the export to finished or failed calculations.
-    
+
     :param what: a list of Django database entries; they can belong to different
       models.
     :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
@@ -995,7 +995,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
     from django.db.models import Q
 
     import aiida
-    from aiida.djsite.db import models
+    from aiida.backends.djsite.db import models
     from aiida.orm import Node, Calculation, load_node
     from aiida.orm.data import Data
     from aiida.common.exceptions import LicensingException
@@ -1004,8 +1004,8 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
     if not silent:
         print "STARTING EXPORT..."
 
-    EXPORT_VERSION = '0.1'
-    
+    EXPORT_VERSION = '0.2'
+
     all_fields_info, unique_identifiers = get_all_fields_info()
 
     entries_ids_to_add = defaultdict(list)
@@ -1051,8 +1051,8 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
     if allowed_licenses is not None or forbidden_licenses is not None:
         from inspect import isfunction
 
-        node_licenses = list(aiida.djsite.db.models.DbNode.objects.filter(
-            reduce(operator.and_, entries_to_add['aiida.djsite.db.models.DbNode']),
+        node_licenses = list(aiida.backends.djsite.db.models.DbNode.objects.filter(
+            reduce(operator.and_, entries_to_add['aiida.backends.djsite.db.models.DbNode']),
             dbattributes__key='source.license').values_list('pk', 'dbattributes__tval'))
         for pk, license in node_licenses:
             if allowed_licenses is not None:
@@ -1103,7 +1103,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
                 print "  - Model: {}".format(model_name)
             Model = get_object_from_string(model_name)
 
-            ## Before I was doing this. But it is VERY slow! E.g. 
+            ## Before I was doing this. But it is VERY slow! E.g.
             ## To get the user owning 44 nodes or 1 group was taking
             ## 26 seconds, while it was taking only 0.1 seconds if the two
             ## queries were run independently!
@@ -1181,7 +1181,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
          node_attributes_conversion[str(n.pk)]) = serialize_dict(
             n.attributes, track_conversion=True)
     ## If I want to store them 'raw'; it is faster, but more error prone and
-    ## less version-independent, I think. Better to optimize the n.attributes 
+    ## less version-independent, I think. Better to optimize the n.attributes
     ## call.
     # all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
     #node_attributes_raw = list(models.DbAttribute.objects.filter(
@@ -1191,7 +1191,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
 
     if not silent:
         print "STORING NODE LINKS..."
-    ## All 'parent' links (in this way, I can automatically export a node 
+    ## All 'parent' links (in this way, I can automatically export a node
     ## that will get automatically attached to a parent node in the end DB,
     ## if the parent node is already present in the DB)
     linksquery = models.DbLink.objects.filter(
@@ -1211,14 +1211,14 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
 
     ######################################
     # Now I store
-    ######################################    
+    ######################################
     # subfolder inside the export package
     nodesubfolder = folder.get_subfolder('nodes',create=True,
                                          reset_limit=True)
 
     if not silent:
         print "STORING DATA..."
-    
+
     with folder.open('data.json', 'w') as f:
         json.dump({
                 'node_attributes': node_attributes,
@@ -1262,14 +1262,14 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
 
 class MyWritingZipFile(object):
     def __init__(self, zipfile, fname):
-        
+
         self._zipfile = zipfile
         self._fname = fname
         self._buffer = None
-        
+
     def open(self):
         import StringIO
-        
+
         if self._buffer is not None:
             raise IOError("Cannot open again!")
         self._buffer = StringIO.StringIO()
@@ -1281,7 +1281,7 @@ class MyWritingZipFile(object):
         self._buffer.seek(0)
         self._zipfile.writestr(self._fname, self._buffer.read())
         self._buffer = None
-        
+
     def __enter__(self):
         self.open()
         return self
@@ -1296,7 +1296,7 @@ class ZipFolder(object):
     (e.g. add explicit open method, rename open to openfile,
     set _zipfile to None, ...)
     """
-    def __init__(self, zipfolder_or_fname, mode=None, subfolder='.', 
+    def __init__(self, zipfolder_or_fname, mode=None, subfolder='.',
                   use_compression=True):
         """
         :param zipfolder_or_fname: either another ZipFolder instance,
@@ -1309,11 +1309,11 @@ class ZipFolder(object):
           subfolder is a relative path from zipfolder_or_fname.subfolder
         :param use_compression: either True, to compress files in the Zip, or
           False if you just want to pack them together without compressing.
-          It is ignored if zipfolder_or_fname is a ZipFolder isntance.  
+          It is ignored if zipfolder_or_fname is a ZipFolder isntance.
         """
         import zipfile
         import os
-        
+
         if isinstance(zipfolder_or_fname, basestring):
             the_mode = mode
             if the_mode is None:
@@ -1335,11 +1335,11 @@ class ZipFolder(object):
         return self
 
     def __exit__(self, type, value, traceback):
-        self.close()    
-            
+        self.close()
+
     def close(self):
         self._zipfile.close()
-            
+
     @property
     def pwd(self):
         return self._pwd
@@ -1354,7 +1354,7 @@ class ZipFolder(object):
     def _get_internal_path(self, filename):
         import os
         return os.path.normpath(os.path.join(self.pwd, filename))
-        
+
     def get_subfolder(self, subfolder, create=False, reset_limit=False):
         # reset_limit: ignored
         # create: ignored, for the time being
@@ -1370,7 +1370,7 @@ class ZipFolder(object):
             base_filename = unicode(dest_name)
 
         base_filename = self._get_internal_path(base_filename)
-        
+
         if not isinstance(src, unicode):
             src = unicode(src)
 
@@ -1399,7 +1399,7 @@ class ZipFolder(object):
         else:
             self._zipfile.write(src, base_filename)
 
-        
+
 def export_zip(what, outfile = 'testzip', overwrite = False,
               silent = False, use_compression = True, **kwargs):
     import os
@@ -1420,9 +1420,9 @@ def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
            silent = False, **kwargs):
     """
     Export the DB entries passed in the 'what' list on a file.
-    
+
     :todo: limit the export to finished or failed calculations.
-    
+
     :param what: a list of Django database entries; they can belong to different
       models.
     :param also_parents: if True, also all the parents are stored (from th
@@ -1432,13 +1432,13 @@ def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
     :param overwrite: if True, overwrite the output file without asking.
         if False, raise an IOError in this case.
     :param silent: suppress debug print
-    
+
     :raise IOError: if overwrite==False and the filename already exists.
     """
     import os
     import tarfile
     import time
-    
+
     from aiida.common.folders import SandboxFolder
 
     if not overwrite and os.path.exists(outfile):
@@ -1449,7 +1449,7 @@ def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
     t1 = time.time()
     export_tree(what, folder=folder, silent=silent, **kwargs)
     t2 = time.time()
-    
+
     if not silent:
         print "COMPRESSING..."
 
@@ -1472,7 +1472,7 @@ def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
         filecr_time = t2-t1
         filecomp_time = t4-t3
         print "Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.".format(filecr_time, filecomp_time, filecr_time + filecomp_time)
-        
+
     if not silent:
         print "DONE."
 
@@ -1481,15 +1481,15 @@ def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
 # In our case, it is better to have a finer control on how to parse fields.
 
 # def default_jsondump(data):
-#    import datetime 
+#    import datetime
 #
 #    if isinstance(data, datetime.datetime):
 #        return data.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
-#    
+#
 #    raise TypeError(repr(data) + " is not JSON serializable")
 #with open('testout.json', 'w') as f:
 #    json.dump({
-#            'entries': serialized_entries,             
+#            'entries': serialized_entries,
 #        },
 #        f,
 #        default=default_jsondump)

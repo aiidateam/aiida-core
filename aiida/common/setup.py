@@ -3,13 +3,15 @@ import os
 
 import aiida
 
-# The username (email) used by the default superuser, that should also run 
+# The username (email) used by the default superuser, that should also run
 # as the daemon
+from aiida.common.exceptions import ConfigurationError
+from aiida.common.utils import query_yes_no
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 DEFAULT_AIIDA_USER = "aiida@localhost"
 
@@ -18,7 +20,7 @@ CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 
 DAEMON_SUBDIR = "daemon"
-LOG_DIR = "daemon/log"
+LOG_SUBDIR = "daemon/log"
 DAEMON_CONF_FILE = "aiida_daemon.conf"
 
 # The key inside the configuration file
@@ -29,6 +31,16 @@ DEFAULT_PROCESS = 'verdi'
 
 # The default umask for file creation under AIIDA_CONFIG_FOLDER
 DEFAULT_UMASK = 0077
+
+# Profile keys
+aiidadb_backend_key = "AIIDADB_BACKEND"
+
+# Profile values
+aiidadb_backend_value_django = "django"
+
+# Temporary repository for tests
+TEMP_TEST_REPO = None
+TEMP_TEST_REPO_PREFIX = "aiida_repository_"
 
 
 def backup_config():
@@ -53,6 +65,10 @@ def get_config():
     """
     import json
     from aiida.common.exceptions import ConfigurationError
+    from aiida.backends.settings import IN_DOC_MODE, DUMMY_CONF_FILE
+
+    if IN_DOC_MODE:
+        return DUMMY_CONF_FILE
 
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
@@ -67,7 +83,7 @@ def get_config():
 def store_config(confs):
     """
     Given a configuration dictionary, stores it in the configuration file.
-    
+
     :param confs: the dictionary to store.
     """
     import json
@@ -92,13 +108,13 @@ file={daemon_dir}/supervisord.sock   ; (the path to the socket file)
 
 [supervisord]
 logfile={log_dir}/supervisord.log
-logfile_maxbytes=10MB 
-logfile_backups=2         
-loglevel=info                
+logfile_maxbytes=10MB
+logfile_backups=2
+loglevel=info
 pidfile={daemon_dir}/supervisord.pid
-nodaemon=false               
-minfds=1024                 
-minprocs=200                 
+nodaemon=false
+minfds=1024
+minprocs=200
 
 [rpcinterface:supervisor]
 supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
@@ -110,8 +126,8 @@ serverurl=unix:///{daemon_dir}/supervisord.sock
 ; Main AiiDA Daemon
 ;=======================================
 [program:aiida-daemon]
-command=python "{aiida_module_dir}/djsite/manage.py" --aiida-process=daemon celeryd --loglevel=INFO
-directory={daemon_dir}
+command=celery worker -A tasks --loglevel=INFO --beat --schedule={daemon_dir}/celerybeat-schedule
+directory={aiida_code_home}/daemon/
 user={local_user}
 numprocs=1
 stdout_logfile={log_dir}/aiida_daemon.log
@@ -119,32 +135,29 @@ stderr_logfile={log_dir}/aiida_daemon.log
 autostart=true
 autorestart=true
 startsecs=10
-stopwaitsecs=30
-process_name=%(process_num)s
 
-; ==========================================
-; AiiDA Deamon BEAT - for scheduled tasks
-; ==========================================
-[program:aiida-daemon-beat]
-command=python "{aiida_module_dir}/djsite/manage.py" --aiida-process=daemon celerybeat
-directory={daemon_dir}
-user={local_user}
-numprocs=1
-stdout_logfile={log_dir}/aiida_daemon_beat.log
-stderr_logfile={log_dir}/aiida_daemon_beat.log
-autostart=true
-autorestart=true
-startsecs=10
-stopwaitsecs = 30
-process_name=%(process_num)s
+; Need to wait for currently executing tasks to finish at shutdown.
+; Increase this if you have very long running tasks.
+stopwaitsecs = 600
+
+; When resorting to send SIGKILL to the program to terminate it
+; send SIGKILL to its whole process group instead,
+; taking care of its children as well.
+killasgroup=true
+
+; Set Celery priority higher than default (999)
+; so, if rabbitmq is supervised, it will start first.
+priority=1000
 """
+
     old_umask = os.umask(DEFAULT_UMASK)
     try:
         with open(os.path.join(aiida_dir, daemon_dir, DAEMON_CONF_FILE), "w") as f:
             f.write(daemon_conf.format(daemon_dir=daemon_dir, log_dir=log_dir,
                                        local_user=local_user,
-                                       aiida_module_dir=os.path.split(os.path.abspath(
-                                           aiida.__file__))[0]))
+                                       aiida_code_home=os.path.split(
+                                           os.path.abspath(
+                                               aiida.__file__))[0]))
     finally:
         os.umask(old_umask)
 
@@ -152,7 +165,7 @@ process_name=%(process_num)s
 def generate_random_secret_key():
     """
     Generate a random secret key to put in the django settings module.
-    
+
     This should be the same function used by Django in
     core/management/commands/startproject.
     """
@@ -168,7 +181,7 @@ def try_create_secret_key():
     """
     Creates a new secret key file, if this does not exist, otherwise do nothing
     (to avoid that the secret key is regenerated each time).
-    
+
     If you really want that the secret key is regenerated, delete the
     secret key file, and then call this function again.
     """
@@ -192,12 +205,12 @@ def try_create_secret_key():
 def create_htaccess_file():
     """
     Creates a suitable .htaccess file in the .aiida folder (if it does not
-    exist yet), that is important 
-    
+    exist yet), that is important
+
     .. note:: some default Apache configurations ignore the ``.htaccess``
-    files unless otherwise specified: read the documentation on 
+    files unless otherwise specified: read the documentation on
     how to setup properly your Apache server!
-    
+
     .. note:: if a ``.htaccess`` file already exists, this is not overwritten.
     """
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
@@ -222,10 +235,14 @@ def create_htaccess_file():
 def get_secret_key():
     """
     Return the secret key.
-    
+
     Raise ConfigurationError if the secret key cannot be found/read from the disk.
     """
     from aiida.common.exceptions import ConfigurationError
+    from aiida.backends.settings import IN_DOC_MODE
+
+    if IN_DOC_MODE:
+        return ""
 
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     secret_key_full_name = os.path.join(aiida_dir, SECRET_KEY_FNAME)
@@ -244,7 +261,7 @@ def get_secret_key():
 def ask_for_timezone(existing_timezone):
     """
     Interactively ask for the current timezone.
-    
+
     :param existing_timezone: the string for the already configured timezone,
       or None if there is no previous configuration.
     :return: a string with the timezone as chosen by the user.
@@ -263,7 +280,7 @@ def ask_for_timezone(existing_timezone):
     # If we are here, either there was no configuration, or the user asked to
     # change it.
 
-    # Try to get a set of valid timezones, as suggested in 
+    # Try to get a set of valid timezones, as suggested in
     # one of the answers of http://stackoverflow.com/questions/7669938
 
     # Get some information on the local TZ and the local offset, doing the
@@ -276,7 +293,7 @@ def ask_for_timezone(existing_timezone):
         local_offset = time.timezone
         localtz = time.tzname[0]
 
-    # convert to a datetime.timedelta object   
+    # convert to a datetime.timedelta object
     local_offset = datetime.timedelta(seconds=-local_offset)
 
     valid_zones = []
@@ -318,10 +335,10 @@ def create_base_dirs():
     """
     import getpass
 
-    # For the daemon, to be hard-coded when ok    
+    # For the daemon, to be hard-coded when ok
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_SUBDIR)
-    aiida_log_dir = os.path.join(aiida_dir, LOG_DIR)
+    aiida_log_dir = os.path.join(aiida_dir, LOG_SUBDIR)
     local_user = getpass.getuser()
 
     old_umask = os.umask(DEFAULT_UMASK)
@@ -337,7 +354,7 @@ def create_base_dirs():
     finally:
         os.umask(old_umask)
 
-    # Install daemon files 
+    # Install daemon files
     install_daemon_files(aiida_dir, aiida_daemon_dir, aiida_log_dir, local_user)
 
     # Create the secret key file, if needed
@@ -348,7 +365,7 @@ def create_base_dirs():
 
 def set_default_profile(process, profile, force_rewrite = False):
     """
-    Set a default db profile to be used by a process (default for verdi, 
+    Set a default db profile to be used by a process (default for verdi,
     default for daemon, ...)
 
     :param process: A string identifying the process to modify (e.g. ``verdi``
@@ -384,9 +401,9 @@ def set_default_profile(process, profile, force_rewrite = False):
 def get_default_profile(process):
     """
     Return the profile name to be used by process
-    
-    :return: None if no default profile is found, otherwise the name of the 
-      default profile for the given process 
+
+    :return: None if no default profile is found, otherwise the name of the
+      default profile for the given process
     """
     confs = get_config()
     try:
@@ -434,7 +451,6 @@ def get_profile_config(profile, conf_dict=None, set_test_location=True):
     test_string = ""
     is_test = False
     use_sqlite_for_tests = False
-
     test_prefix = "test_"
     sqlitetest_prefix = "testsqlite_"
     if profile.startswith(test_prefix):
@@ -458,24 +474,28 @@ def get_profile_config(profile, conf_dict=None, set_test_location=True):
                                              ", ".join(get_profiles_list())))
 
     if is_test and set_test_location:
+        # import traceback
+        # traceback.print_stack()
         # Change the repository and print a message
         ###################################################################
-        # IMPORTANT! Choose a different repository location, otherwise 
+        # IMPORTANT! Choose a different repository location, otherwise
         # real data will be destroyed during tests!!
         # The location is automatically created with the tempfile module
         # Typically, under linux this is created under /tmp
         # and is not deleted at the end of the run.
-        test_repo_path = tempfile.mkdtemp(prefix='aiida_repository_')
+        global TEMP_TEST_REPO
+        if TEMP_TEST_REPO is None:
+            TEMP_TEST_REPO = tempfile.mkdtemp(prefix=TEMP_TEST_REPO_PREFIX)
+            # We write the local repository on stderr, so that the user running
+            # the tests knows where the files are being stored
+            print >> sys.stderr, "############################################"
+            print >> sys.stderr, "# Creating LOCAL AiiDA REPOSITORY FOR TESTS:"
+            print >> sys.stderr, "# {}".format(TEMP_TEST_REPO)
+            print >> sys.stderr, "############################################"
         if 'AIIDADB_REPOSITORY_URI' not in profile_info:
             raise ConfigurationError("Config file has not been found, run "
                                      "verdi install first")
-        profile_info['AIIDADB_REPOSITORY_URI'] = 'file://' + test_repo_path
-        # I write the local repository on stderr, so that the user running
-        # the tests knows where the files are being stored
-        print >> sys.stderr, "########################################"
-        print >> sys.stderr, "# LOCAL AiiDA REPOSITORY FOR TESTS:"
-        print >> sys.stderr, "# {}".format(test_repo_path)
-        print >> sys.stderr, "########################################"
+        profile_info['AIIDADB_REPOSITORY_URI'] = 'file://' + TEMP_TEST_REPO
 
         if use_sqlite_for_tests:
             profile_info['AIIDADB_ENGINE'] = 'sqlite3'
@@ -484,11 +504,256 @@ def get_profile_config(profile, conf_dict=None, set_test_location=True):
     return profile_info
 
 
+key_explanation = {
+    "AIIDADB_ENGINE": "Database engine",
+    "AIIDADB_PASS": "AiiDA Database password",
+    "AIIDADB_NAME": "AiiDA Database name",
+    "AIIDADB_HOST": "Database host",
+    "AIIDADB_BACKEND": "AiiDA backend",
+    "AIIDADB_PORT": "Database port",
+    "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
+    "AIIDADB_USER": "AiiDA Database user",
+    "TIMEZONE": "Timezone",
+    DEFAULT_USER_CONFIG_FIELD: "Default user email"
+}
+
+
 def create_configuration(profile='default'):
+    """
+    :param profile: The profile to be configured
+    :return: The populated profile that was also stored.
+    """
+    import readline
+    from aiida.common.exceptions import ConfigurationError
+    from validate_email import validate_email
+
+    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+
+    print("Setting up profile {}.".format(profile))
+
+    try:
+        confs = get_config()
+    except ConfigurationError:
+        # No configuration file found
+        confs = {}
+
+        # first time creation check
+    try:
+        confs['profiles']
+    except KeyError:
+        confs['profiles'] = {}
+
+    # load the old configuration for the given profile
+    try:
+        this_existing_confs = confs['profiles'][profile]
+    except KeyError:
+        this_existing_confs = {}
+
+    # if there is an existing configuration, print it and ask if the user wants
+    # to modify it.
+    updating_existing_prof = False
+    if this_existing_confs:
+        print("The following configuration found corresponding to "
+              "profile {}.".format(profile))
+        for k, v in this_existing_confs.iteritems():
+            if key_explanation.has_key(k):
+                print("{}: {}".format(key_explanation.get(k), v))
+            else:
+                print("{}: {}".format(k, v))
+        answ = query_yes_no("Would you like to change it?", "no")
+        # If the user doesn't want to change it, we abandon
+        if answ is False:
+            return this_existing_confs
+        # Otherwise, we continue.
+        else:
+            updating_existing_prof = True
+
+    this_new_confs = {}
+
+    try:
+        # Defining the backend to be used
+        aiida_backend = this_existing_confs.get('AIIDADB_BACKEND')
+        if updating_existing_prof:
+            print("The backend of already stored profiles can not be "
+                  "changed. The current backend is {}.".format(aiida_backend))
+            this_new_confs['AIIDADB_BACKEND'] = aiida_backend
+        else:
+            backend_possibilities = ['django', 'sqlalchemy']
+            if len(backend_possibilities) > 0:
+
+                valid_aiida_backend = False
+                while not valid_aiida_backend:
+                    backend_ans = raw_input(
+                        'AiiDA backend (available: {} - sqlalchemy is in beta mode): '
+                            .format(', '.join(backend_possibilities)))
+                    if backend_ans in backend_possibilities:
+                        valid_aiida_backend = True
+                    else:
+                        print "* ERROR! Invalid backend inserted."
+                        print ("*        The available middlewares are {}"
+                               .format(', '.join(backend_possibilities)))
+                this_new_confs['AIIDADB_BACKEND'] = backend_ans
+                aiida_backend = backend_ans
+
+        # Setting the timezone
+        timezone = ask_for_timezone(
+            existing_timezone=this_existing_confs.get('TIMEZONE', None))
+        this_new_confs['TIMEZONE'] = timezone
+
+        # Setting the email
+        valid_email = False
+        readline.set_startup_hook(lambda: readline.insert_text(
+            this_existing_confs.get(DEFAULT_USER_CONFIG_FIELD,
+                                    DEFAULT_AIIDA_USER)))
+        while not valid_email:
+            this_new_confs[DEFAULT_USER_CONFIG_FIELD] = raw_input(
+                'Default user email: ')
+            valid_email = validate_email(
+                this_new_confs[DEFAULT_USER_CONFIG_FIELD])
+            if not valid_email:
+                print "** Invalid email provided!"
+
+        # Setting the database engine
+        db_possibilities = []
+        if aiida_backend == 'django':
+            db_possibilities.extend(['postgresql_psycopg2', 'sqlite', 'mysql'])
+        elif aiida_backend == 'sqlalchemy':
+            db_possibilities.extend(['postgresql_psycopg2'])
+        if len(db_possibilities) > 0:
+            db_engine = this_existing_confs.get('AIIDADB_ENGINE', db_possibilities[0])
+            readline.set_startup_hook(lambda: readline.insert_text(
+                db_engine))
+
+            valid_db_engine = False
+            while not valid_db_engine:
+                db_engine_ans = raw_input(
+                    'Database engine (available: {} - mysql is deprecated): '
+                    .format(', '.join(db_possibilities)))
+                if db_engine_ans in db_possibilities:
+                    valid_db_engine = True
+                else:
+                    print "* ERROR! Invalid database engine inserted."
+                    print ("*        The available engines are {}"
+                           .format(', '.join(db_possibilities)))
+            this_new_confs['AIIDADB_ENGINE'] = db_engine_ans
+
+        if 'sqlite' in this_new_confs['AIIDADB_ENGINE']:
+            this_new_confs['AIIDADB_ENGINE'] = 'sqlite3'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                this_existing_confs.get('AIIDADB_NAME', os.path.join(aiida_dir, "aiida.db"))))
+            this_new_confs['AIIDADB_NAME'] = raw_input('AiiDA Database location: ')
+            this_new_confs['AIIDADB_HOST'] = ""
+            this_new_confs['AIIDADB_PORT'] = ""
+            this_new_confs['AIIDADB_USER'] = ""
+            this_new_confs['AIIDADB_PASS'] = ""
+
+        elif 'postgresql_psycopg2' in this_new_confs['AIIDADB_ENGINE']:
+            this_new_confs['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
+
+            old_host = this_existing_confs.get('AIIDADB_HOST', 'localhost')
+            if not old_host:
+                old_host = 'localhost'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_host))
+            this_new_confs['AIIDADB_HOST'] = raw_input('PostgreSQL host: ')
+
+            old_port = this_existing_confs.get('AIIDADB_PORT', '5432')
+            if not old_port:
+                old_port = '5432'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_port))
+            this_new_confs['AIIDADB_PORT'] = raw_input('PostgreSQL port: ')
+
+            readline.set_startup_hook(lambda: readline.insert_text(
+                this_existing_confs.get('AIIDADB_NAME', 'aiidadb')))
+            this_new_confs['AIIDADB_NAME'] = raw_input('AiiDA Database name: ')
+
+            old_user = this_existing_confs.get('AIIDADB_USER', 'aiida')
+            if not old_user:
+                old_user = 'aiida'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_user))
+            this_new_confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
+
+            readline.set_startup_hook(lambda: readline.insert_text(
+                this_existing_confs.get('AIIDADB_PASS')))
+            this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
+
+        elif 'mysql' in this_new_confs['AIIDADB_ENGINE']:
+            this_new_confs['AIIDADB_ENGINE'] = 'mysql'
+
+            old_host = this_existing_confs.get('AIIDADB_HOST', 'localhost')
+            if not old_host:
+                old_host = 'localhost'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_host))
+            this_new_confs['AIIDADB_HOST'] = raw_input('mySQL host: ')
+
+            old_port = this_existing_confs.get('AIIDADB_PORT', '3306')
+            if not old_port:
+                old_port = '3306'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_port))
+            this_new_confs['AIIDADB_PORT'] = raw_input('mySQL port: ')
+
+            readline.set_startup_hook(lambda: readline.insert_text(
+                this_existing_confs.get('AIIDADB_NAME', 'aiidadb')))
+            this_new_confs['AIIDADB_NAME'] = raw_input('AiiDA Database name: ')
+
+            old_user = this_existing_confs.get('AIIDADB_USER', 'aiida')
+            if not old_user:
+                old_user = 'aiida'
+            readline.set_startup_hook(lambda: readline.insert_text(
+                old_user))
+            this_new_confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
+
+            readline.set_startup_hook(lambda: readline.insert_text(
+                this_existing_confs.get('AIIDADB_PASS')))
+            this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
+        else:
+            raise ValueError("You have to specify a valid database "
+                             "(valid choices are 'sqlite', 'mysql', 'postgres')")
+
+        # This part for the time being is a bit oddly written
+        # it should change in the future to add the possibility of having a
+        # remote repository. Atm, I act as only a local repo is possible
+        existing_repo = this_existing_confs.get('AIIDADB_REPOSITORY_URI',
+            os.path.join(aiida_dir, "repository-{}/".format(profile)))
+        default_protocol = 'file://'
+        if existing_repo.startswith(default_protocol):
+            existing_repo = existing_repo[len(default_protocol):]
+        readline.set_startup_hook(lambda: readline.insert_text(existing_repo))
+        new_repo_path = raw_input('AiiDA repository directory: ')
+        new_repo_path = os.path.expanduser(new_repo_path)
+        if not os.path.isabs(new_repo_path):
+            raise ValueError("You must specify an absolute path")
+        if (not os.path.isdir(new_repo_path)):
+            old_umask = os.umask(DEFAULT_UMASK)
+            try:
+                os.makedirs(new_repo_path)
+            finally:
+                os.umask(old_umask)
+
+        this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
+
+        confs['profiles'][profile] = this_new_confs
+
+        backup_config()
+        store_config(confs)
+
+        return this_new_confs
+    finally:
+        readline.set_startup_hook(lambda: readline.insert_text(""))
+
+
+
+
+def create_configuration_old(profile='default'):
     """
     :param database: create the configuration file
     """
     import readline
+    from aiida.backends import settings
     from aiida.common.exceptions import ConfigurationError
     # BE CAREFUL: THIS IS THE DJANGO VALIDATIONERROR
     from django.core.exceptions import ValidationError as DjangoValidationError
@@ -534,7 +799,7 @@ def create_configuration(profile='default'):
                 print "** Invalid email provided!"
 
         readline.set_startup_hook(lambda: readline.insert_text(
-            this_existing_confs.get('AIIDADB_ENGINE', 'sqlite3')))
+            this_existing_confs.get('AIIDADB_ENGINE', 'postgres')))
         this_new_confs['AIIDADB_ENGINE'] = raw_input('Database engine: ')
 
         if 'sqlite' in this_new_confs['AIIDADB_ENGINE']:
@@ -579,6 +844,27 @@ def create_configuration(profile='default'):
                 this_existing_confs.get('AIIDADB_PASS', 'aiida_password')))
             this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
 
+            # possibilities = ['django', 'sqlalchemy']
+            possibilities = ['django']
+            if len(possibilities) > 0:
+
+                aiida_backend = this_existing_confs.get('AIIDADB_BACKEND',
+                                                     'django')
+                readline.set_startup_hook(lambda: readline.insert_text(
+                    aiida_backend))
+
+                valid_aiida_backend = False
+                while not valid_aiida_backend:
+                    backend_ans = raw_input('AiiDA backend (available: {}): '
+                                            .format(', '.join(possibilities)))
+                    if backend_ans in possibilities:
+                        valid_aiida_backend = True
+                    else:
+                        print "* ERROR! Invalid backend inserted."
+                        print "*        The available middlewares are {}"\
+                            .format(', '.join(possibilities))
+                this_new_confs['AIIDADB_BACKEND'] = backend_ans
+
         elif 'mysql' in this_new_confs['AIIDADB_ENGINE']:
             this_new_confs['AIIDADB_ENGINE'] = 'mysql'
 
@@ -615,10 +901,11 @@ def create_configuration(profile='default'):
                              "(valid choices are 'sqlite', 'mysql', 'postgres')")
 
         # This part for the time being is a bit oddly written
-        # it should change in the future to add the possibility of having a 
+        # it should change in the future to add the possibility of having a
         # remote repository. Atm, I act as only a local repo is possible
         existing_repo = this_existing_confs.get('AIIDADB_REPOSITORY_URI',
-                                                os.path.join(aiida_dir, "repository/"))
+            os.path.join(aiida_dir, "repository-{}/".format(
+                    settings.AIIDADB_PROFILE)))
         default_protocol = 'file://'
         if existing_repo.startswith(default_protocol):
             existing_repo = existing_repo[len(default_protocol):]
@@ -649,11 +936,11 @@ def create_configuration(profile='default'):
 # The value is a tuple, where:
 # - the first entry is a string used as the key in the
 # JSON config file
-# - the second is the expected data type for data 
+# - the second is the expected data type for data
 #   conversion if the property is passed as a string.
 #   For valid data type strings, see the implementation of set_property
 # - the third entry is the description of the field
-# - the fourth entry is the default value. Use _NoDefaultValue() if you want 
+# - the fourth entry is the default value. Use _NoDefaultValue() if you want
 #   an exception to be raised if no property is found.
 
 class _NoDefaultValue(object):
@@ -676,7 +963,7 @@ _property_table = {
         "verdi shell (but not in the runaiida environment); it should be a "
         "string with the full paths for each module,"
         " function or class, separated by colons, e.g. "
-        "'aiida.djsite.db.models:aiida.orm.querytool.Querytool'",
+        "'aiida.backends.djsite.db.models:aiida.orm.querytool.Querytool'",
         "",
         None),
     "tests.use_sqlite": (
@@ -743,21 +1030,26 @@ _property_table = {
         "string",
         "E-mail address for TCOD depositions",
         None,
+        None),
+    "warnings.showdeprecations":(
+        "show_deprecations",
+        "bool",
+        "Boolean whether to print deprecation warnings",
+        False,
         None)
-
 }
 
 
 def exists_property(name):
     """
     Check if a property exists in the DB.
-    
+
     .. note:: this is useful if one wants explicitly to know if a property
       is defined just because it has a default value, or because it is
       explicitly defined in the config file.
-    
+
     :param name: the name of the property to check.
-    
+
     :raise ValueError: if the given name is not a valid property (as stored in
       the _property_table dictionary).
     """
@@ -782,7 +1074,7 @@ def get_property(name, default=_NoDefaultValue()):
     :param name: the name of the property to get.
     :param default: if provided, this value is returned if no value is found
       in the database.
-    
+
     :raise ValueError: if the given name is not a valid property (as stored in
       the _property_table dictionary).
     :raise KeyError: if the given property is not found in the config file, and
@@ -814,7 +1106,7 @@ def get_property(name, default=_NoDefaultValue()):
 def del_property(name):
     """
     Delete a property in the json file.
-    
+
     :param name: the name of the property to delete.
     :raise: KeyError if the key is not found in the configuration file.
     """
@@ -838,13 +1130,13 @@ def del_property(name):
 def set_property(name, value):
     """
     Set a property in the json file.
-    
+
     :param name: The name of the property value to set.
     :param value: the value to set. If it is a string, it is possibly casted
       to the correct type according to the information in the _property_table
       dictionary.
-    
-    :raise ValueError: if the provided name is not among the set of valid 
+
+    :raise ValueError: if the provided name is not among the set of valid
       properties, or if the value provided as a string cannot be casted to the
       correct type.
     """
@@ -893,10 +1185,10 @@ def parse_repository_uri(repository_uri):
     """
     This function validates the REPOSITORY_URI, that should be in the
     format protocol://address
-    
-    :note: At the moment, only the file protocol is supported. 
-    
-    :return: a tuple (protocol, address). 
+
+    :note: At the moment, only the file protocol is supported.
+
+    :return: a tuple (protocol, address).
     """
 
     protocol, _, address = repository_uri.partition('://')

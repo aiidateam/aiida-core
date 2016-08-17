@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 from aiida.orm.calculation.inline import optional_inline
 
@@ -269,13 +269,13 @@ class CifEntry(DbEntry):
         .. note:: To be removed, as it is duplicated in
             :py:class:`aiida.orm.data.cif.CifData`.
         """
-        import ase.io.cif
         import StringIO
-
-        return ase.io.cif.read_cif(StringIO.StringIO(self.cif))
+        from aiida.orm.data.cif import CifData
+        return CifData.read_cif(StringIO.StringIO(self.cif))
 
     def get_cif_node(self, store=False):
         """
+
         Creates a CIF node, that can be used in AiiDA workflow.
 
         :return: :py:class:`aiida.orm.data.cif.CifData` object
@@ -300,10 +300,13 @@ class CifEntry(DbEntry):
 
     def get_aiida_structure(self):
         """
-        Returns AiiDA-compatible structure, representing the crystal
-        structure from the CIF file.
+        :return: AiiDA structure corresponding to the CIF file.
         """
-        raise NotImplementedError("not implemented in base class")
+        from aiida.orm import DataFactory
+
+        S = DataFactory("structure")
+        aiida_structure = S(ase=self.get_ase_structure())
+        return aiida_structure
 
     def get_parsed_cif(self):
         """

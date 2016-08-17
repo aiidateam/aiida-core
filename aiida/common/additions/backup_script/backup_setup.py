@@ -1,26 +1,27 @@
 # -*- coding: utf-8 -*-
-import os
-import sys
-import logging
-import shutil
 import datetime
 import json
+import logging
+import os
+import shutil
 import stat
-
-from aiida.common.setup import AIIDA_CONFIG_FOLDER
-from dateutil.parser import parse
+import sys
 from os.path import expanduser
-from aiida.djsite.utils import load_dbenv
+
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.common import utils
+from aiida.common.setup import AIIDA_CONFIG_FOLDER
 
 # Needed initialization for Django
 
-load_dbenv()
+if not is_dbenv_loaded():
+    load_dbenv()
 from backup import Backup
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Giovanni Pizzi, Martin Uhrin, Spyros Zoupanos"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class BackupSetup(object):
@@ -31,12 +32,12 @@ class BackupSetup(object):
     -    the backup folders.
     -    the script that initiates the backup.
     """
-    
+
     def __init__(self):
         # The backup directory names
         self._conf_backup_folder_rel = "backup"
         self._file_backup_folder_rel = "backup_dest"
-        
+
         # The backup configuration file (& template) names
         self._backup_info_filename = "backup_info.json"
         self._backup_info_tmpl_filename = "backup_info.json.tmpl"
@@ -45,99 +46,17 @@ class BackupSetup(object):
         self._script_filename = "start_backup.py"
 
         # Configuring the logging
-        logging.basicConfig(level=logging.INFO,
+        logging.basicConfig(
                 format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 
         # The logger of the backup script
         self._logger = logging.getLogger("aiida_backup_setup")
 
-    def query_yes_no(self, question, default="yes"):
-        """Ask a yes/no question via raw_input() and return their answer.
-    
-        "question" is a string that is presented to the user.
-        "default" is the presumed answer if the user just hits <Enter>.
-            It must be "yes" (the default), "no" or None (meaning
-            an answer is required of the user).
-    
-        The "answer" return value is True for "yes" or False for "no".
-        """
-        valid = {"yes": True, "y": True, "ye": True,
-                 "no": False, "n": False}
-        if default is None:
-            prompt = " [y/n] "
-        elif default == "yes":
-            prompt = " [Y/n] "
-        elif default == "no":
-            prompt = " [y/N] "
-        else:
-            raise ValueError("invalid default answer: '%s'" % default)
-    
-        while True:
-            choice = raw_input(question + prompt).lower()
-            if default is not None and not choice:
-                return valid[default]
-            elif choice in valid:
-                return valid[choice]
-            else:
-                sys.stdout.write("Please respond with 'yes' or 'no' "
-                                 "(or 'y' or 'n').\n")
-
-    @staticmethod
-    def query_string(question, default):
-        if default is None or not default:
-            prompt = ""
-        else:
-            prompt = " [{}]".format(default)
-        
-        while True:
-            reply = raw_input(question + prompt)
-            if default is not None and not reply:
-                if not default:
-                    return None
-                else:
-                    return default
-            elif reply:
-                return reply
-            else:
-                sys.stdout.write("Please provide a non empty answer.\n")
-
-    def ask_backup_question(self, question, reply_type, allow_none_as_answer):
-        final_answer = None
-        
-        while True:
-            answer = BackupSetup.query_string(question, "")
-            
-            # If the reply is empty
-            if not answer:
-                if not allow_none_as_answer:
-                    continue
-            # Otherwise, try to parse it    
-            else:
-                try:
-                    if reply_type == int:
-                        final_answer = int(answer)
-                    elif reply_type == datetime.datetime:
-                        final_answer = parse(answer)
-                    else:
-                        raise ValueError
-                # If it is not parsable...
-                except ValueError:
-                    sys.stdout.write("The given value could not be parsed. " +
-                                     "Type expected: {}\n".format(reply_type))
-                    # If the timestamp could not have been parsed,
-                    # ask again the same question.
-                    continue
-            
-            if self.query_yes_no("{} was parsed. Is it correct?"
-                                 .format(final_answer), default="yes"):
-                break
-        return final_answer
-
     def construct_backup_variables(self, file_backup_folder_abs):
         backup_variables = {}
 
         # Setting the oldest backup timestamp
-        oldest_object_bk = self.ask_backup_question(
+        oldest_object_bk = utils.ask_question(
             "Please provide the oldest backup timestamp "
             "(e.g. 2014-07-18 13:54:53.688484+00:00). ",
             datetime.datetime, True)
@@ -147,17 +66,17 @@ class BackupSetup(object):
         else:
             backup_variables[Backup._oldest_object_bk_key] = str(
                 oldest_object_bk)
-        
+
         # Setting the backup directory
         backup_variables[Backup._backup_dir_key] = file_backup_folder_abs
-        
+
         # Setting the days_to_backup
         backup_variables[
-            Backup._days_to_backup_key] = self.ask_backup_question(
+            Backup._days_to_backup_key] = utils.ask_question(
             "Please provide the number of days to backup.", int, True)
-        
+
         # Setting the end date
-        end_date_of_backup_key = self.ask_backup_question(
+        end_date_of_backup_key = utils.ask_question(
             "Please provide the end date of the backup " +
             "(e.g. 2014-07-18 13:54:53.688484+00:00).",
             datetime.datetime, True)
@@ -166,24 +85,24 @@ class BackupSetup(object):
         else:
             backup_variables[
                 Backup._end_date_of_backup_key] = str(end_date_of_backup_key)
-                
+
         # Setting the backup periodicity
         backup_variables[
-            Backup._periodicity_key] = self.ask_backup_question(
+            Backup._periodicity_key] = utils.ask_question(
             "Please periodicity (in days).", int, False)
-        
+
         # Setting the backup threshold
         backup_variables[
-            Backup._backup_length_threshold_key] = self.ask_backup_question(
+            Backup._backup_length_threshold_key] = utils.ask_question(
             "Please provide the backup threshold (in hours).", int, False)
-        
+
         return backup_variables
 
     def create_dir(self, question, dir_path):
-        final_path = BackupSetup.query_string(question, dir_path)
-        
+        final_path = utils.query_string(question, dir_path)
+
         if not os.path.exists(final_path):
-            if self.query_yes_no("The path {} doesn't exist. Should it be "
+            if utils.query_yes_no("The path {} doesn't exist. Should it be "
                               "created?".format(final_path), "yes"):
                 try:
                     os.makedirs(final_path)
@@ -245,7 +164,7 @@ class BackupSetup(object):
         sys.stdout.write(info_str)
 
     def run(self):
-        
+
         conf_backup_folder_abs = self.create_dir(
             "Please provide the backup folder by providing the full path.",
             os.path.join(expanduser(AIIDA_CONFIG_FOLDER),
@@ -255,7 +174,7 @@ class BackupSetup(object):
             "Please provide the destination folder of the backup (normally in "
             "the previously provided backup folder).",
             os.path.join(conf_backup_folder_abs, self._file_backup_folder_rel))
-        
+
         # The template backup configuration file
         template_conf_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -269,8 +188,8 @@ class BackupSetup(object):
                 "Error copying the file {} ".format(template_conf_path) +
                 "to the directory {}.".format(conf_backup_folder_abs))
             raise
-        
-        if self.query_yes_no("A sample configuration file was copied to {}. "
+
+        if utils.query_yes_no("A sample configuration file was copied to {}. "
                              "Would you like to ".format(
                                     conf_backup_folder_abs) +
                              "see the configuration parameters explanation?",
@@ -279,10 +198,10 @@ class BackupSetup(object):
 
         # Construct the path to the backup configuration file
         final_conf_filepath = os.path.join(conf_backup_folder_abs,
-                                               self._backup_info_filename)
+                                           self._backup_info_filename)
 
         # If the backup parameters are configured now
-        if self.query_yes_no("Would you like to configure the backup " +
+        if utils.query_yes_no("Would you like to configure the backup " +
                              "configuration file now?", default="yes"):
 
             # Ask questions to properly setup the backup variables
@@ -303,7 +222,7 @@ class BackupSetup(object):
              "Please adapt the startup script accordingly to point to the " +
              "correct backup configuration file. For the moment, it points " +
              "to {}\n".format(os.path.join(conf_backup_folder_abs,
-                                          self._backup_info_filename)))
+                                           self._backup_info_filename)))
 
         # The contents of the startup script
         script_content = \
@@ -327,7 +246,7 @@ backup_inst.run()
                                    self._script_filename)
 
         # Write the contents to the script
-        with open(script_path ,'w') as script_file:
+        with open(script_path, 'w') as script_file:
             script_file.write(script_content)
 
         # Set the right permissions

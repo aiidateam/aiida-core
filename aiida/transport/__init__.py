@@ -5,10 +5,10 @@ from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
 import os, re, fnmatch, sys  # for glob commands
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA and 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Python Software Foundation. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. and 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Python Software Foundation. All rights reserved."
 __license__ = "MIT license, and Python license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 magic_check = re.compile('[*?[]')
 
@@ -23,7 +23,7 @@ def TransportFactory(module):
     from aiida.common.pluginloader import BaseFactory
 
     return BaseFactory(module, Transport, "aiida.transport.plugins")
-    
+
 
 class FileAttribute(FixedFieldsAttributeDict):
     """
@@ -53,14 +53,14 @@ def copy_from_remote_to_remote(transportsource,transportdestination,
                                   remotesource,remotedestination,**kwargs):
     """
     Copy files or folders from a remote computer to another remote computer.
-    
+
     :param transportsource: transport to be used for the source computer
     :param transportdestination: transport to be used for the destination computer
     :param str remotesource: path to the remote source directory / file
     :param str remotedestination: path to the remote destination directory / file
     :param kwargs: keyword parameters passed to the final put,
         except for 'dereference' that is passed to the initial get
-    
+
     .. note:: it uses the method transportsource.copy_from_remote_to_remote
     """
     transportsource.copy_from_remote_to_remote(transportdestination,
@@ -73,7 +73,7 @@ class Transport(object):
     Contains the set of minimal methods
     """
     # To be defined in the subclass
-    # See the ssh or local plugin to see the format 
+    # See the ssh or local plugin to see the format
     _valid_auth_params = None
 
     def __init__(self, *args, **kwargs):
@@ -122,12 +122,12 @@ class Transport(object):
         """
         Pass the data that should be passed automatically to self.logger
         as 'extra' keyword. This is typically useful if you pass data
-        obtained using get_dblogger_extra in aiida.djsite.utils, to automatically
+        obtained using get_dblogger_extra in aiida.backends.djsite.utils, to automatically
         log also to the DbLog table.
-        
+
         :param logger_extra: data that you want to pass as extra to the
           self.logger. To write to DbLog, it should be created by the
-          aiida.djsite.utils.get_dblogger_extra function. Pass None if you
+          aiida.backends.djsite.utils.get_dblogger_extra function. Pass None if you
           do not want to have extras passed.
         """
         self._logger_extra = logger_extra
@@ -177,7 +177,7 @@ class Transport(object):
         """
         try:
             import logging
-            from aiida.djsite.utils import get_dblogger_extra
+            from aiida.utils.logger import get_dblogger_extra
 
             if self._logger_extra is not None:
                 return logging.LoggerAdapter(logger=self._logger,
@@ -190,7 +190,7 @@ class Transport(object):
     def chdir(self, path):
         """
         Change directory to 'path'
-        
+
         :param str path: path to change working directory into.
         :raises: IOError, if the requested path does not exist
         :rtype: string
@@ -217,9 +217,9 @@ class Transport(object):
 
     def chown(self, path, uid, gid):
         """
-        Change the owner (uid) and group (gid) of a file. 
-        As with python's os.chown function, you must pass both arguments, 
-        so if you only want to change one, use stat first to retrieve the 
+        Change the owner (uid) and group (gid) of a file.
+        As with python's os.chown function, you must pass both arguments,
+        so if you only want to change one, use stat first to retrieve the
         current owner and group.
 
         :param str path: path to the file to change the owner and group of
@@ -231,9 +231,9 @@ class Transport(object):
 
     def copy(self, remotesource, remotedestination, *args, **kwargs):
         """
-        Copy a file or a directory from remote source to remote destination 
+        Copy a file or a directory from remote source to remote destination
         (On the same remote machine)
-        
+
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
@@ -244,9 +244,9 @@ class Transport(object):
 
     def copyfile(self, remotesource, remotedestination, *args, **kwargs):
         """
-        Copy a file from remote source to remote destination 
+        Copy a file from remote source to remote destination
         (On the same remote machine)
-        
+
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
@@ -257,9 +257,9 @@ class Transport(object):
 
     def copytree(self, remotesource, remotedestination, *args, **kwargs):
         """
-        Copy a folder from remote source to remote destination 
+        Copy a folder from remote source to remote destination
         (On the same remote machine)
-        
+
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
@@ -272,55 +272,55 @@ class Transport(object):
                                       remotesource,remotedestination,**kwargs):
         """
         Copy files or folders from a remote computer to another remote computer.
-        
+
         :param transportdestination: transport to be used for the destination computer
         :param str remotesource: path to the remote source directory / file
         :param str remotedestination: path to the remote destination directory / file
         :param kwargs: keyword parameters passed to the call to transportdestination.put,
             except for 'dereference' that is passed to self.get
-        
+
         .. note:: the keyword 'dereference' SHOULD be set to False for the
-         final put (onto the destination), while it can be set to the 
-         value given in kwargs for the get from the source. In that 
-         way, a symbolic link would never be followed in the final 
-         copy to the remote destination. That way we could avoid getting 
+         final put (onto the destination), while it can be set to the
+         value given in kwargs for the get from the source. In that
+         way, a symbolic link would never be followed in the final
+         copy to the remote destination. That way we could avoid getting
          unknown (potentially malicious) files into the destination computer.
          HOWEVER, since dereference=False is currently NOT
          supported by all plugins, we still force it to True for the final put.
-            
+
         .. note:: the supported keys in kwargs are callback, dereference,
            overwrite and ignore_nonexisting.
         """
         from aiida.common.folders import SandboxFolder
-        
+
         kwargs_get = {'callback': None,
                       'dereference': kwargs.pop('dereference',True),
                       'overwrite': True,
                       'ignore_nonexisting': False,
                       }
-        # TODO: dereference should be set to False in the following, as soon as 
+        # TODO: dereference should be set to False in the following, as soon as
         # dereference=False is supported by all transport plugins
         kwargs_put = {'callback': kwargs.pop('callback',None),
                       'dereference': True,
                       'overwrite': kwargs.pop('overwrite',True),
                       'ignore_nonexisting': kwargs.pop('ignore_nonexisting',False),
                       }
-        
+
         if kwargs:
             self.logger.error("Unknown parameters passed to copy_from_remote_to_remote")
-        
+
         with SandboxFolder() as sandbox:
             self.get(remotesource, sandbox.abspath, **kwargs_get)
-            # Then we scan the full sandbox directory with get_content_list, 
-            # because copying directly from sandbox.abspath would not work 
-            # to copy a single file into another single file, and copying 
-            # from sandbox.get_abs_path('*') would not work for files 
+            # Then we scan the full sandbox directory with get_content_list,
+            # because copying directly from sandbox.abspath would not work
+            # to copy a single file into another single file, and copying
+            # from sandbox.get_abs_path('*') would not work for files
             # beginning with a dot ('.').
             for filename in sandbox.get_content_list():
                 transportdestination.put(os.path.join(sandbox.abspath,filename),
-                                         remotedestination,**kwargs_put)        
+                                         remotedestination,**kwargs_put)
 
-    
+
     def _exec_command_internal(self, command, **kwargs):
         """
         Execute the command on the shell, similarly to os.system.
@@ -330,7 +330,7 @@ class Transport(object):
 
         If possible, use the higher-level
         exec_command_wait function.
-        
+
         :param str command: execute the command given as a string
         :return: stdin, stdout, stderr and the session, when this exists \
                  (can be None).
@@ -356,7 +356,7 @@ class Transport(object):
         """
         Retrieve a file or folder from remote source to local destination
         dst must be an absolute path (src not necessarily)
-        
+
         :param remotepath: (str) remote_folder_path
         :param localpath: (str) local_folder_path
         """
@@ -367,7 +367,7 @@ class Transport(object):
         """
         Retrieve a file from remote source to local destination
         dst must be an absolute path (src not necessarily)
-        
+
         :param str remotepath: remote_folder_path
         :param str localpath: local_folder_path
         """
@@ -378,7 +378,7 @@ class Transport(object):
         """
         Retrieve a folder recursively from remote source to local destination
         dst must be an absolute path (src not necessarily)
-        
+
         :param str remotepath: remote_folder_path
         :param str localpath: local_folder_path
         """
@@ -397,10 +397,10 @@ class Transport(object):
     def get_attribute(self, path):
         """
         Return an object FixedFieldsAttributeDict for file in a given path,
-        as defined in aiida.common.extendeddicts 
+        as defined in aiida.common.extendeddicts
         Each attribute object consists in a dictionary with the following keys:
-        
-        * st_size: size of files, in bytes 
+
+        * st_size: size of files, in bytes
 
         * st_uid: user id of owner
 
@@ -452,10 +452,10 @@ class Transport(object):
 
     def listdir(self, path='.', pattern=None):
         """
-        Return a list of the names of the entries in the given path. 
-        The list is in arbitrary order. It does not include the special 
+        Return a list of the names of the entries in the given path.
+        The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
-        
+
         :param str path: path to list (default to '.')
         :param str pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
@@ -494,8 +494,8 @@ class Transport(object):
 
     def normalize(self, path='.'):
         """
-        Return the normalized path (on the server) of a given path. 
-        This can be used to quickly resolve symbolic links or determine 
+        Return the normalized path (on the server) of a given path.
+        This can be used to quickly resolve symbolic links or determine
         what the server is considering to be the "current folder".
 
         :param str path: path to be normalized
@@ -510,7 +510,7 @@ class Transport(object):
         Put a file or a directory from local src to remote dst.
         src must be an absolute path (dst not necessarily))
         Redirects to putfile and puttree.
-       
+
         :param str localpath: absolute path to local source
         :param str remotepath: path to remote destination
         """
@@ -521,7 +521,7 @@ class Transport(object):
         """
         Put a file from local src to remote dst.
         src must be an absolute path (dst not necessarily))
-        
+
         :param str localpath: absolute path to local file
         :param str remotepath: path to remote file
         """
@@ -532,7 +532,7 @@ class Transport(object):
         """
         Put a folder recursively from local src to remote dst.
         src must be an absolute path (dst not necessarily))
-        
+
         :param str localpath: absolute path to local folder
         :param str remotepath: path to remote folder
         """
@@ -541,7 +541,7 @@ class Transport(object):
 
     def remove(self, path):
         """
-        Remove the file at the given path. This only works on files; 
+        Remove the file at the given path. This only works on files;
         for removing folders (directories), use rmdir.
 
         :param str path: path to file to remove
@@ -599,9 +599,9 @@ class Transport(object):
 
     def symlink(self, remotesource, remotedestination):
         """
-        Create a symbolic link between the remote source and the remote 
+        Create a symbolic link between the remote source and the remote
         destination.
-        
+
         :param remotesource: remote source
         :param remotedestination: remote destination
         """
@@ -640,16 +640,16 @@ class Transport(object):
     # from the python module glob.
     def glob(self, pathname):
         """Return a list of paths matching a pathname pattern.
-        
+
         The pattern may contain simple shell-style wildcards a la fnmatch.
         """
         return list(self.iglob(pathname))
 
     def iglob(self, pathname):
         """Return an iterator which yields the paths matching a pathname pattern.
-    
+
         The pattern may contain simple shell-style wildcards a la fnmatch.
-    
+
         """
         if not self.has_magic(pathname):
             # if os.path.lexists(pathname): # ORIGINAL

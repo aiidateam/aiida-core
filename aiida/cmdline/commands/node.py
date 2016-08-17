@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 import sys
-from aiida.cmdline.baseclass import (
-    VerdiCommand, VerdiCommandRouter, VerdiCommandWithSubcommands)
-from aiida import load_dbenv
-from aiida.cmdline.baseclass import VerdiCommand
-from aiida.orm import load_node
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin"
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.cmdline import delayed_load_node as load_node
+from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import (
+    VerdiCommandRouter, VerdiCommandWithSubcommands)
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 def list_repo_files(node, path, color):
     """
-    Given a Node and a relative path prints in output the list of files 
+    Given a Node and a relative path prints in output the list of files
     in the given path in the Node repository directory.
-    
+
     :param node: a Node instance
     :param path: a string with the relative path to list. Can be a file.
     :param color: boolean, if True prints with the codes to show colors.
@@ -65,7 +66,7 @@ def cat_repo_files(node, path):
     """
     Given a Node and a relative path to a file in the Node repository directory,
     prints in output the content of the file.
-    
+
     :param node: a Node instance
     :param path: a string with the relative path to list. Must be a file.
     :raise ValueError: if the file is not found, or is a directory.
@@ -108,7 +109,7 @@ def cat_repo_files(node, path):
 class Node(VerdiCommandRouter):
     """
     Manage operations on AiiDA nodes
-    
+
     There is a list of subcommands for managing specific types of data.
     For instance, 'node repo' manages the files in the local repository.
     """
@@ -121,11 +122,12 @@ class Node(VerdiCommandRouter):
         self.routed_subcommands = {
             'repo': _Repo,
             'show': _Show,
+            'tree': _Tree
         }
 
 
 # Note: this class should not be exposed directly in the main module,
-# otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
+# otherwise it becomes a command of 'verdi'. Instead, we want it to be a
 # subcommand of verdi data.
 class _Repo(VerdiCommandWithSubcommands):
     """
@@ -162,12 +164,13 @@ class _Repo(VerdiCommandWithSubcommands):
         # parser.add_argument('-d', '--with-description',
         #                    dest='with_description',action='store_true',
         #                    help="Show also the description for the UPF family")
-        #parser.set_defaults(with_description=False)
+        # parser.set_defaults(with_description=False)
 
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         try:
             n = load_node(parsed_args.pk)
@@ -180,7 +183,6 @@ class _Repo(VerdiCommandWithSubcommands):
         except ValueError as e:
             print >> sys.stderr, e.message
             sys.exit(1)
-
 
     def cat(self, *args):
         """
@@ -201,7 +203,8 @@ class _Repo(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         try:
             n = load_node(parsed_args.pk)
@@ -240,91 +243,150 @@ class _Show(VerdiCommand):
             description='Show information of a node.')
         parser.add_argument('pk', type=int, default=None, nargs="+",
                             help="ID of the node.")
-        parser.add_argument('-d', '--depth', action='store', default=0,
-                            metavar="N", type=int,
-                            help="Add children of shown nodes up to Nth "
-                                 "level. Default 0")
-        parser.add_argument('-i', '--indent', action='store_true',
-                            dest='indent', default=False,
-                            help="Indent the output.")
-        parser.add_argument('--no-indent', '--dont-indent', action='store_false',
-                            dest='indent', default=False,
-                            help="Do not indent the output. Default behaviour.")
-        parser.add_argument('--print-uuid', action='store_true',
-                            dest='print_uuid', default=False,
-                            help="Add UUID of children nodes to the output.")
-        parser.add_argument('--no-print-uuid', '--dont-print-uuid',
-                            action='store_false', dest='print_uuid',
+        parser.add_argument('--print-groups', action='store_true',
+                            dest='print_groups', default=False,
+                            help="Show groups containing the nodes.")
+        parser.add_argument('--no-print-groups', '--dont-print-groups',
+                            action='store_false', dest='print_groups',
                             default=False,
-                            help="Do not add UUID of children nodes to the "
+                            help="Do not show groups containing the nodes"
                                  "output. Default behaviour.")
+
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        indent = ""
-        if parsed_args.indent or parsed_args.depth:
-            indent = "    "
-
-        load_dbenv()
-        from aiida.orm import Node
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         for pk in parsed_args.pk:
             try:
                 n = load_node(pk)
-                self.print_node_info(n, depth=parsed_args.depth, indent=indent,
-                                     print_uuid=parsed_args.print_uuid)
+                self.print_node_info(n, print_groups=parsed_args.print_groups)
             except NotExistent as e:
                 print >> sys.stderr, e.message
                 sys.exit(1)
 
-    def print_node_info(self, node, level=0, depth=0, indent="", print_uuid=False,
-                        seen=[]):
-        ind_this = "".join([indent for i in range(level)])
-        ind_next = "{}{}".format(ind_this, indent)
-        if level == 0:
-            print "root {} {}".format(node.pk, node.__class__.__name__)
-            print "uuid: {}".format(node.uuid)
-            print "label: {}".format(node.label)
-            print "description: {}".format(node.description)
-            print "ctime: {}".format(node.ctime)
-            print "mtime: {}".format(node.mtime)
-            if node.get_computer() is not None:
-                print "computer: {} {}".format(node.get_computer().pk,
-                                               node.get_computer().name)
-        if level != 0 and len(node.get_inputs()) == 1 and \
-                not node.get_outputs():
-            # Not printing INPUTS and OUTPUTS for dead-end nodes (having
-            # no outputs and only the parent node as input)
+            if len(parsed_args.pk) > 1:
+                print ""
+
+    def print_node_info(self, node, print_groups=False):
+        from aiida.cmdline.common import print_node_info
+
+###TODO
+#Add a check here on the node type, otherwise it might try to access attributes such as code which are not necessarily there
+#####
+        print_node_info(node)
+
+        if print_groups:
+            from aiida.orm.querybuilder import QueryBuilder
+            from aiida.orm.group import Group
+            from aiida.orm.node import Node
+
+            qb = QueryBuilder()
+            qb.append(Node, tag='node', filters={'id': {'==': node.pk}})
+            qb.append(Group, tag='groups', group_of='node',
+                      project=['id', 'name'])
+
+            print "#### GROUPS:"
+
+            if qb.count() == 0:
+                print "No groups found containing node {}".format(node.pk)
+            else:
+                res = qb.iterdict()
+                for gr in res:
+                    gr_specs = "{} {}".format(gr['groups']['name'],
+                                              gr['groups']['id'])
+                    print gr_specs
+
+
+class _Tree(VerdiCommand):
+    """
+    Show a tree of the nodes.
+    """
+
+    def run(self, *args):
+        """
+        Show node information.
+        """
+        import argparse
+        from aiida.common.exceptions import NotExistent
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Show information of a node.')
+        parser.add_argument('pk', type=int, default=None, nargs="+",
+                            help="ID of the node.")
+        parser.add_argument('-d', '--depth', action='store', default=1,
+                            metavar="N", type=int,
+                            help="Add children of shown nodes up to Nth "
+                                 "level. Default 0")
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        for pk in parsed_args.pk:
+            try:
+                n = load_node(pk)
+                self.print_node_tree(n, parsed_args.depth)
+            except NotExistent as e:
+                print >> sys.stderr, e.message
+                sys.exit(1)
+
+            if len(parsed_args.pk) > 1:
+                print ""
+
+    def print_node_tree(self, node, max_depth, follow_links=None):
+        from aiida.cmdline.common import print_node_summary
+        from ete3 import Tree
+        print_node_summary(node)
+
+        tree_string = \
+            "({});".format(self._build_tree(node, max_depth=max_depth,
+                                            follow_links=follow_links))
+        t = Tree(tree_string, format=1)
+        print(t.get_ascii(show_internal=True))
+
+    def _ctime(self, nodelab):
+        return nodelab[1].ctime
+
+    def _build_tree(self, node, label_type=None, show_pk=True, max_depth=None,
+                    follow_links=None, depth=0):
+        if max_depth is not None and depth > max_depth:
             return
-        print "{}##### INPUTS:".format(ind_next)
-        for k, v in node.get_inputs(also_labels=True):
-            id = v.pk
-            if print_uuid:
-                id = "{} {}".format(v.pk, v.uuid)
-            print "{}{}".format(ind_next, k), id, v.__class__.__name__
-            if v.pk in seen or (not depth and level and (v.get_inputs() or v.get_outputs())):
-                print "{}{}...".format(ind_next, indent)
-            elif depth:
-                self.print_node_info(v, level=level + 1, depth=depth - 1,
-                                     indent=indent, print_uuid=print_uuid,
-                                     seen=seen + [node.pk])
-        print "{}##### OUTPUTS:".format(ind_next)
-        for k, v in node.get_outputs(also_labels=True):
-            id = v.pk
-            if print_uuid:
-                id = "{} {}".format(v.pk, v.uuid)
-            print "{}{}".format(ind_next, k), id, v.__class__.__name__
-            if v.pk in seen or (not depth and level and (v.get_inputs() or v.get_outputs())):
-                print "{}{}...".format(ind_next, indent)
-            elif depth:
-                self.print_node_info(v, level=level + 1, depth=depth - 1,
-                                     indent=indent, print_uuid=print_uuid,
-                                     seen=seen + [node.pk])
+
+        children = []
+        for label, child \
+                in sorted(node.get_outputs(also_labels=True,
+                                           link_type=follow_links),
+                          key=self._ctime):
+            child_str = self._build_tree(
+                child, label, show_pk, follow_links=follow_links,
+                max_depth=max_depth, depth=depth + 1)
+            if child_str:
+                children.append(child_str)
+
+        out_values = []
+        if children:
+            out_values.append("(")
+            out_values.append(", ".join(children))
+            out_values.append(")")
+
+        lab = node.__class__.__name__
+
+        if show_pk:
+            lab += " [{}]".format(node.pk)
+
+        out_values.append(lab)
+
+        return "".join(out_values)
 
 
 # the classes _Label and _Description are written here,
 # but in fact they are called by the verdi calculation or verdi data
-# in fact, I don't want to allow the possibility of changing labels or 
+# in fact, I don't want to allow the possibility of changing labels or
 # descriptions of codes, for that there is a separate command
 
 class _Label(VerdiCommandWithSubcommands):
@@ -349,7 +411,8 @@ class _Label(VerdiCommandWithSubcommands):
             raise ValueError("node_subclass not recognized")
 
     def run(self, *args):
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         import argparse
         from aiida.cmdline import wait_for_confirmation
 
@@ -380,8 +443,9 @@ class _Label(VerdiCommandWithSubcommands):
             for pk in pks:
                 n = load_node(pk)
                 if not self._node_class_ok(n):
-                    print "Node {} is not a subclass of {}. Exiting...".format(pk,
-                                                                               self._node_subclass)
+                    print "Node {} is not a subclass of {}. Exiting...".format(
+                        pk,
+                        self._node_subclass)
                     sys.exit(1)
                 if raw:
                     print '"{}"'.format(n.label)
@@ -445,7 +509,8 @@ class _Description(VerdiCommandWithSubcommands):
             raise ValueError("node_subclass not recognized")
 
     def run(self, *args):
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         import argparse
         from aiida.cmdline import wait_for_confirmation
 
@@ -454,7 +519,8 @@ class _Description(VerdiCommandWithSubcommands):
                                                      "description or label is found, prints n.a.")
 
         # parameters for display
-        parser.add_argument('-n', '--no-labels', action='store_false', default=True,
+        parser.add_argument('-n', '--no-labels', action='store_false',
+                            default=True,
                             help="Don't show the labels.")
         parser.add_argument('-r', '--raw', action='store_true', default=False,
                             help="If set, prints only the description without "
@@ -487,8 +553,9 @@ class _Description(VerdiCommandWithSubcommands):
                 n = load_node(pk)
 
                 if not self._node_class_ok(n):
-                    print "Node {} is not a subclass of {}. Exiting...".format(pk,
-                                                                               self._node_subclass)
+                    print "Node {} is not a subclass of {}. Exiting...".format(
+                        pk,
+                        self._node_subclass)
                     sys.exit(1)
 
                 label = n.label
@@ -513,8 +580,9 @@ class _Description(VerdiCommandWithSubcommands):
         else:
             # check that only one pk is present
             if len(pks) > 1:
-                sys.stderr.write("More than one node found to set one description"
-                                 ". Exiting...\n")
+                sys.stderr.write(
+                    "More than one node found to set one description"
+                    ". Exiting...\n")
                 sys.exit(1)
             else:
                 pk = pks[0]
@@ -527,16 +595,20 @@ class _Description(VerdiCommandWithSubcommands):
             if not parsed_args.add_to_description:
                 n = load_node(pk)
                 if not self._node_class_ok(n):
-                    print "Node {} is not a subclass of {}. Exiting...".format(pk,
-                                                                               self._node_subclass)
+                    print "Node {} is not a subclass of {}. Exiting...".format(
+                        pk,
+                        self._node_subclass)
                     sys.exit(1)
 
                 old_description = n.description
                 if not parsed_args.force:
-                    sys.stderr.write("Current description is: {}\n".format(old_description))
-                    sys.stderr.write("New description is: {}\n".format(new_description))
-                    sys.stderr.write("Are you sure you want to reset the description? "
-                                     "[Y/N] ")
+                    sys.stderr.write(
+                        "Current description is: {}\n".format(old_description))
+                    sys.stderr.write(
+                        "New description is: {}\n".format(new_description))
+                    sys.stderr.write(
+                        "Are you sure you want to reset the description? "
+                        "[Y/N] ")
                     if not wait_for_confirmation():
                         sys.exit(0)
 
@@ -545,8 +617,9 @@ class _Description(VerdiCommandWithSubcommands):
             else:
                 n = load_node(pk)
                 if not self._node_class_ok(n):
-                    print "Node {} is not a subclass of {}. Exiting...".format(pk,
-                                                                               self._node_subclass)
+                    print "Node {} is not a subclass of {}. Exiting...".format(
+                        pk,
+                        self._node_subclass)
                     sys.exit(1)
 
                 old_description = n.description

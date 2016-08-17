@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from aiida.tools.dbimporters.baseclasses \
-    import DbImporter, DbSearchResults, CifEntry
+from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
+                                                 CifEntry)
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet, Philippe Schwaller"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class IcsdImporterExp(Exception):
@@ -451,7 +451,7 @@ class IcsdDbImporter(DbImporter):
         """
         :return: List of all supported query keywords.
         """
-        if db_parameters["querydb"]:
+        if self.db_parameters["querydb"]:
             return self.keywords_db.keys()
         else:
             return self.keywords.keys()
@@ -609,7 +609,10 @@ class IcsdSearchResults(DbSearchResults):
         """
         Connect to the MySQL database for performing searches.
         """
-        import MySQLdb
+        try:
+            import MySQLdb
+        except ImportError:
+            import pymysql as MySQLdb
 
         self.db = MySQLdb.connect(host=self.db_parameters['host'],
                                   user=self.db_parameters['user'],
@@ -693,10 +696,10 @@ class IcsdEntry(CifEntry):
         """
         :return: ASE structure corresponding to the cif file.
         """
-        import ase.io.cif
+        from aiida.orm.data.cif import CifData
         import StringIO
 
-        return ase.io.cif.read_cif(StringIO.StringIO(self.get_corrected_cif()))
+        return CifData.read_cif(StringIO.StringIO(self.get_corrected_cif()))
 
 
     def get_aiida_structure(self):

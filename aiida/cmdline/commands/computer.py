@@ -2,12 +2,13 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.common.exceptions import ValidationError
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 def prompt_for_computer_configuration(computer):
@@ -144,7 +145,10 @@ class Computer(VerdiCommandWithSubcommands):
         }
 
     def complete_computers(self, subargs_idx, subargs):
+        if not is_dbenv_loaded():
+            load_dbenv()
         computer_names = self.get_computer_names()
+        print computer_names
         return "\n".join(computer_names)
 
     def computer_list(self, *args):
@@ -153,8 +157,10 @@ class Computer(VerdiCommandWithSubcommands):
         """
         import argparse
 
-        from aiida.orm import Computer as AiiDAOrmComputer
-        from aiida.djsite.utils import get_automatic_user
+        if not is_dbenv_loaded():
+            load_dbenv()
+        from aiida.orm.computer import Computer as AiiDAOrmComputer
+        from aiida.backends.utils import get_automatic_user
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -271,7 +277,6 @@ class Computer(VerdiCommandWithSubcommands):
                             bold_sequence, name, nobold_sequence,
                             enabled_str, configured_str, end_color)
 
-
         else:
             print "# No computers configured yet. Use 'verdi computer setup'"
 
@@ -279,7 +284,9 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Show information on a given computer
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.exceptions import NotExistent
 
         if len(args) != 1:
@@ -300,10 +307,12 @@ class Computer(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.computer import Computer
 
-        load_dbenv()
-        from aiida.djsite.db.models import DbNode
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        # from aiida.backends.djsite.db.models import DbNode
+        from aiida.orm.computer import Computer
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -319,8 +328,8 @@ class Computer(VerdiCommandWithSubcommands):
             print "No computer {} was found".format(computer_name)
             sys.exit(1)
 
-        calculation_on_computer = DbNode.objects.filter(dbcomputer__name=computer_name,
-                                                        type__startswith='calculation')
+        calculation_on_computer = computer.get_calculations_on_computer()
+
         if calculation_on_computer:
             # Note: this is an artificial comment.
             # If you comment the following lines, you will be able to overwrite
@@ -361,18 +370,19 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Setup a new or existing computer
         """
-        import inspect
         import readline
-
-        from aiida.common.exceptions import NotExistent, ValidationError
-        from aiida.orm import Computer as AiidaOrmComputer
 
         if len(args) != 0:
             print >> sys.stderr, ("after 'computer setup' there cannot be any "
                                   "argument.")
             sys.exit(1)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        from aiida.common.exceptions import NotExistent, ValidationError
+        from aiida.orm.computer import Computer as AiidaOrmComputer
+
 
         print "At any prompt, type ? to get some help."
         print "---------------------------------------"
@@ -414,7 +424,9 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Rename a computer
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.exceptions import (
             NotExistent, UniquenessError, ValidationError)
 
@@ -455,7 +467,8 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Configure the authentication information for a given computer
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import readline
         import inspect
@@ -464,9 +477,10 @@ class Computer(VerdiCommandWithSubcommands):
 
         from aiida.common.exceptions import (
             NotExistent, ValidationError)
-        from aiida.djsite.utils import (
-            get_automatic_user, get_configured_user_email)
-        from aiida.djsite.db.models import DbAuthInfo, DbUser
+        from aiida.backends.utils import get_automatic_user
+        from aiida.common.utils import get_configured_user_email
+        from aiida.backends.settings import BACKEND
+        from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
         import argparse
 
@@ -485,33 +499,60 @@ class Computer(VerdiCommandWithSubcommands):
         user_email = parsed_args.user
         computername = parsed_args.computer
 
+
         try:
             computer = self.get_computer(name=computername)
         except NotExistent:
             print >> sys.stderr, "No computer exists with name '{}'".format(
                 computername)
             sys.exit(1)
-
         if user_email is None:
             user = get_automatic_user()
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            from aiida.orm.querybuilder import QueryBuilder
+            qb = QueryBuilder()
+            qb.append(type="user", filters={'email':user_email})
+            user = qb.first()
+            if user is None:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
 
-        try:
-            authinfo = DbAuthInfo.objects.get(
-                dbcomputer=computer.dbcomputer,
-                aiidauser=user)
+        if BACKEND == BACKEND_DJANGO:
+            from aiida.backends.djsite.db.models import DbAuthInfo
 
-            old_authparams = authinfo.get_auth_params()
-        except ObjectDoesNotExist:
-            authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
-            old_authparams = {}
+            try:
+                authinfo = DbAuthInfo.objects.get(
+                    dbcomputer=computer.dbcomputer,
+                    aiidauser=user)
 
+                old_authparams = authinfo.get_auth_params()
+            except ObjectDoesNotExist:
+                authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
+                old_authparams = {}
+
+        elif BACKEND==BACKEND_SQLA:
+            from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+            from aiida.backends.sqlalchemy import session
+
+
+            authinfo = session.query(DbAuthInfo).filter(
+                    DbAuthInfo.dbcomputer==computer.dbcomputer
+                ).filter(
+                    DbAuthInfo.aiidauser==user
+                ).first()
+            if authinfo is None:
+                authinfo = DbAuthInfo(
+                        dbcomputer=computer.dbcomputer,
+                        aiidauser=user
+                    )
+                old_authparams = {}
+            else:
+                old_authparams = authinfo.get_auth_params()
+        else:
+            raise Exception(
+                    "Unknown backend {}".format(BACKEND)
+                )
         Transport = computer.get_transport_class()
 
         print ("Configuring computer '{}' for the AiiDA user '{}'".format(
@@ -600,11 +641,13 @@ class Computer(VerdiCommandWithSubcommands):
     def computer_delete(self, *args):
         """
         Configure the authentication information for a given computer
-        
+
         Does not delete the computer if there are calculations that are using
         it.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.common.exceptions import (
             NotExistent, InvalidOperation)
         from aiida.orm.computer import delete_computer
@@ -634,18 +677,20 @@ class Computer(VerdiCommandWithSubcommands):
     def computer_test(self, *args):
         """
         Test the connection to a computer.
-        
+
         It tries to connect, to get the list of calculations on the queue and
         to perform other tests.
         """
         import argparse
         import traceback
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db.models import DbUser
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.orm.user import User
+        from aiida.backends.utils import get_automatic_user
         from aiida.orm.computer import Computer as OrmComputer
 
         parser = argparse.ArgumentParser(
@@ -680,19 +725,20 @@ class Computer(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         if user_email is None:
-            user = get_automatic_user()
+            user = User(dbuser=get_automatic_user())
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            user_list = User.search_for_users(email=user_email)
+            # If no user is found
+            if not user_list:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
+            user = user_list[0]
 
         print "Testing computer '{}' for user {}...".format(computername,
                                                             user.email)
         try:
-            dbauthinfo = computer.get_dbauthinfo(user)
+            dbauthinfo = computer.get_dbauthinfo(user._dbuser)
         except NotExistent:
             print >> sys.stderr, ("User with email '{}' is not yet configured "
                                   "for computer '{}' yet.".format(
@@ -714,7 +760,7 @@ class Computer(VerdiCommandWithSubcommands):
         s = OrmComputer(dbcomputer=dbauthinfo.dbcomputer).get_scheduler()
         t = dbauthinfo.get_transport()
 
-        ## STARTING TESTS HERE        
+        ## STARTING TESTS HERE
         num_failures = 0
         num_tests = 0
 
@@ -769,9 +815,9 @@ class Computer(VerdiCommandWithSubcommands):
     def _computer_test_get_jobs(self, transport, scheduler, dbauthinfo):
         """
         Internal test to check if it is possible to check the queue state.
-        
+
         :note: exceptions could be raised
-        
+
         :param transport: an open transport
         :param scheduler: the corresponding scheduler class
         :param dbauthinfo: the dbauthinfo object (from which one can get
@@ -780,6 +826,9 @@ class Computer(VerdiCommandWithSubcommands):
         """
         print "> Getting job list..."
         found_jobs = scheduler.getJobs(as_dict=True)
+        #For debug
+        #for jid, data in found_jobs.iteritems():
+        #    print jid, data['submission_time'], data['dispatch_time'], data['job_state']
         print "  `-> OK, {} jobs found in the queue.".format(len(found_jobs))
         return True
 
@@ -787,9 +836,9 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Internal test to check if it is possible to create a temporary file
         and then delete it in the work directory
-        
+
         :note: exceptions could be raised
-        
+
         :param transport: an open transport
         :param scheduler: the corresponding scheduler class
         :param dbauthinfo: the dbauthinfo object (from which one can get
@@ -860,13 +909,14 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Enable a computer.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
 
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db.models import DbUser
+        from aiida.orm.implementation import User
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -901,22 +951,22 @@ class Computer(VerdiCommandWithSubcommands):
                 computer.set_enabled_state(True)
                 print "Computer '{}' enabled.".format(computername)
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            user_list = User.search_for_users(email=user_email)
+            if user_list is None or len(user_list) == 0:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
+            user = user_list[0]
             try:
-                dbauthinfo = computer.get_dbauthinfo(user)
+                dbauthinfo = computer.get_dbauthinfo(user._dbuser)
                 if not dbauthinfo.enabled:
                     dbauthinfo.enabled = True
                     dbauthinfo.save()
                     print "Computer '{}' enabled for user {}.".format(
                         computername, user.get_full_name())
                 else:
-                    print "Computer '{}' was already enabled for user {}.".format(
-                        computername, user.get_full_name())
+                    print "Computer '{}' was already enabled for user {} {}.".format(
+                        computername, user.first_name, user.last_name)
             except NotExistent:
                 print >> sys.stderr, ("User with email '{}' is not configured "
                                       "for computer '{}' yet.".format(
@@ -926,18 +976,17 @@ class Computer(VerdiCommandWithSubcommands):
     def computer_disable(self, *args):
         """
         Disable a computer.
-        
+
         If a computer is disabled, AiiDA does not try to connect to it to
         submit new calculations or check for the state of existing calculations.
         Useful, for instance, if you know that a computer is under maintenance.
         """
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import argparse
 
-        from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db.models import DbUser
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -972,12 +1021,12 @@ class Computer(VerdiCommandWithSubcommands):
                 computer.set_enabled_state(False)
                 print "Computer '{}' disabled.".format(computername)
         else:
-            try:
-                user = DbUser.objects.get(email=user_email)
-            except ObjectDoesNotExist:
+            user_list = User.search_for_users(email=user_email)
+            if user_list is None or len(user_list) == 0:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
                 sys.exit(1)
+            user = user_list[0]
             try:
                 dbauthinfo = computer.get_dbauthinfo(user)
                 if dbauthinfo.enabled:
@@ -986,30 +1035,32 @@ class Computer(VerdiCommandWithSubcommands):
                     print "Computer '{}' disabled for user {}.".format(
                         computername, user.get_full_name())
                 else:
-                    print "Computer '{}' was already disabled for user {}.".format(
-                        computername, user.get_full_name())
+                    print("Computer '{}' was already disabled for user {} {}."
+                        .format(computername, user.first_name, user.last_name))
             except NotExistent:
                 print >> sys.stderr, ("User with email '{}' is not configured "
                                       "for computer '{}' yet.".format(
                     user_email, computername))
 
-
     def get_computer_names(self):
         """
         Retrieve the list of computers in the DB.
-        
+
         ToDo: use an API or cache the results, sometime it is quite slow!
         """
-        from aiida.orm import Computer as AiidaOrmComputer
-
-        load_dbenv()
-        return AiidaOrmComputer.list_names()
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(type='computer', project=['name'])
+        if qb.count() > 0:
+            return zip(*qb.all())[0]
+        else:
+            return None
 
     def get_computer(self, name):
         """
         Get a Computer object with given name, or raise NotExistent
         """
-        from aiida.orm import Computer as AiidaOrmComputer
+        from aiida.orm.computer import Computer as AiidaOrmComputer
 
         return AiidaOrmComputer.get(name)
-    
+

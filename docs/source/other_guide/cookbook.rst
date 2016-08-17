@@ -35,7 +35,7 @@ and all the children nodes::
       """
       from django.db import transaction
       from django.db.models import Q
-      from aiida.djsite.db import models
+      from aiida.backends.djsite.db import models
       from aiida.orm import load_node
   
       # Delete also all children of the given calculations

@@ -2,10 +2,10 @@
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.calculation.inline import optional_inline
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 ase_loops = {
     '_atom_site': [
@@ -347,7 +347,7 @@ class CifData(SinglefileData):
     def from_md5(cls, md5):
         """
         Return a list of all CIF files that match a given MD5 hash.
-        
+
         .. note:: the hash has to be stored in a ``_md5`` attribute,
             otherwise the CIF file will not be found.
         """
@@ -358,13 +358,13 @@ class CifData(SinglefileData):
     def get_or_create(cls, filename, use_first=False, store_cif=True):
         """
         Pass the same parameter of the init; if a file with the same md5
-        is found, that CifData is returned. 
-        
+        is found, that CifData is returned.
+
         :param filename: an absolute filename on disk
         :param use_first: if False (default), raise an exception if more than \
                 one CIF file is found.\
                 If it is True, instead, use the first available CIF file.
-        :param bool store_cif: If false, the CifData objects are not stored in 
+        :param bool store_cif: If false, the CifData objects are not stored in
                 the database. default=True.
         :return (cif, created): where cif is the CifData object, and create is either\
             True if the object was created, or False if the object was retrieved\
@@ -431,6 +431,17 @@ class CifData(SinglefileData):
             self._ase = self.get_ase()
         return self._ase
 
+    @staticmethod
+    def read_cif(fileobj, index=-1, **kwargs):
+        """
+        A wrapper method that simulates the behaviour of the older versions of
+        the read_cif. It behaves similarly with the older and newer versions
+        of ase.io.cif.read_cif.
+        """
+        import ase.io.cif
+        return list(ase.io.cif.read_cif(
+            fileobj, index=slice(None), **kwargs))[index]
+
     def get_ase(self, **kwargs):
         """
         Returns ASE object, representing the CIF. This function differs
@@ -442,9 +453,8 @@ class CifData(SinglefileData):
         if not kwargs and self._ase:
             return self.ase
         else:
-            from ase.io.cif import read_cif
-            return read_cif(self._get_folder_pathsubfolder.open(self.filename),
-                            **kwargs)
+            return CifData.read_cif(
+                self._get_folder_pathsubfolder.open(self.filename), **kwargs)
 
     def set_ase(self, aseatoms):
         import tempfile
@@ -565,7 +575,7 @@ class CifData(SinglefileData):
                         if abs(float(site)-1) > epsilon:
                             partial_occupancies = True
                     else:
-                        # bracket, cut string 
+                        # bracket, cut string
                         if abs(float(site[0:bracket])-1)> epsilon:
                             partial_occupancies = True
 
@@ -604,7 +614,7 @@ class CifData(SinglefileData):
         """
         # If values have been changed and node is not stored,
         # the file is updated.
-        if self._values and not self._is_stored:
+        if self._values and not self.is_stored:
             self.values = self._values
         with self._get_folder_pathsubfolder.open(self.filename) as f:
             return f.read()
@@ -615,7 +625,7 @@ class CifData(SinglefileData):
         """
         from aiida.tools.dbexporters.tcod import export_cif
         return export_cif(self,**kwargs)
-        
+
     def _get_object_ase(self):
         """
         Converts CifData to ase.Atoms

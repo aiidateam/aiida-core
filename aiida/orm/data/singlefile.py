@@ -16,18 +16,18 @@ in the perm repo?
 """
 import os
 
-from aiida.orm import Data
+from aiida.orm.data import Data
 
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class SinglefileData(Data):
     """
-    Pass as input a file parameter with the (absolute) path of a file 
+    Pass as input a file parameter with the (absolute) path of a file
     on the hard drive.
     It will get copied inside the node.
 
@@ -118,5 +118,5 @@ class SinglefileData(Data):
                                   "match the 'filename' attribute. "
                                   "_filename='{}', content: {}".format(
                 filename, self.get_folder_list()))
-        
-    
+
+

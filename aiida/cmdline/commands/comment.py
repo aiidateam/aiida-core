@@ -5,13 +5,13 @@ This allows to manage comments from command line.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida import load_dbenv
-from aiida.orm import load_node
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.cmdline import delayed_load_node as load_node
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class Comment(VerdiCommandWithSubcommands):
@@ -35,9 +35,11 @@ class Comment(VerdiCommandWithSubcommands):
         Add comment to a node
         """
         import argparse
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
@@ -78,9 +80,10 @@ class Comment(VerdiCommandWithSubcommands):
         Show the comments of a node
         """
         import argparse
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
@@ -122,18 +125,21 @@ class Comment(VerdiCommandWithSubcommands):
             print "{}".format(i['content'])
             print ""
 
+        # If there is nothing to print, print a message
+        if not to_print:
+            print "No comment found."
+
     def comment_remove(self, *args):
         """
         Remove comments. The user can only remove its own comments
         """
         # Note: in fact, the user can still manually delete any comment
         import argparse
-        from aiida.djsite.utils import get_automatic_user
-        from aiida.common.exceptions import ModificationNotAllowed
+        from aiida.backends.utils import get_automatic_user
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         user = get_automatic_user()
-        from aiida.djsite.db.models import DbComment
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -154,10 +160,8 @@ class Comment(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         node = load_node(parsed_args.pk)
-        all_comments = node.get_comments(parsed_args.id)  # Filter those with desired id, if present
 
         allowed_trues = ['1', 't', 'true', 'y', 'yes']
-
         if parsed_args.all:
             sys.stdout.write("Delete all comments of user {}? ".format(user))
             inpread = sys.stdin.readline()
@@ -167,9 +171,10 @@ class Comment(VerdiCommandWithSubcommands):
                 print "Not deleting comment. Aborting."
                 sys.exit(1)
             else:
-                comments = DbComment.objects.filter(dbnode=node, user=user)
+                comments = node.get_comment_obj(user=user)
                 for comment in comments:
                     comment.delete()
+                print("Deleted {} comments.".format(len(comments)))
 
         else:
             sys.stdout.write("Delete comment? ")
@@ -180,21 +185,19 @@ class Comment(VerdiCommandWithSubcommands):
                 print "Not deleting comment. Aborting."
                 sys.exit(1)
             else:
-                comments = DbComment.objects.filter(dbnode=node,
-                                                    pk=parsed_args.id, user=user)
-                if not list(comments):
-                    print "No deletable comment found."
-                for comment in comments:
-                    comment.delete()
+                from aiida.orm.implementation import Comment as CommentOrm
+                c = CommentOrm(id=parsed_args.id, user=user)
+                c.delete()
 
     def comment_update(self, *args):
         """
         Update a comment
         """
         import argparse
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
         user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
@@ -232,5 +235,3 @@ class Comment(VerdiCommandWithSubcommands):
 
         node = load_node(parsed_args.pk)
         node._update_comment(the_comment, parsed_args.id, user)
-        
-        

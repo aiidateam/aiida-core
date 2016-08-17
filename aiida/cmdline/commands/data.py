@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
 import sys
 
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
-from aiida import load_dbenv
-from aiida.common.exceptions import MultipleObjectsError
 from aiida.cmdline.commands.node import _Label, _Description
-from aiida.orm import load_node
+from aiida.common.exceptions import MultipleObjectsError
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Leonid Kahle, Marco Gibertini, Martin Uhrin, Nicolas Mounet"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class Data(VerdiCommandRouter):
     """
     Setup and manage data specific types
-    
+
     There is a list of subcommands for managing specific types of data.
     For instance, 'data upf' manages pseudopotentials in the UPF format.
     """
@@ -97,10 +97,10 @@ class Listable(object):
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
-        load_dbenv()
-        from aiida.orm import DataFactory
+        if not is_dbenv_loaded():
+            load_dbenv()
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         q_object = None
         if args.all_users is False:
@@ -118,6 +118,21 @@ class Listable(object):
             entry_list.append([str(obj.pk)])
         return entry_list
 
+    def query_past_days_qb(self, filters, args):
+        """
+        Subselect to filter data nodes by their age.
+
+        :param filters: the filters to be enriched.
+        :param args: a namespace with parsed command line parameters.
+        """
+        from aiida.utils import timezone
+        import datetime
+        if args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
+            filters.update({"ctime": {'>=': n_days_ago}})
+        return filters
+
     def query_past_days(self, q_object, args):
         """
         Subselect to filter data nodes by their age.
@@ -125,13 +140,25 @@ class Listable(object):
         :param q_object: a query object
         :param args: a namespace with parsed command line parameters.
         """
-        from django.utils import timezone
+        from aiida.utils import timezone
         from django.db.models import Q
         import datetime
         if args.past_days is not None:
             now = timezone.now()
             n_days_ago = now - datetime.timedelta(days=args.past_days)
             q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+    def query_group_qb(self, filters, args):
+        """
+        Subselect to filter data nodes by their group.
+
+        :param q_object: a query object
+        :param args: a namespace with parsed command line parameters.
+        """
+        if args.group_name is not None:
+            filters.update({"name": {"in": args.group_name}})
+        if args.group_pk is not None:
+            filters.update({"id": {"in": args.group_pk}})
 
     def query_group(self, q_object, args):
         """
@@ -248,11 +275,12 @@ class Visualizable(object):
                 parsed_args.pop(key)
 
         if format is None:
-            print "Default format is not defined, please specify.\n" + \
-                  "Valid formats are:"
+            print >> sys.stderr, (
+                "Default format is not defined, please specify.\n" 
+                  "Valid formats are:")
             for i in self.get_show_plugins().keys():
-                print "  {}".format(i)
-            sys.exit(0)
+                print >> sys.stderr, "  {}".format(i)
+            sys.exit(1)
 
         # I can give in input the whole path to executable
         code_name = os.path.split(format)[-1]
@@ -260,19 +288,20 @@ class Visualizable(object):
         try:
             func = self.get_show_plugins()[code_name]
         except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_show_plugins()))
+            print >> sys.stderr, "Not implemented; implemented plugins are:"
+            print >> sys.stderr, "{}.".format(
+                ",".join(self.get_show_plugins()))
             sys.exit(1)
 
-        load_dbenv()
-#        from aiida.orm.node import Node
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         n_list = [load_node(id) for id in data_id]
 
         for n in n_list:
             try:
                 if not isinstance(n, self.dataclass):
-                    print("Node {} is of class {} instead "
+                    print >> sys.stderr, ("Node {} is of class {} instead "
                           "of {}".format(n, type(n), self.dataclass))
                     sys.exit(1)
             except AttributeError:
@@ -281,8 +310,9 @@ class Visualizable(object):
         try:
             func(format, n_list, **parsed_args)
         except MultipleObjectsError:
-            print("Visualization of multiple objects is not implemented "
-                  "for '{}'".format(format))
+            print >> sys.stderr, (
+                "Visualization of multiple objects is not implemented "
+                "for '{}'".format(format))
             sys.exit(1)
 
 
@@ -312,7 +342,7 @@ class Exportable(object):
         Export the data node to a given format.
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _export_xxx() method.
-        import argparse, os
+        import argparse
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -353,27 +383,29 @@ class Exportable(object):
                 parsed_args.pop(key)
 
         if format is None:
-            print "Default format is not defined, please specify.\n" + \
-                  "Valid formats are:"
+            print >> sys.stderr, (
+                "Default format is not defined, please specify.\n" 
+                  "Valid formats are:")
             for i in self.get_export_plugins().keys():
-                print "  {}".format(i)
-            sys.exit(0)
+                print >> sys.stderr, "  {}".format(i)
+            sys.exit(1)
 
         try:
             func = self.get_export_plugins()[format]
         except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_export_plugins()))
+            print >> sys.stderr, "Not implemented; implemented plugins are:"
+            print >> sys.stderr, "{}.".format(
+                ",".join(self.get_export_plugins()))
             sys.exit(1)
 
-        load_dbenv()
-#        from aiida.orm.node import Node
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         n = load_node(data_id)
 
         try:
             if not isinstance(n, self.dataclass):
-                print("Node {} is of class {} instead "
+                print >> sys.stderr, ("Node {} is of class {} instead "
                       "of {}".format(n, type(n), self.dataclass))
                 sys.exit(1)
         except AttributeError:
@@ -404,7 +436,7 @@ class Importable(object):
         return {k: getattr(self, self.import_prefix + k) for k in valid_formats}
 
     def importfile(self, *args):
-        import argparse, os, sys
+        import argparse, sys
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -441,11 +473,12 @@ class Importable(object):
         filename = parsed_args.pop('file')
 
         if format is None:
-            print "Default format is not defined, please specify.\n" + \
-                  "Valid formats are:"
+            print >> sys.stderr, (
+                "Default format is not defined, please specify.\n" 
+                  "Valid formats are:")
             for i in self.get_import_plugins().keys():
-                print "  {}".format(i)
-            sys.exit(0)
+                print >> sys.stderr, "  {}".format(i)
+            sys.exit(1)
 
         if not filename:
             filename = "/dev/stdin"
@@ -453,11 +486,14 @@ class Importable(object):
         try:
             func = self.get_import_plugins()[format]
         except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_import_plugins()))
+            print >> sys.stderr, "Not implemented; implemented plugins are:"
+            print >> sys.stderr, "{}.".format(
+                ",".join(self.get_import_plugins()))
             sys.exit(1)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         func(filename, **parsed_args)
 
 
@@ -490,7 +526,7 @@ class Depositable(object):
         :param args: a namespace with parsed command line parameters.
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _deposit_xxx() method.
-        import argparse,os
+        import argparse
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Deposit data object.')
@@ -530,25 +566,29 @@ class Depositable(object):
                 parsed_args.pop(key)
 
         if database is None:
-            print "Default database is not defined, please specify.\n" + \
-                  "Valid databases are:"
+            print >> sys.stderr, (
+                "Default database is not defined, please specify.\n"
+                  "Valid databases are:")
             for i in self.get_deposit_plugins().keys():
-                print "  {}".format(i)
-            sys.exit(0)
+                print >> sys.stderr, "  {}".format(i)
+            sys.exit(1)
 
         try:
             func = self.get_deposit_plugins()[database]
         except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_deposit_plugins()))
+            print >> sys.stderr, "Not implemented; implemented plugins are:"
+            print >> sys.stderr, "{}.".format(
+                ",".join(self.get_deposit_plugins()))
             sys.exit(1)
 
-        load_dbenv()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         n = load_node(data_id)
 
         try:
             if not isinstance(n,self.dataclass):
-                print("Node {} is of class {} instead "
+                print >> sys.stderr, ("Node {} is of class {} instead "
                       "of {}".format(n,type(n),self.dataclass))
                 sys.exit(1)
         except AttributeError:
@@ -559,7 +599,7 @@ class Depositable(object):
 
 
 # Note: this class should not be exposed directly in the main module,
-# otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
+# otherwise it becomes a command of 'verdi'. Instead, we want it to be a
 # subcommand of verdi data.
 class _Upf(VerdiCommandWithSubcommands, Importable):
     """
@@ -572,6 +612,8 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.upf import UpfData
 
         self.dataclass = UpfData
@@ -585,9 +627,9 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
     def uploadfamily(self, *args):
         """
         Upload a new pseudopotential family.
-        
+
         Returns the numbers of files found and the number of nodes uploaded.
-        
+
         Call without parameters to get some help.
         """
         import os.path
@@ -615,14 +657,12 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             print >> sys.stderr, 'Cannot find directory: ' + folder
             sys.exit(1)
 
-        load_dbenv()
         import aiida.orm.data.upf as upf
 
         files_found, files_uploaded = upf.upload_upf_family(folder, group_name,
                                                             group_description, stop_if_existing)
 
         print "UPF files found: {}. New files uploaded: {}".format(files_found, files_uploaded)
-
 
     def listfamilies(self, *args):
         """
@@ -631,8 +671,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         # note that the following command requires that the upfdata has a
         # key called element. As such, it is not well separated.
         import argparse
-
-        from aiida.orm.data.upf import UPFGROUP_TYPE
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -648,44 +686,50 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_dbenv()
         from aiida.orm import DataFactory
+        from aiida.orm.data.upf import UPFGROUP_TYPE
 
         UpfData = DataFactory('upf')
-        groups = UpfData.get_upf_groups(filter_elements=parsed_args.element)
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.group import Group
+        qb = QueryBuilder()
+        qb.append(UpfData)
+        if parsed_args.element is not None:
+            qb.add_filter(UpfData, {'attributes.element': {'in': parsed_args.element}})
+        qb.append(
+            Group,
+            group_of=UpfData,
+            project=["name", "description"],
+            filters={"type": {'==': UPFGROUP_TYPE}}
+        )
 
-        if groups:
-            for g in groups:
-                pseudos = UpfData.query(dbgroups=g.dbgroup).distinct()
-                num_pseudos = pseudos.count()
-
-                pseudos_list = pseudos.filter(
-                    dbattributes__key="element").values_list(
-                    'dbattributes__tval', flat=True)
-
-                new_ps = pseudos.filter(
-                    dbattributes__key="element").values_list(
-                    'dbattributes__tval', flat=True)
+        qb.distinct()
+        if qb.count() > 0:
+            for res in qb.dict():
+                group_name = res.get("group").get("name")
+                group_desc = res.get("group").get("description")
+                qb = QueryBuilder()
+                qb.append(
+                    Group,
+                    filters={"name":  {'like': group_name}}
+                )
+                qb.append(
+                    UpfData,
+                    project=["id"],
+                    member_of=Group
+                )
 
                 if parsed_args.with_description:
-                    description_string = ": {}".format(g.description)
+                    description_string = ": {}".format(group_desc)
                 else:
                     description_string = ""
 
-                if num_pseudos != len(set(pseudos_list)):
-                    print ("x {} [INVALID: {} pseudos, for {} elements]{}"
-                           .format(g.name, num_pseudos, len(set(pseudos_list)),
-                                   description_string))
-                    print ("  Maybe the pseudopotential family wasn't "
-                           "setup with the uploadfamily function?")
+                print "* {} [{} pseudos]{}".format(group_name, qb.count(),
+                                                   description_string)
 
-                else:
-                    print "* {} [{} pseudos]{}".format(g.name, num_pseudos,
-                                                       description_string)
         else:
             print "No valid UPF pseudopotential family found."
 
-    
     def exportfamily(self, *args):
         """
         Export a pseudopotential family into a folder.
@@ -694,8 +738,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         import os
         from aiida.common.exceptions import NotExistent
         from aiida.orm import DataFactory
-        load_dbenv()
-        
+
         if not len(args) == 2:
             print >> sys.stderr, ("After 'upf export' there should be two "
                                   "arguments:")
@@ -704,7 +747,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
 
         folder = os.path.abspath(args[0])
         group_name = args[1]
-        
+
         UpfData = DataFactory('upf')
         try:
             group = UpfData.get_upf_group(group_name)
@@ -720,7 +763,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             else:
                 print >> sys.stdout, ("File {} is already present in the "
                                       "destination folder".format(u.filename))
-        
 
     def _import_upf(self, filename, **kwargs):
         """
@@ -742,6 +784,8 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.array.bands import BandsData
 
         self.dataclass = BandsData
@@ -759,131 +803,99 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
-        load_dbenv()
-        from collections import defaultdict
-        from aiida.orm import DataFactory
-        from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
-        from aiida.common.utils import grouper
-        from aiida.orm.data.structure import (get_formula, get_symbols_string,
-                                              has_vacancies)
-        from aiida.djsite.db import models
-        from aiida.orm import Node
-        from aiida.djsite.db.models import DbPath
+        if not is_dbenv_loaded():
+            load_dbenv()
 
-        query_group_size = 100  # we group the attribute query in chunks of this size
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.implementation import User
+        from aiida.orm.implementation import Group
+        from aiida.orm.data.structure import (get_formula, get_symbols_string)
+        from aiida.orm.data.array.bands import BandsData
+        from aiida.orm.data.structure import StructureData
 
-        StructureData = DataFactory('structure')
-        BandsData = DataFactory('array.bands')
-
-        # First, I run a query to get all BandsData of the past N days
-        q_object = None
+        qb = QueryBuilder()
         if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
+            au = get_automatic_user()
+            user = User(dbuser=au)
+            qb.append(User, tag="creator", filters={"email": user.email})
         else:
-            q_object = Q()
+            qb.append(User, tag="creator")
 
-        self.query_past_days(q_object, args)
-        self.query_group(q_object, args)
+        bdata_filters = {}
+        self.query_past_days_qb(bdata_filters, args)
+        qb.append(BandsData, tag="bdata", created_by="creator",
+                  filters=bdata_filters,
+                  project=["id", "label", "ctime"]
+                  )
 
-        bands_list = BandsData.query(q_object).distinct().order_by('ctime')
+        group_filters = {}
+        self.query_group_qb(group_filters, args)
+        if group_filters:
+            qb.append(Group, tag="group", filters=group_filters,
+                      group_of="bdata")
 
-        bands_list_data = bands_list.values_list('pk', 'label', 'ctime')
+        qb.append(StructureData, tag="sdata", ancestor_of="bdata",
+                  # We don't care about the creator of StructureData
+                  project=["id", "attributes.kinds", "attributes.sites"])
 
-        # split data in chunks
-        grouped_bands_list_data = grouper(query_group_size,
-                                          [(_[0], _[1], _[2]) for _ in bands_list_data])
+        qb.order_by({StructureData: {'ctime': 'desc'}})
+
+        list_data = qb.distinct()
 
         entry_list = []
+        already_visited_bdata = set()
+        if list_data.count() > 0:
+            for [bid, blabel, bdate, sid, akinds, asites] in list_data.iterall():
 
-        for this_chunk in grouped_bands_list_data:
-            # gather all banddata pks
-            pks = [_[0] for _ in this_chunk]
+                # We process only one StructureData per BandsData.
+                # We want to process the closest StructureData to
+                # every BandsData.
+                # We hope that the StructureData with the latest
+                # creation time is the closest one.
+                # This will be updated when the QueryBuilder supports
+                # order_by by the distance of two nodes.
+                if already_visited_bdata.__contains__(bid):
+                    continue
+                already_visited_bdata.add(bid)
 
-            # get all the StructureData that are parents of the selected bandsdatas
-            q_object = Q(child__in=pks)
-            if args.all_users is False:
-                q_object.add(Q(child__user=get_automatic_user()), Q.AND)
-            q_object.add(Q(parent__type='data.structure.StructureData.'), Q.AND)
-            structure_list = DbPath.objects.filter(q_object).distinct()
-            structure_list_data = structure_list.values_list('parent_id', 'child_id', 'depth')
-
-            # select the pks of all structure involved
-            # the right structure is chosen as the closest structure in the graph
-            struc_pks = []
-            for band_pk in pks:
-                try:
-                    struc_pks.append(min([_ for _ in structure_list_data if _[1] == band_pk],
-                                         key=lambda x: x[-1]
-                    )[0]
-                    )
-                except ValueError:  # no structure in input
-                    struc_pks.append(None)
-
-            # query for the attributes needed for the structure formula
-            attr_query = Q(key__startswith='kinds') | Q(key__startswith='sites')
-            attrs = models.DbAttribute.objects.filter(attr_query,
-                                                      dbnode__in=struc_pks).values_list(
-                'dbnode__pk', 'key', 'datatype', 'tval', 'fval',
-                'ival', 'bval', 'dval')
-
-            results = defaultdict(dict)
-            for attr in attrs:
-                results[attr[0]][attr[1]] = {"datatype": attr[2],
-                                             "tval": attr[3],
-                                             "fval": attr[4],
-                                             "ival": attr[5],
-                                             "bval": attr[6],
-                                             "dval": attr[7]}
-            # organize all of it in a dictionary
-            deser_data = {}
-            for k in results:
-                deser_data[k] = models.deserialize_attributes(results[k],
-                                                              sep=models.DbAttribute._sep)
-
-            # prepare the printout
-            for ((band_pk, label, date), struc_pk) in zip(this_chunk, struc_pks):
-                if struc_pk is not None:
-                    # Exclude structures by the elements
-                    if args.element is not None:
-                        all_kinds = [k['symbols'] for k in deser_data[struc_pk]['kinds']]
-                        all_symbols = [item for sublist in all_kinds for item in sublist]
-                        if not any([s in args.element for s in all_symbols]
-                        ):
-                            continue
-                    if args.element_only is not None:
-                        all_kinds = [k['symbols'] for k in deser_data[struc_pk]['kinds']]
-                        all_symbols = [item for sublist in all_kinds for item in sublist]
-                        if not all([s in all_symbols for s in args.element_only]
-                        ):
-                            continue
-
-                    # build the formula
-                    symbol_dict = {k['name']: get_symbols_string(k['symbols'],
-                                                                 k['weights'])
-                                   for k in deser_data[struc_pk]['kinds']}
-                    try:
-                        symbol_list = [symbol_dict[s['kind_name']]
-                                       for s in deser_data[struc_pk]['sites']]
-                        formula = get_formula(symbol_list,
-                                              mode=args.formulamode)
-                    # If for some reason there is no kind with the name
-                    # referenced by the site
-                    except KeyError:
-                        formula = "<<UNKNOWN>>"
-                        # cycle if we imposed the filter on elements
-                        if args.element is not None or args.element_only is not None:
-                            continue
-                else:
-                    formula = "<<UNKNOWN>>"
-                    # cycle if we imposed the filter on elements
-                    if args.element is not None or args.element_only is not None:
+                if args.element is not None:
+                    all_symbols = [_["symbols"][0] for _ in akinds]
+                    if not any([s in args.element for s in all_symbols]
+                               ):
                         continue
 
-                entry_list.append([str(band_pk),
-                                   str(formula),
-                                   date.strftime('%d %b %Y'),
-                                   label])
+                if args.element_only is not None:
+                    all_symbols = [_["symbols"][0] for _ in akinds]
+                    if not all(
+                            [s in all_symbols for s in args.element_only]
+                            ):
+                        continue
+
+                # We want only the StructureData that have attributes
+                if akinds is None or asites is None:
+                    continue
+
+                symbol_dict = {}
+                for k in akinds:
+                    symbols = k['symbols']
+                    weights = k['weights']
+                    symbol_dict[k['name']] = get_symbols_string(symbols,
+                                                                weights)
+
+                try:
+                    symbol_list = []
+                    for s in asites:
+                        symbol_list.append(symbol_dict[s['kind_name']])
+                    formula = get_formula(symbol_list,
+                                          mode=args.formulamode)
+                # If for some reason there is no kind with the name
+                # referenced by the site
+                except KeyError:
+                    formula = "<<UNKNOWN>>"
+                entry_list.append([str(bid), str(formula),
+                                   bdate.strftime('%d %b %Y'), blabel])
+
         return entry_list
 
     def append_list_cmdline_arguments(self, parser):
@@ -944,7 +956,7 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
 
     def _export_dat_blocks(self, node):
         """
-        Export a .dat file with one line per datapoint (kpt, energy), 
+        Export a .dat file with one line per datapoint (kpt, energy),
         with multiple bands separated in stanzas (i.e. having at least an empty
         newline inbetween).
         """
@@ -993,9 +1005,9 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
 
 
 class _Structure(VerdiCommandWithSubcommands,
-                 Listable, 
-                 Visualizable, 
-                 Exportable, 
+                 Listable,
+                 Visualizable,
+                 Exportable,
                  Importable,
                  Depositable):
     """
@@ -1006,6 +1018,8 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.structure import StructureData
 
         self.dataclass = StructureData
@@ -1016,100 +1030,85 @@ class _Structure(VerdiCommandWithSubcommands,
             'deposit': (self.deposit, self.complete_none),
             'import': (self.importfile, self.complete_none),
         }
-        
+
     def query(self, args):
         """
         Perform the query
         """
-        load_dbenv()
-        from collections import defaultdict
-        from aiida.orm import DataFactory
-        from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
-        from aiida.common.utils import grouper
-        from aiida.orm.data.structure import (get_formula, get_symbols_string,
-                                              has_vacancies)
-        from aiida.djsite.db import models
+        if not is_dbenv_loaded():
+            load_dbenv()
 
-        query_group_size = 100  # we group the attribute query in chunks of this size
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.data.structure import StructureData
+        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.implementation import User
+        from aiida.orm.implementation import Group
+        from aiida.orm.data.structure import (get_formula, get_symbols_string)
 
-        StructureData = DataFactory('structure')
-        q_object = None
+        qb = QueryBuilder()
         if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
+            au = get_automatic_user()
+            user = User(dbuser=au)
+            qb.append(User, tag="creator", filters={"email": user.email})
         else:
-            q_object = Q()
+            qb.append(User, tag="creator")
 
-        self.query_past_days(q_object, args)
-        self.query_group(q_object, args)
+        st_data_filters = {}
+        self.query_past_days_qb(st_data_filters, args)
+        qb.append(StructureData, tag="struc", created_by="creator",
+                  filters=st_data_filters,
+                  project=["id", "label", "attributes.kinds",
+                           "attributes.sites"])
 
-        if args.element is not None:
-            q1 = models.DbAttribute.objects.filter(key__startswith='kinds.',
-                                                   key__contains='.symbols.',
-                                                   tval=args.element[0])
-            struc_list = StructureData.query(q_object,
-                                             dbattributes__in=q1).distinct().order_by('ctime')
-            if args.elementonly:
-                print "Not implemented elementonly search"
-                sys.exit(1)
+        group_filters = {}
+        self.query_group_qb(group_filters, args)
+        if group_filters:
+            qb.append(Group, tag="group", filters=group_filters,
+                      group_of="struc")
 
-        else:
-            struc_list = StructureData.query(q_object).distinct().order_by('ctime')
-
-        struc_list_data = struc_list.values_list('pk', 'label')
-        # Used later for efficiency reasons
-        struc_list_data_dict = dict(struc_list_data)
+        struc_list_data = qb.distinct()
 
         entry_list = []
-        if struc_list:
-            struc_list_pks_grouped = grouper(query_group_size,
-                                             [_[0] for _ in struc_list_data])
+        if struc_list_data.count() > 0:
+            for [id, label, akinds, asites] in struc_list_data.iterall():
 
-            for struc_list_pks_part in struc_list_pks_grouped:
-                to_print = []
-                # get attributes needed for formula from another query
-                attr_query = Q(key__startswith='kinds') | Q(key__startswith='sites')
-                # key__endswith='kind_name')
-                attrs = models.DbAttribute.objects.filter(attr_query,
-                                                          dbnode__in=struc_list_pks_part).values_list(
-                    'dbnode__pk', 'key', 'datatype', 'tval', 'fval',
-                    'ival', 'bval', 'dval')
+                # If symbols are defined there is a filtering of the structures
+                # based on the element
+                # When QueryBuilder will support this (attribute)s filtering,
+                # it will be pushed in the query.
+                if args.element is not None:
+                    all_symbols = [_["symbols"][0] for _ in akinds]
+                    if not any([s in args.element for s in all_symbols]
+                               ):
+                        continue
 
-                results = defaultdict(dict)
-                for attr in attrs:
-                    results[attr[0]][attr[1]] = {
-                        "datatype": attr[2],
-                        "tval": attr[3],
-                        "fval": attr[4],
-                        "ival": attr[5],
-                        "bval": attr[6],
-                        "dval": attr[7]}
+                    if args.elementonly:
+                        print "Not implemented elementonly search"
+                        sys.exit(1)
 
-                deser_data = {}
-                for k in results:
-                    deser_data[k] = models.deserialize_attributes(results[k],
-                                                                  sep=models.DbAttribute._sep)
+                # We want only the StructureData that have attributes
+                if akinds is None or asites is None:
+                    continue
 
-                for s_pk in struc_list_pks_part:
-                    symbol_dict = {}
-                    for k in deser_data[s_pk]['kinds']:
-                        symbols = k['symbols']
-                        weights = k['weights']
-                        symbol_dict[k['name']] = get_symbols_string(symbols,
-                                                                    weights)
-                    try:
-                        symbol_list = []
-                        for s in deser_data[s_pk]['sites']:
-                            symbol_list.append(symbol_dict[s['kind_name']])
-                        formula = get_formula(symbol_list,
-                                              mode=args.formulamode)
-                    # If for some reason there is no kind with the name
-                    # referenced by the site
-                    except KeyError:
-                        formula = "<<UNKNOWN>>"
-                    entry_list.append([str(s_pk),
-                                       str(formula),
-                                       struc_list_data_dict[s_pk]])
+                symbol_dict = {}
+                for k in akinds:
+                    symbols = k['symbols']
+                    weights = k['weights']
+                    symbol_dict[k['name']] = get_symbols_string(symbols,
+                                                                weights)
+
+                try:
+                    symbol_list = []
+                    for s in asites:
+                        symbol_list.append(symbol_dict[s['kind_name']])
+                    formula = get_formula(symbol_list,
+                                          mode=args.formulamode)
+                # If for some reason there is no kind with the name
+                # referenced by the site
+                except KeyError:
+                    formula = "<<UNKNOWN>>"
+                entry_list.append([str(id), str(formula), label])
+
         return entry_list
 
     def append_list_cmdline_arguments(self, parser):
@@ -1169,7 +1168,7 @@ class _Structure(VerdiCommandWithSubcommands,
                     sys.exit(1)
                 else:
                     raise
-                
+
     def _show_ase(self,exec_name,structure_list):
         """
         Plugin to show the structure with the ASE visualizer
@@ -1177,10 +1176,10 @@ class _Structure(VerdiCommandWithSubcommands,
         try:
             from ase.visualize import view
             for structure in structure_list:
-                view(structure.get_ase()) 
+                view(structure.get_ase())
         except ImportError:
-            raise 
-    
+            raise
+
     def _show_vmd(self, exec_name, structure_list):
         """
         Plugin for vmd
@@ -1241,6 +1240,7 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         Plugin for TCOD
         """
+
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1279,7 +1279,7 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         # In order to deal with structures that do not have a cell defined:
         # We can increase the size of the cell from the minimal cell
-        # The minimal cell is the cell the just accomodates the structure given, 
+        # The minimal cell is the cell the just accomodates the structure given,
         # defined by the minimum and maximum of position in each dimension
         parser.add_argument('--vacuum-factor', type=float, default=1.0,
                 help = 'The factor by which the cell accomodating the structure should be increased, default: 1.0')
@@ -1328,13 +1328,40 @@ class _Structure(VerdiCommandWithSubcommands,
         except ValueError as e:
             print e
 
+    def _import_pwi(self, filename, **kwargs):
+        """
+        Imports a structure from a quantumespresso input file.
+        """
+        from os.path import abspath
+        from aiida.orm.data.structure import get_structuredata_from_qeinput
+        dont_store = kwargs.pop('dont_store')
+        view_in_ase = kwargs.pop('view')
 
+        print 'importing structure from: \n  {}'.format(abspath(filename))
+        filepath =  abspath(filename)
+
+        try:
+            new_structure = get_structuredata_from_qeinput(filepath=filepath)
+
+            if not dont_store:
+                new_structure.store()
+            if view_in_ase:
+                from ase.visualize import view
+                view(new_structure.get_ase())
+            print  (
+                    '  Succesfully imported structure {}, '
+                    '(PK = {})'.format(new_structure.get_formula(), new_structure.pk)
+                )
+
+        except ValueError as e:
+            print e
 
     def _deposit_tcod(self, node, parameter_data=None, **kwargs):
         """
         Deposition plugin for TCOD.
         """
         from aiida.tools.dbexporters.tcod import deposit
+
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1362,6 +1389,8 @@ class _Cif(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.cif import CifData
 
         self.dataclass = CifData
@@ -1407,10 +1436,10 @@ class _Cif(VerdiCommandWithSubcommands,
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
-        load_dbenv()
-        from aiida.orm import DataFactory
+        if not is_dbenv_loaded():
+            load_dbenv()
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.utils import get_automatic_user
 
         q_object = None
         if args.all_users is False:
@@ -1492,6 +1521,7 @@ class _Cif(VerdiCommandWithSubcommands,
         Deposition plugin for TCOD.
         """
         from aiida.tools.dbexporters.tcod import deposit
+
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1519,6 +1549,8 @@ class _Trajectory(VerdiCommandWithSubcommands,
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.array.trajectory import TrajectoryData
 
         self.dataclass = TrajectoryData
@@ -1563,7 +1595,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
                             help="ID of the trajectory step. If none is "
                                  "supplied, all steps are exported.",
                             type=int, action='store')
-        
+
     def _show_xcrysden(self, exec_name, trajectory_list, **kwargs):
         """
         Plugin for xcrysden
@@ -1604,6 +1636,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         """
         Plugin for TCOD
         """
+
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1640,6 +1673,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         Deposition plugin for TCOD.
         """
         from aiida.tools.dbexporters.tcod import deposit
+
         parameters = None
         if parameter_data is not None:
             from aiida.orm import DataFactory
@@ -1667,6 +1701,8 @@ class _Parameter(VerdiCommandWithSubcommands, Visualizable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.orm.data.parameter import ParameterData
 
         self.dataclass = ParameterData
@@ -1695,6 +1731,9 @@ class _Array(VerdiCommandWithSubcommands, Visualizable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         from aiida.orm.data.array import ArrayData
 
         self.dataclass = ArrayData

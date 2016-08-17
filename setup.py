@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 try:
     from setuptools import setup, find_packages
@@ -16,7 +16,7 @@ aiida_folder = os.path.split(os.path.abspath(__file__))[0]
 fname = os.path.join(aiida_folder, 'aiida', '__init__.py')
 with open(fname) as aiida_init:
     ns = {}
-    exec(aiida_init.read(), ns)
+    exec (aiida_init.read(), ns)
     aiida_version = ns['__version__']
 
 if os.path.exists('CHANGELOG_EPFL.txt'):
@@ -41,13 +41,13 @@ setup(
     # for a useful dicussion
     install_requires=[
         'django', 'django_extensions', 'pytz', 'django-celery',
-        'celery', 'kombu', 'billiard', 'amqp', 'anyjson', 'six', 'supervisor',
+        'celery', 'billiard', 'anyjson', 'six', 'supervisor',
         'meld3', 'paramiko', 'ecdsa', 'pycrypto', 'numpy', 'django-tastypie',
-        'python-dateutil', 'python-mimeparse',
-        ],
+        'python-dateutil', 'python-mimeparse', 'plum', 'enum34', 'voluptuous',
+        'click',
+    ],
     packages=find_packages(),
     scripts=[os.path.join(bin_folder, f) for f in os.listdir(bin_folder)
              if not os.path.isdir(os.path.join(bin_folder, f))],
     long_description=open(os.path.join(aiida_folder, 'README.rst')).read(),
 )
-

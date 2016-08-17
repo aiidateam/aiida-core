@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import sys
 
-from aiida import load_dbenv
+from aiida.backends.utils import load_dbenv
 from aiida.cmdline.baseclass import VerdiCommand
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uhrin, Nicolas Mounet"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class Export(VerdiCommand):
@@ -25,7 +25,7 @@ class Export(VerdiCommand):
         import argparse
 
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db import models
+        from aiida.backends.djsite.db import models
         from aiida.orm import Group
         from aiida.orm.importexport import export, export_zip
 
@@ -98,7 +98,7 @@ class Export(VerdiCommand):
                 groups_list.append(group.dbgroup)
         
         node_pk_list = set(node_pk_list)
-        
+
         node_list = list(
             models.DbNode.objects.filter(pk__in=node_pk_list))
         missing_nodes = node_pk_list.difference(_.pk for _ in node_list)

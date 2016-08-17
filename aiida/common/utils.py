@@ -1,21 +1,27 @@
 # -*- coding: utf-8 -*-
+import datetime
+import filecmp
+import functools
 import os.path
 import string
+import sys
+
+from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Leonid Kahle, Martin Uhrin, Tiziano Müller"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class classproperty(object):
     """
-    A class that, when used as a decorator, works as if the 
+    A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together
     (i.e., the object works as a property, both for the Class and for any
-    of its instance; and is called with the class cls rather than with the 
+    of its instance; and is called with the class cls rather than with the
     instance as its first argument).
     """
 
@@ -26,30 +32,47 @@ class classproperty(object):
         return self.getter(owner)
 
 
+def get_configured_user_email():
+    """
+    Return the email (that is used as the username) configured during the
+    first verdi install.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.setup import get_profile_config, DEFAULT_USER_CONFIG_FIELD
+    from aiida.backends import settings
+
+    try:
+        profile_conf = get_profile_config(settings.AIIDADB_PROFILE,
+                                          set_test_location=False)
+        email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
+    # I do not catch the error in case of missing configuration, because
+    # it is already a ConfigurationError
+    except KeyError:
+        raise ConfigurationError("No 'default_user' key found in the "
+                                 "AiiDA configuration file".format(
+            DEFAULT_USER_CONFIG_FIELD))
+    return email
+
+
 def get_new_uuid():
     """
     Return a new UUID (typically to be used for new nodes).
-    It uses the UUID version specified in 
-    aiida.djsite.settings.settings_profile.AIIDANODES_UUID_VERSION
+    It uses the UUID version specified in
+    aiida.backends.settings.AIIDANODES_UUID_VERSION
     """
-    from aiida.djsite.settings.settings_profile import (
-        AIIDANODES_UUID_VERSION)
+    from aiida.backends.settings import AIIDANODES_UUID_VERSION
     import uuid
-
-    # Taken from UUIDField
-    try:
-        from django.utils.encoding import force_unicode
-    except ImportError:
-        from django.utils.encoding import force_text as force_unicode
 
     if AIIDANODES_UUID_VERSION != 4:
         raise NotImplementedError("Only version 4 of UUID supported currently")
 
     the_uuid = uuid.uuid4()
-    return force_unicode(the_uuid)
+    return unicode(the_uuid)
+
 
 # To speed up the process (os.path.abspath calls are slow)
 _repository_folder_cache = {}
+
 
 def get_repository_folder(subfolder=None):
     """
@@ -59,8 +82,8 @@ def get_repository_folder(subfolder=None):
         return _repository_folder_cache[subfolder]
     except KeyError:
         try:
-            from aiida.djsite.settings.settings import REPOSITORY_PATH
-            
+            from aiida.settings import REPOSITORY_PATH
+
             if not os.path.isdir(REPOSITORY_PATH):
                 raise ImportError
         except ImportError:
@@ -71,7 +94,8 @@ def get_repository_folder(subfolder=None):
         elif subfolder == "sandbox":
             retval = os.path.abspath(os.path.join(REPOSITORY_PATH, 'sandbox'))
         elif subfolder == "repository":
-            retval = os.path.abspath(os.path.join(REPOSITORY_PATH, 'repository'))
+            retval = os.path.abspath(
+                os.path.join(REPOSITORY_PATH, 'repository'))
         else:
             raise ValueError("Invalid 'subfolder' passed to "
                              "get_repository_folder: {}".format(subfolder))
@@ -83,19 +107,19 @@ def escape_for_bash(str_to_escape):
     """
     This function takes any string and escapes it in a way that
     bash will interpret it as a single string.
-    
+
     Explanation:
 
     At the end, in the return statement, the string is put within single
     quotes. Therefore, the only thing that I have to escape in bash is the
     single quote character. To do this, I substitute every single
     quote ' with '"'"' which means:
-                 
+
     First single quote: exit from the enclosing single quotes
 
     Second, third and fourth character: "'" is a single quote character,
     escaped by double quotes
-    
+
     Last single quote: reopen the single quote to continue the string
 
     Finally, note that for python I have to enclose the string '"'"'
@@ -115,7 +139,7 @@ def get_suggestion(provided_string, allowed_strings):
     Args:
         provided_string: the string to compare
         allowed_strings: a list of valid strings
-    
+
     Returns:
         A string to print on output, to suggest to the user a possible valid
         value.
@@ -189,7 +213,7 @@ def conv_to_fortran(val):
 def get_unique_filename(filename, list_of_filenames):
     """
     Return a unique filename that can be added to the list_of_filenames.
-    
+
     If filename is not in list_of_filenames, it simply returns the filename
     string itself. Otherwise, it appends a integer number to the filename
     (before the extension) until it finds a unique filename.
@@ -197,7 +221,7 @@ def get_unique_filename(filename, list_of_filenames):
     :param filename: the filename to add
     :param list_of_filenames: the list of filenames to which filename
         should be added, without name duplicates
-    
+
     :returns: Either filename or its modification, with a number appended
         between the name and the extension.
     """
@@ -338,9 +362,9 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):
 
 def create_display_name(field):
     """
-    Given a string, creates the suitable "default" display name: replace 
+    Given a string, creates the suitable "default" display name: replace
     underscores with spaces, and capitalize each word.
-    
+
     :return: the converted string
     """
     return ' '.join(_.capitalize() for _ in field.split('_'))
@@ -389,7 +413,7 @@ def grouper(n, iterable):
     Given an iterable, returns an iterable that returns tuples of groups of
     elements from iterable of length n, except the last one that has the
     required length to exaust iterable (i.e., there is no filling applied).
-    
+
     :param n: length of each tuple (except the last one,that will have length
        <= n
     :param iterable: the iterable to divide in groups
@@ -435,6 +459,7 @@ def gunzip_string(string):
         g = gzip.open(f.name, 'rb')
         return g.read()
 
+
 def xyz_parser_iterator(string):
     """
     Yields a tuple `(natoms, comment, atomiter)`for each frame
@@ -449,6 +474,7 @@ def xyz_parser_iterator(string):
         An iterator for wrapping the iterator returned by `match.finditer`
         to extract the required fields directly from the match object
         """
+
         def __init__(self, it, natoms):
             self._it = it
             self._natoms = natoms
@@ -468,15 +494,15 @@ def xyz_parser_iterator(string):
                 else:
                     # otherwise we got too less entries
                     raise TypeError("Number of atom entries ({}) is smaller "
-                        "than the number of atoms ({})".format(
-                            self._catom, self._natoms))
+                                    "than the number of atoms ({})".format(
+                        self._catom, self._natoms))
 
             self._catom += 1
 
             if self._catom > self._natoms:
                 raise TypeError("Number of atom entries ({}) is larger "
-                    "than the number of atoms ({})".format(
-                        self._catom, self._natoms))
+                                "than the number of atoms ({})".format(
+                    self._catom, self._natoms))
 
             return (
                 match.group('sym'),
@@ -484,7 +510,7 @@ def xyz_parser_iterator(string):
                     float(match.group('x')),
                     float(match.group('y')),
                     float(match.group('z'))
-                    ))
+                ))
 
         def next(self):
             """
@@ -546,7 +572,8 @@ def xyz_parser_iterator(string):
             BlockIterator(
                 pos_regex.finditer(block.group('positions')),
                 natoms)
-            )
+        )
+
 
 class EmptyContextManager(object):
     def __enter__(self):
@@ -556,8 +583,279 @@ class EmptyContextManager(object):
         pass
 
 
-def get_extremas_from_positions (positions):
+def get_extremas_from_positions(positions):
     """
     returns the minimum and maximum value for each dimension in the positions given
     """
-    return zip(*[(min(values), max(values)) for values in  zip(* positions)])
+    return zip(*[(min(values), max(values)) for values in zip(*positions)])
+
+
+def get_fortfloat(key, txt, be_case_sensitive=True):
+    """
+    Matches a fortran compatible specification of a float behind a defined key in a string.
+    :param key: The key to look for
+    :param txt: The string where to search for the key
+    :param be_case_sensitive: An optional boolean whether to search case-sensitive, defaults to ``True``
+
+    If abc is a key, and f is a float, number, than this regex
+    will match t and return f in the following cases:
+
+    *   charsbefore, abc = f, charsafter
+    *   charsbefore
+        abc = f
+        charsafter
+    *   charsbefore, abc = f
+        charsafter
+
+    and vice-versa.
+    If no float is matched, returns None
+
+    Exampes of matchable floats are:
+
+    *   0.1d2
+    *   0.D-3
+    *   .2e1
+    *   -0.23
+    *   23.
+    *   232
+    """
+    import re
+    pattern = """
+        [\n,]                       # key - value pair can be prepended by comma or start
+        [ \t]*                      # in a new line and some optional white space
+        {}                          # the key goes here
+        [ \t]*                      # Optional white space between key and equal sign
+        =                           # Equals, you can put [=:,] if you want more specifiers
+        [ \t]*                      # optional white space between specifier and float
+        (?P<float>                  # Universal float pattern
+            ( \d*[\.]\d+  |  \d+[\.]?\d* )
+            ([ E | D | e | d ] [+|-]? \d+)?
+        )
+        [ \t]*[,\n,#]               # Can be followed by comma, end of line, or a comment
+        """.format(key)
+    REKEYS = re.X | re.M if be_case_sensitive else re.X | re.M | re.I
+    match = re.search(
+        pattern,
+        txt,
+        REKEYS)
+    if not match:
+        return None
+    else:
+        return float(match.group('float').replace('d', 'e').replace('D', 'e'))
+
+
+def ask_question(question, reply_type, allow_none_as_answer):
+    """
+    This method asks a specific question, tries to parse the given reply
+    and then it verifies the parsed answer.
+    :param question: The question to be asked.
+    :param reply_type: The type of the expected answer (int, datetime etc). It
+    is needed for the parsing of the answer.
+    :param allow_none_as_answer: Allow empty answers?
+    :return: The parsed reply.
+    """
+    final_answer = None
+
+    while True:
+        answer = query_string(question, "")
+
+        # If the reply is empty
+        if not answer:
+            if not allow_none_as_answer:
+                continue
+        # Otherwise, try to parse it
+        else:
+            try:
+                if reply_type == int:
+                    final_answer = int(answer)
+                elif reply_type == float:
+                    final_answer = float(answer)
+                elif reply_type == datetime.datetime:
+                    final_answer = parse(answer)
+                else:
+                    raise ValueError
+            # If it is not parsable...
+            except ValueError:
+                sys.stdout.write("The given value could not be parsed. " +
+                                 "Type expected: {}\n".format(reply_type))
+                # If the timestamp could not have been parsed,
+                # ask again the same question.
+                continue
+
+        if query_yes_no("{} was parsed. Is it correct?"
+                                .format(final_answer), default="yes"):
+            break
+    return final_answer
+
+
+def query_yes_no(question, default="yes"):
+    """Ask a yes/no question via raw_input() and return their answer.
+
+    "question" is a string that is presented to the user.
+    "default" is the presumed answer if the user just hits <Enter>.
+    It must be "yes" (the default), "no" or None (meaning
+    an answer is required of the user).
+
+    The "answer" return value is True for "yes" or False for "no".
+    """
+    valid = {"yes": True, "y": True, "ye": True,
+             "no": False, "n": False}
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        choice = raw_input(question + prompt).lower()
+        if default is not None and not choice:
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' "
+                             "(or 'y' or 'n').\n")
+
+
+def query_string(question, default):
+    """
+    Asks a question (with the option to have a default, predefined answer,
+    and depending on the default answer and the answer of the user the
+    following options are available:
+    - If the user replies (with a non empty answer), then his answer is
+    returned.
+    - If the default answer is None then the user has to reply with a non-empty
+    answer.
+    - If the default answer is not None, then it is returned if the user gives
+    an empty answer. In the case of empty default answer and empty reply from
+    the user, None is returned.
+    :param question: The question that we want to ask the user.
+    :param default: The default answer (if there is any) to the question asked.
+    :return: The returned reply.
+    """
+
+    if default is None or not default:
+        prompt = ""
+    else:
+        prompt = " [{}]".format(default)
+
+    while True:
+        reply = raw_input(question + prompt)
+        if default is not None and not reply:
+            # If the default answer is an empty string.
+            if not default:
+                return None
+            else:
+                return default
+        elif reply:
+            return reply
+        else:
+            sys.stdout.write("Please provide a non empty answer.\n")
+
+
+def flatten_list(value):
+    """
+    Flattens a list or a tuple
+    In [2]: flatten_list([[[[[4],3]],[3],['a',[3]]]])
+    Out[2]: [4, 3, 3, 'a', 3]
+
+    :param value: A value, whether iterable or not
+    :returns: a list of nesting level 1
+    """
+
+    if isinstance(value, (list, tuple)):
+        return_list = []
+        [[return_list.append(i) for i in flatten_list(item)] for item in value]
+        return return_list
+    return [value]
+
+
+class combomethod(object):
+    """
+    A decorator that wraps a function that can be both a classmethod or
+    instancemethod and behaves accordingly::
+
+        class A():
+
+            @combomethod
+            def do(self, **kwargs):
+                isclass = kwargs.get('isclass')
+                if isclass:
+                    print "I am a class", self
+                else:
+                    print "I am an instance", self
+
+        A.do()
+        A().do()
+
+        >>> I am a class __main__.A
+        >>> I am an instance <__main__.A instance at 0x7f2efb116e60>
+
+    Attention: For ease of handling, pass keyword **isclass**
+    equal to True if this was called as a classmethod and False if this
+    was called as an instance.
+    The argument self is therefore ambiguous!
+    """
+
+    def __init__(self, method):
+        self.method = method
+
+    def __get__(self, obj=None, objtype=None):
+        @functools.wraps(self.method)
+        def _wrapper(*args, **kwargs):
+            kwargs.pop('isclass', None)
+            if obj is not None:
+                return self.method(obj, *args, isclass=False, **kwargs)
+            return self.method(objtype, *args, isclass=True, **kwargs)
+
+        return _wrapper
+
+
+class ArrayCounter(object):
+    """
+    A counter & a method that increments it and returns its value.
+    It is used in various tests.
+    """
+    seq = None
+
+    def __init__(self):
+        self.seq = -1
+
+    def array_counter(self):
+        self.seq += 1
+        return self.seq
+
+
+def are_dir_trees_equal(dir1, dir2):
+    """
+    Compare two directories recursively. Files in each directory are
+    assumed to be equal if their names and contents are equal.
+
+    @param dir1: First directory path
+    @param dir2: Second directory path
+
+    @return: True if the directory trees are the same and
+        there were no errors while accessing the directories or files,
+        False otherwise.
+    """
+    dirs_cmp = filecmp.dircmp(dir1, dir2)
+    if (len(dirs_cmp.left_only) > 0 or len(dirs_cmp.right_only) > 0 or
+                len(dirs_cmp.funny_files) > 0):
+        return False
+    (_, mismatch, errors) = filecmp.cmpfiles(
+        dir1, dir2, dirs_cmp.common_files, shallow=False)
+    if len(mismatch) > 0 or len(errors) > 0:
+        return False
+    for common_dir in dirs_cmp.common_dirs:
+        new_dir1 = os.path.join(dir1, common_dir)
+        new_dir2 = os.path.join(dir2, common_dir)
+        if not are_dir_trees_equal(new_dir1, new_dir2):
+            return False
+    return True
+
+
+def indent(txt, spaces=4):
+    return "\n".join(" "*spaces + ln for ln in txt.splitlines())

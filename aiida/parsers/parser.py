@@ -3,20 +3,19 @@
 This module implements a generic output plugin, that is general enough
 to allow the reading of the outputs of a calculation.
 """
-from aiida.common.datastructures import calc_states
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin, Tiziano Müller"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 class Parser(object):
     """
     Base class for a parser object.
-    
-    Receives a Calculation object. This should be in the PARSING state. 
-    Raises ValueError otherwise 
+
+    Receives a Calculation object. This should be in the PARSING state.
+    Raises ValueError otherwise
     Looks for the attached parser_opts or input_settings nodes attached to the calculation.
     Get the child Folderdata, parse it and store the parsed data.
     """
@@ -40,7 +39,7 @@ class Parser(object):
         extras of the calculation
         """
         import logging
-        from aiida.djsite.utils import get_dblogger_extra
+        from aiida.utils.logger import get_dblogger_extra
 
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self._calc))
@@ -56,7 +55,7 @@ class Parser(object):
         """
         Parses the datafolder, stores results.
         Main functionality of the class. If you only have one retrieved node,
-        you do not need to reimplement this. Implement only the 
+        you do not need to reimplement this. Implement only the
         parse_from_retrieved
         """
         # select the folder object
@@ -95,7 +94,7 @@ class Parser(object):
     def get_result_parameterdata_node(self):
         """
         Return the parameterdata node.
-        
+
         :raise UniquenessError: if the node is not unique
         :raise NotExistent: if the node does not exist
         """
@@ -103,7 +102,8 @@ class Parser(object):
         from aiida.common.exceptions import NotExistent
 
         out_parameters = self._calc.get_outputs(type=ParameterData, also_labels=True)
-        out_parameterdata = [i[1] for i in out_parameters if i[0] == self.get_linkname_outparams()]
+        out_parameterdata = [i[1] for i in out_parameters
+                             if i[0] == self.get_linkname_outparams()]
 
         if not out_parameterdata:
             raise NotExistent("No output .res ParameterData node found")
@@ -116,18 +116,17 @@ class Parser(object):
 
         return out_parameterdata[0]
 
-
     def get_result_keys(self):
         """
         Return an iterator of list of strings of valid result keys,
         that can be then passed to the get_result() method.
-        
+
         :note: the function returns an empty list if no output params node
           can be found (either because the parser did not create it, or because
           the calculation has not been parsed yet).
-        
+
         :raise UniquenessError: if more than one output node with the name
-          self._get_linkname_outparams() is found. 
+          self._get_linkname_outparams() is found.
         """
         from aiida.common.exceptions import NotExistent
 
@@ -158,4 +157,3 @@ class Parser(object):
         # and convert in the right units)
 
         return value
-

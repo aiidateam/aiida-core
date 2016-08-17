@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
+
+import datetime
+
 from aiida.common.exceptions import ValidationError, MissingPluginError
 
-__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 current_autogroup = None
 
@@ -19,10 +22,10 @@ class Autogroup(object):
     In the store(), the Node will check if current_autogroup is != None.
     If so, it will call Autogroup.is_to_be_grouped, and decide whether to put it in a group.
     Such autogroups are going to be of the VERDIAUTOGROUP_TYPE.
-    
+
     The exclude/include lists, can have values 'all' if you want to include/exclude all classes.
     Otherwise, they are lists of strings like: calculation.quantumespresso.pw, data.array.kpoints, ...
-    i.e.: a string identifying the base class, than the path to the class as in Calculation/Data -Factories 
+    i.e.: a string identifying the base class, than the path to the class as in Calculation/Data -Factories
     """
 
     def _validate(self, param, is_exact=True):
@@ -99,14 +102,12 @@ class Autogroup(object):
 
     def get_group_name(self):
         """
-        Get the name of the group. 
+        Get the name of the group.
         If no group name was set, it will set a default one by itself.
         """
         try:
             return self.group_name
         except AttributeError:
-            import datetime
-
             now = datetime.datetime.now()
             gname = "Verdi autogroup on " + now.strftime("%Y-%m-%d %H:%M:%S")
             self.set_group_name(gname)
@@ -162,7 +163,7 @@ class Autogroup(object):
     def is_to_be_grouped(self, the_class):
         """
         :return (bool): Returns True if the_class has to be included in the autogroup,
-        according to which classes are specified in the include/exclude lists 
+        according to which classes are specified in the include/exclude lists
         """
         include = self.get_include()
         include_ws = self.get_include_with_subclasses()

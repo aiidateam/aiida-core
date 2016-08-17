@@ -9,7 +9,7 @@
 ## sudo pip install --upgrade setuptools
 
 ## For postgreSQL
-psycopg2==2.6
+psycopg2==2.6.1
 
 ## For MySQL
 MySQL-python==1.2.5
@@ -29,3 +29,18 @@ pyspglib
 
 ## Support for the AiiDA CifData class
 PyCifRW==3.6.2.1
+
+## ICSD tools
+PyMySQL>=0.6.1
+
+## For documentation
+sphinx==1.2.3
+pygments==2.0.2
+docutils==0.12
+jinja2==2.7.3
+markupsafe==0.23
+## For a nicer documentation theme (from read the docs):
+sphinx_rtd_theme
+
+# For the deamon to use kombu message passing
+kombu==3.0.35

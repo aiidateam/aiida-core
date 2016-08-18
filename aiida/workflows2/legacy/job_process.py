@@ -2,6 +2,7 @@
 
 import plum.port as port
 import plum.process
+import plum.util
 from aiida.common.lang import override
 from aiida.workflows2.process import Process, DictSchema
 from voluptuous import Any
@@ -56,6 +57,8 @@ class JobProcess(Process):
             # Outputs
             spec.dynamic_output(valid_type=Data)
 
+        class_name = "{}_{}".format(
+            JobProcess.__name__, plum.util.fullname(calc_class))
         return type(calc_class.__name__, (JobProcess,),
                     {'_define': staticmethod(_define),
                      '_CALC_CLASS': calc_class})

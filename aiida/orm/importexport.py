@@ -769,6 +769,7 @@ def serialize_field(data, track_conversion=False):
     """
     import datetime
     import pytz
+    from uuid import UUID
 
     if isinstance(data, dict):
         if track_conversion:
@@ -799,6 +800,9 @@ def serialize_field(data, track_conversion=False):
         ret_data = data.astimezone(pytz.utc).strftime(
             '%Y-%m-%dT%H:%M:%S.%f')
         ret_conversion = 'date'
+    elif isinstance(data, UUID):
+        ret_data = str(data)
+        ret_conversion = None
     else:
         ret_data = data
         ret_conversion = None
@@ -1331,7 +1335,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str):
     entity_prop = all_fields_info[sqla_current_entity_str].keys()
 
     # sqla_current_entity_str = django_to_sqla_schema[current_entity_str]
-    project_cols = list()
+    # project_cols = list()
+    project_cols = ["id"]
     for prop in entity_prop:
         nprop = prop
         if django_fields_to_sqla.has_key(current_entity_str):
@@ -1373,7 +1378,6 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str):
         fill_in_query(partial_query, current_entity_str, ref_model_name)
 
 
-
 def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
                 allowed_licenses=None, forbidden_licenses=None,
                 silent=False):
@@ -1400,15 +1404,11 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     :raises LicensingException: if any node is licensed under forbidden
       license
     """
-#
-# def spyros():
     import json
-    import operator
+    import aiida
+
     from collections import defaultdict
 
-    # from django.db.models import Q
-
-    import aiida
     # from aiida.backends.djsite.db import models
     from aiida.backends.sqlalchemy import models
     from aiida.orm import Node, Calculation
@@ -1498,6 +1498,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     # entries_to_add = {k: [Q(id__in=v)]for k, v
     #                   in entries_ids_to_add. iteritems()}
 
+    export_data = dict()
     ############################################################
     ##### Start automatic recursive export data generation #####
     ############################################################
@@ -1520,18 +1521,28 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
         print "===============> "
         # print str(partial_query)
-        print partial_query.all()
-        sys.exit(0)
+        # print partial_query.dict()
+
+        for temp_d in partial_query.iterdict():
+            for k in temp_d.keys():
+                temp_d2 = {temp_d[k]["id"]: serialize_dict(temp_d[k], remove_fields=['id'])}
+                try:
+                    export_data[k].update(temp_d2)
+                except KeyError:
+                    export_data[k] = temp_d2
+
+
+    print export_data
 
     # Until here
-    sys.exit()
+    # sys.exit()
 
 
     ######################################
     # Manually manage links and attributes
     ######################################
     # I use .get because there may be no nodes to export
-    all_nodes_pk = export_data.get(get_class_string(models.DbNode), {}).keys()
+    all_nodes_pk = export_data.get("aiida.backends.sqlalchemy.models.node.DbNode").keys()
     if sum(len(model_data) for model_data in export_data.values()) == 0:
         if not silent:
             print "No nodes to store, exiting..."
@@ -1541,17 +1552,37 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
         print "Exporting a total of {} db entries, of which {} nodes.".format(
             sum(len(model_data) for model_data in export_data.values()),
             len(all_nodes_pk))
-    all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
+
+    # !!!!!!!! WHY AGAIN ANOTHER QUERY FOR ALREADY EXTRACTED NODES !!!!!
+    # => In order to get the attributes too... => See if this can be optimized
+    all_nodes_query = QueryBuilder()
+    all_nodes_query.append(Node, filters={"id": {"in": all_nodes_pk}}, project=["*"])
+    # all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
+
+    # sys.exit()
+
+    # if not silent:
+    #     print "Exporting a total of {} db entries, of which {} nodes.".format(
+    #         sum(len(model_data) for model_data in export_data.values()),
+    #         len(all_nodes_pk))
+    # all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
 
     ## ATTRIBUTES
     if not silent:
         print "STORING NODE ATTRIBUTES..."
     node_attributes = {}
     node_attributes_conversion = {}
-    for n in all_nodes_query:
+    for res in all_nodes_query.iterall():
+        n = res[0]
         (node_attributes[str(n.pk)],
          node_attributes_conversion[str(n.pk)]) = serialize_dict(
-            n.attributes, track_conversion=True)
+            n.get_attrs(), track_conversion=True)
+        # for item in n.get_attrs().iteritems():
+        #     (node_attributes[str(n.pk)],
+        #      node_attributes_conversion[str(n.pk)]) = item
+
+    # See if the above is correct!!!!
+
     ## If I want to store them 'raw'; it is faster, but more error prone and
     ## less version-independent, I think. Better to optimize the n.attributes
     ## call.
@@ -1566,16 +1597,25 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     ## All 'parent' links (in this way, I can automatically export a node
     ## that will get automatically attached to a parent node in the end DB,
     ## if the parent node is already present in the DB)
-    linksquery = models.DbLink.objects.filter(
-        output__in=all_nodes_query).distinct()
+    from aiida.backends.sqlalchemy import session
+    from aiida.backends.sqlalchemy.models.node import DbLink
+    # authinfo = session.query(DbLink).filter(DbLink.output_id.in_(all_nodes_pk)).all()
+    linksquery = session.query(DbLink).filter(
+        DbLink.output_id.in_(all_nodes_pk)).distinct()
 
-    links_uuid = [
-        serialize_dict(l, rename_fields={
-            'input__uuid': 'input',
-            'output__uuid': 'output'})
-        for l in linksquery.values(
-            'input__uuid', 'output__uuid', 'label')]
+    print "================="
 
+    print linksquery.all()
+
+    # I have to find a way to project only specific columns -
+    # To be seen with Leo
+    links_uuid = list()
+    for link in linksquery.all():
+        links_uuid.append({"input": str(link.input.uuid),
+                           "output": str(link.output.uuid),
+                           "label": str(link.label)})
+
+    # The following has to be written more properly
     if not silent:
         print "STORING GROUP ELEMENTS..."
     groups_uuid = {g.uuid: list(g.dbnodes.values_list('uuid', flat=True))
@@ -1615,8 +1655,13 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
     # Large speed increase by not getting the node itself and looping in memory
     # in python, but just getting the uuid
-    for uuid in models.DbNode.objects.filter(pk__in=all_nodes_pk).values_list(
-        'uuid', flat=True):
+    # for uuid in models.DbNode.objects.filter(pk__in=all_nodes_pk).values_list(
+    #     'uuid', flat=True):
+    uuid_query = QueryBuilder()
+    uuid_query.append(Node, filters={"id": {"in": all_nodes_pk}},
+                               project=["uuid"])
+    for res in uuid_query.all():
+        uuid =  str(res[0])
         sharded_uuid = export_shard_uuid(uuid)
 
         # Important to set create=False, otherwise creates

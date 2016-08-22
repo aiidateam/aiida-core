@@ -1,11 +1,12 @@
-##########AIIDA RESTAPI README file#################
+########## AIIDA RESTAPI README file #################
 
 ========================
 Required python packages
 =======================
--flask
--flask_restul
--pyparsing
+
+Install required packages using command:
+cd <aiida_installation_path>
+pip install --user --upgrade -r requirements.txt
 
 
 =========================================

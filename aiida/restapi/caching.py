@@ -1,5 +1,5 @@
 from flask_cache import Cache
-from aiida.restapi.flaskapi import app
+from aiida.restapi.api import app
 from aiida.restapi.common.config import cache_config
 
 #Would be nice to be able to specify here what has to be cached or not!

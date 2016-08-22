@@ -1,6 +1,6 @@
-===================
-REST API for AiiDA
-===================
+==========
+REST API
+==========
 
 AiiDA provides a REST API to access different AiiDA objects stored
 in the database. The AiiDA objects are of four types: *Computer*, *Node*, *User*,

@@ -70,3 +70,8 @@ tabulate==0.7.5
 
 # To get ASCII trees, may make this optional later
 ete3==3.0.0b35
+
+# REST API
+flask==0.10.1
+flask_restful==0.3.5
+pyparsing==2.1.8

@@ -5,19 +5,19 @@ import uuid
 
 import plum.port as port
 import plum.process
-import plum.process_monitor
-from plum.wait_ons import Checkpoint
+from plum.process_monitor import MONITOR
 
 import aiida.orm
 import aiida.workflows2.util as util
 from aiida.orm import load_node
 import voluptuous
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
+from aiida.workflows2.defaults import class_loader
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -108,6 +108,9 @@ class Process(plum.process.Process):
     def _define(cls, spec):
         super(Process, cls)._define(spec)
 
+        spec.input("_store_provenance", valid_type=bool, default=True,
+                   required=False)
+
         spec.dynamic_input(valid_type=aiida.orm.Data)
         spec.dynamic_output(valid_type=aiida.orm.Data)
 
@@ -133,11 +136,11 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, store_provenance=True):
+    def __init__(self):
         super(Process, self).__init__()
         self._calc = None
         self._parent_pid = None
-        self._store_provenance = store_provenance
+        self._store_provenance = True
 
     @property
     def calc(self):
@@ -147,19 +150,12 @@ class Process(plum.process.Process):
     def save_instance_state(self, bundle):
         super(Process, self).save_instance_state(bundle)
 
-        # bundle[self._INPUTS] = self._convert_to_ids(self.inputs)
         if self._store_provenance:
             assert self._calc.is_stored
 
         bundle[self.KEY_CALC_ID] = self.pid
 
-    @override
-    def _run(self, **kwargs):
-        return self._main(**kwargs)
-
-    @abstractmethod
-    def _main(self, **kwargs):
-        pass
+        bundle.set_class_loader(class_loader)
 
     def run_after_queueing(self, wait_on):
         return self._run
@@ -174,42 +170,6 @@ class Process(plum.process.Process):
         else:
             return super(Process, self).out(output_port, value)
 
-    def _convert_to_ids(self, nodes):
-        from aiida.orm import Node
-
-        input_ids = {}
-        for label, node in nodes.iteritems():
-            if node is None:
-                continue
-            elif isinstance(node, Node):
-                if node.is_stored:
-                    input_ids[label] = node.pk
-                else:
-                    # Try using the UUID, but there's probably no chance of
-                    # being abel to recover the node from this if not stored
-                    # (for the time being)
-                    input_ids[label] = node.uuid
-            elif isinstance(node, collections.Mapping):
-                input_ids[label] = self._convert_to_ids(node)
-        return input_ids
-
-    def _load_nodes_from(self, pks_mapping):
-        """
-        Take a dictionary of of {label: pk} or nested dictionary i.e.
-        {label: {label: pk}} and convert to the equivalent dictionary but
-        with nodes instead of the ids.
-
-        :param pks_mapping: The dictionary of node pks.
-        :return: A dictionary with the loaded nodes.
-        """
-        nodes = {}
-        for label, pk in pks_mapping.iteritems():
-            if isinstance(pk, collections.Mapping):
-                nodes[label] = self._load_nodes_from(pk)
-            else:
-                nodes[label] = load_node(pk=pk)
-        return nodes
-
     # Messages #####################################################
     @override
     def on_create(self, pid, inputs, saved_instance_state):
@@ -222,12 +182,10 @@ class Process(plum.process.Process):
             except IndexError:
                 pass
 
+            if '_store_provenance' in self.inputs:
+                self._store_provenance = self.inputs._store_provenance
             self._pid = self._create_and_setup_db_record()
         else:
-            # Replace the node pks for real nodes
-            saved_instance_state[self._INPUTS] = \
-                self._load_nodes_from(saved_instance_state[self._INPUTS])
-
             if self.KEY_CALC_ID in saved_instance_state:
                 self._calc = load_node(saved_instance_state[self.KEY_CALC_ID])
                 self._pid = self._calc.pk
@@ -264,6 +222,36 @@ class Process(plum.process.Process):
         value.add_link_from(self._calc, output_port, LinkType.RETURN)
     #################################################################
 
+    @protected
+    def get_parent_calc(self):
+        # Can't get it if we don't know our parent
+        if self._parent_pid is None:
+            return None
+
+        # First try and get the process from the registry in case it is running
+        try:
+            return MONITOR.get_process(self._parent_pid).calc
+        except ValueError:
+            pass
+
+        # Ok, maybe the pid is actually a pk...
+        try:
+            return load_node(pk=self._parent_pid)
+        except exceptions.NotExistent:
+            pass
+
+        # Out of options
+        return None
+
+    @override
+    def create_input_args(self, inputs):
+        parsed = super(Process, self).create_input_args(inputs)
+        # Now remove any that have a leading underscore
+        for name in parsed.keys():
+            if name.startswith('_'):
+                del parsed[name]
+        return parsed
+
     def _create_and_setup_db_record(self):
         self._calc = self.create_db_record()
         self._setup_db_record()
@@ -276,7 +264,7 @@ class Process(plum.process.Process):
             return uuid.UUID(self._calc.uuid)
 
     def _setup_db_record(self):
-        assert self.inputs is not None
+        assert self.parsed_inputs is not None
         assert not self.calc.is_sealed,\
             "Calculation cannot be sealed when setting up the database record"
 
@@ -288,7 +276,11 @@ class Process(plum.process.Process):
         # First get a dictionary of all the inputs to link, this is needed to
         # deal with things like input groups
         to_link = {}
-        for name, input in self.inputs.iteritems():
+        for name, input in self.parsed_inputs.iteritems():
+            # Ignore all inputs starting with a leading underscore
+            if name.startswith('_'):
+                continue
+
             if self.spec().has_input(name):
                 if isinstance(self.spec().get_input(name), port.InputGroupPort):
                     to_link.update(
@@ -323,31 +315,6 @@ class Process(plum.process.Process):
         node = None  # Here we should find the old node
         for k, v in node.get_output_dict():
             self.out(k, v)
-
-    @protected
-    def get_parent_calc(self):
-        # Can't get it if we don't know our parent
-        if self._parent_pid is None:
-            return None
-
-        parent_calc = None
-        # First try and get the process from the registry in case it is running
-        if self.process_registry is not None:
-            try:
-                parent_process =\
-                    self.process_registry.get_running_process(self._parent_pid)
-                return parent_process.calc
-            except ValueError:
-                pass
-
-        # Ok, maybe the pid is actually a pk...
-        try:
-            return load_node(pk=self._parent_pid)
-        except exceptions.NotExistent:
-            pass
-
-        # Out of options
-        return None
 
 
 class FunctionProcess(Process):
@@ -416,7 +383,8 @@ class FunctionProcess(Process):
         # Save the name of the function
         self.calc._set_attr(self.PROCESS_LABEL_ATTR, self._func.__name__)
 
-    def _main(self, **kwargs):
+    @override
+    def _run(self, **kwargs):
         from aiida.orm.data import Data
 
         args = []
@@ -442,7 +410,7 @@ class _ProcessFinaliser(plum.process_monitor.ProcessMonitorListener):
     completion or because of a failure caused by an exception.
     """
     def __init__(self):
-        plum.process_monitor.monitor.add_monitor_listener(self)
+        plum.process_monitor.MONITOR.add_monitor_listener(self)
 
     @override
     def on_monitored_process_destroying(self, process):

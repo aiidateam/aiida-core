@@ -12,7 +12,7 @@ if not is_dbenv_loaded():
 
 import inspect
 from unittest import TestCase
-from aiida.workflows2.defaults import factory, registry, storage
+from aiida.workflows2.defaults import storage
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction,\
     ResultToContext, _Block, _If, _While, if_, while_
 from aiida.workflows2.fragmented_wf import _FragmentedWorkfunctionSpec
@@ -20,6 +20,7 @@ from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.wf import wf
 from aiida.workflows2.run import async
 from aiida.orm.data.simple import Str, Int
+import aiida.workflows2.util as util
 from plum.engine.ticking import TickingEngine
 
 
@@ -48,8 +49,8 @@ class Wf(FragmentedWorkfunction):
             ),
         )
 
-    def __init__(self, store_provenance=False):
-        super(Wf, self).__init__(store_provenance)
+    def __init__(self):
+        super(Wf, self).__init__()
         # Reset the finished step
         self.finished_steps = {
             k: False for k in
@@ -96,6 +97,12 @@ class Wf(FragmentedWorkfunction):
 
 
 class TestFragmentedWorkfunction(TestCase):
+    def setUp(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+
+    def tearDown(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+
     def test_run(self):
         A = Str('A')
         B = Str('B')
@@ -225,13 +232,15 @@ class TestFragmentedWorkfunction(TestCase):
     def _run_with_checkpoints(self, wf_class, inputs=None):
         finished_steps = {}
 
-        te = TickingEngine(process_factory=factory, process_registry=registry)
+        te = TickingEngine()
         fut = te.submit(wf_class, inputs)
         while not fut.done():
             pid = fut.pid
             te.tick()
             finished_steps.update(wf_class.finished_steps)
-            if not fut.done():
-                te.stop(pid)
-                fut = te.run_from(storage.load_checkpoint(pid))
+            # if not fut.done():
+            #     te.stop(pid)
+            #     fut = te.run_from(storage.load_checkpoint(pid))
+        te.shutdown()
+
         return finished_steps

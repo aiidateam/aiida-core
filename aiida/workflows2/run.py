@@ -75,13 +75,14 @@ def queue_up(process_class, inputs, storage):
     :return: The pid of the queued process.
     """
 
-    proc = defaults.factory.create_process(process_class, inputs)
+    # The straregy for queueing up is this:
+    # 1) Create the process which will set up all the provenance info, pid, etc
+    proc = process_class.new_instance(inputs)
     pid = proc.pid
-    proc.perform_run(None, defaults.registry)
-    cp = plum.wait_ons.Checkpoint('run_after_queueing')
-    proc.perform_wait(cp)
-    storage.save(proc, cp)
-    proc.perform_stop()
-    proc.perform_destroy()
+    # 2) Save the instance state of the Process
+    storage.save(proc)
+    # 3) Ask it to stop itself
+    proc.stop()
+    proc.run_until_complete()
     del proc
     return pid

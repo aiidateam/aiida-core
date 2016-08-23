@@ -3,14 +3,15 @@
 import plum.class_loader
 import plum.util
 from aiida.workflows2.legacy.job_process import JobProcess
+from aiida.common.lang import override
 
 
 class ClassLoader(plum.class_loader.ClassLoader):
+    @override
     def find_class(self, name):
-        if name.startswith(JobProcess.__name__):
-            wrapped_class = name[len(JobProcess.__name__) + 1:]
+        idx = name.find(JobProcess.__name__)
+        if idx != -1:
+            wrapped_class = name[idx + len(JobProcess.__name__) + 1:]
             # Recreate the class
             return JobProcess.build(plum.util.load_class(wrapped_class))
 
-# The default class loader for AiiDA workflows
-LOADER = plum.class_loader.ClassLoader(ClassLoader)

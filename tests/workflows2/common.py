@@ -12,7 +12,7 @@ class DummyProcess(Process):
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def _main(self):
+    def _run(self):
         pass
 
 
@@ -26,22 +26,5 @@ class BadOutput(Process):
         super(BadOutput, cls)._define(spec)
         spec.dynamic_output()
 
-    def _main(self):
+    def _run(self):
         self.out("bad_output", 5)
-
-
-class ProcessScope(object):
-    def __init__(self, process, pid=None, inputs=None):
-        self._process = process
-        self._pid = pid
-        self._inputs = inputs
-
-    def __enter__(self):
-        self._process.perform_create(self._pid, self._inputs, None)
-        self._process.perform_run(None, None)
-        return self._process
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._process.perform_finish(None)
-        self._process.perform_stop()
-        self._process.perform_destroy()

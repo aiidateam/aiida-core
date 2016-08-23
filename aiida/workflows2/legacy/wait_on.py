@@ -3,6 +3,7 @@
 from plum.wait import WaitOn, validate_callback_func
 from aiida.orm.utils import load_node
 from aiida.common.lang import override
+from aiida.workflows2.defaults import class_loader
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -14,8 +15,9 @@ class WaitOnJobCalculation(WaitOn):
     PK = "pk"
 
     @classmethod
-    def create_from(cls, bundle, exec_engine):
-        return WaitOnJobCalculation(bundle[cls.CALLBACK_NAME], bundle[cls.PK])
+    def create_from(cls, bundle):
+        return WaitOnJobCalculation(
+            bundle[cls.BundleKeys.CALLBACK_NAME.value], bundle[cls.PK])
 
     def __init__(self, callback_name, pk):
         super(WaitOnJobCalculation, self).__init__(callback_name)
@@ -29,6 +31,7 @@ class WaitOnJobCalculation(WaitOn):
     def save_instance_state(self, out_state):
         super(WaitOnJobCalculation, self).save_instance_state(out_state)
         out_state[self.PK] = self._pk
+        out_state.set_class_loader(class_loader)
 
 
 def wait_on_job_calculation(callback, pk):

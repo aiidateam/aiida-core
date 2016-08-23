@@ -2,10 +2,10 @@
 import os.path
 import aiida.common.setup as setup
 from plum.engine.serial import SerialEngine
+import plum.class_loader
 from plum.engine.parallel import MultithreadedEngine
 from aiida.workflows2.execution_engine import ExecutionEngine
-from aiida.workflows2.process_factory import ProcessFactory
-from plum.persistence.pickle_persistence import PicklePersistence
+from aiida.workflows2.class_loader import ClassLoader
 from aiida.workflows2.process_registry import ProcessRegistry
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -18,14 +18,15 @@ WORKFLOWS_DIR = os.path.expanduser(os.path.join(
     setup.WORKFLOWS_SUBDIR))
 
 # Have globals that can be used by all of AiiDA
-factory = ProcessFactory(store_provenance=True)
-storage = PicklePersistence(
-    factory, auto_persist=True,
-    directory=os.path.join(WORKFLOWS_DIR, 'running'),
-    finished_directory=os.path.join(WORKFLOWS_DIR, 'finished'),
-    failed_directory=os.path.join(WORKFLOWS_DIR, 'failed'))
+class_loader = plum.class_loader.ClassLoader(ClassLoader())
 registry = ProcessRegistry()
 # execution_engine = MultithreadedEngine(process_factory=factory,
 #                                        process_registry=registry)
-execution_engine = SerialEngine(process_factory=factory,
-                                process_registry=registry)
+execution_engine = SerialEngine()
+
+import aiida.workflows2.persistence
+storage = aiida.workflows2.persistence.Persistence(
+    auto_persist=True,
+    directory=os.path.join(WORKFLOWS_DIR, 'running'),
+    finished_directory=os.path.join(WORKFLOWS_DIR, 'finished'),
+    failed_directory=os.path.join(WORKFLOWS_DIR, 'failed'))

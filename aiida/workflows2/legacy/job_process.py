@@ -59,16 +59,11 @@ class JobProcess(Process):
 
         class_name = "{}_{}".format(
             JobProcess.__name__, plum.util.fullname(calc_class))
-        return type(calc_class.__name__, (JobProcess,),
+        return type(class_name, (JobProcess,),
                     {'_define': staticmethod(_define),
                      '_CALC_CLASS': calc_class})
 
-    def __init__(self, store_provenance=True):
-        # Need to tell Process to not create output links as these are
-        # created internally by the execution manager
-        super(JobProcess, self).__init__(store_provenance)
-
-    def _main(self, **kwargs):
+    def _run(self, **kwargs):
         from aiida.workflows2.legacy.wait_on import wait_on_job_calculation
 
         # I create this wait_on here because there is a check to make sure the

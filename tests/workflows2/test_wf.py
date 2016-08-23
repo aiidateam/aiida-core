@@ -8,6 +8,7 @@ if not is_dbenv_loaded():
 from aiida.workflows2.wf import wf
 from aiida.workflows2.run import async, run
 from aiida.orm.data.simple import TRUE
+import aiida.workflows2.util as util
 
 
 @wf
@@ -20,6 +21,12 @@ def return_input(inp):
 
 
 class TestWf(unittest.TestCase):
+    def setUp(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+
+    def tearDown(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+
     def test_blocking(self):
         self.assertTrue(simple_wf()['result'])
         self.assertTrue(return_input(TRUE)['result'])

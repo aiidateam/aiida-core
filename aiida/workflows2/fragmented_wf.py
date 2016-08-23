@@ -6,6 +6,7 @@ from plum.wait_ons import Checkpoint
 from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
 from aiida.workflows2.process import Process, ProcessSpec
+from aiida.workflows2.defaults import registry
 from plum.engine.execution_engine import Future
 from aiida.common.lang import override
 
@@ -85,8 +86,8 @@ class FragmentedWorkfunction(Process):
             for k, v in self._content.iteritems():
                 out_state[k] = v
 
-    def __init__(self, store_provenance=True):
-        super(FragmentedWorkfunction, self).__init__(store_provenance)
+    def __init__(self):
+        super(FragmentedWorkfunction, self).__init__()
         self._context = None
         self._stepper = None
 
@@ -108,7 +109,7 @@ class FragmentedWorkfunction(Process):
         return self._context
 
     @override
-    def _main(self, **kwargs):
+    def _run(self, **kwargs):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
@@ -158,7 +159,7 @@ class _ResultToContext(WaitOn):
     PIDS = 'pids'
 
     @classmethod
-    def create_from(cls, bundle, process_factory):
+    def create_from(cls, bundle):
         return _ResultToContext(bundle[cls.CALLBACK_NAME], **bundle[cls.PIDS])
 
     def __init__(self, callback_name, **kwargs):
@@ -166,9 +167,9 @@ class _ResultToContext(WaitOn):
         self._to_assign = kwargs
         self._ready_values = {}
 
-    def is_ready(self, registry):
+    def is_ready(self):
         # Check all the processes have finished
-        all_done = all(registry.is_finished(pid) for pid
+        all_done = all(registry.has_finished(pid) for pid
                        in self._to_assign.itervalues())
         if all_done:
             for key, pid in self._to_assign.iteritems():

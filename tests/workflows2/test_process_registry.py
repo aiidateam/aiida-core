@@ -11,11 +11,12 @@ from aiida.workflows2.wf import wf
 from aiida.common.lang import override
 from aiida.workflows2.run import async
 from aiida.orm.data.simple import Int
+import aiida.workflows2.util as util
 
 
 class RegistryTester(Process):
     @override
-    def _main(self):
+    def _run(self):
         assert registry.current_pid == self.pid
         assert registry.current_calc_node is self.calc
         nested_tester()
@@ -46,6 +47,12 @@ class TestProcessRegistry(TestCase):
     These these check that the registry is giving out the right pid which when
     using storage is equal to the node pk.
     """
+    def setUp(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+
+    def tearDown(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+
     def test_process_pid_and_calc(self):
         RegistryTester.run()
 

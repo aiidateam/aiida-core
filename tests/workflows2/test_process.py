@@ -9,7 +9,8 @@ from aiida.orm import load_node
 from aiida.workflows2.process import Process
 from aiida.workflows2.db_types import Int
 from aiida.workflows2.run import run
-from workflows2.common import ProcessScope, DummyProcess, BadOutput
+import aiida.workflows2.util as util
+from workflows2.common import DummyProcess, BadOutput
 from aiida.common.lang import override
 import uuid
 import threading
@@ -17,7 +18,7 @@ import threading
 
 class ProcessStackTest(Process):
     @override
-    def _main(self):
+    def _run(self):
         pass
 
     @override
@@ -35,6 +36,12 @@ class ProcessStackTest(Process):
 
 
 class TestProcess(TestCase):
+    def setUp(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+
+    def tearDown(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+
     def test_process_stack(self):
         ProcessStackTest.run()
 
@@ -42,24 +49,29 @@ class TestProcess(TestCase):
         with self.assertRaises(AssertionError):
             BadOutput.run()
 
-    def test_pid_uuid(self):
-        with ProcessScope(DummyProcess(store_provenance=False)) as p:
-            self.assertEqual(uuid.UUID(p._calc.uuid), p.pid)
+    def test_pid_is_uuid(self):
+        p = DummyProcess.new_instance(inputs={'_store_provenance': False})
+        self.assertEqual(uuid.UUID(p._calc.uuid), p.pid)
+        p.stop()
+        p.run_until_complete()
 
     def test_input_link_creation(self):
-        inputs = ["1", "2", "3", "4"]
+        dummy_inputs = ["1", "2", "3", "4"]
 
-        with ProcessScope(
-                DummyProcess(store_provenance=True),
-                inputs={l: Int(l) for l in inputs}) as p:
+        inputs = {l: Int(l) for l in dummy_inputs}
+        inputs['_store_provenance'] = True
+        p = DummyProcess.new_instance(inputs)
 
-            for label, value in p._calc.get_inputs_dict().iteritems():
-                self.assertTrue(label in inputs)
-                self.assertEqual(int(label), int(value.value))
-                inputs.remove(label)
+        for label, value in p._calc.get_inputs_dict().iteritems():
+            self.assertTrue(label in inputs)
+            self.assertEqual(int(label), int(value.value))
+            dummy_inputs.remove(label)
 
-            # Make sure there are no other inputs
-            self.assertFalse(inputs)
+        # Make sure there are no other inputs
+        self.assertFalse(dummy_inputs)
+
+        p.stop()
+        p.run_until_complete()
 
     def test_seal(self):
         pid = run(DummyProcess, _return_pid=True)[1]

@@ -1,8 +1,8 @@
 
 import plum.persistence.pickle_persistence
-import plum.process_registry
 import plum.process
-import plum.simple_registry
+import plum.process_database
+import plum.simple_database
 import plum.process_monitor
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override
@@ -10,10 +10,10 @@ from aiida.workflows2.util import ProcessStack
 from aiida.orm import load_node
 
 
-class ProcessRegistry(plum.process_registry.ProcessRegistry,
-                      plum.process.ProcessListener):
+class ProcessRegistry(plum.simple_database.ProcessDatabase):
     def __init__(self):
-        self._simple_registry = plum.simple_registry.SimpleRegistry()
+        self._simple_database =\
+            plum.simple_database.SimpleDatabase(retain_outputs=False)
 
     @property
     def current_pid(self):
@@ -23,19 +23,16 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
     def current_calc_node(self):
         return ProcessStack.top().calc
 
-    def get_running_pids(self):
-        return plum.process_monitor.monitor.get_pids()
+    @override
+    def get_active_process(self, pid):
+        return self._simple_database.get_active_process(pid)
 
     @override
-    def get_running_process(self, pid):
-        return self._simple_registry.get_running_process(pid)
-
-    @override
-    def is_finished(self, pid):
+    def has_finished(self, pid):
         import aiida.orm
 
         try:
-            return self._simple_registry.is_finished(pid)
+            return self._simple_database.has_finished(pid)
         except KeyError:
             pass
 
@@ -63,8 +60,8 @@ class ProcessRegistry(plum.process_registry.ProcessRegistry,
     def get_outputs(self, pid):
         # Try getting them from processes that have run in this interpreter
         try:
-            return self._simple_registry.get_outputs(pid)
-        except KeyError:
+            return self._simple_database.get_outputs(pid)
+        except (KeyError, RuntimeError):
             pass
         # Try getting them from the node in the database
         try:

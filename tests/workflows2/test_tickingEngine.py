@@ -14,6 +14,7 @@ from aiida.workflows2.db_types import Bool, Int
 from unittest import TestCase
 from plum.engine.ticking import TickingEngine
 from aiida.workflows2.process import Process
+import aiida.workflows2.util as util
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -24,14 +25,19 @@ class DummyProcess(Process):
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def _main(self, a):
+    def _run(self, a):
         self.out("ran", Bool(True))
 
 
 class TestTickingEngine(TestCase):
     def setUp(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.ticking_engine = TickingEngine()
         self.executor = ThreadPoolExecutor(max_workers=1)
+
+    def tearDown(self):
+        self.ticking_engine.shutdown()
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
 
     def test_get_process(self):
         # Test cancelling a future before the process runs

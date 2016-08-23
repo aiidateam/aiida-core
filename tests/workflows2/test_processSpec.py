@@ -7,11 +7,16 @@ if not is_dbenv_loaded():
 from unittest import TestCase
 from collections import Mapping
 from aiida.workflows2.process import Process, ProcessSpec
+import aiida.workflows2.util as util
 
 
 class TestProcessSpec(TestCase):
     def setUp(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.spec = Process.spec()
+
+    def tearDown(self):
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
 
     def test_get_inputs_template(self):
         s = ProcessSpec()

@@ -76,3 +76,17 @@ class TestProcess(TestCase):
     def test_seal(self):
         pid = run(DummyProcess, _return_pid=True)[1]
         self.assertTrue(load_node(pk=pid).is_sealed)
+
+    def test_description(self):
+        dp = DummyProcess.new_instance(inputs={'_description': 'My description'})
+        self.assertEquals(dp.calc.description, 'My description')
+
+        with self.assertRaises(TypeError):
+            DummyProcess.new_instance(inputs={'_description': 5})
+
+    def test_label(self):
+        dp = DummyProcess.new_instance(inputs={'_label': 'My label'})
+        self.assertEquals(dp.calc.label, 'My label')
+
+        with self.assertRaises(TypeError):
+            DummyProcess.new_instance(inputs={'_label': 5})

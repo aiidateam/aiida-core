@@ -1,9 +1,9 @@
 
 import collections
 from plum.persistence.pickle_persistence import PicklePersistence
+from plum.process import Process
 from aiida.orm import load_node
 from aiida.common.lang import override
-from aiida.workflows2.process import Process
 from aiida.workflows2.defaults import class_loader
 
 

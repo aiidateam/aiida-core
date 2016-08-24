@@ -58,7 +58,6 @@ def wf(func):
     return wrapped_function
 
 
-
 # def aiidise(func):
 #     import inspect
 #     import itertools

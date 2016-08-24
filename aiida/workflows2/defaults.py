@@ -4,7 +4,6 @@ import aiida.common.setup as setup
 from plum.engine.serial import SerialEngine
 import plum.class_loader
 from plum.engine.parallel import MultithreadedEngine
-from aiida.workflows2.execution_engine import ExecutionEngine
 from aiida.workflows2.class_loader import ClassLoader
 from aiida.workflows2.process_registry import ProcessRegistry
 

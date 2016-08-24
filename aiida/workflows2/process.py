@@ -6,8 +6,10 @@ import uuid
 import plum.port as port
 import plum.process
 from plum.process_monitor import MONITOR
+import plum.process_monitor
 
 import aiida.orm
+from aiida.orm.data import Data
 import aiida.workflows2.util as util
 from aiida.orm import load_node
 import voluptuous
@@ -110,6 +112,8 @@ class Process(plum.process.Process):
 
         spec.input("_store_provenance", valid_type=bool, default=True,
                    required=False)
+        spec.input("_description", valid_type=basestring, required=False)
+        spec.input("_label", valid_type=basestring, required=False)
 
         spec.dynamic_input(valid_type=aiida.orm.Data)
         spec.dynamic_output(valid_type=aiida.orm.Data)
@@ -140,7 +144,6 @@ class Process(plum.process.Process):
         super(Process, self).__init__()
         self._calc = None
         self._parent_pid = None
-        self._store_provenance = True
 
     @property
     def calc(self):
@@ -150,11 +153,10 @@ class Process(plum.process.Process):
     def save_instance_state(self, bundle):
         super(Process, self).save_instance_state(bundle)
 
-        if self._store_provenance:
+        if self.parsed_inputs._store_provenance:
             assert self._calc.is_stored
 
         bundle[self.KEY_CALC_ID] = self.pid
-
         bundle.set_class_loader(class_loader)
 
     def run_after_queueing(self, wait_on):
@@ -182,8 +184,6 @@ class Process(plum.process.Process):
             except IndexError:
                 pass
 
-            if '_store_provenance' in self.inputs:
-                self._store_provenance = self.inputs._store_provenance
             self._pid = self._create_and_setup_db_record()
         else:
             if self.KEY_CALC_ID in saved_instance_state:
@@ -196,6 +196,9 @@ class Process(plum.process.Process):
                 self._parent_pid = saved_instance_state[
                     self.KEY_PARENT_CALC_PID]
 
+    @override
+    def on_start(self):
+        super(Process, self).on_start()
         util.ProcessStack.push(self)
 
     @override
@@ -208,8 +211,6 @@ class Process(plum.process.Process):
         :param dynamic: Was the output port a dynamic one (i.e. not known
         beforehand?)
         """
-        from aiida.orm.data import Data
-
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
         assert isinstance(value, Data), \
             "Values outputted from process must be instances of AiiDA Data" \
@@ -217,10 +218,16 @@ class Process(plum.process.Process):
 
         if not value.is_stored:
             value.add_link_from(self._calc, output_port, LinkType.CREATE)
-            if self._store_provenance:
+            if self.parsed_inputs._store_provenance:
                 value.store()
         value.add_link_from(self._calc, output_port, LinkType.RETURN)
     #################################################################
+
+    @override
+    def do_run(self):
+        # Exclude all private inputs
+        ins = {k: v for k, v in self._parsed_inputs.iteritems() if not k.startswith('_')}
+        return self._run(**ins)
 
     @protected
     def get_parent_calc(self):
@@ -243,19 +250,19 @@ class Process(plum.process.Process):
         # Out of options
         return None
 
-    @override
-    def create_input_args(self, inputs):
-        parsed = super(Process, self).create_input_args(inputs)
-        # Now remove any that have a leading underscore
-        for name in parsed.keys():
-            if name.startswith('_'):
-                del parsed[name]
-        return parsed
+    # @override
+    # def create_input_args(self, inputs):
+    #     parsed = super(Process, self).create_input_args(inputs)
+    #     # Now remove any that have a leading underscore
+    #     for name in parsed.keys():
+    #         if name.startswith('_'):
+    #             del parsed[name]
+    #     return parsed
 
     def _create_and_setup_db_record(self):
         self._calc = self.create_db_record()
         self._setup_db_record()
-        if self._store_provenance:
+        if self.parsed_inputs._store_provenance:
             self._calc.store_all()
 
         if self._calc.pk is not None:
@@ -299,7 +306,7 @@ class Process(plum.process.Process):
                 if parent_calc:
                     input.add_link_from(parent_calc, "CREATE",
                                         link_type=LinkType.CREATE)
-                if self._store_provenance:
+                if self.parsed_inputs._store_provenance:
                     input.store()
 
             self.calc.add_link_from(input, name)
@@ -307,6 +314,11 @@ class Process(plum.process.Process):
         if parent_calc:
             self.calc.add_link_from(parent_calc, "CALL",
                                     link_type=LinkType.CALL)
+
+        if '_description' in self.inputs:
+            self.calc.description = self.inputs._description
+        if '_label' in self.inputs:
+            self.calc.label = self.inputs._label
 
     def _can_fast_forward(self, inputs):
         return False
@@ -410,7 +422,7 @@ class _ProcessFinaliser(plum.process_monitor.ProcessMonitorListener):
     completion or because of a failure caused by an exception.
     """
     def __init__(self):
-        plum.process_monitor.MONITOR.add_monitor_listener(self)
+        MONITOR.add_monitor_listener(self)
 
     @override
     def on_monitored_process_destroying(self, process):

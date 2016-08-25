@@ -96,7 +96,7 @@ class TestDaemon(unittest.TestCase):
     def test_tick(self):
         import tempfile
         storage = PicklePersistence(
-            auto_persist=False, directory=tempfile.mkdtemp())
+            auto_persist=False, running_directory=tempfile.mkdtemp())
         registry = ProcessRegistry()
 
         pk = asyncd(ProcessEventsTester, _jobs_store=storage)

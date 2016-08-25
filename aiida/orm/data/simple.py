@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from abc import ABCMeta
 from aiida.orm import Data
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -8,6 +9,29 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Martin Uh
 
 
 class SimpleData(Data):
+    __metaclass__ = ABCMeta
+
+    def create_init_args(self, **kwargs):
+        assert getattr(self, '_type', None) is not None
+        if 'dbnode' not in kwargs:
+            if 'typevalue' in kwargs:
+                assert kwargs['typevalue'][0] is self._type
+                if kwargs['typevalue'][1] is not None:
+                    kwargs['typevalue'] = \
+                        (self._type, self._type(kwargs['typevalue'][1]))
+            else:
+                kwargs['typevalue'] = (self._type, None)
+
+        return kwargs
+
+    def __init__(self, **kwargs):
+        assert 'dbnode' in kwargs or 'typevalue' in kwargs
+        super(SimpleData, self).__init__(**self.create_init_args(**kwargs))
+
+    def init(self, type_):
+        assert getattr(self, '_type', None) is None, "Can only be called once"
+        self._type = type_
+
     def set_typevalue(self, typevalue):
         _type, value = typevalue
         self._type = _type
@@ -138,25 +162,43 @@ class NumericType(SimpleData):
         return int(self.value)
 
 
-def Float(value=None):
-    return NumericType(typevalue=(float, value))
+class Float(NumericType):
+    def __init__(self, **kwargs):
+        self.init(float)
+        super(Float, self).__init__(**kwargs)
 
 
-def Int(value=None):
-    return NumericType(typevalue=(int, value))
+def make_float(value=None):
+    return Float(typevalue=(float, value))
 
 
-def Str(value=None):
-    return StrType(typevalue=(str, value))
+class Int(NumericType):
+    def __init__(self, **kwargs):
+        self.init(int)
+        super(Int, self).__init__(**kwargs)
 
 
-class StrType(SimpleData):
-    pass
+def make_int(value=None):
+    return Int(typevalue=(int, value))
 
 
-class BoolType(SimpleData):
+class Str(SimpleData):
+    def __init__(self, **kwargs):
+        self.init(str)
+        super(Str, self).__init__(**kwargs)
+
+
+def make_str(value=None):
+    return Str(typevalue=(str, value))
+
+
+class Bool(SimpleData):
+    def __init__(self, **kwargs):
+        self.init(bool)
+        super(Bool, self).__init__(**kwargs)
+
     def __int__(self):
         return 0 if not self.value else 1
 
-TRUE = BoolType(typevalue=(bool, True))
-FALSE = BoolType(typevalue=(bool, False))
+TRUE = Bool(typevalue=(bool, True))
+FALSE = Bool(typevalue=(bool, False))

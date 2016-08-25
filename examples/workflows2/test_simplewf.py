@@ -4,7 +4,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.orm.data.simple import Int
+from aiida.orm.data.simple import make_int
 from aiida.workflows2.run import run, asyncd
 
 from aiida.tutorial.simple_wf import SimpleWF

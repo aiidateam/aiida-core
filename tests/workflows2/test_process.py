@@ -7,10 +7,10 @@ if not is_dbenv_loaded():
 from unittest import TestCase
 from aiida.orm import load_node
 from aiida.workflows2.process import Process
-from aiida.workflows2.db_types import Int
+from aiida.workflows2.db_types import make_int
 from aiida.workflows2.run import run
 import aiida.workflows2.util as util
-from workflows2.common import DummyProcess, BadOutput
+from aiida.workflows2.test_utils import DummyProcess, BadOutput
 from aiida.common.lang import override
 import uuid
 import threading
@@ -58,7 +58,7 @@ class TestProcess(TestCase):
     def test_input_link_creation(self):
         dummy_inputs = ["1", "2", "3", "4"]
 
-        inputs = {l: Int(l) for l in dummy_inputs}
+        inputs = {l: make_int(l) for l in dummy_inputs}
         inputs['_store_provenance'] = True
         p = DummyProcess.new_instance(inputs)
 
@@ -72,6 +72,12 @@ class TestProcess(TestCase):
 
         p.stop()
         p.run_until_complete()
+
+    def test_none_input(self):
+        # Check that if we pass no input the process runs fine
+        DummyProcess.new_instance().run_until_complete()
+        # Check that if we explicitly pass None as the input it also runs fine
+        DummyProcess.new_instance(inputs=None).run_until_complete()
 
     def test_seal(self):
         pid = run(DummyProcess, _return_pid=True)[1]

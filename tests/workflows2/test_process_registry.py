@@ -10,7 +10,7 @@ from aiida.workflows2.defaults import registry
 from aiida.workflows2.wf import wf
 from aiida.common.lang import override
 from aiida.workflows2.run import async
-from aiida.orm.data.simple import Int
+from aiida.orm.data.simple import make_int
 import aiida.workflows2.util as util
 
 
@@ -32,14 +32,14 @@ def registry_tester():
     # Call a Process
     RegistryTester.run()
 
-    return {'pid': Int(registry.current_pid),
-            'node_pk': Int(registry.current_calc_node.pk)}
+    return {'pid': make_int(registry.current_pid),
+            'node_pk': make_int(registry.current_calc_node.pk)}
 
 
 @wf
 def nested_tester():
-    return {'pid': Int(registry.current_pid),
-            'node_pk': Int(registry.current_calc_node.pk)}
+    return {'pid': make_int(registry.current_pid),
+            'node_pk': make_int(registry.current_calc_node.pk)}
 
 
 class TestProcessRegistry(TestCase):

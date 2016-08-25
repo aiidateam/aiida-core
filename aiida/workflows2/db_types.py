@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from aiida.orm import Data
-from aiida.orm.data.simple import NumericType, SimpleData, Float, Int, Str
+from aiida.orm.data.simple import SimpleData, make_float, make_int, Int, Bool, Float, Str, NumericType
 
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -11,10 +11,10 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 
 _TYPE_MAPPING = {
-    int: NumericType,
-    float: NumericType,
-    bool: SimpleData,
-    str: SimpleData
+    int: Int,
+    float: Float,
+    bool: Bool,
+    str: Str
 }
 
 
@@ -26,13 +26,13 @@ def to_db_type(value):
     if isinstance(value, Data):
         return value
     elif isinstance(value, bool):
-        return SimpleData(typevalue=(bool, value))
+        return Bool(typevalue=(bool, value))
     elif isinstance(value, (int, long)):
-        return SimpleData(typevalue=(int, value))
+        return Int(typevalue=(int, value))
     elif isinstance(value, float):
-        return Float(value)
+        return make_float(value)
     elif isinstance(value, basestring):
-        return SimpleData(typevalue=(type(value), value))
+        return Str(typevalue=(type(value), value))
     else:
         raise ValueError("Cannot convert value to database type")
 

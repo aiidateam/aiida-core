@@ -12,11 +12,22 @@ class Persistence(PicklePersistence):
     def load_checkpoint_from_file(self, filepath):
         cp = super(Persistence, self).load_checkpoint_from_file(filepath)
 
-        cp[Process.BundleKeys.INPUTS.value] =\
-            self._load_nodes_from(Process.BundleKeys.INPUTS.value)
+        inputs = cp[Process.BundleKeys.INPUTS.value]
+        if inputs:
+            cp[Process.BundleKeys.INPUTS.value] = self._load_nodes_from(inputs)
 
         cp.set_class_loader(class_loader)
         return cp
+
+    @override
+    def create_bundle(self, process):
+        b = super(Persistence, self).create_bundle(process)
+
+        inputs = b[Process.BundleKeys.INPUTS.value]
+        if inputs:
+            b[Process.BundleKeys.INPUTS.value] = self._convert_to_ids(inputs)
+
+        return b
 
     def _convert_to_ids(self, nodes):
         from aiida.orm import Node

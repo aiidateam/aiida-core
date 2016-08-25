@@ -61,8 +61,8 @@ def do_list(past_days, limit):
     if not is_dbenv_loaded():
         load_dbenv()
     import aiida.utils.timezone as timezone
-    from aiida.orm.mixins import SealableMixin
-    _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(SealableMixin.SEALED_KEY)
+    from aiida.orm.mixins import Sealable
+    _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
 
     now = timezone.now()
 
@@ -126,8 +126,8 @@ def _build_query(order_by=None, limit=None, past_days=None):
     from aiida.orm.calculation import Calculation
     import aiida.utils.timezone as timezone
     import datetime
-    from aiida.orm.mixins import SealableMixin
-    _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(SealableMixin.SEALED_KEY)
+    from aiida.orm.mixins import Sealable
+    _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
 
     # The things that we want to get out
     calculation_projections = \

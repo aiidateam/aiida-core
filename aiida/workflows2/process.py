@@ -315,10 +315,11 @@ class Process(plum.process.Process):
             self.calc.add_link_from(parent_calc, "CALL",
                                     link_type=LinkType.CALL)
 
-        if '_description' in self.inputs:
-            self.calc.description = self.inputs._description
-        if '_label' in self.inputs:
-            self.calc.label = self.inputs._label
+        if self.inputs:
+            if '_description' in self.inputs:
+                self.calc.description = self.inputs._description
+            if '_label' in self.inputs:
+                self.calc.label = self.inputs._label
 
     def _can_fast_forward(self, inputs):
         return False

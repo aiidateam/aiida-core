@@ -51,7 +51,7 @@ ultrajson==1.35
 
 # For workflows
 enum34==1.1.2
-git+https://bitbucket.org/aiida_team/plum.git@8acd6f386d174b83806c31579a56fc0aaa588af9#egg=plum
+git+https://bitbucket.org/aiida_team/plum.git@018525fa80e8aed44c059163bbb4b7e11138ddc2#egg=plum
 voluptuous==0.8.11
 
 # For the QueryBuilder in Django when testing:

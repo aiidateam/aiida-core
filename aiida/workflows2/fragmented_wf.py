@@ -160,7 +160,8 @@ class _ResultToContext(WaitOn):
 
     @classmethod
     def create_from(cls, bundle):
-        return _ResultToContext(bundle[cls.CALLBACK_NAME], **bundle[cls.PIDS])
+        return _ResultToContext(
+            bundle[cls.BundleKeys.CALLBACK_NAME.value], **bundle[cls.PIDS])
 
     def __init__(self, callback_name, **kwargs):
         super(_ResultToContext, self).__init__(callback_name)

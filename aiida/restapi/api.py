@@ -9,7 +9,7 @@ from aiida.restapi.common.exceptions import RestInputValidationError,\
     RestValidationError
 from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
     Node, User
-from aiida.restapi.common.config import PREFIX
+from aiida.restapi.common.config import PREFIX, APP_CONFIG
 
 ## Initiate an app with its api
 app = Flask(__name__)
@@ -28,7 +28,6 @@ def validation_error_handler(error):
     response = jsonify({'message': error.message})
     response.status_code = 400
     return response
-
 
 ## Todo: add api configutations, such as prefix '/api/v1 ...'
 ## Add resources to the api
@@ -123,4 +122,7 @@ api.add_resource(Group,
 
 # Standard boilerplate to run the app
 if __name__ == '__main__':
-    app.run(debug=False)
+    #Config the app
+    app.config.update(**APP_CONFIG)
+    #Warm up the engine - brum brum - and run it!!
+    app.run()

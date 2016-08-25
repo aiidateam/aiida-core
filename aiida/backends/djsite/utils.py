@@ -7,9 +7,9 @@ import django
 
 from aiida.utils.logger import get_dblogger_extra
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
@@ -190,7 +190,7 @@ def check_schema_version():
 
     if code_schema_version != db_schema_version:
         raise ConfigurationError(
-            "The code schema version is {}, but the version stored in the"
+            "The code schema version is {}, but the version stored in the "
             "database (DbSetting table) is {}, stopping.\n"
             "To migrate to latest version, go to aiida.backends.djsite and "
             "run:\nverdi daemon stop\n python manage.py --aiida-profile={} migrate".

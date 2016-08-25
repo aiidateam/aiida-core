@@ -1,9 +1,9 @@
 #!/usr/bin/env runaiida
 # -*- coding: utf-8 -*-
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -15,8 +15,8 @@ import time
 from aiida.orm.data.simple import make_int
 from aiida.workflows2.run import async, run
 from aiida.workflows2.wf import wf
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction,\
-    ResultToContext
+from aiida.workflows2.fragmented_wf import (FragmentedWorkfunction,
+                                            ResultToContext)
 
 
 @wf

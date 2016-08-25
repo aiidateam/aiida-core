@@ -15,6 +15,8 @@ User's guide
    ../examples/pwimmigrant_tutorial
    ../examples/ph_tutorial
    ../examples/cp_tutorial
+   ../examples/wannier90_tutorial
+   ../examples/projwfc_tutorial
    ../parsers/resultmanager
    ../examples/pseudo_tutorial
    ../verdi/verdi_user_guide
@@ -26,3 +28,4 @@ User's guide
    ../workflow/index
    ../dbimporters/index
    ../dbexporters/index
+   ../cmdline/scripting_and_shell.rst

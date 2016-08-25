@@ -31,6 +31,12 @@ from aiida.backends.querybuild.sa_init import (
     cast, Float, Integer, Boolean, DateTime,
     case, exists, join, select, exists
 )
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
 class QueryBuilder(AbstractQueryBuilder):
 
     def __init__(self, *args, **kwargs):
@@ -164,7 +170,13 @@ class QueryBuilder(AbstractQueryBuilder):
 
 
         elif operator=='has_key':
-            expr = alias.attributes.any(mapped_class.key==value)
+            if issubclass(mapped_class, DummyAttribute):
+                expr = alias.attributes.any(mapped_class.key == '.'.join(attr_key+[value]))
+            elif issubclass(mapped_class, DummyExtra):
+                expr = alias.extras.any(mapped_class.key == '.'.join(attr_key+[value]))
+            else:
+                raise Exception("I was given {} as an attribute base class".format(mapped_class))
+
         else:
             types_n_casts = []
             if isinstance(value_to_consider, basestring):

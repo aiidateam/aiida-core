@@ -5,6 +5,11 @@ from aiida.workflows2.process import Process
 from aiida.orm import load_node
 
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
 class Workflow(Process, plum.workflow.Workflow):
     """
     This class represents an AiiDA workflow which can be executed and will

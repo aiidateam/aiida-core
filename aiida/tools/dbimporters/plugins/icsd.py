@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from aiida.tools.dbimporters.baseclasses \
-    import DbImporter, DbSearchResults, CifEntry
+from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
+                                                 CifEntry)
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
@@ -696,10 +696,10 @@ class IcsdEntry(CifEntry):
         """
         :return: ASE structure corresponding to the cif file.
         """
-        import ase.io.cif
+        from aiida.orm.data.cif import CifData
         import StringIO
 
-        return ase.io.cif.read_cif(StringIO.StringIO(self.get_corrected_cif()))
+        return CifData.read_cif(StringIO.StringIO(self.get_corrected_cif()))
 
 
     def get_aiida_structure(self):

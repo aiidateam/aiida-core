@@ -2,9 +2,9 @@
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.calculation.inline import optional_inline
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 ase_loops = {
@@ -431,6 +431,17 @@ class CifData(SinglefileData):
             self._ase = self.get_ase()
         return self._ase
 
+    @staticmethod
+    def read_cif(fileobj, index=-1, **kwargs):
+        """
+        A wrapper method that simulates the behaviour of the older versions of
+        the read_cif. It behaves similarly with the older and newer versions
+        of ase.io.cif.read_cif.
+        """
+        import ase.io.cif
+        return list(ase.io.cif.read_cif(
+            fileobj, index=slice(None), **kwargs))[index]
+
     def get_ase(self, **kwargs):
         """
         Returns ASE object, representing the CIF. This function differs
@@ -442,9 +453,8 @@ class CifData(SinglefileData):
         if not kwargs and self._ase:
             return self.ase
         else:
-            from ase.io.cif import read_cif
-            return read_cif(self._get_folder_pathsubfolder.open(self.filename),
-                            **kwargs)
+            return CifData.read_cif(
+                self._get_folder_pathsubfolder.open(self.filename), **kwargs)
 
     def set_ase(self, aseatoms):
         import tempfile

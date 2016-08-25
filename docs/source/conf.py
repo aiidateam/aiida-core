@@ -51,9 +51,9 @@ copyright = u'2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulat
 # built documents.
 #
 # The short X.Y version.
-version = '0.6'
+version = '0.7'
 # The full version, including alpha/beta/rc tags.
-release = '0.6.0'
+release = '0.7.0'
 
 author = "The AiiDA team."
 
@@ -227,7 +227,6 @@ sys.path.append( os.path.join( os.path.split(__file__)[0],
                                    os.pardir))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
 
-
 if not on_rtd:  # only import and set the theme if we're building docs locally
     try:
         import sphinx_rtd_theme
@@ -244,15 +243,9 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 else:
     # Back-end settings for readthedocs online documentation.
     from aiida.backends import settings
+    settings.IN_DOC_MODE = True
     settings.BACKEND = "django"
     settings.AIIDADB_PROFILE = "default"
-
-
-# Note by Andrea Cepellotti:
-# Sphinx tries to load every module that is trying to document
-# some of them requires the DJANGO_SETTINGS_MODULE variable to be set
-#from aiida import load_dbenv
-#load_dbenv()
 
 
 # -- Options for manual page output --------------------------------------------

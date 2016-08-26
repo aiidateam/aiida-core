@@ -1,8 +1,11 @@
+#!/usr/bin/env python
+
 """
 Implementation of RESTful API for materialscloud.org based on flask + flask_restful module
 For the time being the API returns the parsed valid endpoints upon GET request
 Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 """
+
 from flask import Flask, jsonify
 from flask_restful import Api
 from aiida.restapi.common.exceptions import RestInputValidationError,\
@@ -10,13 +13,14 @@ from aiida.restapi.common.exceptions import RestInputValidationError,\
 from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
     Node, User
 from aiida.restapi.common.config import PREFIX, APP_CONFIG
+from aiida.restapi.common.flaskrun import flaskrun
 
 ## Initiate an app with its api
 app = Flask(__name__)
 api = Api(app, prefix=PREFIX)
 
 
-## Errors handling for  error raised by invalid uri
+## Error handling for  error raised by invalid urls
 @app.errorhandler(RestValidationError)
 def validation_error_handler(error):
     response = jsonify({'message': error.message})
@@ -29,7 +33,6 @@ def validation_error_handler(error):
     response.status_code = 400
     return response
 
-## Todo: add api configutations, such as prefix '/api/v1 ...'
 ## Add resources to the api
 api.add_resource(Computer,
                  # supported urls
@@ -40,7 +43,6 @@ api.add_resource(Computer,
                  strict_slashes=False)
 
 api.add_resource(Node,
-                 # supported urls
                  '/nodes/',
                  '/nodes/page/',
                  '/nodes/page/<int:page>/',
@@ -56,7 +58,6 @@ api.add_resource(Node,
                  strict_slashes=False)
 
 api.add_resource(Calculation,
-                 # supported urls
                  '/calculations/',
                  '/calculations/page/',
                  '/calculations/page/<int:page>/',
@@ -72,7 +73,6 @@ api.add_resource(Calculation,
                  strict_slashes=False)
 
 api.add_resource(Data,
-                 # supported urls
                  '/datas/',
                  '/datas/page/',
                  '/datas/page/<int:page>',
@@ -88,7 +88,6 @@ api.add_resource(Data,
                  strict_slashes=False)
 
 api.add_resource(Code,
-                 # supported urls
                  '/codes/',
                  '/codes/page/',
                  '/codes/page/<int:page>/',
@@ -104,7 +103,6 @@ api.add_resource(Code,
                  strict_slashes=False)
 
 api.add_resource(User,
-                 # supported urls
                  '/users/',
                  '/users/page/',
                  '/users/page/<int:page>/',
@@ -112,7 +110,6 @@ api.add_resource(User,
                  strict_slashes=False)
 
 api.add_resource(Group,
-                 # supported urls
                  '/groups/',
                  '/groups/page/',
                  '/groups/page/<int:page>/',
@@ -124,5 +121,8 @@ api.add_resource(Group,
 if __name__ == '__main__':
     #Config the app
     app.config.update(**APP_CONFIG)
-    #Warm up the engine - brum brum - and run it!!
-    app.run()
+    #I run the app via a wrapper that accepts arguments such as host and port
+    #e.g. python api.py --host=127.0.0.2 --port=6000
+    # Default address is 127.0.01:5000
+    #Warm up the engine - brum brum - and staaarrrt!!
+    flaskrun(app)

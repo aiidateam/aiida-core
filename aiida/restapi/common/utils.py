@@ -28,7 +28,7 @@ def parse_path(path_string):
     It assunme
 
     :param path_string: the path string
-    :return:node_type (string)
+    :return:resource_type (string)
             page (integer)
             pk (integer)
             result_type (string))
@@ -43,9 +43,9 @@ def parse_path(path_string):
     ## Pop out iteratively the "words" of the path until it is an empty list.
     ##  This way it should be easier to plug in more endpoint logic
     # Object type
-    node_type = path.pop(0)
+    resource_type = path.pop(0)
     if not path:
-        return (node_type, page, pk, query_type)
+        return (resource_type, page, pk, query_type)
     # Node_pk
     try:
         pk = int(path[0])
@@ -53,23 +53,23 @@ def parse_path(path_string):
     except ValueError:
         pass
     if not path:
-        return (node_type, page, pk, query_type)
+        return (resource_type, page, pk, query_type)
     # Result type (input, output, attributes, extras)
     if path[0] == "io" or path[0] == "content":
         foo = path.pop(0)
         query_type = path.pop(0)
     if not path:
-        return (node_type, page, pk, query_type)
+        return (resource_type, page, pk, query_type)
     # Page (this has to be in any case the last field)
     if path[0] == "page":
         do_paginate = True
         foo = path.pop(0)
         if not path:
             page = 1
-            return (node_type, page, pk, query_type)
+            return (resource_type, page, pk, query_type)
         else:
             page = int(path.pop(0))
-            return (node_type, page, pk, query_type)
+            return (resource_type, page, pk, query_type)
 
 
 def validate_request(limit=None, offset=None, perpage=None, page=None):
@@ -205,7 +205,7 @@ def build_headers(rel_pages=None, url=None, total_count=None):
     # set X-Total-Count
     headers['X-Total-Count'] = total_count
 
-    ## Two auxiliaty funxtions
+    ## Two auxiliary functions
     def split_url(url):
         if '?' in url:
             [path, query_string] = url.split('?')
@@ -310,11 +310,14 @@ def parse_query_string(query_string):
                 Literal('=') | Literal('>=') | Literal('>') |
                 Literal('<=') | Literal('<'))
     # Value types
-    ## TODO (maybe) make it more solid. Specify position of sign and point
     valueNum = ppc.number
     valueBool = (Literal('true') | Literal('false')).addParseAction(lambda toks: bool(toks[0]))
     valueString = QuotedString('"', escQuote='""')
     valueOrderby = Combine(Optional(Word('+-',exact=1)) + key)
+    #TODO support for datetime
+    #valueDateTime = Combine()
+
+
     # More General types
     value = (valueString | valueBool | valueNum | valueOrderby)
     # List of values (I do not check the homogeneity of the types of values,

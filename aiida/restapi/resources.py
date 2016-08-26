@@ -30,7 +30,7 @@ class BaseResource(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (node_type, page, pk, query_type) = parse_path(path)
+        (resource_type, page, pk, query_type) = parse_path(path)
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
          nelist) = parse_query_string(query_string)
 
@@ -63,7 +63,7 @@ class BaseResource(Resource):
                     path=request.path,
                     pk=pk,
                     query_string=request.query_string,
-                    node_type=node_type,
+                    resource_type=resource_type,
                     data=results)
         return build_response(status=200, headers=headers, data=data)
 
@@ -88,7 +88,7 @@ class Node(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (node_type, page, pk, query_type) = parse_path(path)
+        (resource_type, page, pk, query_type) = parse_path(path)
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
          nelist) = parse_query_string(query_string)
 
@@ -123,7 +123,7 @@ class Node(Resource):
                     path=path,
                     pk=pk,
                     query_string=query_string,
-                    node_type=node_type,
+                    resource_type=resource_type,
                     data=results)
         return build_response(status=200, headers=headers, data=data)
 

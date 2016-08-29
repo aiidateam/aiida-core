@@ -10,8 +10,8 @@ from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved"
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file."
 __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
@@ -186,12 +186,43 @@ def validate_list_of_string_tuples(val, tuple_length):
     return True
 
 
+
 def conv_to_fortran(val):
     """
     :param val: the value to be read and converted to a Fortran-friendly string.
     """
     # Note that bool should come before integer, because a boolean matches also
     # isinstance(...,int)
+    if (isinstance(val, bool)):
+        if val:
+            val_str = '.true.'
+        else:
+            val_str = '.false.'
+    elif (isinstance(val, (int, long))):
+        val_str = "{:d}".format(val)
+    elif (isinstance(val, float)):
+        val_str = ("{:18.10e}".format(val)).replace('e', 'd')
+    elif (isinstance(val, basestring)):
+        val_str = "'{!s}'".format(val)
+    else:
+        raise ValueError("Invalid value passed, accepts only bools, ints, "
+                         "floats and strings")
+
+    return val_str
+
+def conv_to_fortran_withlists(val):
+    """
+    Same as conv_to_fortran but with extra logic to handle lists
+    :param val: the value to be read and converted to a Fortran-friendly string.
+    """
+    # Note that bool should come before integer, because a boolean matches also
+    # isinstance(...,int)
+    if (isinstance(val,(list, tuple))):
+        out_list = []
+        for thing in val:
+            out_list.append(conv_to_fortran(thing))
+        val_str = ", ".join(out_list)
+        return  val_str
     if (isinstance(val, bool)):
         if val:
             val_str = '.true.'

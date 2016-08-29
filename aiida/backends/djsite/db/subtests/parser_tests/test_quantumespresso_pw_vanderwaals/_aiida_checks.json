@@ -1,0 +1,42 @@
+{
+  "output_band": {
+    "array|bands": [
+      {
+        "comparison": "Equal",
+        "value": [24, 9]
+      }
+    ]
+  },
+  "output_parameters": {
+    "volume": [
+      {
+        "comparison": "AlmostEqual", 
+        "value": 251.66213304315
+      }
+    ], 
+    "energy": [
+      {
+        "comparison": "AlmostEqual", 
+        "value": -1092.51009511531
+      }
+    ],
+    "dft_exchange_correlation": [
+      {
+        "comparison": "Equal", 
+        "value": "VDW-DF-OB86"
+      }
+    ],
+    "vdw_kernel_name": [
+      {
+        "comparison": "Equal", 
+        "value": "vdW_kernel_table"
+      }
+    ],
+    "warnings": [
+      {
+        "comparison": "LengthEqual",
+        "value": 0
+      }
+    ]
+  }
+}

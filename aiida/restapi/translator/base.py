@@ -327,13 +327,19 @@ class BaseTranslator(object):
             raise InvalidOperation("query builder object has not been "
                                    "initialized.")
 
-        data = []
+        results = []
 
         if self._total_count>0:
             for tmp in self.qb.iterdict():
-                data.append(tmp[label])
+                results.append(tmp[label])
 
-        return data
+        #TODO think how to make it less hardcoded
+        if self._result_type == 'input_of':
+            return {'inputs': results}
+        elif self._result_type == 'output_of':
+            return {'outputs': results}
+        else:
+            return {self._qb_label: results}
 
 
     def get_results(self):

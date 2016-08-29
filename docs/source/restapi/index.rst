@@ -8,20 +8,26 @@ and *Group*. The *Node* type has three subtypes: *Calculation*, *Data*,
 and *Code*. Different REST urls are provided to get the list of objects, 
 the details of a specific object as well as its inputs/outputs/attributes/extras.
 
-The AiiDA REST API is implemented using *Flask RESTFul* framework. The response
-data are always returned in *JSON* format.
+The AiiDA REST API is implemented using *Flask RESTFul* framework.  For the time being, it only supports GET methods. The response data are always returned in *JSON* format.
 
-To start the REST server 
-python api.py --host=HOST --port=PORT
+In this document, the paths of the file systems are defined with respect to the AiiDA installation folder. The source files of the API are contained in the folder *aiida/restapi*. To start the REST server sopen a terminal, reach this folder and type
 
-If you do not define the host and the port, the REST API will run on the port *5000* 
+.. code-block:: bash
+
+    $ python api.py --host=HOST --port=PORT
+
+If you do not specify the host and port flags, the REST API will run on port *5000* 
 of *localhost*. So the **base url** for your REST API will be:
 
     \http://localhost:5000/api/v2
 
 where the last field identifies the version of the API. This field enables running  multiple versions of the API simultaneously, so that the clients should not be obliged to update immediately the format of their requests when a new version of the API is deployed. The current latest version is **v2**. 
-    
-Let us now introduce the urls supported by the API.
+
+The configuration of the API can be set by changing the file *aiida/restapi/config.py*. The available configuration option is documented therein.
+
+In order to send requests to the REST API you can simply type the url of the request in the address bar of your browser or you can use command line tools such as *curl* or *wget*.
+
+Let us now introduce the urls supported by the API. 
 
 General form of the urls
 ++++++++++++++++++++++++
@@ -268,15 +274,25 @@ The relational operators '<', '>', '<=', '>=' assume natural ordering for intege
 
 Examples:
 
-    1. \http://localhost:5000/api/v2/nodes?id>578
-    2. *\http://localhost:5000/api/v2/users/?last_login>2014-04-07* selects only the user that logged in for the last time after April 7th, 2014.
-    3. *\http://localhost:5000/api/v2/users/?last_name<="m"* selects only the users whose last name begins with a character in the range [a-m].
+    *\http://localhost:5000/api/v2/nodes?id>578* selects the nodes having an id larger than 578
+    
+    *\http://localhost:5000/api/v2/users/?last_login>2014-04-07* selects only the user that logged in for the last time after April 7th, 2014.
+    
+    *\http://localhost:5000/api/v2/users/?last_name<="m"* selects only the users whose last name begins with a character in the range [a-m].
 
 
-.. note:: Object types have to be specified by a string that defines their position in the AiiDA source tree. Examples: 
-    - type="data.Data" selects only objects of *Data* type
-    - type="data.remote.RemoteData" selects only objects of *RemoteData* type
-    - type="data.parameter.ParameterData"
+.. note:: Object types have to be specified by a string that defines their position in the AiiDA source tree ending with a dot. Examples: 
+    - type="data.Data." selects only objects of *Data* type
+    - type="data.remote.RemoteData." selects only objects of *RemoteData* type
+    - type="data.parameter.ParameterData."
+
+.. note:: If you use in your request the endpoint *io/input* (*io/outputs*) together with one or more filters, the latter are applied to the input (output) nodes of the selected *pk*. For example, the request
+
+     \http://localhost:5000/api/v2/nodes/6/io/outputs/?type=data.folder.FolderData."
+
+would first search for the outputs of the node with *pk* =6 and then select only those objects of type *data.folder.FolderData*
+
+       
 
 The HTTP response
 +++++++++++++++++
@@ -296,461 +312,203 @@ The JSON object mainly contains the list of the results returned by the API. Thi
 Examples
 ++++++++
 
-AiiDA REST API provides the urls to get the list of *Computer* nodes stored in the database
-or to get the details of a single *Computer* node. The REST urls for *Computer* are explained
-below.
+Computers
+---------
 
-1. Get list of *Computer* nodes:
---------------------------------
+1. Get a list of the *Computers* objects.
 
-This url returns the list of *Computer* nodes stored in AiiDA database. There are two ways to limit the number of results returned by the REST API, either using pagination, or providing values LIMIT and OFFSET
-The URL format is:
+    REST url:: 
 
-    \http://localhost:5000/api/computers/page/(PAGE)?(COLUMN_FILTERS)&(ORDERBY)&(PERPAGE)
-    \http://localhost:5000/api/computers?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-In the first case, the results of a request are organized in pages containing by default 20 results each.
-
-The order of the fields composing the querystring is not significant and none of the field is mandatory.
-Here, we give a detailed explanation of the fields that form a query string.
-
-    - COLUMN_FILTERS: Each filter is composed by a key, an operator, and a value. A key represents a column name, namely, a specific property of a node. The supported operators depend on the key, see the following table. A value can be either an integer number or a double quoted string. The operator '=in=' can be followed by a comma-separated list of values.
-
-        +---------------+-----------+-----------------------+------------------------+
-        | Key           | Operator  | Query string          |             Details    |
-        +===============+===========+=======================+========================+
-        | id            | "=",      | | id=1                | | Primary key of the   |
-        +               +-----------+-----------------------+ | Computer             +
-        |               | "<" ,"<=" | | id<5, id<=5         |                        |
-        +               +-----------+-----------------------+                        +
-        |               | ">", ">=" | | id>5, id>=5         |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "in"      | | id=in=2,3,6,7       |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | name          | "="       | | name="abc"          | | Name of the          |
-        +               +-----------+-----------------------+ | Computer             +
-        |               | "like"    | | name=like="ab_c%"   |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "ilike"   | | name=ilike="aB_c%"  |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | hostname      | "="       | | hostname="abc"      | | Hostname of the      |
-        +               +-----------+-----------------------+ | Computer             +
-        |               | "like"    | | hostname=like=      |                        |
-        |               |           | | "ab_c%"             |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "ilike"   | | hostname=ilike=     |                        |
-        |               |           | | "aB_c%"             |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | description   | "="       | | description="lmn"   | | Description of the   |
-        +               +-----------+-----------------------+ | Computer             +
-        |               | "like"    | | description=like=   |                        |
-        |               |           | | "lm_n%"             |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "ilike"   | | description=ilike=  |                        |
-        |               |           | | "Km_N%"             |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | enabled       | "="       | | enabled=true        | | If *true*, Computer  |
-        |               |           |                       | | is enabled to run    |
-        |               |           |                       | | calculations else    |
-        |               |           |                       | | *false*              |
-        +---------------+-----------+-----------------------+------------------------+
-        | scheduler_type| "="       | | scheduler_type=     | | Scheduler type       |
-        |               |           | | "slurm"             |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "in"      | | scheduler_type=in=  |                        |
-        |               |           | | "slurm","pbspro"    |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | transport_type| "="       | | transport_type="ssh"| | Transport type       |
-        +               +-----------+-----------------------+                        +
-        |               | "in"      | | transport_type=in=  |                        |
-        |               |           | | "ssh", ...          |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | uuid          | "="       | | uuid="aabh-6754-.." | | Uuid of the Computer |
-        +               +-----------+-----------------------+                        +
-        |               | "in"      | | uuid=in=            |                        |
-        |               |           | | "aa..", "bb..", ... |                        |
-        +---------------+-----------+-----------------------+------------------------+
-
-.. note:: Multiple filters can be specified separating them by the special character "&". In this case, the boolean operator AND is applied between the conditions set by the filters. You can specify multiple filters on the same column, ex: "id>10&id<=30". Clearly, the query string "id=20&d=30" would yield no results.
-.. note:: If a string value contains '"' characters (double quotes), the latter must be escaped as '""' (two double quotes). If you use "=like=" or "=ilike=" operators and you want to match a string that contains "%" or "_" characters, you have to escape those using a backslash, e.g. "\\%" and "\\_".
-.. note:: Filter keys can only contain alphanumeric characters, dashes, and underscores. In any case, if a query string contains well-formed column names that, however, do not correspond to any column of the database table, an error is returned.
-
-
-    - ORDERBY: field that specifies how to order the elements returned by the API. For each of the projected columns you can choose between ascending or descending order. If for a certain column the order is not specified, then the ascending order will be used.
-
-        +-------------+-----------+--------------------+-----------------------------+
-        | Column name | Order type| Query string       |             Details         |
-        +=============+===========+====================+=============================+
-        | id          | ascending | | orderby=id       | | Final results will be     |
-        |             |           | |     OR           | | ordered by *id* in        |
-        |             |           | | orderby=+id      | | ascending order           |
-        +             +-----------+--------------------+-----------------------------+
-        |             | descending| | orderby=-id      | | Final results will be     |
-        |             |           | |                  | | ordered by *id* in        |
-        |             |           |                    | | descending order          |
-        +-------------+-----------+--------------------+-----------------------------+
-        | ...                                                                        |
-        +-------------+-----------+--------------------+-----------------------------+
-
-
-.. note:: You can replace the column name e.g. *id* by *name/hostname/enabled/scheduler_type/transport_type/uuid*
-.. note:: You can require ordering on multiple columns, e.g. "orderby=+scheduler_type,-id". This way, computers will be ordered by their scheduler type in ascending alphabetical order, and computers with the same scheduler type will be ordered from the highest to the lowest id.
-
-**Example**
-
-    REST url:: \http://localhost:5000/computers?limit=3&offset=2&orderby=id
+        http://localhost:5000/api/v2/computers?limit=3&offset=2&orderby=id
 
     Description::
-        returns the list of 3 *Computer* nodes (limit=3) starting from the 2nd
-        row (offset=2) of the database table and the list will be ordered
-        by ascending values of *id* (default ordering if ORDERBY is not provided).
+
+        returns the list of three *Computer* objects (*limit* =3) starting from the 3rd
+        row (*offset* =2) of the database table and the list will be ordered
+        by ascending values of *id*.
+
+    Response::
+    
+        {
+          "data": {
+            "computers": [
+              {
+                "description": "Alpha Computer", 
+                "enabled": true, 
+                "hostname": "alpha.aiida.net", 
+                "id": 3, 
+                "name": "Alpha", 
+                "scheduler_type": "slurm", 
+                "transport_params": "{}", 
+                "transport_type": "ssh", 
+                "uuid": "9b5c84bb-4575-4fbe-b18c-b23fc30ec55e"
+              }, 
+              {
+                "description": "Beta Computer", 
+                "enabled": true, 
+                "hostname": "beta.aiida.net", 
+                "id": 4, 
+                "name": "Beta", 
+                "scheduler_type": "slurm", 
+                "transport_params": "{}", 
+                "transport_type": "ssh", 
+                "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
+              }, 
+              {
+                "description": "Gamma Computer", 
+                "enabled": true, 
+                "hostname": "gamma.aiida.net", 
+                "id": 5, 
+                "name": "Gamma", 
+                "scheduler_type": "slurm", 
+                "transport_params": "{}", 
+                "transport_type": "ssh", 
+                "uuid": "7a0c3ff9-1caf-405c-8e89-2369cf91b634"
+              }
+            ]
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/computers", 
+          "pk": null, 
+          "query_string": "limit=3&offset=2&orderby=id", 
+          "resource_type": "computers", 
+          "url": "http://localhost:5000/api/v2/computers?limit=3&offset=2&orderby=id", 
+          "url_root": "http://localhost:5000/"
+        }
+        
+   
+
+2. Get details of a single *Computer* object:
+
+    REST url::
+
+        http://localhost:5000/api/v2/computers/4
+
+    Description::
+
+        returns the details of the *Computer* object with *pk* =4.
 
     Response::
 
         {
-          "data": [
-            {
-              "description": "",
-              "enabled": true,
-              "hostname": "test.abc.ch",
-              "id": 3,
-              "name": "test3",
-              "scheduler_type": "pbspro",
-              "transport_params": "{}",
-              "transport_type": "local",
-              "uuid": "56d7f972-1232-4adc-aa5b-c425619fdd58"
-            },
-            {...},
-            {...},
-            {...},
-          ],
-          "method": "GET",
-          "node_type": "computers",
-          "path": "/computers",
-          "pk": null,
-          "query_string": {},
-          "url": "\http://localhost:5000/computers",
-          "url_root": "\http://localhost:5000/"
+          "data": {
+            "computers": [
+              {
+                "description": "Beta Computer", 
+                "enabled": true, 
+                "hostname": "beta.aiida.net", 
+                "id": 4, 
+                "name": "Beta", 
+                "scheduler_type": "slurm", 
+                "transport_params": "{}", 
+                "transport_type": "ssh", 
+                "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
+              }
+            ]
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/computers/4", 
+          "pk": 4, 
+          "query_string": "", 
+          "resource_type": "computers", 
+          "url": "http://localhost:5000/api/v2/computers/4", 
+          "url_root": "http://localhost:5000/"
         }
-
-
-2. Get details of single *Computer* node:
-------------------------------------------
-
-This url returns the details of *Computer* node from AiiDA database.
-The URL format is:
-
-    \http://localhost:5000/computers/(PK)
-
-Where,
-    - PK: Primary key of the *Computer*
-    - PK: Primary key of the *Computer*
-
-**Example**
-
-    REST url:: \http://localhost:5000/computers/1
-
-    Description::
-        returns the details of *Computer* node (pk=1) from database.
-
-    Response::
-
-        {
-          "data": [
-            {
-              "description": "",
-              "enabled": true,
-              "hostname": "test.abb.ch",
-              "id": 1,
-              "name": "test1",
-              "scheduler_type": "pbspro",
-              "transport_params": "{}",
-              "transport_type": "local",
-              "uuid": "56d7f972-56bb-4adc-aa5b-c425619fdd58"
-            }
-          ],
-          "method": "GET",
-          "node_type": "computers",
-          "path": "/computers/1",
-          "pk": "1",
-          "query_string": {},
-          "url": "\http://localhost:5000/computers/1",
-          "url_root": "\http://localhost:5000/"
-        }
-
+        
 
 Nodes
-++++++
+-----
 
-AiiDA *Node* type is subdivided into *Calculation, Data and Code*. All the REST urls
-provided for *Node* can be applied to *Calculation, Data and Code* as well.The AiiDA
-REST API provides the urls to get the list of *Node* nodes stored in database or to get
-the details of single *Node* node, its inputs, outputs, attributes and extras. Different
-type of filters can be applied on list of nodes. The REST urls are explained below.
+1.  Get a list of *Node* objects
+  
+    REST url::
 
-1. Get list of *Node* nodes:
------------------------------
-
-This url returns the list of *Node* nodes stored in AiiDA database.
-The URL format is:
-
-    \http://localhost:5000/nodes?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-Where,
-
-    - COLUMN_FILTERS:
-
-        +---------------+-----------+-----------------------+------------------------+
-        | Column name   | Operation | Query string          |             Details    |
-        +===============+===========+=======================+========================+
-        | id            | "="       | | id=1                | | Primary key of the   |
-        +               +-----------+-----------------------+ | Node                 +
-        |               | "<" ,"<=" | | id<5, id<=5         |                        |
-        +               +-----------+-----------------------+                        +
-        |               | ">", ">=" | | id>5, id>=5         |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "in"      | | id={in:[2,3,6,7]}   |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | label         | "="       | | label=abc           | | Label of the Node    |
-        +               +-----------+-----------------------+                        +
-        |               | "like"    | | label={like:abc%}   |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "ilike"   | | label={like:aBc%}   |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | type          | "="       | | type=abc            | | Type of the Node.    |
-        |               |           |                       | | Please note that     |
-        |               |           |                       | | here we need to      |
-        |               |           |                       | | give complete Node   |
-        |               |           |                       | | type e.g.            |
-        |               |           |                       | | type=data.Data.      |
-        |               |           |                       | | to get all Data Node |
-        +---------------+-----------+-----------------------+------------------------+
-        | state         | "="       | | state=FINISHED      | | State of the Node    |
-        +---------------+-----------+-----------------------+------------------------+
-        | ctime         | "="       | | ctime=??            | | Creation time of     |
-        +               +-----------+-----------------------+ | the Node             +
-        |               | "<" ,"<=" | | ctime<??, ctime<=?? |                        |
-        +               +-----------+-----------------------+                        +
-        |               | ">", ">=" | | ctime>??, ctime>=?? |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | mtime         | "="       | | mtime=??            | | Last modification    |
-        +               +-----------+-----------------------+ | time of the Node     +
-        |               | "<" ,"<=" | | mtime<??, mtime<=?? |                        |
-        +               +-----------+-----------------------+                        +
-        |               | ">", ">=" | | mtime>??, mtime>=?? |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | uuid          | "="       | | uuid=aabh-6754-..   | | Uuid of the Node     |
-        +               +-----------+-----------------------+                        +
-        |               | "in"      | | uuid=               |                        |
-        |               |           | | {in:[aa..,bb..]}    |                        |
-        +---------------+-----------+-----------------------+------------------------+
-
-    - LIMIT: number that says no more than that many rows will be returned
-
-    - OFFSET: number that says to skip that many rows before beginning to return rows.
-
-    - ORDERBY: requested node list would be ordered by the provided column. If the order
-        type is not provided, then *asc* will be used as default order type.
-
-        +-------------+-----------+--------------------+-----------------------------+
-        | Column name | Order type| Query string       |             Details         |
-        +=============+===========+====================+=============================+
-        | id          | "asc",    | | orderby=id OR    | | Final results will be     |
-        |             |           | | orderby={id:asc} | | ordered by *id* in        |
-        |             |           |                    | | ascending order           |
-        +             +-----------+--------------------+-----------------------------+
-        |             | "desc",   | | orderby=id OR    | | Final results will be     |
-        |             |           | | orderby={id:desc}| | ordered by *id* in        |
-        |             |           |                    | | descending order          |
-        +-------------+-----------+--------------------+-----------------------------+
-        | ...                                                                        |
-        +-------------+-----------+--------------------+-----------------------------+
-
-
-        .. note:: You could replace column name e.g. *id* with *label/type/state/*
-*ctime/mtime/uuid*
-
-**Example**
-
-    REST url:: \http://localhost:5000/nodes?limit=2&offset=8&orderby=id
+        http://localhost:5000/api/v2/nodes?limit=2&offset=8&orderby=-id
 
     Description::
-        returns the list of 2 *Node* nodes (limit=2) starting from 8th
-        row (offset=8) of the database table and the list will be ordered
-        by *id* in descending order (default order if order is not provided).
+
+        returns the list of two *Node* objects (*limit* =2) starting from 9th
+        row (*offset* =8) of the database table and the list will be ordered
+        by *id* in descending order.
 
     Response::
 
         {
           "data": {
-            "node": [
+            "nodes  ": [
               {
-                "id": 9,
-                "label": "",
-                "state": null,
-                "type": "data.array.kpoints.KpointsData.",
-                "uuid": "4e872a4c-dc21-4910-ba60-c627cf33eeb0"
-              },
+                "ctime": "Fri, 29 Apr 2016 19:24:12 GMT", 
+                "id": 386913, 
+                "label": "", 
+                "mtime": "Fri, 29 Apr 2016 19:24:13 GMT", 
+                "state": null, 
+                "type": "calculation.inline.InlineCalculation.", 
+                "uuid": "68d2ed6c-6f51-4546-8d10-7fe063525ab8"
+              }, 
               {
-                "id": 43,
-                "label": "",
-                "state": "FAILED",
-                "type": "calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation.",
-                "uuid": "9b1f2e61-5236-422e-809e-2b72ed7d9ce9"
+                "ctime": "Fri, 29 Apr 2016 19:24:00 GMT", 
+                "id": 386912, 
+                "label": "", 
+                "mtime": "Fri, 29 Apr 2016 19:24:00 GMT", 
+                "state": null, 
+                "type": "data.parameter.ParameterData.", 
+                "uuid": "a39dc158-fedd-4ea1-888d-d90ec6f86f35"
               }
             ]
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes",
-          "pk": null,
-          "query_string": {
-            "limit": "2",
-            "offset": "8",
-            "orderby": "id"
-          },
-          "url": "\http://localhost:5000/nodes?limit=2&offset=8&orderby=id",
-          "url_root": "\http://localhost:5000/"
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/nodes", 
+          "pk": null, 
+          "query_string": "limit=2&offset=8&orderby=-id", 
+          "resource_type": "nodes", 
+          "url": "http://localhost:5000/api/v2/nodes?limit=2&offset=8&orderby=-id", 
+          "url_root": "http://localhost:5000/"
         }
+           
+2. Get the details of a single *Node* object:
 
+    REST url::
 
-2. Get details of single *Node* node:
---------------------------------------
-
-This url returns the details of *Node* type node from AiiDA database.
-The URL format is:
-
-    \http://localhost:5000/nodes/(PK)
-
-Where,
-    - PK: Primary key of the *Node*
-
-**Example**
-
-    REST url:: \http://localhost:5000/nodes/1
+        http://localhost:5000/api/v2/nodes/1
 
     Description::
-        returns the details of *Node* node (pk=1) from database.
+
+        returns the details of the *Node* object with *pk* =1.
 
     Response::
 
         {
           "data": {
-            "node": [
+            "nodes  ": [
               {
-                "id": 1,
-                "label": "pw",
-                "state": null,
-                "type": "code.Code.",
-                "uuid": "3e5d980c-5fc7-44a9-9189-343063a1366b"
+                "ctime": "Fri, 14 Aug 2015 13:18:04 GMT", 
+                "id": 1, 
+                "label": "", 
+                "mtime": "Mon, 25 Jan 2016 14:34:59 GMT", 
+                "state": "IMPORTED", 
+                "type": "data.parameter.ParameterData.", 
+                "uuid": "e30da7cc-af50-40ca-a940-2ac8d89b2e0d"
               }
             ]
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/1",
-          "pk": "1",
-          "query_string": {},
-          "url": "\http://localhost:5000/nodes/1",
-          "url_root": "\http://localhost:5000/"
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/nodes/1", 
+          "pk": 1, 
+          "query_string": "", 
+          "resource_type": "nodes", 
+          "url": "http://localhost:5000/api/v2/nodes/1", 
+          "url_root": "http://localhost:5000/"
         }
+           
+3. Get the list of inputs of a specific node.
 
-
-3. Get list of *Node* inputs:
-------------------------------
-
-This url returns the inputs of the *Node* from AiiDA database.
-The URL format is:
-
-    \http://localhost:5000/nodes/(PK)/io/inputs?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-.. note:: Please note that in this url the COLUMN_FILTERS, LIMIT, OFFSET
-and ORDERBY will be applyed to the input list of the selected node
-          with its PK.
-
-Where,
-    - PK: Primary key of the *Node* whose inputs are requested
-    - COLUMN_FILTERS:
-
-        +---------------+-----------+-----------------------+------------------------+
-        | Column name   | Operation | Query string          |             Details    |
-        +===============+===========+=======================+========================+
-        | id            | "=",      | | id=1                | | Primary key of the   |
-        +               +-----------+-----------------------+ | input Node           +
-        |               | "<" ,"<=" | | id<5, id<=5         |                        |
-        +               +-----------+-----------------------+                        +
-        |               | ">", ">=" | | id>5, id>=5         |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "in"      | | id={in:[2,3,6,7]}   |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | label         | "="       | | label=abc           | | Label of the input   |
-        +               +-----------+-----------------------+ | node                 +
-        |               | "like"    | | label={like:abc%}   |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "ilike"   | | label={like:aBc%}   |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | type          | "="       | | type=abc            | | Type of the input    |
-        |               |           |                       | | Node.                |
-        |               |           |                       | | Please note that     |
-        |               |           |                       | | here we need to      |
-        |               |           |                       | | give complete Node   |
-        |               |           |                       | | type e.g.            |
-        |               |           |                       | | type=data.Data.      |
-        |               |           |                       | | to get all Data Node |
-        +---------------+-----------+-----------------------+------------------------+
-        | state         | "="       | | state=FINISHED      | | State of the input   |
-        |               |           |                       | | Node                 |
-        +---------------+-----------+-----------------------+------------------------+
-        | ctime         | "="       | | ctime=??            | | Creation time of     |
-        +               +-----------+-----------------------+ | the input Node       +
-        |               | "<" ,"<=" | | ctime<??, ctime<=?? |                        |
-        +               +-----------+-----------------------+                        +
-        |               | ">", ">=" | | ctime>??, ctime>=?? |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | mtime         | "="       | | mtime=??            | | Last modification    |
-        +               +-----------+-----------------------+ | time of the input    +
-        |               | "<" ,"<=" | | mtime<??, mtime<=?? | | Node                 |
-        +               +-----------+-----------------------+                        +
-        |               | ">", ">=" | | mtime>??, mtime>=?? |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | uuid          | "="       | | uuid=aabh-6754-..   | | Uuid of the input    |
-        +               +-----------+-----------------------+ | Node                 +
-        |               | "in"      | | uuid=               |                        |
-        |               |           | | {in:[aa..,bb..]}    |                        |
-        +---------------+-----------+-----------------------+------------------------+
-
-    - LIMIT: number that says no more than that many rows will be returned
-
-    - OFFSET: number that says to skip that many rows before beginning to return rows.
-
-    - ORDERBY: requested node list would be ordered by the provided column. If the order
-        type is not provided, then *asc* will be used as default order type.
-
-        +-------------+-----------+--------------------+-----------------------------+
-        | Column name | Order type| Query string       |             Details         |
-        +=============+===========+====================+=============================+
-        | id          | "asc",    | | orderby=id OR    | | Inputs will be            |
-        |             |           | | orderby={id:asc} | | ordered by *id* in        |
-        |             |           |                    | | ascending order           |
-        +             +-----------+--------------------+-----------------------------+
-        |             | "desc",   | | orderby=id OR    | | Inputs will be            |
-        |             |           | | orderby={id:desc}| | ordered by *id* in        |
-        |             |           |                    | | descending order          |
-        +-------------+-----------+--------------------+-----------------------------+
-        | ...                                                                        |
-        +-------------+-----------+--------------------+-----------------------------+
-
-
-        .. note:: You could replace column name e.g. *id* with *label/type/state/*
-*ctime/mtime/uuid*
-
-
-**Example 1**
-
-    REST url:: \http://localhost:5000/nodes/10/io/inputs
+    REST url:: 
+    
+        http://localhost:5000/api/v2/nodes/6/io/inputs?limit=2
 
     Description::
-        returns the inputs list of *Node* node (pk=10) from database.
+    
+        returns the list of the first two input nodes (*limit* =2) of the *Node* object with *pk* =6.
 
     Response::
 
@@ -758,33 +516,45 @@ Where,
           "data": {
             "inputs": [
               {
-                "id": 9,
-                "label": "",
-                "state": null,
-                "type": "data.array.kpoints.KpointsData.",
-                "uuid": "4e872a4c-dc21-4910-ba60-c627cf33eeb0"
-              },
-              {...},
-              ...
+                "ctime": "Fri, 24 Jul 2015 18:49:23 GMT", 
+                "id": 10605, 
+                "label": "", 
+                "mtime": "Mon, 25 Jan 2016 14:35:00 GMT", 
+                "state": "IMPORTED", 
+                "type": "data.remote.RemoteData.", 
+                "uuid": "16b93b23-8629-4d83-9259-de2a947b43ed"
+              }, 
+              {
+                "ctime": "Fri, 24 Jul 2015 14:33:04 GMT", 
+                "id": 9215, 
+                "label": "", 
+                "mtime": "Mon, 25 Jan 2016 14:35:00 GMT", 
+                "state": "IMPORTED", 
+                "type": "data.array.kpoints.KpointsData.", 
+                "uuid": "1b4d22ec-9f29-4e0d-9d68-84ddd18ad8e7"
+              }
             ]
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/10/io/inputs",
-          "pk": "10",
-          "query_string": {},
-          "url": "\http://localhost:5000/nodes/10/io/inputs",
-          "url_root": "\http://localhost:5000/"
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/nodes/6/io/inputs", 
+          "pk": 6, 
+          "query_string": "limit=2", 
+          "resource_type": "nodes", 
+          "url": "http://localhost:5000/api/v2/nodes/6/io/inputs?limit=2", 
+          "url_root": "http://localhost:5000/"
         }
+        
 
+4. Filter the inputs/outputs of a node by their type. 
 
-**Example 2**
-
-    REST url:: \http://localhost:5000/nodes/10/io/inputs?type=data.array.kpoints.KpointsData.
+    REST url:: 
+    
+        http://localhost:5000/api/v2/nodes/6/io/inputs?type="data.array.kpoints.KpointsData."
 
     Description::
-        returns the inputs (having *type=data.array.kpoints.KpointsData.*) list of
-        the *Node* node (pk=10) from database.
+    
+        returns the list of the *KpointsData* input nodes of
+        the *Node* object with *pk* =6.
 
     Response::
 
@@ -792,121 +562,32 @@ Where,
           "data": {
             "inputs": [
               {
-                "id": 9,
-                "label": "",
-                "state": null,
-                "type": "data.array.kpoints.KpointsData.",
-                "uuid": "4e872a4c-dc21-4910-ba60-c627cf33eeb0"
+                "ctime": "Fri, 24 Jul 2015 14:33:04 GMT", 
+                "id": 9215, 
+                "label": "", 
+                "mtime": "Mon, 25 Jan 2016 14:35:00 GMT", 
+                "state": "IMPORTED", 
+                "type": "data.array.kpoints.KpointsData.", 
+                "uuid": "1b4d22ec-9f29-4e0d-9d68-84ddd18ad8e7"
               }
             ]
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/10/io/inputs",
-          "pk": "10",
-          "query_string": {
-            "type": "data.array.kpoints.KpointsData."
-          },
-          "url": "\http://localhost:5000/nodes/10/io/inputs?type=data.array.kpoints.KpointsData.",
-          "url_root": "\http://localhost:5000/"
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/nodes/6/io/inputs", 
+          "pk": 6, 
+          "query_string": "type=\"data.array.kpoints.KpointsData.\"", 
+          "resource_type": "nodes", 
+          "url": "http://localhost:5000/api/v2/nodes/6/io/inputs?type=\"data.array.kpoints.KpointsData.\"", 
+          "url_root": "http://localhost:5000/"
         }
-
-
-4. Get list of *Node* outputs:
--------------------------------
-
-This url returns the outputs of the *Node* from AiiDA database.
-The URL format is:
-
-    \http://localhost:5000/nodes/(PK)/io/outputs?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-.. note:: Please note that in this url the COLUMN_FILTERS, LIMIT, OFFSET
-and ORDERBY will be applyed to the output list of the selected node
-          with its PK.
-
-Where,
-    - PK: Primary key of the *Node* whose outputs are requested
-    - COLUMN_FILTERS:
-
-        +---------------+-----------+-----------------------+------------------------+
-        | Column name   | Operation | Query string          |             Details    |
-        +===============+===========+=======================+========================+
-        | id            | "=",      | | id=1                | | Primary key of the   |
-        +               +-----------+-----------------------+ | output Node          +
-        |               | "<" ,"<=" | | id<5, id<=5         |                        |
-        +               +-----------+-----------------------+                        +
-        |               | ">", ">=" | | id>5, id>=5         |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "in"      | | id={in:[2,3,6,7]}   |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | label         | "="       | | label=abc           | | Label of the output  |
-        +               +-----------+-----------------------+ | node                 +
-        |               | "like"    | | label={like:abc%}   |                        |
-        +               +-----------+-----------------------+                        +
-        |               | "ilike"   | | label={like:aBc%}   |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | type          | "="       | | type=abc            | | Type of the output   |
-        |               |           |                       | | Node.                |
-        |               |           |                       | | Please note that     |
-        |               |           |                       | | here we need to      |
-        |               |           |                       | | give complete Node   |
-        |               |           |                       | | type e.g.            |
-        |               |           |                       | | type=data.Data.      |
-        |               |           |                       | | to get all Data Node |
-        +---------------+-----------+-----------------------+------------------------+
-        | state         | "="       | | state=FINISHED      | | State of the output  |
-        |               |           |                       | | Node                 |
-        +---------------+-----------+-----------------------+------------------------+
-        | ctime         | "="       | | ctime=??            | | Creation time of     |
-        +               +-----------+-----------------------+ | the output Node      +
-        |               | "<" ,"<=" | | ctime<??, ctime<=?? |                        |
-        +               +-----------+-----------------------+                        +
-        |               | ">", ">=" | | ctime>??, ctime>=?? |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | mtime         | "="       | | mtime=??            | | Last modification    |
-        +               +-----------+-----------------------+ | time of the output   +
-        |               | "<" ,"<=" | | mtime<??, mtime<=?? | | Node                 |
-        +               +-----------+-----------------------+                        +
-        |               | ">", ">=" | | mtime>??, mtime>=?? |                        |
-        +---------------+-----------+-----------------------+------------------------+
-        | uuid          | "="       | | uuid=aabh-6754-..   | | Uuid of the output   |
-        +               +-----------+-----------------------+ | Node                 +
-        |               | "in"      | | uuid=               |                        |
-        |               |           | | {in:[aa..,bb..]}    |                        |
-        +---------------+-----------+-----------------------+------------------------+
-
-    - LIMIT: number that says no more than that many rows will be returned
-
-    - OFFSET: number that says to skip that many rows before beginning to return rows.
-
-    - ORDERBY: requested node list would be ordered by the provided column. If the order
-        type is not provided, then *asc* will be used as default order type.
-
-        +-------------+-----------+--------------------+-----------------------------+
-        | Column name | Order type| Query string       |             Details         |
-        +=============+===========+====================+=============================+
-        | id          | "asc",    | | orderby=id OR    | | Inputs will be            |
-        |             |           | | orderby={id:asc} | | ordered by *id* in        |
-        |             |           |                    | | ascending order           |
-        +             +-----------+--------------------+-----------------------------+
-        |             | "desc",   | | orderby=id OR    | | Inputs will be            |
-        |             |           | | orderby={id:desc}| | ordered by *id* in        |
-        |             |           |                    | | descending order          |
-        +-------------+-----------+--------------------+-----------------------------+
-        | ...                                                                        |
-        +-------------+-----------+--------------------+-----------------------------+
-
-
-        .. note:: You could replace column name e.g. *id* with *label/type/state/*
-*ctime/mtime/uuid*
-
-
-**Example 1**
-
-    REST url:: \http://localhost:5000/nodes/150/io/outputs
-
+        
+    REST url::
+    
+        http://localhost:5000/api/v2/nodes/6/io/outputs?type="data.remote.RemoteData."
+    
     Description::
-        returns the outputs list of *Node* node (pk=150) from database.
+    
+        returns the list of the *RemoteData* output nodes of the *Node* object with *pk* =6.
 
     Response::
 
@@ -914,341 +595,372 @@ Where,
           "data": {
             "outputs": [
               {
-                "id": 163,
-                "label": "",
-                "state": null,
-                "type": "data.remote.RemoteData.",
-                "uuid": "fd89962e-6197-43a8-a07c-5a737d900cff"
-              },
+                "ctime": "Fri, 24 Jul 2015 20:35:02 GMT", 
+                "id": 2811, 
+                "label": "", 
+                "mtime": "Mon, 25 Jan 2016 14:34:59 GMT", 
+                "state": "IMPORTED", 
+                "type": "data.remote.RemoteData.", 
+                "uuid": "bd48e333-da8a-4b6f-8e1e-6aaa316852eb"
+              }
+            ]
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/nodes/6/io/outputs", 
+          "pk": 6, 
+          "query_string": "type=\"data.remote.RemoteData.\"", 
+          "resource_type": "nodes", 
+          "url": "http://localhost:5000/api/v2/nodes/6/io/outputs?type=\"data.remote.RemoteData.\"", 
+          "url_root": "http://localhost:5000/"
+        }
+            
+
+
+5. Getting the list of the attributes/extras of a specific node
+
+    REST url::
+    
+        http://localhost:5000/api/v2/nodes/1822/content/attributes
+
+    Description::
+    
+        returns the list of all attributes of the *Node* object with *pk* =1822.
+
+    Response::
+
+        {
+          "data": {
+            "attributes": {
+              "append_text": "", 
+              "input_plugin": "quantumespresso.pw", 
+              "is_local": false, 
+              "prepend_text": "", 
+              "remote_exec_path": "/project/espresso-5.1-intel/bin/pw.x"
+            }
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/nodes/1822/content/attributes", 
+          "pk": 1822, 
+          "query_string": "", 
+          "resource_type": "nodes", 
+          "url": "http://localhost:5000/api/v2/nodes/1822/content/attributes", 
+          "url_root": "http://localhost:5000/"
+        }
+      
+
+
+    REST url::
+
+        http://localhost:5000/api/v2/nodes/1822/content/extras
+
+    Description::
+    
+        returns the list of all the extras of the *Node* object with *pk* =1822.
+
+    Response::
+
+        {
+          "data": {
+            "extras": {
+              "trialBool": true, 
+              "trialFloat": 3.0, 
+              "trialInt": 34, 
+              "trialStr": "trial"
+            }
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/codes/1822/content/extras", 
+          "pk": 1822, 
+          "query_string": "", 
+          "resource_type": "codes", 
+          "url": "http://localhost:5000/api/v2/codes/1822/content/extras", 
+          "url_root": "http://localhost:5000/"
+        }
+     
+
+6. Getting a user-defined list of attributes/extras of a specific node 
+
+    REST url::
+    
+         http://localhost:5000/api/v2/codes/1822/content/attributes?alist=append_text,is_local
+
+    Description::
+    
+        returns a list of the attributes *append_text* and *is_local* of the *Node* object with *pk* =1822.
+
+    Response::
+
+        {
+          "data": {
+            "attributes": {
+              "append_text": "", 
+              "is_local": false
+            }
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/codes/1822/content/attributes", 
+          "pk": 1822, 
+          "query_string": "alist=append_text,is_local", 
+          "resource_type": "codes", 
+          "url": "http://localhost:5000/api/v2/codes/1822/content/attributes?alist=append_text,is_local", 
+          "url_root": "http://localhost:5000/"
+        }
+        
+
+
+    REST url::
+    
+        http://localhost:5000/api/v2/codes/1822/content/extras?elist=trialBool,trialInt
+
+    Description::
+    
+        returns a list of the extras *trialBool* and *trialInt* of the *Node* object with *pk* =1822.
+
+    Response::
+
+        {
+          "data": {
+            "extras": {
+              "trialBool": true, 
+              "trialInt": 34
+            }
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/codes/1822/content/extras", 
+          "pk": 1822, 
+          "query_string": "elist=trialBool,trialInt", 
+          "resource_type": "codes", 
+          "url": "http://localhost:5000/api/v2/codes/1822/content/extras?elist=trialBool,trialInt", 
+          "url_root": "http://localhost:5000/"
+        }
+
+7. Getting all the attributes/extras of a specific node except a user-defined list
+
+
+    REST url::
+
+        http://localhost:5000/api/v2/codes/1822/content/attributes?nalist=append_text,is_local    
+
+    Description::
+    
+        returns all the attributes of the *Node* object with *pk* =1822 except *append_text* and *is_local*.
+
+    Response::
+
+        {
+          "data": {
+            "attributes": {
+              "input_plugin": "quantumespresso.pw", 
+              "prepend_text": "", 
+              "remote_exec_path": "/project/espresso-5.1-intel/bin/pw.x"
+            }
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/codes/1822/content/attributes", 
+          "pk": 1822, 
+          "query_string": "nalist=append_text,is_local", 
+          "resource_type": "codes", 
+          "url": "http://localhost:5000/api/v2/codes/1822/content/attributes?nalist=append_text,is_local", 
+          "url_root": "http://localhost:5000/"
+       }
+
+
+    REST url::
+
+        http://localhost:5000/api/v2/codes/1822/content/extras?nelist=trialBool,trialInt
+
+    Description::
+    
+        returns all the extras of the *Node* object with *pk* =1822 except *trialBool* and *trialInt*.
+
+    Response::
+
+        {
+          "data": {
+            "extras": {
+              "trialFloat": 3.0, 
+              "trialStr": "trial"
+            }
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/codes/1822/content/extras", 
+          "pk": 1822, 
+          "query_string": "nelist=trialBool,trialInt", 
+          "resource_type": "codes", 
+          "url": "http://localhost:5000/api/v2/codes/1822/content/extras?nelist=trialBool,trialInt", 
+          "url_root": "http://localhost:5000/"
+        }
+
+
+.. note:: The same REST urls supported for the resource *nodes* are also available with the derived resources, namely,  *calculations*, *data*, and *codes*, just changing the resource field in the path.
+
+
+Users
+-----
+
+1. Getting a list of the users
+
+    REST url:: 
+
+        http://localhost:5000/api/v2/users/
+
+    Description::
+    
+        returns a list of all the *User* objects. 
+
+    Response::
+
+        {
+          "data": {
+            "users": [
               {
-                "id": 165,
-                "label": "",
-                "state": null,
-                "type": "data.folder.FolderData.",
-                "uuid": "4835dd56-8423-452a-b299-88057796efb9"
-              },
-              {...},
+                "date_joined": "Mon, 25 Jan 2016 14:31:17 GMT", 
+                "email": "aiida@localhost", 
+                "first_name": "AiiDA", 
+                "id": 1, 
+                "institution": "", 
+                "is_active": true, 
+                "last_login": "Mon, 25 Jan 2016 14:31:17 GMT", 
+                "last_name": "Daemon"
+              }, 
+              {
+                "date_joined": "Thu, 11 Aug 2016 12:35:32 GMT",
+                "email": "gengis.khan@aiida.net",
+                "first_name": "Gengis",
+                "id": 2,
+                "institution": "",
+                "is_active": true,
+                "last_login": "Thu, 11 Aug 2016 12:35:32 GMT", 
+                "last_name": "Khan"
+              }
+            ]
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/users/", 
+          "pk": null, 
+          "query_string": "", 
+          "resource_type": "users", 
+          "url": "http://localhost:5000/api/v2/users/", 
+          "url_root": "http://localhost:5000/"
+        }
+        
+2. Getting a list of users whose first name starts with a given string
+
+    REST url:: 
+
+        http://localhost:5000/api/v2/users/?first_name=ilike="aii%"
+
+    Description::
+    
+        returns a lists of the *User* objects whose first name starts with "aii", regardless the case of the characters.
+
+    Response::
+
+        {
+          "data": {
+            "users": [
+              {
+                "date_joined": "Mon, 25 Jan 2016 14:31:17 GMT", 
+                "email": "aiida@localhost", 
+                "first_name": "AiiDA", 
+                "id": 1, 
+                "institution": "", 
+                "is_active": true, 
+                "last_login": "Mon, 25 Jan 2016 14:31:17 GMT", 
+                "last_name": "Daemon"
+              }
+            ]
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/users/", 
+          "pk": null, 
+          "query_string": "first_name=ilike=%22aii%%22", 
+          "resource_type": "users", 
+          "url": "http://localhost:5000/api/v2/users/?first_name=ilike=\"aii%\"", 
+          "url_root": "http://localhost:5000/"
+        }
+        
+Groups
+------
+
+
+1. Getting a list of groups
+
+    REST url::
+
+        http://localhost:5000/api/v2/groups/?limit=10&orderby=-user_id
+
+    Description::
+    
+        returns the list of ten *Group* objects (*limit* =10) starting from the 1st
+        row of the database table (*offset* =0) and the list will be ordered
+        by *user_id* in descending order.
+        
+    Response::
+
+        {
+          "data": {
+            "groups": [
+              {
+                "description": "", 
+                "id": 104, 
+                "name": "SSSP_new_phonons_0p002", 
+                "type": "", 
+                "user_id": 2, 
+                "uuid": "7c0e0744-8549-4eea-b1b8-e7207c18de32"
+              }, 
+              {
+                "description": "", 
+                "id": 102, 
+                "name": "SSSP_cubic_old_phonons_0p025", 
+                "type": "", 
+                "user_id": 1, 
+                "uuid": "c4e22134-495d-4779-9259-6192fcaec510"
+              }, 
               ...
+     
             ]
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/150/io/outputs",
-          "pk": "150",
-          "query_string": {},
-          "url": "\http://localhost:5000/nodes/150/io/outputs",
-          "url_root": "\http://localhost:5000/"
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/groups/", 
+          "pk": null, 
+          "query_string": "limit=10&orderby=-user_id", 
+          "resource_type": "groups", 
+          "url": "http://localhost:5000/api/v2/groups/?limit=10&orderby=-user_id", 
+          "url_root": "http://localhost:5000/"
         }
 
+2. Getting the details of a specific group
 
-**Example 2**
+    REST url::
 
-    REST url:: \http://localhost:5000/nodes/150/io/outputs?type=data.remote.RemoteData.
+        http://localhost:5000/api/v2/groups/23
 
     Description::
-        returns the outputs (having *type=data.remote.RemoteData.*) list of
-        the *Node* node (pk=150) from database.
+    
+        returns the details of the *Group* object with *pk* =23.
 
     Response::
 
         {
           "data": {
-            "outputs": [
+            "groups": [
               {
-                "id": 163,
-                "label": "",
-                "state": null,
-                "type": "data.remote.RemoteData.",
-                "uuid": "fd89962e-6197-43a8-a07c-5a737d900cff"
+                "description": "GBRV US pseudos, version 1.2", 
+                "id": 23,
+                "name": "GBRV_1.2", 
+                "type": "data.upf.family", 
+                "user_id": 2, 
+                "uuid": "a6e5b6c6-9d47-445b-bfea-024cf8333c55"
               }
             ]
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/150/io/outputs",
-          "pk": "150",
-          "query_string": {
-            "type": "data.remote.RemoteData."
-          },
-          "url": "\http://localhost:5000/nodes/150/io/outputs?type=data.remote.RemoteData.",
-          "url_root": "\http://localhost:5000/"
+          }, 
+          "method": "GET", 
+          "path": "/api/v2/groups/23", 
+          "pk": 23, 
+          "query_string": "", 
+          "resource_type": "groups", 
+          "url": "http://localhost:5000/api/v2/groups/23", 
+          "url_root": "http://localhost:5000/"
         }
-
-5. Get list of *Node* attributes:
-----------------------------------
-
-This url returns the list of *Node* attributes. The *Node* attributes can be stored
-in AiiDA database or calculated on fly. User can filter the list of attributes or can
-request a specific attribute of the node.
-The URL format is:
-
-    \http://localhost:5000/nodes/(PK)/content/attributes?(alist)
-
-Where,
-    - PK: Primary key of the *Node*
-    - alist: It is a list of attributes. There are two ways to specify
-             the list of attributes. Consider, a1, a2, a3 are the attributes.
-             1. alist=[a1,a2,a3] : response will contain the list of atrributes
-                                   a1, a2 and a3
-             2. alist=[-a1,-a2,-a3] : response will contain the list of all
-                                      atrributes EXCEPT a1, a2 and a3
-
-**Example 1**
-
-    REST url:: \http://localhost:5000/nodes/10/content/attributes
-
-    Description::
-        returns the list of all attributes of *Node* node (pk=10).
-
-    Response::
-
-        {
-          "data": {
-            "attributes": {
-              "append_text": "",
-              "input_plugin": "quantumespresso.pw",
-              "is_local": false,
-              "prepend_text": "",
-              "remote_exec_path": "/home/waychal/software/espresso-5.2.0/bin/pw.x"
-            }
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/10/content/attributes",
-          "pk": "10",
-          "query_string": {},
-          "url": "\http://localhost:5000/nodes/10/content/attributes",
-          "url_root": "\http://localhost:5000/"
-        }
-
-**Example 2**
-
-    REST url:: \http://localhost:5000/nodes/10/content/attributes?alist=[a1,a2,a3]
-
-    Description::
-        returns the list of attributes a1,a2,a3 of *Node* node (pk=10).
-
-    Response::
-
-        {
-          "data": {
-            "attributes": {
-              "a1": ??,
-              "a2": ??,
-              "a3": ??,
-            }
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/10/content/attributes",
-          "pk": "10",
-          "query_string": {
-            "alist": [a1,a2,a3]
-          },
-          "url": "\http://localhost:5000/nodes/10/content/attributes?alist=[a1,a2,a3]",
-          "url_root": "\http://localhost:5000/"
-        }
-
-
-**Example 3**
-
-    REST url:: \http://localhost:5000/nodes/10/content/attributes?alist=[-a1,-a2,-a3]
-
-    Description::
-        returns the list of attributes a1,a2,a3 of *Node* node (pk=10).
-
-    Response::
-
-        {
-          "data": {
-            "attributes": {
-              "a4": ??,
-              "a5": ??,
-            }
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/10/content/attributes",
-          "pk": "10",
-          "query_string": {
-            "alist": [-a1,-a2,-a3]
-          },
-          "url": "\http://localhost:5000/nodes/10/content/attributes?alist=[-a1,-a2,-a3]",
-          "url_root": "\http://localhost:5000/"
-        }
-
-
-6. Get list of *Node* extras:
-------------------------------
-
-This url returns the list of *Node* extras. *Extras* are the additional attributes added
-by user. User can filter the list of extras or can request a specific extra of the node.
-The URL format is:
-
-    \http://localhost:5000/nodes/(PK)/content/extras?(elist)
-
-Where,
-    - PK: Primary key of the *Node*
-    - elist: It is a list of extras. There are two ways to specify
-             the list of extras. Consider, e1, e2, e3 are the extras.
-             1. elist=[e1,e2,e3] : response will contain the list of extras
-                                   e1, e2 and e3
-             2. elist=[-e1,-e2,-e3] : response will contain the list of all
-                                      extras EXCEPT e1, e2 and e3
-
-**Example 1**
-
-    REST url:: \http://localhost:5000/nodes/10/content/extras
-
-    Description::
-        returns the list of all extras of *Node* node (pk=10).
-
-    Response::
-
-        {
-          "data": {
-            "extras": {
-              "e1": ??,
-              "e2": ??,
-              "e3": ??,
-              "e4": ??,
-              "e5": ??,
-              }
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/10/content/extras",
-          "pk": "10",
-          "query_string": {},
-          "url": "\http://localhost:5000/nodes/10/content/extras",
-          "url_root": "\http://localhost:5000/"
-        }
-
-**Example 2**
-
-    REST url:: \http://localhost:5000/nodes/10/content/extras?elist=[e1,e2,e3]
-
-    Description::
-        returns the list of extras a1,a2,a3 of *Node* node (pk=10).
-
-    Response::
-
-        {
-          "data": {
-            "extras": {
-              "e1": ??,
-              "e2": ??,
-              "e3": ??,
-            }
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/10/content/extras",
-          "pk": "10",
-          "query_string": {
-            "elist": [e1,e2,e3]
-          },
-          "url": "\http://localhost:5000/nodes/10/content/extras?elist=[e1,e2,e3]",
-          "url_root": "\http://localhost:5000/"
-        }
-
-
-**Example 3**
-
-    REST url:: \http://localhost:5000/nodes/10/content/extras?elist=[-e1,-e2,-e3]
-
-    Description::
-        returns the list of extras e1,e2,e3 of *Node* node (pk=10).
-
-    Response::
-
-        {
-          "data": {
-            "extras": {
-              "a4": ??,
-              "a5": ??,
-            }
-          },
-          "method": "GET",
-          "node_type": "nodes",
-          "path": "/nodes/10/content/extras",
-          "pk": "10",
-          "query_string": {
-            "elist": [-e1,-e2,-e3]
-          },
-          "url": "\http://localhost:5000/nodes/10/content/extras?elist=[-e1,-e2,-e3]",
-          "url_root": "\http://localhost:5000/"
-        }
-
-
-Calculations
-+++++++++++++
-
-*Calculation* is a subtype of the *Node*. So all the *Node* REST urls can also be applied
-to the *Calculation* by replacing *nodes* from url with *calculations*. Below are some
-examples of *Calculation* REST urls:
-
-1. \http://localhost:5000/calculations?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-2. \http://localhost:5000/calculations/(PK)
-
-3. \http://localhost:5000/calculations/(PK)/io/inputs?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-4. \http://localhost:5000/calculations/(PK)/io/outputs?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-5. \http://localhost:5000/calculations/(PK)/content/attributes?(alist)
-
-6. \http://localhost:5000/calculations/(PK)/content/extras?(elist)
-
-The COLUMN_FILTERS, LIMIT, OFFSET and ORDERBY works same as in *Node*.
-If the provided pk is not of type *Calculation*, it gives an error saying
-that "given node is not of type Calculation".
-
-
-Data
-++++++
-
-*Data* is a subtype of the *Node*. So all the *Node* REST urls can also be applied
-to the *Data* by replacing *nodes* from url with *data*. Below are some
-examples of *Data* REST urls:
-
-1. \http://localhost:5000/data?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-2. \http://localhost:5000/data/(PK)
-
-3. \http://localhost:5000/data/(PK)/io/inputs?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-4. \http://localhost:5000/data/(PK)/io/outputs?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-5. \http://localhost:5000/data/(PK)/content/attributes?(alist)
-
-6. \http://localhost:5000/data/(PK)/content/extras?(elist)
-
-The COLUMN_FILTERS, LIMIT, OFFSET and ORDERBY works same as in *Node*.
-If the provided pk is not of type *Data*, it gives an error saying
-that "given node is not of type Data".
-
-
-Codes
-++++++
-
-*Code* is a subtype of the *Node*. So all the *Node* REST urls can also be applied
-to the *Code* by replacing *nodes* from url with *codes*. Below are some
-examples of *Code* REST urls:
-
-1. \http://localhost:5000/codes?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-2. \http://localhost:5000/codes/(PK)
-
-3. \http://localhost:5000/codes/(PK)/io/inputs?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-4. \http://localhost:5000/codes/(PK)/io/outputs?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(ORDERBY)
-
-5. \http://localhost:5000/codes/(PK)/content/attributes?(alist)
-
-6. \http://localhost:5000/codes/(PK)/content/extras?(elist)
-
-The COLUMN_FILTERS, LIMIT, OFFSET and ORDERBY works same as in *Node*.
-If the provided pk is not of type *Code*, it gives an error saying
-that "given node is not of type Code".
-
+                

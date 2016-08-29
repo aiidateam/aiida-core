@@ -20,18 +20,25 @@ app = Flask(__name__)
 api = Api(app, prefix=PREFIX)
 
 
-## Error handling for  error raised by invalid urls
-@app.errorhandler(RestValidationError)
-def validation_error_handler(error):
-    response = jsonify({'message': error.message})
-    response.status_code = 400
-    return response
+## Error handling for error raised for invalid urls (not for non existing
+# resources!)
+@app.errorhandler(Exception)
+def error_handler(error):
+    if isinstance(error, RestValidationError):
+        response = jsonify({'message': error.message})
+        response.status_code = 400
+        return response
+    elif isinstance(error, RestInputValidationError):
+        response = jsonify({'message': error.message})
+        response.status_code = 400
+        return response
+    # Generic server-side error (not to make the api crash if an unhandled
+    # exception is raised. Caution is never enough!!)
+    else:
+        response = jsonify({'message': 'Internal server error'})
+        response.status_code = 500
+        return response
 
-@app.errorhandler(RestInputValidationError)
-def validation_error_handler(error):
-    response = jsonify({'message': error.message})
-    response.status_code = 400
-    return response
 
 ## Add resources to the api
 api.add_resource(Computer,

@@ -298,7 +298,7 @@ def parse_query_string(query_string):
     from pyparsing import Word, alphas, nums, alphanums, ZeroOrMore, \
         OneOrMore, \
         Suppress, Optional, Literal, Group, QuotedString, Combine,\
-        StringStart as SS, StringEnd as SE, WordStart as WS, WordEnd as WE
+        StringStart as SS, StringEnd as SE, ParseException
 
     from pyparsing import pyparsing_common as ppc
 
@@ -339,7 +339,11 @@ def parse_query_string(query_string):
                      Optional(separator) + SE()
 
     ## Parse the query string
-    fields = generalGrammar.parseString(query_string).asList()
+    try:
+        fields = generalGrammar.parseString(query_string).asList()
+    except ParseException:
+        #raise RestInputValidationError("The query string format is invalid")
+        raise ParseException("The query string format is invalid")
 
     filters = {}
     orderby = []

@@ -74,7 +74,7 @@ class CalculationTranslator(NodeTranslator):
     """
     _aiida_type = "Calculation"
     _qb_type = "calculation.Calculation."
-    _qb_label = "calculation"
+    _qb_label = "calculations"
     _result_type = _qb_label
 
     def __init__(self):

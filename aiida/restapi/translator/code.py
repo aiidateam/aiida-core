@@ -65,7 +65,7 @@ class CodeTranslator(NodeTranslator):
     """
     _aiida_type = "Code"
     _qb_type = "code.Code."
-    _qb_label = "code"
+    _qb_label = "codes"
     _result_type = _qb_label
 
     def __init__(self):

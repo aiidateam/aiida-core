@@ -74,7 +74,7 @@ class DataTranslator(NodeTranslator):
     """
     _aiida_type = "Data"
     _qb_type = "data.Data."
-    _qb_label = "data"
+    _qb_label = "datas"
     _result_type = _qb_label
 
     def __init__(self):

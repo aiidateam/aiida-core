@@ -42,7 +42,7 @@ class UserTranslator(BaseTranslator):
     """
     _aiida_type = "User"
     _qb_type = "user"
-    _qb_label= "user"
+    _qb_label= "users"
     _result_type = _qb_label
     _default_projections = [ 'id',
                     'first_name',

@@ -42,7 +42,7 @@ class GroupTranslator(BaseTranslator):
     """
     _aiida_type = "Group"
     _qb_type = "group"
-    _qb_label = "group"
+    _qb_label = "groups"
     _result_type = _qb_label
     _default_projections = [ 'id',
                     'name',

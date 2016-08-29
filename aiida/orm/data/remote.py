@@ -36,7 +36,7 @@ class RemoteData(Data):
         """
         Check if remote folder is empty
         """
-        from aiida.execmanager import get_authinfo
+        from aiida.backends.utils import get_authinfo
 
         authinfo = get_authinfo(computer=self.get_computer(),
                                 aiidauser=self.get_user())
@@ -54,7 +54,7 @@ class RemoteData(Data):
         """
         Remove all content of the remote folder on the remote computer
         """
-        from aiida.execmanager import get_authinfo
+        from aiida.backends.utils import get_authinfo
         import os
 
         authinfo = get_authinfo(computer=self.get_computer(),

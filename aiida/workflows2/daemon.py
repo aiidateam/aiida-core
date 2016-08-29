@@ -16,26 +16,6 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-def run_all_saved_processes(engine, storage):
-    futures = []
-    for cp in storage.load_all_checkpoints():
-        proc = Process.create_from(cp)
-        storage.persist_process(proc)
-        futures.append(engine.run(proc))
-    return futures
-
-
-# def tick_workflow_engine(storage=None):
-#     if storage is None:
-#         storage = defaults.storage
-#
-#     engine = TickingEngine()
-#     run_all_saved_processes(engine, storage)
-#     more_work = engine.tick()
-#     engine.shutdown()
-#     return more_work
-
-
 def tick_workflow_engine(storage=None):
     if storage is None:
         storage = defaults.storage

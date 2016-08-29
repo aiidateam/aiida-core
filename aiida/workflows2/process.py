@@ -153,7 +153,7 @@ class Process(plum.process.Process):
     def save_instance_state(self, bundle):
         super(Process, self).save_instance_state(bundle)
 
-        if self.parsed_inputs._store_provenance:
+        if self.inputs._store_provenance:
             assert self._calc.is_stored
 
         bundle[self.KEY_CALC_ID] = self.pid
@@ -218,7 +218,7 @@ class Process(plum.process.Process):
 
         if not value.is_stored:
             value.add_link_from(self._calc, output_port, LinkType.CREATE)
-            if self.parsed_inputs._store_provenance:
+            if self.inputs._store_provenance:
                 value.store()
         value.add_link_from(self._calc, output_port, LinkType.RETURN)
     #################################################################
@@ -226,7 +226,7 @@ class Process(plum.process.Process):
     @override
     def do_run(self):
         # Exclude all private inputs
-        ins = {k: v for k, v in self._parsed_inputs.iteritems() if not k.startswith('_')}
+        ins = {k: v for k, v in self.inputs.iteritems() if not k.startswith('_')}
         return self._run(**ins)
 
     @protected
@@ -262,7 +262,7 @@ class Process(plum.process.Process):
     def _create_and_setup_db_record(self):
         self._calc = self.create_db_record()
         self._setup_db_record()
-        if self.parsed_inputs._store_provenance:
+        if self.inputs._store_provenance:
             self._calc.store_all()
 
         if self._calc.pk is not None:
@@ -271,7 +271,7 @@ class Process(plum.process.Process):
             return uuid.UUID(self._calc.uuid)
 
     def _setup_db_record(self):
-        assert self.parsed_inputs is not None
+        assert self.inputs is not None
         assert not self.calc.is_sealed,\
             "Calculation cannot be sealed when setting up the database record"
 
@@ -283,7 +283,7 @@ class Process(plum.process.Process):
         # First get a dictionary of all the inputs to link, this is needed to
         # deal with things like input groups
         to_link = {}
-        for name, input in self.parsed_inputs.iteritems():
+        for name, input in self.inputs.iteritems():
             # Ignore all inputs starting with a leading underscore
             if name.startswith('_'):
                 continue
@@ -306,7 +306,7 @@ class Process(plum.process.Process):
                 if parent_calc:
                     input.add_link_from(parent_calc, "CREATE",
                                         link_type=LinkType.CREATE)
-                if self.parsed_inputs._store_provenance:
+                if self.inputs._store_provenance:
                     input.store()
 
             self.calc.add_link_from(input, name)
@@ -315,11 +315,11 @@ class Process(plum.process.Process):
             self.calc.add_link_from(parent_calc, "CALL",
                                     link_type=LinkType.CALL)
 
-        if self.inputs:
-            if '_description' in self.inputs:
-                self.calc.description = self.inputs._description
-            if '_label' in self.inputs:
-                self.calc.label = self.inputs._label
+        if self.raw_inputs:
+            if '_description' in self.raw_inputs:
+                self.calc.description = self.raw_inputs._description
+            if '_label' in self.raw_inputs:
+                self.calc.label = self.raw_inputs._label
 
     def _can_fast_forward(self, inputs):
         return False
@@ -359,7 +359,7 @@ class FunctionProcess(Process):
         args, varargs, keywords, defaults = inspect.getargspec(func)
 
         def _define(cls, spec):
-            FunctionProcess._define(spec)
+            super(FunctionProcess, cls)._define(spec)
 
             for i in range(len(args)):
                 default = None

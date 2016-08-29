@@ -10,7 +10,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.workflows2.db_types import Bool, make_int
+from aiida.orm.data.simple import TRUE, make_int
 from unittest import TestCase
 from plum.engine.ticking import TickingEngine
 from aiida.workflows2.process import Process
@@ -26,7 +26,7 @@ class DummyProcess(Process):
         spec.dynamic_output()
 
     def _run(self, a):
-        self.out("ran", Bool(True))
+        self.out("ran", TRUE)
 
 
 class TestTickingEngine(TestCase):

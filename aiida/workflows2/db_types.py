@@ -18,10 +18,6 @@ _TYPE_MAPPING = {
 }
 
 
-def Bool(value):
-    return SimpleData(typevalue=(bool, value))
-
-
 def to_db_type(value):
     if isinstance(value, Data):
         return value

@@ -1,6 +1,6 @@
 import unittest
 import aiida.workflows2.daemon as daemon
-from aiida.workflows2.db_types import Bool
+from aiida.orm.data.simple import TRUE
 from aiida.workflows2.process import Process
 from aiida.workflows2.process_registry import ProcessRegistry
 from aiida.workflows2.run import asyncd
@@ -9,8 +9,7 @@ from plum.wait_ons import checkpoint
 from plum.persistence.pickle_persistence import PicklePersistence
 from aiida.orm import load_node
 import aiida.workflows2.util as util
-
-from workflows2.common import DummyProcess
+from aiida.workflows2.test_utils import DummyProcess
 
 
 class ProcessEventsTester(Process):
@@ -32,12 +31,12 @@ class ProcessEventsTester(Process):
     def on_create(self, pid, inputs, saved_instance_state):
         super(ProcessEventsTester, self).on_create(
             pid, inputs, saved_instance_state)
-        self.out("create", Bool(True))
+        self.out("create", TRUE)
 
     @override
     def on_run(self):
         super(ProcessEventsTester, self).on_run()
-        self.out("run", Bool(True))
+        self.out("run", TRUE)
 
     @override
     def _on_output_emitted(self, output_port, value, dynamic):
@@ -45,32 +44,32 @@ class ProcessEventsTester(Process):
             output_port, value, dynamic)
         if not self._emitted:
             self._emitted = True
-            self.out("emitted", Bool(True))
+            self.out("emitted", TRUE)
 
     @override
     def on_wait(self, wait_on):
         super(ProcessEventsTester, self).on_wait(wait_on)
-        self.out("wait", Bool(True))
+        self.out("wait", TRUE)
 
     @override
     def on_continue(self, wait_on):
         super(ProcessEventsTester, self).on_continue(wait_on)
-        self.out("continue_", Bool(True))
+        self.out("continue_", TRUE)
 
     @override
     def on_finish(self):
         super(ProcessEventsTester, self).on_finish()
-        self.out("finish", Bool(True))
+        self.out("finish", TRUE)
 
     @override
     def on_stop(self):
         super(ProcessEventsTester, self).on_stop()
-        self.out("stop", Bool(True))
+        self.out("stop", TRUE)
 
     @override
     def on_destroy(self):
         super(ProcessEventsTester, self).on_destroy()
-        self.out("destroy", Bool(True))
+        self.out("destroy", TRUE)
 
     @override
     def _run(self):

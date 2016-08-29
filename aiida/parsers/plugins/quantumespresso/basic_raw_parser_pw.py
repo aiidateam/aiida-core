@@ -719,20 +719,33 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None, input_dict=No
             # save dipole in debye units, only at last iteration of scf cycle
 
             # grep energy and eventually, magnetization
-            if '!' in line:
-                try:
-                    for key in ['energy', 'energy_accuracy']:
-                        if key not in trajectory_data:
-                            trajectory_data[key] = []
+            if '!' in line:                
+                if 'makov-payne' in line.lower():
+                    try:
+                        for key in ['total','envir']:
+                            if key in line.lower():                                
+                                En = float(line.split('=')[1].split('Ry')[0]) * ry_to_ev
+                                try:
+                                    trajectory_data[key+'_makov-payne'].append(En)
+                                except KeyError:
+                                    trajectory_data[key+'_makov-payne'] = [En]
+                                    parsed_data[key +'_makov-payne'+ units_suffix] = default_energy_units
+                    except Exception:
+                        parsed_data['warnings'].append('Error while parsing the energy')
+                else:    
+                    try:
+                        for key in ['energy', 'energy_accuracy']:
+                            if key not in trajectory_data:
+                                trajectory_data[key] = []
 
-                    En = float(line.split('=')[1].split('Ry')[0]) * ry_to_ev
-                    E_acc = float(data_step[count + 2].split('<')[1].split('Ry')[0]) * ry_to_ev
+                        En = float(line.split('=')[1].split('Ry')[0]) * ry_to_ev
+                        E_acc = float(data_step[count + 2].split('<')[1].split('Ry')[0]) * ry_to_ev
 
-                    for key, value in [['energy', En], ['energy_accuracy', E_acc]]:
-                        trajectory_data[key].append(value)
-                        parsed_data[key + units_suffix] = default_energy_units
-                except Exception:
-                    parsed_data['warnings'].append('Error while parsing the energy')
+                        for key, value in [['energy', En], ['energy_accuracy', E_acc]]:
+                            trajectory_data[key].append(value)
+                            parsed_data[key + units_suffix] = default_energy_units
+                    except Exception:
+                        parsed_data['warnings'].append('Error while parsing the energy')
 
             elif 'the Fermi energy is' in line:
                 try:

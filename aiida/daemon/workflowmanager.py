@@ -30,9 +30,6 @@ def execute_steps():
     stack is reported in the workflow report.
     """
 
-    from aiida.backends.utils import get_automatic_user
-    from aiida.orm.workflow import Workflow
-    from aiida.common.datastructures import wf_states
     from aiida.orm import JobCalculation
     from aiida.orm.implementation import get_all_running_steps
 
@@ -57,8 +54,8 @@ def execute_steps():
                            if sw.has_failed()]
         s_sub_wf_num = len(s.get_sub_workflows())
 
-        if s_calcs_num == (len(s_calcs_finished) + len(s_calcs_failed)) and
-           s_sub_wf_num == (len(s_sub_wf_finished) + len(s_sub_wf_failed)):
+        if (s_calcs_num == (len(s_calcs_finished) + len(s_calcs_failed)) and
+            s_sub_wf_num == (len(s_sub_wf_finished) + len(s_sub_wf_failed))):
 
             logger.info("[{0}] Step: {1} ready to move".format(w.pk, s.name))
 

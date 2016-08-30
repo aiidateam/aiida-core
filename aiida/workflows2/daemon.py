@@ -24,19 +24,23 @@ def tick_workflow_engine(storage=None):
     procs = [Process.create_from(cp) for cp in storage.load_all_checkpoints()]
     for proc in procs:
         storage.persist_process(proc)
+        is_waiting = proc.get_waiting_on()
+        try:
+            # Get the Process till the point it is about to do some work
+            if is_waiting is not None:
+                proc.run_until(ProcessState.WAITING)
+            else:
+                proc.run_until(ProcessState.STARTED)
 
-        # Get the Process till the point it is about to do some work
-        if proc.get_waiting_on() is not None:
-            proc.run_until(ProcessState.WAITING)
-        else:
-            proc.run_until(ProcessState.STARTED)
+            proc.tick()
 
-        proc.tick()
-
-        # Now stop the process and let it finish running through the states
-        # until it is destroyed
-        proc.stop()
-        proc.run_until(ProcessState.DESTROYED)
+            # Now stop the process and let it finish running through the states
+            # until it is destroyed
+            proc.stop()
+            proc.run_until(ProcessState.DESTROYED)
+        except BaseException:
+            # TODO: Log error
+            continue
 
         # Check if the process finished or was stopped early
         if not proc.has_finished():

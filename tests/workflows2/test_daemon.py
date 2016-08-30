@@ -1,4 +1,9 @@
+
 import unittest
+import tempfile
+from os.path import join
+from shutil import rmtree
+
 import aiida.workflows2.daemon as daemon
 from aiida.orm.data.base import TRUE
 from aiida.workflows2.process import Process
@@ -9,7 +14,7 @@ from plum.wait_ons import checkpoint
 from plum.persistence.pickle_persistence import PicklePersistence
 from aiida.orm import load_node
 import aiida.workflows2.util as util
-from aiida.workflows2.test_utils import DummyProcess
+from aiida.workflows2.test_utils import DummyProcess, ExceptionProcess
 
 
 class ProcessEventsTester(Process):
@@ -83,8 +88,15 @@ class TestDaemon(unittest.TestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
+        self.storedir = tempfile.mkdtemp()
+        self.storage = PicklePersistence(
+            running_directory=join(self.storedir, 'r'),
+            finished_directory=join(self.storedir, 'fin'),
+            failed_directory=join(self.storedir, 'fail'))
+
     def tearDown(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
+        rmtree(self.storedir)
 
     def test_asyncd(self):
         # This call should create an entry in the database with a PK
@@ -93,15 +105,20 @@ class TestDaemon(unittest.TestCase):
         self.assertIsNotNone(load_node(pk=pk))
 
     def test_tick(self):
-        import tempfile
-        storage = PicklePersistence(
-            auto_persist=False, running_directory=tempfile.mkdtemp())
         registry = ProcessRegistry()
 
-        pk = asyncd(ProcessEventsTester, _jobs_store=storage)
+        pk = asyncd(ProcessEventsTester, _jobs_store=self.storage)
         # Tick the engine a number of times or until there is no more work
         i = 0
-        while daemon.tick_workflow_engine(storage):
+        while daemon.tick_workflow_engine(self.storage):
             self.assertLess(i, 10, "Engine not done after 10 ticks")
             i += 1
         self.assertTrue(registry.has_finished(pk))
+
+    def test_multiple_processes(self):
+        asyncd(DummyProcess, _jobs_store=self.storage)
+        asyncd(ExceptionProcess, _jobs_store=self.storage)
+        asyncd(ExceptionProcess, _jobs_store=self.storage)
+        asyncd(DummyProcess, _jobs_store=self.storage)
+
+        self.assertFalse(daemon.tick_workflow_engine(self.storage))

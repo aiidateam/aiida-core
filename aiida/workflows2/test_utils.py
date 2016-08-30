@@ -29,3 +29,8 @@ class BadOutput(Process):
 
     def _run(self):
         self.out("bad_output", 5)
+
+
+class ExceptionProcess(Process):
+    def _run(self):
+        raise RuntimeError("CRASH")

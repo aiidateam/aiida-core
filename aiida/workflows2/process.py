@@ -2,6 +2,7 @@
 
 import collections
 import uuid
+from enum import Enum
 
 import plum.port as port
 import plum.process
@@ -20,6 +21,7 @@ from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from aiida.workflows2.defaults import class_loader
+from aiida.workflows2.util import PROCESS_LABEL_ATTR
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -101,10 +103,13 @@ class Process(plum.process.Process):
     __metaclass__ = ABCMeta
 
     SINGLE_RETURN_LINKNAME = '_return'
-    PROCESS_LABEL_ATTR = '_process_label'
 
-    KEY_CALC_ID = 'calc_id'
-    KEY_PARENT_CALC_PID = 'parent_calc_pid'
+    class SaveKeys(Enum):
+        """
+        Keys used to identify things in the saved instance state bundle.
+        """
+        CALC_ID = 'calc_id'
+        PARENT_CALC_PID = 'parent_calc_pid'
 
     @classmethod
     def _define(cls, spec):
@@ -156,7 +161,7 @@ class Process(plum.process.Process):
         if self.inputs._store_provenance:
             assert self._calc.is_stored
 
-        bundle[self.KEY_CALC_ID] = self.pid
+        bundle[self.SaveKeys.CALC_ID.value] = self.pid
         bundle.set_class_loader(class_loader)
 
     def run_after_queueing(self, wait_on):
@@ -186,15 +191,15 @@ class Process(plum.process.Process):
 
             self._pid = self._create_and_setup_db_record()
         else:
-            if self.KEY_CALC_ID in saved_instance_state:
-                self._calc = load_node(saved_instance_state[self.KEY_CALC_ID])
+            if self.SaveKeys.CALC_ID.value in saved_instance_state:
+                self._calc = load_node(saved_instance_state[self.SaveKeys.CALC_ID.value])
                 self._pid = self._calc.pk
             else:
                 self._pid = self._create_and_setup_db_record()
 
-            if self.KEY_PARENT_CALC_PID in saved_instance_state:
+            if self.SaveKeys.PARENT_CALC_PID.value in saved_instance_state:
                 self._parent_pid = saved_instance_state[
-                    self.KEY_PARENT_CALC_PID]
+                    self.SaveKeys.PARENT_CALC_PID.value]
 
     @override
     def on_start(self):
@@ -276,7 +281,7 @@ class Process(plum.process.Process):
             "Calculation cannot be sealed when setting up the database record"
 
         # Save the name of this process
-        self.calc._set_attr(self.PROCESS_LABEL_ATTR, self.__class__.__name__)
+        self.calc._set_attr(PROCESS_LABEL_ATTR, self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()
 
@@ -394,7 +399,7 @@ class FunctionProcess(Process):
         super(FunctionProcess, self)._setup_db_record()
         add_source_info(self.calc, self._func)
         # Save the name of the function
-        self.calc._set_attr(self.PROCESS_LABEL_ATTR, self._func.__name__)
+        self.calc._set_attr(PROCESS_LABEL_ATTR, self._func.__name__)
 
     @override
     def _run(self, **kwargs):

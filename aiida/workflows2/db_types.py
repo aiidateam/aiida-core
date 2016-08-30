@@ -22,13 +22,13 @@ def to_db_type(value):
     if isinstance(value, Data):
         return value
     elif isinstance(value, bool):
-        return Bool(typevalue=(bool, value))
+        return Bool(value)
     elif isinstance(value, (int, long)):
-        return Int(typevalue=(int, value))
+        return Int(value)
     elif isinstance(value, float):
         return Float(value)
     elif isinstance(value, basestring):
-        return Str(typevalue=(type(value), value))
+        return Str(value)
     else:
         raise ValueError("Cannot convert value to database type")
 

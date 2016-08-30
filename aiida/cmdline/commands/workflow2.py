@@ -5,8 +5,7 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 import click
 import sys
 from tabulate import tabulate
-from aiida.workflows2.process import Process
-from aiida.common.links import LinkType
+from aiida.workflows2.util import PROCESS_LABEL_ATTR
 from aiida.utils.ascii_vis import build_tree
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -84,7 +83,7 @@ def do_list(past_days, limit):
 
 
 @click.command('tree', context_settings=CONTEXT_SETTINGS)
-@click.option('--node-label', default=Process.PROCESS_LABEL_ATTR, type=str)
+@click.option('--node-label', default=PROCESS_LABEL_ATTR, type=str)
 @click.option('--depth', '-d', type=int, default=1)
 @click.argument('pks', nargs=-1, type=int)
 def do_tree(node_label, depth, pks):

@@ -8,6 +8,9 @@ __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
+# The name of the attribute to store the label of a process in a node with.
+PROCESS_LABEL_ATTR = '_process_label'
+
 
 class ProcessStack(object):
     # Use thread-local storage for the stack

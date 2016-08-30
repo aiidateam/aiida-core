@@ -10,7 +10,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.orm.data.simple import TRUE, make_int
+from aiida.orm.data.base import TRUE, Int
 from unittest import TestCase
 from plum.engine.ticking import TickingEngine
 from aiida.workflows2.process import Process
@@ -41,17 +41,17 @@ class TestTickingEngine(TestCase):
 
     def test_get_process(self):
         # Test cancelling a future before the process runs
-        future = self.ticking_engine.submit(DummyProcess, inputs={'a': make_int(5)})
+        future = self.ticking_engine.submit(DummyProcess, inputs={'a': Int(5)})
 
     def test_submit(self):
-        fut = self.ticking_engine.submit(DummyProcess, inputs={'a': make_int(5)})
+        fut = self.ticking_engine.submit(DummyProcess, inputs={'a': Int(5)})
         self._tick_till_finished()
         res = fut.result()
         self.assertTrue(res['ran'].value)
 
     def test_cancel(self):
         # Test cancelling a future before the process runs
-        future = self.ticking_engine.submit(DummyProcess, inputs={'a': make_int(5)})
+        future = self.ticking_engine.submit(DummyProcess, inputs={'a': Int(5)})
         self.assertTrue(future.running())
         future.cancel()
         self.assertTrue(future.cancelled())

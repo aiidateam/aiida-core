@@ -5,7 +5,7 @@ if not is_dbenv_loaded():
 
 from aiida.orm import load_node
 from aiida.orm.utils import DataFactory
-from aiida.workflows2.db_types import make_float, make_str, NumericType, SimpleData
+from aiida.workflows2.db_types import Float, Str, NumericType, BaseType
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run, asyncd
@@ -113,11 +113,11 @@ class EquationOfState(FragmentedWorkfunction):
     @classmethod
     def _define(cls, spec):
         spec.input("structure", valid_type=StructureData)
-        spec.input("start", valid_type=NumericType, default=make_float(0.96))
-        spec.input("delta", valid_type=NumericType, default=make_float(0.02))
-        spec.input("end", valid_type=NumericType, default=make_float(1.04))
-        spec.input("code", valid_type=SimpleData)
-        spec.input("pseudo_family", valid_type=SimpleData)
+        spec.input("start", valid_type=NumericType, default=Float(0.96))
+        spec.input("delta", valid_type=NumericType, default=Float(0.02))
+        spec.input("end", valid_type=NumericType, default=Float(1.04))
+        spec.input("code", valid_type=BaseType)
+        spec.input("pseudo_family", valid_type=BaseType)
         spec.outline(
             cls.run_pw,
             cls.print_eos
@@ -155,8 +155,8 @@ class EquationOfState2(FragmentedWorkfunction):
     @classmethod
     def _define(cls, spec):
         spec.input("structure", valid_type=StructureData)
-        spec.input("code", valid_type=SimpleData)
-        spec.input("pseudo_family", valid_type=SimpleData)
+        spec.input("code", valid_type=BaseType)
+        spec.input("pseudo_family", valid_type=BaseType)
         spec.outline(
             cls.init,
             while_(cls.not_finished)(
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     #     start=Float(start), end=Float(end), delta=Float(delta),
     #     code=Str(args.code), pseudo_family=Str(args.pseudo))
     asyncd(EquationOfState, structure=load_node(args.structure_pk),
-           start=make_float(start), end=make_float(end), delta=make_float(delta),
-           code=make_str(args.code), pseudo_family=make_str(args.pseudo))
+           start=Float(start), end=Float(end), delta=Float(delta),
+           code=Float(args.code), pseudo_family=Float(args.pseudo))
 
 

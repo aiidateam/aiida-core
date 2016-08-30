@@ -1,6 +1,6 @@
 import unittest
 import aiida.workflows2.daemon as daemon
-from aiida.orm.data.simple import TRUE
+from aiida.orm.data.base import TRUE
 from aiida.workflows2.process import Process
 from aiida.workflows2.process_registry import ProcessRegistry
 from aiida.workflows2.run import asyncd

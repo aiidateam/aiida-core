@@ -10,7 +10,6 @@ __version__ = "0.7.0"
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.orm.data.simple import make_int
 from aiida.workflows2.run import run, asyncd
 
 from aiida.tutorial.simple_wf import SimpleWF

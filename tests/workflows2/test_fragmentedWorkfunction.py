@@ -18,7 +18,7 @@ from aiida.workflows2.fragmented_wf import _FragmentedWorkfunctionSpec
 from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.wf import wf
 from aiida.workflows2.run import async
-from aiida.orm.data.simple import make_str, make_int
+from aiida.orm.data.base import Int, Str
 import aiida.workflows2.util as util
 from plum.engine.ticking import TickingEngine
 
@@ -103,10 +103,10 @@ class TestFragmentedWorkfunction(TestCase):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
     def test_run(self):
-        A = make_str('A')
-        B = make_str('B')
-        C = make_str('C')
-        three = make_int(3)
+        A = Str('A')
+        B = Str('B')
+        C = Str('C')
+        three = Int(3)
 
         # Try the if(..) part
         Wf.run(inputs={'value': A, 'n': three})
@@ -144,8 +144,8 @@ class TestFragmentedWorkfunction(TestCase):
             Wf.spec()
 
     def test_context(self):
-        A = make_str("a")
-        B = make_str("b")
+        A = Str("a")
+        B = Str("b")
 
         @wf
         def a():
@@ -196,10 +196,10 @@ class TestFragmentedWorkfunction(TestCase):
             spec.outline(type)
 
     def test_checkpointing(self):
-        A = make_str('A')
-        B = make_str('B')
-        C = make_str('C')
-        three = make_int(3)
+        A = Str('A')
+        B = Str('B')
+        C = Str('C')
+        three = Int(3)
 
         # Try the if(..) part
         finished_steps =\

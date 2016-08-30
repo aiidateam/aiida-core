@@ -12,7 +12,6 @@ if not is_dbenv_loaded():
 import ase
 from aiida.workflows2.run import async
 from aiida.orm import DataFactory
-from aiida.workflows2.db_types import make_float, make_str
 from aiida.workflows2.wf import wf
 from aiida.workflows2.run import async
 from examples.workflows2.common import run_scf
@@ -59,13 +58,13 @@ def calc_energies(codename, pseudo_family):
 
     futures = {}
     for element, scale in [("Si", 5.41)]:
-        structure = create_diamond_fcc(make_str(element), make_float(1.))
-        structure = rescale(structure, make_float(scale))
+        structure = create_diamond_fcc(make_str(element), Float(1.))
+        structure = rescale(structure, Float(scale))
         print("Running {} scf calculation.".format(element))
         futures[element] = async(run_scf, structure, codename, pseudo_family)
 
     print("Waiting for calculations to finish.")
-    outs = {element: make_float(future.result()['output_parameters'].dict.energy)
+    outs = {element: Float(future.result()['output_parameters'].dict.energy)
             for element, future in futures.iteritems()}
     print("Calculations finished.")
     return outs

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from aiida.orm import Data
-from aiida.orm.data.simple import SimpleData, make_float, make_int, Int, Bool, Float, Str, NumericType
+from aiida.orm.data.base import BaseType, Int, Bool, Float, Str
 
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -26,7 +26,7 @@ def to_db_type(value):
     elif isinstance(value, (int, long)):
         return Int(typevalue=(int, value))
     elif isinstance(value, float):
-        return make_float(value)
+        return Float(value)
     elif isinstance(value, basestring):
         return Str(typevalue=(type(value), value))
     else:
@@ -36,7 +36,7 @@ def to_db_type(value):
 def to_native_type(data):
     if not isinstance(data, Data):
         return data
-    elif isinstance(data, SimpleData):
+    elif isinstance(data, BaseType):
         return data.value
     else:
         raise ValueError("Cannot convert from database to native type")

@@ -10,8 +10,8 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.workflows2.wf import wf
-from aiida.orm.data.simple import make_int
-from aiida.workflows2.db_types import to_db_type, SimpleData
+from aiida.orm.data.base import Int
+from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.process import Process
 from aiida.workflows2.workflow import Workflow
 
@@ -76,9 +76,9 @@ class MulAdd(Workflow):
 
 
 if __name__ == '__main__':
-    two = make_int(2)
-    three = make_int(3)
-    four = make_int(4)
+    two = Int(2)
+    three = Int(3)
+    four = Int(4)
 
     print "WORKFUNCTION:"
 

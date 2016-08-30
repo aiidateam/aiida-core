@@ -12,7 +12,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 import time
-from aiida.orm.data.simple import make_int
+from aiida.orm.data.base import Int
 from aiida.workflows2.run import async, run
 from aiida.workflows2.wf import wf
 from aiida.workflows2.fragmented_wf import (FragmentedWorkfunction,
@@ -87,7 +87,7 @@ class F1WaitFor(FragmentedWorkfunction):
 
 
 if __name__ == '__main__':
-    five = make_int(5)
+    five = Int(5)
 
     r1 = f1(five)
     run(F1, inp=five)

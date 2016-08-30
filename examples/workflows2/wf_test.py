@@ -10,9 +10,9 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.workflows2.wf import wf
-from aiida.orm.data.simple import make_int
+from aiida.orm.data.base import Int
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction
-from aiida.orm.data.simple import NumericType
+from aiida.orm.data.base import NumericType
 from aiida.workflows2.run import run
 
 @wf
@@ -52,9 +52,9 @@ class AddMultiplyWf(FragmentedWorkfunction):
 
 
 if __name__ == '__main__':
-    two = make_int(2)
-    three = make_int(3)
-    four = make_int(4)
+    two = Int(2)
+    three = Int(3)
+    four = Int(4)
 
     print "WORKFUNCTION:"
 

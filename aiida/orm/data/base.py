@@ -8,29 +8,16 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class SimpleData(Data):
+class BaseType(Data):
     __metaclass__ = ABCMeta
 
-    def create_init_args(self, **kwargs):
-        assert getattr(self, '_type', None) is not None
-        if 'dbnode' not in kwargs:
-            if 'typevalue' in kwargs:
-                assert kwargs['typevalue'][0] is self._type
-                if kwargs['typevalue'][1] is not None:
-                    kwargs['typevalue'] = \
-                        (self._type, self._type(kwargs['typevalue'][1]))
-            else:
-                kwargs['typevalue'] = (self._type, None)
+    def __init__(self, *args, **kwargs):
+        try:
+            getattr(self, '_type')
+        except AttributeError:
+            raise RuntimeError("Derived class must define the _type class member")
 
-        return kwargs
-
-    def __init__(self, **kwargs):
-        assert 'dbnode' in kwargs or 'typevalue' in kwargs
-        super(SimpleData, self).__init__(**self.create_init_args(**kwargs))
-
-    def init(self, type_):
-        assert getattr(self, '_type', None) is None, "Can only be called once"
-        self._type = type_
+        super(BaseType, self).__init__(**self._create_init_args(*args, **kwargs))
 
     def set_typevalue(self, typevalue):
         _type, value = typevalue
@@ -55,13 +42,13 @@ class SimpleData(Data):
         return self.value.__repr__()
 
     def __eq__(self, other):
-        if isinstance(other, SimpleData):
+        if isinstance(other, BaseType):
             return self.value == other.value
         else:
             return self.value == other
 
     def __ne__(self, other):
-        if isinstance(other, SimpleData):
+        if isinstance(other, BaseType):
             return self.value != other.value
         else:
             return self.value != other
@@ -69,8 +56,31 @@ class SimpleData(Data):
     def new(self, value=None):
         return self.__class__(typevalue=(self._type, value))
 
+    def _create_init_args(self, *args, **kwargs):
+        if args:
+            assert not kwargs, "Cannot have positional arguments and kwargs"
+            assert len(args) == 1,\
+                "Simple data can only take at most one positional argument"
 
-class NumericType(SimpleData):
+            kwargs['typevalue'] = (self._type, self._type(args[0]))
+
+        elif 'dbnode' not in kwargs:
+            if 'typevalue' in kwargs:
+                assert kwargs['typevalue'][0] is self._type
+                if kwargs['typevalue'][1] is not None:
+                    kwargs['typevalue'] = \
+                        (self._type, self._type(kwargs['typevalue'][1]))
+            else:
+                kwargs['typevalue'] = (self._type, None)
+
+        else:
+            assert len(kwargs) == 1,\
+                "When specifying dbnode it can be the only kwarg"
+
+        return kwargs
+
+
+class NumericType(BaseType):
     def __add__(self, other):
         if isinstance(other, NumericType):
             return self.new(self.value + other.value)
@@ -163,39 +173,19 @@ class NumericType(SimpleData):
 
 
 class Float(NumericType):
-    def __init__(self, **kwargs):
-        self.init(float)
-        super(Float, self).__init__(**kwargs)
-
-
-def make_float(value=None):
-    return Float(typevalue=(float, value))
+    _type = float
 
 
 class Int(NumericType):
-    def __init__(self, **kwargs):
-        self.init(int)
-        super(Int, self).__init__(**kwargs)
+    _type = int
 
 
-def make_int(value=None):
-    return Int(typevalue=(int, value))
+class Str(BaseType):
+    _type = str
 
 
-class Str(SimpleData):
-    def __init__(self, **kwargs):
-        self.init(str)
-        super(Str, self).__init__(**kwargs)
-
-
-def make_str(value=None):
-    return Str(typevalue=(str, value))
-
-
-class Bool(SimpleData):
-    def __init__(self, **kwargs):
-        self.init(bool)
-        super(Bool, self).__init__(**kwargs)
+class Bool(BaseType):
+    _type = bool
 
     def __int__(self):
         return 0 if not self.value else 1

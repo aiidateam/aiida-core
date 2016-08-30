@@ -13,7 +13,7 @@ if not is_dbenv_loaded():
 
 from aiida.workflows2.wf import wf
 from aiida.workflows2.run import async, run
-from aiida.orm.data.simple import TRUE
+from aiida.orm.data.base import TRUE
 import aiida.workflows2.util as util
 
 

@@ -12,8 +12,8 @@ if not is_dbenv_loaded():
 
 from unittest import TestCase
 from aiida.orm import load_node
+from aiida.orm.data.base import Int
 from aiida.workflows2.process import Process
-from aiida.workflows2.db_types import make_int
 from aiida.workflows2.run import run
 import aiida.workflows2.util as util
 from aiida.workflows2.test_utils import DummyProcess, BadOutput
@@ -64,7 +64,7 @@ class TestProcess(TestCase):
     def test_input_link_creation(self):
         dummy_inputs = ["1", "2", "3", "4"]
 
-        inputs = {l: make_int(l) for l in dummy_inputs}
+        inputs = {l: Int(l) for l in dummy_inputs}
         inputs['_store_provenance'] = True
         p = DummyProcess.new_instance(inputs)
 

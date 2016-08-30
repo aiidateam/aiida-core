@@ -11,7 +11,7 @@ if not is_dbenv_loaded():
 
 from aiida.orm import load_node
 from aiida.orm.utils import DataFactory
-from aiida.workflows2.db_types import make_float, make_str, NumericType, SimpleData
+from aiida.workflows2.db_types import NumericType, BaseType
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run
@@ -88,7 +88,7 @@ def get_structure(original_structure, new_volume):
     """
     initial_volume = original_structure.get_cell_volume()
     scale_factor = (new_volume / initial_volume) ** (1. / 3.)
-    scaled_structure = rescale(original_structure, make_float(scale_factor))
+    scaled_structure = rescale(original_structure, Float(scale_factor))
     return scaled_structure
 
 
@@ -105,8 +105,8 @@ class PressureConvergence(FragmentedWorkfunction):
         spec.input("structure", valid_type=StructureData)
         spec.input("volume_tolerance",
                    valid_type=NumericType)  # , default=Float(0.1))
-        spec.input("code", valid_type=SimpleData)
-        spec.input("pseudo_family", valid_type=SimpleData)
+        spec.input("code", valid_type=BaseType)
+        spec.input("pseudo_family", valid_type=BaseType)
         spec.outline(
             cls.init,
             cls.put_step0_in_ctx,
@@ -217,13 +217,13 @@ if __name__ == "__main__":
     parser.add_argument('--code', type=str, dest='code', required=True,
                         help='The codename to use')
 
-    structure = create_diamond_fcc(element=make_str('Si'), alat=make_float(5.2))
+    structure = create_diamond_fcc(element=make_str('Si'), alat=Float(5.2))
 
     print "Initial structure:", structure
 
     args = parser.parse_args()
     wf_results = run(PressureConvergence, structure=structure,
                      code=make_str(args.code), pseudo_family=make_str(args.pseudo),
-                     volume_tolerance=make_float(0.1))
+                     volume_tolerance=Float(0.1))
     print "Workflow results:"
     print wf_results

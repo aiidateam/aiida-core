@@ -46,7 +46,9 @@ class SshTransport(aiida.transport.Transport):
     _valid_connect_params = ['username', 'port', 'look_for_keys', 
                              'key_filename', 'timeout', 'allow_agent',
                              'proxy_command', # Managed 'manually' in connect
-                             'compress']
+                             'compress',
+                             'gss_auth', # for Kerberos support through python-gssapi
+                             ]
     
     # Valid parameters for the ssh transport
     # For each param, a class method with name

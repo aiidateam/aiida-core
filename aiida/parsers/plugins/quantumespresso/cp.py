@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.calculation.job.quantumespresso.cp import CpCalculation
-from aiida.parsers.plugins.quantumespresso.basic_raw_parser_cp import (
+from aiida.parsers.plugins.quantumespresso.raw_parser_cp import (
     QEOutputParsingError, parse_cp_traj_stanzas, parse_cp_raw_output)
 from aiida.parsers.plugins.quantumespresso.constants import (bohr_to_ang,
                                                              timeau_to_sec, hartree_to_ev)
@@ -12,7 +12,7 @@ from aiida.common.datastructures import calc_states
 from aiida.orm.data.array.trajectory import TrajectoryData
 import numpy
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved"
 __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.0"
 __authors__ = "The AiiDA team."

@@ -23,7 +23,9 @@ class JobProcess(Process):
         from aiida.orm.data import Data
         from aiida.orm.computer import Computer
 
-        def _define(spec):
+        def _define(cls_, spec):
+            super(JobProcess, cls_)._define(spec)
+
             # Calculation options
             options = {
                 "max_wallclock_seconds": int,
@@ -60,7 +62,7 @@ class JobProcess(Process):
         class_name = "{}_{}".format(
             JobProcess.__name__, plum.util.fullname(calc_class))
         return type(class_name, (JobProcess,),
-                    {'_define': staticmethod(_define),
+                    {'_define': classmethod(_define),
                      '_CALC_CLASS': calc_class})
 
     def _run(self, **kwargs):

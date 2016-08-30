@@ -43,9 +43,12 @@ class FragmentedWorkfunction(Process):
         spec.dynamic_output()
 
     class Context(object):
-        _content = {}
-
         def __init__(self, value=None):
+            # Have to do it this way otherwise our setattr will be called
+            # causing infinite recursion.
+            # See http://rafekettler.com/magicmethods.html
+            super(FragmentedWorkfunction.Context, self).__setattr__('_content', {})
+
             if value is not None:
                 for k, v in value.iteritems():
                     self._content[k] = v
@@ -95,7 +98,7 @@ class FragmentedWorkfunction(Process):
         super(FragmentedWorkfunction, self).save_instance_state(out_state)
         # Ask the context to save itself
         context_state = Bundle()
-        self._context.save_instance_state(context_state)
+        self.context.save_instance_state(context_state)
         out_state[self._CONTEXT] = context_state
 
         # Ask the stepper to save itself

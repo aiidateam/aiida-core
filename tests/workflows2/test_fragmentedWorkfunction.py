@@ -12,7 +12,6 @@ if not is_dbenv_loaded():
 
 import inspect
 from unittest import TestCase
-from aiida.workflows2.defaults import storage
 from aiida.workflows2.fragmented_wf import FragmentedWorkfunction,\
     ResultToContext, _Block, _If, _While, if_, while_
 from aiida.workflows2.fragmented_wf import _FragmentedWorkfunctionSpec

@@ -25,8 +25,13 @@ def tick_workflow_engine(storage=None):
     for proc in procs:
         storage.persist_process(proc)
 
-        # Get the Process running but break if ta wait on isn't ready
-        proc.run_until(ProcessState.RUNNING, break_on_wait_not_ready=True)
+        # Get the Process till the point it is about to do some work
+        if proc.get_waiting_on() is not None:
+            proc.run_until(ProcessState.WAITING)
+        else:
+            proc.run_until(ProcessState.STARTED)
+
+        proc.tick()
 
         # Now stop the process and let it finish running through the states
         # until it is destroyed

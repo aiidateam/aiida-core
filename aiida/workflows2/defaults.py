@@ -25,7 +25,7 @@ execution_engine = SerialEngine()
 
 import aiida.workflows2.persistence
 storage = aiida.workflows2.persistence.Persistence(
-    auto_persist=True,
+    auto_persist=False,
     running_directory=os.path.join(WORKFLOWS_DIR, 'running'),
     finished_directory=os.path.join(WORKFLOWS_DIR, 'finished'),
     failed_directory=os.path.join(WORKFLOWS_DIR, 'failed'))

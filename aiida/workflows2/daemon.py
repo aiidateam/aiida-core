@@ -5,9 +5,9 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
+import traceback
 import aiida.workflows2.defaults as defaults
 from plum.process import ProcessState
-from plum.engine.ticking import TickingEngine
 from aiida.workflows2.process import Process
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -16,7 +16,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-def tick_workflow_engine(storage=None):
+def tick_workflow_engine(storage=None, print_exceptions=True):
     if storage is None:
         storage = defaults.storage
 
@@ -39,7 +39,8 @@ def tick_workflow_engine(storage=None):
             proc.stop()
             proc.run_until(ProcessState.DESTROYED)
         except BaseException:
-            # TODO: Log error
+            if print_exceptions:
+                traceback.print_exc()
             continue
 
         # Check if the process finished or was stopped early

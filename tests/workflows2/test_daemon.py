@@ -110,7 +110,7 @@ class TestDaemon(unittest.TestCase):
         pk = asyncd(ProcessEventsTester, _jobs_store=self.storage)
         # Tick the engine a number of times or until there is no more work
         i = 0
-        while daemon.tick_workflow_engine(self.storage):
+        while daemon.tick_workflow_engine(self.storage, print_exceptions=False):
             self.assertLess(i, 10, "Engine not done after 10 ticks")
             i += 1
         self.assertTrue(registry.has_finished(pk))
@@ -121,4 +121,4 @@ class TestDaemon(unittest.TestCase):
         asyncd(ExceptionProcess, _jobs_store=self.storage)
         asyncd(DummyProcess, _jobs_store=self.storage)
 
-        self.assertFalse(daemon.tick_workflow_engine(self.storage))
+        self.assertFalse(daemon.tick_workflow_engine(self.storage, print_exceptions=False))

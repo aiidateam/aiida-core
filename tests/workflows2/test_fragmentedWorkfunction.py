@@ -164,14 +164,14 @@ class TestFragmentedWorkfunction(TestCase):
             def s1(self, ctx):
                 fa = async(a)
                 fb = async(b)
-                return ResultToContext(r1=fa, r2=fb)
+                return ResultToContext(r1=fa.pid, r2=fb.pid)
 
             def s2(self, ctx):
                 assert ctx.r1['_return'] == A
                 assert ctx.r2['_return'] == B
                 fb = async(b)
                 # Try overwriting r1
-                return ResultToContext(r1=fb)
+                return ResultToContext(r1=fb.pid)
 
             def s3(self, ctx):
                 assert ctx.r1['_return'] == B

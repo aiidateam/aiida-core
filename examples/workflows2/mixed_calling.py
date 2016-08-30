@@ -46,7 +46,7 @@ class F1(FragmentedWorkfunction):
     def s1(self, ctx):
         p2 = self.submit(LongRunning, inputs={'a': self.inputs.inp})
         ctx.a = 1 #  Do some work...
-        return ResultToContext(r2=p2)
+        return ResultToContext(r2=p2.pid)
 
     def s2(self, ctx):
         print("a={}".format(ctx.a))

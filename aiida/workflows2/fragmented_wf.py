@@ -152,10 +152,7 @@ class FragmentedWorkfunction(Process):
 
 class ResultToContext(object):
     def __init__(self, **kwargs):
-        for value in kwargs.itervalues():
-            assert isinstance(value, Future),\
-                "Values to be stored must be futures"
-        self.to_assign = {name: fut.pid for name, fut in kwargs.iteritems()}
+        self.to_assign = kwargs
 
 
 class _ResultToContext(WaitOn):

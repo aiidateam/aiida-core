@@ -1,1 +1,0 @@
-../../examples/workflows2/mixed_calling.py

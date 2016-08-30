@@ -5,7 +5,7 @@ if not is_dbenv_loaded():
 
 from aiida.orm import load_node
 from aiida.orm.utils import DataFactory
-from aiida.workflows2.db_types import Float, Str, NumericType, BaseType
+from aiida.orm.data.base import Float, Str, NumericType, BaseType
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run, asyncd
@@ -134,10 +134,10 @@ class EquationOfState(FragmentedWorkfunction):
                 scaled, self.inputs.code, self.inputs.pseudo_family)
 
             # Launch the code
-            future = self.submit(PwProcess, inputs)
+            pid = self.submit(PwProcess, inputs).pid
             #print scale.value, future.pid
             # Store the future
-            calcs["s_{}".format(scale)] = future
+            calcs["s_{}".format(scale)] = pid
             scale = scale.value + self.inputs.delta.value
 
         # Ask the workflow to continue when the results are ready and store them
@@ -180,10 +180,10 @@ class EquationOfState2(FragmentedWorkfunction):
             scaled, self.inputs.code, self.inputs.pseudo_family)
 
         # Launch the code
-        calc = self.submit(PwProcess, inputs)
+        pid = self.submit(PwProcess, inputs).pid
 
         ctx.i += 1
-        return ResultToContext(result=calc)
+        return ResultToContext(result=pid)
 
     def print_result(self, ctx):
         print ctx.scales[ctx.i],\

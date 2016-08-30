@@ -141,7 +141,7 @@ class PressureConvergence(FragmentedWorkfunction):
         future1 = self.submit(PwProcess, inputs1)
 
         # Wait to complete before next step
-        return ResultToContext(r0=future0, r1=future1)
+        return ResultToContext(r0=future0.pid, r1=future1.pid)
 
     def put_step0_in_ctx(self, ctx):
         """
@@ -187,7 +187,7 @@ class PressureConvergence(FragmentedWorkfunction):
         # Run PW
         future = self.submit(PwProcess, inputs)
         # Replace r1
-        return ResultToContext(r1=future)
+        return ResultToContext(r1=future.pid)
 
     def not_converged(self, ctx):
         """

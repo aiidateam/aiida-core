@@ -8,24 +8,26 @@ and *Group*. The *Node* type has three subtypes: *Calculation*, *Data*,
 and *Code*. Different REST urls are provided to get the list of objects, 
 the details of a specific object as well as its inputs/outputs/attributes/extras.
 
-The AiiDA REST API is implemented using *Flask RESTFul* framework.  For the time being, it only supports GET methods. The response data are always returned in *JSON* format.
+The AiiDA REST API is implemented using ``Flask RESTFul`` framework.  For the time being, it only supports GET methods. The response data are always returned in ``JSON`` format.
 
-In this document, the paths of the file systems are defined with respect to the AiiDA installation folder. The source files of the API are contained in the folder *aiida/restapi*. To start the REST server sopen a terminal, reach this folder and type
+In this document, the paths of the file systems are defined with respect to the AiiDA installation folder. The source files of the API are contained in the folder ``aiida/restapi``. To start the REST server open a terminal, reach this folder and type
 
 .. code-block:: bash
 
     $ python api.py --host=HOST --port=PORT
 
 If you do not specify the host and port flags, the REST API will run on port *5000* 
-of *localhost*. So the **base url** for your REST API will be:
+of *localhost*. So the base url for your REST API will be:
 
-    \http://localhost:5000/api/v2
+    .. code-block::
+    
+        http://localhost:5000/api/v2
 
-where the last field identifies the version of the API. This field enables running  multiple versions of the API simultaneously, so that the clients should not be obliged to update immediately the format of their requests when a new version of the API is deployed. The current latest version is **v2**. 
+where the last field identifies the version of the API. This field enables running  multiple versions of the API simultaneously, so that the clients should not be obliged to update immediately the format of their requests when a new version of the API is deployed. The current latest version is ``v2``. 
 
-The configuration of the API can be set by changing the file *aiida/restapi/config.py*. The available configuration option is documented therein.
+The configuration of the API can be set by changing the file ``aiida/restapi/config.py``. The available configuration option is documented therein.
 
-In order to send requests to the REST API you can simply type the url of the request in the address bar of your browser or you can use command line tools such as *curl* or *wget*.
+In order to send requests to the REST API you can simply type the url of the request in the address bar of your browser or you can use command line tools such as ``curl`` or ``wget``.
 
 Let us now introduce the urls supported by the API. 
 
@@ -34,17 +36,15 @@ General form of the urls
 
 A generic url to send requests to the REST API is formed by:
  
-    1. the base url. It specifies the host and the version of the API. Ex. \http://localhost:5000/api/v2.
+    1. the base url. It specifies the host and the version of the API. Example: ``http://localhost:5000/api/v2``
     2. the path. It defines the kind of resource requested by the client and the type of query.
     3. the query string (not mandatory). It can be used for any further specification of the request, e.g. to introduce query filters, to give instructions for ordering, to set how results have to be paginated, etc.   
 
-The query string is introduced by the question mark character "?". Here are some examples:
+The query string is introduced by the question mark character ``?``. Here are some examples::
  
-  \http://localhost:5000/api/v2/users/
-  
-  \http://localhost:5000/api/v2/computers?scheduler_type="slurm"
-  
-  \http://localhost:5000/api/v2/nodes/?id>45&type=like="%data%"
+  http://localhost:5000/api/v2/users/
+  http://localhost:5000/api/v2/computers?scheduler_type="slurm"
+  http://localhost:5000/api/v2/nodes/?id>45&type=like="%data%"
 
 The trailing slash at the end of the path is not mandatory.
 
@@ -56,112 +56,120 @@ Before exploring in details the functionalities of the API it is important to kn
 Pagination
 **********
 
-The complete set of results is divided in *pages* containing by default 20 results each. Individual pages are accessed by appending "/page/(PAGE)" to the end of the path, where (PAGE) is the number of the page required. The number of results contained in each page can be altered by specifying the *perpage* field in the query string. However, *perpage* values larger than 400 are not allowed. Examples:
+The complete set of results is divided in *pages* containing by default 20 results each. Individual pages are accessed by appending ``/page/(PAGE)`` to the end of the path, where ``(PAGE)`` has to be replaced by the number of the required page. The number of results contained in each page can be altered by specifying the ``perpage=(PERPAGE)`` field in the query string. However, ``(PERPAGE)`` values larger than 400 are not allowed. Examples::
 
-    \http://localhost:5000/api/v2/computers/page/1?
-
-    \http://localhost:5000/api/v2/computers/page/1?perpage=5
-
-    \http://localhost:5000/api/v2/computers/page
+    http://localhost:5000/api/v2/computers/page/1?
+    http://localhost:5000/api/v2/computers/page/1?perpage=5
+    http://localhost:5000/api/v2/computers/page
 
 If no page number is specified, as in the last example, the system redirects the request to page 1. When pagination is used the header of the response contains two more non-empty fields:
     
-    - *X-Total-Counts* (custom field): the total number of results returned by the query, i.e.the sum of the results of all pages)
-    - *Links*: links to the first, previous, next, and last page. Suppose you send a request whose results would fill 8 pages. Then the value of the *Links* field would look like:     <\http://localhost:5000/.../page/1?... ;>; rel=first, <\http://localhost:5000/.../page/3?...     ;>; rel=prev, <\http://localhost:5000/.../page/5?... ;>; rel=next, <\http://localhost:5000/.../page/8?... ;>; rel=last,
+    - ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e.the sum of the results of all pages)
+    - ``Links``: links to the first, previous, next, and last page. Suppose you send a request whose results would fill 8 pages. Then the value of the ``Links`` field would look like::
+        .. code-block::
+        
+            <\http://localhost:5000/.../page/1?... >; rel=first,
+            <\http://localhost:5000/.../page/3?...     ;>; rel=prev,
+            <\http://localhost:5000/.../page/5?... >; rel=next,
+            <\http://localhost:5000/.../page/8?... >; rel=last
 
 Setting *limit* and *offset*
 ****************************
 
 You can specify two special fields in the query string:
 
-    - *limit*: field that specifies the largest number of results that will be returned. The syntax is the following: "limit=(LIMIT)", ex: "limit=20". The default and highest allowed limit is 400
-    - *offset*: field that specifies how many entries are skipped before returning results. The syntax is the following: "offset=(OFFSET)", ex: "offset=20". By default no offset applies.
+    - ``limit=(LIMIT)``: field that specifies the largest number of results that will be returned, ex: "limit=20". The default and highest allowed ``LIMIT`` is 400.
+    - ``offset=(OFFSET)``: field that specifies how many entries are skipped before returning results, ex: ``offset=20``. By default no offset applies.
 
+Example::
+
+    http://localhost:5000/api/v2/computers/?limit=3&offset=2
 
 
 How to build the path
 ---------------------
 
-There are two type of paths: those that request a list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: **users**, **computers**, **groups**, **nodes**, **codes**, **calculations**, and **datafdatra**.
-If you request data for a specific object you have to append its pk to the path (note that the pk is also called id). Here are few examples:
+There are two type of paths: those that request a list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: ``users``, ``computers``, ``groups``, ``nodes``, ``codes``, ``calculations``, and ``datetime``.
+If you request data for a specific object you have to append its pk to the path (note that the pk is also called id). Here are few examples::
 
-    \http://localhost:5000/api/v2/users/
-    
-    \http://localhost:5000/api/v2/users/2
-    
-    \http://localhost:5000/api/v2/nodes/345
+    http://localhost:5000/api/v2/users/    
+    http://localhost:5000/api/v2/users/2    
+    http://localhost:5000/api/v2/nodes/345
     
     
-When you ask for a single object (and only in that case) you can construct more complex requests, namely, you can ask for the inputs/outputs or for the attributes/extras of an object. In the first case you have to append to the path the fields **"/io/inputs"** or **"io/outputs"** depending on the desired relation between the nodes, whereas in the second case you have to append **"content/attributes"** or **"content/extras"** depending on the kind of content you want to access. Here are some examples: 
+When you ask for a single object (and only in that case) you can construct more complex requests, namely, you can ask for its inputs/outputs or for its attributes/extras. In the first case you have to append to the path the string ``/io/inputs`` or ``io/outputs`` depending on the desired relation between the nodes, whereas in the second case you have to append ``content/attributes`` or ``content/extras`` depending on the kind of content you want to access. Here are some examples::
 
-    \http://localhost:5000/api/v2/calculations/345/io/inputs
-    
-    \http://localhost:5000/api/v2/nodes/345/io/inputs
-    
-    \http://localhost:5000/api/v2/data/385/content/attributes
-    
-    \http://localhost:5000/api/v2/nodes/385/content/extras
+    http://localhost:5000/api/v2/calculations/345/io/inputs
+    http://localhost:5000/api/v2/nodes/345/io/inputs
+    http://localhost:5000/api/v2/data/385/content/attributes
+    http://localhost:5000/api/v2/nodes/385/content/extras
 
-.. note:: As you can see from the last examples, a *Node*-type object can be accessed requesting either a generic **/nodes** resource or requesting the resource corresponding to its specific type (**/data**, **/codes**, **/calculations** ). This is because in AiiDA  the classes *Data*, *Code*, and *Calculation* are derived from the class *Node*.
+.. note:: As you can see from the last examples, a *Node* object can be accessed requesting either a generic ``nodes`` resource or requesting the resource corresponding to its specific type (``data``, ``codes``, ``calculations``). This is because in AiiDA  the classes *Data*, *Code*, and *Calculation* are derived from the class *Node*.
 
 How to build the query string
 -----------------------------
 
-The query string is formed by one or more fields separated by the special character "&".
-Each field has the form (*key*)(*operator*)(*value*). The same constraints that apply to the names of python variables determine what are the valid keys, namely, only alphanumeric characters plus '_' are allowed and the first character cannot be a number.
+The query string is formed by one or more fields separated by the special character ``&``.
+Each field has the form (``key``)(``operator``)(``value``). The same constraints that apply to the names of python variables determine what are the valid keys, namely, only alphanumeric characters plus ``_`` are allowed and the first character cannot be a number.
 
 Special keys 
 ************
 
-There are several special keys that can be specified only once in a query string. All of them must be followed by the operator '='. Here is the complete list:
+There are several special keys that can be specified only once in a query string. All of them must be followed by the operator ``=``. Here is the complete list:
 
     :limit: This key only supports integer values.
 
-    :offset: Same format as *limit*.
+    :offset: Same format as ``limit``.
 
-    :perpage: Same format as *limit*.
+    :perpage: Same format as ``limit``.
 
-    :orderby: This key is used to impose a specific ordering to the results. Two orderings are supported, ascending or descending. The value for the *orderby* key must be the name of the property with respect to which to order the results. Additionall'+' or '-' can be pre-pended to the value in order to select, respectively, ascending or descending order. Specifying no leading character is equivalent to select ascending order. Ascending (descending) order for strings corresponds to alphabetical (reverse-alphabetical) order, whereas for datetime objects it corresponds to chronological (reverse-chronological order). Examples:
+    :orderby: This key is used to impose a specific ordering to the results. Two orderings are supported, ascending or descending. The value for the ``orderby`` key must be the name of the property with respect to which to order the results. Additionally, ``+`` or ``-`` can be pre-pended to the value in order to select, respectively, ascending or descending order. Specifying no leading character is equivalent to select ascending order. Ascending (descending) order for strings corresponds to alphabetical (reverse-alphabetical) order, whereas for datetime objects it corresponds to chronological (reverse-chronological order). Examples:
     
-        \http://localhost:5000/api/v2/c=+id
+        .. code-block::
 
-        \http://localhost:5000/api/v2/computers=+name
+            http://localhost:5000/api/v2/c=+id
+            http://localhost:5000/api/v2/computers=+name
+            http://localhost:5000/api/v2/computers/orderby=-uuid
+        
+              
+    :alist: This key is used to specify which attributes of a specific object have to be returned. The desired attributes have to be provided as a comma-separated list of values. It requires that the path contains the endpoint ``/content/attributes``. Example:                                  
 
-        \http://localhost:5000/api/v2/computers/orderby=-uuid
-          
-    :alist: This key is be used to specify which attributes of a specific object have to be returned. The desired attributes have to be provided as a comma-separated list of values. It requires that the path contains the endpoint "/content/attributes". Example:         
+        .. code-block::
 
-        \http://localhost:5000/api/v2/codes/1822/content/attributes?alist=append_text,prepend_text 
+            http://localhost:5000/api/v2/codes/1822/content/attributes?
+                                        alist=append_text,prepend_text 
 
-    :nalist: (incompatible with *alist*) This key is be used to specify which attributes of a specific object *should not* be returned. The syntax is identical to *alist*. The system returns all the attributes except those specified in the list of values.  
+
+    :nalist: (incompatible with ``alist``) This key is used to specify which attributes of a specific object should not be returned. The syntax is identical to ``alist``. The system returns all the attributes except those specified in the list of values.  
     
-    :elist: Similar to *alist* but for extras. It requires that the path contains the endpoint "/content/extras".
+    :elist: Similar to ``alist`` but for extras. It requires that the path contains the endpoint ``/content/extras``.
     
-    :nelist: (incompatible with *elist*) Similar to *nalist* but for extras. It requires that the path contains the endpoint "/content/extras".
+    :nelist: (incompatible with ``elist``) Similar to ``nalist`` but for extras. It requires that the path contains the endpoint ``/content/extras``.
 
 Filters
 *******
 
-All the other fields composing a query string are filters, that is, conditions that have to be fulfilled by the retrieved objects. When a query string contains multiple filters, those are applied as they were related by the AND logical clause, that is, the results have to fulfill all the conditions set by the filters (and not any of them). Each filter key is associated to a unique value type. The possible types are:
+All the other fields composing a query string are filters, that is, conditions that have to be fulfilled by the retrieved objects. When a query string contains multiple filters, those are applied as if they were related by the AND logical clause, that is, the results have to fulfill all the conditions set by the filters (and not any of them). Each filter key is associated to a unique value type. The possible types are:
 
-    :string: Text enclosed in double quotes. If the string contains double quotes those have to be escaped as '""' (two double quotes). Note that in the unlikely occurrence of a sequence of double quotes you will have escape it by writing twice as many double quotes.  
+    :string: Text enclosed in double quotes. If the string contains double quotes those have to be escaped as ``""`` (two double quotes). Note that in the unlikely occurrence of a sequence of double quotes you will have to escape it by writing twice as many double quotes.  
 
     :integer: Positive integer numbers.
     
-    :datetime: Datetime objects expressed in the format (DATE)T(TIME)(SHIFT) where SHIFT is the time difference with respect to the UTC time. This is required to avoid any problem arising from comparing datetime values expressed in different time zones. The formats of each field are:
+    :datetime: Datetime objects expressed in the format ``(DATE)T(TIME)(SHIFT)`` where ``(SHIFT)`` is the time difference with respect to the UTC time. This is required to avoid any problem arising from comparing datetime values expressed in different time zones. The formats of each field are:
     
-        1. YYYY-MM-DD for DATE (mandatory).
-        2. HH:MM:SS for TIME (optional). The formats HH and HH:MM are supported too.  
-        3. SHIFT(optional) has +/-HH:MM. The format +/-HH is allowed too. If no sign is specified, a positive shift is assumed.
+        1. ``YYYY-MM-DD`` for ``(DATE)`` (mandatory).
+        2. ``HH:MM:SS`` for ``(TIME)`` (optional). The formats ``HH`` and ``HH:MM`` are supported too.  
+        3. ``+/-HH:MM`` for ``(SHIFT)`` (optional, if present requires ``(TIME)`` to be specified). The format ``+/-HH`` is allowed too. If no shift is specified UTC time is assumed.
         
-        This format is ISO-8601 compliant. Note that date and time fields have to be separated by the character 'T'. Examples:
-    
-            ctime>2016-04-23T05:45+03:45
+        This format is ``ISO-8601`` compliant. Note that date and time fields have to be separated by the character ``T``. Examples:
 
-            ctime<2016-04-23T05:45 
-            
-            mtime>=2016-04-23    
+        .. code-block::
         
+            ctime>2016-04-23T05:45+03:45
+            ctime<2016-04-23T05:45 
+            mtime>=2016-04-23    
+
+
     :bool: It can be either true or false (lower case).
 
 The following table reports what is the value type and the supported resources associated to each key. 
@@ -214,83 +222,90 @@ The following table reports what is the value type and the supported resources a
 |hostname        |string    |computers                                                 |
 +----------------+----------+----------------------------------------------------------+
 
-The operators supported by a specific key are uniquely determined by the value type associated to that key. For example, a key that requires a boolean value admits only the identity operator '=', whereas an integer value enables the usage of the relational operators '=', '<', '<=', '>', '>=' plus the membership operator '=in='.  
+The operators supported by a specific key are uniquely determined by the value type associated to that key. For example, a key that requires a boolean value admits only the identity operator ``=``, whereas an integer value enables the usage of the relational operators ``=``, ``<``, ``<=``, ``>``, ``>=`` plus the membership operator ``=in=``.  
 Please refer to the following table for a comprehensive list. 
 
-+---------+------------------------+---------------------------------+
-|operator |meaning                 |accepted value types             |
-+=========+========================+=================================+
-|'='      |identity                |integers, strings, bool, datetime|
-+---------+------------------------+---------------------------------+
-|'>'      |greater than            |integers, strings, datetime      |
-+---------+------------------------+---------------------------------+
-|'<'      |lower than              |integers, strings, datetime      |
-+---------+------------------------+---------------------------------+
-|'>='     |greater than or equal to|integers, strings, datetime      |
-+---------+------------------------+---------------------------------+
-|'<='     |lower than or equal to  |integers, strings, datetime      |
-+---------+------------------------+---------------------------------+
-|'=like=' |pattern matching        |strings                          |
-+---------+------------------------+---------------------------------+
-|'=ilike='|case-insensitive        |strings                          |
-|         |pattern matching        |                                 |
-+---------+------------------------+---------------------------------+
-|'=in='   |identity with one       |integers, strings, datetime      |
-|         |    element of a list   |                                 |
-+---------+------------------------+---------------------------------+
++-----------+------------------------+---------------------------------+
+|operator   |meaning                 |accepted value types             |
++===========+========================+=================================+
+|``=``      |identity                |integers, strings, bool, datetime|
++-----------+------------------------+---------------------------------+
+|``>``      |greater than            |integers, strings, datetime      |
++-----------+------------------------+---------------------------------+
+|``<``      |lower than              |integers, strings, datetime      |
++-----------+------------------------+---------------------------------+
+|``>=``     |greater than or equal to|integers, strings, datetime      |
++-----------+------------------------+---------------------------------+
+|``<=``     |lower than or equal to  |integers, strings, datetime      |
++-----------+------------------------+---------------------------------+
+|``=like=`` |pattern matching        |strings                          |
++-----------+------------------------+---------------------------------+
+|``=ilike=``|case-insensitive        |strings                          |
+|           |pattern matching        |                                 |
++-----------+------------------------+---------------------------------+
+|``=in=``   |identity with one       |integers, strings, datetime      |
+|           |    element of a list   |                                 |
++-----------+------------------------+---------------------------------+
 
-The pattern matching operators '=like=' and '=ilike=' must be followed by the pattern definition, namely, a string where two characters assume special meaning:
+The pattern matching operators ``=like=`` and ``=ilike=`` must be followed by the pattern definition, namely, a string where two characters assume special meaning:
 
-    1. '%' is used to replace an arbitrary sequence of characters, including no characters.
-    2. '_' is used to replace one or zero characters.
+    1. ``%`` is used to replace an arbitrary sequence of characters, including no characters.
+    2. ``_`` is used to replace one or zero characters.
     
-Differently from '=like=', '=ilike=' assumes that two characters that only differ in the case are equal. 
+Differently from ``=like=``, ``=ilike=`` assumes that two characters that only differ in the case are equal. 
 
-To prevent interpreting special characters as wildcards, these have to be escaped by pre-pending the character '\'.
+To prevent interpreting special characters as wildcards, these have to be escaped by pre-pending the character ``\``.
 
 Examples:
 
-    **name=like="a%d_"** matches **"aiida"** but does not match **"AiiDA"**
-    
-    **name=ilike="a%d_"** matches both **"aiida"** and **"AiiDA"**
-    
-    **name=like="a_d_"** does not match **"aiida"** 
-    
-    **name=like="aii%d_a"** matches **"aiida"**
-    
-    **uuid=like="cdfd48%"** matches **"cdfd48f9-7ed2-4969-ba06-09c752b83d26"**
-    
-    **description=like="This calculation is %\\% useful"** matches **"This calculation is 100% useful"**
++-------------------------------+----------------------+-------------------+
+| Filter                        | Matched string       | Non-matched string|
++===============================+======================+===================+
+| ``name=like="a%d_"``          |       "aiida"        |      "AiiDA"      |
++-------------------------------+----------------------+-------------------+
+| ``name=ilike="a%d_"``         |   "aiida", "AiiDA"   |                   |
++-------------------------------+----------------------+-------------------+
+| ``name=like="a_d_"``          |                      |      "aiida"      |
++-------------------------------+----------------------+-------------------+
+| ``name=like="aii%d_a"``       |        "aiida"       |                   |
++-------------------------------+----------------------+-------------------+
+| ``uuid=like="cdfd48%"``       | "cdfd48f9-7ed2-4969  |                   |
+|                               |  -ba06-09c752b83d2"  |                   |
++-------------------------------+----------------------+-------------------+
+| ``description=like="This``    | "This calculation is |                   | 
+| ``calculation is %\% useful"``|  100% useful"        |                   |
++-------------------------------+----------------------+-------------------+
 
-The membership operator '=in=' has to be followed by a comma-separated list of values of the same type. The condition is fulfilled if the column value of an object is an element of the list.
+The membership operator ``=in=`` has to be followed by a comma-separated list of values of the same type. The condition is fulfilled if the column value of an object is an element of the list.
 
-Examples: 
+Examples:: 
 
-    \http://localhost:5000/api/v2/nodes?id=in=45,56,78
-    
-    \http://localhost:5000/api/v2/computers/?scheduler_type=in="slurm","pbs"&state="FINISHED"
+    http://localhost:5000/api/v2/nodes?id=in=45,56,78
+    http://localhost:5000/api/v2/computers/?
+    scheduler_type=in="slurm","pbs"&state="FINISHED"
 
 The relational operators '<', '>', '<=', '>=' assume natural ordering for integers, (case-insensitive) alphabetical ordering for strings, and chronological ordering for datetime values.
 
 Examples:
 
-    *\http://localhost:5000/api/v2/nodes?id>578* selects the nodes having an id larger than 578
-    
-    *\http://localhost:5000/api/v2/users/?last_login>2014-04-07* selects only the user that logged in for the last time after April 7th, 2014.
-    
-    *\http://localhost:5000/api/v2/users/?last_name<="m"* selects only the users whose last name begins with a character in the range [a-m].
+    - ``http://localhost:5000/api/v2/nodes?id>578`` selects the nodes having an id larger than 578.  
+    - ``http://localhost:5000/api/v2/users/?last_login>2014-04-07`` selects only the user that logged in for the last time after April 7th, 2014. 
+    - ``http://localhost:5000/api/v2/users/?last_name<="m"`` selects only the users whose last name begins with a character in the range [a-m].
 
 
-.. note:: Object types have to be specified by a string that defines their position in the AiiDA source tree ending with a dot. Examples: 
+.. note:: Object types have to be specified by a string that defines their position in the AiiDA source tree ending with a dot. Examples:
+ 
     - type="data.Data." selects only objects of *Data* type
     - type="data.remote.RemoteData." selects only objects of *RemoteData* type
-    - type="data.parameter.ParameterData."
 
-.. note:: If you use in your request the endpoint *io/input* (*io/outputs*) together with one or more filters, the latter are applied to the input (output) nodes of the selected *pk*. For example, the request
+.. note:: If you use in your request the endpoint *io/input* (*io/outputs*) together with one or more filters, the latter are applied to the input (output) nodes of the selected *pk*. For example, the request:
 
-     \http://localhost:5000/api/v2/nodes/6/io/outputs/?type=data.folder.FolderData."
+        .. code-block::
 
-would first search for the outputs of the node with *pk* =6 and then select only those objects of type *data.folder.FolderData*
+            http://localhost:5000/api/v2/nodes/6/io/outputs/?
+                              type="data.folder.FolderData."
+
+    would first search for the outputs of the node with *pk* =6 and then select only those objects of type *FolderData*.
 
        
 
@@ -298,14 +313,15 @@ The HTTP response
 +++++++++++++++++
 
 The HTTP response of the REST API consists in a JSON object, a header, and a status code. Possible status are:
-1. 200 for successful requests.
-2. 400 for bad requests. In this case, the JSON object contains only an error message describing the problem.
-3. 500 for a generic internal server error. No JSON is returned.
-4. 404 for invalid url. Differently from the 400 status, it is returned when the REST API does not succeed in directing the request to a specific resource. This typically happens when the path does not match any of the supported format. No JSON is returned.
 
-The header is a standard HTTP response header with the additional custom field *X-Total-Counts* and, only if paginated results are required, a non-empty *Link* field, as described in the Pagination section.
+    1. 200 for successful requests.
+    2. 400 for bad requests. In this case, the JSON object contains only an error message describing the problem.
+    3. 500 for a generic internal server error. The JSON object contains only a generic error message.
+    4. 404 for invalid url. Differently from the 400 status, it is returned when the REST API does not succeed in directing the request to a specific resource. This typically happens when the path does not match any of the supported format. No JSON is returned.
 
-The JSON object mainly contains the list of the results returned by the API. This list is assigned to the key *data*. Additionally, the JSON object contains several informations about the request (keys *method*, *url*, *url_root*, *path*, *query_string*, *resource_type*, and *pk*).
+The header is a standard HTTP response header with the additional custom field ``X-Total-Counts`` and, only if paginated results are required, a non-empty ``Link`` field, as described in the Pagination section.
+
+The JSON object mainly contains the list of the results returned by the API. This list is assigned to the key ``data``. Additionally, the JSON object contains several informations about the request (keys ``method``, ``url``, ``url_root``, ``path``, ``query_string``, ``resource_type``, and ``pk``).
 
 
 
@@ -321,11 +337,11 @@ Computers
 
         http://localhost:5000/api/v2/computers?limit=3&offset=2&orderby=id
 
-    Description::
+    Description:
 
-        returns the list of three *Computer* objects (*limit* =3) starting from the 3rd
-        row (*offset* =2) of the database table and the list will be ordered
-        by ascending values of *id*.
+        returns the list of three *Computer* objects (``limit=3``) starting from the 3rd
+        row (``offset=2``) of the database table and the list will be ordered
+        by ascending values of ``id``.
 
     Response::
     
@@ -384,9 +400,9 @@ Computers
 
         http://localhost:5000/api/v2/computers/4
 
-    Description::
+    Description:
 
-        returns the details of the *Computer* object with *pk* =4.
+        returns the details of the *Computer* object with ``pk=4``.
 
     Response::
 
@@ -425,11 +441,11 @@ Nodes
 
         http://localhost:5000/api/v2/nodes?limit=2&offset=8&orderby=-id
 
-    Description::
+    Description:
 
-        returns the list of two *Node* objects (*limit* =2) starting from 9th
-        row (*offset* =8) of the database table and the list will be ordered
-        by *id* in descending order.
+        returns the list of two *Node* objects (``limit=2``) starting from 9th
+        row (``offset=8``) of the database table and the list will be ordered
+        by ``id`` in descending order.
 
     Response::
 
@@ -471,9 +487,9 @@ Nodes
 
         http://localhost:5000/api/v2/nodes/1
 
-    Description::
+    Description:
 
-        returns the details of the *Node* object with *pk* =1.
+        returns the details of the *Node* object with ``pk=1``.
 
     Response::
 
@@ -506,9 +522,9 @@ Nodes
     
         http://localhost:5000/api/v2/nodes/6/io/inputs?limit=2
 
-    Description::
+    Description:
     
-        returns the list of the first two input nodes (*limit* =2) of the *Node* object with *pk* =6.
+        returns the list of the first two input nodes (``limit=2``) of the *Node* object with ``pk=6``.
 
     Response::
 
@@ -551,10 +567,10 @@ Nodes
     
         http://localhost:5000/api/v2/nodes/6/io/inputs?type="data.array.kpoints.KpointsData."
 
-    Description::
+    Description:
     
-        returns the list of the *KpointsData* input nodes of
-        the *Node* object with *pk* =6.
+        returns the list of the `*KpointsData* input nodes of
+        the *Node* object with ``pk=6``.
 
     Response::
 
@@ -585,9 +601,9 @@ Nodes
     
         http://localhost:5000/api/v2/nodes/6/io/outputs?type="data.remote.RemoteData."
     
-    Description::
+    Description:
     
-        returns the list of the *RemoteData* output nodes of the *Node* object with *pk* =6.
+        returns the list of the *RemoteData* output nodes of the *Node* object with ``pk=6``.
 
     Response::
 
@@ -622,9 +638,9 @@ Nodes
     
         http://localhost:5000/api/v2/nodes/1822/content/attributes
 
-    Description::
+    Description:
     
-        returns the list of all attributes of the *Node* object with *pk* =1822.
+        returns the list of all attributes of the *Node* object with ``pk=1822``.
 
     Response::
 
@@ -653,9 +669,9 @@ Nodes
 
         http://localhost:5000/api/v2/nodes/1822/content/extras
 
-    Description::
+    Description:
     
-        returns the list of all the extras of the *Node* object with *pk* =1822.
+        returns the list of all the extras of the *Node* object with ``pk=1822``.
 
     Response::
 
@@ -684,9 +700,9 @@ Nodes
     
          http://localhost:5000/api/v2/codes/1822/content/attributes?alist=append_text,is_local
 
-    Description::
+    Description:
     
-        returns a list of the attributes *append_text* and *is_local* of the *Node* object with *pk* =1822.
+        returns a list of the attributes ``append_text`` and ``is_local`` of the *Node* object with ``pk=1822``.
 
     Response::
 
@@ -712,9 +728,9 @@ Nodes
     
         http://localhost:5000/api/v2/codes/1822/content/extras?elist=trialBool,trialInt
 
-    Description::
+    Description:
     
-        returns a list of the extras *trialBool* and *trialInt* of the *Node* object with *pk* =1822.
+        returns a list of the extras ``trialBool`` and ``trialInt`` of the *Node* object with ``pk=1822``.
 
     Response::
 
@@ -741,9 +757,9 @@ Nodes
 
         http://localhost:5000/api/v2/codes/1822/content/attributes?nalist=append_text,is_local    
 
-    Description::
+    Description:
     
-        returns all the attributes of the *Node* object with *pk* =1822 except *append_text* and *is_local*.
+        returns all the attributes of the *Node* object with ``pk=1822`` except ``append_text`` and ``is_local``.
 
     Response::
 
@@ -769,9 +785,9 @@ Nodes
 
         http://localhost:5000/api/v2/codes/1822/content/extras?nelist=trialBool,trialInt
 
-    Description::
+    Description:
     
-        returns all the extras of the *Node* object with *pk* =1822 except *trialBool* and *trialInt*.
+        returns all the extras of the *Node* object with ``pk=1822`` except ``trialBool`` and ``trialInt``.
 
     Response::
 
@@ -792,7 +808,7 @@ Nodes
         }
 
 
-.. note:: The same REST urls supported for the resource *nodes* are also available with the derived resources, namely,  *calculations*, *data*, and *codes*, just changing the resource field in the path.
+.. note:: The same REST urls supported for the resource ``nodes`` are also available with the derived resources, namely,  ``calculations``, ``data``, and ``codes``, just changing the resource field in the path.
 
 
 Users
@@ -804,7 +820,7 @@ Users
 
         http://localhost:5000/api/v2/users/
 
-    Description::
+    Description:
     
         returns a list of all the *User* objects. 
 
@@ -850,9 +866,9 @@ Users
 
         http://localhost:5000/api/v2/users/?first_name=ilike="aii%"
 
-    Description::
+    Description:
     
-        returns a lists of the *User* objects whose first name starts with "aii", regardless the case of the characters.
+        returns a lists of the *User* objects whose first name starts with ``"aii"``, regardless the case of the characters.
 
     Response::
 
@@ -890,11 +906,11 @@ Groups
 
         http://localhost:5000/api/v2/groups/?limit=10&orderby=-user_id
 
-    Description::
+    Description:
     
-        returns the list of ten *Group* objects (*limit* =10) starting from the 1st
-        row of the database table (*offset* =0) and the list will be ordered
-        by *user_id* in descending order.
+        returns the list of ten *Group* objects (``limit=10``) starting from the 1st
+        row of the database table (``offset=0``) and the list will be ordered
+        by ``user_id`` in descending order.
         
     Response::
 
@@ -936,9 +952,9 @@ Groups
 
         http://localhost:5000/api/v2/groups/23
 
-    Description::
+    Description:
     
-        returns the details of the *Group* object with *pk* =23.
+        returns the details of the *Group* object with ``pk=23``.
 
     Response::
 

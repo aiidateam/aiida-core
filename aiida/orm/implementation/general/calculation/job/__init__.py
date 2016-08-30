@@ -1375,9 +1375,9 @@ class AbstractJobCalculation(object):
         #   would return None, in which case the join method would raise
         #   an exception
         job_tmpl.prepend_text = "\n\n".join(_ for _ in
-                                            [computer.get_prepend_text(),
-                                             code.get_prepend_text(),
-                                             calcinfo.prepend_text,
+                                            [computer.get_prepend_text()]+
+                                             [code.get_prepend_text() for code in codes]+
+                                             [calcinfo.prepend_text,
                                              self.get_prepend_text()] if _)
 
         job_tmpl.append_text = "\n\n".join(_ for _ in

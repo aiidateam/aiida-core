@@ -19,7 +19,7 @@ In this document, the paths of the file systems are defined with respect to the 
 If you do not specify the host and port flags, the REST API will run on port *5000* 
 of *localhost*. So the base url for your REST API will be:
 
-    .. code-block::
+    ::
     
         http://localhost:5000/api/v2
 
@@ -36,7 +36,10 @@ General form of the urls
 
 A generic url to send requests to the REST API is formed by:
  
-    1. the base url. It specifies the host and the version of the API. Example: ``http://localhost:5000/api/v2``
+    1. the base url. It specifies the host and the version of the API. Example::
+    
+        http://localhost:5000/api/v2
+        
     2. the path. It defines the kind of resource requested by the client and the type of query.
     3. the query string (not mandatory). It can be used for any further specification of the request, e.g. to introduce query filters, to give instructions for ordering, to set how results have to be paginated, etc.   
 
@@ -66,7 +69,6 @@ If no page number is specified, as in the last example, the system redirects the
     
     - ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e.the sum of the results of all pages)
     - ``Links``: links to the first, previous, next, and last page. Suppose you send a request whose results would fill 8 pages. Then the value of the ``Links`` field would look like::
-        .. code-block::
         
             <\http://localhost:5000/.../page/1?... >; rel=first,
             <\http://localhost:5000/.../page/3?...     ;>; rel=prev,
@@ -124,9 +126,9 @@ There are several special keys that can be specified only once in a query string
     :perpage: Same format as ``limit``.
 
     :orderby: This key is used to impose a specific ordering to the results. Two orderings are supported, ascending or descending. The value for the ``orderby`` key must be the name of the property with respect to which to order the results. Additionally, ``+`` or ``-`` can be pre-pended to the value in order to select, respectively, ascending or descending order. Specifying no leading character is equivalent to select ascending order. Ascending (descending) order for strings corresponds to alphabetical (reverse-alphabetical) order, whereas for datetime objects it corresponds to chronological (reverse-chronological order). Examples:
-    
-        .. code-block::
 
+        ::
+    
             http://localhost:5000/api/v2/c=+id
             http://localhost:5000/api/v2/computers=+name
             http://localhost:5000/api/v2/computers/orderby=-uuid
@@ -134,7 +136,7 @@ There are several special keys that can be specified only once in a query string
               
     :alist: This key is used to specify which attributes of a specific object have to be returned. The desired attributes have to be provided as a comma-separated list of values. It requires that the path contains the endpoint ``/content/attributes``. Example:                                  
 
-        .. code-block::
+        ::
 
             http://localhost:5000/api/v2/codes/1822/content/attributes?
                                         alist=append_text,prepend_text 
@@ -163,7 +165,7 @@ All the other fields composing a query string are filters, that is, conditions t
         
         This format is ``ISO-8601`` compliant. Note that date and time fields have to be separated by the character ``T``. Examples:
 
-        .. code-block::
+        ::
         
             ctime>2016-04-23T05:45+03:45
             ctime<2016-04-23T05:45 
@@ -295,12 +297,12 @@ Examples:
 
 .. note:: Object types have to be specified by a string that defines their position in the AiiDA source tree ending with a dot. Examples:
  
-    - type="data.Data." selects only objects of *Data* type
-    - type="data.remote.RemoteData." selects only objects of *RemoteData* type
+    - ``type="data.Data."`` selects only objects of *Data* type
+    - ``type="data.remote.RemoteData."`` selects only objects of *RemoteData* type
 
 .. note:: If you use in your request the endpoint *io/input* (*io/outputs*) together with one or more filters, the latter are applied to the input (output) nodes of the selected *pk*. For example, the request:
 
-        .. code-block::
+        ::
 
             http://localhost:5000/api/v2/nodes/6/io/outputs/?
                               type="data.folder.FolderData."

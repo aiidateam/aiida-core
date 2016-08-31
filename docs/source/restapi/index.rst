@@ -91,7 +91,7 @@ Example::
 How to build the path
 ---------------------
 
-There are two type of paths: those that request a list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: ``users``, ``computers``, ``groups``, ``nodes``, ``codes``, ``calculations``, and ``datetime``.
+There are two type of paths: those that request a list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: ``users``, ``computers``, ``groups``, ``nodes``, ``codes``, ``calculations``, and ``data``.
 If you request data for a specific object you have to append its pk to the path (note that the pk is also called id). Here are few examples::
 
     http://localhost:5000/api/v2/users/    
@@ -780,7 +780,7 @@ Nodes
           "resource_type": "codes", 
           "url": "http://localhost:5000/api/v2/codes/1822/content/attributes?nalist=append_text,is_local", 
           "url_root": "http://localhost:5000/"
-       }
+        }
 
 
     REST url::

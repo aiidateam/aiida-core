@@ -8,6 +8,7 @@ Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 
 from flask import Flask, jsonify
 from flask_restful import Api
+from flask_cors import CORS, cross_origin
 from aiida.restapi.common.exceptions import RestInputValidationError,\
     RestValidationError
 from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
@@ -18,7 +19,7 @@ from aiida.restapi.common.flaskrun import flaskrun
 ## Initiate an app with its api
 app = Flask(__name__)
 api = Api(app, prefix=PREFIX)
-
+cors = CORS(app, resources={r"/api/v2/*": {"origins": "*"}})
 
 ## Error handling for error raised for invalid urls (not for non existing
 # resources!)

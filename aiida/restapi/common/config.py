@@ -25,3 +25,9 @@ TIMEOUT_DATAS = 10*60
 TIMEOUT_GROUPS = 10*60
 TIMEOUT_CODES = 10*60
 
+
+# Database
+import os
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, '../database/mcloud.db')

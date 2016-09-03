@@ -15,11 +15,15 @@ from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
     Node, User
 from aiida.restapi.common.config import PREFIX, APP_CONFIG
 from aiida.restapi.common.flaskrun import flaskrun
+from flask.ext.sqlalchemy import SQLAlchemy
 
 ## Initiate an app with its api
 app = Flask(__name__)
 api = Api(app, prefix=PREFIX)
 cors = CORS(app, resources={r"/api/v2/*": {"origins": "*"}})
+
+# database
+from aiida.restapi.database.initdb import mcloud_db_session
 
 ## Error handling for error raised for invalid urls (not for non existing
 # resources!)
@@ -124,11 +128,19 @@ api.add_resource(Group,
                  '/groups/<int:pk>/',
                  strict_slashes=False)
 
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    mcloud_db_session.remove()
+
+from aiida.restapi.database.initdb import setup_database
+setup_database()
 
 # Standard boilerplate to run the app
 if __name__ == '__main__':
     #Config the app
     app.config.update(**APP_CONFIG)
+
+
     #I run the app via a wrapper that accepts arguments such as host and port
     #e.g. python api.py --host=127.0.0.2 --port=6000
     # Default address is 127.0.01:5000

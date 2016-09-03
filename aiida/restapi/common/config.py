@@ -31,3 +31,4 @@ import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, '../database/mcloud.db')
+SECRET_KEY = "\xb7\x9c:\xca\xa3\x9f\x8a;\xa6_\x96\xc7\xd2?\x82\xa6\x9d;'\xe2W\xe1\xc8\xc2"

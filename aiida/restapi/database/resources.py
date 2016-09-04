@@ -67,7 +67,6 @@ class McloudTokenResource(Resource):
         self.trans = None
 
     @auth.login_required
-    def get(self):
+    def post(self):
         token = g.user.generate_auth_token()
         return jsonify({ 'token': token.decode('ascii') })
-

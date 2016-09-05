@@ -75,3 +75,66 @@ class CodeTranslator(NodeTranslator):
         """
         # basic query_help object
         super(CodeTranslator, self).__init__()
+
+    def get_schema(self):
+        return {
+            "fields": {
+                "ctime": {
+                    "is_display": False,
+                    "display_name": "Creation Time",
+                    "help_text": "Created at",
+                    "type": "datetime",
+                },
+                "dbcomputer": {
+                    "is_display": False,
+                    "display_name": "Computer",
+                    "help_text": "Computer id on which job was submitted",
+                    "type": "related",
+                },
+                "description": {
+                    "is_display": False,
+                    "display_name": "Description",
+                    "help_text": "Short description on the calculation",
+                    "type": "string",
+                },
+                "id": {
+                    "is_display": True,
+                    "display_name": "ID",
+                    "help_text": "Calculation id",
+                    "type": "integer",
+                },
+                "label": {
+                    "is_display": True,
+                    "display_name": "Label",
+                    "help_text": "Calculation label",
+                    "type": "string",
+                },
+                "mtime": {
+                    "is_display": True,
+                    "display_name": "Last modified Time",
+                    "help_text": "Last modified datetime of the node",
+                    "type": "datetime",
+                },
+                "type": {
+                    "is_display": True,
+                    "display_name": "Type",
+                    "help_text": "Calculation type",
+                    "type": "string",
+                },
+                "uuid": {
+                    "is_display": False,
+                    "display_name": "Unique ID",
+                    "help_text": "Unique id of the calculation",
+                    "type": "string",
+                }
+            },
+            "ordering": [
+                "id",
+                "label",
+                "type",
+                "dbcomputer",
+                "ctime",
+                "mtime",
+                "uuid"
+            ]
+        }

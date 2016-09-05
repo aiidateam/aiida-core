@@ -57,6 +57,7 @@ api.add_resource(Computer,
                  '/computers/page/',
                  '/computers/page/<int:page>/',
                  '/computers/<int:pk>/',
+                 '/computers/schema/',
                  strict_slashes=False)
 
 api.add_resource(Node,
@@ -87,6 +88,7 @@ api.add_resource(Calculation,
                  '/calculations/<int:pk>/io/outputs/page/<int:page>/',
                  '/calculations/<int:pk>/content/attributes/',
                  '/calculations/<int:pk>/content/extras/',
+                 '/calculations/schema/',
                  strict_slashes=False)
 
 api.add_resource(Data,
@@ -102,6 +104,7 @@ api.add_resource(Data,
                  '/data/<int:pk>/io/outputs/page/<int:page>/',
                  '/data/<int:pk>/content/attributes/',
                  '/data/<int:pk>/content/extras/',
+                 '/data/schema/',
                  strict_slashes=False)
 
 api.add_resource(Code,
@@ -117,6 +120,7 @@ api.add_resource(Code,
                  '/codes/<int:pk>/io/outputs/page/<int:page>/',
                  '/codes/<int:pk>/content/attributes/',
                  '/codes/<int:pk>/content/extras/',
+                 '/codes/schema/',
                  strict_slashes=False)
 
 api.add_resource(User,

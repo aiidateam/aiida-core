@@ -133,6 +133,7 @@ It should print a snapshot of the queue status, without any errors.
      ``proxy_command`` feature of ssh, that we also support in
      AiiDA. For more information, see :ref:`ssh_proxycommand`.
 
+
 .. _computer_setup:
 
 Computer setup and configuration
@@ -289,6 +290,24 @@ The configuration of computers happens in two steps.
            
  After these two steps have been completed, your computer is ready to go!
 
+.. note:: If the cluster you are using requires authentication through a Kerberos
+	token (that you need to obtain before using ssh), you typically need to install 
+	``libffi`` (``sudo apt-get install libffi-dev`` under Ubuntu), and then
+        ``python-gssapi`` and ``pyasn1`` (see the ``optional_requirements.txt`` file
+	at the root of the AiiDA distribution).
+	Then, you will have to add manually an attribute to the authentication info associated with
+	the computer you just created. To do so open a ``verdi shell`` and type::
+	 
+	   import json
+	   comp = models.DbComputer.objects.get(name='COMPUTERNAME')
+	   auth = models.DbAuthInfo.objects.get(dbcomputer=comp)
+	   params = json.loads(auth.auth_params)
+	   params['gss_auth'] = True
+	   auth.auth_params = json.dumps(params)
+	   auth.save()
+
+	You need to do this only once.
+	   
 .. note:: To check if you set up the computer correctly,
   execute::
 

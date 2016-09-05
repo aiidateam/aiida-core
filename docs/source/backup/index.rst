@@ -137,10 +137,6 @@ Then, become the UNIX ``postgres`` user, typing as root::
 
 (or, equivalently, type ``sudo su - postgres``, depending on your distribution).
 
-Stop the postgres database daemon::
-
-  service postgresql stop
-
 Then enter the postgres shell::
 
   psql
@@ -151,12 +147,17 @@ and look for the current location of the data directory::
 
 Typically you should get something like ``/var/lib/postgresql/9.1/main``.
 
+.. note :: In the above, ``9.1`` is replaced by the actual version number of your postgres distribution (the same applies to the remainder of the section).
+
 .. note :: If you are experiencing memory problems and cannot enter the postgres
 	shell, you can look directly into the file ``/etc/postgresql/9.1/main/postgresql.conf``
 	and check out the line defining the variable ``data_directory``.
 
-Then exit the shell with ``\q``, go to this directory and copy all the
-files to the new directory::
+Then exit the shell with ``\q``, and stop the postgres database daemon::
+
+  service postgresql stop
+
+Copy all the files and folders from the postgres data directory into the new directory::
 
   cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
 
@@ -164,10 +165,16 @@ where ``SOURCE_DIRECTORY`` is the directory you got from the
 ``SHOW data_directory;`` command, and ``DESTINATION_DIRECTORY`` is the new
 directory for the database files.
 
+.. note :: The behaviour of the ``cp -a`` command is to create a directory into ``DESTINATION_DIRECTORY``, e.g.::
+
+    cp -a OLD_DIR/main/ NEW_DIR/
+
+  will create the directory ``main`` into ``NEW_DIR``.
+
 Make sure the permissions, owner and group are the same in the old and new directory
 (including all levels above the ``DESTINATION_DIRECTORY``). The owner and group
 should be both ``postgres``, at the notable exception of some symbolic links in
-``server.crt`` and ``server.key``.
+``server.crt`` and ``server.key`` (these files might be absent, depending on your postgresql version number).
 
 .. note :: If the permissions of these links need to be changed, use the ``-h``
   option of ``chown`` to avoid changing the permissions of the destination of the

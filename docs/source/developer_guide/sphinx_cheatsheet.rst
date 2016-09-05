@@ -88,6 +88,13 @@ Can be done like this. This entire document can be seen unformated below using t
 
 .. _self-reference:
 
+Math
+====
+
+Math formulas can be added as follows :math:`<g_i|`, see
+`the Sphinx documentation on math <http://sphinx-doc.org/latest/ext/math.html#module-sphinx.ext.mathbase>`_
+
+
 Cross Reference Docs
 ====================
 

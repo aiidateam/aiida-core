@@ -31,11 +31,11 @@ class McloudUserResource(Resource):
         from aiida.restapi.database.schemas import McloudUserSchema
 
         if pk is None:
-            return (jsonify({'error': 'pass an id'})) 
+            return (jsonify({'response': 'pass user id'}))
 
         user = McloudUser.query.get(pk)
         if not user:
-            return jsonify({'message':  "user with pk=" + str(pk) +" is not exist"})
+            return jsonify({'response':  "user with pk=" + str(pk) +" is not exist"})
 
         user_schema = McloudUserSchema()
         return user_schema.dump(user).data
@@ -55,11 +55,15 @@ class McloudUserResource(Resource):
         institute = request.json.get('institute')
         password = request.json.get('password')
         if email is None or password is None:
-            return jsonify({ 'errpr': 'email/password is none!'})
-            abort(400) # missing arguments
+	    response = jsonify({ 'response': "email/password is none!"})
+            response.status_code = 400
+            return response
 
         if McloudUser.query.filter_by(email = email).first() is not None:
-            return jsonify({ 'username': email + " already exist"})
+	    response = jsonify({ 'response': email + " already exist"})
+            response.status_code = 400
+            return response
+
         user = McloudUser( first_name=first_name,
                             last_name=last_name,
                             email=email,
@@ -69,8 +73,9 @@ class McloudUserResource(Resource):
         mcloud_db_session.commit()
 
         user_schema = McloudUserSchema()
-        return user_schema.dump(user).data
-        return jsonify({ 'message': user.email + " added in db"})
+        response = jsonify({ 'response': user_schema.dump(user).data})
+        response.status_code = 200
+        return response
 
 class McloudTokenResource(Resource):
 
@@ -80,4 +85,4 @@ class McloudTokenResource(Resource):
     @auth.login_required
     def post(self):
         token = g.user.generate_auth_token()
-        return jsonify({ 'token': token.decode('ascii') })
+        return jsonify({ 'response': token.decode('ascii') })

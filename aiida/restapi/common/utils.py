@@ -206,6 +206,7 @@ def build_headers(rel_pages=None, url=None, total_count=None):
     ## Setting mandatory headers
     # set X-Total-Count
     headers['X-Total-Count'] = total_count
+    expose_header = ["X-Total-Count"]
 
     ## Two auxiliary functions
     def split_url(url):
@@ -235,8 +236,12 @@ def build_headers(rel_pages=None, url=None, total_count=None):
                 if page is not None:
                     links.append(make_rel_url(rel, page))
             headers['Link'] = ''.join(links)
+            expose_header.append("Link")
         else:
             pass
+
+    # to expose header access in cross-domain requests
+    headers['Access-Control-Expose-Headers'] =','.join(expose_header)
 
     return headers
 

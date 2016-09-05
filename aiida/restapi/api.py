@@ -16,20 +16,19 @@ from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
 from aiida.restapi.common.config import PREFIX, APP_CONFIG
 from aiida.restapi.common.flaskrun import flaskrun
 from flask.ext.sqlalchemy import SQLAlchemy
-from flask.ext.httpauth import HTTPBasicAuth
-from flask_marshmallow import Marshmallow
+
 
 ## Initiate an app with its api
 app = Flask(__name__)
 api = Api(app, prefix=PREFIX)
-ma = Marshmallow(app)
-auth = HTTPBasicAuth()
 
 cors = CORS(app, resources={r"/api/v2/*": {"origins": "*"}})
 
 # database
 from aiida.restapi.database.initdb import mcloud_db_session
-from aiida.restapi.database.resources import McloudUserResource, McloudUsersResource, McloudTokenResource 
+from aiida.restapi.database.resources import (McloudUserResource,
+    McloudUsersResource, McloudTokenResource )
+
 
 ## Error handling for error raised for invalid urls (not for non existing
 # resources!)

@@ -2,10 +2,9 @@ from urllib import unquote
 from flask import request, jsonify, url_for, g
 from flask_restful import Resource
 
-from aiida.restapi.database.models import McloudUser
-from aiida.restapi.database.schemas import McloudUserSchema
-from aiida.restapi.database.initdb import mcloud_db_session
-from aiida.restapi.api import ma, auth
+from flask.ext.httpauth import HTTPBasicAuth
+auth = HTTPBasicAuth()
+
 
 class McloudUsersResource(Resource):
 
@@ -13,6 +12,10 @@ class McloudUsersResource(Resource):
         self.trans = None
 
     def get(self, **kwargs):
+
+        from aiida.restapi.database.models import McloudUser
+        from aiida.restapi.database.schemas import McloudUserSchema
+
         user_schema = McloudUserSchema(many=True)
         users = McloudUser.query.all()
         return user_schema.dump(users).data
@@ -23,6 +26,9 @@ class McloudUserResource(Resource):
         self.trans = None
 
     def get(self, pk=None):
+
+        from aiida.restapi.database.models import McloudUser
+        from aiida.restapi.database.schemas import McloudUserSchema
 
         if pk is None:
             return (jsonify({'error': 'pass an id'})) 
@@ -38,6 +44,11 @@ class McloudUserResource(Resource):
         return self.new_user(request)
 
     def new_user(self, request):
+
+        from aiida.restapi.database.models import McloudUser
+        from aiida.restapi.database.schemas import McloudUserSchema
+        from aiida.restapi.database.initdb import mcloud_db_session
+
         first_name = request.json.get('first_name')
         last_name = request.json.get('last_name')
         email = request.json.get('email')

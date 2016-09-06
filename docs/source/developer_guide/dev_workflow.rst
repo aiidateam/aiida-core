@@ -444,7 +444,7 @@ Some notes and tips:
 
 * If you want to pass intermediate data from one step to another, you can set
   the data as a workflow attibute: in a step, call 
-  ``self.set_attribute(attr_name, attr_value)``, and retrieve it
+  ``self.add_attribute(attr_name, attr_value)``, and retrieve it
   in another step using ``attr_value = self.get_attribute(attr_name)``.
   Values can be any JSON-serializable value, or an AiiDA node.
 

@@ -129,8 +129,8 @@ class Process(plum.process.Process):
 
     @classmethod
     def _create_default_exec_engine(cls):
-        from aiida.workflows2.defaults import execution_engine
-        return execution_engine
+        from aiida.workflows2.defaults import serial_engine
+        return serial_engine
 
     @classmethod
     def create_db_record(cls):

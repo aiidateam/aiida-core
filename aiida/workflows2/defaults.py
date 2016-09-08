@@ -19,9 +19,8 @@ WORKFLOWS_DIR = os.path.expanduser(os.path.join(
 # Have globals that can be used by all of AiiDA
 class_loader = plum.class_loader.ClassLoader(ClassLoader())
 registry = ProcessRegistry()
-# execution_engine = MultithreadedEngine(process_factory=factory,
-#                                        process_registry=registry)
-execution_engine = SerialEngine()
+parallel_engine = MultithreadedEngine()
+serial_engine = SerialEngine()
 
 import aiida.workflows2.persistence
 storage = aiida.workflows2.persistence.Persistence(

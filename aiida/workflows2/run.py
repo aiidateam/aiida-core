@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from aiida.workflows2 import util as util
-from aiida.workflows2.defaults import execution_engine
+from aiida.workflows2.defaults import parallel_engine, serial_engine
 from aiida.workflows2.process import Process
 import aiida.workflows2.defaults as defaults
-import plum.wait_ons
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -20,21 +19,11 @@ def async(process_class, *args, **kwargs):
         # No need to consider args as a Process can't deal with positional
         # arguments anyway
         return_pid = kwargs.pop('_result_pid', False)
-        fut = execution_engine.submit(process_class, inputs=kwargs)
+        fut = parallel_engine.submit(process_class, inputs=kwargs)
         if return_pid:
             return fut, fut.pid
         else:
             return fut
-
-
-def asyncd(process_class, _jobs_store=None, **kwargs):
-    assert not util.is_workfunction(process_class),\
-        "You cannot submit a workfunction to the daemon"
-
-    if _jobs_store is None:
-        _jobs_store = defaults.storage
-
-    return queue_up(process_class, kwargs, _jobs_store)
 
 
 def run(process_class, *args, **inputs):
@@ -50,7 +39,7 @@ def run(process_class, *args, **inputs):
         return process_class(*args, **inputs)
     elif issubclass(process_class, Process):
         return_pid = inputs.pop('_return_pid', False)
-        fut = execution_engine.submit(process_class, inputs)
+        fut = serial_engine.submit(process_class, inputs)
         result = fut.result()
         if return_pid:
             return result, fut.pid
@@ -62,7 +51,17 @@ def run(process_class, *args, **inputs):
 
 def restart(pid):
     cp = defaults.storage.load_checkpoint(pid)
-    return defaults.execution_engine.run_from_and_block(cp)
+    return defaults.serial_engine.run_from_and_block(cp)
+
+
+def asyncd(process_class, _jobs_store=None, **kwargs):
+    assert not util.is_workfunction(process_class),\
+        "You cannot submit a workfunction to the daemon"
+
+    if _jobs_store is None:
+        _jobs_store = defaults.storage
+
+    return queue_up(process_class, kwargs, _jobs_store)
 
 
 def queue_up(process_class, inputs, storage):

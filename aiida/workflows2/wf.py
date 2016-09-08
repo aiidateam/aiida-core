@@ -5,7 +5,7 @@ Do not delete, otherwise 'verdi developertest' will stop to work.
 """
 
 from aiida.workflows2.process import FunctionProcess
-from aiida.workflows2.defaults import execution_engine
+from aiida.workflows2.defaults import serial_engine
 import functools
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -32,7 +32,7 @@ def wf(func):
             inputs.update(kwargs)
         if args:
             inputs.update(FuncProc.args_to_dict(*args))
-        future = execution_engine.submit(FuncProc, inputs)
+        future = serial_engine.submit(FuncProc, inputs)
         pid = future.pid
 
         if run_async:

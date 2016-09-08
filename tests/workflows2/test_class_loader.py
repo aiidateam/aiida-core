@@ -1,5 +1,10 @@
 import unittest
 
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
+if not is_dbenv_loaded():
+    load_dbenv()
+
 from plum.util import fullname
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.workflows2.defaults import class_loader

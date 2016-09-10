@@ -103,8 +103,11 @@ class Node(Resource):
             headers = build_headers(url=request.url, total_count=0)
             results = self.trans.get_schema()
         elif query_type == "statistics":
+            (limit, offset, perpage, orderby, filters, alist, nalist, elist,
+                  nelist) = parse_query_string(query_string)
             headers = build_headers(url=request.url, total_count=0)
-            results = self.trans.get_statistics(self.tclass)
+            usr = filters["user"]["=="]
+            results = self.trans.get_statistics(self.tclass, usr)
         else:
             (limit, offset, perpage, orderby, filters, alist, nalist, elist,
              nelist) = parse_query_string(query_string)

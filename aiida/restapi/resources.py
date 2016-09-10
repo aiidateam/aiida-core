@@ -80,6 +80,8 @@ class Node(Resource):
     def __init__(self):
         from aiida.restapi.translator.node import NodeTranslator
         self.trans = NodeTranslator()
+        from aiida.orm import Node
+        self.tclass = Node
 
     def get(self, **kwargs):
         """
@@ -100,6 +102,9 @@ class Node(Resource):
         if query_type == "schema":
             headers = build_headers(url=request.url, total_count=0)
             results = self.trans.get_schema()
+        elif query_type == "statistics":
+            headers = build_headers(url=request.url, total_count=0)
+            results = self.trans.get_statistics(self.tclass)
         else:
             (limit, offset, perpage, orderby, filters, alist, nalist, elist,
              nelist) = parse_query_string(query_string)
@@ -159,13 +164,19 @@ class Calculation(Node):
     def __init__(self):
         from aiida.restapi.translator.calculation import CalculationTranslator
         self.trans = CalculationTranslator()
+        from aiida.orm import Calculation
+        self.tclass = Calculation
 
 class Code(Node):
     def __init__(self):
         from aiida.restapi.translator.code import CodeTranslator
         self.trans = CodeTranslator()
+        from aiida.orm import Code
+        self.tclass = Code
 
 class Data(Node):
     def __init__(self):
         from aiida.restapi.translator.data import DataTranslator
         self.trans = DataTranslator()
+        from aiida.orm import Data
+        self.tclass = Data

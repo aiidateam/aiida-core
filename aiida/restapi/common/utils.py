@@ -73,6 +73,9 @@ def parse_path(path_string):
     if path[0] == "schema":
         query_type = "schema"
         return (resource_type, page, pk, query_type)
+    if path[0] == "statistics":
+        query_type = "statistics"
+        return (resource_type, page, pk, query_type)
 
 def validate_request(limit=None, offset=None, perpage=None, page=None):
     """

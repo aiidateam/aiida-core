@@ -257,3 +257,58 @@ class NodeTranslator(BaseTranslator):
         else:
             return super(NodeTranslator, self).get_results()
 
+    def get_statistics(self, tclass, user=""):
+       from aiida.orm.querybuilder import QueryBuilder as QB
+       from aiida.orm import User
+       from collections import Counter
+       from datetime import datetime
+
+       statistics = {}
+
+       q = QB()
+       q.append(tclass, project=['id', 'ctime', 'mtime', 'type'], tag='node')
+       q.append(User, creator_of='node', project='email')
+       res = q.all()
+
+       # total count
+       statistics["total"] = len(res)
+
+       users = Counter([r[4] for r in res])
+       statistics["users"]={}
+
+       if user is not "":
+           statistics["users"][user] = users[user]
+       else:
+           for count, email in sorted((v, k) for k, v in users.iteritems())[::-1]:
+               statistics["users"][email] = count
+
+       types = Counter([r[3] for r in res])
+       statistics["types"] = {}
+       for count, typestring in sorted((v, k) for k, v in types.iteritems())[::-1]:
+           statistics["types"][typestring] = count
+
+       ctimelist = [r[1].strftime("%Y-%m") for r in res]
+       ctime = Counter(ctimelist)
+       statistics["ctime_by_month"] = {}
+       for count, period in sorted((v, k) for k, v in ctime.iteritems())[::-1]:
+           statistics["ctime_by_month"][period] = count
+
+       ctimelist = [r[1].strftime("%Y-%m-%d") for r in res]
+       ctime = Counter(ctimelist)
+       statistics["ctime_by_day"] = {}
+       for count, period in sorted((v, k) for k, v in ctime.iteritems())[::-1]:
+           statistics["ctime_by_day"][period] = count
+
+       mtimelist = [r[1].strftime("%Y-%m") for r in res]
+       mtime = Counter(mtimelist)
+       statistics["mtime_by_month"] = {}
+       for count, period in sorted((v, k) for k, v in mtime.iteritems())[::-1]:
+           statistics["mtime_by_month"][period] = count
+
+       mtimelist = [r[1].strftime("%Y-%m-%d") for r in res]
+       mtime = Counter(mtimelist)
+       statistics["mtime_by_day"] = {}
+       for count, period in sorted((v, k) for k, v in mtime.iteritems())[::-1]:
+           statistics["mtime_by_day"][period] = count
+
+       return statistics

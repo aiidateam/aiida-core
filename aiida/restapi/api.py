@@ -73,6 +73,7 @@ api.add_resource(Node,
                  '/nodes/<int:pk>/io/outputs/page/<int:page>/',
                  '/nodes/<int:pk>/content/attributes/',
                  '/nodes/<int:pk>/content/extras/',
+                 '/nodes/statistics/',
                  strict_slashes=False)
 
 api.add_resource(Calculation,
@@ -89,6 +90,7 @@ api.add_resource(Calculation,
                  '/calculations/<int:pk>/content/attributes/',
                  '/calculations/<int:pk>/content/extras/',
                  '/calculations/schema/',
+                 '/calculations/statistics/',
                  strict_slashes=False)
 
 api.add_resource(Data,
@@ -105,6 +107,7 @@ api.add_resource(Data,
                  '/data/<int:pk>/content/attributes/',
                  '/data/<int:pk>/content/extras/',
                  '/data/schema/',
+                 '/data/statistics/',
                  strict_slashes=False)
 
 api.add_resource(Code,
@@ -121,6 +124,7 @@ api.add_resource(Code,
                  '/codes/<int:pk>/content/attributes/',
                  '/codes/<int:pk>/content/extras/',
                  '/codes/schema/',
+                 '/codes/statistics/',
                  strict_slashes=False)
 
 api.add_resource(User,

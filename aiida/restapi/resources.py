@@ -31,30 +31,36 @@ class BaseResource(Resource):
 
         ## Parse request
         (resource_type, page, pk, query_type) = parse_path(path)
-        (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist) = parse_query_string(query_string)
 
-        ## Validate request
-        validate_request(limit=limit, offset=offset, perpage=perpage, page=page)
-
-        ## Set the query, and initialize qb object
-        self.trans.set_query(filters=filters, orders=orderby, pk=pk)
-
-        ## Count results
-        total_count = self.trans.get_total_count()
-
-        ## Pagination (if required)
-        if page is not None:
-            (limit, offset, rel_pages) = paginate(page, perpage, total_count)
-            self.trans.set_limit_offset(limit=limit, offset=offset)
-            headers = build_headers(rel_pages=rel_pages, url=request.url,
-                                    total_count=total_count)
+        ## schema request (static)
+        if query_type == "schema":
+            headers = build_headers(url=request.url, total_count=0)
+            results = self.trans.get_schema()
         else:
-            self.trans.set_limit_offset(limit=limit, offset=offset)
-            headers = build_headers(url=request.url, total_count=total_count)
+            (limit, offset, perpage, orderby, filters, alist, nalist, elist,
+             nelist) = parse_query_string(query_string)
 
-        ## Retrieve results
-        results = self.trans.get_results()
+            ## Validate request
+            validate_request(limit=limit, offset=offset, perpage=perpage, page=page)
+
+            ## Set the query, and initialize qb object
+            self.trans.set_query(filters=filters, orders=orderby, pk=pk)
+
+            ## Count results
+            total_count = self.trans.get_total_count()
+
+            ## Pagination (if required)
+            if page is not None:
+                (limit, offset, rel_pages) = paginate(page, perpage, total_count)
+                self.trans.set_limit_offset(limit=limit, offset=offset)
+                headers = build_headers(rel_pages=rel_pages, url=request.url,
+                                        total_count=total_count)
+            else:
+                self.trans.set_limit_offset(limit=limit, offset=offset)
+                headers = build_headers(url=request.url, total_count=total_count)
+
+            ## Retrieve results
+            results = self.trans.get_results()
 
         ## Build response
         data = dict(method=request.method,
@@ -74,6 +80,8 @@ class Node(Resource):
     def __init__(self):
         from aiida.restapi.translator.node import NodeTranslator
         self.trans = NodeTranslator()
+        from aiida.orm import Node
+        self.tclass = Node
 
     def get(self, **kwargs):
         """
@@ -89,32 +97,41 @@ class Node(Resource):
 
         ## Parse request
         (resource_type, page, pk, query_type) = parse_path(path)
-        (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist) = parse_query_string(query_string)
 
-        ## Validate request
-        validate_request(limit=limit, offset=offset, perpage=perpage, page=page)
-
-        ## Instantiate a translator and initialize it
-        self.trans.set_query(filters=filters, orders=orderby,
-                          query_type=query_type, pk=pk, alist=alist,
-                             nalist=nalist, elist=elist, nelist=nelist)
-
-        ## Count results
-        total_count = self.trans.get_total_count()
-
-        ## Pagination (if required)
-        if page is not None:
-            (limit, offset, rel_pages) = paginate(page, perpage, total_count)
-            self.trans.set_limit_offset(limit=limit, offset=offset)
-            headers = build_headers(rel_pages=rel_pages, url=request.url,
-                                    total_count=total_count)
+        ## schema request (static)
+        if query_type == "schema":
+            headers = build_headers(url=request.url, total_count=0)
+            results = self.trans.get_schema()
+        elif query_type == "statistics":
+            headers = build_headers(url=request.url, total_count=0)
+            results = self.trans.get_statistics(self.tclass)
         else:
-            self.trans.set_limit_offset(limit=limit, offset=offset)
-            headers = build_headers(url=request.url, total_count=total_count)
+            (limit, offset, perpage, orderby, filters, alist, nalist, elist,
+             nelist) = parse_query_string(query_string)
 
-        ## Retrieve results
-        results = self.trans.get_results()
+            ## Validate request
+            validate_request(limit=limit, offset=offset, perpage=perpage, page=page)
+
+            ## Instantiate a translator and initialize it
+            self.trans.set_query(filters=filters, orders=orderby,
+                              query_type=query_type, pk=pk, alist=alist,
+                                 nalist=nalist, elist=elist, nelist=nelist)
+
+            ## Count results
+            total_count = self.trans.get_total_count()
+
+            ## Pagination (if required)
+            if page is not None:
+                (limit, offset, rel_pages) = paginate(page, perpage, total_count)
+                self.trans.set_limit_offset(limit=limit, offset=offset)
+                headers = build_headers(rel_pages=rel_pages, url=request.url,
+                                        total_count=total_count)
+            else:
+                self.trans.set_limit_offset(limit=limit, offset=offset)
+                headers = build_headers(url=request.url, total_count=total_count)
+
+            ## Retrieve results
+            results = self.trans.get_results()
 
         ## Build response
         data = dict(method=request.method,
@@ -147,13 +164,19 @@ class Calculation(Node):
     def __init__(self):
         from aiida.restapi.translator.calculation import CalculationTranslator
         self.trans = CalculationTranslator()
+        from aiida.orm import Calculation
+        self.tclass = Calculation
 
 class Code(Node):
     def __init__(self):
         from aiida.restapi.translator.code import CodeTranslator
         self.trans = CodeTranslator()
+        from aiida.orm import Code
+        self.tclass = Code
 
 class Data(Node):
     def __init__(self):
         from aiida.restapi.translator.data import DataTranslator
         self.trans = DataTranslator()
+        from aiida.orm import Data
+        self.tclass = Data

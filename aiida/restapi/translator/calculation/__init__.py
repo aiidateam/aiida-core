@@ -84,3 +84,114 @@ class CalculationTranslator(NodeTranslator):
         """
         # basic query_help object
         super(CalculationTranslator, self).__init__()
+
+    def get_schema(self):
+        return {
+            "fields": {
+                "ctime": {
+                    "is_display": False,
+                    "display_name": "Creation Time",
+                    "help_text": "Created at",
+                    "type": "datetime",
+                },
+                "dbcomputer": {
+                    "is_display": False,
+                    "display_name": "Computer",
+                    "help_text": "Computer id on which job was submitted",
+                    "type": "related",
+                },
+                "description": {
+                    "is_display": False,
+                    "display_name": "Description",
+                    "help_text": "Short description on the calculation",
+                    "type": "string",
+                },
+                "id": {
+                    "is_display": True,
+                    "display_name": "ID",
+                    "help_text": "Calculation id",
+                    "type": "integer",
+                },
+                "label": {
+                    "is_display": True,
+                    "display_name": "Label",
+                    "help_text": "Calculation label",
+                    "type": "string",
+                },
+                "mtime": {
+                    "is_display": True,
+                    "display_name": "Last modified Time",
+                    "help_text": "Last modified datetime of the node",
+                    "type": "datetime",
+                },
+                "state": {
+                    "is_display": True,
+                    "display_name": "State",
+                    "help_text": "The AiiDA state of the calculation.",
+                    "type": "string",
+                    "valid_choices": {
+                        "COMPUTED": {
+                            "doc": "Calculation in the AiiDA state 'COMPUTED'"
+                        },
+                        "FAILED": {
+                            "doc": "Calculation in the AiiDA state 'FAILED'"
+                        },
+                        "FINISHED": {
+                            "doc": "Calculation in the AiiDA state 'FINISHED'"
+                        },
+                        "IMPORTED": {
+                            "doc": "Calculation in the AiiDA state 'IMPORTED'"
+                        },
+                        "NEW": {
+                            "doc": "Calculation in the AiiDA state 'NEW'"
+                        },
+                        "PARSING": {
+                            "doc": "Calculation in the AiiDA state 'PARSING'"
+                        },
+                        "PARSINGFAILED": {
+                            "doc": "Calculation in the AiiDA state 'PARSINGFAILED'"
+                        },
+                        "RETRIEVALFAILED": {
+                            "doc": "Calculation in the AiiDA state 'RETRIEVALFAILED'"
+                        },
+                        "RETRIEVING": {
+                            "doc": "Calculation in the AiiDA state 'RETRIEVING'"
+                        },
+                        "SUBMISSIONFAILED": {
+                            "doc": "Calculation in the AiiDA state 'SUBMISSIONFAILED'"
+                        },
+                        "SUBMITTING": {
+                            "doc": "Calculation in the AiiDA state 'SUBMITTING'"
+                        },
+                        "TOSUBMIT": {
+                            "doc": "Calculation in the AiiDA state 'TOSUBMIT'"
+                        },
+                        "WITHSCHEDULER": {
+                            "doc": "Calculation in the AiiDA state 'WITHSCHEDULER'"
+                        }
+                    }
+                },
+                "type": {
+                    "is_display": True,
+                    "display_name": "Type",
+                    "help_text": "Calculation type",
+                    "type": "string",
+                },
+                "uuid": {
+                    "is_display": False,
+                    "display_name": "Unique ID",
+                    "help_text": "Unique id of the calculation",
+                    "type": "string",
+                }
+            },
+            "ordering": [
+                "id",
+                "label",
+                "type",
+                "dbcomputer",
+                "state",
+                "ctime",
+                "mtime",
+                "uuid"
+            ]
+        }

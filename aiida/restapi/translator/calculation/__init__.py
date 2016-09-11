@@ -113,7 +113,7 @@ class CalculationTranslator(NodeTranslator):
                     "type": "integer",
                 },
                 "label": {
-                    "is_display": True,
+                    "is_display": False,
                     "display_name": "Label",
                     "help_text": "Calculation label",
                     "type": "string",

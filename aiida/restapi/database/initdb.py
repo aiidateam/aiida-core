@@ -15,4 +15,22 @@ def setup_database():
     # they will be registered properly on the metadata.  Otherwise
     # you will have to import them first before calling init_db()
     from aiida.restapi.database import models
+    from aiida.restapi.database.models import McloudUser
+
     Base.metadata.create_all(bind=engine)
+
+    #create guest user
+    email = "guest@mcloud.com"
+    password = "guest123"
+    first_name = "Guest"
+    last_name = "Guest"
+    institute = "Unknown"
+
+    if McloudUser.query.filter_by(email = email).first() is None:
+        user = McloudUser( first_name=first_name,
+                            last_name=last_name,
+                            email=email,
+                            institute=institute)
+        user.hash_password(password)
+        mcloud_db_session.add(user)
+        mcloud_db_session.commit()

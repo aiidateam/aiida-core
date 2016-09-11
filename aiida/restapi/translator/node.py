@@ -309,15 +309,14 @@ class NodeTranslator(BaseTranslator):
 
        if isinstance(users,basestring):
            users = [users]
-       if len(users) > 0:
-           for user in users:
-               user_data = [r for r in qb_res if r[4] == user] 
-               # statistics for user data
-               statistics["users"][user] = count_statistics(user_data)
-               statistics["users"][user]["total"] = node_users[user]
-       else:
-           for count, email in sorted((v, k) for k, v in node_users.iteritems())[::-1]:
-               statistics["users"][email] = count
+       if len(users) == 0:
+           users = node_users
+
+       for user in users:
+           user_data = [r for r in qb_res if r[4] == user]
+           # statistics for user data
+           statistics["users"][user] = count_statistics(user_data)
+           statistics["users"][user]["total"] = node_users[user]
 
        # statistics for node data
        statistics.update( count_statistics(qb_res))

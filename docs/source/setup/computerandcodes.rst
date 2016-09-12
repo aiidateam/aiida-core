@@ -295,18 +295,9 @@ The configuration of computers happens in two steps.
 	``libffi`` (``sudo apt-get install libffi-dev`` under Ubuntu), and then
         ``python-gssapi`` and ``pyasn1`` (see the ``optional_requirements.txt`` file
 	at the root of the AiiDA distribution).
-	Then, you will have to add manually an attribute to the authentication info associated with
-	the computer you just created. To do so open a ``verdi shell`` and type::
-	 
-	   import json
-	   comp = models.DbComputer.objects.get(name='COMPUTERNAME')
-	   auth = models.DbAuthInfo.objects.get(dbcomputer=comp)
-	   params = json.loads(auth.auth_params)
-	   params['gss_auth'] = True
-	   auth.auth_params = json.dumps(params)
-	   auth.save()
-
-	You need to do this only once.
+	Then, if your ``.ssh/config`` file is configured properly (in particular includes
+	all the necessary ``GSSAPI`` options), ``verdi computer configure`` will
+	contain already the correct suggestions for all the gss options needed to support Kerberos.
 	   
 .. note:: To check if you set up the computer correctly,
   execute::

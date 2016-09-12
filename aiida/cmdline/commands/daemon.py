@@ -159,13 +159,17 @@ class Daemon(VerdiCommandWithSubcommands):
         # it crashed for some reason).
         # TODO: remove them when the old workflow system will be
         # taken away.
-        if (get_last_daemon_timestamp('workflow',when='stop')
-            -get_last_daemon_timestamp('workflow',when='start'))<timedelta(0):
-            logger.info("Workflow stop timestamp was {}; re-initializing "
-                        "it to current time".format(
-                        get_last_daemon_timestamp('workflow',when='stop')))
-            print "Re-initializing workflow stepper stop timestamp"
-            set_daemon_timestamp(task_name='workflow', when='stop')
+        try:
+            if (get_last_daemon_timestamp('workflow',when='stop')
+                -get_last_daemon_timestamp('workflow',when='start'))<timedelta(0):
+                logger.info("Workflow stop timestamp was {}; re-initializing "
+                            "it to current time".format(
+                            get_last_daemon_timestamp('workflow',when='stop')))
+                print "Re-initializing workflow stepper stop timestamp"
+                set_daemon_timestamp(task_name='workflow', when='stop')
+        except TypeError:
+            # when timestamps are None (i.e. not present), do not do anything
+            pass
 
         if (process.returncode == 0):
             print "Daemon started"
@@ -245,13 +249,17 @@ class Daemon(VerdiCommandWithSubcommands):
                     # it crashed for some reason).
                     # TODO: remove them when the old workflow system will be
                     # taken away.
-                    if (get_last_daemon_timestamp('workflow',when='stop')
-                        -get_last_daemon_timestamp('workflow',when='start'))<timedelta(0):
-                        logger.info("Workflow stop timestamp was {}; re-initializing"
-                                    " it to current time".format(
-                                    get_last_daemon_timestamp('workflow',when='stop')))
-                        print "Re-initializing workflow stepper stop timestamp"
-                        set_daemon_timestamp(task_name='workflow', when='stop')
+                    try:
+                        if (get_last_daemon_timestamp('workflow',when='stop')
+                            -get_last_daemon_timestamp('workflow',when='start'))<timedelta(0):
+                            logger.info("Workflow stop timestamp was {}; re-initializing"
+                                        " it to current time".format(
+                                        get_last_daemon_timestamp('workflow',when='stop')))
+                            print "Re-initializing workflow stepper stop timestamp"
+                            set_daemon_timestamp(task_name='workflow', when='stop')
+                    except TypeError:
+                        # when timestamps are None (undefined), don't do anything
+                        pass
                     break
                 else:
                     print "Waiting for the AiiDA Daemon to shut down..."

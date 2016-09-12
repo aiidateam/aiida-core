@@ -32,7 +32,7 @@ def execute_steps():
 
     from aiida.orm import JobCalculation
     from aiida.orm.implementation import get_all_running_steps
-
+ 
     logger.info("Querying the worflow DB")
     
     running_steps = get_all_running_steps()
@@ -76,7 +76,7 @@ def execute_steps():
 
 
 
-def advance_workflow(w_superclass, step):
+def advance_workflow(w, step):
     """
     The method tries to advance a step running its next method and handling 
     possible errors.
@@ -95,7 +95,7 @@ def advance_workflow(w_superclass, step):
     Is no errors are reported the method returns True, in all the other cases 
     the Workflow is set to ERROR state and the method returns False.
 
-    :param w_superclass: Workflow object to advance
+    :param w: Workflow object to advance
     :param step: DbWorkflowStep to execute
     :return: True if the step has been executed, False otherwise
     """
@@ -103,33 +103,34 @@ def advance_workflow(w_superclass, step):
     from aiida.orm.workflow import Workflow
 
     if step.nextcall == wf_exit_call:
-        logger.info("[{0}] Step: {1} has an exit call".format(w_superclass.pk, step.name))
-        if len(w_superclass.get_steps(wf_states.RUNNING)) == 0 and len(w_superclass.get_steps(wf_states.ERROR)) == 0:
-            logger.info("[{0}] Step: {1} is really finished, going out".format(w_superclass.pk, step.name))
-            w_superclass.set_state(wf_states.FINISHED)
+        logger.info("[{0}] Step: {1} has an exit call".format(w.pk, step.name))
+        if len(w.get_steps(wf_states.RUNNING)) == 0 and len(w.get_steps(wf_states.ERROR)) == 0:
+            logger.info("[{0}] Step: {1} is really finished, going out".format(w.pk, step.name))
+            w.set_state(wf_states.FINISHED)
             return True
         else:
-            logger.error(
-                "[{0}] Step: {1} is NOT finished, stopping workflow with error".format(w_superclass.pk, step.name))
-            w_superclass.append_to_report("""Step: {1} is NOT finished, some calculations or workflows
+            logger.error("[{0}] Step: {1} is NOT finished, stopping workflow "
+                         "with error".format(w.pk, step.name))
+            w.append_to_report("""Step: {0} is NOT finished, some calculations or workflows
             are still running and there is a next call, stopping workflow with error""".format(step.name))
-            w_superclass.set_state(wf_states.ERROR)
+            w.set_state(wf_states.ERROR)
 
             return False
     elif step.nextcall == wf_default_call:
-        logger.info("Step: {0} is not finished and has no next call, waiting "
-                    "for other methods to kick.".format(step.name))
-        w_superclass.append_to_report("Step: {0} is not finished and has no "
+        logger.info("[{0}] Step: {1} is not finished and has no next call, waiting "
+                    "for other methods to kick.".format(w.pk, step.name))
+        w.append_to_report("Step: {0} is not finished and has no "
                                       "next call, waiting for other methods "
                                       "to kick.".format(step.name))
         return True
 
     elif not step.nextcall == None:
 
-        logger.info("In advance_workflow the step {0} goes to nextcall {1}".format(step.name, step.nextcall))
+        logger.info("[{0}] In advance_workflow the step {1} goes to nextcall {2}"
+                    "".format(w.pk, step.name, step.nextcall))
 
         try:
-            w = Workflow.get_subclass_from_pk(w_superclass.pk)
+            #w = Workflow.get_subclass_from_pk(w_superclass.pk)
             getattr(w, step.nextcall)()
             return True
 
@@ -147,7 +148,8 @@ def advance_workflow(w_superclass, step):
             return False
     else:
 
-        logger.error("Step: {0} ERROR, no nextcall".format(step.name))
+        logger.error("[{0}] Step: {1} ERROR, no nextcall".format(w.pk,
+                                                                 step.name))
         w.append_to_report("Step: {0} ERROR, no nextcall".format(step.name))
         w.set_state(wf_states.ERROR)
 

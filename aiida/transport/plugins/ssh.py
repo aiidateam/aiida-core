@@ -47,7 +47,7 @@ class SshTransport(aiida.transport.Transport):
                              'key_filename', 'timeout', 'allow_agent',
                              'proxy_command', # Managed 'manually' in connect
                              'compress',
-                             'gss_auth', # for Kerberos support through python-gssapi
+                             'gss_auth','gss_kex','gss_deleg_creds','gss_host', # for Kerberos support through python-gssapi
                              ]
     
     # Valid parameters for the ssh transport
@@ -298,7 +298,84 @@ class SshTransport(aiida.transport.Transport):
         """
         return "RejectPolicy"
     
+    @classmethod
+    def _convert_gss_auth_fromstring(cls, string):
+        """
+        Convert the gss auth. command from string.
+        """
+        from aiida.common.exceptions import ValidationError
         
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("gss_auth must be an boolean")
+
+    @classmethod
+    def _get_gss_auth_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        return str(config.get('gssapiauthentication',"no"))
+
+    @classmethod
+    def _convert_gss_kex_fromstring(cls, string):
+        """
+        Convert the gss key exchange command from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("gss_kex must be an boolean")
+
+    @classmethod
+    def _get_gss_kex_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        return str(config.get('gssapikeyexchange',"no"))
+
+    @classmethod
+    def _convert_gss_deleg_creds_fromstring(cls, string):
+        """
+        Convert the gss auth. command from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("gss_deleg_creds must be an boolean")
+
+    @classmethod
+    def _get_gss_deleg_creds_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        return str(config.get('gssapidelegatecredentials',"no"))
+
+    @classmethod
+    def _convert_gss_host_fromstring(cls, string):
+        """
+        Convert the gss auth. command from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        return str(string)
+
+    @classmethod
+    def _get_gss_host_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        return str(config.get('gssapihostname',computer.hostname))
+
+
     def __init__(self, machine, **kwargs):
         """
         Initialize the SshTransport class.

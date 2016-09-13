@@ -161,7 +161,7 @@ All the other fields composing a query string are filters, that is, conditions t
     
         1. ``YYYY-MM-DD`` for ``(DATE)`` (mandatory).
         2. ``HH:MM:SS`` for ``(TIME)`` (optional). The formats ``HH`` and ``HH:MM`` are supported too.  
-        3. ``+/-HH:MM`` for ``(SHIFT)`` (optional, if present requires ``(TIME)`` to be specified). The format ``+/-HH`` is allowed too. If no shift is specified UTC time is assumed.
+        3. ``+/-HH:MM`` for ``(SHIFT)`` (optional, if present requires ``(TIME)`` to be specified). The format ``+/-HH`` is allowed too. If no shift is specified UTC time is assumed. The shift format follows the general convention that eastern (western) shifts are positive (negative). The API is unaware of daylight saving times so the user is required to adjust the shift to take them into account. 
         
         This format is ``ISO-8601`` compliant. Note that date and time fields have to be separated by the character ``T``. Examples:
 

@@ -11,6 +11,7 @@ def strip_prefix(path):
     else:
         raise ValidationError('path has to start with {}'.format(PREFIX))
 
+
 def split_path(path):
     """
     :param path: entire path contained in flask request
@@ -292,15 +293,18 @@ def parse_query_string(query_string):
         '<=': '<=',
         '=like=': 'like',
         '=ilike=': 'ilike'
-        }
+    }
 
-
-    from pyparsing import Word, alphas, nums, alphanums, ZeroOrMore, \
-        OneOrMore, \
-        Suppress, Optional, Literal, Group, QuotedString, Combine,\
-        StringStart as SS, StringEnd as SE, ParseException
+    from pyparsing import Word, alphas, nums, alphanums, printables, \
+        ZeroOrMore, OneOrMore, Suppress, Optional, Literal, Group, \
+        QuotedString, Combine, \
+        StringStart as SS, StringEnd as SE, \
+        WordStart as WS, WordEnd as WE, \
+        ParseException
 
     from pyparsing import pyparsing_common as ppc
+    from dateutil import parser as dtparser
+    from psycopg2.tz import FixedOffsetTimezone
 
     ## Define grammar
     # key types
@@ -311,15 +315,71 @@ def parse_query_string(query_string):
                 Literal('<=') | Literal('<'))
     # Value types
     valueNum = ppc.number
-    valueBool = (Literal('true') | Literal('false')).addParseAction(lambda toks: bool(toks[0]))
+    valueBool = (Literal('true') | Literal('false')).addParseAction(
+        lambda toks: bool(toks[0]))
     valueString = QuotedString('"', escQuote='""')
-    valueOrderby = Combine(Optional(Word('+-',exact=1)) + key)
-    #TODO support for datetime
-    #valueDateTime = Combine()
+    valueOrderby = Combine(Optional(Word('+-', exact=1)) + key)
 
+    ## DateTimeShift value. First, compose the atomic values and then combine
+    #  them and convert them to datetime objects
+    # Date
+    valueDate = Combine(
+        Word(nums, exact=4) +
+        Literal('-') + Word(nums, exact=2) +
+        Literal('-') + Word(nums, exact=2)
+    )
+    # Time
+    valueTime = Combine(
+        Literal('T') +
+        Word(nums, exact=2) +
+        Optional(Literal(':') + Word(nums, exact=2)) +
+        Optional(Literal(':') + Word(nums, exact=2))
+    )
+    # Shift
+    valueShift = Combine(
+        Word('+-', exact=1) +
+        Word(nums, exact=2) +
+        Optional(Literal(':') + Word(nums, exact=2))
+    )
+    # Combine atomic values
+    valueDateTime = Combine(
+        valueDate +
+        Optional(valueTime) +
+        Optional(valueShift) + WE(printables.translate(None, '&'))  # To us the
+        # word must end with '&' or end of the string
+        # Adding  WordEnd  only here is very important. This makes atomic
+        # values for date, time and shift not really
+        # usable alone individually.
+    )
+    # Convert it to datetime object
+    # Function compliant with ParseAction requirements
+    def validate_time(s, loc, toks):
+        try:
+            dt = dtparser.parse(toks[0])
+        except ValueError:
+            raise RestInputValidationError("time value has wrong format. The "
+                                           "right format is "
+                                           "<date>T<time><offset>, "
+                                           "where <date> is expressed as "
+                                           "[YYYY]-[MM]-[DD], "
+                                           "<time> is expressed as [HH]:[MM]:["
+                                           "SS], "
+                                           "<offset> is expressed as +/-[HH]:["
+                                           "MM] "
+                                           "given with "
+                                           "respect to UTC")
+        if dt.tzinfo is not None:
+            tzoffset_minutes = int(
+                dt.tzinfo.utcoffset(None).total_seconds() / 60)
+            return dt.replace(tzinfo=FixedOffsetTimezone(
+                offset=tzoffset_minutes, name=None))
+        else:
+            return dt.replace(tzinfo=FixedOffsetTimezone(offset=0, name=None))
+       
+    valueDateTime.setParseAction(validate_time)
 
     # More General types
-    value = (valueString | valueBool | valueNum | valueOrderby)
+    value = (valueString | valueBool | valueDateTime | valueNum | valueOrderby)
     # List of values (I do not check the homogeneity of the types of values,
     # query builder will do it in a sense)
     valueList = Group(value + OneOrMore(Suppress(',') + value) + Optional(
@@ -341,9 +401,12 @@ def parse_query_string(query_string):
     ## Parse the query string
     try:
         fields = generalGrammar.parseString(query_string).asList()
-    except ParseException:
-        #raise RestInputValidationError("The query string format is invalid")
-        raise ParseException("The query string format is invalid")
+    except ParseException as e:
+        raise RestInputValidationError("The query string format is invalid. "
+                                       "Parser returned this massage: ""{"
+                                       "}. The column number is counted from "
+                                       "the first character of the query "
+                                       "string."" ".format(e))
 
     filters = {}
     orderby = []
@@ -472,67 +535,3 @@ def parse_query_string(query_string):
             nelist)
 
 
-# ## Define grammar
-# # Key types
-# key = Word(alphanums + '_-')
-# timekey = key.copy().addCondition(lambda toks: 'time' in toks[0])
-# # Operators
-# operator = (Literal('=like=') | Literal('=ilike=') | Literal('=') |
-#             Literal('>=') | Literal('>') |
-#             Literal('<=') | Literal('<'))
-# # Values
-# valueString = QuotedString('"', escQuote='""')
-# valueBool = (Literal('true') | Literal('false')).addParseAction(lambda
-#                                                                     toks: bool(
-#     toks[0]))
-# valueInt = Word(nums + '+-').addParseAction(lambda toks: int(toks[0]))
-# valueFloat = Word(nums + '+-.').addParseAction(
-#     lambda toks: float(toks[0]))
-# valueGeneric = Word(alphanums + '+-%_.')
-# valueNum = (valueInt | valueFloat)
-# value = (valueString | valueBool | valueNum | valueGeneric)
-# valueList = Group(value + OneOrMore(Suppress(',') + value) + Optional(
-#     Suppress(',')))
-#
-# ##TODO manage better the parse exceptions in general
-# from dateutil.parser import parse
-#
-# valueTime = Word(nums + 'TZ' + '+-:.')
-#
-#
-# # Function compliant with ParseAction definition
-# def validate_time(s, loc, toks):
-#     try:
-#         return parse(toks[0])
-#     except ValueError:
-#         raise RestInputValidationError("time value has wrong format. The "
-#                                        "right format is "
-#                                        "<date>T<time>Z<offset>, "
-#                                        "where <date> is expressed as [MM]-["
-#                                        "DD]-[YY], "
-#                                        "<time> is expressed as [HH]:[MM]:["
-#                                        "SS], "
-#                                        "<offset> is expressed as [HH]:[MM] "
-#                                        "given with "
-#                                        "respect to UTC")
-#
-#
-# valueTime.addParseAction(validate_time)
-#
-# # time values list
-# valueTimeList = Group(valueTime + OneOrMore(Suppress(',') + valueTime) +
-#                       Optional(Suppress(',')))
-#
-# # Query eparator
-# separator = Suppress('&')
-#
-# # Define field types (or lists of values)
-# basicField = Group(key + operator + value)
-# timeField = Group(timekey + operator + valueTime)
-# listField = Group(key + Literal('=') + valueList)
-# timeListField = Group(timekey + Literal('=') + valueTimeList)
-#
-# Field = (timeListField | timeField | listField | basicField)
-#
-# generalGrammar = SS() + Optional(Field) + ZeroOrMore(separator + Field) + \
-#                  Optional(separator) + SE()

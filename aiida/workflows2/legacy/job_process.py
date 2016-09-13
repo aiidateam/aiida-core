@@ -77,15 +77,17 @@ class JobProcess(Process):
         return wait_on
 
     def calculation_finished(self, wait_on):
+        """
+        The callback function that is called when the remote calculation
+        is finished.
+
+        :param wait_on: aiida.workflows2.legacy.wait_on.WaitOnJobCalculation
+         The original WaitOnJobCalculation object.
+        """
         assert not self.calc._is_running()
 
         for label, node in self.calc.get_outputs_dict().iteritems():
             self.out(label, node)
-
-        if self.calc.has_failed():
-            raise RuntimeError(
-                "Calculation (pk={}) failed with state '{}'".
-                    format(self.calc.pk, self.calc.get_state()))
 
     @override
     def _on_output_emitted(self, output_port, value, dynamic):

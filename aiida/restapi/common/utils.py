@@ -250,6 +250,10 @@ def build_response(status=200, headers=None, data=None):
     :return: a Flask response object
     """
 
+    # TODO write better serializer for timedate so that the format is
+    # identical to the quarystring format (to be used in a programmatic way)
+    # Consider doing it by overriding the default JSON encoder (
+
     ## Type checks
     # mandatory parameters
     if not isinstance(data, dict):
@@ -375,7 +379,7 @@ def parse_query_string(query_string):
                 offset=tzoffset_minutes, name=None))
         else:
             return dt.replace(tzinfo=FixedOffsetTimezone(offset=0, name=None))
-       
+
     valueDateTime.setParseAction(validate_time)
 
     # More General types
@@ -403,10 +407,12 @@ def parse_query_string(query_string):
         fields = generalGrammar.parseString(query_string).asList()
     except ParseException as e:
         raise RestInputValidationError("The query string format is invalid. "
-                                       "Parser returned this massage: ""{"
-                                       "}. The column number is counted from "
+                                       "Parser returned this massage: \"{"
+                                       "}.\" Please notice that the column "
+                                       "number "
+                                       "is counted from "
                                        "the first character of the query "
-                                       "string."" ".format(e))
+                                       "string.".format(e))
 
     filters = {}
     orderby = []

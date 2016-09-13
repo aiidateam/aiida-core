@@ -12,15 +12,18 @@ if not is_dbenv_loaded():
 
 import inspect
 from unittest import TestCase
+from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.workflows2.workchain import WorkChain,\
     ResultToContext, _Block, _If, _While, if_, while_
 from aiida.workflows2.workchain import _WorkChainSpec
-from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.workfunction import workfunction
 from aiida.workflows2.run import async
 from aiida.orm.data.base import Int, Str
 import aiida.workflows2.util as util
 from plum.engine.ticking import TickingEngine
+
+
+PwProcess = PwCalculation.process()
 
 
 class Wf(WorkChain):

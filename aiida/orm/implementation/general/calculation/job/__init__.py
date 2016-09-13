@@ -114,7 +114,7 @@ class AbstractJobCalculation(object):
         super(AbstractJobCalculation, self)._validate()
 
         if self.get_computer() is None:
-            raise ValidationError("You did not specify any computer")
+            raise ValidationError("You did not specify a computer")
 
         if self.get_state() not in calc_states:
             raise ValidationError("Calculation state '{}' is not valid".format(

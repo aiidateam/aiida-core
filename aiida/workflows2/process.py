@@ -3,6 +3,7 @@
 import collections
 import uuid
 from enum import Enum
+import itertools
 
 import plum.port as port
 import plum.process
@@ -166,6 +167,10 @@ class Process(plum.process.Process):
 
     def run_after_queueing(self, wait_on):
         return self._run
+
+    def get_provenance_inputs_iterator(self):
+        return itertools.ifilter(lambda kv: not kv[0].startswith('_'),
+                                 self.inputs.iteritems())
 
     @override
     def out(self, output_port, value=None):

@@ -118,7 +118,7 @@ class JobProcess(Process):
         # First get a dictionary of all the inputs to link, this is needed to
         # deal with things like input groups
         to_link = {}
-        for name, input in self.inputs.iteritems():
+        for name, input in self.get_provenance_inputs_iterator():
             if input is None or name is self.OPTIONS_INPUT_LABEL:
                 continue
 

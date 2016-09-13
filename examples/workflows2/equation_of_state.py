@@ -22,6 +22,7 @@ KpointsData = DataFactory("array.kpoints")
 
 PwProcess = PwCalculation.process()
 
+
 @workfunction
 def rescale(structure, scale):
     """
@@ -94,7 +95,7 @@ def generate_scf_input_params(structure, codename, pseudo_family):
     # Calculation parameters
     parameters_dict = {
         "CONTROL": {"calculation": "scf",
-                    "tstress": True,  #  Important that this stays to get stress
+                    "tstress": True,  # Important that this stays to get stress
                     "tprnfor": True,},
         "SYSTEM": {"ecutwfc": 30.,
                    "ecutrho": 200.,},

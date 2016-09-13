@@ -12,12 +12,12 @@ if not is_dbenv_loaded():
 import ase
 from aiida.workflows2.run import async
 from aiida.orm import DataFactory
-from aiida.workflows2.wf import wf
+from aiida.workflows2.workfunction import workfunction
 from aiida.workflows2.run import async
 from examples.workflows2.common import run_scf
 from aiida.workflows2.defaults import registry
 
-@wf
+@workfunction
 def create_diamond_fcc(element,alat):
     """
     Workfunction to create a diamond crystal structure with a given element.
@@ -36,7 +36,7 @@ def create_diamond_fcc(element,alat):
     return structure
 
 
-@wf
+@workfunction
 def rescale(structure, scale):
     """
     Workfunction to rescale a structure
@@ -52,7 +52,7 @@ def rescale(structure, scale):
     return new_structure
 
 
-@wf
+@workfunction
 def calc_energies(codename, pseudo_family):
     print("Calculating energies, my pk is '{}'".format(registry.current_pid))
 

@@ -10,7 +10,7 @@ __version__ = "0.7.0"
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.workflows2.run import run, asyncd
+from aiida.workflows2.run import run, submit
 
 from aiida.tutorial.simple_wf import SimpleWF
 from aiida.orm.data.parameter import ParameterData
@@ -18,4 +18,4 @@ from aiida.orm.data.parameter import ParameterData
 
 p = ParameterData(dict=dict(number=12))
 p.store()
-asyncd(SimpleWF, params=p)
+submit(SimpleWF, params=p)

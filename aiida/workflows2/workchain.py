@@ -16,9 +16,9 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class _FragmentedWorkfunctionSpec(ProcessSpec):
+class _WorkChainSpec(ProcessSpec):
     def __init__(self):
-        super(_FragmentedWorkfunctionSpec, self).__init__()
+        super(_WorkChainSpec, self).__init__()
         self._outline = None
 
     def outline(self, *commands):
@@ -29,14 +29,14 @@ class _FragmentedWorkfunctionSpec(ProcessSpec):
         return self._outline
 
 
-class FragmentedWorkfunction(Process):
-    _spec_type = _FragmentedWorkfunctionSpec
+class WorkChain(Process):
+    _spec_type = _WorkChainSpec
     _CONTEXT = 'context'
     _STEPPER_STATE = 'stepper_state'
 
     @classmethod
     def _define(cls, spec):
-        super(FragmentedWorkfunction, cls)._define(spec)
+        super(WorkChain, cls)._define(spec)
         # For now fragmented workflows can accept any input and emit any output
         # _If this changes in the future the spec should be updated here.
         spec.dynamic_input()
@@ -47,7 +47,7 @@ class FragmentedWorkfunction(Process):
             # Have to do it this way otherwise our setattr will be called
             # causing infinite recursion.
             # See http://rafekettler.com/magicmethods.html
-            super(FragmentedWorkfunction.Context, self).__setattr__('_content', {})
+            super(WorkChain.Context, self).__setattr__('_content', {})
 
             if value is not None:
                 for k, v in value.iteritems():
@@ -90,12 +90,12 @@ class FragmentedWorkfunction(Process):
                 out_state[k] = v
 
     def __init__(self):
-        super(FragmentedWorkfunction, self).__init__()
+        super(WorkChain, self).__init__()
         self._context = None
         self._stepper = None
 
     def save_instance_state(self, out_state):
-        super(FragmentedWorkfunction, self).save_instance_state(out_state)
+        super(WorkChain, self).save_instance_state(out_state)
         # Ask the context to save itself
         context_state = Bundle()
         self.context.save_instance_state(context_state)
@@ -128,7 +128,7 @@ class FragmentedWorkfunction(Process):
     # Internal messages #################################
     @override
     def on_create(self, pid, inputs, saved_instance_state):
-        super(FragmentedWorkfunction, self).on_create(
+        super(WorkChain, self).on_create(
             pid, inputs, saved_instance_state)
 
         if saved_instance_state is None:
@@ -144,7 +144,7 @@ class FragmentedWorkfunction(Process):
 
     @override
     def on_continue(self, wait_on):
-        super(FragmentedWorkfunction, self).on_continue(wait_on)
+        super(WorkChain, self).on_continue(wait_on)
         if isinstance(wait_on, _ResultToContext):
             wait_on.assign(self._context)
     #####################################################

@@ -9,7 +9,7 @@ __version__ = "0.7.0"
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.workflows2.wf import wf
+from aiida.workflows2.workfunction import workfunction
 from aiida.orm.data.base import Int
 from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.process import Process
@@ -24,17 +24,17 @@ def multiply(a, b):
     return a * b
 
 
-@wf
+@workfunction
 def sum(a, b):
     return to_db_type(a.value + b.value)
 
 
-@wf
+@workfunction
 def prod(a, b):
     return to_db_type(a.value * b.value)
 
 
-@wf
+@workfunction
 def add_multiply_wf(a, b, c):
     return prod(sum(a, b), c)
 

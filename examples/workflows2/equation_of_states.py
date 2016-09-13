@@ -8,12 +8,12 @@ from aiida.orm.utils import DataFactory
 from aiida.orm.data.base import Float, Str, NumericType, BaseType
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.workflows2.run import run, asyncd
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction, \
+from aiida.workflows2.run import run, submit
+from aiida.workflows2.workchain import WorkChain, \
     ResultToContext, while_
 from examples.workflows2.diamond_fcc import rescale
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.workflows2.wf import wf
+from aiida.workflows2.workfunction import workfunction
 
 # Set up the factories
 ParameterData = DataFactory("parameter")
@@ -22,7 +22,7 @@ KpointsData = DataFactory("array.kpoints")
 
 PwProcess = PwCalculation.process()
 
-@wf
+@workfunction
 def rescale(structure, scale):
     """
     Workfunction to rescale a structure
@@ -109,7 +109,7 @@ def generate_scf_input_params(structure, codename, pseudo_family):
     return inputs
 
 
-class EquationOfState(FragmentedWorkfunction):
+class EquationOfState(WorkChain):
     @classmethod
     def _define(cls, spec):
         spec.input("structure", valid_type=StructureData)
@@ -151,7 +151,7 @@ class EquationOfState(FragmentedWorkfunction):
                     label, ctx[label]['output_parameters'].dict.energy)
 
 
-class EquationOfState2(FragmentedWorkfunction):
+class EquationOfState2(WorkChain):
     @classmethod
     def _define(cls, spec):
         spec.input("structure", valid_type=StructureData)
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     # run(EquationOfStates, structure=load_node(args.structure_pk),
     #     start=Float(start), end=Float(end), delta=Float(delta),
     #     code=Str(args.code), pseudo_family=Str(args.pseudo))
-    asyncd(EquationOfState, structure=load_node(args.structure_pk),
+    submit(EquationOfState, structure=load_node(args.structure_pk),
            start=Float(start), end=Float(end), delta=Float(delta),
            code=Float(args.code), pseudo_family=Float(args.pseudo))
 

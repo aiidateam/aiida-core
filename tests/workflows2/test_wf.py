@@ -11,17 +11,17 @@ __version__ = "0.7.0"
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.workflows2.wf import wf
+from aiida.workflows2.workfunction import workfunction
 from aiida.workflows2.run import async, run
 from aiida.orm.data.base import TRUE
 import aiida.workflows2.util as util
 
 
-@wf
+@workfunction
 def simple_wf():
     return {'result': TRUE}
 
-@wf
+@workfunction
 def return_input(inp):
     return {'result': inp}
 

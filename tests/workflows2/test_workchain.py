@@ -12,18 +12,18 @@ if not is_dbenv_loaded():
 
 import inspect
 from unittest import TestCase
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction,\
+from aiida.workflows2.workchain import WorkChain,\
     ResultToContext, _Block, _If, _While, if_, while_
-from aiida.workflows2.fragmented_wf import _FragmentedWorkfunctionSpec
+from aiida.workflows2.workchain import _WorkChainSpec
 from aiida.workflows2.db_types import to_db_type
-from aiida.workflows2.wf import wf
+from aiida.workflows2.workfunction import workfunction
 from aiida.workflows2.run import async
 from aiida.orm.data.base import Int, Str
 import aiida.workflows2.util as util
 from plum.engine.ticking import TickingEngine
 
 
-class Wf(FragmentedWorkfunction):
+class Wf(WorkChain):
     # Keep track of which steps were completed by the workflow
     finished_steps = {}
 
@@ -95,7 +95,7 @@ class Wf(FragmentedWorkfunction):
         self.finished_steps[function_name] = True
 
 
-class TestFragmentedWorkfunction(TestCase):
+class TestWorkchain(TestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
@@ -133,7 +133,7 @@ class TestFragmentedWorkfunction(TestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
     def test_incorrect_outline(self):
-        class Wf(FragmentedWorkfunction):
+        class Wf(WorkChain):
             @classmethod
             def _define(cls, spec):
                 super(Wf, cls)._define(spec)
@@ -147,15 +147,15 @@ class TestFragmentedWorkfunction(TestCase):
         A = Str("a")
         B = Str("b")
 
-        @wf
+        @workfunction
         def a():
             return A
 
-        @wf
+        @workfunction
         def b():
             return B
 
-        class Wf(FragmentedWorkfunction):
+        class Wf(WorkChain):
             @classmethod
             def _define(cls, spec):
                 super(Wf, cls)._define(spec)
@@ -187,7 +187,7 @@ class TestFragmentedWorkfunction(TestCase):
         Test some malformed outlines
         :return:
         """
-        spec = _FragmentedWorkfunctionSpec()
+        spec = _WorkChainSpec()
 
         with self.assertRaises(ValueError):
             spec.outline(5)

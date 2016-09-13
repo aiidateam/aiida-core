@@ -15,9 +15,9 @@ from aiida.workflows2.db_types import NumericType, BaseType
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.workflows2.run import run
-from aiida.workflows2.fragmented_wf import (FragmentedWorkfunction,
-                                            ResultToContext, while_)
-from aiida.workflows2.wf import wf
+from aiida.workflows2.workchain import (WorkChain,
+                                        ResultToContext, while_)
+from aiida.workflows2.workfunction import workfunction
 from common import generate_scf_input_params
 from diamond_fcc import rescale, create_diamond_fcc
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
@@ -92,7 +92,7 @@ def get_structure(original_structure, new_volume):
     return scaled_structure
 
 
-class PressureConvergence(FragmentedWorkfunction):
+class PressureConvergence(WorkChain):
     """
     Converge to minimum using Newton's algorithm on the first derivative of the energy (minus the pressure).
     """

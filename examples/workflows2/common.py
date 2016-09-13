@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from aiida.workflows2.wf import wf
+from aiida.workflows2.workfunction import workfunction
 from aiida.workflows2.run import run
 from aiida.orm import DataFactory
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
@@ -82,7 +82,7 @@ def generate_scf_input_params(structure, codename, pseudo_family):
 
     return inputs
 
-@wf
+@workfunction
 def run_scf(structure, codename, pseudo_family):
     JobCalc = PwCalculation.process()
     inputs = generate_scf_input_params(structure, codename, pseudo_family)

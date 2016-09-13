@@ -9,7 +9,7 @@ __version__ = "0.7.0"
 if not is_dbenv_loaded():
     load_dbenv()
 
-import aiida.workflows2.wf as wf
+import aiida.workflows2.workfunction as wf
 from aiida.workflows2.run import async
 from aiida.workflows2.db_types import to_db_type
 from aiida.workflows2.process import Process
@@ -24,17 +24,17 @@ def multiply(a, b):
     return a * b
 
 
-@wf.wf
+@wf.workfunction
 def add_wf(a, b):
     return {'value': to_db_type(a.value + b.value)}
 
 
-@wf.wf
+@wf.workfunction
 def muliply_wf(a, b):
     return {'value': to_db_type(a.value * b.value)}
 
 
-@wf.wf
+@wf.workfunction
 def add_multiply_wf(a, b, c):
     return muliply_wf(add_wf(a, b)['value'], c)
 

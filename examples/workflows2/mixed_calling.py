@@ -14,12 +14,12 @@ if not is_dbenv_loaded():
 import time
 from aiida.orm.data.base import Int
 from aiida.workflows2.run import async, run
-from aiida.workflows2.wf import wf
-from aiida.workflows2.fragmented_wf import (FragmentedWorkfunction,
-                                            ResultToContext)
+from aiida.workflows2.workfunction import workfunction
+from aiida.workflows2.workchain import (WorkChain,
+                                        ResultToContext)
 
 
-@wf
+@workfunction
 def f1(inp=None):
     p2 = async(long_running, a=inp)
     a = 1  # Do some work...
@@ -30,13 +30,13 @@ def f1(inp=None):
     return {'r1': r2['r2']}
 
 
-@wf
+@workfunction
 def long_running(a):
     time.sleep(2)
     return {'r2': a}
 
 
-class F1(FragmentedWorkfunction):
+class F1(WorkChain):
     @classmethod
     def _define(cls, spec):
         spec.dynamic_input()
@@ -55,7 +55,7 @@ class F1(FragmentedWorkfunction):
         self.out("r1", ctx.r2['r2'])
 
 
-class LongRunning(FragmentedWorkfunction):
+class LongRunning(WorkChain):
     @classmethod
     def _define(cls, spec):
         spec.dynamic_input()
@@ -67,7 +67,7 @@ class LongRunning(FragmentedWorkfunction):
         self.out("r2", self.inputs.a)
 
 
-class F1WaitFor(FragmentedWorkfunction):
+class F1WaitFor(WorkChain):
     @classmethod
     def _define(cls, spec):
         spec.dynamic_input()

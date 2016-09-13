@@ -13,7 +13,7 @@ if not is_dbenv_loaded():
 from unittest import TestCase
 from aiida.workflows2.process import Process
 from aiida.workflows2.defaults import registry
-from aiida.workflows2.wf import wf
+from aiida.workflows2.workfunction import workfunction
 from aiida.common.lang import override
 from aiida.workflows2.run import async
 from aiida.orm.data.base import Int
@@ -27,7 +27,7 @@ class RegistryTester(Process):
         assert registry.current_calc_node is self.calc
         nested_tester()
 
-@wf
+@workfunction
 def registry_tester():
     # Call a wf
     future = async(nested_tester)
@@ -42,7 +42,7 @@ def registry_tester():
             'node_pk': Int(registry.current_calc_node.pk)}
 
 
-@wf
+@workfunction
 def nested_tester():
     return {'pid': Int(registry.current_pid),
             'node_pk': Int(registry.current_calc_node.pk)}

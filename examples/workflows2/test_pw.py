@@ -17,7 +17,7 @@ from aiida.common.example_helpers import test_and_get_code
 from aiida.orm import DataFactory
 from aiida.common.exceptions import NotExistent
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.workflows2.run import asyncd
+from aiida.workflows2.run import submit
 
 # If set to True, will ask AiiDA to run in serial mode (i.e., AiiDA will not
 # invoke the mpirun command in the submission script)
@@ -175,4 +175,4 @@ if settings is not None:
     inputs.pseudo = pseudos_to_use
 
 # Run the calculation
-print(asyncd(JobCalc, **inputs))
+print(submit(JobCalc, **inputs))

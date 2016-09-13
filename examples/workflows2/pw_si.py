@@ -7,7 +7,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.orm import DataFactory
 from aiida.orm.code import Code
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.workflows2.run import asyncd
+from aiida.workflows2.run import submit
 
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -95,7 +95,7 @@ def run_si_scf(codename, pseudo_family):
 
     # calc.set_extra("element", "Si")
     # calc.submit()
-    asyncd(JobCalc, **inputs)
+    submit(JobCalc, **inputs)
 
 
 if __name__ == "__main__":

@@ -9,31 +9,31 @@ __version__ = "0.7.0"
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.workflows2.wf import wf
+from aiida.workflows2.workfunction import workfunction
 from aiida.orm.data.base import Int
-from aiida.workflows2.fragmented_wf import FragmentedWorkfunction
+from aiida.workflows2.workchain import WorkChain
 from aiida.orm.data.base import NumericType
 from aiida.workflows2.run import run
 
-@wf
+@workfunction
 def sum(a, b):
     return a + b
 
 
-@wf
+@workfunction
 def prod(a, b):
     return a * b
 
 
-@wf
+@workfunction
 def add_multiply_wf(a, b, c):
     return prod(sum(a, b), c)
 
 
-class AddMultiplyWf(FragmentedWorkfunction):
+class AddMultiplyWf(WorkChain):
     @classmethod
     def _define(cls, spec):
-        super(FragmentedWorkfunction, cls)._define(spec)
+        super(WorkChain, cls)._define(spec)
 
         spec.input("a", valid_type=NumericType)
         spec.input("b", valid_type=NumericType)

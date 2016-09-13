@@ -14,7 +14,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-def wf(func):
+def workfunction(func):
     @functools.wraps(func)
     def wrapped_function(*args, **kwargs):
         """

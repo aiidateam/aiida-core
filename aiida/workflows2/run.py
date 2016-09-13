@@ -54,7 +54,7 @@ def restart(pid):
     return defaults.serial_engine.run_from_and_block(cp)
 
 
-def asyncd(process_class, _jobs_store=None, **kwargs):
+def submit(process_class, _jobs_store=None, **kwargs):
     assert not util.is_workfunction(process_class),\
         "You cannot submit a workfunction to the daemon"
 

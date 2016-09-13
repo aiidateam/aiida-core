@@ -8,7 +8,7 @@ import aiida.workflows2.daemon as daemon
 from aiida.orm.data.base import TRUE
 from aiida.workflows2.process import Process
 from aiida.workflows2.process_registry import ProcessRegistry
-from aiida.workflows2.run import asyncd
+from aiida.workflows2.run import submit
 from aiida.common.lang import override
 from plum.wait_ons import checkpoint
 from plum.persistence.pickle_persistence import PicklePersistence
@@ -100,14 +100,14 @@ class TestDaemon(unittest.TestCase):
 
     def test_asyncd(self):
         # This call should create an entry in the database with a PK
-        pk = asyncd(DummyProcess)
+        pk = submit(DummyProcess)
         self.assertIsNotNone(pk)
         self.assertIsNotNone(load_node(pk=pk))
 
     def test_tick(self):
         registry = ProcessRegistry()
 
-        pk = asyncd(ProcessEventsTester, _jobs_store=self.storage)
+        pk = submit(ProcessEventsTester, _jobs_store=self.storage)
         # Tick the engine a number of times or until there is no more work
         i = 0
         while daemon.tick_workflow_engine(self.storage, print_exceptions=False):
@@ -116,9 +116,9 @@ class TestDaemon(unittest.TestCase):
         self.assertTrue(registry.has_finished(pk))
 
     def test_multiple_processes(self):
-        asyncd(DummyProcess, _jobs_store=self.storage)
-        asyncd(ExceptionProcess, _jobs_store=self.storage)
-        asyncd(ExceptionProcess, _jobs_store=self.storage)
-        asyncd(DummyProcess, _jobs_store=self.storage)
+        submit(DummyProcess, _jobs_store=self.storage)
+        submit(ExceptionProcess, _jobs_store=self.storage)
+        submit(ExceptionProcess, _jobs_store=self.storage)
+        submit(DummyProcess, _jobs_store=self.storage)
 
         self.assertFalse(daemon.tick_workflow_engine(self.storage, print_exceptions=False))

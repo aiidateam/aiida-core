@@ -9,11 +9,11 @@ __version__ = "0.7.0"
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.workflows2.fragmented_wf import *
+from aiida.workflows2.workchain import *
 from aiida.workflows2.run import run
 
 
-class W(FragmentedWorkfunction):
+class W(WorkChain):
     @classmethod
     def _define(cls, spec):
         spec.outline(

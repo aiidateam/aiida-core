@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import uritools
 
 import aiida
 
@@ -1192,18 +1193,17 @@ def parse_repository_uri(repository_uri):
 
     :return: a tuple (protocol, address).
     """
+    parts = uritools.urisplit(repository_uri)
 
-    protocol, _, address = repository_uri.partition('://')
 
-    if protocol != 'file':
+    if parts.scheme != u'file':
         raise ConfigurationError("The current AiiDA version supports only a "
                                  "local repository")
 
-    if protocol == 'file':
-        if not os.path.isabs(address):
+    if parts.scheme == u'file':
+        if not os.path.isabs(parts.path):
             raise ConfigurationError("The current repository is specified with a "
                                      "file protocol but with a relative path")
-        address = os.path.expanduser(address)
 
-    # Normalize address to its absolute path
-    return (protocol, address)
+        # Normalize path to its absolute path
+        return parts.scheme, os.path.expanduser(parts.path)

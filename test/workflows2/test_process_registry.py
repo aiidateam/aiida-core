@@ -23,6 +23,7 @@ class RegistryTester(Process):
         assert registry.current_calc_node is self.calc
         nested_tester()
 
+
 @workfunction
 def registry_tester():
     # Call a wf

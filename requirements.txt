@@ -70,3 +70,7 @@ tabulate==0.7.5
 
 # To get ASCII trees, may make this optional later
 ete3==3.0.0b35
+
+# For treating the repository location using URIs
+uritools==1.0.2
+

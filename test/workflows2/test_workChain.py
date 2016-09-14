@@ -1,17 +1,9 @@
 # -*- coding: utf-8 -*-
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
-
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
-if not is_dbenv_loaded():
-    load_dbenv()
-
 import inspect
-from unittest import TestCase
+
+from test.util import DbTestCase
+from plum.engine.ticking import TickingEngine
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.workflows2.workchain import WorkChain,\
     ResultToContext, _Block, _If, _While, if_, while_
@@ -20,7 +12,11 @@ from aiida.workflows2.workfunction import workfunction
 from aiida.workflows2.run import async
 from aiida.orm.data.base import Int, Str
 import aiida.workflows2.util as util
-from plum.engine.ticking import TickingEngine
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__version__ = "0.7.0"
+__authors__ = "The AiiDA team."
 
 
 PwProcess = PwCalculation.process()
@@ -98,7 +94,7 @@ class Wf(WorkChain):
         self.finished_steps[function_name] = True
 
 
-class TestWorkchain(TestCase):
+class TestWorkchain(DbTestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 

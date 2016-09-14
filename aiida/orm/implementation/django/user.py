@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from aiida.orm.implementation.general.user import AbstractUser
+from aiida.orm.implementation.general.user import AbstractUser, Util as UserUtil
 from aiida.backends.djsite.db.models import DbUser
 from aiida.utils.email import normalize_email
+from aiida.common.lang import override
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -13,6 +14,8 @@ __authors__ = "The AiiDA team."
 class User(AbstractUser):
 
     def __init__(self, **kwargs):
+        super(User, self).__init__()
+
         # If no arguments are passed, then create a new DbUser
         if not kwargs:
             raise ValueError("User can not be instantiated without arguments")
@@ -57,10 +60,12 @@ class User(AbstractUser):
     def to_be_stored(self):
         return self._dbuser.pk is None
 
+    @override
     def save(self):
         if not self.to_be_stored:
             self._dbuser.save()
 
+    @override
     def force_save(self):
         self._dbuser.save()
 
@@ -73,10 +78,12 @@ class User(AbstractUser):
         self._dbuser.email = val
         self.save()
 
+    @override
     def _set_password(self, val):
         self._dbuser.password = val
         self.save()
 
+    @override
     def _get_password(self):
         return self._dbuser.password
 
@@ -181,3 +188,13 @@ class User(AbstractUser):
         for dbuser in dbusers:
             users.append(cls(dbuser=dbuser))
         return users
+
+
+class Util(UserUtil):
+    @override
+    def delete_user(self, pk):
+        """
+        Delete the user with the given pk.
+        :param pk: The user pk.
+        """
+        DbUser.objecs.filter(pk=pk).delete()

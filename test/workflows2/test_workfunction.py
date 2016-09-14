@@ -1,32 +1,29 @@
 # -*- coding: utf-8 -*-
-import unittest
 
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
+from test.util import DbTestCase
+from aiida.workflows2.workfunction import workfunction
+from aiida.workflows2.run import async, run
+from aiida.orm.data.base import TRUE
+import aiida.workflows2.util as util
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-if not is_dbenv_loaded():
-    load_dbenv()
-
-from aiida.workflows2.workfunction import workfunction
-from aiida.workflows2.run import async, run
-from aiida.orm.data.base import TRUE
-import aiida.workflows2.util as util
-
 
 @workfunction
 def simple_wf():
     return {'result': TRUE}
+
 
 @workfunction
 def return_input(inp):
     return {'result': inp}
 
 
-class TestWf(unittest.TestCase):
+class TestWf(DbTestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 

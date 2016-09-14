@@ -1,17 +1,13 @@
 
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
-if not is_dbenv_loaded():
-    load_dbenv()
-
 import tempfile
-from unittest import TestCase
+
+from test.util import DbTestCase
 from aiida.workflows2.persistence import Persistence
 import aiida.workflows2.util as util
 from aiida.workflows2.test_utils import DummyProcess
 
 
-class TestProcess(TestCase):
+class TestProcess(DbTestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 

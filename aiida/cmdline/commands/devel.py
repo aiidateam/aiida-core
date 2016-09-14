@@ -547,6 +547,11 @@ class Devel(VerdiCommandWithSubcommands):
                                     settings.AIIDADB_PROFILE is not None else 'default')
             settings_profile.aiida_test_list = db_test_list
 
+            # project_dir = os.path.join(os.path.dirname(aiida.__file__), '..')
+            # testsuite = unittest.defaultTestLoader.discover('test', top_level_dir=project_dir)
+            # test_runner = unittest.TextTestRunner()
+            # test_runner.run(testsuite)
+
             print "v" * 75
             print (">>> Tests for django db application   "
                    "                                  <<<")

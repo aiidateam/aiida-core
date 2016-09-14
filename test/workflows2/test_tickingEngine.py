@@ -1,21 +1,16 @@
 # -*- coding: utf-8 -*-
 
+from test.util import DbTestCase
+from concurrent.futures import ThreadPoolExecutor
+from plum.engine.ticking import TickingEngine
+from aiida.orm.data.base import TRUE, Int
+from aiida.workflows2.process import Process
+import aiida.workflows2.util as util
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
-
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
-if not is_dbenv_loaded():
-    load_dbenv()
-
-from aiida.orm.data.base import TRUE, Int
-from unittest import TestCase
-from plum.engine.ticking import TickingEngine
-from aiida.workflows2.process import Process
-import aiida.workflows2.util as util
-from concurrent.futures import ThreadPoolExecutor
 
 
 class DummyProcess(Process):
@@ -29,7 +24,7 @@ class DummyProcess(Process):
         self.out("ran", TRUE)
 
 
-class TestTickingEngine(TestCase):
+class TestTickingEngine(DbTestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.ticking_engine = TickingEngine()

@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-if not is_dbenv_loaded():
-    load_dbenv()
 
-from unittest import TestCase
+import uuid
+import threading
+
+from test.util import DbTestCase
 from aiida.orm import load_node
 from aiida.orm.data.base import Int
 from aiida.workflows2.process import Process
@@ -18,8 +17,6 @@ from aiida.workflows2.run import run
 import aiida.workflows2.util as util
 from aiida.workflows2.test_utils import DummyProcess, BadOutput
 from aiida.common.lang import override
-import uuid
-import threading
 
 
 class ProcessStackTest(Process):
@@ -41,7 +38,7 @@ class ProcessStackTest(Process):
         assert self._thread_id is threading.current_thread().ident
 
 
-class TestProcess(TestCase):
+class TestProcess(DbTestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 

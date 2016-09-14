@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-if not is_dbenv_loaded():
-    load_dbenv()
+from test.util import DbTestCase
 
-from unittest import TestCase
 from aiida.workflows2.process import Process
 from aiida.workflows2.defaults import registry
 from aiida.workflows2.workfunction import workfunction
@@ -48,7 +44,7 @@ def nested_tester():
             'node_pk': Int(registry.current_calc_node.pk)}
 
 
-class TestProcessRegistry(TestCase):
+class TestProcessRegistry(DbTestCase):
     """
     These these check that the registry is giving out the right pid which when
     using storage is equal to the node pk.

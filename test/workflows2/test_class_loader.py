@@ -1,9 +1,5 @@
-import unittest
 
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
-if not is_dbenv_loaded():
-    load_dbenv()
+from test.util import DbTestCase
 
 from plum.util import fullname
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
@@ -12,7 +8,7 @@ import aiida.workflows2.util as util
 from aiida.workflows2.legacy.job_process import JobProcess
 
 
-class TestJobProcess(unittest.TestCase):
+class TestJobProcess(DbTestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 

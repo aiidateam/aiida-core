@@ -13,12 +13,12 @@ from aiida.restapi.common.exceptions import RestInputValidationError,\
     RestValidationError
 from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
     Node, User
-from aiida.restapi.common.config import PREFIX, APP_CONFIG
+import aiida.restapi.common.config as conf
 from aiida.restapi.common.flaskrun import flaskrun
 
 ## Initiate an app with its api
 app = Flask(__name__)
-api = Api(app, prefix=PREFIX)
+api = Api(app, prefix=conf.PREFIX)
 cors = CORS(app, resources={r"/api/v2/*": {"origins": "*"}})
 
 ## Error handling for error raised for invalid urls (not for non existing
@@ -127,8 +127,15 @@ api.add_resource(Group,
 
 # Standard boilerplate to run the app
 if __name__ == '__main__':
+
     #Config the app
-    app.config.update(**APP_CONFIG)
+    app.config.update(**conf.APP_CONFIG)
+
+    #Config the serializer used by the app
+    if conf.SERIALIZER_CONFIG:
+        from aiida.restapi.common.utils import CustomJSONEncoder
+        app.json_encoder = CustomJSONEncoder
+
     #I run the app via a wrapper that accepts arguments such as host and port
     #e.g. python api.py --host=127.0.0.2 --port=6000
     # Default address is 127.0.01:5000

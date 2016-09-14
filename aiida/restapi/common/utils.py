@@ -2,8 +2,9 @@ from aiida.common.exceptions import InputValidationError, ValidationError
 from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
 from flask import jsonify
+from flask.json import JSONEncoder
 from aiida.restapi.common.config import PERPAGE_DEFAULT, PREFIX
-
+from datetime import datetime
 
 def strip_prefix(path):
     if path.startswith(PREFIX):
@@ -164,6 +165,34 @@ def paginate(page, perpage, total_count):
                      last=last_page)
 
     return (limit, offset, rel_pages)
+
+
+class CustomJSONEncoder(JSONEncoder):
+    """
+    Custom json encoder for serialization.
+    This has to be provided to the Flask app in order to replace the default
+    encoder.
+    """
+    def default(self, obj):
+
+        from aiida.restapi.common.config import SERIALIZER_CONFIG
+
+        # Treat the datetime objects
+        if isinstance(obj, datetime):
+            if 'datetime_format' in SERIALIZER_CONFIG.keys() and \
+                            SERIALIZER_CONFIG[
+                                'datetime_format'] is not 'default':
+                if SERIALIZER_CONFIG['datetime_format'] == 'asinput':
+                    if obj.utcoffset() is not None:
+                        obj = obj - obj.utcoffset()
+                        return '-'.join([str(obj.year), str(obj.month).zfill(2),
+                                         str(obj.day).zfill(2)]) + 'T' + \
+                               ':'.join([str(
+                            obj.hour).zfill(2), str(obj.minute).zfill(2),
+                                   str(obj.second).zfill(2)])
+
+        # If not returned yet, do it in the default way
+        return JSONEncoder.default(self, obj)
 
 
 def build_headers(rel_pages=None, url=None, total_count=None):

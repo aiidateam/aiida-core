@@ -15,6 +15,13 @@ APP_CONFIG = {
               'PROPAGATE_EXCEPTIONS': True,
               }
 
+##JSON serialization config. Leave this dictionary empty if default Flask
+# serializer is desired.
+SERIALIZER_CONFIG = {'datetime_format': 'asinput'}
+# Here is a list a all supported fields. If a field is not present in the
+# dictionary its value is assumed to be 'default'.
+# DATETIME_FORMAT: allowed values are 'asinput' and 'default'.
+
 ## Caching
 #memcached: backend caching system
 cache_config={'CACHE_TYPE': 'memcached'}

@@ -245,6 +245,7 @@ class NodeTranslator(BaseTranslator):
 
         return data
 
+    # TODO add some caching (memoize)
     def get_results(self):
         """
         Returns either a list of nodes or details of single node from database

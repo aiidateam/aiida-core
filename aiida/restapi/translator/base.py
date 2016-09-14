@@ -68,7 +68,7 @@ class BaseTranslator(object):
         else:
             raise InvalidOperation("query builder object has not been "
                                    "initialized.")
-
+    # TODO add some caching
     def get_total_count(self):
         """
         Returns the number of rows of the query
@@ -334,6 +334,8 @@ class BaseTranslator(object):
                 results.append(tmp[label])
 
         #TODO think how to make it less hardcoded
+        #TODO convert data to string a.__str__().replace(' ','T')
+
         if self._result_type == 'input_of':
             return {'inputs': results}
         elif self._result_type == 'output_of':
@@ -342,6 +344,7 @@ class BaseTranslator(object):
             return {self._qb_label: results}
 
 
+    # TODO add some caching
     def get_results(self):
         """
         Returns either list of nodes or details of single node from database

@@ -61,6 +61,20 @@ class QueryBuilder(AbstractQueryBuilder):
     def _get_session(self):
         return sa_session
 
+    def _modify_expansions(self, alias, expansions):
+        """
+        For sqlalchemy, there are no additional expansions for now, so
+        I am returning an empty list
+        """
+        if issubclass(alias._sa_class_manager.class_, self.Computer):
+            try:
+                expansions.remove('metadata')
+                expansions.append('_metadata')
+            except KeyError:
+                pass
+
+        return expansions
+
     @classmethod
     def _get_filter_expr_from_attributes(
             cls, operator, value, attr_key,

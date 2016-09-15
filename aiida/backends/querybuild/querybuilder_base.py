@@ -834,6 +834,13 @@ class AbstractQueryBuilder(object):
 
 
 
+    @abstractmethod
+    def _modify_expansions(self, alias, expansions):
+        """
+        Modify names of projections if ** was specified.
+        This is important for the schema having attributes in a different table.
+        """
+        pass
 
     def _build_projections(self, tag, items_to_project=None):
 
@@ -853,7 +860,11 @@ class AbstractQueryBuilder(object):
             for projectable_entity_name, extraspec in projectable_spec.items():
                 if projectable_entity_name == '**':
                     # Need to expand
-                    entity_names = [str(c).replace(alias.__table__.name+'.','') for c in alias.__table__.columns]
+                    entity_names = self._modify_expansions(alias, [
+                            str(c).replace(alias.__table__.name+'.','')
+                            for c
+                            in alias.__table__.columns
+                        ])
                     #~ for s in ('attributes', 'extras'):
                         #~ try:
                             #~ entity_names.remove(s)
@@ -1293,7 +1304,7 @@ class AbstractQueryBuilder(object):
                 (entity_to_join, self.Node),
                 'descendant_of'
             )
-        
+
         self._query = self._query.join(
                 aliased_path,
                 aliased_path.parent_id == joined_entity.id
@@ -1575,7 +1586,12 @@ class AbstractQueryBuilder(object):
 
         if colname not in alias._sa_class_manager.mapper.c.keys():
             raise InputValidationError(
-                "\n{} is not a column of {}\n".format(colname, alias)
+                "\n{} is not a column of {}\n"
+                "Valid columns are:\n"
+                "{}".format(
+                        colname, alias,
+                        '\n'.join( alias._sa_class_manager.mapper.c.keys())
+                    )
             )
         return getattr(alias, colname)
 
@@ -1951,7 +1967,7 @@ class AbstractQueryBuilder(object):
         http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
 
 
-        :param int batch_size: 
+        :param int batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
 
@@ -1986,7 +2002,7 @@ class AbstractQueryBuilder(object):
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
 
-        :param int batch_size: 
+        :param int batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
             Leave the default (*None*) if speed is not critical or if you don't know
@@ -2004,19 +2020,19 @@ class AbstractQueryBuilder(object):
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
 
-        :param int batch_size: 
+        :param int batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
             Leave the default (*None*) if speed is not critical or if you don't know
             what you're doing!
 
-        :returns: 
+        :returns:
             a list of dictionaries of all projected entities.
             Each dictionary consists of key value pairs, where the key is the tag
             of the vertice and the value a dictionary of key-value pairs where key
             is the entity description (a column name or attribute path)
             and the value the value in the DB.
-        
+
         Usage::
 
             qb = QueryBuilder()
@@ -2031,7 +2047,7 @@ class AbstractQueryBuilder(object):
                 project=['type', 'id'],  # returns type (string) and id (string)
                 tag='descendant'
             )
-            
+
             # Return the dictionaries:
             print "qb.iterdict()"
             for d in qb.iterdict():
@@ -2061,7 +2077,7 @@ class AbstractQueryBuilder(object):
         http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
 
 
-        :param int batch_size: 
+        :param int batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
 
@@ -2113,7 +2129,7 @@ class AbstractQueryBuilder(object):
                 "User iterdict for generator or dict for list",
                 DeprecationWarning
             )
-        
+
         return self.iterdict()
 
     @abstractmethod

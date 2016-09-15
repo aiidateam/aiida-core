@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
+from json import loads as json_loads
 
 from querybuilder_base import (
     AbstractQueryBuilder,
@@ -70,7 +71,7 @@ class QueryBuilder(AbstractQueryBuilder):
 
         :returns: an aiida-compatible instance
         """
-        
+
         if key.startswith('attributes.'):
             # If you want a specific attributes, that key was stored in res.
             # So I call the getvalue method to expand into a dictionary
@@ -94,6 +95,9 @@ class QueryBuilder(AbstractQueryBuilder):
         elif key == 'extras':
             # same as attributes
             return DbExtra.get_all_values_for_nodepk(res)
+        elif key in ('_metadata', 'transport_params'):
+            # Metadata and transport_params are stored as json strings in the DB:
+            return json_loads(res)
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
             returnval =  res.get_aiida_class()
         else:
@@ -225,6 +229,23 @@ class QueryBuilder(AbstractQueryBuilder):
         return expr
 
 
+    def _modify_expansions(self, alias, expansions):
+        """
+        For the Django schema, we have as additioanl expansions 'attributes'
+        and 'extras'
+        """
+
+        if issubclass(alias._sa_class_manager.class_, self.Node):
+            expansions.append("attributes")
+            expansions.append("extras")
+        elif issubclass(alias._sa_class_manager.class_, self.Computer):
+            try:
+                expansions.remove('metadata')
+                expansions.append('_metadata')
+            except KeyError:
+                pass
+
+        return expansions
 
     def _get_projectable_attribute(
             self, alias, column_name, attrpath,

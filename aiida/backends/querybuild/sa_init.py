@@ -50,6 +50,19 @@ def compile(element, compiler, **kw):
     """
     return "jsonb_array_length(%s)" % compiler.process(element.clauses)
 
+
+class array_length(FunctionElement):
+    name = 'array_len'
+
+@compiles(array_length)
+def compile(element, compiler, **kw):
+    """
+    Get length of array defined in a JSONB column
+    """
+    return "array_length(%s)" % compiler.process(element.clauses)
+
+
+
 class jsonb_typeof(FunctionElement):
     name = 'jsonb_typeof'
 

@@ -70,16 +70,30 @@ class QueryBuilder(AbstractQueryBuilder):
 
         :returns: an aiida-compatible instance
         """
-        if key.startswith('attributes'):
+        
+        if key.startswith('attributes.'):
+            # If you want a specific attributes, that key was stored in res.
+            # So I call the getvalue method to expand into a dictionary
             try:
                 returnval = DbAttribute.objects.get(id=res).getvalue()
             except ObjectDoesNotExist:
+                # If the object does not exist, return None. This is consistent
+                # with SQLAlchemy inside the JSON
                 returnval = None
-        elif key.startswith('extras'):
+        elif key.startswith('extras.'):
+            # Same as attributes
             try:
                 returnval = DbExtra.objects.get(id=res).getvalue()
             except ObjectDoesNotExist:
                 returnval = None
+        elif key == 'attributes':
+            # If you asked for all attributes, the QB return the ID of the node
+            # I use DbAttribute.get_all_values_for_nodepk
+            # to get the dictionary
+            return DbAttribute.get_all_values_for_nodepk(res)
+        elif key == 'extras':
+            # same as attributes
+            return DbExtra.get_all_values_for_nodepk(res)
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
             returnval =  res.get_aiida_class()
         else:
@@ -221,35 +235,42 @@ class QueryBuilder(AbstractQueryBuilder):
                 "Casting is not implemented in the Django backend"
             )
         if not attrpath:
-            raise NotImplementedError(
-                "Cannot project all attributes in the Django backend\n"
-                "(You did not provide a key)"
-            )
+            # If the user with Django backend wants all the attributes or all
+            # the extras, I will select as entity the ID of the node.
+            # in _get_aiida_res, this is transformed to the dictionary of attributes.
+            if column_name in ('attributes', 'extras'):
+                entity = alias.id
+            else:
+                raise NotImplementedError(
+                        "Whatever you asked for "
+                        "({}) is not implemented"
+                        "".format(column_name)
+                    )
+        else:
+            aliased_attributes = aliased(getattr(alias, column_name).prop.mapper.class_)
 
-        aliased_attributes = aliased(getattr(alias, column_name).prop.mapper.class_)
+            if not issubclass(alias._aliased_insp.class_,self.Node):
+                NotImplementedError(
+                    "Other classes than Nodes are not implemented yet"
+                )
 
-        if not issubclass(alias._aliased_insp.class_,self.Node):
-            NotImplementedError(
-                "Other classes than Nodes are not implemented yet"
-            )
-
-        attrkey = '.'.join(attrpath)
+            attrkey = '.'.join(attrpath)
 
 
-        exists_stmt = exists(select([1], correlate=True).select_from(
-                aliased_attributes
-            ).where(and_(
-                aliased_attributes.key==attrkey,
-                aliased_attributes.dbnode_id==alias.id
-            )))
+            exists_stmt = exists(select([1], correlate=True).select_from(
+                    aliased_attributes
+                ).where(and_(
+                    aliased_attributes.key==attrkey,
+                    aliased_attributes.dbnode_id==alias.id
+                )))
 
-        select_stmt = select(
-                [aliased_attributes.id], correlate=True
-            ).select_from(aliased_attributes).where(and_(
-                aliased_attributes.key==attrkey,
-                aliased_attributes.dbnode_id==alias.id
-            )).label('miao')
+            select_stmt = select(
+                    [aliased_attributes.id], correlate=True
+                ).select_from(aliased_attributes).where(and_(
+                    aliased_attributes.key==attrkey,
+                    aliased_attributes.dbnode_id==alias.id
+                )).label('miao')
 
-        entity = case([(exists_stmt, select_stmt), ], else_=None)
+            entity = case([(exists_stmt, select_stmt), ], else_=None)
 
         return entity

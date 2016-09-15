@@ -36,7 +36,10 @@ def error_handler(error):
     # Generic server-side error (not to make the api crash if an unhandled
     # exception is raised. Caution is never enough!!)
     else:
-        response = jsonify({'message': 'Internal server error'})
+#        response = jsonify({'message': 'Internal server error'})
+        response = jsonify({'message': 'Internal server error. The original '
+                                       'message was: \"{}\"'.format(
+            error.message)})
         response.status_code = 500
         return response
 

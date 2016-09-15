@@ -279,10 +279,6 @@ def build_response(status=200, headers=None, data=None):
     :return: a Flask response object
     """
 
-    # TODO write better serializer for timedate so that the format is
-    # identical to the quarystring format (to be used in a programmatic way)
-    # Consider doing it by overriding the default JSON encoder (
-
     ## Type checks
     # mandatory parameters
     if not isinstance(data, dict):
@@ -443,6 +439,7 @@ def parse_query_string(query_string):
                                        "the first character of the query "
                                        "string.".format(e))
 
+    ## Create void variables
     filters = {}
     orderby = []
     limit = None
@@ -461,7 +458,16 @@ def parse_query_string(query_string):
         field_key = field[0]
         if field_key not in field_counts.keys():
             field_counts[field_key] = 1
+            #Store the information whether membership operator is used
+            is_membership = (field[1] is '=in=')
         else:
+            #Check if the key of a filter using membership operator is used
+            # in multiple filters
+            if is_membership is True or field[1] is '=in=':
+                raise RestInputValidationError("If a key appears in "
+                                               "multiple filters, "
+                                               "those cannot use "
+                                               "membership opertor '=in='")
             field_counts[field_key] = field_counts[field_key] + 1
 
     ## Check the reserved keywords
@@ -553,18 +559,43 @@ def parse_query_string(query_string):
                 raise RestInputValidationError("only assignment operator '=' "
                                                "is permitted after 'orderby'")
         else:
-            # Treat the ordinary filter case
-            field_key = field[0]
-            # Here I treat the AND clause
-            if field_counts[field_key] > 1:
-                if field_key not in filters.keys():
-                    filters.update({field_key: {'and': [{op_conv_map[field[
-                        1]]: field[2]}]}})
+            ## Treat the filter case.
+            # List of value case. list value is associated to membership
+            # operator '=in='
+            if type(field[2]) == list:
+                if field[1] is not '=in=':
+                    raise RestInputValidationError("comma-separated list of "
+                                                   "values can only be used "
+                                                   "with membership operator "
+                                                   "'=in='")
                 else:
-                    filters[field_key]['and'].append({op_conv_map[field[1]]:
-                                                     field[2]})
+                    field_key = field[0]
+                    filters.update({field_key: {'or': [
+                                {op_conv_map[field[1]]: field[2][0]}]}})
+
+                    for value in field[2][1:]:
+                        filters[field_key]['or'].append(
+                            {op_conv_map[field[1]]: value})
+
+                    # if field_key not in filters.keys():
+                    #     filters.update({field_key: {'or': [
+                    #         {op_conv_map[field[1]]: field[2]}]}})
+                    # else:
+                    #     filters[field_key]['or'].append(
+                    #         {op_conv_map[field[1]]: field[2]})
             else:
-                filters.update({field_key: {op_conv_map[field[1]]: field[2]}})
+
+                field_key = field[0]
+                # Here I treat the AND clause
+                if field_counts[field_key] > 1:
+                    if field_key not in filters.keys():
+                        filters.update({field_key: {'and': [{op_conv_map[field[
+                            1]]: field[2]}]}})
+                    else:
+                        filters[field_key]['and'].append({op_conv_map[field[1]]:
+                                                         field[2]})
+                else:
+                    filters.update({field_key: {op_conv_map[field[1]]: field[2]}})
 
     return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
             nelist)

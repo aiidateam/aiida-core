@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.calculation.job.quantumespresso.cp import CpCalculation
-from aiida.parsers.plugins.quantumespresso.basic_raw_parser_cp import (
+from aiida.parsers.plugins.quantumespresso.raw_parser_cp import (
     QEOutputParsingError, parse_cp_traj_stanzas, parse_cp_raw_output)
 from aiida.parsers.plugins.quantumespresso.constants import (bohr_to_ang,
                                                              timeau_to_sec, hartree_to_ev)
@@ -12,7 +12,7 @@ from aiida.common.datastructures import calc_states
 from aiida.orm.data.array.trajectory import TrajectoryData
 import numpy
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved"
 __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
@@ -41,9 +41,9 @@ class CpParser(Parser):
         Does all the logic here.
         """
         from aiida.common.exceptions import InvalidOperation
-        import os, copy
-        import numpy  # TrajectoryData also uses numpy arrays
-
+        import os, numpy
+        from distutils.version import LooseVersion
+        
         successful = True
 
         # check if I'm not to overwrite anything
@@ -176,17 +176,66 @@ class CpParser(Parser):
                 matrix.shape[1]
             except IndexError:
                 matrix = numpy.array(numpy.matrix(matrix))
+            
+            if LooseVersion(out_dict['creator_version']) > LooseVersion("5.1"):
+                # Between version 5.1 and 5.1.1, someone decided to change
+                # the .evp output format, without any way to know that this 
+                # happened... SVN commit 11158.
+                # I here use the version number to parse, plus some
+                # heuristics to check that I'm doing the right thing
+                #print "New version"
+                raw_trajectory['steps'] = numpy.array(matrix[:,0],dtype=int)
+                raw_trajectory['evp_times']                 = matrix[:,1]                    # TPS, ps
+                raw_trajectory['electronic_kinetic_energy'] = matrix[:,2] * hartree_to_ev    # EKINC, eV
+                raw_trajectory['cell_temperature']          = matrix[:,3]                    # TEMPH, K
+                raw_trajectory['ionic_temperature']         = matrix[:,4]                    # TEMPP, K
+                raw_trajectory['scf_total_energy']          = matrix[:,5] * hartree_to_ev    # ETOT, eV
+                raw_trajectory['enthalpy']                  = matrix[:,6] * hartree_to_ev    # ENTHAL, eV
+                raw_trajectory['enthalpy_plus_kinetic']     = matrix[:,7] * hartree_to_ev    # ECONS, eV
+                raw_trajectory['energy_constant_motion']    = matrix[:,8] * hartree_to_ev    # ECONT, eV
+                raw_trajectory['volume']                    = matrix[:,9] * (bohr_to_ang**3) # volume, angstrom^3
+                raw_trajectory['pressure']                  = matrix[:,10]                    # out_press, GPa
+            else:
+                #print "Old version"    
+                raw_trajectory['steps'] = numpy.array(matrix[:,0],dtype=int)
+                raw_trajectory['electronic_kinetic_energy'] = matrix[:,1] * hartree_to_ev    # EKINC, eV
+                raw_trajectory['cell_temperature']          = matrix[:,2]                    # TEMPH, K
+                raw_trajectory['ionic_temperature']         = matrix[:,3]                    # TEMPP, K
+                raw_trajectory['scf_total_energy']          = matrix[:,4] * hartree_to_ev    # ETOT, eV
+                raw_trajectory['enthalpy']                  = matrix[:,5] * hartree_to_ev    # ENTHAL, eV
+                raw_trajectory['enthalpy_plus_kinetic']     = matrix[:,6] * hartree_to_ev    # ECONS, eV
+                raw_trajectory['energy_constant_motion']    = matrix[:,7] * hartree_to_ev    # ECONT, eV
+                raw_trajectory['volume']                    = matrix[:,8] * (bohr_to_ang**3) # volume, angstrom^3
+                raw_trajectory['pressure']                  = matrix[:,9]                    # out_press, GPa
+                raw_trajectory['evp_times']                  = matrix[:,10]                    # TPS, ps
 
-            raw_trajectory['steps'] = numpy.array(matrix[:, 0], dtype=int)
-            raw_trajectory['electronic_kinetic_energy'] = matrix[:, 1] * hartree_to_ev  # EKINC, eV
-            raw_trajectory['cell_temperature'] = matrix[:, 2]  # TEMPH, K
-            raw_trajectory['ionic_temperature'] = matrix[:, 3]  # TEMPP, K
-            raw_trajectory['scf_total_energy'] = matrix[:, 4] * hartree_to_ev  # ETOT, eV
-            raw_trajectory['enthalpy'] = matrix[:, 5] * hartree_to_ev  # ENTHAL, eV
-            raw_trajectory['enthalpy_plus_kinetic'] = matrix[:, 6] * hartree_to_ev  # ECONS, eV
-            raw_trajectory['energy_constant_motion'] = matrix[:, 7] * hartree_to_ev  # ECONT, eV
-            raw_trajectory['volume'] = matrix[:, 8] * (bohr_to_ang ** 3)  # volume, angstrom^3
-            raw_trajectory['pressure'] = matrix[:, 9]  # out_press, GPa
+            # Huristics to understand if it's correct.
+            # A better heuristics could also try to fix possible issues
+            # (in new versions of QE, it's possible to recompile it with
+            # the __OLD_FORMAT flag to get back the old version format...)
+            # but I won't do it, as there may be also other columns swapped.
+            # Better to stop and ask the user to check what's going on.
+            max_time_difference = abs(
+                numpy.array(raw_trajectory['times']) - 
+                numpy.array(raw_trajectory['evp_times'])).max()
+            if max_time_difference > 1.e-4: # It is typically ~1.e-7 due to roundoff errors
+                # If there is a large discrepancy, I set successful = False,
+                # it means there is something very weird going on...
+                out_dict['warnings'].append("Error parsing EVP file ({}). Skipping file."
+                                            .format(e.message))
+                successful = False
+
+                # In this case, remove all what has been parsed to avoid users
+                # using the wrong data
+                for k in evp_keys:
+                    try:
+                        del raw_trajectory[k]
+                    except KeyError:
+                        # If for some reason a key is not there, ignore
+                        pass
+            # Delete evp_times in any case, it's a duplicate of 'times'
+            del raw_trajectory['evp_times']
+            
         except Exception as e:
             out_dict['warnings'].append("Error parsing EVP file ({}). Skipping file.".format(e.message))
         except IOError:
@@ -206,8 +255,51 @@ class CpParser(Parser):
         )
 
         for this_name in evp_keys:
-            traj.set_array(this_name, raw_trajectory[this_name])
-        new_nodes_list = [(self.get_linkname_trajectory(), traj)]
+            try:
+                traj.set_array(this_name,raw_trajectory[this_name])
+            except KeyError:
+                # Some columns may have not been parsed, skip
+                pass
+        new_nodes_list = [(self.get_linkname_trajectory(),traj)]
+        
+        # Remove big dictionaries that would be redundant
+        # For atoms and cell, there is a small possibility that nothing is parsed
+        # but then probably nothing moved.
+        try:
+            del out_dict['atoms']
+        except KeyError:
+            pass
+        try:
+            del out_dict['cell']
+        except KeyError:
+            pass
+        try:
+            del out_dict['ions_positions_stau']
+        except KeyError:
+            pass
+        try:
+            del out_dict['ions_positions_svel']
+        except KeyError:
+            pass
+        try:
+            del out_dict['ions_positions_taui']
+        except KeyError:
+            pass
+        # This should not be needed
+        try:
+            del out_dict['atoms_index_list']
+        except KeyError:
+            pass
+        # This should be already in the input
+        try:
+            del out_dict['atoms_if_pos_list']
+        except KeyError:
+            pass
+        # 
+        try:
+            del out_dict['ions_positions_force']
+        except KeyError:
+            pass
 
         # convert the dictionary into an AiiDA object
         output_params = ParameterData(dict=out_dict)

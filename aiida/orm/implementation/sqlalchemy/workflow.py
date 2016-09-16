@@ -396,7 +396,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow's state
         :return: a state from wf_states in aiida.common.datastructures
         """
-        return self.dbworkflowinstance.state
+        return self.dbworkflowinstance.state.value
 
     def set_state(self, state):
         """
@@ -437,7 +437,6 @@ class Workflow(AbstractWorkflow):
         return self.dbworkflowinstance.is_subworkflow()
 
     def get_step(self, step_method):
-
         """
         Retrieves by name a step from the Workflow.
         :param step_method: a string with the name of the step to retrieve or a method
@@ -447,7 +446,6 @@ class Workflow(AbstractWorkflow):
         if isinstance(step_method, basestring):
             step_method_name = step_method
         else:
-
             if not getattr(step_method, "is_wf_step"):
                 raise AiidaException("Cannot get step calculations from a method not decorated as Workflow method")
 
@@ -456,8 +454,12 @@ class Workflow(AbstractWorkflow):
         if step_method_name == wf_exit_call:
             raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
 
-        step = self.dbworkflowinstance.steps.filter_by(name=step_method_name, user=get_automatic_user()).first()
-        return step
+        step_list = self.dbworkflowinstance.steps
+        step = [ _ for _ in step_list if _.name==step_method_name and _.user==get_automatic_user() ]
+        try:
+            return step[0]
+        except IndexError:
+            return None
 
     def get_steps(self, state=None):
         """
@@ -466,10 +468,13 @@ class Workflow(AbstractWorkflow):
         :param state: a state from wf_states in aiida.common.datastructures
         :return: a list of DbWorkflowStep objects.
         """
-        if state is None:
-            return self.dbworkflowinstance.steps.order_by('time').all()
-        else:
-            return self.dbworkflowinstance.steps.filter_by(state=state).order_by('time').all()
+        step_list = self.dbworkflowinstance.steps
+        if state is not None:
+            step_list = [ _ for _ in step_list if _.state==state ]
+        steps_and_times = [ [_.time,_] for _ in step_list ]
+        steps_and_times = sorted(steps_and_times)
+        steps = [_[1] for _ in steps_and_times]
+        return steps
 
     def get_report(self):
         """
@@ -518,7 +523,7 @@ class Workflow(AbstractWorkflow):
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
-        dbworkflowinstance = DbWorkflow.query.filter_by(pk=pk).first()
+        dbworkflowinstance = DbWorkflow.query.filter_by(id=pk).first()
 
         if not dbworkflowinstance:
             raise NotExistent("No entry with pk= {} found".format(pk))
@@ -535,6 +540,163 @@ class Workflow(AbstractWorkflow):
 
         return cls.get_subclass_from_dbnode(dbworkflowinstance)
 
+    @classmethod
+    def step(cls, fun):
+        """
+        This method is used as a decorator for workflow steps, and handles the method's execution,
+        the state updates and the eventual errors.
+
+        The decorator generates a wrapper around the input function to execute, adding with the correct
+        step name and a utility variable to make it distinguishable from non-step methods.
+
+        When a step is launched, the wrapper tries to run the function in case of error the state of
+        the workflow is moved to ERROR and the traceback is stored in the report. In general the input
+        method is a step obtained from the Workflow object, and the decorator simply handles a controlled
+        execution of the step allowing the code not to break in case of error in the step's source code.
+
+        The wrapper also tests not to run two times the same step, unless a Workflow is in ERROR state, in this
+        case all the calculations and subworkflows of the step are killed and a new execution is allowed.
+
+        :param fun: a methods to wrap, making it a Workflow step
+        :raise: AiidaException: in case the workflow state doesn't allow the execution
+        :return: the wrapped methods,
+        """
+        import sys, traceback
+        wrapped_method = fun.__name__
+
+        # This function gets called only if the method is launched with the execution brackets ()
+        # Otherwise, when the method is addressed in a next() call this never gets called and only the
+        # attributes are added
+        def wrapper(cls, *args, **kwargs):
+            # Store the workflow at the first step executed
+            if cls._to_be_stored:
+                cls.store()
+
+            if len(args) > 0:
+                raise AiidaException("A step method cannot have any argument, use add_attribute to the workflow")
+
+            # If a method is launched and the step is RUNNING or INITIALIZED we should stop
+            if cls.has_step(wrapped_method) and \
+                    not (cls.get_step(wrapped_method).state == wf_states.ERROR or \
+                                     cls.get_step(wrapped_method).state == wf_states.SLEEP or \
+                                     cls.get_step(wrapped_method).nextcall == wf_default_call or \
+                                     cls.get_step(wrapped_method).nextcall == wrapped_method \
+                         #cls.has_step(wrapped_method) \
+                    ):
+                raise AiidaException(
+                    "The step {0} has already been initialized, cannot change this outside the parent workflow !".format(
+                        wrapped_method))
+
+            # If a method is launched and the step is halted for ERROR, then clean the step and re-launch
+            if cls.has_step(wrapped_method) and \
+                    ( cls.get_step(wrapped_method).state == wf_states.ERROR or \
+                                  cls.get_step(wrapped_method).state == wf_states.SLEEP ):
+
+                for w in cls.get_step(wrapped_method).get_sub_workflows(): w.kill()
+                cls.get_step(wrapped_method).remove_sub_workflows()
+
+                for c in cls.get_step(wrapped_method).get_calculations(): c.kill()
+                cls.get_step(wrapped_method).remove_calculations()
+
+                #self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
+
+            method_step, created = cls.dbworkflowinstance._get_or_create_step(name=wrapped_method,
+                                                                              user=get_automatic_user())
+
+            try:
+                fun(cls)
+            except:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                cls.append_to_report(
+                    "ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(
+                        wrapped_method))
+                cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
+                method_step.set_state(wf_states.ERROR)
+            return None
+
+        out = wrapper
+        wrapper.is_wf_step = True
+        wrapper.wf_step_name = fun.__name__
+
+        return wrapper
+
+    def next(self, next_method):
+        """
+        Adds the a new step to be called after the completion of the caller method's calculations and subworkflows.
+
+        This method must be called inside a Workflow step, otherwise an error is thrown. The
+        code finds the caller method and stores in the database the input next_method as the next
+        method to be called. At this point no execution in made, only configuration updates in the database.
+
+        If during the execution of the caller method the user launched calculations or subworkflows, this
+        method will add them to the database, making them available to the workflow manager to be launched.
+        In fact all the calculation and subworkflow submissions are lazy method, really executed by this call.
+
+        :param next_method: a Workflow step method to execute after the caller method
+        :raise: AiidaException: in case the caller method cannot be found or validated
+        :return: the wrapped methods, decorated with the correct step name
+        """
+
+        md5 = self.dbworkflowinstance.script_md5
+        script_path = self.dbworkflowinstance.script_path
+
+        # TODO: in principles, the file containing the workflow description
+        # should be copied in a repository, and, on that file, the workflow
+        # should check to be sure of loading the same description of the
+        # workflow. At the moment, this is not done and is checking the source
+        # in aiida/workflows/... resulting essentially in the impossibility of
+        # developing a workflow without rendering most of the trial run
+        # unaccessible. I comment these lines for this moment.
+
+        #if md5 != md5_file(script_path):
+        #    raise ValidationError("Unable to load the original workflow module from {}, MD5 has changed".format(script_path))
+
+        # ATTENTION: Do not move this code outside or encapsulate it in a function
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        caller_method = calframe[1][3]
+
+        if next_method is None:
+            raise AiidaException("The next method is None, probably you passed a method with parenthesis ??")
+
+        if not self.has_step(caller_method):
+            raise AiidaException("The caller method is either not a step or has not been registered as one")
+
+        if not next_method.__name__ == wf_exit_call:
+            try:
+                is_wf_step = getattr(next_method, "is_wf_step", None)
+            except AttributeError:
+                raise AiidaException("Cannot add as next call a method not decorated as Workflow method")
+
+        # TODO SP: abstract this, this depends on the DB. The better would be
+        # to add a method to the DbWorkflow from SQLA and Django to get steps
+        # with particular filters, in order to avoid repetition of all the code
+        # arround
+
+        # Retrieve the caller method
+        method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=get_automatic_user())
+
+        # Attach calculations
+        if caller_method in self.attach_calc_lazy_storage:
+            for c in self.attach_calc_lazy_storage[caller_method]:
+                method_step.add_calculation(c)
+
+        # Attach sub-workflows
+        if caller_method in self.attach_subwf_lazy_storage:
+            for w in self.attach_subwf_lazy_storage[caller_method]:
+                method_step.add_sub_workflow(w)
+
+        # Set the next method
+        if not next_method.__name__ == wf_exit_call:
+            next_method_name = next_method.wf_step_name
+        else:
+            next_method_name = wf_exit_call
+
+        #logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid))
+        method_step.set_nextcall(next_method_name)
+        #
+        self.dbworkflowinstance.set_state(wf_states.RUNNING)
+        method_step.set_state(wf_states.RUNNING)
 
 def kill_all():
     w_list = DbWorkflow.query.filter(
@@ -545,6 +707,10 @@ def kill_all():
     for w in w_list:
         Workflow.get_subclass_from_uuid(w.uuid).kill()
 
+def get_all_running_steps():
+    from aiida.common.datastructures import wf_states
+    from aiida.backends.sqlalchemy.models.workflow import DbWorkflowStep
+    return DbWorkflowStep.query.filter_by(state=wf_states.RUNNING).all()
 
 def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                       depth=16):
@@ -565,6 +731,8 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
 
     :return lines: list of lines to be outputed
     """
+    from aiida.orm import load_node
+    from aiida.common.datastructures import calc_states
     # Note: pre_string becomes larger at each call of get_workflow_info on the
     #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
 
@@ -583,20 +751,28 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
 
     lines.append(pre_string)  # put an empty line before any workflow
     lines.append(pre_string + "+ Workflow {} ({}pk: {}) is {} [{}]".format(
-        w.module_class, wf_labelstring, w.pk, w.state, str_timedelta(
+        w.module_class, wf_labelstring, w.id, w.state.value, str_timedelta(
             now - w.ctime, negative_to_zero=True)))
 
     # print information on the steps only if depth is higher than 0
     if depth > 0:
 
         # order all steps by time and  get all the needed values
-        steps_and_subwf_pks = w.steps.\
-            join(DbWorkflowStep.sub_workflows, DbWorkflowStep.calculations).\
-            order_by(DbWorkflowStep.time, DbWorkflow.ctime, DbNode.ctime).\
-            with_entities(
-                DbWorkflowStep.id, DbWorkflow.id, DbNode, DbWorkflowStep.name,
-                DbWorkflowStep.nextcall, DbWorkflowStep.state
-            )
+        step_list = sorted([ [_.time,_] for _ in w.steps ])
+        step_list = [ _[1] for _ in step_list ]
+        
+        steps_and_subwf_pks = []
+        for step in step_list:
+            wf_id = None
+            calc_id = None
+            if step.calculations:
+                for calc in step.calculations:
+                    steps_and_subwf_pks.append( [step.id, wf_id, calc.id, step.name, step.nextcall, step.state.value] )
+            if step.sub_workflows:
+                for www in step.sub_workflows:
+                    steps_and_subwf_pks.append( [step.id, www.id, calc_id, step.name, step.nextcall, step.state.value] )
+            if (not step.calculations) and (not step.sub_workflows): 
+                steps_and_subwf_pks.append( [step.id, wf_id, calc_id, step.name, step.nextcall, step.state.value] )
 
         # get the list of step pks (distinct), preserving the order
         steps_pk = []
@@ -619,71 +795,81 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
             if calc_pk:
                 subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
 
-
     # TODO: replace the database access using SQLAlchemy
-    #
-    #     # get all subworkflows for all steps
-    #     wflows = DbWorkflow.filter(DbWorkflow.parent_workflow_step.in_(steps_pk))
-    #     # dictionary mapping pks into workflows
-    #     workflow_mapping = {_.pk: _ for _ in wflows}
-    #
-    #     # get all calculations for all steps
-    #     calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
-    #     # dictionary mapping pks into calculations
-    #     calc_mapping = {_.pk: _ for _ in calcs}
-    #
-    #     for step_pk in steps_pk:
-    #         lines.append(pre_string + "|" + '-' * (tab_size - 1) +
-    #                      "* Step: {0} [->{1}] is {2}".format(
-    #                          subwfs_of_steps[step_pk]['name'],
-    #                          subwfs_of_steps[step_pk]['nextcall'],
-    #                          subwfs_of_steps[step_pk]['state']))
-    #
-    #         calc_pks = subwfs_of_steps[step_pk]['calc_pks']
-    #
-    #         # print calculations only if it is not short
-    #         if short:
-    #             lines.append(pre_string + "|" + " " * (tab_size - 1) +
-    #                          "| [{0} calculations]".format(len(calc_pks)))
-    #         else:
-    #             for calc_pk in calc_pks:
-    #                 c = calc_mapping[calc_pk]
-    #                 calc_state = c.get_state()
-    #                 if c.label:
-    #                     labelstring = "'{}', ".format(c.label)
-    #                 else:
-    #                     labelstring = ""
-    #
-    #                 if calc_state == calc_states.WITHSCHEDULER:
-    #                     sched_state = c.get_scheduler_state()
-    #                     if sched_state is None:
-    #                         remote_state = "(remote state still unknown)"
-    #                     else:
-    #                         last_check = c._get_scheduler_lastchecktime()
-    #                         if last_check is not None:
-    #                             when_string = " {}".format(
-    #                                 str_timedelta(now - last_check, short=True,
-    #                                               negative_to_zero=True))
-    #                             verb_string = "was "
-    #                         else:
-    #                             when_string = ""
-    #                             verb_string = ""
-    #                         remote_state = " ({}{}{})".format(verb_string,
-    #                                                           sched_state, when_string)
-    #                 else:
-    #                     remote_state = ""
-    #                 lines.append(pre_string + "|" + " " * (tab_size - 1) +
-    #                              "| Calculation ({}pk: {}) is {}{}".format(
-    #                                  labelstring, calc_pk, calc_state, remote_state))
-    #
-    #         ## SubWorkflows
-    #         for subwf_pk in subwfs_of_steps[step_pk]['subwf_pks']:
-    #             subwf = workflow_mapping[subwf_pk]
-    #             lines.extend(get_workflow_info(subwf,
-    #                                            short=short, tab_size=tab_size,
-    #                                            pre_string=pre_string + "|" + " " * (tab_size - 1),
-    #                                            depth=depth - 1))
-    #
-    #         lines.append(pre_string + "|")
-    #
-    # return lines
+    
+        # get all subworkflows for all steps
+        #wflows = DbWorkflow.query.filter_by(DbWorkflow.parent_workflow_step.in_(steps_pk))
+        # although the line above is equivalent to the following, has a bug of sqlalchemy.
+      #  import warnings
+       # from sqlalchemy import exc as sa_exc
+       # with warnings.catch_warnings():
+       #     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
+       #     wflows = DbWorkflow.parent_workflow_step.any(DbWorkflowStep.id.in_(steps_pk))
+        
+        wflows = DbWorkflow.query.join(DbWorkflow.parent_workflow_step).filter(DbWorkflowStep.id.in_(steps_pk)).all()
+
+        # dictionary mapping pks into workflows
+        workflow_mapping = {_.id: _ for _ in wflows}
+        
+        # get all calculations for all steps
+        #calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
+        calcs_ids = [ _[2] for _ in  steps_and_subwf_pks if _[2] is not None] # extremely inefficient!
+        calcs = [ load_node(_) for _ in calcs_ids ]
+        # dictionary mapping pks into calculations
+        calc_mapping = {_.id: _ for _ in calcs}
+    
+        for step_pk in steps_pk:
+            lines.append(pre_string + "|" + '-' * (tab_size - 1) +
+                         "* Step: {0} [->{1}] is {2}".format(
+                             subwfs_of_steps[step_pk]['name'],
+                             subwfs_of_steps[step_pk]['nextcall'],
+                             subwfs_of_steps[step_pk]['state']))
+    
+            calc_pks = subwfs_of_steps[step_pk]['calc_pks']
+    
+            # print calculations only if it is not short
+            if short:
+                lines.append(pre_string + "|" + " " * (tab_size - 1) +
+                             "| [{0} calculations]".format(len(calc_pks)))
+            else:
+                for calc_pk in calc_pks:
+                    c = calc_mapping[calc_pk]
+                    calc_state = c.get_state()
+                    if c.label:
+                        labelstring = "'{}', ".format(c.label)
+                    else:
+                        labelstring = ""
+    
+                    if calc_state == calc_states.WITHSCHEDULER:
+                        sched_state = c.get_scheduler_state()
+                        if sched_state is None:
+                            remote_state = "(remote state still unknown)"
+                        else:
+                            last_check = c._get_scheduler_lastchecktime()
+                            if last_check is not None:
+                                when_string = " {}".format(
+                                    str_timedelta(now - last_check, short=True,
+                                                  negative_to_zero=True))
+                                verb_string = "was "
+                            else:
+                                when_string = ""
+                                verb_string = ""
+                            remote_state = " ({}{}{})".format(verb_string,
+                                                              sched_state, when_string)
+                    else:
+                        remote_state = ""
+                    lines.append(pre_string + "|" + " " * (tab_size - 1) +
+                                 "| Calculation ({}pk: {}) is {}{}".format(
+                                     labelstring, calc_pk, calc_state, remote_state))
+    
+            ## SubWorkflows
+            for subwf_pk in subwfs_of_steps[step_pk]['subwf_pks']:
+                subwf = workflow_mapping[subwf_pk]
+                lines.extend(get_workflow_info(subwf,
+                                               short=short, tab_size=tab_size,
+                                               pre_string=pre_string + "|" + " " * (tab_size - 1),
+                                               depth=depth - 1))
+    
+            lines.append(pre_string + "|")
+    
+    return lines

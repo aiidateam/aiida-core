@@ -41,3 +41,5 @@ Plugins
    matdyn
    q2r
    neb
+   projwfc
+   dos

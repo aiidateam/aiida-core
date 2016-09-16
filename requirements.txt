@@ -18,7 +18,7 @@ django_extensions==1.5
 pytz==2014.10
 
 ## For the daemon
-django-celery == 3.1.16
+django-celery==3.1.16
 celery==3.1.17
 billiard==3.3.0.19
 amqp==1.4.9

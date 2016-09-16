@@ -301,10 +301,10 @@ class BandsData(KpointsData):
         Set an array of band energies of dimension (nkpoints x nbands).
         Kpoints must be set in advance. Can contain floats or None.
         :param bands: a list of nkpoints lists of nbands bands, or a 2D array
-                of shape (nkpoints x nbands), with band energies for each kpoint
+        of shape (nkpoints x nbands), with band energies for each kpoint
         :param units: optional, energy units
-        :param occupations: optional, a 2D list or array of floats of same shape
-                as bands, with the occupation associated to each band
+        :param occupations: optional, a 2D list or array of floats of same
+        shape as bands, with the occupation associated to each band
         """
         # checks bands and occupations
         the_bands, the_occupations, the_labels = self._validate_bands_occupations(bands,
@@ -366,7 +366,7 @@ class BandsData(KpointsData):
         Returns an array (nkpoints x num_bands or nspins x nkpoints x num_bands)
         of energies.
         :param also_occupations: if True, returns also the occupations array.
-            Default = False
+        Default = False
         """
         try:
             bands = numpy.array(self.get_array('bands'))
@@ -511,16 +511,16 @@ class BandsData(KpointsData):
         """
         Export the bands to a file.
         :param path: absolute path of the file to be created
-        :param fileformat: format of the file created. If None, tries to use the
-                     extension of path to understand the correct one.
+        :param fileformat: format of the file created. If None, tries to use
+        the extension of path to understand the correct one.
         :param overwrite: if set to True, overwrites file found at path. Default=False
         :param comments: if True, append some extra informations at the
-                beginning of the file.
+        beginning of the file.
         :param cartesian: if True, distances (for the x-axis) are computed in
-                cartesian coordinates, otherwise they are computed in reciprocal
-                coordinates. cartesian=True will fail if no cell has been set.
+        cartesian coordinates, otherwise they are computed in reciprocal
+        coordinates. cartesian=True will fail if no cell has been set.
         :param **kwargs: additional parameters to be passed to the
-                _prepare_[fileformat] method
+        _prepare_[fileformat] method
 
         :note: this function will NOT produce nice plots if:
               - there is no path of kpoints, but a set of isolated points

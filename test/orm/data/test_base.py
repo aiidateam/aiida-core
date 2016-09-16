@@ -1,14 +1,68 @@
 # -*- coding: utf-8 -*-
 import unittest
 
+from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import load_node
 from aiida.orm.data.base import NumericType, Float, Str, Bool, Int, TRUE, FALSE
-
+import aiida.orm.data.base as base
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
+
+
+class TestList(unittest.TestCase):
+    def test_creation(self):
+        l = base.List()
+        self.assertEqual(len(l), 0)
+        with self.assertRaises(IndexError):
+            l[0]
+
+    def test_append(self):
+        l = base.List()
+        l.append(4)
+        self.assertEqual(len(l), 1)
+        self.assertEqual(l[0], 4)
+
+    def test_extend(self):
+        lst = [1, 2, 3]
+        l = base.List()
+        l.extend(lst)
+        self.assertEqual(len(l), len(lst))
+        # Do an element wise comparison
+        for x, y in zip(lst, l):
+            self.assertEqual(x, y)
+
+        # Further extend
+        l.extend(lst)
+        self.assertEqual(len(l), len(lst) * 2)
+
+        # Do an element wise comparison
+        for i in range(0, len(lst)):
+            self.assertEqual(lst[i], l[i])
+            self.assertEqual(lst[i], l[i % len(lst)])
+
+    def test_mutability(self):
+        l = base.List()
+        l.append(5)
+        l.store()
+
+        # Test all mutable calls are now disallowed
+        with self.assertRaises(ModificationNotAllowed):
+            l.append(5)
+        with self.assertRaises(ModificationNotAllowed):
+            l.extend([5])
+        with self.assertRaises(ModificationNotAllowed):
+            l.insert(0, 2)
+        with self.assertRaises(ModificationNotAllowed):
+            l.remove(0)
+        with self.assertRaises(ModificationNotAllowed):
+            l.pop()
+        with self.assertRaises(ModificationNotAllowed):
+            l.sort()
+        with self.assertRaises(ModificationNotAllowed):
+            l.reverse()
 
 
 class TestFloat(unittest.TestCase):

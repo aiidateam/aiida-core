@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from abc import ABCMeta
+import collections
 from aiida.orm import Data
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -59,7 +60,7 @@ class BaseType(Data):
     def _create_init_args(self, *args, **kwargs):
         if args:
             assert not kwargs, "Cannot have positional arguments and kwargs"
-            assert len(args) == 1,\
+            assert len(args) == 1, \
                 "Simple data can only take at most one positional argument"
 
             kwargs['typevalue'] = (self._type, self._type(args[0]))
@@ -74,7 +75,7 @@ class BaseType(Data):
                 kwargs['typevalue'] = (self._type, None)
 
         else:
-            assert len(kwargs) == 1,\
+            assert len(kwargs) == 1, \
                 "When specifying dbnode it can be the only kwarg"
 
         return kwargs
@@ -189,6 +190,74 @@ class Bool(BaseType):
 
     def __int__(self):
         return 0 if not self.value else 1
+
+
+class List(Data, collections.MutableSequence):
+    _LIST_KEY = 'list'
+
+    def __getitem__(self, item):
+        return self._get_list()[item]
+
+    def __setitem__(self, key, value):
+        l = self._get_list()
+        l[key] = value
+        self._set_list(l)
+
+    def __delitem__(self, key):
+        l = self._get_list()
+        del l[key]
+        self._set_list(l)
+
+    def __len__(self):
+        return len(self._get_list())
+
+    def append(self, value):
+        l = self._get_list()
+        l.append(value)
+        self._set_list(l)
+
+    def extend(self, L):
+        l = self._get_list()
+        l.extend(L)
+        self._set_list(l)
+
+    def insert(self, i, value):
+        l = self._get_list()
+        l.insert(i, value)
+        self._set_list(l)
+
+    def remove(self, value):
+        del self[value]
+
+    def pop(self, **kwargs):
+        l = self._get_list()
+        l.pop(**kwargs)
+        self._set_list(l)
+
+    def index(self, value):
+        return self._get_list().index(value)
+
+    def count(self, value):
+        return self._get_list().count(value)
+
+    def sort(self, cmp=None, key=None, reverse=False):
+        l = self._get_list()
+        l.sort(cmp, key, reverse)
+        self._set_list(l)
+
+    def reverse(self):
+        l = self._get_list()
+        l.reverse()
+        self._set_list(l)
+
+    def _get_list(self):
+        return self.get_attr(self._LIST_KEY, list())
+
+    def _set_list(self, list_):
+        if not isinstance(list_, list):
+            raise TypeError("Must supply list type")
+        self._set_attr(self._LIST_KEY, list_)
+
 
 TRUE = Bool(typevalue=(bool, True))
 FALSE = Bool(typevalue=(bool, False))

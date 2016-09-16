@@ -105,7 +105,7 @@ class ArrayData(Data):
         Iterator that returns tuples (name, array) for each array stored in the
         node.
         """
-        for name in self.arraynames():
+        for name in self.get_arraynames():
             yield (name, self.get_array(name))
 
     def get_array(self, name):

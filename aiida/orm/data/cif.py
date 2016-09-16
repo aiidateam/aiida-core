@@ -42,6 +42,7 @@ symmetry_tags = [
     '_space_group_name_Hall',
 ]
 
+
 def has_pycifrw():
     """
     :return: True if the PyCifRW module can be imported, False otherwise.
@@ -53,19 +54,19 @@ def has_pycifrw():
     return True
 
 
-def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
+def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
     """
     Construct a CIF representation of symmetry operator plus translation.
     See International Tables for Crystallography Vol. A. (2002) for
     definition.
 
     :param matrix: 3x3 matrix, representing the symmetry operator
-    :param tr: translation vector of length 3 (default [0, 0, 0])
+    :param tr: translation vector of length 3 (default 0)
     :param eps: epsilon parameter for fuzzy comparison x == 0
     :return: CIF representation of symmetry operator
     """
     import re
-    axes = [ "x", "y", "z" ]
+    axes = ["x", "y", "z"]
     parts = ["", "", ""]
     for i in range(0, 3):
         for j in range(0, 3):
@@ -75,12 +76,12 @@ def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
             elif matrix[i][j] < -eps:
                 sign = "-"
             if sign:
-                parts[i] = format("{}{}{}".format(parts[i],sign,axes[j]))
+                parts[i] = format("{}{}{}".format(parts[i], sign, axes[j]))
         if tr[i] < -eps or tr[i] > eps:
             sign = "+"
             if tr[i] < -eps:
                 sign = "-"
-            parts[i] = format("{}{}{}".format(parts[i],sign,abs(tr[i])))
+            parts[i] = format("{}{}{}".format(parts[i], sign, abs(tr[i])))
         parts[i] = re.sub('^\+', '', parts[i])
     return ",".join(parts)
 
@@ -218,7 +219,7 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
                          "datablocks: {} (names) < "
                          "{} (datablocks)".format(len(names),
                                                   len(datablocks)))
-    for i,values in enumerate(datablocks):
+    for i, values in enumerate(datablocks):
         name = str(i)
         if names:
             name = names[i]
@@ -285,13 +286,13 @@ def refine_inline(node):
     for tag in symmetry_tags:
         cif.values[name].RemoveCifItem(tag)
 
-    cif.values[name]['_symmetry_space_group_name_H-M']  = symmetry['hm']
+    cif.values[name]['_symmetry_space_group_name_H-M'] = symmetry['hm']
     cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
-    cif.values[name]['_symmetry_Int_Tables_number']     = symmetry['tables']
+    cif.values[name]['_symmetry_Int_Tables_number'] = symmetry['tables']
     cif.values[name]['_symmetry_equiv_pos_as_xyz'] = \
-        [ symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
-                                            symmetry['translations'][i])
-          for i in range(0, len(symmetry['rotations'])) ]
+        [symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
+                                           symmetry['translations'][i])
+         for i in range(0, len(symmetry['rotations']))]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \
@@ -343,6 +344,17 @@ class CifData(SinglefileData):
     _set_incompatibilities = [("ase", "file"), ("ase", "values"),
                               ("file", "values")]
 
+    @staticmethod
+    def read_cif(fileobj, index=-1, **kwargs):
+        """
+        A wrapper method that simulates the behaviour of the older versions of
+        the read_cif. It behaves similarly with the older and newer versions
+        of ase.io.cif.read_cif.
+        """
+        import ase.io.cif
+        return list(ase.io.cif.read_cif(
+            fileobj, index=slice(None), **kwargs))[index]
+
     @classmethod
     def from_md5(cls, md5):
         """
@@ -391,34 +403,13 @@ class CifData(SinglefileData):
                 if use_first:
                     return (cifs[0], False)
                 else:
-                    raise ValueError("More than one copy of a CIF file "
-                                     "with the same MD5 has been found in "
-                                     "the DB. pks={}".format(
-                        ",".join([str(i.pk) for i in cifs])))
+                    raise ValueError(
+                        "More than one copy of a CIF file "
+                        "with the same MD5 has been found in "
+                        "the DB. pks={}".format(
+                            ",".join([str(i.pk) for i in cifs])))
             else:
-                return (cifs[0], False)
-
-    def _get_aiida_structure(self, converter='ase', store=False, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.data.structure.StructureData`.
-
-        :param converter: specify the converter. Default 'ase'.
-        :param store: if True, intermediate calculation gets stored in the
-            AiiDA database for record. Default False.
-        :param primitive_cell: if True, primitive cell is returned,
-            conventional cell if False. Default False.
-        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
-        """
-        from aiida.orm.data.parameter import ParameterData
-        import cif  # This same module
-
-        param = ParameterData(dict=kwargs)
-        try:
-            conv_f = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
-        except AttributeError:
-            raise ValueError("No such converter '{}' available".format(converter))
-        ret_dict = conv_f(cif=self, parameters=param, store=store)
-        return ret_dict['structure']
+                return cifs[0], False
 
     @property
     def ase(self):
@@ -430,17 +421,6 @@ class CifData(SinglefileData):
         if self._ase is None:
             self._ase = self.get_ase()
         return self._ase
-
-    @staticmethod
-    def read_cif(fileobj, index=-1, **kwargs):
-        """
-        A wrapper method that simulates the behaviour of the older versions of
-        the read_cif. It behaves similarly with the older and newer versions
-        of ase.io.cif.read_cif.
-        """
-        import ase.io.cif
-        return list(ase.io.cif.read_cif(
-            fileobj, index=slice(None), **kwargs))[index]
 
     def get_ase(self, **kwargs):
         """
@@ -514,8 +494,8 @@ class CifData(SinglefileData):
         super(CifData, self).set_file(filename)
         md5sum = self.generate_md5()
         if isinstance(self.source, dict) and \
-          self.source.get('source_md5', None) is not None and \
-          self.source['source_md5'] != md5sum:
+                        self.source.get('source_md5', None) is not None and \
+                        self.source['source_md5'] != md5sum:
             self.source = {}
         self._set_attr('md5', md5sum)
         self._values = None
@@ -572,11 +552,11 @@ class CifData(SinglefileData):
                     bracket = site.find('(')
                     if bracket == -1:
                         # no bracket found
-                        if abs(float(site)-1) > epsilon:
+                        if abs(float(site) - 1) > epsilon:
                             partial_occupancies = True
                     else:
                         # bracket, cut string
-                        if abs(float(site[0:bracket])-1)> epsilon:
+                        if abs(float(site[0:bracket]) - 1) > epsilon:
                             partial_occupancies = True
 
         return partial_occupancies
@@ -608,6 +588,28 @@ class CifData(SinglefileData):
 
         return aiida.common.utils.md5_file(abspath)
 
+    def _get_aiida_structure(self, converter='ase', store=False, **kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+
+        :param converter: specify the converter. Default 'ase'.
+        :param store: if True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :param primitive_cell: if True, primitive cell is returned,
+            conventional cell if False. Default False.
+        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        """
+        from aiida.orm.data.parameter import ParameterData
+        import cif  # This same module
+
+        param = ParameterData(dict=kwargs)
+        try:
+            conv_f = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
+        except AttributeError:
+            raise ValueError("No such converter '{}' available".format(converter))
+        ret_dict = conv_f(cif=self, parameters=param, store=store)
+        return ret_dict['structure']
+
     def _prepare_cif(self):
         """
         Write the given CIF file to a string of format CIF.
@@ -624,7 +626,7 @@ class CifData(SinglefileData):
         Write the given CIF to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self,**kwargs)
+        return export_cif(self, **kwargs)
 
     def _get_object_ase(self):
         """
@@ -657,5 +659,4 @@ class CifData(SinglefileData):
         md5 = self.generate_md5()
         if attr_md5 != md5:
             raise ValidationError("Attribute 'md5' says '{}' but '{}' was "
-                                  "parsed instead.".format(
-                attr_md5, md5))
+                                  "parsed instead.".format(attr_md5, md5))

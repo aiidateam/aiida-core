@@ -1,8 +1,9 @@
 from aiida.restapi.translator.base import BaseTranslator
-# from aiida.restapi import caching
+from aiida.restapi.caching import cache
 from aiida.common.exceptions import InputValidationError, ValidationError, \
     InvalidOperation
 from aiida.restapi.common.exceptions import RestValidationError
+from aiida.restapi.common.config import CACHING_TIMEOUTS
 
 
 class NodeTranslator(BaseTranslator):
@@ -69,7 +70,7 @@ class NodeTranslator(BaseTranslator):
     """
     _aiida_type = "Node"
     _qb_type = "node.Node."
-    _qb_label = "nodes  "
+    _qb_label = "nodes"
     _result_type = _qb_label
     _content_type = None
     _default_projections = ['id',

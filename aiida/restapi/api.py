@@ -13,15 +13,14 @@ from aiida.restapi.common.exceptions import RestInputValidationError,\
     RestValidationError
 from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
     Node, User
-from aiida.restapi.common.config import PREFIX, APP_CONFIG
+import aiida.restapi.common.config as conf
 from aiida.restapi.common.flaskrun import flaskrun
 from flask.ext.sqlalchemy import SQLAlchemy
 
 
 ## Initiate an app with its api
 app = Flask(__name__)
-api = Api(app, prefix=PREFIX)
-
+api = Api(app, prefix=conf.PREFIX)
 cors = CORS(app, resources={r"/api/v2/*": {"origins": "*"}})
 
 # database
@@ -45,7 +44,10 @@ def error_handler(error):
     # Generic server-side error (not to make the api crash if an unhandled
     # exception is raised. Caution is never enough!!)
     else:
-        response = jsonify({'message': 'Internal server error'})
+#        response = jsonify({'message': 'Internal server error'})
+        response = jsonify({'message': 'Internal server error. The original '
+                                       'message was: \"{}\"'.format(
+            error.message)})
         response.status_code = 500
         return response
 
@@ -164,9 +166,14 @@ setup_database()
 
 # Standard boilerplate to run the app
 if __name__ == '__main__':
-    #Config the app
-    app.config.update(**APP_CONFIG)
 
+    #Config the app
+    app.config.update(**conf.APP_CONFIG)
+
+    #Config the serializer used by the app
+    if conf.SERIALIZER_CONFIG:
+        from aiida.restapi.common.utils import CustomJSONEncoder
+        app.json_encoder = CustomJSONEncoder
 
     #I run the app via a wrapper that accepts arguments such as host and port
     #e.g. python api.py --host=127.0.0.2 --port=6000

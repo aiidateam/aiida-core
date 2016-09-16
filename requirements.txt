@@ -82,3 +82,5 @@ marshmallow-sqlalchemy==0.10.0
 flask-marshmallow==0.7.0
 itsdangerous==0.24
 flask-httpauth==3.2.0
+flask-cache==0.13.1
+python-memcached==1.58

@@ -1,7 +1,9 @@
 from aiida.common.exceptions import InputValidationError, InvalidOperation
-# from aiida.restapi import caching
+from aiida.restapi.caching import cache
+from aiida.restapi.common.config import CACHING_TIMEOUTS
 from aiida.orm.querybuilder import QueryBuilder
-from aiida.restapi.common.exceptions import RestValidationError, RestInputValidationError
+from aiida.restapi.common.exceptions import RestValidationError, \
+    RestInputValidationError
 from aiida.restapi.common.config import LIMIT_DEFAULT
 
 
@@ -50,14 +52,12 @@ class BaseTranslator(object):
         """
         return ""
 
-
     def init_qb(self):
         """
         Initialize query builder object by means of _query_help
         """
         self.qb.__init__(**self._query_help)
         self._is_qb_initialized = True
-
 
     def count(self):
         """
@@ -69,6 +69,17 @@ class BaseTranslator(object):
             raise InvalidOperation("query builder object has not been "
                                    "initialized.")
 
+    # def caching_method(self):
+    #     """
+    #     class method for caching. It is a wrapper of the flask_cache memoize
+    #     method. To be used as a decorator
+    #     :return: the flask_cache memoize method with the timeout kwarg
+    #     corrispondent to the class
+    #     """
+    #     return cache.memoize()
+    #
+
+#    @cache.memoize(timeout=CACHING_TIMEOUTS[self._qb_label])
     def get_total_count(self):
         """
         Returns the number of rows of the query
@@ -79,7 +90,6 @@ class BaseTranslator(object):
             self.count()
 
         return self._total_count
-
 
     def set_filters(self, filters={}):
         """
@@ -108,11 +118,10 @@ class BaseTranslator(object):
                                 = filter_value
         else:
             raise InputValidationError("Pass data in dictionary format where "
-                                        "keys are the tag names given in the "
-                                        "path in query_help and and their values"
-                                        " are the dictionary of filters want "
-                                        "to add for that tag name.")
-
+                                       "keys are the tag names given in the "
+                                       "path in query_help and and their values"
+                                       " are the dictionary of filters want "
+                                       "to add for that tag name.")
 
     def get_default_projections(self):
         """
@@ -120,7 +129,6 @@ class BaseTranslator(object):
         :return: self._default_projections
         """
         return self._default_projections
-
 
     def set_default_projections(self):
         """
@@ -130,7 +138,6 @@ class BaseTranslator(object):
         :return: None
         """
         self.set_projections({self._qb_label: self._default_projections})
-
 
     def set_projections(self, projections):
         """
@@ -147,11 +154,10 @@ class BaseTranslator(object):
                     self._query_help["project"][project_key] = project_list
         else:
             raise InputValidationError("Pass data in dictionary format where "
-                                        "keys are the tag names given in the "
-                                        "path in query_help and values are the "
-                                        "list of the names you want to project "
-                                        "in the final output")
-
+                                       "keys are the tag names given in the "
+                                       "path in query_help and values are the "
+                                       "list of the names you want to project "
+                                       "in the final output")
 
     def set_order(self, orders):
         """
@@ -191,28 +197,6 @@ class BaseTranslator(object):
         for tag, columns in orders.iteritems():
             self._query_help['order_by'][tag] = def_order(columns)
 
-
-
-
-        # if isinstance(orders, dict):
-        #     if len(orders) > 0:
-        #         for tag, tag_orders in orders.iteritems():
-        #             print tag, tag_orders
-        #             if len(tag_orders) > 0 and isinstance(tag_orders, dict):
-        #                 self.query_help["order_by"][tag] = {}
-        #                 for order_key, order_value in tag_orders.iteritems():
-        #                     if order_key == "pk":
-        #                         order_key = self._pk_dbsynonym
-        #                     self.query_help["filters"][tag][order_key] \
-        #                         = order_value
-        # else:
-        #     raise InputValidationError("Pass data in dictionary format where "
-        #                                 "keys are the tag names given in the "
-        #                                 "path in query_help and and their values"
-        #                                 " are the dictionary of orders want "
-        #                                 "to add for that tag name.")
-
-
     def set_query(self, filters=None, orders=None, projections=None, pk=None):
         """
         Adds filters, default projections, order specs to the query_help,
@@ -229,14 +213,15 @@ class BaseTranslator(object):
         # for pk_query
         if pk is not None:
             self._is_pk_query = True
-            if self._result_type==self._qb_label and len(filters)>0:
+            if self._result_type == self._qb_label and len(filters) > 0:
                 raise RestInputValidationError("selecting a specific pk does "
-                                              "not "
-                                           "allow to specify filters")
+                                               "not "
+                                               "allow to specify filters")
             elif not self._check_pk_validity(pk):
-                raise RestValidationError("either the selected pk does not exist "
-                                       "or the corresponding object is not of "
-                                       "type {}".format(self._aiida_type))
+                raise RestValidationError(
+                    "either the selected pk does not exist "
+                    "or the corresponding object is not of "
+                    "type {}".format(self._aiida_type))
             else:
                 tagged_filters[self._qb_label] = {'id': {'==': pk}}
                 if self._result_type is not self._qb_label:
@@ -262,13 +247,11 @@ class BaseTranslator(object):
         ## Initialize the query_object
         self.init_qb()
 
-
     def get_query_help(self):
         """
         :return: return QB json dictionary
         """
         return self._query_help
-
 
     def set_limit_offset(self, limit=None, offset=None):
         """
@@ -314,7 +297,6 @@ class BaseTranslator(object):
             raise InvalidOperation("query builder object has not been "
                                    "initialized.")
 
-
     def get_formatted_result(self, label):
         """
         Runs the query and retrieves results tagged as "label"
@@ -329,18 +311,17 @@ class BaseTranslator(object):
 
         results = []
 
-        if self._total_count>0:
+        if self._total_count > 0:
             for tmp in self.qb.iterdict():
                 results.append(tmp[label])
 
-        #TODO think how to make it less hardcoded
+        # TODO think how to make it less hardcoded
         if self._result_type == 'input_of':
             return {'inputs': results}
         elif self._result_type == 'output_of':
             return {'outputs': results}
         else:
             return {self._qb_label: results}
-
 
     def get_results(self):
         """
@@ -364,7 +345,6 @@ class BaseTranslator(object):
         data = self.get_formatted_result(self._result_type)
         return data
 
-
     def _check_pk_validity(self, pk):
         """
         Checks whether a pk corresponds to an object of the expected type
@@ -375,17 +355,20 @@ class BaseTranslator(object):
         # do with qb for consistency, although it would be easier to do it
         # with load_node
 
-        query_help_base = {'path':[
-                                {
-                                'type': self._qb_type,
-                                'label': self._qb_label,
-                                },
-                            ],
-                      'filters': {self._qb_label:
-                                      {'id': {'==': pk}
-                                       }
-                                  }
-                      }
+        query_help_base = {
+            'path': [
+                {
+                    'type': self._qb_type,
+                    'label': self._qb_label,
+                },
+            ],
+            'filters': {
+                self._qb_label:
+                    {
+                        'id': {'==': pk}
+                        }
+                }
+        }
 
         qb_base = QueryBuilder(**query_help_base)
-        return qb_base.count()==1
+        return qb_base.count() == 1

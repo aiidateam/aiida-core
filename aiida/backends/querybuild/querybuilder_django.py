@@ -20,8 +20,10 @@ from aiida.backends.querybuild.dummy_model import (
     DbGroup     as DummyGroup,
     DbExtra     as DummyExtra,
     DbAttribute as DummyAttribute,
+    descendants_beta as DummyDescendants_beta,
     table_groups_nodes  as Dummy_table_groups_nodes,
     session,                             # session with DB
+
 )
 
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
@@ -53,10 +55,12 @@ class QueryBuilder(AbstractQueryBuilder):
         self.User               = DummyUser
         self.Group              = DummyGroup
         self.table_groups_nodes = Dummy_table_groups_nodes
+        self.descendants_beta   = DummyDescendants_beta
         self.AiidaNode          = AiidaNode
         self.AiidaGroup         = AiidaGroup
         self.AiidaComputer      = AiidaComputer
         self.AiidaUser          = AiidaUser
+
 
         super(QueryBuilder, self).__init__(*args, **kwargs)
 

@@ -11,7 +11,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sa_init import (
     Column, Table, ForeignKey,
     Integer, String, DateTime, Float, Boolean, Text,  # basic column types
-    UUID, JSONB,                                      # Fancy column types
+    UUID, JSONB, array,                               # Fancy column types
     UniqueConstraint,aliased,
     select, func, join, and_, or_, not_, except_,     # join and filter ops
     relationship, backref, column_property,           # Table to table relationsships
@@ -385,33 +385,76 @@ DbNode.state = column_property(
 )
 
 
-DbAttribute.value_str = column_property(
-        case([
-            (DbAttribute.datatype == 'txt', DbAttribute.tval),
-            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
-            (DbAttribute.datatype == 'int', cast(DbAttribute.ival, String)),
-            (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, String)),
-            (DbAttribute.datatype == 'date', cast(DbAttribute.dval, String)),
-            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, String)),
-            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
-            (DbAttribute.datatype == 'list', None),
-            (DbAttribute.datatype == 'dict', None),
-        ])
+
+node_aliased = aliased(DbNode)
+
+walk = select([
+        DbNode.id.label('start'),
+        DbNode.id.label('end'),
+        cast(-1, Integer).label('depth'),
+        array([DbNode.id]).label('path')
+    ]).select_from(DbNode).cte(recursive=True) #, name="incl_aliased3")
+
+
+descendants_beta = walk.union_all(
+    select([
+            walk.c.start,
+            node_aliased.id,
+            walk.c.depth + cast(1, Integer),
+            (walk.c.path+array([node_aliased.id])).label('path'),
+        ]).select_from(
+            join(
+                node_aliased,
+                DbLink,
+                DbLink.output_id==node_aliased.id,
+            )
+        ).where(
+            and_(
+                DbLink.input_id == walk.c.end,
+            )
+        )
     )
 
-DbAttribute.value_float = column_property(
-        case([
-            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
-            (DbAttribute.datatype == 'float', DbAttribute.fval),
-            (DbAttribute.datatype == 'int', cast(DbAttribute.ival, Float)),
-            (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, Float)),
-            (DbAttribute.datatype == 'date', cast(DbAttribute.dval, Float)),
-            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
-            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, Float)),
-            (DbAttribute.datatype == 'list', None),
-            (DbAttribute.datatype == 'dict', None),
-        ])
-    )
+
+class DbPathBeta(object):
+
+    def __init__(self, start, end, depth):
+        self.start = start
+        self.out = end
+        self.depth = depth
+
+
+
+mapper(DbPathBeta, descendants_beta)
+
+
+#~ DbAttribute.value_str = column_property(
+        #~ case([
+            #~ (DbAttribute.datatype == 'txt', DbAttribute.tval),
+            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
+            #~ (DbAttribute.datatype == 'int', cast(DbAttribute.ival, String)),
+            #~ (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, String)),
+            #~ (DbAttribute.datatype == 'date', cast(DbAttribute.dval, String)),
+            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, String)),
+            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
+            #~ (DbAttribute.datatype == 'list', None),
+            #~ (DbAttribute.datatype == 'dict', None),
+        #~ ])
+    #~ )
+#~
+#~ DbAttribute.value_float = column_property(
+        #~ case([
+            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
+            #~ (DbAttribute.datatype == 'float', DbAttribute.fval),
+            #~ (DbAttribute.datatype == 'int', cast(DbAttribute.ival, Float)),
+            #~ (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, Float)),
+            #~ (DbAttribute.datatype == 'date', cast(DbAttribute.dval, Float)),
+            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
+            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, Float)),
+            #~ (DbAttribute.datatype == 'list', None),
+            #~ (DbAttribute.datatype == 'dict', None),
+        #~ ])
+    #~ )
 
 
 

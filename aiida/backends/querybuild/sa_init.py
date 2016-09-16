@@ -30,7 +30,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import Cast
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID, JSONB, INTEGER, array
 # TO COMPILE MY OWN FUNCTIONALITIES:
 from sqlalchemy.sql.expression import FunctionElement, cast
 from sqlalchemy.ext.compiler import compiles

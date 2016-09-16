@@ -1288,6 +1288,8 @@ class AbstractQueryBuilder(object):
                 aliased_edge.input_id == entity_to_join.id
         )
 
+    #~ def _join_descendants_beta(self, joined_entity, entity_to_join, aliased_path):
+
     def _join_descendants(self, joined_entity, entity_to_join, aliased_path):
         """
         :param joined_entity: The (aliased) ORMclass that is an ancestor

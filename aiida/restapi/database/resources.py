@@ -55,12 +55,12 @@ class McloudUserResource(Resource):
         institute = request.json.get('institute')
         password = request.json.get('password')
         if email is None or password is None:
-	    response = jsonify({ 'response': "email/password is none!"})
+	    response = jsonify({ 'response': "email/password is empty!"})
             response.status_code = 400
             return response
 
         if McloudUser.query.filter_by(email = email).first() is not None:
-	    response = jsonify({ 'response': email + " already exist"})
+	    response = jsonify({ 'response': email + " is already registered!"})
             response.status_code = 400
             return response
 
@@ -86,3 +86,16 @@ class McloudTokenResource(Resource):
     def post(self):
         token = g.user.generate_auth_token()
         return jsonify({ 'response': token.decode('ascii') })
+
+    def get(self):
+	email = "guest@mcloud.com"
+	from aiida.restapi.database.models import McloudUser
+	guest = McloudUser.query.filter_by(email = email).first()
+
+	if guest:
+            token = guest.generate_auth_token()
+            return jsonify({ 'response': token.decode('ascii') })
+	else:
+	    response = jsonify({ 'response': " Guest Login Not Available!"})
+            response.status_code = 400
+            return response

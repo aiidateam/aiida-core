@@ -14,7 +14,6 @@ def setup_database():
     # import all modules here that might define models so that
     # they will be registered properly on the metadata.  Otherwise
     # you will have to import them first before calling init_db()
-    from aiida.restapi.database import models
     from aiida.restapi.database.models import McloudUser
 
     Base.metadata.create_all(bind=engine)

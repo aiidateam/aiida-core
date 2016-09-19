@@ -66,7 +66,7 @@ class ComputerTranslator(BaseTranslator):
         return {
             "fields": {
                 "description": {
-                    "is_display": False,
+                    "is_display": True,
                     "display_name": "Description",
                     "help_text": "short description of the Computer",
                     "type": "string",
@@ -164,11 +164,11 @@ class ComputerTranslator(BaseTranslator):
                 "id",
                 "name",
                 "hostname",
+                "description",
                 "transport_type",
                 "scheduler_type",
                 "enabled",
                 "uuid",
-                "description"
             ]
         }
 

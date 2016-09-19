@@ -89,7 +89,7 @@ class CalculationTranslator(NodeTranslator):
         return {
             "fields": {
                 "ctime": {
-                    "is_display": False,
+                    "is_display": True,
                     "display_name": "Creation Time",
                     "help_text": "Created at",
                     "type": "datetime",
@@ -188,8 +188,8 @@ class CalculationTranslator(NodeTranslator):
                 "id",
                 "label",
                 "type",
-                "dbcomputer",
                 "state",
+                "dbcomputer",
                 "ctime",
                 "mtime",
                 "uuid"

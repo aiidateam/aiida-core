@@ -89,7 +89,7 @@ class DataTranslator(NodeTranslator):
         return {
             "fields": {
                 "ctime": {
-                    "is_display": False,
+                    "is_display": True,
                     "display_name": "Creation Time",
                     "help_text": "Created at",
                     "type": "datetime",
@@ -97,25 +97,25 @@ class DataTranslator(NodeTranslator):
                 "dbcomputer": {
                     "is_display": False,
                     "display_name": "Computer",
-                    "help_text": "Computer id on which job was submitted",
+                    "help_text": "Computer id on which the data node is created",
                     "type": "related",
                 },
                 "description": {
                     "is_display": False,
                     "display_name": "Description",
-                    "help_text": "Short description on the calculation",
+                    "help_text": "Short description on the data node",
                     "type": "string",
                 },
                 "id": {
                     "is_display": True,
                     "display_name": "ID",
-                    "help_text": "Calculation id",
+                    "help_text": "Data node id",
                     "type": "integer",
                 },
                 "label": {
                     "is_display": False,
                     "display_name": "Label",
-                    "help_text": "Calculation label",
+                    "help_text": "Data node label",
                     "type": "string",
                 },
                 "mtime": {
@@ -127,19 +127,28 @@ class DataTranslator(NodeTranslator):
                 "type": {
                     "is_display": True,
                     "display_name": "Type",
-                    "help_text": "Calculation type",
+                    "help_text": "Data node type",
+                    "type": "string",
+                },
+                "state": {
+                    "is_display": True,
+                    "display_name": "State",
+                    "help_text": "Data node state",
                     "type": "string",
                 },
                 "uuid": {
                     "is_display": False,
                     "display_name": "Unique ID",
-                    "help_text": "Unique id of the calculation",
+                    "help_text": "Unique id of the data node",
                     "type": "string",
                 }
             },
             "ordering": [
                 "id",
+                "label",
                 "type",
+                "state",
+                "dbcomputer",
                 "ctime",
                 "mtime",
                 "uuid"

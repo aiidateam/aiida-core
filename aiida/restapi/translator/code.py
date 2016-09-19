@@ -80,7 +80,7 @@ class CodeTranslator(NodeTranslator):
         return {
             "fields": {
                 "ctime": {
-                    "is_display": False,
+                    "is_display": True,
                     "display_name": "Creation Time",
                     "help_text": "Created at",
                     "type": "datetime",
@@ -94,19 +94,19 @@ class CodeTranslator(NodeTranslator):
                 "description": {
                     "is_display": False,
                     "display_name": "Description",
-                    "help_text": "Short description on the calculation",
+                    "help_text": "Short description on the code",
                     "type": "string",
                 },
                 "id": {
                     "is_display": True,
                     "display_name": "ID",
-                    "help_text": "Calculation id",
+                    "help_text": "Code id",
                     "type": "integer",
                 },
                 "label": {
                     "is_display": True,
                     "display_name": "Label",
-                    "help_text": "Calculation label",
+                    "help_text": "Code label",
                     "type": "string",
                 },
                 "mtime": {
@@ -118,13 +118,13 @@ class CodeTranslator(NodeTranslator):
                 "type": {
                     "is_display": True,
                     "display_name": "Type",
-                    "help_text": "Calculation type",
+                    "help_text": "Code type",
                     "type": "string",
                 },
                 "uuid": {
                     "is_display": False,
                     "display_name": "Unique ID",
-                    "help_text": "Unique id of the calculation",
+                    "help_text": "Unique id of the code",
                     "type": "string",
                 }
             },
@@ -136,5 +136,5 @@ class CodeTranslator(NodeTranslator):
                 "ctime",
                 "mtime",
                 "uuid"
-            ]
+            ],
         }

@@ -99,3 +99,30 @@ class McloudTokenResource(Resource):
 	    response = jsonify({ 'response': " Guest Login Not Available!"})
             response.status_code = 400
             return response
+
+
+@auth.verify_password
+def verify_password(username_or_token, password):
+
+    from aiida.restapi.database.models import McloudUser
+
+    username_or_token = request.json.get('email')
+    password = request.json.get('password')
+
+    # first try to authenticate by token
+    user = McloudUser.verify_auth_token(username_or_token)
+
+    if not user:
+        # try to authenticate with username/password
+        user = McloudUser.query.filter_by(email = username_or_token).first()
+        if not user or not user.verify_password(password):
+            print " => Authentication failed for ", username_or_token, " Password : ", password
+            return False
+    g.user = user
+    return True
+
+@auth.error_handler
+def auth_error():
+    response = jsonify({ 'response': " Server Authentication Failed!"})
+    response.status_code = 403
+    return response

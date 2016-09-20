@@ -1,5 +1,5 @@
 ## Pagination defaults
-LIMIT_DEFAULT = 4000
+LIMIT_DEFAULT = 400
 PERPAGE_DEFAULT = 20
 
 ##Version prefix for all the URLs
@@ -11,7 +11,7 @@ PREFIX="/api/v2"
 #PROPAGATE_EXCEPTIONS: True/False serve REST exceptions to the client (and not a
 # generic 500: Internal Server Error exception)
 APP_CONFIG = {
-              'DEBUG': True,
+              'DEBUG': False,
               'PROPAGATE_EXCEPTIONS': True,
               }
 

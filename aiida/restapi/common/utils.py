@@ -315,7 +315,9 @@ def parse_query_string(query_string):
 
     op_conv_map = {
         '=': '==',
-        '=in=': '==',
+        '!=': '!==',
+        '=in=': 'in',
+        '=notin=': '!in',
         '>': '>',
         '<': '<',
         '>=': '>=',
@@ -339,8 +341,10 @@ def parse_query_string(query_string):
     # key types
     key = Word(alphas + '_', alphanums + '_')
     # operators
-    operator = (Literal('=like=') | Literal('=ilike=') | Literal('=in=') |
-                Literal('=') | Literal('>=') | Literal('>') |
+    operator = (Literal('=like=') | Literal('=ilike=') |
+                Literal('=in=') | Literal('=notin=') |
+                Literal('=') | Literal('!=') |
+                Literal('>=') | Literal('>') |
                 Literal('<=') | Literal('<'))
     # Value types
     valueNum = ppc.number
@@ -381,7 +385,7 @@ def parse_query_string(query_string):
         # usable alone individually.
     )
     # Convert it to datetime object
-    # Function compliant with ParseAction requirements
+    # Function format is compliant with ParseAction requirements
     def validate_time(s, loc, toks):
         try:
             dt = dtparser.parse(toks[0])
@@ -416,7 +420,7 @@ def parse_query_string(query_string):
 
     # Fields
     singleField = Group(key + operator + value)
-    listField = Group(key + Literal('=in=') + valueList)
+    listField = Group(key + (Literal('=in=') | Literal('=notin=')) + valueList)
     orderbyField = Group(key + Literal('=') + valueList)
     Field = (listField | orderbyField | singleField)
 
@@ -459,15 +463,15 @@ def parse_query_string(query_string):
         if field_key not in field_counts.keys():
             field_counts[field_key] = 1
             #Store the information whether membership operator is used
-            is_membership = (field[1] is '=in=')
+            # is_membership = (field[1] is '=in=')
         else:
             #Check if the key of a filter using membership operator is used
             # in multiple filters
-            if is_membership is True or field[1] is '=in=':
-                raise RestInputValidationError("If a key appears in "
-                                               "multiple filters, "
-                                               "those cannot use "
-                                               "membership opertor '=in='")
+            # if is_membership is True or field[1] is '=in=':
+                # raise RestInputValidationError("If a key appears in "
+                #                                "multiple filters, "
+                #                                "those cannot use "
+                #                                "membership opertor '=in='")
             field_counts[field_key] = field_counts[field_key] + 1
 
     ## Check the reserved keywords
@@ -499,6 +503,7 @@ def parse_query_string(query_string):
 
     ## Extract results
     for field in fields:
+
         if field[0] == 'limit':
             if field[1] == '=':
                 limit = field[2]
@@ -560,42 +565,18 @@ def parse_query_string(query_string):
                                                "is permitted after 'orderby'")
         else:
             ## Treat the filter case.
-            # List of value case. list value is associated to membership
-            # operator '=in='
-            if type(field[2]) == list:
-                if field[1] is not '=in=':
-                    raise RestInputValidationError("comma-separated list of "
-                                                   "values can only be used "
-                                                   "with membership operator "
-                                                   "'=in='")
+            field_key = field[0]
+            # Here I treat the AND clause
+            if field_counts[field_key] > 1:
+
+                if field_key not in filters.keys():
+                    filters.update({field_key: {'and': [{op_conv_map[field[
+                        1]]: field[2]}]}})
                 else:
-                    field_key = field[0]
-                    filters.update({field_key: {'or': [
-                                {op_conv_map[field[1]]: field[2][0]}]}})
-
-                    for value in field[2][1:]:
-                        filters[field_key]['or'].append(
-                            {op_conv_map[field[1]]: value})
-
-                    # if field_key not in filters.keys():
-                    #     filters.update({field_key: {'or': [
-                    #         {op_conv_map[field[1]]: field[2]}]}})
-                    # else:
-                    #     filters[field_key]['or'].append(
-                    #         {op_conv_map[field[1]]: field[2]})
+                    filters[field_key]['and'].append({op_conv_map[field[1]]:
+                                                     field[2]})
             else:
-
-                field_key = field[0]
-                # Here I treat the AND clause
-                if field_counts[field_key] > 1:
-                    if field_key not in filters.keys():
-                        filters.update({field_key: {'and': [{op_conv_map[field[
-                            1]]: field[2]}]}})
-                    else:
-                        filters[field_key]['and'].append({op_conv_map[field[1]]:
-                                                         field[2]})
-                else:
-                    filters.update({field_key: {op_conv_map[field[1]]: field[2]}})
+                filters.update({field_key: {op_conv_map[field[1]]: field[2]}})
 
     return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
             nelist)

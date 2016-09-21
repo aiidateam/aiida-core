@@ -79,6 +79,13 @@ class ProcessSpec(plum.process.ProcessSpec):
         self._fastforwardable = True
 
     def get_inputs_template(self):
+        """
+        Get an object that represents a template of the known inputs and their
+        defaults for the :class:`Process`.
+
+        :return: An object with attributes that represent the known inputs for
+            this process.  Default values will be filled in.
+        """
         template = type(
             "{}Inputs".format(self.__class__.__name__),
             (FixedFieldsAttributeDict,),

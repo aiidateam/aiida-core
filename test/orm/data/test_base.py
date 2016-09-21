@@ -20,20 +20,32 @@ class TestList(unittest.TestCase):
             l[0]
 
     def test_append(self):
+        def do_checks(l):
+            self.assertEqual(len(l), 1)
+            self.assertEqual(l[0], 4)
+
         l = base.List()
         l.append(4)
-        self.assertEqual(len(l), 1)
-        self.assertEqual(l[0], 4)
+        do_checks(l)
+
+        # Try the same after storing
+        l = base.List()
+        l.append(4)
+        l.store()
+        do_checks(l)
 
     def test_extend(self):
         lst = [1, 2, 3]
+
+        def do_checks(l):
+            self.assertEqual(len(l), len(lst))
+            # Do an element wise comparison
+            for x, y in zip(lst, l):
+                self.assertEqual(x, y)
+
         l = base.List()
         l.extend(lst)
-        self.assertEqual(len(l), len(lst))
-        # Do an element wise comparison
-        for x, y in zip(lst, l):
-            self.assertEqual(x, y)
-
+        do_checks(l)
         # Further extend
         l.extend(lst)
         self.assertEqual(len(l), len(lst) * 2)
@@ -42,6 +54,12 @@ class TestList(unittest.TestCase):
         for i in range(0, len(lst)):
             self.assertEqual(lst[i], l[i])
             self.assertEqual(lst[i], l[i % len(lst)])
+
+        # Now try after strogin
+        l = base.List()
+        l.extend(lst)
+        l.store()
+        do_checks(l)
 
     def test_mutability(self):
         l = base.List()

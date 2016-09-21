@@ -201,30 +201,38 @@ class List(Data, collections.MutableSequence):
     def __setitem__(self, key, value):
         l = self._get_list()
         l[key] = value
-        self._set_list(l)
+        if not self._using_list_reference():
+            self._set_list(l)
 
     def __delitem__(self, key):
         l = self._get_list()
         del l[key]
-        self._set_list(l)
+        if not self._using_list_reference():
+            self._set_list(l)
 
     def __len__(self):
         return len(self._get_list())
 
+    def __str__(self):
+        return self._get_list().__str__()
+
     def append(self, value):
         l = self._get_list()
         l.append(value)
-        self._set_list(l)
+        if not self._using_list_reference():
+            self._set_list(l)
 
     def extend(self, L):
         l = self._get_list()
         l.extend(L)
-        self._set_list(l)
+        if not self._using_list_reference():
+            self._set_list(l)
 
     def insert(self, i, value):
         l = self._get_list()
         l.insert(i, value)
-        self._set_list(l)
+        if not self._using_list_reference():
+            self._set_list(l)
 
     def remove(self, value):
         del self[value]
@@ -232,7 +240,8 @@ class List(Data, collections.MutableSequence):
     def pop(self, **kwargs):
         l = self._get_list()
         l.pop(**kwargs)
-        self._set_list(l)
+        if not self._using_list_reference():
+            self._set_list(l)
 
     def index(self, value):
         return self._get_list().index(value)
@@ -243,20 +252,42 @@ class List(Data, collections.MutableSequence):
     def sort(self, cmp=None, key=None, reverse=False):
         l = self._get_list()
         l.sort(cmp, key, reverse)
-        self._set_list(l)
+        if not self._using_list_reference():
+            self._set_list(l)
 
     def reverse(self):
         l = self._get_list()
         l.reverse()
-        self._set_list(l)
+        if not self._using_list_reference():
+            self._set_list(l)
 
     def _get_list(self):
-        return self.get_attr(self._LIST_KEY, list())
+        try:
+            return self.get_attr(self._LIST_KEY)
+        except AttributeError:
+            self._set_list(list())
+            return self.get_attr(self._LIST_KEY)
 
     def _set_list(self, list_):
         if not isinstance(list_, list):
             raise TypeError("Must supply list type")
         self._set_attr(self._LIST_KEY, list_)
+
+    def _using_list_reference(self):
+        """
+        This function tells the class if we are using a list reference.  This
+        means that calls to self.get_list return a reference rather than a copy
+        of the underlying list and therefore self._set_list need not be called.
+        This knwoledge is essential to make sure this class is performant.
+
+        Currently the implementation assumes that if the node needs to be
+        stored then it is using the attributes cache which is a reference.
+
+        :return: True if using self._get_list returns a reference to the
+            underlying sequence.  False otherwise.
+        :rtype: bool
+        """
+        return self._to_be_stored
 
 
 TRUE = Bool(typevalue=(bool, True))

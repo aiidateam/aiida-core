@@ -2,6 +2,7 @@
 
 from abc import abstractmethod
 import datetime
+from pytz.exceptions import NonExistentTimeError
 
 from aiida.utils import timezone
 from aiida.common.utils import str_timedelta
@@ -836,7 +837,6 @@ class AbstractJobCalculation(object):
         """
 
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.daemon.timestamps import get_last_daemon_timestamp
         from tabulate import tabulate
 
         now = timezone.now()
@@ -851,39 +851,14 @@ class AbstractJobCalculation(object):
         valid_order_parameters = (None, 'id', 'ctime')
         assert order_by in valid_order_parameters, \
             "invalid order by parameter {}\n" \
-             "valid parameters are:\n".format(order_by, valid_order_parameters)
+            "valid parameters are:\n".format(order_by, valid_order_parameters)
 
         # Limit:
         if limit is not None:
-            assert isinstance(limit, int),  \
+            assert isinstance(limit, int), \
                 "Limit (set to {}) has to be an integer or None".format(limit)
 
-        # get the last daemon check:
-        try:
-            last_daemon_check = \
-                get_last_daemon_timestamp('updater', when='stop')
-        except ValueError:
-            last_check_string = (
-                "# Last daemon state_updater check: "
-                "(Error while retrieving the information)"
-            )
-        else:
-            if last_daemon_check is None:
-                last_check_string = "# Last daemon state_updater check: (Never)"
-            else:
-                last_check_string = (
-                    "# Last daemon state_updater check: "
-                    "{} ({})".format(
-                        str_timedelta(
-                            timezone.delta(last_daemon_check, now),
-                            negative_to_zero=True
-                        ),
-                        timezone.localtime(
-                            last_daemon_check
-                        ).strftime("at %H:%M:%S on %Y-%m-%d")
-                    )
-                )
-        print last_check_string
+        print cls._get_last_daemon_check_string(now)
 
         calculation_filters = {}
 
@@ -924,7 +899,7 @@ class AbstractJobCalculation(object):
         ]
         calc_list_header = ['PK', 'State', 'Creation', 'Sched. state',
                             'Computer', 'Type']
-        calc_list_data = []
+
         qb = QueryBuilder()
         qb.append(
             cls,
@@ -952,45 +927,110 @@ class AbstractJobCalculation(object):
 
         counter = 0
         while True:
+            calc_list_data = []
             try:
                 for i in range(100):
                     res = results_generator.next()
-                    counter += 1
-                    ctime = res['calculation']['ctime']
-                    if relative_ctime:
-                        calc_ctime = str_timedelta(
-                            timezone.delta(ctime, now), negative_to_zero=True,
-                            max_num_fields=1)
-                    else:
-                        calc_ctime = " ".join([
-                            timezone.localtime(ctime).isoformat().split('T')[0],
-                            timezone.localtime(ctime).isoformat().split('T')[
-                                1].split('.')[0].rsplit(":", 1)[0]])
-                    state = str(res['calculation']['state'])
-                    if state == calc_states.IMPORTED:
-                        attrstate = res['calculation']['attributes.state']
-                        if attrstate is None:
-                            attrstate = 'UNKNOWN'
-                        state = '{}/{}'.format(state, attrstate)
+                    row = cls._get_calculation_info_row(res, now if relative_ctime else None)
 
-                    calc_list_data.append([
-                        str(res['calculation']['id']),
-                        state,
-                        str(calc_ctime),
-                        str(res['calculation']['attributes.scheduler_state']),
-                        str(res['computer']['name']),
-                        from_type_to_pluginclassname(
-                            res['calculation']['type']
-                        ).rsplit(".", 1)[0].lstrip('calculation.job.')
-                    ])
+                    # Build the row of information
+                    calc_list_data.append(row)
+
+                    counter += 1
 
                 print(tabulate(calc_list_data, headers=calc_list_header))
-                calc_list_data = []
+
             except StopIteration:
                 print(tabulate(calc_list_data, headers=calc_list_header))
                 break
 
-        print "\nNumber of rows: {}\n".format(counter)
+        print("\nTotal results: {}\n".format(counter))
+
+    @classmethod
+    def _get_last_daemon_check_string(cls, since):
+        """
+        Get a string showing the how long it has been since the daemon was
+        last ticked relative to a particular timepoint.
+
+        :param since: The timepoint to get the last check time since.
+        :return: A string indicating the elapsed period, or an information
+        message.
+        """
+        from aiida.daemon.timestamps import get_last_daemon_timestamp
+
+        # get the last daemon check:
+        try:
+            last_daemon_check = \
+                get_last_daemon_timestamp('updater', when='stop')
+        except ValueError:
+            last_check_string = (
+                "# Last daemon state_updater check: "
+                "(Error while retrieving the information)"
+            )
+        else:
+            if last_daemon_check is None:
+                last_check_string = "# Last daemon state_updater check: (Never)"
+            else:
+                last_check_string = (
+                    "# Last daemon state_updater check: "
+                    "{} ({})".format(
+                        str_timedelta(
+                            timezone.delta(last_daemon_check, since),
+                            negative_to_zero=True
+                        ),
+                        timezone.localtime(
+                            last_daemon_check
+                        ).strftime("at %H:%M:%S on %Y-%m-%d")
+                    )
+                )
+
+        return last_check_string
+
+    @classmethod
+    def _get_calculation_info_row(cls, query_result, times_since=None):
+        """
+        Get a row of information about a calculation.
+
+        :param query_result: Results from the calculations query.
+        :param times_since: Times are relative to this timepoint, if None then
+        absolute times will be used.
+        :return: A list of string with information about the calculation.
+        """
+        id = str(query_result['calculation']['id'])
+
+        ctime = query_result['calculation']['ctime']
+        if times_since:
+            try:
+                dt = timezone.delta(ctime, times_since)
+                calc_ctime = str_timedelta(dt, negative_to_zero=True, max_num_fields=1)
+            except NonExistentTimeError as e:
+                calc_ctime = "Error"
+                cls._logger.error(
+                    "Problem with node ({}) ctime.\n{}".format(id, e.message))
+        else:
+            calc_ctime = " ".join([
+                timezone.localtime(ctime).isoformat().split('T')[0],
+                timezone.localtime(ctime).isoformat().split('T')[
+                    1].split('.')[0].rsplit(":", 1)[0]])
+
+        state = str(query_result['calculation']['state'])
+        if state == calc_states.IMPORTED:
+            attrstate = query_result['calculation']['attributes.state']
+            if attrstate is None:
+                attrstate = 'UNKNOWN'
+            state = '{}/{}'.format(state, attrstate)
+
+        # Build the row of information
+        return [
+            id,
+            state,
+            str(calc_ctime),
+            str(query_result['calculation']['attributes.scheduler_state']),
+            str(query_result['computer']['name']),
+            from_type_to_pluginclassname(
+                query_result['calculation']['type']
+            ).rsplit(".", 1)[0].lstrip('calculation.job.')
+        ]
 
     @classmethod
     def _get_all_with_state(
@@ -1029,7 +1069,7 @@ class AbstractJobCalculation(object):
         from aiida.orm.querybuilder import QueryBuilder
 
         if state not in calc_states:
-            cls.logger.warning("querying for calculation state='{}', but it "
+            cls._logger.warning("querying for calculation state='{}', but it "
                                "is not a valid calculation state".format(state))
 
         calcfilter = {'state': {'==': state}}
@@ -1244,9 +1284,9 @@ class AbstractJobCalculation(object):
 
         old_state = self.get_state()
 
-        if (old_state == calc_states.NEW or old_state == calc_states.TOSUBMIT):
+        if old_state == calc_states.NEW or old_state == calc_states.TOSUBMIT:
             self._set_state(calc_states.FAILED)
-            self.logger.warning(
+            self._logger.warning(
                 "Calculation {} killed by the user "
                 "(it was in {} state)".format(self.pk, old_state))
             return
@@ -1272,14 +1312,14 @@ class AbstractJobCalculation(object):
                 "An error occurred while trying to kill "
                 "calculation {} (jobid {}), see log "
                 "(maybe the calculation already finished?)"
-                .format(self.pk, self.get_job_id()))
+                    .format(self.pk, self.get_job_id()))
         else:
             # Do not set the state, but let the parser do its job
             # self._set_state(calc_states.FAILED)
-            self.logger.warning(
+            self._logger.warning(
                 "Calculation {} killed by the user "
                 "(it was {})".format(self.pk,
-                                                     calc_states.WITHSCHEDULER))
+                                     calc_states.WITHSCHEDULER))
 
     def _presubmit(self, folder, use_unstored_links=False):
         """
@@ -1375,9 +1415,9 @@ class AbstractJobCalculation(object):
         #   would return None, in which case the join method would raise
         #   an exception
         job_tmpl.prepend_text = "\n\n".join(_ for _ in
-                                            [computer.get_prepend_text()]+
-                                             [code.get_prepend_text() for code in codes]+
-                                             [calcinfo.prepend_text,
+                                            [computer.get_prepend_text()] +
+                                            [code.get_prepend_text() for code in codes] +
+                                            [calcinfo.prepend_text,
                                              self.get_prepend_text()] if _)
 
         job_tmpl.append_text = "\n\n".join(_ for _ in

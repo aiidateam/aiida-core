@@ -21,7 +21,21 @@ class _WorkChainSpec(ProcessSpec):
         super(_WorkChainSpec, self).__init__()
         self._outline = None
 
+    def get_description(self):
+        desc = [super(_WorkChainSpec, self).get_description()]
+        if self._outline:
+            desc.append("Outline")
+            desc.append("=======")
+            desc.append(self._outline.get_description())
+
+        return "\n".join(desc)
+
     def outline(self, *commands):
+        """
+        Define the outline that describes this work chain.
+
+        :param commands: One or more functions that make up this work chain.
+        """
         self._outline = commands \
             if isinstance(commands, _Step) else _Block(commands)
 
@@ -214,8 +228,11 @@ class _Step(object):
     def create_stepper(self, workflow):
         pass
 
-    @abstractmethod
     def __str__(self):
+        return self.get_description()
+
+    @abstractmethod
+    def get_description(self):
         pass
 
     @staticmethod
@@ -292,12 +309,24 @@ class _Block(_Step):
                         format(command))
         self._commands = commands
 
+    @override
     def create_stepper(self, workflow):
         return self.Stepper(workflow, self._commands)
 
-    def __str__(self):
-        return "\n".join([str(c) if isinstance(c, _Step) else c.__name__
-                          for c in self._commands])
+    @override
+    def get_description(self):
+        desc = []
+        for c in self._commands:
+            if isinstance(c, _Step):
+                desc.append(c.get_description())
+            else:
+                if c.__doc__:
+                    doc = "\n" + c.__doc__
+                    doc.replace('\n', '    \n')
+                    desc.append("::\n{}\n::".format(doc))
+                desc.append(c.__name__)
+
+        return "\n".join(desc)
 
 
 class _Conditional(object):
@@ -415,7 +444,8 @@ class _If(_Step):
     def conditionals(self):
         return self._ifs
 
-    def __str__(self):
+    @override
+    def get_description(self):
         description = []
         description.append("if {}:\n{}".format(
             self._ifs[0].condition.__name__, self._ifs[0].body))
@@ -486,10 +516,12 @@ class _While(_Conditional, _Step):
     def __init__(self, condition):
         super(_While, self).__init__(self, condition)
 
+    @override
     def create_stepper(self, workflow):
         return self.Stepper(workflow, self)
 
-    def __str__(self):
+    @override
+    def get_description(self):
         return "while {}:\n{}".format(self.condition.__name__, self.body)
 
 
@@ -499,3 +531,4 @@ def if_(condition):
 
 def while_(condition):
     return _While(condition)
+

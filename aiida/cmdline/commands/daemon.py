@@ -168,8 +168,10 @@ class Daemon(VerdiCommandWithSubcommands):
                 print "Re-initializing workflow stepper stop timestamp"
                 set_daemon_timestamp(task_name='workflow', when='stop')
         except TypeError:
-            # when timestamps are None (i.e. not present), do not do anything
-            pass
+            # when some timestamps are None (i.e. not present), we make
+            # sure that at least the stop timestamp is defined
+            print "Re-initializing workflow stepper stop timestamp"
+            set_daemon_timestamp(task_name='workflow', when='stop')
 
         if (process.returncode == 0):
             print "Daemon started"
@@ -258,8 +260,10 @@ class Daemon(VerdiCommandWithSubcommands):
                             print "Re-initializing workflow stepper stop timestamp"
                             set_daemon_timestamp(task_name='workflow', when='stop')
                     except TypeError:
-                        # when timestamps are None (undefined), don't do anything
-                        pass
+                        # when some timestamps are None (i.e. not present), we make
+                        # sure that at least the stop timestamp is defined
+                        print "Re-initializing workflow stepper stop timestamp"
+                        set_daemon_timestamp(task_name='workflow', when='stop')
                     break
                 else:
                     print "Waiting for the AiiDA Daemon to shut down..."

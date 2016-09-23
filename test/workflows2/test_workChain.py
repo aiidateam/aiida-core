@@ -184,7 +184,6 @@ class TestWorkchain(DbTestCase):
     def test_malformed_outline(self):
         """
         Test some malformed outlines
-        :return:
         """
         spec = _WorkChainSpec()
 

@@ -29,10 +29,7 @@ class JobProcess(Process):
             # Calculation options
             options = {
                 "max_wallclock_seconds": int,
-                "resources": {
-                    "num_machines": int,
-                    "num_mpiprocs_per_machine": int
-                },
+                "resources": dict,
                 "custom_scheduler_commands": unicode,
                 "queue_name": basestring,
                 "computer": Computer,

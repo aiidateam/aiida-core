@@ -3,8 +3,9 @@
 from abc import ABCMeta, abstractmethod
 import inspect
 from plum.wait_ons import Checkpoint
-from plum.wait import WaitOn
+from plum.wait import WaitOn, WaitOnError
 from plum.persistence.bundle import Bundle
+from plum.knowledge_provider import NotKnown
 from aiida.workflows2.process import Process, ProcessSpec
 from aiida.workflows2.defaults import registry
 from plum.engine.execution_engine import Future
@@ -184,8 +185,12 @@ class _ResultToContext(WaitOn):
 
     def is_ready(self):
         # Check all the processes have finished
-        all_done = all(registry.has_finished(pid) for pid
-                       in self._to_assign.itervalues())
+        try:
+            all_done = all(registry.has_finished(pid)
+                           for pid in self._to_assign.itervalues())
+        except NotKnown:
+            raise WaitOnError("Could not determine if processes are finished.")
+
         if all_done:
             for key, pid in self._to_assign.iteritems():
                 self._ready_values[key] = registry.get_outputs(pid)

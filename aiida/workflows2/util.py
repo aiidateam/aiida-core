@@ -13,8 +13,30 @@ PROCESS_LABEL_ATTR = '_process_label'
 
 
 class ProcessStack(object):
+    """
+    Keep track of the per-thread call stack of processes.
+    """
     # Use thread-local storage for the stack
     _thread_local = local()
+
+    @classmethod
+    def get_active_process_id(cls):
+        """
+        Get the pid of the process at the top of the stack
+
+        :return: The pid
+        """
+        return cls.top().pid
+
+    @classmethod
+    def get_active_process_calc_node(cls):
+        """
+        Get the calculation node of the process at the top of the stack
+
+        :return: The calculation node
+        :rtype: :class:`aiida.orm.calculation.job.JobCalculation`
+        """
+        return cls.top().calc
 
     @classmethod
     def top(cls):
@@ -47,6 +69,14 @@ class ProcessStack(object):
 
     @classmethod
     def pop(cls, process=None, pid=None):
+        """
+        Pop a process from the stack.  To make sure the stack is not corrupted
+        the process instance or pid of the calling process should be supplied
+        so we can verify that is really is top of the stack.
+
+        :param process: The process instance
+        :param pid: The process id.
+        """
         assert process is not None or pid is not None
         if process is not None:
             assert process is cls.top(),\

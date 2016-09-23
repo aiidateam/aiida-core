@@ -13,10 +13,11 @@ import ase
 from aiida.workflows2.run import async
 from aiida.orm import DataFactory
 from aiida.orm.data.base import Float, Str
-from aiida.workflows2.workfunction import workfunction
 from aiida.workflows2.run import async
-from examples.workflows2.common import run_scf
 from aiida.workflows2.defaults import registry
+from aiida.workflows2.util import ProcessStack
+from aiida.workflows2.workfunction import workfunction
+from examples.workflows2.common import run_scf
 
 @workfunction
 def create_diamond_fcc(element,alat):
@@ -55,7 +56,8 @@ def rescale(structure, scale):
 
 @workfunction
 def calc_energies(codename, pseudo_family):
-    print("Calculating energies, my pk is '{}'".format(registry.current_pid))
+    print("Calculating energies, my pk is '{}'".format(
+        ProcessStack.get_active_process_id()))
 
     futures = {}
     for element, scale in [("Si", 5.41)]:

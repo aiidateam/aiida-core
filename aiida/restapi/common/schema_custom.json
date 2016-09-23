@@ -1,0 +1,126 @@
+{
+    "fields": {
+        "description": {
+            "help_text": "short description of the Computer"
+        },
+        "enabled": {
+            "help_text": "Is the computer enabled to run jobs"
+        },
+        "hostname": {
+            "help_text": "Host name of the computer"
+        },
+        "id": {
+            "help_text": "Id of the object"
+        },
+        "metadata": {
+            "help_text": "Additional metadata information of the computer"
+        },
+        "name": {
+            "help_text": "Name of the computer"
+        },
+        "scheduler_type": {
+            "help_text": "Scheduler type",
+            "valid_choices": {
+                "direct": {
+                    "doc": "Support for the direct execution bypassing schedulers."
+                },
+                "pbsbaseclasses.PbsBaseClass": {
+                    "doc": "Base class with support for the PBSPro scheduler"
+                },
+                "pbspro": {
+                    "doc": "Subclass to support the PBSPro scheduler"
+                },
+                "sge": {
+                    "doc": "Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...)"
+                },
+                "slurm": {
+                    "doc": "Support for the SLURM scheduler (http://slurm.schedmd.com/)."
+                },
+                "torque": {
+                    "doc": "Subclass to support the Torque scheduler.."
+                }
+            }
+        },
+        "transport_params": {
+            "help_text": "Transport Parameters"
+        },
+        "transport_type": {
+            "help_text": "Transport Type",
+            "valid_choices": {
+                "local": {
+                    "doc": "Support copy and command execution on the same host on which AiiDA is running via direct file copy and execution commands."
+                },
+                "ssh": {
+                    "doc": "Support connection, command execution and data transfer to remote computers via SSH+SFTP."
+                }
+            }
+        },
+      "label": {},
+      "type": {},
+      "uuid": {},
+      "ctime": {},
+      "mtime": {},
+      "state": {},
+      "first_name": {},
+      "last_name": {},
+      "email": {},
+      "institution": {},
+      "date_joined": {},
+      "last_login": {},
+      "is_active": {},
+      "user_id": {}
+    },
+    "ordering": [
+        "id",
+        "name",
+        "hostname",
+        "description",
+        "transport_type",
+        "scheduler_type",
+        "enabled",
+        "uuid",
+        "ctime",
+        "mtime"
+    ],
+  "columns": {
+    "nodes": [
+      "id",
+      "label",
+      "type",
+      "state",
+      "ctime",
+      "mtime",
+      "uuid"
+    ],
+    "groups": [
+      "id",
+      "name",
+      "type",
+      "description",
+      "user_id",
+      "uuid"
+    ],
+    "computers": [
+      "id",
+      "name",
+      "hostname",
+      "description",
+      "metadata",
+      "enabled",
+      "scheduler_type",
+      "transport_type",
+      "transport_params",
+      "uuid"
+    ],
+    "users": [
+      "id",
+      "first_name",
+      "last_name",
+      "email",
+      "institution",
+      "date_joined",
+      "last_login",
+      "is_active"
+    ]
+  }
+}

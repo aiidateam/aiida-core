@@ -131,3 +131,4 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
         return Workflow.get_subclass_from_pk(pk)
     else:
         return Workflow.get_subclass_from_uuid(uuid)
+

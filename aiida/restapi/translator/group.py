@@ -1,5 +1,6 @@
 
 from aiida.restapi.translator.base import BaseTranslator
+from aiida.restapi.common.config import custom_schema
 
 class GroupTranslator(BaseTranslator):
     """
@@ -41,17 +42,10 @@ class GroupTranslator(BaseTranslator):
 
     """
     _aiida_type = "Group"
-    _qb_type = "group"
+    _qb_type = "group.Group."
     _qb_label = "groups"
     _result_type = _qb_label
-    _default_projections = [ 'id',
-                    'name',
-                    'type',
-                    'description',
-                    #'time',
-                    'user_id',
-                    'uuid'
-                  ]
+    _default_projections = custom_schema['columns'][_qb_label]
 
     def __init__(self):
         """

@@ -1,5 +1,5 @@
-
 from aiida.restapi.translator.base import BaseTranslator
+from aiida.restapi.common.config import custom_schema
 
 class ComputerTranslator(BaseTranslator):
     """
@@ -41,19 +41,10 @@ class ComputerTranslator(BaseTranslator):
 
     """
     _aiida_type = "Computer"
-    _qb_type = "computer"
+    _qb_type = "computer.Computer."
     _qb_label = "computers"
     _result_type = _qb_label
-    _default_projections = [ 'id',
-                    'name',
-                    'hostname',
-                    'description',
-                    'enabled',
-                    'scheduler_type',
-                    'transport_type',
-                    'transport_params',
-                    'uuid'
-                  ]
+    _default_projections = custom_schema['columns'][_qb_label]
 
     def __init__(self):
         """

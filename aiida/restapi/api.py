@@ -48,6 +48,8 @@ def error_handler(error):
 api.add_resource(Computer,
                  # supported urls
                  '/computers/',
+                 '/computers/schema/',
+                 '/computers/statistics/',
                  '/computers/page/',
                  '/computers/page/<int:page>/',
                  '/computers/<int:pk>/',
@@ -55,6 +57,8 @@ api.add_resource(Computer,
 
 api.add_resource(Node,
                  '/nodes/',
+                 '/nodes/schema/',
+                 '/nodes/statistics/',
                  '/nodes/page/',
                  '/nodes/page/<int:page>/',
                  '/nodes/<int:pk>/',
@@ -70,6 +74,8 @@ api.add_resource(Node,
 
 api.add_resource(Calculation,
                  '/calculations/',
+                 '/calculations/schema/',
+                 '/calculations/statistics/',
                  '/calculations/page/',
                  '/calculations/page/<int:page>/',
                  '/calculations/<int:pk>/',
@@ -85,6 +91,8 @@ api.add_resource(Calculation,
 
 api.add_resource(Data,
                  '/data/',
+                 '/data/schema/',
+                 '/data/statistics/',
                  '/data/page/',
                  '/data/page/<int:page>',
                  '/data/<int:pk>/',
@@ -100,6 +108,8 @@ api.add_resource(Data,
 
 api.add_resource(Code,
                  '/codes/',
+                 '/codes/schema/',
+                 '/codes/statistics/',
                  '/codes/page/',
                  '/codes/page/<int:page>/',
                  '/codes/<int:pk>/',
@@ -115,6 +125,8 @@ api.add_resource(Code,
 
 api.add_resource(User,
                  '/users/',
+                 '/users/schema/',
+                 '/users/statistics/',
                  '/users/page/',
                  '/users/page/<int:page>/',
                  '/users/<int:pk>/',
@@ -122,10 +134,14 @@ api.add_resource(User,
 
 api.add_resource(Group,
                  '/groups/',
+                 '/groups/schema/',
+                 '/groups/statistics/',
                  '/groups/page/',
                  '/groups/page/<int:page>/',
                  '/groups/<int:pk>/',
                  strict_slashes=False)
+
+
 
 
 # Standard boilerplate to run the app

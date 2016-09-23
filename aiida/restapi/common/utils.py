@@ -44,7 +44,7 @@ def parse_path(path_string):
 
     ## Pop out iteratively the "words" of the path until it is an empty list.
     ##  This way it should be easier to plug in more endpoint logic
-    # Object type
+    # Resource type
     resource_type = path.pop(0)
     if not path:
         return (resource_type, page, pk, query_type)
@@ -56,12 +56,19 @@ def parse_path(path_string):
         pass
     if not path:
         return (resource_type, page, pk, query_type)
-    # Result type (input, output, attributes, extras)
-    if path[0] == "io" or path[0] == "content":
+    # Result type (input, output, attributes, extras, schema)
+    if path[0] == 'schema':
+        query_type = path.pop(0)
+        if path:
+            raise RestInputValidationError("url requesting schema resources do not "
+                                       "admit further fields")
+        else:
+            return (resource_type, page, pk, query_type)
+    elif path[0] == "io" or path[0] == "content":
         foo = path.pop(0)
         query_type = path.pop(0)
-    if not path:
-        return (resource_type, page, pk, query_type)
+        if not path:
+            return (resource_type, page, pk, query_type)
     # Page (this has to be in any case the last field)
     if path[0] == "page":
         do_paginate = True
@@ -74,7 +81,8 @@ def parse_path(path_string):
             return (resource_type, page, pk, query_type)
 
 
-def validate_request(limit=None, offset=None, perpage=None, page=None):
+def validate_request(limit=None, offset=None, perpage=None, page=None,
+                     query_type=None, is_querystring_defined=False):
     """
     Performs various checks on the consistency of the request.
     Add here all the checks that you want to do, except validity of the page
@@ -97,6 +105,10 @@ def validate_request(limit=None, offset=None, perpage=None, page=None):
         raise RestValidationError("perpage key requires that a page is "
                                   "requested (i.e. the path must contain "
                                   "/page/)")
+    # 4. if resource_type=='schema'
+    if query_type == 'schema' and is_querystring_defined:
+        raise RestInputValidationError("schema requests do not allow "
+                                       "specifying a query string")
 
 
 def paginate(page, perpage, total_count):

@@ -7,6 +7,7 @@ from django.db.models import F
 from django.core.exceptions import ObjectDoesNotExist
 
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.implementation.django.utils import get_db_columns
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.utils import get_new_uuid
@@ -35,6 +36,11 @@ class Node(AbstractNode):
             raise NotExistent("UUID={} is not an instance of {}".format(
                 uuid, cls.__name__))
         return node
+
+    @staticmethod
+    def get_db_columns():
+        from aiida.backends.djsite.db.models import DbNode
+        return get_db_columns(DbNode)
 
     @classmethod
     def get_subclass_from_pk(cls, pk):

@@ -35,37 +35,58 @@ class BaseResource(Resource):
          nelist) = parse_query_string(query_string)
 
         ## Validate request
-        validate_request(limit=limit, offset=offset, perpage=perpage, page=page)
+        validate_request(limit=limit, offset=offset, perpage=perpage,
+                         page=page, query_type=query_type,
+                         is_querystring_defined=(bool(query_string)))
 
-        ## Set the query, and initialize qb object
-        self.trans.set_query(filters=filters, orders=orderby, pk=pk)
+        if query_type == 'schema':
 
-        ## Count results
-        total_count = self.trans.get_total_count()
+            ## Retrieve the schema
+            schema = self.trans.get_schema()
 
-        ## Pagination (if required)
-        if page is not None:
-            (limit, offset, rel_pages) = paginate(page, perpage, total_count)
-            self.trans.set_limit_offset(limit=limit, offset=offset)
-            headers = build_headers(rel_pages=rel_pages, url=request.url,
-                                    total_count=total_count)
+            ## Build response and return it
+            headers = build_headers(url=request.url, total_count=1)
+
+            data = dict(method=request.method,
+                        url=url,
+                        url_root=url_root,
+                        path=request.path,
+                        pk=pk,
+                        query_string=request.query_string,
+                        resource_type=resource_type,
+                        schema=schema)
+            return build_response(status=200, headers=headers, data=data)
+
         else:
-            self.trans.set_limit_offset(limit=limit, offset=offset)
-            headers = build_headers(url=request.url, total_count=total_count)
+            ## Set the query, and initialize qb object
+            self.trans.set_query(filters=filters, orders=orderby, pk=pk)
 
-        ## Retrieve results
-        results = self.trans.get_results()
+            ## Count results
+            total_count = self.trans.get_total_count()
 
-        ## Build response
-        data = dict(method=request.method,
-                    url=url,
-                    url_root=url_root,
-                    path=request.path,
-                    pk=pk,
-                    query_string=request.query_string,
-                    resource_type=resource_type,
-                    data=results)
-        return build_response(status=200, headers=headers, data=data)
+            ## Pagination (if required)
+            if page is not None:
+                (limit, offset, rel_pages) = paginate(page, perpage, total_count)
+                self.trans.set_limit_offset(limit=limit, offset=offset)
+                headers = build_headers(rel_pages=rel_pages, url=request.url,
+                                        total_count=total_count)
+            else:
+                self.trans.set_limit_offset(limit=limit, offset=offset)
+                headers = build_headers(url=request.url, total_count=total_count)
+
+            ## Retrieve results
+            results = self.trans.get_results()
+
+            ## Build response and return it
+            data = dict(method=request.method,
+                        url=url,
+                        url_root=url_root,
+                        path=request.path,
+                        pk=pk,
+                        query_string=request.query_string,
+                        resource_type=resource_type,
+                        data=results)
+            return build_response(status=200, headers=headers, data=data)
 
 
 class Node(Resource):
@@ -77,7 +98,7 @@ class Node(Resource):
 
     def get(self, **kwargs):
         """
-        Get method for the Calculation resource
+        Get method for the Node resource.
         :return:
         """
 
@@ -93,39 +114,61 @@ class Node(Resource):
          nelist) = parse_query_string(query_string)
 
         ## Validate request
-        validate_request(limit=limit, offset=offset, perpage=perpage, page=page)
+        validate_request(limit=limit, offset=offset, perpage=perpage,
+                         page=page, query_type=query_type,
+                         is_querystring_defined=(bool(query_string)))
 
-        ## Instantiate a translator and initialize it
-        self.trans.set_query(filters=filters, orders=orderby,
-                          query_type=query_type, pk=pk, alist=alist,
-                             nalist=nalist, elist=elist, nelist=nelist)
+        if query_type == 'schema':
 
-        ## Count results
-        total_count = self.trans.get_total_count()
+            ## Retrieve the schema
+            schema = self.trans.get_schema()
 
-        ## Pagination (if required)
-        if page is not None:
-            (limit, offset, rel_pages) = paginate(page, perpage, total_count)
-            self.trans.set_limit_offset(limit=limit, offset=offset)
-            headers = build_headers(rel_pages=rel_pages, url=request.url,
-                                    total_count=total_count)
+            ## Build response and return it
+            headers = build_headers(url=request.url, total_count=1)
+
+            data = dict(method=request.method,
+                        url=url,
+                        url_root=url_root,
+                        path=request.path,
+                        pk=pk,
+                        query_string=request.query_string,
+                        resource_type=resource_type,
+                        schema=schema)
+            return build_response(status=200, headers=headers, data=data)
+
         else:
-            self.trans.set_limit_offset(limit=limit, offset=offset)
-            headers = build_headers(url=request.url, total_count=total_count)
 
-        ## Retrieve results
-        results = self.trans.get_results()
+            ## Instantiate a translator and initialize it
+            self.trans.set_query(filters=filters, orders=orderby,
+                              query_type=query_type, pk=pk, alist=alist,
+                                 nalist=nalist, elist=elist, nelist=nelist)
 
-        ## Build response
-        data = dict(method=request.method,
-                    url=url,
-                    url_root=url_root,
-                    path=path,
-                    pk=pk,
-                    query_string=query_string,
-                    resource_type=resource_type,
-                    data=results)
-        return build_response(status=200, headers=headers, data=data)
+            ## Count results
+            total_count = self.trans.get_total_count()
+
+            ## Pagination (if required)
+            if page is not None:
+                (limit, offset, rel_pages) = paginate(page, perpage, total_count)
+                self.trans.set_limit_offset(limit=limit, offset=offset)
+                headers = build_headers(rel_pages=rel_pages, url=request.url,
+                                        total_count=total_count)
+            else:
+                self.trans.set_limit_offset(limit=limit, offset=offset)
+                headers = build_headers(url=request.url, total_count=total_count)
+
+            ## Retrieve results
+            results = self.trans.get_results()
+
+            ## Build response
+            data = dict(method=request.method,
+                        url=url,
+                        url_root=url_root,
+                        path=path,
+                        pk=pk,
+                        query_string=query_string,
+                        resource_type=resource_type,
+                        data=results)
+            return build_response(status=200, headers=headers, data=data)
 
 class Computer(BaseResource):
     def __init__(self):

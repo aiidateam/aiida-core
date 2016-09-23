@@ -1,10 +1,13 @@
-from aiida.common.exceptions import InputValidationError, InvalidOperation
-from aiida.restapi.caching import cache
-from aiida.restapi.common.config import CACHING_TIMEOUTS
+from aiida.common.exceptions import InputValidationError, InvalidOperation, ConfigurationError
+#from aiida.restapi.caching import cache
+#from aiida.restapi.common.config import CACHING_TIMEOUTS
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
-from aiida.restapi.common.config import LIMIT_DEFAULT
+from aiida.restapi.common.config import LIMIT_DEFAULT, custom_schema
+from aiida.common.utils import get_object_from_string, issingular
+from aiida.backends.settings import BACKEND
+from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
 
 class BaseTranslator(object):
@@ -52,6 +55,59 @@ class BaseTranslator(object):
         """
         return ""
 
+    @classmethod
+    def get_schema(cls):
+
+        # Derive the module and the class name
+        if cls._qb_type[-1] is '.':
+            class_string = 'aiida.orm.' + cls._qb_type[:-1]
+        else:
+            class_string = 'aiida.orm.' + cls._qb_type
+
+        # Load correspondent orm class
+        orm_class = get_object_from_string(class_string)
+
+        # Construct the json object to return it
+        basic_schema = orm_class.get_db_columns()
+        schema = dict([(k, basic_schema[k]) for k in cls._default_projections
+                              if k in basic_schema.keys()])
+
+        # Convert the related_tablevalues to the RESTAPI resources
+        # (orm class/db table ==> RESTapi resource)
+        def table2resource(table_name):
+            # TODO Consider ways to make this function backend independent (one
+            # idea would be to gro from table name to aiida class name which is
+            # univoque)
+            if BACKEND == BACKEND_DJANGO:
+                (spam, resource_name) = issingular(table_name[2:].lower())
+            elif BACKEND == BACKEND_SQLA:
+                (spam, resource_name) = issingular(table_name[5:])
+            elif BACKEND is None:
+                raise ConfigurationError("settings.BACKEND has not been set.\n"
+                                         "Hint: Have you called "
+                                         "aiida.load_dbenv?")
+            else:
+                raise ConfigurationError("Unknown settings.BACKEND: {}".format(
+                    BACKEND))
+            return resource_name
+
+        for k, v in schema.iteritems():
+
+            # Add custom fields to the column dictionaries
+            if k in custom_schema['fields'].keys():
+                schema[k].update(custom_schema['fields'][k])
+
+            # Convert python types values into strings
+            schema[k]['type']=str(schema[k]['type'])[7:-2]
+
+            # Construct the 'related resource' field from he 'related_table'
+            # field
+            if v['is_foreign_key'] == True:
+                schema[k]['related_resource'] = table2resource(
+                    schema[k].pop('related_table'))
+
+        return dict(columns=schema)
+
     def init_qb(self):
         """
         Initialize query builder object by means of _query_help
@@ -69,17 +125,19 @@ class BaseTranslator(object):
             raise InvalidOperation("query builder object has not been "
                                    "initialized.")
 
-    # def caching_method(self):
-    #     """
-    #     class method for caching. It is a wrapper of the flask_cache memoize
-    #     method. To be used as a decorator
-    #     :return: the flask_cache memoize method with the timeout kwarg
-    #     corrispondent to the class
-    #     """
-    #     return cache.memoize()
-    #
+            # def caching_method(self):
+            #     """
+            #     class method for caching. It is a wrapper of the
+            # flask_cache memoize
+            #     method. To be used as a decorator
+            #     :return: the flask_cache memoize method with the timeout kwarg
+            #     corrispondent to the class
+            #     """
+            #     return cache.memoize()
+            #
 
-#    @cache.memoize(timeout=CACHING_TIMEOUTS[self._qb_label])
+        #    @cache.memoize(timeout=CACHING_TIMEOUTS[self._qb_label])
+
     def get_total_count(self):
         """
         Returns the number of rows of the query
@@ -366,8 +424,8 @@ class BaseTranslator(object):
                 self._qb_label:
                     {
                         'id': {'==': pk}
-                        }
-                }
+                    }
+            }
         }
 
         qb_base = QueryBuilder(**query_help_base)

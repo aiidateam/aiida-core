@@ -3,6 +3,7 @@
 from aiida.orm.implementation.general.user import AbstractUser
 from aiida.backends.djsite.db.models import DbUser
 from aiida.utils.email import normalize_email
+from aiida.orm.implementation.django.utils import get_db_columns
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -45,6 +46,10 @@ class User(AbstractUser):
         else:
             raise ValueError("Only dbuser & email are accepted as arguments")
 
+    @staticmethod
+    def get_db_columns():
+        return get_db_columns(DbUser)
+
     @property
     def pk(self):
         return self._dbuser.pk
@@ -56,6 +61,7 @@ class User(AbstractUser):
     @property
     def to_be_stored(self):
         return self._dbuser.pk is None
+
 
     def save(self):
         if not self.to_be_stored:

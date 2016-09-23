@@ -25,7 +25,8 @@ from aiida.common.lang import override
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
-from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
+from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
+    get_attr, get_db_columns
 
 import aiida.orm.autogroup
 
@@ -87,6 +88,11 @@ class Node(AbstractNode):
             # Automatically set all *other* attributes, if possible, otherwise
             # stop
             self._set_with_defaults(**kwargs)
+
+    @staticmethod
+    def get_db_columns():
+        return get_db_columns(DbNode)
+
 
     @classmethod
     def get_subclass_from_uuid(cls, uuid):

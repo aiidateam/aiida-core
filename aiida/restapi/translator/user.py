@@ -1,5 +1,5 @@
-
 from aiida.restapi.translator.base import BaseTranslator
+from aiida.restapi.common.config import custom_schema
 
 class UserTranslator(BaseTranslator):
     """
@@ -41,19 +41,10 @@ class UserTranslator(BaseTranslator):
 
     """
     _aiida_type = "User"
-    _qb_type = "user"
+    _qb_type = "user.User."
     _qb_label= "users"
     _result_type = _qb_label
-    _default_projections = [ 'id',
-                    'first_name',
-                    'last_name',
-                    'email',
-                    'institution',
-                    'date_joined',
-                    'last_login',
-                    #'is_superuser',
-                    'is_active',
-                  ]
+    _default_projections = custom_schema['columns'][_qb_label]
 
     def __init__(self):
         """

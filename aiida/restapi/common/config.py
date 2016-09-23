@@ -11,7 +11,7 @@ PREFIX="/api/v2"
 #PROPAGATE_EXCEPTIONS: True/False serve REST exceptions to the client (and not a
 # generic 500: Internal Server Error exception)
 APP_CONFIG = {
-              'DEBUG': False,
+              'DEBUG': True,
               'PROPAGATE_EXCEPTIONS': True,
               }
 
@@ -36,3 +36,10 @@ CACHING_TIMEOUTS = {
     'groups': 10,
     'codes': 10,
 }
+
+#Schema customization
+#TODO add more verbose description
+import os
+schema_custom_config = os.path.join(os.path.split(__file__)[0], 'schema_custom.json')
+import ultrajson as uj
+custom_schema = uj.load(open(schema_custom_config))

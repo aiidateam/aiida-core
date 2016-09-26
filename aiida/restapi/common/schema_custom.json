@@ -12,9 +12,6 @@
         "id": {
             "help_text": "Id of the object"
         },
-        "metadata": {
-            "help_text": "Additional metadata information of the computer"
-        },
         "name": {
             "help_text": "Name of the computer"
         },
@@ -55,20 +52,20 @@
                 }
             }
         },
-      "label": {},
-      "type": {},
-      "uuid": {},
-      "ctime": {},
-      "mtime": {},
-      "state": {},
-      "first_name": {},
-      "last_name": {},
-      "email": {},
-      "institution": {},
-      "date_joined": {},
-      "last_login": {},
-      "is_active": {},
-      "user_id": {}
+      "label": {"help_text": ""},
+      "type": {"help_text": ""},
+      "uuid": {"help_text": ""},
+      "ctime": {"help_text": ""},
+      "mtime": {"help_text": ""},
+      "state": {"help_text": ""},
+      "first_name": {"help_text": ""},
+      "last_name": {"help_text": ""},
+      "email": {"help_text": ""},
+      "institution": {"help_text": ""},
+      "date_joined": {"help_text": ""},
+      "last_login": {"help_text": ""},
+      "is_active": {"help_text": ""},
+      "user_id": {"help_text": ""}
     },
   "columns": {
     "nodes": [
@@ -94,7 +91,6 @@
       "name",
       "hostname",
       "description",
-      "metadata",
       "enabled",
       "scheduler_type",
       "transport_type",

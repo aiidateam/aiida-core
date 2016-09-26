@@ -40,11 +40,18 @@ class UserTranslator(BaseTranslator):
     data = ct.formatted_result(qb)
 
     """
-    _aiida_type = "User"
-    _db_type = "user"
-    _qb_label= "users"
-    _result_type = _qb_label
-    _default_projections = custom_schema['columns'][_qb_label]
+
+    # A label associated to the present class (coincides with the resource name)
+    __label__ = "users"
+    # The string name of the AiiDA class one-to-one associated to the present
+    #  class
+    _aiida_type = "user.User"
+    # The string associated to the AiiDA class in the query builder lexicon
+    _qb_type = 'user'
+
+    _result_type = __label__
+
+    _default_projections = custom_schema['columns'][__label__]
 
     def __init__(self):
         """

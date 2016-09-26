@@ -8,72 +8,22 @@ from aiida.restapi.common.config import CACHING_TIMEOUTS, custom_schema
 
 class NodeTranslator(BaseTranslator):
     """
-    It prepares the query_help from user inputs which later will be
-    passed to QueryBuilder to get either the list of Nodes or the
-    details of one node
-
-    Supported REST requests:
-    - http://base_url/node?filters
-    - http://base_url/node/pk
-    - http://base_url/node/pk/io/inputs
-    - http://base_url/node/pk/io/outputs
-    - http://base_url/node/pk/content/attributes
-    - http://base_url/node/pk/content/extras
-
-    **Please NOTE that filters are allowed ONLY in first resuest to
-    get nodes list
-
-    Pk         : pk of the node
-    Filters    : filters dictionary to apply on
-                 nodes list. Not applicable to single node.
-    order_by   : used to sort nodes list. Not applicable to
-                 single node
-    end_points : io/inputs, io/outputs, content/attributes, content/extras
-    query_help : (TODO)
-    kwargs: extra parameters if any.
-
-    **Return: list of nodes or details of single node
-
-    EXAMPLES:
-    ex1:: get single node details
-    ct = NodeTranslator()
-    ct.set_filters(pk)
-    _query_help = ct.get__query_help()
-    qb = QueryBuilder(**_query_help)
-    data = ct.formatted_result(qb)
-
-    ex2:: get list of nodes (use filters)
-    ct = NodeTranslator()
-    ct.set_filters(filters_dict)
-    _query_help = ct.get__query_help()
-    qb = QueryBuilder(**_query_help)
-    data = ct.get_formatted_result(qb)
-
-    ex3:: get node inputs
-    ct = NodeTranslator()
-    ct.get_inputs(pk)
-    results_type = "inputs"
-    ct.set_filters(filters_dict)
-    _query_help = ct.get__query_help()
-    qb = QueryBuilder(**_query_help)
-    data = ct.get_formatted_result(qb, results_type)
-
-    ex4:: get node outputs
-    ct = NodeTranslator()
-    ct.get_outputs(pk)
-    results_type = "outputs"
-    ct.set_filters(filters_dict)
-    _query_help = ct.get__query_help()
-    qb = QueryBuilder(**_query_help)
-    data = ct.get_formatted_result(qb, results_type)
+    TODO add docstring
 
     """
-    _aiida_type = "Node"
-    _db_type = "node.Node."
-    _qb_label = "nodes"
-    _result_type = _qb_label
+
+    # A label associated to the present class (coincides with the resource name)
+    __label__ = "nodes"
+    # The string name of the AiiDA class one-to-one associated to the present
+    #  class
+    _aiida_type = "node.Node"
+    # The string associated to the AiiDA class in the query builder lexicon
+    _qb_type = _aiida_type + '.'
+
+    _result_type = __label__
+
     _content_type = None
-    _default_projections = custom_schema['columns'][_qb_label]
+    _default_projections = custom_schema['columns'][__label__]
     _alist = None
     _nalist = None
     _elist = None
@@ -115,12 +65,12 @@ class NodeTranslator(BaseTranslator):
                                        "}".format(query_type))
 
         ## Add input/output relation to the query help
-        if self._result_type is not self._qb_label:
+        if self._result_type is not self.__label__:
             self._query_help["path"].append(
                 {
                 "type": "node.Node.",
                 "label": self._result_type,
-                self._result_type: self._qb_label
+                self._result_type: self.__label__
                 })
 
 
@@ -160,7 +110,7 @@ class NodeTranslator(BaseTranslator):
 
         ## TODO this actually works, but the logic is a little bit obscure.
         # Make it clearer
-        if self._result_type is not self._qb_label:
+        if self._result_type is not self.__label__:
             projections = self._default_projections
 
         super(NodeTranslator, self).set_query(filters=filters,

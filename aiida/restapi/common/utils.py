@@ -6,6 +6,8 @@ from flask.json import JSONEncoder
 from aiida.restapi.common.config import PERPAGE_DEFAULT, PREFIX
 from datetime import datetime
 
+pk_dbsynonym = 'id'
+
 def strip_prefix(path):
     if path.startswith(PREFIX):
         return path[len(PREFIX):]

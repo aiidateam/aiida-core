@@ -40,11 +40,18 @@ class ComputerTranslator(BaseTranslator):
     data = ct.formatted_result(qb)
 
     """
-    _aiida_type = "Computer"
-    _db_type = "computer"
-    _qb_label = "computers"
-    _result_type = _qb_label
-    _default_projections = custom_schema['columns'][_qb_label]
+
+    # A label associated to the present class (coincides with the resource name)
+    __label__ = "computers"
+    # The string name of the AiiDA class one-to-one associated to the present
+    #  class
+    _aiida_type = "computer.Computer"
+    # The string associated to the AiiDA class in the query builder lexicon
+    _qb_type = 'computer'
+
+    _result_type = __label__
+
+    _default_projections = custom_schema['columns'][__label__]
 
     def __init__(self):
         """

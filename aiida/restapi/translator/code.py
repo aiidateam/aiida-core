@@ -63,10 +63,16 @@ class CodeTranslator(NodeTranslator):
     data = ct.get_formatted_result(qb, results_type)
 
     """
-    _aiida_type = "Code"
-    _db_type = "code.Code."
-    _qb_label = "codes"
-    _result_type = _qb_label
+
+    # A label associated to the present class (coincides with the resource name)
+    __label__ = "codes"
+    # The string name of the AiiDA class one-to-one associated to the present
+    #  class
+    _aiida_type = "code.Code"
+    # The string associated to the AiiDA class in the query builder lexicon
+    _qb_type = _aiida_type + '.'
+
+    _result_type = __label__
 
     def __init__(self):
         """

@@ -4,6 +4,7 @@ from aiida.common.exceptions import InputValidationError, InvalidOperation, Conf
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
+from aiida.restapi.common.utils import pk_dbsynonym
 from aiida.restapi.common.config import LIMIT_DEFAULT, custom_schema
 from aiida.common.utils import get_object_from_string, issingular
 from aiida.backends.settings import BACKEND
@@ -16,15 +17,20 @@ class BaseTranslator(object):
     required to build QueryBuilder object
     """
 
+    # A label associated to the present class
+    __label__ = None
+    # The string name of the AiiDA class one-to-one associated to the present
+    #  class
     _aiida_type = None
-    _db_type = None
-    _qb_label = None
-    _result_type = _qb_label
+    # The string associated to the AiiDA class in the query builder lexicon
+    _qb_type = None
+
+    _result_type = __label__
     _default_projections = []
-    _pk_dbsynonym = "id"
     _is_qb_initialized = False
     _is_pk_query = None
     _total_count = None
+
 
     def __init__(self):
         """
@@ -34,8 +40,8 @@ class BaseTranslator(object):
         # basic query_help object
         self._query_help = {
             "path": [{
-                "type": self._aiida_type,
-                "label": self._qb_label
+                "type": self._qb_type,
+                "label": self.__label__
             }],
             "filters": {},
             "project": {},
@@ -58,13 +64,10 @@ class BaseTranslator(object):
     @classmethod
     def get_schema(cls):
 
-        # Derive the module and the class name from _aiida_type
-        class_string = 'aiida.orm.' + cls._aiida_type.lower() + '.' + cls._aiida_type
+        # Construct the full class string
+        class_string = 'aiida.orm.' + cls._aiida_type
 
-        # if cls._db_type[-1] is '.':
-        #     class_string = 'aiida.orm.' + cls._db_type[:-1]
-        # else:
-        #     class_string = 'aiida.orm.' + cls._db_type
+        print class_string
 
         # Load correspondent orm class
         orm_class = get_object_from_string(class_string)
@@ -102,7 +105,7 @@ class BaseTranslator(object):
             # Convert python types values into strings
             schema[k]['type']=str(schema[k]['type'])[7:-2]
 
-            # Construct the 'related resource' field from he 'related_table'
+            # Construct the 'related resource' field from the 'related_table'
             # field
             if v['is_foreign_key'] == True:
                 schema[k]['related_resource'] = table2resource(
@@ -138,7 +141,7 @@ class BaseTranslator(object):
             #     return cache.memoize()
             #
 
-        #    @cache.memoize(timeout=CACHING_TIMEOUTS[self._qb_label])
+        #    @cache.memoize(timeout=CACHING_TIMEOUTS[self.__label__])
 
     def get_total_count(self):
         """
@@ -173,7 +176,7 @@ class BaseTranslator(object):
                         self._query_help["filters"][tag] = {}
                         for filter_key, filter_value in tag_filters.iteritems():
                             if filter_key == "pk":
-                                filter_key = self._pk_dbsynonym
+                                filter_key = pk_dbsynonym
                             self._query_help["filters"][tag][filter_key] \
                                 = filter_value
         else:
@@ -197,7 +200,7 @@ class BaseTranslator(object):
 
         :return: None
         """
-        self.set_projections({self._qb_label: self._default_projections})
+        self.set_projections({self.__label__: self._default_projections})
 
     def set_projections(self, projections):
         """
@@ -250,7 +253,7 @@ class BaseTranslator(object):
                 else:
                     order_dict[column] = 'asc'
             if order_dict.has_key('pk'):
-                order_dict[self._pk_dbsynonym] = order_dict.pop('pk')
+                order_dict[pk_dbsynonym] = order_dict.pop('pk')
             return order_dict
 
         ## Assign orderby field query_help
@@ -273,7 +276,7 @@ class BaseTranslator(object):
         # for pk_query
         if pk is not None:
             self._is_pk_query = True
-            if self._result_type == self._qb_label and len(filters) > 0:
+            if self._result_type == self.__label__ and len(filters) > 0:
                 raise RestInputValidationError("selecting a specific pk does "
                                                "not "
                                                "allow to specify filters")
@@ -281,13 +284,13 @@ class BaseTranslator(object):
                 raise RestValidationError(
                     "either the selected pk does not exist "
                     "or the corresponding object is not of "
-                    "type {}".format(self._aiida_type))
+                    "type aiida.orm.{}".format(self._aiida_type))
             else:
-                tagged_filters[self._qb_label] = {'id': {'==': pk}}
-                if self._result_type is not self._qb_label:
+                tagged_filters[self.__label__] = {'id': {'==': pk}}
+                if self._result_type is not self.__label__:
                     tagged_filters[self._result_type] = filters
         else:
-            tagged_filters[self._qb_label] = filters
+            tagged_filters[self.__label__] = filters
 
         ## Add filters
         self.set_filters(tagged_filters)
@@ -381,7 +384,7 @@ class BaseTranslator(object):
         elif self._result_type == 'output_of':
             return {'outputs': results}
         else:
-            return {self._qb_label: results}
+            return {self.__label__: results}
 
     def get_results(self):
         """
@@ -420,12 +423,12 @@ class BaseTranslator(object):
         query_help_base = {
             'path': [
                 {
-                    'type': self._db_type,
-                    'label': self._qb_label,
+                    'type': self._qb_type,
+                    'label': self.__label__,
                 },
             ],
             'filters': {
-                self._qb_label:
+                self.__label__:
                     {
                         'id': {'==': pk}
                     }

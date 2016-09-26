@@ -76,3 +76,4 @@ flask==0.10.1
 flask_restful==0.3.5
 flask-cors==3.0.1
 pyparsing==2.1.8
+pattern==2.6

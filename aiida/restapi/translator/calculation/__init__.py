@@ -72,10 +72,16 @@ class CalculationTranslator(NodeTranslator):
     data = ct.get_formatted_result(qb, results_type)
 
     """
-    _aiida_type = "Calculation"
-    _db_type = "calculation.Calculation."
-    _qb_label = "calculations"
-    _result_type = _qb_label
+
+    # A label associated to the present class (coincides with the resource name)
+    __label__ = "calculations"
+    # The string name of the AiiDA class one-to-one associated to the present
+    #  class
+    _aiida_type = "calculation.Calculation"
+    # The string associated to the AiiDA class in the query builder lexicon
+    _qb_type = _aiida_type + '.'
+
+    _result_type = __label__
 
     def __init__(self):
         """

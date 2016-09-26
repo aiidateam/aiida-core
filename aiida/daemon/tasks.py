@@ -115,21 +115,21 @@ def workflow_stepper(): # daemon for legacy workflow
     # RUDIMENTARY way to check if this task is already running (to avoid acting
     # again and again on the same workflow steps)
     try:
-        if (get_last_daemon_timestamp('workflow',when='stop')
-            -get_last_daemon_timestamp('workflow',when='start'))>timedelta(0):
-            set_daemon_timestamp(task_name='workflow', when='start')
-            # the previous wf manager stopped already -> we can run a new one
-            print "aiida.daemon.tasks.workflowmanager: running execute_steps"
-            execute_steps()
-            set_daemon_timestamp(task_name='workflow', when='stop')
-        else:
-            print "aiida.daemon.tasks.workflowmanager: execute_steps already running"
+        stepper_is_running = (get_last_daemon_timestamp('workflow',when='stop')
+            -get_last_daemon_timestamp('workflow',when='start'))<=timedelta(0)
     except TypeError:
-        # when timestamps are None (undefined)
+        # when some timestamps are None (undefined)
+        stepper_is_running = (get_last_daemon_timestamp('workflow',when='stop')
+            is None and get_last_daemon_timestamp('workflow',when='start') is not None)
+        
+    if not stepper_is_running:
         set_daemon_timestamp(task_name='workflow', when='start')
+        # the previous wf manager stopped already -> we can run a new one
         print "aiida.daemon.tasks.workflowmanager: running execute_steps"
         execute_steps()
         set_daemon_timestamp(task_name='workflow', when='stop')
+    else:
+        print "aiida.daemon.tasks.workflowmanager: execute_steps already running"
        
 
 def manual_tick_all():

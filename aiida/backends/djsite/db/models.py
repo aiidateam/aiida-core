@@ -1677,7 +1677,7 @@ class DbWorkflow(m.Model):
         return Workflow.get_subclass_from_dbnode(self)
 
     def set_state(self, _state):
-        self.state = _state;
+        self.state = _state
         self.save()
 
     def set_script_md5(self, _md5):
@@ -1766,7 +1766,7 @@ class DbWorkflow(m.Model):
             raise ValueError("Error retrieving results: {0}".format(name))
 
     def clear_report(self):
-        self.report = None
+        self.report = ''
         self.save()
 
     def append_to_report(self, _text):
@@ -1774,7 +1774,7 @@ class DbWorkflow(m.Model):
         import datetime
 
         now = datetime.datetime.utcnow().replace(tzinfo=utc)
-        self.report += str(now) + "] " + _text + "\n";
+        self.report += str(now) + "] " + _text + "\n"
         self.save()
 
     def get_calculations(self):
@@ -1930,7 +1930,7 @@ class DbWorkflowStep(m.Model):
         self.save()
 
     def set_state(self, _state):
-        self.state = _state;
+        self.state = _state
         self.save()
 
     def reinitialize(self):

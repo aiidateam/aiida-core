@@ -69,7 +69,7 @@ class NodeTranslator(BaseTranslator):
 
     """
     _aiida_type = "Node"
-    _qb_type = "node.Node."
+    _db_type = "node.Node."
     _qb_label = "nodes"
     _result_type = _qb_label
     _content_type = None

@@ -17,7 +17,7 @@ class BaseTranslator(object):
     """
 
     _aiida_type = None
-    _qb_type = None
+    _db_type = None
     _qb_label = None
     _result_type = _qb_label
     _default_projections = []
@@ -34,7 +34,7 @@ class BaseTranslator(object):
         # basic query_help object
         self._query_help = {
             "path": [{
-                "type": self._qb_type,
+                "type": self._aiida_type,
                 "label": self._qb_label
             }],
             "filters": {},
@@ -58,11 +58,13 @@ class BaseTranslator(object):
     @classmethod
     def get_schema(cls):
 
-        # Derive the module and the class name
-        if cls._qb_type[-1] is '.':
-            class_string = 'aiida.orm.' + cls._qb_type[:-1]
-        else:
-            class_string = 'aiida.orm.' + cls._qb_type
+        # Derive the module and the class name from _aiida_type
+        class_string = 'aiida.orm.' + cls._aiida_type.lower() + '.' + cls._aiida_type
+
+        # if cls._db_type[-1] is '.':
+        #     class_string = 'aiida.orm.' + cls._db_type[:-1]
+        # else:
+        #     class_string = 'aiida.orm.' + cls._db_type
 
         # Load correspondent orm class
         orm_class = get_object_from_string(class_string)
@@ -405,7 +407,9 @@ class BaseTranslator(object):
 
     def _check_pk_validity(self, pk):
         """
-        Checks whether a pk corresponds to an object of the expected type
+        Checks whether a pk corresponds to an object of the expected type,
+        whenever type is a valid column of the database (ex. for nodes,
+        but not for users)_
         :param pk: (integer) ok to check
         :return: True or False
         """
@@ -416,7 +420,7 @@ class BaseTranslator(object):
         query_help_base = {
             'path': [
                 {
-                    'type': self._qb_type,
+                    'type': self._db_type,
                     'label': self._qb_label,
                 },
             ],

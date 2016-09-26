@@ -41,7 +41,7 @@ class UserTranslator(BaseTranslator):
 
     """
     _aiida_type = "User"
-    _qb_type = "user.User."
+    _db_type = "user"
     _qb_label= "users"
     _result_type = _qb_label
     _default_projections = custom_schema['columns'][_qb_label]

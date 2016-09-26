@@ -73,7 +73,7 @@ class CalculationTranslator(NodeTranslator):
 
     """
     _aiida_type = "Calculation"
-    _qb_type = "calculation.Calculation."
+    _db_type = "calculation.Calculation."
     _qb_label = "calculations"
     _result_type = _qb_label
 

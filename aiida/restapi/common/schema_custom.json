@@ -70,18 +70,6 @@
       "is_active": {},
       "user_id": {}
     },
-    "ordering": [
-        "id",
-        "name",
-        "hostname",
-        "description",
-        "transport_type",
-        "scheduler_type",
-        "enabled",
-        "uuid",
-        "ctime",
-        "mtime"
-    ],
   "columns": {
     "nodes": [
       "id",
@@ -90,7 +78,8 @@
       "state",
       "ctime",
       "mtime",
-      "uuid"
+      "uuid",
+      "user_id"
     ],
     "groups": [
       "id",

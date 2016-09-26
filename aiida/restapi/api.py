@@ -23,7 +23,7 @@ cors = CORS(app, resources={r"/api/v2/*": {"origins": "*"}})
 
 ## Error handling for error raised for invalid urls (not for non existing
 # resources!)
-@app.errorhandler(Exception)
+@app.errorhandler(RestInputValidationError)
 def error_handler(error):
     if isinstance(error, RestValidationError):
         response = jsonify({'message': error.message})
@@ -35,13 +35,13 @@ def error_handler(error):
         return response
     # Generic server-side error (not to make the api crash if an unhandled
     # exception is raised. Caution is never enough!!)
-    else:
-#        response = jsonify({'message': 'Internal server error'})
-        response = jsonify({'message': 'Internal server error. The original '
-                                       'message was: \"{}\"'.format(
-            error.message)})
-        response.status_code = 500
-        return response
+#     else:
+# #        response = jsonify({'message': 'Internal server error'})
+#         response = jsonify({'message': 'Internal server error. The original '
+#                                        'message was: \"{}\"'.format(
+#             error.message)})
+#         response.status_code = 500
+#         return response
 
 
 ## Add resources to the api

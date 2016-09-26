@@ -39,6 +39,7 @@ class BaseResource(Resource):
                          page=page, query_type=query_type,
                          is_querystring_defined=(bool(query_string)))
 
+        ## Treat the schema case which does not imply access to the DataBase
         if query_type == 'schema':
 
             ## Retrieve the schema
@@ -118,6 +119,7 @@ class Node(Resource):
                          page=page, query_type=query_type,
                          is_querystring_defined=(bool(query_string)))
 
+        ## Treat the schema case which does not imply access to the DataBase
         if query_type == 'schema':
 
             ## Retrieve the schema

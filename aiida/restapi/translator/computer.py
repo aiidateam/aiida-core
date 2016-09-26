@@ -41,7 +41,7 @@ class ComputerTranslator(BaseTranslator):
 
     """
     _aiida_type = "Computer"
-    _qb_type = "computer.Computer."
+    _db_type = "computer"
     _qb_label = "computers"
     _result_type = _qb_label
     _default_projections = custom_schema['columns'][_qb_label]

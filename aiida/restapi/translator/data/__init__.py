@@ -73,7 +73,7 @@ class DataTranslator(NodeTranslator):
 
     """
     _aiida_type = "Data"
-    _qb_type = "data.Data."
+    _db_type = "data.Data."
     _qb_label = "datas"
     _result_type = _qb_label
 

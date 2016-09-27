@@ -32,7 +32,7 @@ class BaseResource(Resource):
         ## Parse request
         (resource_type, page, pk, query_type) = parse_path(path)
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist) = parse_query_string(query_string)
+             nelist) = parse_query_string(query_string)
 
         ## Validate request
         validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -43,20 +43,9 @@ class BaseResource(Resource):
         if query_type == 'schema':
 
             ## Retrieve the schema
-            schema = self.trans.get_schema()
-
+            results = self.trans.get_schema()
             ## Build response and return it
             headers = build_headers(url=request.url, total_count=1)
-
-            data = dict(method=request.method,
-                        url=url,
-                        url_root=url_root,
-                        path=request.path,
-                        pk=pk,
-                        query_string=request.query_string,
-                        resource_type=resource_type,
-                        schema=schema)
-            return build_response(status=200, headers=headers, data=data)
 
         else:
             ## Set the query, and initialize qb object
@@ -78,16 +67,16 @@ class BaseResource(Resource):
             ## Retrieve results
             results = self.trans.get_results()
 
-            ## Build response and return it
-            data = dict(method=request.method,
-                        url=url,
-                        url_root=url_root,
-                        path=request.path,
-                        pk=pk,
-                        query_string=request.query_string,
-                        resource_type=resource_type,
-                        data=results)
-            return build_response(status=200, headers=headers, data=data)
+        ## Build response and return it
+        data = dict(method=request.method,
+		url=url,
+		url_root=url_root,
+		path=request.path,
+		pk=pk,
+		query_string=request.query_string,
+		resource_type=resource_type,
+		data=results)
+        return build_response(status=200, headers=headers, data=data)
 
 
 class Node(Resource):
@@ -96,6 +85,8 @@ class Node(Resource):
     def __init__(self):
         from aiida.restapi.translator.node import NodeTranslator
         self.trans = NodeTranslator()
+        from aiida.orm import Node
+        self.tclass = Node
 
     def get(self, **kwargs):
         """
@@ -123,23 +114,22 @@ class Node(Resource):
         if query_type == 'schema':
 
             ## Retrieve the schema
-            schema = self.trans.get_schema()
+            results = self.trans.get_schema()
 
             ## Build response and return it
             headers = build_headers(url=request.url, total_count=1)
 
-            data = dict(method=request.method,
-                        url=url,
-                        url_root=url_root,
-                        path=request.path,
-                        pk=pk,
-                        query_string=request.query_string,
-                        resource_type=resource_type,
-                        schema=schema)
-            return build_response(status=200, headers=headers, data=data)
+        elif query_type == "statistics":
+            (limit, offset, perpage, orderby, filters, alist, nalist, elist,
+                  nelist) = parse_query_string(query_string)
+            headers = build_headers(url=request.url, total_count=0)
+            if len(filters) > 0 :
+                usr = filters["user"]["=="]
+            else:
+                usr = []
+            results = self.trans.get_statistics(self.tclass, usr)
 
         else:
-
             ## Instantiate a translator and initialize it
             self.trans.set_query(filters=filters, orders=orderby,
                               query_type=query_type, pk=pk, alist=alist,
@@ -161,16 +151,16 @@ class Node(Resource):
             ## Retrieve results
             results = self.trans.get_results()
 
-            ## Build response
-            data = dict(method=request.method,
-                        url=url,
-                        url_root=url_root,
-                        path=path,
-                        pk=pk,
-                        query_string=query_string,
-                        resource_type=resource_type,
-                        data=results)
-            return build_response(status=200, headers=headers, data=data)
+        ## Build response
+        data = dict(method=request.method,
+                    url=url,
+                    url_root=url_root,
+                    path=path,
+                    pk=pk,
+                    query_string=query_string,
+                    resource_type=resource_type,
+                    data=results)
+        return build_response(status=200, headers=headers, data=data)
 
 class Computer(BaseResource):
     def __init__(self):
@@ -192,13 +182,19 @@ class Calculation(Node):
     def __init__(self):
         from aiida.restapi.translator.calculation import CalculationTranslator
         self.trans = CalculationTranslator()
+        from aiida.orm import Calculation
+        self.tclass = Calculation
 
 class Code(Node):
     def __init__(self):
         from aiida.restapi.translator.code import CodeTranslator
         self.trans = CodeTranslator()
+        from aiida.orm import Code
+        self.tclass = Code
 
 class Data(Node):
     def __init__(self):
         from aiida.restapi.translator.data import DataTranslator
         self.trans = DataTranslator()
+        from aiida.orm import Data
+        self.tclass = Data

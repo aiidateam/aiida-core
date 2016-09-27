@@ -59,4 +59,3 @@ class ComputerTranslator(BaseTranslator):
         Create the basic query_help
         """
         super(ComputerTranslator, self).__init__()
-

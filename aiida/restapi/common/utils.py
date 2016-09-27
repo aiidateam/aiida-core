@@ -121,6 +121,14 @@ def parse_path(path_string):
                 "admit further fields")
         else:
             return (resource_type, page, pk, query_type)
+    elif path[0] == 'statistics':
+        query_type = path.pop(0)
+        if path:
+            raise RestInputValidationError(
+                "url requesting statistics resources do not "
+                "admit further fields")
+        else:
+            return (resource_type, page, pk, query_type)
     elif path[0] == "io" or path[0] == "content":
         foo = path.pop(0)
         query_type = path.pop(0)
@@ -136,7 +144,6 @@ def parse_path(path_string):
         else:
             page = int(path.pop(0))
             return (resource_type, page, pk, query_type)
-
 
 def validate_request(limit=None, offset=None, perpage=None, page=None,
                      query_type=None, is_querystring_defined=False):
@@ -304,6 +311,7 @@ def build_headers(rel_pages=None, url=None, total_count=None):
     ## Setting mandatory headers
     # set X-Total-Count
     headers['X-Total-Count'] = total_count
+    expose_header = ["X-Total-Count"]
 
     ## Two auxiliary functions
     def split_url(url):
@@ -333,8 +341,12 @@ def build_headers(rel_pages=None, url=None, total_count=None):
                 if page is not None:
                     links.append(make_rel_url(rel, page))
             headers['Link'] = ''.join(links)
+            expose_header.append("Link")
         else:
             pass
+
+    # to expose header access in cross-domain requests
+    headers['Access-Control-Expose-Headers'] =','.join(expose_header)
 
     return headers
 
@@ -556,7 +568,7 @@ def build_translator_parameters(field_list):
             if isinstance(field_value, datetime_precision) and operator == '=':
                 filter_value = build_datetime_filter(field_value)
             else:
-                filter_value = {op_conv_map[field[1]]: field_value.dt}
+                filter_value = {op_conv_map[field[1]]: field_value}
 
             # Here I treat the AND clause
             if field_counts[field_key] > 1:

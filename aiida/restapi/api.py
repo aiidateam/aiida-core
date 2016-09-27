@@ -15,11 +15,19 @@ from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
     Node, User
 import aiida.restapi.common.config as conf
 from aiida.restapi.common.flaskrun import flaskrun
+from flask.ext.sqlalchemy import SQLAlchemy
+
 
 ## Initiate an app with its api
 app = Flask(__name__)
 api = Api(app, prefix=conf.PREFIX)
 cors = CORS(app, resources={r"/api/v2/*": {"origins": "*"}})
+
+# database
+from aiida.restapi.database.initdb import mcloud_db_session
+from aiida.restapi.database.resources import (McloudUserResource,
+    McloudUsersResource, McloudTokenResource )
+
 
 ## Error handling for error raised for invalid urls (not for non existing
 # resources!)
@@ -51,6 +59,7 @@ api.add_resource(Computer,
                  '/computers/page/',
                  '/computers/page/<int:page>/',
                  '/computers/<int:pk>/',
+                 '/computers/schema/',
                  strict_slashes=False)
 
 api.add_resource(Node,
@@ -68,6 +77,7 @@ api.add_resource(Node,
                  '/nodes/<int:pk>/io/outputs/page/<int:page>/',
                  '/nodes/<int:pk>/content/attributes/',
                  '/nodes/<int:pk>/content/extras/',
+                 '/nodes/statistics/',
                  strict_slashes=False)
 
 api.add_resource(Calculation,
@@ -85,6 +95,8 @@ api.add_resource(Calculation,
                  '/calculations/<int:pk>/io/outputs/page/<int:page>/',
                  '/calculations/<int:pk>/content/attributes/',
                  '/calculations/<int:pk>/content/extras/',
+                 '/calculations/schema/',
+                 '/calculations/statistics/',
                  strict_slashes=False)
 
 api.add_resource(Data,
@@ -102,6 +114,8 @@ api.add_resource(Data,
                  '/data/<int:pk>/io/outputs/page/<int:page>/',
                  '/data/<int:pk>/content/attributes/',
                  '/data/<int:pk>/content/extras/',
+                 '/data/schema/',
+                 '/data/statistics/',
                  strict_slashes=False)
 
 api.add_resource(Code,
@@ -119,6 +133,8 @@ api.add_resource(Code,
                  '/codes/<int:pk>/io/outputs/page/<int:page>/',
                  '/codes/<int:pk>/content/attributes/',
                  '/codes/<int:pk>/content/extras/',
+                 '/codes/schema/',
+                 '/codes/statistics/',
                  strict_slashes=False)
 
 api.add_resource(User,
@@ -139,6 +155,26 @@ api.add_resource(Group,
                  '/groups/<int:pk>/',
                  strict_slashes=False)
 
+#mcloud user resource mapping
+api.add_resource(McloudUsersResource,
+                 '/mcloud/users/',
+                 strict_slashes=False)
+
+api.add_resource(McloudUserResource,
+                 '/mcloud/user/',
+                 '/mcloud/user/<int:pk>/',
+                 strict_slashes=False)
+
+api.add_resource(McloudTokenResource,
+                 '/mcloud/token/',
+                 strict_slashes=False)
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    mcloud_db_session.remove()
+
+from aiida.restapi.database.initdb import setup_database
+setup_database()
 
 
 

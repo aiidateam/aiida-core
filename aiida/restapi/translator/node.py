@@ -201,3 +201,68 @@ class NodeTranslator(BaseTranslator):
         else:
             return super(NodeTranslator, self).get_results()
 
+    def get_statistics(self, tclass, users=[]):
+       from aiida.orm.querybuilder import QueryBuilder as QB
+       from aiida.orm import User
+       from collections import Counter
+       from datetime import datetime
+
+       def count_statistics(dataset):
+
+           def get_statistics_dict(dataset):
+               results = {}
+               for count, typestring in sorted((v, k) for k, v in dataset.iteritems())[::-1]:
+                   results[typestring] = count
+               return results
+
+           count_dict = {}
+
+           types = Counter([r[3] for r in dataset])
+           count_dict["types"] = get_statistics_dict(types)
+
+           ctimelist = [r[1].strftime("%Y-%m") for r in dataset]
+           ctime = Counter(ctimelist)
+           count_dict["ctime_by_month"] = get_statistics_dict(ctime)
+
+           ctimelist = [r[1].strftime("%Y-%m-%d") for r in dataset]
+           ctime = Counter(ctimelist)
+           count_dict["ctime_by_day"] = get_statistics_dict(ctime)
+
+           mtimelist = [r[2].strftime("%Y-%m") for r in dataset]
+           mtime = Counter(ctimelist)
+           count_dict["mtime_by_month"] = get_statistics_dict(mtime)
+
+           mtimelist = [r[1].strftime("%Y-%m-%d") for r in dataset]
+           mtime = Counter(ctimelist)
+           count_dict["mtime_by_day"] = get_statistics_dict(mtime)
+
+           return count_dict
+
+       statistics = {}
+
+       q = QB()
+       q.append(tclass, project=['id', 'ctime', 'mtime', 'type'], tag='node')
+       q.append(User, creator_of='node', project='email')
+       qb_res = q.all()
+
+       # total count
+       statistics["total"] = len(qb_res)
+
+       node_users = Counter([r[4] for r in qb_res])
+       statistics["users"]={}
+
+       if isinstance(users,basestring):
+           users = [users]
+       if len(users) == 0:
+           users = node_users
+
+       for user in users:
+           user_data = [r for r in qb_res if r[4] == user]
+           # statistics for user data
+           statistics["users"][user] = count_statistics(user_data)
+           statistics["users"][user]["total"] = node_users[user]
+
+       # statistics for node data
+       statistics.update( count_statistics(qb_res))
+
+       return statistics

@@ -4,11 +4,65 @@ from aiida.restapi.common.exceptions import RestValidationError, \
 from flask import jsonify
 from flask.json import JSONEncoder
 from aiida.restapi.common.config import PERPAGE_DEFAULT, PREFIX
-from datetime import datetime
+from datetime import datetime, timedelta
 
+
+##########################Variables and classes#####################
+
+# Imported by the translators
 pk_dbsynonym = 'id'
 
+# Conversion map from the query_string operators to the query_builder operators
+op_conv_map = {
+    '=': '==',
+    '!=': '!==',
+    '=in=': 'in',
+    '=notin=': '!in',
+    '>': '>',
+    '<': '<',
+    '>=': '>=',
+    '<=': '<=',
+    '=like=': 'like',
+    '=ilike=': 'ilike'
+}
+
+
+class datetime_precision():
+    """
+    A simple class which stores a datetime object with its precision. No
+    internal check is done (cause itis not possible).
+
+    precision:  1 (only full date)
+                2 (date plus hour)
+                3 (date + hour + minute)
+                4 (dare + hour + minute +second)
+    """
+
+    def __init__(self, dt, precision):
+
+        if not isinstance(dt, datetime):
+            raise TypeError("dt argument has to be a datetime object")
+
+        if type(precision) is not int:
+            raise TypeError("precision argument has to be an integer")
+
+        self.dt = dt
+        self.precision = precision
+
+
+#######################Functions##################
 def strip_prefix(path):
+    """
+    Removes the PREFIX from an URL path. PREFIX must be defined in the
+    config.py file.
+    Ex. PREFIX = "/api/v2"
+        path = "/api/v2/calculations/page/2"
+        strip_prefix(path) ==> "/calculations/page/2"
+
+    :param path: the URL path string
+    :return: the same URL without the prefix
+    """
+
     if path.startswith(PREFIX):
         return path[len(PREFIX):]
     else:
@@ -62,8 +116,9 @@ def parse_path(path_string):
     if path[0] == 'schema':
         query_type = path.pop(0)
         if path:
-            raise RestInputValidationError("url requesting schema resources do not "
-                                       "admit further fields")
+            raise RestInputValidationError(
+                "url requesting schema resources do not "
+                "admit further fields")
         else:
             return (resource_type, page, pk, query_type)
     elif path[0] == "io" or path[0] == "content":
@@ -187,6 +242,7 @@ class CustomJSONEncoder(JSONEncoder):
     This has to be provided to the Flask app in order to replace the default
     encoder.
     """
+
     def default(self, obj):
 
         from aiida.restapi.common.config import SERIALIZER_CONFIG
@@ -202,8 +258,8 @@ class CustomJSONEncoder(JSONEncoder):
                         return '-'.join([str(obj.year), str(obj.month).zfill(2),
                                          str(obj.day).zfill(2)]) + 'T' + \
                                ':'.join([str(
-                            obj.hour).zfill(2), str(obj.minute).zfill(2),
-                                   str(obj.second).zfill(2)])
+                                   obj.hour).zfill(2), str(obj.minute).zfill(2),
+                                         str(obj.second).zfill(2)])
 
         # If not returned yet, do it in the default way
         return JSONEncoder.default(self, obj)
@@ -319,143 +375,57 @@ def build_response(status=200, headers=None, data=None):
     return response
 
 
-def parse_query_string(query_string):
+def build_datetime_filter(dt):
     """
-    Function that parse the querystring, extracting infos for limit, offset,
-    ordering, filters, attribute and extra projections.
-    :param query_string (as obtained from request.query_string)
-    :return: parsed values for the querykeys
+    This function constructs a filter for a datetime object to be in a
+    certain datetime interval according to the precision.
+
+    The interval is [reference_datetime, reference_datetime + Dt],
+    where Dt is a function fo the required precision.
+
+    This function should be used to replace a datetime filter based on
+    the equality operator that is inehrently "picky" because it implies
+    matching two datetime objects down to the microsecond or something,
+    by a "tolerant" operator which checks whether the datetime is in an
+    interval.
+
+    :return: a suitable entry of the filter dictionary
     """
 
-    op_conv_map = {
-        '=': '==',
-        '!=': '!==',
-        '=in=': 'in',
-        '=notin=': '!in',
-        '>': '>',
-        '<': '<',
-        '>=': '>=',
-        '<=': '<=',
-        '=like=': 'like',
-        '=ilike=': 'ilike'
+    if not isinstance(dt, datetime_precision):
+        TypeError("dt argument has to be a datetime_precision object")
+
+    reference_datetime = dt.dt
+    precision = dt.precision
+
+    ## Define interval according to the precision
+    if precision == 1:
+        Dt = timedelta(days=1)
+    elif precision == 2:
+        Dt = timedelta(hours=1)
+    elif precision == 3:
+        Dt = timedelta(minutes=1)
+    elif precision == 4:
+        Dt = timedelta(seconds=1)
+    else:
+        raise RestValidationError("The datetime resolution is not valid.")
+
+    filter = {
+        'and': [{'>=': reference_datetime}, {'<': reference_datetime + Dt}]
     }
 
-    from pyparsing import Word, alphas, nums, alphanums, printables, \
-        ZeroOrMore, OneOrMore, Suppress, Optional, Literal, Group, \
-        QuotedString, Combine, \
-        StringStart as SS, StringEnd as SE, \
-        WordStart as WS, WordEnd as WE, \
-        ParseException
+    return filter
 
-    from pyparsing import pyparsing_common as ppc
-    from dateutil import parser as dtparser
-    from psycopg2.tz import FixedOffsetTimezone
 
-    ## Define grammar
-    # key types
-    key = Word(alphas + '_', alphanums + '_')
-    # operators
-    operator = (Literal('=like=') | Literal('=ilike=') |
-                Literal('=in=') | Literal('=notin=') |
-                Literal('=') | Literal('!=') |
-                Literal('>=') | Literal('>') |
-                Literal('<=') | Literal('<'))
-    # Value types
-    valueNum = ppc.number
-    valueBool = (Literal('true') | Literal('false')).addParseAction(
-        lambda toks: bool(toks[0]))
-    valueString = QuotedString('"', escQuote='""')
-    valueOrderby = Combine(Optional(Word('+-', exact=1)) + key)
+def build_translator_parameters(field_list):
+    """
+    Takes a list of elements resulting from the parsing the query_string and
+    elaborates them in order to provide translator-compliant instructions
 
-    ## DateTimeShift value. First, compose the atomic values and then combine
-    #  them and convert them to datetime objects
-    # Date
-    valueDate = Combine(
-        Word(nums, exact=4) +
-        Literal('-') + Word(nums, exact=2) +
-        Literal('-') + Word(nums, exact=2)
-    )
-    # Time
-    valueTime = Combine(
-        Literal('T') +
-        Word(nums, exact=2) +
-        Optional(Literal(':') + Word(nums, exact=2)) +
-        Optional(Literal(':') + Word(nums, exact=2))
-    )
-    # Shift
-    valueShift = Combine(
-        Word('+-', exact=1) +
-        Word(nums, exact=2) +
-        Optional(Literal(':') + Word(nums, exact=2))
-    )
-    # Combine atomic values
-    valueDateTime = Combine(
-        valueDate +
-        Optional(valueTime) +
-        Optional(valueShift) + WE(printables.translate(None, '&'))  # To us the
-        # word must end with '&' or end of the string
-        # Adding  WordEnd  only here is very important. This makes atomic
-        # values for date, time and shift not really
-        # usable alone individually.
-    )
-    # Convert it to datetime object
-    # Function format is compliant with ParseAction requirements
-    def validate_time(s, loc, toks):
-        try:
-            dt = dtparser.parse(toks[0])
-        except ValueError:
-            raise RestInputValidationError("time value has wrong format. The "
-                                           "right format is "
-                                           "<date>T<time><offset>, "
-                                           "where <date> is expressed as "
-                                           "[YYYY]-[MM]-[DD], "
-                                           "<time> is expressed as [HH]:[MM]:["
-                                           "SS], "
-                                           "<offset> is expressed as +/-[HH]:["
-                                           "MM] "
-                                           "given with "
-                                           "respect to UTC")
-        if dt.tzinfo is not None:
-            tzoffset_minutes = int(
-                dt.tzinfo.utcoffset(None).total_seconds() / 60)
-            return dt.replace(tzinfo=FixedOffsetTimezone(
-                offset=tzoffset_minutes, name=None))
-        else:
-            return dt.replace(tzinfo=FixedOffsetTimezone(offset=0, name=None))
-
-    valueDateTime.setParseAction(validate_time)
-
-    # More General types
-    value = (valueString | valueBool | valueDateTime | valueNum | valueOrderby)
-    # List of values (I do not check the homogeneity of the types of values,
-    # query builder will do it in a sense)
-    valueList = Group(value + OneOrMore(Suppress(',') + value) + Optional(
-        Suppress(',')))
-
-    # Fields
-    singleField = Group(key + operator + value)
-    listField = Group(key + (Literal('=in=') | Literal('=notin=')) + valueList)
-    orderbyField = Group(key + Literal('=') + valueList)
-    Field = (listField | orderbyField | singleField)
-
-    # Fields separator
-    separator = Suppress(Literal('&'))
-
-    # General query string
-    generalGrammar = SS() + Optional(Field) + ZeroOrMore(separator + Field) + \
-                     Optional(separator) + SE()
-
-    ## Parse the query string
-    try:
-        fields = generalGrammar.parseString(query_string).asList()
-    except ParseException as e:
-        raise RestInputValidationError("The query string format is invalid. "
-                                       "Parser returned this massage: \"{"
-                                       "}.\" Please notice that the column "
-                                       "number "
-                                       "is counted from "
-                                       "the first character of the query "
-                                       "string.".format(e))
+    :param field_list: a (nested) list of elements resulting from parsing the
+    query_string
+    :return: the filters in the
+    """
 
     ## Create void variables
     filters = {}
@@ -472,20 +442,20 @@ def parse_query_string(query_string):
     # reserved keyword
     # have been used twice,
     field_counts = {}
-    for field in fields:
+    for field in field_list:
         field_key = field[0]
         if field_key not in field_counts.keys():
             field_counts[field_key] = 1
-            #Store the information whether membership operator is used
+            # Store the information whether membership operator is used
             # is_membership = (field[1] is '=in=')
         else:
-            #Check if the key of a filter using membership operator is used
+            # Check if the key of a filter using membership operator is used
             # in multiple filters
             # if is_membership is True or field[1] is '=in=':
-                # raise RestInputValidationError("If a key appears in "
-                #                                "multiple filters, "
-                #                                "those cannot use "
-                #                                "membership opertor '=in='")
+            # raise RestInputValidationError("If a key appears in "
+            #                                "multiple filters, "
+            #                                "those cannot use "
+            #                                "membership opertor '=in='")
             field_counts[field_key] = field_counts[field_key] + 1
 
     ## Check the reserved keywords
@@ -514,9 +484,8 @@ def parse_query_string(query_string):
         raise RestInputValidationError("You cannot specify nelist more than "
                                        "once")
 
-
     ## Extract results
-    for field in fields:
+    for field in field_list:
 
         if field[0] == 'limit':
             if field[1] == '=':
@@ -578,21 +547,175 @@ def parse_query_string(query_string):
                 raise RestInputValidationError("only assignment operator '=' "
                                                "is permitted after 'orderby'")
         else:
-            ## Treat the filter case.
+
+            ## Construct the filter entry.
             field_key = field[0]
+            operator = field[1]
+            field_value = field[2]
+
+            if isinstance(field_value, datetime_precision) and operator == '=':
+                filter_value = build_datetime_filter(field_value)
+            else:
+                filter_value = {op_conv_map[field[1]]: field_value.dt}
+
             # Here I treat the AND clause
             if field_counts[field_key] > 1:
 
                 if field_key not in filters.keys():
-                    filters.update({field_key: {'and': [{op_conv_map[field[
-                        1]]: field[2]}]}})
+                    filters.update({
+                        field_key: {
+                            'and': [filter_value]
+                        }
+                    })
                 else:
-                    filters[field_key]['and'].append({op_conv_map[field[1]]:
-                                                     field[2]})
+                    filters[field_key]['and'].append(filter_value)
             else:
-                filters.update({field_key: {op_conv_map[field[1]]: field[2]}})
+                filters.update({field_key: filter_value})
 
     return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
             nelist)
 
 
+def parse_query_string(query_string):
+    """
+    Function that parse the querystring, extracting infos for limit, offset,
+    ordering, filters, attribute and extra projections.
+    :param query_string (as obtained from request.query_string)
+    :return: parsed values for the querykeys
+    """
+
+    from pyparsing import Word, alphas, nums, alphanums, printables, \
+        ZeroOrMore, OneOrMore, Suppress, Optional, Literal, Group, \
+        QuotedString, Combine, \
+        StringStart as SS, StringEnd as SE, \
+        WordStart as WS, WordEnd as WE, \
+        ParseException
+
+    from pyparsing import pyparsing_common as ppc
+    from dateutil import parser as dtparser
+    from psycopg2.tz import FixedOffsetTimezone
+
+    ## Define grammar
+    # key types
+    key = Word(alphas + '_', alphanums + '_')
+    # operators
+    operator = (Literal('=like=') | Literal('=ilike=') |
+                Literal('=in=') | Literal('=notin=') |
+                Literal('=') | Literal('!=') |
+                Literal('>=') | Literal('>') |
+                Literal('<=') | Literal('<'))
+    # Value types
+    valueNum = ppc.number
+    valueBool = (Literal('true') | Literal('false')).addParseAction(
+        lambda toks: bool(toks[0]))
+    valueString = QuotedString('"', escQuote='""')
+    valueOrderby = Combine(Optional(Word('+-', exact=1)) + key)
+
+    ## DateTimeShift value. First, compose the atomic values and then combine
+    #  them and convert them to datetime objects
+    # Date
+    valueDate = Combine(
+        Word(nums, exact=4) +
+        Literal('-') + Word(nums, exact=2) +
+        Literal('-') + Word(nums, exact=2)
+    )
+    # Time
+    valueTime = Combine(
+        Literal('T') +
+        Word(nums, exact=2) +
+        Optional(Literal(':') + Word(nums, exact=2)) +
+        Optional(Literal(':') + Word(nums, exact=2))
+    )
+    # Shift
+    valueShift = Combine(
+        Word('+-', exact=1) +
+        Word(nums, exact=2) +
+        Optional(Literal(':') + Word(nums, exact=2))
+    )
+    # Combine atomic values
+    valueDateTime = Combine(
+        valueDate +
+        Optional(valueTime) +
+        Optional(valueShift) + WE(printables.translate(None, '&'))  # To us the
+        # word must end with '&' or end of the string
+        # Adding  WordEnd  only here is very important. This makes atomic
+        # values for date, time and shift not really
+        # usable alone individually.
+    )
+
+    ############################################################################
+    # Function to convert datetime string into datetime object. The format is
+    # compliant with ParseAction requirements
+    def validate_time(s, loc, toks):
+
+        datetime_string = toks[0]
+
+        # Check the precision
+        precision = len(datetime_string.replace('T', ':').split(':'))
+
+        # Parse
+        try:
+            dt = dtparser.parse(datetime_string)
+        except ValueError:
+            raise RestInputValidationError("time value has wrong format. The "
+                                           "right format is "
+                                           "<date>T<time><offset>, "
+                                           "where <date> is expressed as "
+                                           "[YYYY]-[MM]-[DD], "
+                                           "<time> is expressed as [HH]:[MM]:["
+                                           "SS], "
+                                           "<offset> is expressed as +/-[HH]:["
+                                           "MM] "
+                                           "given with "
+                                           "respect to UTC")
+        if dt.tzinfo is not None:
+            tzoffset_minutes = int(
+                dt.tzinfo.utcoffset(None).total_seconds() / 60)
+
+            return datetime_precision(dt.replace(tzinfo=FixedOffsetTimezone(
+                offset=tzoffset_minutes, name=None)), precision)
+        else:
+            return datetime_precision(dt.replace(tzinfo=FixedOffsetTimezone(
+                offset=0, name=None)), precision)
+    ########################################################################
+
+    # Convert datetime value to datetime object
+    valueDateTime.setParseAction(validate_time)
+
+    # More General types
+    value = (valueString | valueBool | valueDateTime | valueNum |
+             valueOrderby)
+    # List of values (I do not check the homogeneity of the types of values,
+    # query builder will do it in a sense)
+    valueList = Group(value + OneOrMore(Suppress(',') + value) + Optional(
+        Suppress(',')))
+
+    # Fields
+    singleField = Group(key + operator + value)
+    listField = Group(key + (Literal('=in=') | Literal('=notin=')) + valueList)
+    orderbyField = Group(key + Literal('=') + valueList)
+    Field = (listField | orderbyField | singleField)
+
+    # Fields separator
+    separator = Suppress(Literal('&'))
+
+    # General query string
+    generalGrammar = SS() + Optional(Field) + ZeroOrMore(separator + Field) + \
+                     Optional(separator) + SE()
+
+    ## Parse the query string
+    try:
+        fields = generalGrammar.parseString(query_string)
+        field_dict = fields.asDict()
+        field_list = fields.asList()
+    except ParseException as e:
+        raise RestInputValidationError("The query string format is invalid. "
+                                       "Parser returned this massage: \"{"
+                                       "}.\" Please notice that the column "
+                                       "number "
+                                       "is counted from "
+                                       "the first character of the query "
+                                       "string.".format(e))
+
+    ## return the translator instructions elaborated from the field_list
+    return build_translator_parameters(field_list)

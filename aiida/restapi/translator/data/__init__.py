@@ -90,3 +90,73 @@ class DataTranslator(NodeTranslator):
         """
         # basic query_help object
         super(DataTranslator, self).__init__()
+
+    def get_schema(self):
+        return {
+            "fields": {
+                "ctime": {
+                    "is_display": True,
+                    "display_name": "Creation Time",
+                    "help_text": "Created at",
+                    "type": "datetime",
+                },
+                "dbcomputer": {
+                    "is_display": False,
+                    "display_name": "Computer",
+                    "help_text": "Computer id on which the data node is created",
+                    "type": "related",
+                },
+                "description": {
+                    "is_display": False,
+                    "display_name": "Description",
+                    "help_text": "Short description on the data node",
+                    "type": "string",
+                },
+                "id": {
+                    "is_display": True,
+                    "display_name": "ID",
+                    "help_text": "Data node id",
+                    "type": "integer",
+                },
+                "label": {
+                    "is_display": False,
+                    "display_name": "Label",
+                    "help_text": "Data node label",
+                    "type": "string",
+                },
+                "mtime": {
+                    "is_display": True,
+                    "display_name": "Last modified Time",
+                    "help_text": "Last modified datetime of the node",
+                    "type": "datetime",
+                },
+                "type": {
+                    "is_display": True,
+                    "display_name": "Type",
+                    "help_text": "Data node type",
+                    "type": "string",
+                },
+                "state": {
+                    "is_display": True,
+                    "display_name": "State",
+                    "help_text": "Data node state",
+                    "type": "string",
+                },
+                "uuid": {
+                    "is_display": False,
+                    "display_name": "Unique ID",
+                    "help_text": "Unique id of the data node",
+                    "type": "string",
+                }
+            },
+            "ordering": [
+                "id",
+                "label",
+                "type",
+                "state",
+                "dbcomputer",
+                "ctime",
+                "mtime",
+                "uuid"
+            ]
+        }

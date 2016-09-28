@@ -569,17 +569,16 @@ class AbstractWorkflow(object):
 
             method_step, created = cls.dbworkflowinstance.steps.get_or_create(name=wrapped_method,
                                                                               user=get_automatic_user())
-
             try:
                 fun(cls)
             except:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
+                #exc_type, exc_value, exc_traceback = sys.exc_info()
                 cls.append_to_report(
                     "ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(
                         wrapped_method))
                 cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_state(wf_states.ERROR)
-                method_step.parent.set_state(wf_states.ERROR)
+                cls.set_state(wf_states.ERROR)
             return None
 
         out = wrapper

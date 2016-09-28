@@ -36,10 +36,12 @@ class DictSchema(object):
 
     def __call__(self, value):
         """
-        Call this to validate the value against the chema
+        Call this to validate the value against the schema.
+
         :return: tuple (success, msg).  success is True if the value is valid
-        and False otherwise, in which case msg will contain information about
-        the validation failure.
+            and False otherwise, in which case msg will contain information about
+            the validation failure.
+        :rtype: tuple
         """
         try:
             self._schema(value)

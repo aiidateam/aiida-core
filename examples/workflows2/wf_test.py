@@ -15,6 +15,7 @@ from aiida.workflows2.workchain import WorkChain
 from aiida.orm.data.base import NumericType
 from aiida.workflows2.run import run
 
+
 @workfunction
 def sum(a, b):
     return a + b
@@ -48,7 +49,6 @@ class AddMultiplyWf(WorkChain):
 
     def prod(self, ctx):
         self.out(ctx.sum * self.inputs.c)
-
 
 
 if __name__ == '__main__':

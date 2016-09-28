@@ -1,7 +1,6 @@
 
 import unittest
 import tempfile
-from os.path import join
 from shutil import rmtree
 
 import aiida.workflows2.daemon as daemon
@@ -89,16 +88,13 @@ class TestDaemon(unittest.TestCase):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
         self.storedir = tempfile.mkdtemp()
-        self.storage = PicklePersistence(
-            running_directory=join(self.storedir, 'r'),
-            finished_directory=join(self.storedir, 'fin'),
-            failed_directory=join(self.storedir, 'fail'))
+        self.storage = PicklePersistence.create_from_basedir(self.storedir)
 
     def tearDown(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         rmtree(self.storedir)
 
-    def test_asyncd(self):
+    def test_submit(self):
         # This call should create an entry in the database with a PK
         pk = submit(DummyProcess)
         self.assertIsNotNone(pk)

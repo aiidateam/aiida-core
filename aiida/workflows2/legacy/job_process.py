@@ -65,7 +65,7 @@ class JobProcess(Process):
     def _run(self, **kwargs):
         from aiida.workflows2.legacy.wait_on import wait_on_job_calculation
 
-        # I create this wait_on here because there is a check to make sure the
+        # Create this wait_on here because there is a check to make sure the
         # callback function is defined correctly which may cause an assertion, in which
         # case we shouldn't submit
         wait_on = wait_on_job_calculation(
@@ -78,8 +78,8 @@ class JobProcess(Process):
         The callback function that is called when the remote calculation
         is finished.
 
-        :param wait_on: aiida.workflows2.legacy.wait_on.WaitOnJobCalculation
-         The original WaitOnJobCalculation object.
+        :param wait_on: The original WaitOnJobCalculation object.
+        :type wait_on: aiida.workflows2.legacy.wait_on.WaitOnJobCalculation
         """
         assert not self.calc._is_running()
 
@@ -101,7 +101,6 @@ class JobProcess(Process):
     def _setup_db_record(self):
         """
         Link up all the retrospective provenance for this JobCalculation
-        :return:
         """
         from aiida.common.links import LinkType
 

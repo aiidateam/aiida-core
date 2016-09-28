@@ -7,17 +7,19 @@ __version__ = "0.7.0"
 
 
 import uuid
+import shutil
+import tempfile
 import threading
 
 from test.util import DbTestCase
 from aiida.orm import load_node
 from aiida.orm.data.base import Int
 from aiida.workflows2.process import Process
-from aiida.workflows2.run import run
+from aiida.workflows2.run import run, submit
 import aiida.workflows2.util as util
 from aiida.workflows2.test_utils import DummyProcess, BadOutput
 from aiida.common.lang import override
-
+from plum.persistence.pickle_persistence import PicklePersistence
 
 class ProcessStackTest(Process):
     @override
@@ -85,6 +87,18 @@ class TestProcess(DbTestCase):
     def test_seal(self):
         pid = run(DummyProcess, _return_pid=True)[1]
         self.assertTrue(load_node(pk=pid).is_sealed)
+
+        storedir = tempfile.mkdtemp()
+        storage = PicklePersistence.create_from_basedir(storedir)
+
+        pid = submit(DummyProcess, _jobs_store=storage)
+        n = load_node(pk=pid)
+        self.assertFalse(n.is_sealed)
+
+        dp = DummyProcess.create_from(storage.load_checkpoint(pid))
+        dp.run_until_complete()
+        self.assertTrue(n.is_sealed)
+        shutil.rmtree(storedir)
 
     def test_description(self):
         dp = DummyProcess.new_instance(inputs={'_description': 'My description'})

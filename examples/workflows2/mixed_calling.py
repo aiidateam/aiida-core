@@ -13,10 +13,9 @@ if not is_dbenv_loaded():
 
 import time
 from aiida.orm.data.base import Int
-from aiida.workflows2.run import async, run
+from aiida.workflows2.run import async, run, submit
 from aiida.workflows2.workfunction import workfunction
-from aiida.workflows2.workchain import (WorkChain,
-                                        ResultToContext)
+from aiida.workflows2.workchain import (WorkChain, ResultToContext)
 
 
 @workfunction
@@ -39,13 +38,15 @@ def long_running(a):
 class F1(WorkChain):
     @classmethod
     def _define(cls, spec):
+        super(F1, cls)._define(spec)
+
         spec.dynamic_input()
         spec.dynamic_output()
         spec.outline(cls.s1, cls.s2)
 
     def s1(self, ctx):
-        p2 = self.submit(LongRunning, inputs={'a': self.inputs.inp})
-        ctx.a = 1 #  Do some work...
+        p2 = async(LongRunning, a=self.inputs.inp)
+        ctx.a = 1  # Do some work...
         return ResultToContext(r2=p2.pid)
 
     def s2(self, ctx):
@@ -58,6 +59,8 @@ class F1(WorkChain):
 class LongRunning(WorkChain):
     @classmethod
     def _define(cls, spec):
+        super(LongRunning, cls)._define(spec)
+
         spec.dynamic_input()
         spec.dynamic_output()
         spec.outline(cls.s1)
@@ -70,6 +73,8 @@ class LongRunning(WorkChain):
 class F1WaitFor(WorkChain):
     @classmethod
     def _define(cls, spec):
+        super(F1WaitFor, cls)._define(spec)
+
         spec.dynamic_input()
         spec.dynamic_output()
         spec.outline(cls.s1, cls.s2)

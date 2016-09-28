@@ -221,6 +221,11 @@ class Process(plum.process.Process):
         util.ProcessStack.push(self)
 
     @override
+    def on_finish(self):
+        super(Process, self).on_finish()
+        self.calc.seal()
+
+    @override
     def _on_output_emitted(self, output_port, value, dynamic):
         """
         The process has emitted a value on the given output port.
@@ -446,7 +451,6 @@ class _ProcessFinaliser(plum.process_monitor.ProcessMonitorListener):
 
     @override
     def on_monitored_process_destroying(self, process):
-        process.calc.seal()
         util.ProcessStack.pop(process)
 
     @override

@@ -7,6 +7,8 @@ import aiida.common.exceptions as exceptions
 from aiida.common.lang import override
 from aiida.workflows2.util import ProcessStack
 from aiida.orm import load_node
+from aiida.orm.calculation.job import JobCalculation
+from aiida.orm.calculation.process import ProcessCalculation
 
 
 class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
@@ -32,16 +34,13 @@ class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
             raise plum.knowledge_provider.NotKnown(
                 "Can't find node with pk '{}'".format(pid))
         else:
-            try:
+            if isinstance(node, JobCalculation):
                 return node.has_finished_ok() or node.has_failed()
-            except AttributeError:
-                pass
-            try:
+            elif isinstance(node, ProcessCalculation):
                 return node.is_sealed
-            except AttributeError:
-                pass
-
-        raise plum.knowledge_provider.NotKnown()
+            else:
+                raise plum.knowledge_provider.NotKnown(
+                    "The node is of an unexpected type.")
 
     @override
     def get_inputs(self, pid):

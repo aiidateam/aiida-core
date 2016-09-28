@@ -28,10 +28,10 @@ def async(process_class, *args, **kwargs):
 
 def run(process_class, *args, **inputs):
     """
-    Synchronously (i.e. blocking) run a workfunction or Process.
+    Synchronously (i.e. blocking) run a workfunction or process.
 
     :param process_class: The process class or workfunction
-    :param _attributes: Optional attributes (only for Processes)
+    :param _attributes: Optional attributes (only for process)
     :param args: Positional arguments for a workfunction
     :param inputs: The list of inputs
     """
@@ -71,10 +71,13 @@ def queue_up(process_class, inputs, storage):
 
     :param process_class: The process class to queue up.
     :param inputs: The inputs to the process.
+    :type inputs: Mapping
+    :param storage: The storage engine which will be used to save the process
+    :type storage: plum.persistence.
     :return: The pid of the queued process.
     """
 
-    # The straregy for queueing up is this:
+    # The strategy for queueing up is this:
     # 1) Create the process which will set up all the provenance info, pid, etc
     proc = process_class.new_instance(inputs)
     pid = proc.pid

@@ -14,12 +14,13 @@ import threading
 from test.util import DbTestCase
 from aiida.orm import load_node
 from aiida.orm.data.base import Int
-from aiida.workflows2.process import Process
+from aiida.workflows2.process import Process, FunctionProcess
 from aiida.workflows2.run import run, submit
 import aiida.workflows2.util as util
 from aiida.workflows2.test_utils import DummyProcess, BadOutput
 from aiida.common.lang import override
 from plum.persistence.pickle_persistence import PicklePersistence
+
 
 class ProcessStackTest(Process):
     @override
@@ -113,3 +114,41 @@ class TestProcess(DbTestCase):
 
         with self.assertRaises(TypeError):
             DummyProcess.new_instance(inputs={'_label': 5})
+
+
+class TestFunctionProcess(DbTestCase):
+    def test_fixed_inputs(self):
+        def wf(a, b, c):
+            return {'a': a, 'b': b, 'c': c}
+
+        inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
+        FP = FunctionProcess.build(wf)
+        self.assertEqual(FP.run(inputs=inputs), inputs)
+
+    def test_kwargs(self):
+        def wf_with_kwargs(**kwargs):
+            return kwargs
+
+        def wf_without_kwargs():
+            return Int(4)
+
+        def wf_fixed_args(a):
+            return {'a': a}
+
+        a = Int(4)
+        inputs = {'a': a}
+
+        FP = FunctionProcess.build(wf_with_kwargs)
+        outs = FP.run(inputs=inputs)
+        self.assertEqual(outs, inputs)
+
+        FP = FunctionProcess.build(wf_without_kwargs)
+        with self.assertRaises(ValueError):
+            FP.run(inputs=inputs)
+
+        FP = FunctionProcess.build(wf_fixed_args)
+        outs = FP.run(inputs=inputs)
+        self.assertEqual(outs, inputs)
+
+
+

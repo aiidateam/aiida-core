@@ -374,8 +374,9 @@ class FunctionProcess(Process):
 
         :param func: The function to build a process from
         :param kwargs: Optional keyword arguments that will become additional
-        inputs to the process
+            inputs to the process
         :return: A Process class that represents the function
+        :rtype: :class:`Process`
         """
         import inspect
         from aiida.orm.data import Data
@@ -395,6 +396,14 @@ class FunctionProcess(Process):
 
             for k, v in kwargs.iteritems():
                 spec.input(k)
+
+            # If the function support kwargs then allow dynamic inputs,
+            # otherwise disallow
+            if keywords is not None:
+                spec.dynamic_input()
+            else:
+                spec.no_dynamic_input()
+
             # We don't know what a function will return so keep it dynamic
             spec.dynamic_output(valid_type=Data)
 
@@ -407,6 +416,7 @@ class FunctionProcess(Process):
     def args_to_dict(cls, *args):
         """
         Create an input dictionary (i.e. label: value) from supplied args.
+
         :param args: The values to use
         :return: A label: value dictionary
         """
@@ -427,7 +437,7 @@ class FunctionProcess(Process):
         args = []
         for arg in self._func_args:
             args.append(kwargs.pop(arg))
-        outs = self._func(*args)
+        outs = self._func(*args, **kwargs)
         if outs is not None:
             if isinstance(outs, Data):
                 self.out(self.SINGLE_RETURN_LINKNAME, outs)

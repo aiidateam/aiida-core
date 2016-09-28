@@ -24,7 +24,7 @@ def workfunction(func):
         run_async = kwargs.pop('__async', False)
         return_pid = kwargs.pop('_return_pid', False)
 
-        # Build up the Process repreresenting this function
+        # Build up the Process representing this function
         FuncProc = FunctionProcess.build(func, **kwargs)
 
         inputs = {}
@@ -56,7 +56,6 @@ def workfunction(func):
 
     wrapped_function._is_workfunction = True
     return wrapped_function
-
 
 # def aiidise(func):
 #     import inspect

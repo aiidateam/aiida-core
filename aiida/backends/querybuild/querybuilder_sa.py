@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
+
 from datetime import datetime
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -26,6 +32,7 @@ from sa_init import (
 from sqlalchemy_utils.types.choice import Choice
 from aiida.backends.sqlalchemy import session as sa_session
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
+from aiida.backends.sqlalchemy.models import DbPathBeta
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.user import DbUser
@@ -47,6 +54,7 @@ class QueryBuilder(AbstractQueryBuilder):
         from aiida.orm.implementation.sqlalchemy.user import User as AiidaUser
         self.Link               = DbLink
         self.Path               = DbPath
+        self.PathBeta           = DbPathBeta
         self.Node               = DbNode
         self.Computer           = DbComputer
         self.User               = DbUser

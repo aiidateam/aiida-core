@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
 
 """
 The general functionalities that all querybuilders need to have
@@ -531,6 +536,9 @@ class AbstractQueryBuilder(object):
                 aliased_edge = aliased(self.Link)
             elif joining_keyword in ('ancestor_of', 'descendant_of'):
                 aliased_edge = aliased(self.Path)
+            elif joining_keyword in ('ancestor_of_beta', 'descendant_of_beta'):
+                #~ aliased_edge = aliased(self.PathBeta)
+                aliased_edge = self.PathBeta
 
             if aliased_edge is not None:
 
@@ -1261,10 +1269,10 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 aliased_edge,
                 aliased_edge.input_id == joined_entity.id
-        ).join(
+            ).join(
                 entity_to_join,
                 aliased_edge.output_id == entity_to_join.id
-        )
+            )
 
     def _join_inputs(self, joined_entity, entity_to_join, aliased_edge):
         """
@@ -1283,12 +1291,56 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 aliased_edge,
                 aliased_edge.output_id == joined_entity.id
-        ).join(
+            ).join(
                 entity_to_join,
                 aliased_edge.input_id == entity_to_join.id
-        )
+            )
 
-    #~ def _join_descendants_beta(self, joined_entity, entity_to_join, aliased_path):
+    def _join_descendants_beta(self, joined_entity, entity_to_join, aliased_path):
+        """
+        Beta version, joining descendants using the recursive functionality
+        """
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Node),
+                'descendant_of_beta'
+            )
+
+        self._query = self._query.join(
+                aliased_path,
+                aliased_path.ancestor_id == joined_entity.id
+            ).join(
+                entity_to_join,
+                aliased_path.descendant_id == entity_to_join.id
+            ).filter(
+                # it is necessary to put this filter so that the
+                # the node does not include itself as a ancestor/descendant
+                aliased_path.depth > -1
+            )
+    def _join_ancestors_beta(self, joined_entity, entity_to_join, aliased_path):
+        """
+        :param joined_entity: The (aliased) ORMclass that is a descendant
+        :param entity_to_join: The (aliased) ORMClass that is an ancestor.
+        :param aliased_path: An aliased instance of DbPath
+
+        """
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Node),
+                'ancestor_of_beta'
+            )
+        #~ aliased_path = aliased(self.Path)
+        self._query = self._query.join(
+                aliased_path,
+                aliased_path.descendant_id == joined_entity.id
+            ).join(
+                entity_to_join,
+                aliased_path.ancestor_id == entity_to_join.id
+            ).filter(
+                # it is necessary to put this filter so that the
+                # the node does not include itself as a ancestor/descendant
+                aliased_path.depth > -1
+            )
 
     def _join_descendants(self, joined_entity, entity_to_join, aliased_path):
         """
@@ -1310,10 +1362,10 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 aliased_path,
                 aliased_path.parent_id == joined_entity.id
-        ).join(
+            ).join(
                 entity_to_join,
                 aliased_path.child_id == entity_to_join.id
-        )
+            )
 
     def _join_ancestors(self, joined_entity, entity_to_join, aliased_path):
         """
@@ -1335,10 +1387,10 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 aliased_path,
                 aliased_path.child_id == joined_entity.id
-        ).join(
+            ).join(
                 entity_to_join,
                 aliased_path.parent_id == entity_to_join.id
-        )
+            )
     def _join_group_members(self, joined_entity, entity_to_join):
         """
         :param joined_entity:
@@ -1361,10 +1413,10 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 aliased_group_nodes,
                 aliased_group_nodes.c.dbgroup_id == joined_entity.id
-        ).join(
+            ).join(
                 entity_to_join,
                 entity_to_join.id == aliased_group_nodes.c.dbnode_id
-        )
+            )
     def _join_groups(self, joined_entity, entity_to_join):
         """
         :param joined_entity: The (aliased) node in the database
@@ -1384,10 +1436,10 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 aliased_group_nodes,
                 aliased_group_nodes.c.dbnode_id == joined_entity.id
-        ).join(
+            ).join(
                 entity_to_join,
                 entity_to_join.id == aliased_group_nodes.c.dbgroup_id
-        )
+            )
     def _join_creator_of(self, joined_entity, entity_to_join):
         """
         :param joined_entity: the aliased node
@@ -1431,7 +1483,7 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 entity_to_join,
                 entity_to_join.dbcomputer_id == joined_entity.id
-        )
+            )
 
     def _join_computer(self, joined_entity, entity_to_join):
         """
@@ -1448,7 +1500,7 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 entity_to_join,
                 joined_entity.dbcomputer_id == entity_to_join.id
-        )
+            )
 
     def _get_function_map(self):
         d = {
@@ -1458,6 +1510,8 @@ class AbstractQueryBuilder(object):
                 'master_of' : self._join_masters,# not implemented
                 'ancestor_of': self._join_ancestors,
                 'descendant_of': self._join_descendants,
+                'ancestor_of_beta': self._join_ancestors_beta, #not implemented
+                'descendant_of_beta': self._join_descendants_beta,
                 'direction' : None,
                 'group_of'  : self._join_groups,
                 'member_of' : self._join_group_members,

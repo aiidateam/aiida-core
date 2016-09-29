@@ -3,7 +3,7 @@
 from sqlalchemy import ForeignKey, select, func, join, and_
 from sqlalchemy.orm import (
         relationship, backref, Query, mapper,
-        foreign, column_property,
+        foreign, column_property, aliased
     )
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import Column, UniqueConstraint
@@ -382,3 +382,5 @@ DbNode.state = column_property(
     select([recent_states.c.state]).
     where(recent_states.c.dbnode_id == foreign(DbNode.id))
 )
+
+

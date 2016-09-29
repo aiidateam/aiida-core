@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
+
 """
 The dummy model encodes the model defined by django in backends.djsite
 using SQLAlchemy.
@@ -38,10 +44,6 @@ from aiida.utils import timezone
 
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 Base = declarative_base()
 
@@ -386,22 +388,25 @@ DbNode.state = column_property(
 
 
 
+# Recursive query that replaces DbPath
+# Note: Does not work with sqlite
 node_aliased = aliased(DbNode)
 
 walk = select([
-        DbNode.id.label('start'),
-        DbNode.id.label('end'),
+        DbNode.id.label('ancestor_id'),
+        DbNode.id.label('descendant_id'),
         cast(-1, Integer).label('depth'),
-        array([DbNode.id]).label('path')
+        # array([DbNode.id]).label('path') Arrays can only be used with postgres, so leave it out for now
     ]).select_from(DbNode).cte(recursive=True) #, name="incl_aliased3")
 
 
 descendants_beta = walk.union_all(
     select([
-            walk.c.start,
+            walk.c.ancestor_id,
             node_aliased.id,
             walk.c.depth + cast(1, Integer),
-            (walk.c.path+array([node_aliased.id])).label('path'),
+            # This is the way to reconstruct the path (the sequence of nodes traversed)
+            # (walk.c.path+array([node_aliased.id])).label('path'), As above, but if arrays are supported
         ]).select_from(
             join(
                 node_aliased,
@@ -410,7 +415,7 @@ descendants_beta = walk.union_all(
             )
         ).where(
             and_(
-                DbLink.input_id == walk.c.end,
+                DbLink.input_id == walk.c.descendant_id,
             )
         )
     )
@@ -423,10 +428,7 @@ class DbPathBeta(object):
         self.out = end
         self.depth = depth
 
-
-
 mapper(DbPathBeta, descendants_beta)
-
 
 #~ DbAttribute.value_str = column_property(
         #~ case([

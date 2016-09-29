@@ -163,12 +163,27 @@ class Scheduler(object):
             script_lines.append(job_tmpl.append_text)
             script_lines.append(empty_line)
 
+        try:
+            script_lines.append(self._get_submit_script_footer(job_tmpl))
+            script_lines.append(empty_line)
+        except NotImplementedError:
+            pass
+
         return "\n".join(script_lines)
 
     @abstractmethod
     def _get_submit_script_header(self, job_tmpl):
         """
         Return the submit script header, using the parameters from the
+        job_tmpl.
+
+        :param job_tmpl: a JobTemplate instance with relevant parameters set.
+        """
+        raise NotImplementedError
+
+    def _get_submit_script_footer(self, job_tmpl):
+        """
+        Return the submit script final part, using the parameters from the
         job_tmpl.
 
         :param job_tmpl: a JobTemplate instance with relevant parameters set.

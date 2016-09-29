@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
+
 """
 The dummy model encodes the model defined by django in backends.djsite
 using SQLAlchemy.
@@ -11,7 +17,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sa_init import (
     Column, Table, ForeignKey,
     Integer, String, DateTime, Float, Boolean, Text,  # basic column types
-    UUID, JSONB,                                      # Fancy column types
+    UUID, JSONB, array,                               # Fancy column types
     UniqueConstraint,aliased,
     select, func, join, and_, or_, not_, except_,     # join and filter ops
     relationship, backref, column_property,           # Table to table relationsships
@@ -38,10 +44,6 @@ from aiida.utils import timezone
 
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 Base = declarative_base()
 
@@ -385,33 +387,76 @@ DbNode.state = column_property(
 )
 
 
-DbAttribute.value_str = column_property(
-        case([
-            (DbAttribute.datatype == 'txt', DbAttribute.tval),
-            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
-            (DbAttribute.datatype == 'int', cast(DbAttribute.ival, String)),
-            (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, String)),
-            (DbAttribute.datatype == 'date', cast(DbAttribute.dval, String)),
-            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, String)),
-            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
-            (DbAttribute.datatype == 'list', None),
-            (DbAttribute.datatype == 'dict', None),
-        ])
+
+# Recursive query that replaces DbPath
+# Note: Does not work with sqlite
+node_aliased = aliased(DbNode)
+
+walk = select([
+        DbNode.id.label('ancestor_id'),
+        DbNode.id.label('descendant_id'),
+        cast(-1, Integer).label('depth'),
+        array([DbNode.id]).label('path') # Arrays can only be used with postgres
+    ]).select_from(DbNode).cte(recursive=True) #, name="incl_aliased3")
+
+
+descendants_beta = walk.union_all(
+    select([
+            walk.c.ancestor_id,
+            node_aliased.id,
+            walk.c.depth + cast(1, Integer),
+            # This is the way to reconstruct the path (the sequence of nodes traversed)
+            (walk.c.path+array([node_aliased.id])).label('path')
+        ]).select_from(
+            join(
+                node_aliased,
+                DbLink,
+                DbLink.output_id==node_aliased.id,
+            )
+        ).where(
+            and_(
+                DbLink.input_id == walk.c.descendant_id,
+            )
+        )
     )
 
-DbAttribute.value_float = column_property(
-        case([
-            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
-            (DbAttribute.datatype == 'float', DbAttribute.fval),
-            (DbAttribute.datatype == 'int', cast(DbAttribute.ival, Float)),
-            (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, Float)),
-            (DbAttribute.datatype == 'date', cast(DbAttribute.dval, Float)),
-            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
-            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, Float)),
-            (DbAttribute.datatype == 'list', None),
-            (DbAttribute.datatype == 'dict', None),
-        ])
-    )
+
+class DbPathBeta(object):
+
+    def __init__(self, start, end, depth):
+        self.start = start
+        self.out = end
+        self.depth = depth
+
+mapper(DbPathBeta, descendants_beta)
+
+#~ DbAttribute.value_str = column_property(
+        #~ case([
+            #~ (DbAttribute.datatype == 'txt', DbAttribute.tval),
+            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
+            #~ (DbAttribute.datatype == 'int', cast(DbAttribute.ival, String)),
+            #~ (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, String)),
+            #~ (DbAttribute.datatype == 'date', cast(DbAttribute.dval, String)),
+            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, String)),
+            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
+            #~ (DbAttribute.datatype == 'list', None),
+            #~ (DbAttribute.datatype == 'dict', None),
+        #~ ])
+    #~ )
+#~
+#~ DbAttribute.value_float = column_property(
+        #~ case([
+            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
+            #~ (DbAttribute.datatype == 'float', DbAttribute.fval),
+            #~ (DbAttribute.datatype == 'int', cast(DbAttribute.ival, Float)),
+            #~ (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, Float)),
+            #~ (DbAttribute.datatype == 'date', cast(DbAttribute.dval, Float)),
+            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
+            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, Float)),
+            #~ (DbAttribute.datatype == 'list', None),
+            #~ (DbAttribute.datatype == 'dict', None),
+        #~ ])
+    #~ )
 
 
 

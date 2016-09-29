@@ -426,11 +426,16 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             raise SchedulerError("Error during submission, retval={}\n"
                                  "stdout={}\nstderr={}".format(
                 retval, stdout, stderr))
-            
+
+        try:
+            transport_string = " for {}".format(self.transport)
+        except SchedulerError:
+            transport_string = ""
+ 
         if stderr.strip():
-            self.logger.warning("in _parse_submit_output for {}: "
+            self.logger.warning("in _parse_submit_output{}: "
                 "there was some text in stderr: {}".format(
-                    str(self.transport),stderr))
+                    transport_string,stderr))
          
         # I check for a valid string in the output.
         # See comments near the regexp above.
@@ -440,9 +445,9 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             if match:
                 return match.group('jobid')
         # If I am here, no valid line could be found.
-        self.logger.error("in _parse_submit_output for {}: "
+        self.logger.error("in _parse_submit_output{}: "
                           "unable to find the job id: {}".format(
-                str(self.transport),stdout))
+                transport_string,stdout))
         raise SchedulerError(
             "Error during submission, could not retrieve the jobID from "
             "sbatch output; see log for more info.")
@@ -710,15 +715,20 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
                 "stdout={}; stderr={}".format(retval, stdout, stderr))
             return False
 
+        try:
+            transport_string = " for {}".format(self.transport)
+        except SchedulerError:
+            transport_string = ""
+
         if stderr.strip():
-            self.logger.warning("in _parse_kill_output for {}: "
+            self.logger.warning("in _parse_kill_output{}: "
                 "there was some text in stderr: {}".format(
-                    str(self.transport),stderr))
+                    transport_string,stderr))
 
         if stdout.strip():
-            self.logger.warning("in _parse_kill_output for {}: "
+            self.logger.warning("in _parse_kill_output{}: "
                 "there was some text in stdout: {}".format(
-                    str(self.transport),stdout))
+                    transport_string,stdout))
 
         return True
     

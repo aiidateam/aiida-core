@@ -102,6 +102,7 @@ class Node(Resource):
 
         ## Parse request
         (resource_type, page, pk, query_type) = parse_path(path)
+
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
          nelist) = parse_query_string(query_string)
 
@@ -128,6 +129,14 @@ class Node(Resource):
             else:
                 usr = []
             results = self.trans.get_statistics(self.tclass, usr)
+
+        elif query_type == "tree":
+            if len(filters) > 0 :
+                depth = filters["depth"]["=="]
+            else:
+                depth = None
+            results = self.trans.get_io_tree(pk, depth)
+            headers = build_headers(url=request.url, total_count=0)
 
         else:
             ## Instantiate a translator and initialize it

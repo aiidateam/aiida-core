@@ -266,3 +266,86 @@ class NodeTranslator(BaseTranslator):
        statistics.update( count_statistics(qb_res))
 
        return statistics
+
+    def get_io_tree(self, nodeId, maxDepth=None):
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.node import Node
+
+        def addNodes(nodeId, maxDepth, nodes, addedNodes, addedEdges, edgeType):
+            qb= QueryBuilder()
+            qb.append(Node, tag="main", filters={"id":{"==":nodeId}})
+            if edgeType == "ancestors":
+                qb.append(Node, tag=edgeType, project=['id', 'type'], edge_project=['path', 'depth'],
+                        ancestor_of_beta='main', edge_filters={'depth':{'<=':maxDepth}})
+            elif edgeType == "desc":
+                qb.append(Node, tag=edgeType, project=['id', 'type'], edge_project=['path', 'depth'],
+                        descendant_of_beta='main', edge_filters={'depth':{'<=':maxDepth}})
+
+            if (qb.count() > 0):
+                qbResults = qb.get_results_dict()
+
+                for resultDict in qbResults:
+                    if resultDict[edgeType]["id"] not in addedNodes:
+                        nodes.append({"id": len(addedNodes),
+                                      "nodeid":resultDict[edgeType]["id"],
+                                      "nodetype":resultDict[edgeType]["type"],
+                                      "group":edgeType + "-" +str(resultDict["main--"+edgeType]["depth"])
+                                     })
+                        addedNodes.append(resultDict[edgeType]["id"])
+
+                    path = resultDict["main--"+edgeType]["path"]
+                    if edgeType == "ancestors":
+                        startEdge = path[0]
+                        endEdge = path[1]
+                    elif edgeType == "desc":
+                        startEdge = path[-2]
+                        endEdge = path[-1]
+                    if startEdge not in addedEdges.keys():
+                        addedEdges[startEdge] = [endEdge]
+                    elif endEdge not in addedEdges[startEdge]:
+                        addedEdges[startEdge].append(endEdge)
+
+            return nodes, addedNodes, addedEdges
+
+        def addEdges(edges, addedNodes, addedEdges):
+            for fromNodeId in addedEdges.keys():
+                fromNodeIdIndex = addedNodes.index(fromNodeId)
+                for toNodeId in addedEdges[fromNodeId]:
+                    toNodeIdIndex = addedNodes.index(toNodeId)
+                    edges.append({"from": fromNodeIdIndex,
+                                  "to": toNodeIdIndex,
+                                  "arrows": "to",
+                                  "color":{"inherit":'from'}
+                                 })
+
+            return edges
+
+        nodes=[]
+        edges=[]
+        addedNodes = []
+        addedEdges = {}
+
+        if maxDepth is None:
+            from aiida.restapi.common.config import MAX_TREE_DEPTH
+            maxDepth = MAX_TREE_DEPTH
+
+        qb= QueryBuilder()
+        qb.append(Node, tag="main",  project=["id", "type"], filters={"id":{"==":nodeId}})
+        if qb.count() > 0:
+            mainNode = qb.first()
+            nodes.append({"id": 0,
+                          "nodeid":mainNode[0],
+                          "nodetype":mainNode[1],
+                          "group": "mainNode"
+                         })
+            addedNodes.append(mainNode[0])
+
+        # get all descendents
+        nodes, addedNodes, addedEdges = addNodes(nodeId, maxDepth, nodes,
+                               addedNodes, addedEdges, "ancestors")
+        nodes, addedNodes, addedEdges = addNodes(nodeId, maxDepth, nodes,
+                               addedNodes, addedEdges, "desc")
+
+        edges = addEdges(edges, addedNodes, addedEdges)
+
+        return {"nodes": nodes, "edges": edges}

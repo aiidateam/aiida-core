@@ -3,10 +3,11 @@
 from test.util import DbTestCase
 import shutil
 import tempfile
-from plum.persistence.pickle_persistence import PicklePersistence
+
 from aiida.orm.data.base import Int, Str
 from aiida.workflows2.run import queue_up
 from aiida.workflows2.test_utils import DummyProcess
+from aiida.workflows2.persistence import Persistence
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -17,7 +18,7 @@ __authors__ = "The AiiDA team."
 class TestRun(DbTestCase):
     def setUp(self):
         self.storedir = tempfile.mkdtemp()
-        self.storage = PicklePersistence.create_from_basedir(self.storedir)
+        self.storage = Persistence.create_from_basedir(self.storedir)
 
     def tearDown(self):
         shutil.rmtree(self.storedir)

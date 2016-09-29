@@ -14,12 +14,12 @@ import threading
 from test.util import DbTestCase
 from aiida.orm import load_node
 from aiida.orm.data.base import Int
+from aiida.workflows2.persistence import Persistence
 from aiida.workflows2.process import Process, FunctionProcess
 from aiida.workflows2.run import run, submit
 import aiida.workflows2.util as util
 from aiida.workflows2.test_utils import DummyProcess, BadOutput
 from aiida.common.lang import override
-from plum.persistence.pickle_persistence import PicklePersistence
 
 
 class ProcessStackTest(Process):
@@ -90,7 +90,7 @@ class TestProcess(DbTestCase):
         self.assertTrue(load_node(pk=pid).is_sealed)
 
         storedir = tempfile.mkdtemp()
-        storage = PicklePersistence.create_from_basedir(storedir)
+        storage = Persistence.create_from_basedir(storedir)
 
         pid = submit(DummyProcess, _jobs_store=storage)
         n = load_node(pk=pid)

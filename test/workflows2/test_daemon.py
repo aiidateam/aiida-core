@@ -3,14 +3,15 @@ import unittest
 import tempfile
 from shutil import rmtree
 
-import aiida.workflows2.daemon as daemon
+from plum.wait_ons import checkpoint
+
+from aiida.workflows2.persistence import Persistence
 from aiida.orm.data.base import TRUE
+import aiida.workflows2.daemon as daemon
 from aiida.workflows2.process import Process
 from aiida.workflows2.process_registry import ProcessRegistry
 from aiida.workflows2.run import submit
 from aiida.common.lang import override
-from plum.wait_ons import checkpoint
-from plum.persistence.pickle_persistence import PicklePersistence
 from aiida.orm import load_node
 import aiida.workflows2.util as util
 from aiida.workflows2.test_utils import DummyProcess, ExceptionProcess
@@ -83,12 +84,25 @@ class ProcessEventsTester(Process):
         pass
 
 
+class FailCreateFromSavedStateProcess(DummyProcess):
+    """
+    This class emulates a failure that occurs when loading the process from
+    a saved state.
+    """
+    @override
+    def on_create(self, pid, inputs, saved_instance_state):
+        super(FailCreateFromSavedStateProcess, self).on_create(
+            pid, inputs, saved_instance_state)
+        if saved_instance_state is not None:
+            raise RuntimeError()
+
+
 class TestDaemon(unittest.TestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
         self.storedir = tempfile.mkdtemp()
-        self.storage = PicklePersistence.create_from_basedir(self.storedir)
+        self.storage = Persistence.create_from_basedir(self.storedir)
 
     def tearDown(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
@@ -118,3 +132,19 @@ class TestDaemon(unittest.TestCase):
         submit(DummyProcess, _jobs_store=self.storage)
 
         self.assertFalse(daemon.tick_workflow_engine(self.storage, print_exceptions=False))
+
+    def test_create_fail(self):
+        registry = ProcessRegistry()
+
+        dp_pk = submit(DummyProcess, _jobs_store=self.storage)
+        fail_pk = submit(FailCreateFromSavedStateProcess, _jobs_store=self.storage)
+
+        # Tick the engine a number of times or until there is no more work
+        i = 0
+        while daemon.tick_workflow_engine(self.storage, print_exceptions=False):
+            self.assertLess(i, 10, "Engine not done after 10 ticks")
+            i += 1
+
+        self.assertTrue(registry.has_finished(dp_pk))
+        self.assertFalse(registry.has_finished(fail_pk))
+

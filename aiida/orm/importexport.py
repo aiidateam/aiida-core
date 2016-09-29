@@ -932,6 +932,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                         foreign_ids_reverse_mappings[model_name] = {
                             k: v.pk for k, v in relevant_db_entries.iteritems()}
                         for k, v in data['export_data'][model_name].iteritems():
+                            if model_name == "aiida.backends.djsite.db.models.DbComputer":
+                                v["name"] += " (IMPORTED)"
+
                             if v[unique_identifier] in relevant_db_entries.keys():
                                 # Already in DB
                                 existing_entries[model_name][k] = v
@@ -1014,11 +1017,20 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                 # just_saved = dict(Model.objects.filter(
                 #     **{"{}__in".format(unique_identifier):
                 #            import_entry_ids.keys()}).values_list(unique_identifier, 'pk'))
-                qb = QueryBuilder()
-                qb.append(Model, filters={
-                    unique_identifier: {"in": import_entry_ids.keys()}},
-                          project=[unique_identifier, "id"], tag="res")
-                just_saved = {v[0]: v[1] for v in qb.all()}
+                if import_entry_ids.keys():
+                    qb = QueryBuilder()
+                    # qb.append(Model, filters={
+                    #     unique_identifier: {"in": import_entry_ids.keys()}},
+                    #           tag="res")
+                    qb.append(Model, filters={
+                        unique_identifier: {"in": import_entry_ids.keys()}},
+                              project=[unique_identifier, "id"], tag="res")
+                    print qb.all()
+                    # exit(0)
+                    just_saved = {v[0]: v[1] for v in qb.all()}
+                else:
+                    just_saved = dict()
+
 
                 imported_states = []
                 if model_name == "aiida.backends.djsite.db.models.DbNode":
@@ -1026,15 +1038,23 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                         print "SETTING THE IMPORTED STATES FOR NEW NODES..."
                     # I set for all nodes, even if I should set it only
                     # for calculations
+                    from aiida.backends.sqlalchemy.models.node import DbCalcState
                     for unique_id, new_pk in just_saved.iteritems():
                         imported_states.append(
-                            models.DbCalcState(dbnode_id=new_pk,
+                            DbCalcState(dbnode_id=new_pk,
                                                state=calc_states.IMPORTED))
-                    models.DbCalcState.objects.bulk_create(imported_states)
+
+                    from aiida.backends.sqlalchemy import session
+                    session.add_all(imported_states)
+                    session.commit()
+                    # models.DbCalcState.objects.bulk_create(imported_states)
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.iteritems():
+                    from uuid import UUID
+                    if isinstance(unique_id, UUID):
+                        unique_id = str(unique_id)
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
                     if model_name not in ret_dict:
@@ -1052,6 +1072,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                     if not silent:
                         print "STORING NEW NODE ATTRIBUTES..."
                     for unique_id, new_pk in just_saved.iteritems():
+                        from uuid import UUID
+                        if isinstance(unique_id, UUID):
+                            unique_id = str(unique_id)
                         import_entry_id = import_entry_ids[unique_id]
                         # Get attributes from import file
                         try:
@@ -1068,10 +1091,21 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                         # Here I have to deserialize the attributes
                         deserialized_attributes = deserialize_attributes(
                             attributes, attributes_conversion)
-                        models.DbAttribute.reset_values_for_node(
-                            dbnode=new_pk,
-                            attributes=deserialized_attributes,
-                            with_transaction=False)
+
+                        if deserialized_attributes:
+                            from aiida.backends.sqlalchemy.models.node import DbNode
+                            from aiida.backends.sqlalchemy import session
+                            nodes_to_change = session.query(DbNode).filter(
+                                DbNode.uuid == UUID(unique_id)).first()
+
+                            for k, v in deserialized_attributes.items():
+                                nodes_to_change.set_attr(k, v)
+                            session.flush()
+                            session.commit()
+                            # models.DbAttribute.reset_values_for_node(
+                            #     dbnode=new_pk,
+                            #     attributes=deserialized_attributes,
+                            #     with_transaction=False)
 
             if not silent:
                 print "STORING NODE LINKS..."
@@ -1081,13 +1115,15 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
             links_to_store = []
 
             # Needed for fast checks of existing links
-            existing_links_raw = models.DbLink.objects.all().values_list(
-                'input', 'output', 'label')
+            from aiida.backends.sqlalchemy.models.node import DbLink
+            existing_links_raw = session.query(DbLink.input, DbLink.output, DbLink.label).all()
+            # existing_links_raw = DbLink.objects.all().values_list(
+            #     'input', 'output', 'label')
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 
             dbnode_reverse_mappings = foreign_ids_reverse_mappings[
-                get_class_string("aiida.backends.djsite.db.models.DbNode")]
+                "aiida.backends.djsite.db.models.DbNode"]
             for link in import_links:
                 try:
                     in_id = dbnode_reverse_mappings[link['input']]
@@ -1122,7 +1158,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                             out_id, link['label'], in_id))
                     except KeyError:
                         # New link
-                        links_to_store.append(models.DbLink(
+                        links_to_store.append(DbLink(
                             input_id=in_id, output_id=out_id, label=link['label']))
                         if 'aiida.backends.djsite.db.models.DbLink' not in ret_dict:
                             ret_dict['aiida.backends.djsite.db.models.DbLink'] = { 'new': [] }
@@ -1132,8 +1168,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
             if links_to_store:
                 if not silent:
                     print "   ({} new links...)".format(len(links_to_store))
-
-                models.DbLink.objects.bulk_create(links_to_store)
+                from aiida.backends.sqlalchemy import session
+                session.add_all(links_to_store)
+                session.commit()
+                # models.DbLink.objects.bulk_create(links_to_store)
             else:
                 if not silent:
                     print "   (0 new links...)"
@@ -1143,7 +1181,12 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
             import_groups = data['groups_uuid']
             for groupuuid, groupnodes in import_groups.iteritems():
                 # TODO: cache these to avoid too many queries
-                group = models.DbGroup.objects.get(uuid=groupuuid)
+                from aiida.backends.sqlalchemy.models.group import DbGroup
+                from uuid import UUID
+                group = session.query(DbGroup).filter(
+                    DbGroup.uuid == UUID(groupuuid)).all()
+
+                # group = DbGroup.objects.get(uuid=groupuuid)
                 nodes_to_store = [dbnode_reverse_mappings[node_uuid]
                                   for node_uuid in groupnodes]
                 if nodes_to_store:
@@ -1151,7 +1194,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
 
             ######################################################
             # Put everything in a specific group
-            dbnode_model_name = get_class_string(models.DbNode)
+            dbnode_model_name = "aiida.backends.djsite.db.models.DbNode"
             existing = existing_entries.get(dbnode_model_name, {})
             existing_pk = [foreign_ids_reverse_mappings[
                                dbnode_model_name][v['uuid']]
@@ -1185,8 +1228,12 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
 
                 # Add all the nodes to the new group
                 # TODO: decide if we want to return the group name
-                group.add_nodes(models.DbNode.objects.filter(
-                    pk__in=pks_for_group))
+                from aiida.backends.sqlalchemy.models.node import DbNode
+                group.add_nodes(session.query(DbNode).filter(
+                    DbNode.id.in_(pks_for_group)).distinct().all())
+
+                # group.add_nodes(models.DbNode.objects.filter(
+                #     pk__in=pks_for_group))
 
                 if not silent:
                     print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
@@ -1198,6 +1245,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
         print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
         print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
         print "DONE."
+
+
+    # from aiida.backends.sqlalchemy import session
+    # session.flush()
+    # session.commit()
 
     return ret_dict
 
@@ -1763,6 +1815,17 @@ django_fields_to_sqla = {
         "metadata" : "_metadata"}
 }
 
+sqla_fields_to_django = {
+    "aiida.backends.sqlalchemy.models.node.DbNode": {
+        "dbcomputer_id" : "dbcomputer",
+        "user_id": "user"},
+    "aiida.backends.sqlalchemy.models.node.DbLink": {},
+    "aiida.backends.sqlalchemy.models.group.DbGroup": {},
+    "aiida.backends.sqlalchemy.models.computer.DbComputer": {
+        "_metadata" : "metadata"},
+    "aiida.backends.sqlalchemy.models.user.DbUser": {}
+}
+
 def export_spyros(dbnodes, dbcomputers, dbgroups, folder, also_parents = True, also_calc_outputs=True,
                 allowed_licenses=None, forbidden_licenses=None,
                 silent=False):
@@ -2015,7 +2078,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
         for temp_d in partial_query.iterdict():
             for k in temp_d.keys():
-                temp_d2 = {temp_d[k]["id"]: serialize_dict(temp_d[k], remove_fields=['id'])}
+                temp_d2 = {temp_d[k]["id"]: serialize_dict(temp_d[k], remove_fields=['id'], rename_fields=sqla_fields_to_django[k])}
                 try:
                     export_data[sqla_to_django_schema[k]].update(temp_d2)
                 except KeyError:

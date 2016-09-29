@@ -35,6 +35,7 @@ from sqlalchemy.orm import aliased, mapper
 from sqlalchemy import select, func, join, and_
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.types import Integer
+from sqlalchemy.dialects.postgresql import array
 
 node_aliased = aliased(DbNode)
 

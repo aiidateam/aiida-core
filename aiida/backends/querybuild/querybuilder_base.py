@@ -1959,10 +1959,21 @@ class AbstractQueryBuilder(object):
 
         :returns: a generator
         """
-        return self.get_query().yield_per(batch_size)
+        try:
+            return self.get_query().yield_per(batch_size)
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
 
     def _all(self):
-        return self.get_query().all()
+        try:
+            return self.get_query().all()
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
 
     def _first(self):
         """
@@ -1970,7 +1981,13 @@ class AbstractQueryBuilder(object):
 
         :returns: One row of aiida results
         """
-        return self.get_query().first()
+        try:
+            return self.get_query().first()
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
 
     def first(self):
         """

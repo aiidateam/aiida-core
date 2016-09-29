@@ -895,7 +895,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
         ###############
         # DO ALL WITH A TRANSACTION
         # with transaction.commit_on_success():
-        if True:
+        # if True
+        try:
             foreign_ids_reverse_mappings = {}
             new_entries = {}
             existing_entries = {}
@@ -979,6 +980,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
                                        for k, v in entry_data.iteritems())
 
+                    print "================================> INSIDE"
                     objects_to_create.append(Model(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
 
@@ -1011,7 +1013,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                 if objects_to_create:
                     from aiida.backends.sqlalchemy import session
                     session.add_all(objects_to_create)
-                    session.commit()
+                    # session.commit()
 
                 # Get back the just-saved entries
                 # just_saved = dict(Model.objects.filter(
@@ -1046,7 +1048,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
 
                     from aiida.backends.sqlalchemy import session
                     session.add_all(imported_states)
-                    session.commit()
+                    # session.commit()
                     # models.DbCalcState.objects.bulk_create(imported_states)
 
                 # Now I have the PKs, print the info
@@ -1100,8 +1102,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
 
                             for k, v in deserialized_attributes.items():
                                 nodes_to_change.set_attr(k, v)
-                            session.flush()
-                            session.commit()
+                            # session.flush()
+                            # session.commit()
                             # models.DbAttribute.reset_values_for_node(
                             #     dbnode=new_pk,
                             #     attributes=deserialized_attributes,
@@ -1170,7 +1172,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                     print "   ({} new links...)".format(len(links_to_store))
                 from aiida.backends.sqlalchemy import session
                 session.add_all(links_to_store)
-                session.commit()
+                # session.commit()
                 # models.DbLink.objects.bulk_create(links_to_store)
             else:
                 if not silent:
@@ -1241,15 +1243,16 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                 if not silent:
                     print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
 
+            session.commit()
+        except:
+            print "Rolling back"
+            session.rollback()
+            raise
+
     if not silent:
         print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
         print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
         print "DONE."
-
-
-    # from aiida.backends.sqlalchemy import session
-    # session.flush()
-    # session.commit()
 
     return ret_dict
 

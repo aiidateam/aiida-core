@@ -35,7 +35,7 @@ class AbstractJobCalculation(object):
 
     @classmethod
     def process(cls):
-        from aiida.workflows2.legacy.job_process import JobProcess
+        from aiida.work.legacy.job_process import JobProcess
         return JobProcess.build(cls)
 
     def _init_internal_params(self):

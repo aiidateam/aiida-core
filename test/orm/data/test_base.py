@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 
+from test.util import DbTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import load_node
 from aiida.orm.data.base import NumericType, Float, Str, Bool, Int, TRUE, FALSE
@@ -12,7 +13,7 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
 
-class TestList(unittest.TestCase):
+class TestList(DbTestCase):
     def test_creation(self):
         l = base.List()
         self.assertEqual(len(l), 0)

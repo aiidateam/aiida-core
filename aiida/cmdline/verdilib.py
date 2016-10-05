@@ -39,7 +39,7 @@ from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.profile import Profile
 from aiida.cmdline.commands.workflow import Workflow
-from aiida.cmdline.commands.workflow2 import Workflow2
+from aiida.cmdline.commands.work import Work
 from aiida.cmdline.commands.comment import Comment
 from aiida.cmdline.commands.shell import Shell
 from aiida.cmdline import execname

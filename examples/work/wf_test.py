@@ -1,0 +1,65 @@
+# -*- coding: utf-8 -*-
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
+if not is_dbenv_loaded():
+    load_dbenv()
+
+from aiida.work.workfunction import workfunction
+from aiida.orm.data.base import Int
+from aiida.work.workchain import WorkChain
+from aiida.orm.data.base import NumericType
+from aiida.work.run import run
+
+
+@workfunction
+def sum(a, b):
+    return a + b
+
+
+@workfunction
+def prod(a, b):
+    return a * b
+
+
+@workfunction
+def add_multiply_wf(a, b, c):
+    return prod(sum(a, b), c)
+
+
+class AddMultiplyWf(WorkChain):
+    @classmethod
+    def _define(cls, spec):
+        super(WorkChain, cls)._define(spec)
+
+        spec.input("a", valid_type=NumericType)
+        spec.input("b", valid_type=NumericType)
+        spec.input("c", valid_type=NumericType)
+        spec.outline(
+            cls.sum,
+            cls.prod
+        )
+
+    def sum(self, ctx):
+        ctx.sum = self.inputs.a + self.inputs.b
+
+    def prod(self, ctx):
+        self.out(ctx.sum * self.inputs.c)
+
+
+if __name__ == '__main__':
+    two = Int(2)
+    three = Int(3)
+    four = Int(4)
+
+    print "WORKFUNCTION:"
+
+    simpledata = add_multiply_wf(two, three, four)
+    print "output pk:", simpledata.pk
+    print "output value:", simpledata.value
+
+    print(run(AddMultiplyWf, a=two, b=three, c=four))

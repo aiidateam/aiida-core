@@ -149,8 +149,8 @@ class Process(plum.process.Process):
         this process.
         :return:
         """
-        from aiida.orm.calculation.process import ProcessCalculation
-        calc = ProcessCalculation()
+        from aiida.orm.calculation.work import WorkCalculation
+        calc = WorkCalculation()
         return calc
 
     _spec_type = ProcessSpec

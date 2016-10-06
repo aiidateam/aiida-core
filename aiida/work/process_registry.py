@@ -8,7 +8,7 @@ from aiida.common.lang import override
 from aiida.work.util import ProcessStack
 from aiida.orm import load_node
 from aiida.orm.calculation.job import JobCalculation
-from aiida.orm.calculation.process import ProcessCalculation
+from aiida.orm.calculation.work import WorkCalculation
 
 
 class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
@@ -36,7 +36,7 @@ class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
         else:
             if isinstance(node, JobCalculation):
                 return node.has_finished_ok() or node.has_failed()
-            elif isinstance(node, ProcessCalculation):
+            elif isinstance(node, WorkCalculation):
                 return node.is_sealed
             else:
                 raise plum.knowledge_provider.NotKnown(

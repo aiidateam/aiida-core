@@ -47,7 +47,7 @@ python-mimeparse==0.1.4
 # SQLAlchemy support
 SQLAlchemy==1.0.12
 SQLAlchemy-Utils==0.31.2
-ultrajson==1.35
+ujson==1.35
 
 # For workflows
 enum34==1.1.2

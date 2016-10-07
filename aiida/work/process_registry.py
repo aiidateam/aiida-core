@@ -35,7 +35,7 @@ class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
                 "Can't find node with pk '{}'".format(pid))
         else:
             if isinstance(node, JobCalculation):
-                return node.has_finished_ok() or node.has_failed()
+                return node.has_finished()
             elif isinstance(node, WorkCalculation):
                 return node.is_sealed
             else:

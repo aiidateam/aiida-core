@@ -507,11 +507,12 @@ class AbstractJobCalculation(object):
 
     def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
         """
-        Replace a link. Add the additional constratint that this is
+        Replace a link. Add the additional constraint that this is
         only possible if the calculation is in state NEW.
 
         :param src: a node of the database. It cannot be a Calculation object.
-        :param str label: Name of the link.
+        :param label: Name of the link.
+        :type label: str
         """
         valid_states = [calc_states.NEW]
 
@@ -620,6 +621,16 @@ class AbstractJobCalculation(object):
             calc_states.RETRIEVING,
             calc_states.PARSING
         ]
+
+    def has_finished(self):
+        """
+        Determine if the calculation is finished for whatever reason.
+        This may be because it finished successfully or because of a failure.
+
+        :return: True if the job has finished running, False otherwise.
+        :rtype: bool
+        """
+        return self.has_finished_ok() or self.has_failed()
 
     def has_finished_ok(self):
         """
@@ -1798,7 +1809,7 @@ class CalculationResultManager(object):
     """
     An object used internally to interface the calculation object with the Parser
     and consequentially with the ParameterData object result.
-    It shouldn't be used explicitely by a user.
+    It shouldn't be used explicitly by a user.
     """
 
     def __init__(self, calc):

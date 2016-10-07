@@ -87,15 +87,15 @@ class JobProcess(Process):
             self.out(label, node)
 
     @override
+    def create_db_record(self):
+        return self._CALC_CLASS()
+
+    @override
     def _on_output_emitted(self, output_port, value, dynamic):
         # Skip over parent _on_output_emitted because it will try to store stuff
         # which is already done for us by the Calculation
         plum.process.Process._on_output_emitted(
             self, output_port, value, dynamic)
-
-    @override
-    def create_db_record(self):
-        return self._CALC_CLASS()
 
     @override
     def _setup_db_record(self):

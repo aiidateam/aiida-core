@@ -7,6 +7,10 @@
 ## NOTE: before running the command above, you need to install a recent version
 ## of pip from the website, and then possibly install/upgrade setuptools using
 ## sudo pip install --upgrade setuptools
+##
+## DEVELOPERS: When adding requirements here make sure you ALSO add them to
+## install_requires in setup.py!
+
 
 ## Django
 django==1.7.4
@@ -47,7 +51,7 @@ python-mimeparse==0.1.4
 # SQLAlchemy support
 SQLAlchemy==1.0.12
 SQLAlchemy-Utils==0.31.2
-ultrajson==1.35
+ujson==1.35
 
 # For workflows
 enum34==1.1.2

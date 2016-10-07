@@ -44,7 +44,7 @@ setup(
         'celery', 'billiard', 'anyjson', 'six', 'supervisor',
         'meld3', 'paramiko', 'ecdsa', 'pycrypto', 'numpy', 'django-tastypie',
         'python-dateutil', 'python-mimeparse', 'plum', 'enum34', 'voluptuous',
-        'click', 'uritools',
+        'click', 'ujson', 'uritools',
     ],
     packages=find_packages(),
     scripts=[os.path.join(bin_folder, f) for f in os.listdir(bin_folder)

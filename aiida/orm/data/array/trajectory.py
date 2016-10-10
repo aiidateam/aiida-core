@@ -434,27 +434,38 @@ class TrajectoryData(ArrayData):
         if index is not None:
             indices = [index]
         return_string = "ANIMSTEPS {}\nCRYSTAL\n".format(len(indices))
+        # Do the checks once and for all here:
+        structure = self.get_step_structure(index=0)
+        if structure.is_alloy() or structure.has_vacancies():
+            raise NotImplementedError("XSF for alloys or systems with "
+                                      "vacancies not implemented.")
+        cells = self.get_cells()
+        positions = self.get_positions()
+        symbols = self.get_symbols()
+        atomic_numbers_list = [_atomic_numbers[s] for s in symbols]
+        nat = len(symbols)
+
         for idx in indices:
             return_string += "PRIMVEC {}\n".format(idx+1)
-            structure = self.get_step_structure(index=idx)
-            sites = structure.sites
-            if structure.is_alloy() or structure.has_vacancies():
-                raise NotImplementedError("XSF for alloys or systems with "
-                                          "vacancies not implemented.")
-            for cell_vector in structure.cell:
-                return_string += " ".join(["%18.5f" % i for i in cell_vector])
+            #~ structure = self.get_step_structure(index=idx)
+            #~ sites = structure.sites
+            #~ if structure.is_alloy() or structure.has_vacancies():
+                #~ raise NotImplementedError("XSF for alloys or systems with "
+                                          #~ "vacancies not implemented.")
+            for cell_vector in cells[idx]:
+                return_string += " ".join(["{:18.5f}".format(i) for i in cell_vector])
                 return_string += "\n"
             return_string += "PRIMCOORD {}\n".format(idx+1)
-            return_string += "%d 1\n" % len(sites)
-            for site in sites:
-                # I checked above that it is not an alloy, therefore I take the
-                # first symbol
-                return_string += "%s " % _atomic_numbers[
-                    structure.get_kind(site.kind_name).symbols[0]]
-                return_string += "%18.10f %18.10f %18.10f\n" % tuple(site.position)
+            return_string += "{} 1\n" .format(nat)
+            for atn, pos in zip(atomic_numbers_list, positions[idx]):
+                try:
+                    return_string += "{} {:18.10f} {:18.10f} {:18.10f}\n".format(atn, pos[0], pos[1], pos[2] )
+                except:
+                    print sym, pos
+                    raise
         return return_string
 
-    def _prepare_cif(self, index=None):
+    def _prepare_cif(self, trajectory_index=None):
         """
         Write the given trajectory to a string of format CIF.
         """
@@ -464,8 +475,8 @@ class TrajectoryData(ArrayData):
 
         cif = ""
         indices = range(self.numsteps)
-        if index is not None:
-            indices = [index]
+        if trajectory_index is not None:
+            indices = [trajectory_index]
         for idx in indices:
             structure = self.get_step_structure(idx)
             ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),

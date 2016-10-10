@@ -169,7 +169,7 @@ class Process(plum.process.Process):
         super(Process, self).save_instance_state(bundle)
 
         if self.inputs._store_provenance:
-            assert self._calc.is_stored
+            assert self.calc.is_stored
 
         bundle[self.SaveKeys.CALC_ID.value] = self.pid
         bundle.set_class_loader(class_loader)
@@ -207,13 +207,16 @@ class Process(plum.process.Process):
         else:
             if self.SaveKeys.CALC_ID.value in saved_instance_state:
                 self._calc = load_node(saved_instance_state[self.SaveKeys.CALC_ID.value])
-                self._pid = self._calc.pk
+                self._pid = self.calc.pk
             else:
                 self._pid = self._create_and_setup_db_record()
 
             if self.SaveKeys.PARENT_CALC_PID.value in saved_instance_state:
                 self._parent_pid = saved_instance_state[
                     self.SaveKeys.PARENT_CALC_PID.value]
+
+        if self.logger is None:
+            self.set_logger(self.calc.logger)
 
     @override
     def on_start(self):
@@ -241,10 +244,10 @@ class Process(plum.process.Process):
             "types.  Got: {}".format(value.__class__)
 
         if not value.is_stored:
-            value.add_link_from(self._calc, output_port, LinkType.CREATE)
+            value.add_link_from(self.calc, output_port, LinkType.CREATE)
             if self.inputs._store_provenance:
                 value.store()
-        value.add_link_from(self._calc, output_port, LinkType.RETURN)
+        value.add_link_from(self.calc, output_port, LinkType.RETURN)
     #################################################################
 
     @override
@@ -287,12 +290,12 @@ class Process(plum.process.Process):
         self._calc = self.create_db_record()
         self._setup_db_record()
         if self.inputs._store_provenance:
-            self._calc.store_all()
+            self.calc.store_all()
 
-        if self._calc.pk is not None:
-            return self._calc.pk
+        if self.calc.pk is not None:
+            return self.calc.pk
         else:
-            return uuid.UUID(self._calc.uuid)
+            return uuid.UUID(self.calc.uuid)
 
     def _setup_db_record(self):
         assert self.inputs is not None

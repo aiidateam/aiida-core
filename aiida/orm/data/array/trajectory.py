@@ -83,7 +83,7 @@ class TrajectoryData(ArrayData):
         Store the whole trajectory, after checking that types and dimensions
         are correct.
         Velocities are optional, if they are not passed, nothing is stored.
-        
+
         :param stepids: integer array with dimension ``s``, where ``s`` is the
                       number of steps. Typically represents an internal counter
                       within the code. For instance, if you want to store a
@@ -102,12 +102,12 @@ class TrajectoryData(ArrayData):
                       ``cells[i,j,k]`` is the ``k``-th component of the ``j``-th
                       cell vector at the time step with index ``i`` (identified
                       by step number ``stepid[i]`` and with timestamp ``times[i]``).
-        :param symbols: string array with dimension ``n``, where ``n`` is the 
+        :param symbols: string array with dimension ``n``, where ``n`` is the
                       number of atoms (i.e., sites) in the structure.
                       The same array is used for each step. Normally, the string
                       should be a valid chemical symbol, but actually any unique
                       string works and can be used as the name of the atomic kind
-                      (see also the :py:meth:`.get_step_structure()` method). 
+                      (see also the :py:meth:`.get_step_structure()` method).
         :param positions: float array with dimension :math:`s \times n \times 3`,
                       where ``s`` is the
                       length of the ``stepids`` array and ``n`` is the length
@@ -117,13 +117,13 @@ class TrajectoryData(ArrayData):
                       ``j``-th atom (or site) in the structure at the time step
                       with index ``i`` (identified
                       by step number ``step[i]`` and with timestamp ``times[i]``).
-        :param times: if specified, float array with dimension ``s``, where 
-                      ``s`` is the length of the ``stepids`` array. Contains the 
+        :param times: if specified, float array with dimension ``s``, where
+                      ``s`` is the length of the ``stepids`` array. Contains the
                       timestamp of each step in picoseconds (ps).
         :param velocities: if specified, must be a float array with the same
                       dimensions of the ``positions`` array.
                       The array contains the velocities in the atoms.
-                      
+
         .. todo :: Choose suitable units for velocities
         """
         self._internal_validate(stepids, cells, symbols, positions, times, velocities)
@@ -216,21 +216,21 @@ class TrajectoryData(ArrayData):
     def get_steps(self):
         """
         .. deprecated:: 0.7
-           Use :meth:`get_stepids` instead.       
+           Use :meth:`get_stepids` instead.
         """
         import warnings
         warnings.warn(
-            "get_steps is deprecated, use get_stepids instead", 
+            "get_steps is deprecated, use get_stepids instead",
             DeprecationWarning)
         return self.get_stepids()
 
     def get_stepids(self):
         """
         Return the array of steps, if it has already been set.
-        
+
         .. versionadded:: 0.7
-           Renamed from get_steps        
-        
+           Renamed from get_steps
+
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('steps')
@@ -238,7 +238,7 @@ class TrajectoryData(ArrayData):
     def get_times(self):
         """
         Return the array of times (in ps), if it has already been set.
-        
+
         :raises KeyError: if the trajectory has not been set yet.
         """
         try:
@@ -249,7 +249,7 @@ class TrajectoryData(ArrayData):
     def get_cells(self):
         """
         Return the array of cells, if it has already been set.
-        
+
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('cells')
@@ -257,7 +257,7 @@ class TrajectoryData(ArrayData):
     def get_symbols(self):
         """
         Return the array of symbols, if it has already been set.
-        
+
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('symbols')
@@ -265,7 +265,7 @@ class TrajectoryData(ArrayData):
     def get_positions(self):
         """
         Return the array of positions, if it has already been set.
-        
+
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('positions')
@@ -287,11 +287,11 @@ class TrajectoryData(ArrayData):
     def get_step_index(self, step):
         """
         .. deprecated:: 0.7
-           Use :meth:`get_index_from_stepid` instead.       
+           Use :meth:`get_index_from_stepid` instead.
         """
         import warnings
         warnings.warn(
-            "get_step_index is deprecated, use get_index_from_stepid instead", 
+            "get_step_index is deprecated, use get_index_from_stepid instead",
             DeprecationWarning)
         return self.get_index_from_stepid(stepid=step)
 
@@ -301,14 +301,14 @@ class TrajectoryData(ArrayData):
         array), return the array index of that stepid, that can be used in other
         methods such as :py:meth:`.get_step_data` or
         :py:meth:`.get_step_structure`.
- 
+
         .. versionadded:: 0.7
            Renamed from get_step_index
-          
+
         .. note:: Note that this function returns the first index found
             (i.e. if multiple steps are present with the same value,
             only the index of the first one is returned).
-        
+
         :raises ValueError: if no step with the given value is found.
         """
         import numpy
@@ -320,22 +320,22 @@ class TrajectoryData(ArrayData):
 
     def get_step_data(self, index):
         r"""
-        Return a tuple with all information concerning 
+        Return a tuple with all information concerning
         the stepid with given index (0 is the first step, 1 the second step
-        and so on). If you know only the step value, use the 
-        :py:meth:`.get_index_from_stepid`  method to get the 
+        and so on). If you know only the step value, use the
+        :py:meth:`.get_index_from_stepid`  method to get the
         corresponding index.
-        
+
         If no velocities were specified, None is returned as the last element.
-        
+
         :return: A tuple in the format
           ``(stepid, time, cell, symbols, positions, velocities)``,
           where ``stepid`` is an integer, ``time`` is a float, ``cell`` is a
           :math:`3 \times 3` matrix, ``symbols`` is an array of length ``n``,
           positions is a :math:`n \times 3` array, and velocities is either
           ``None`` or a :math:`n \times 3` array
-        
-        :param index: The index of the step that you want to retrieve, from 
+
+        :param index: The index of the step that you want to retrieve, from
            0 to ``self.numsteps - 1``.
         :raises IndexError: if you require an index beyond the limits.
         :raises KeyError: if you did not store the trajectory yet.
@@ -357,27 +357,27 @@ class TrajectoryData(ArrayData):
     def step_to_structure(self, index, custom_kinds=None):
         """
         .. deprecated:: 0.7
-           Use :meth:`get_step_structure` instead.       
+           Use :meth:`get_step_structure` instead.
         """
         import warnings
         warnings.warn(
-            "step_to_structure is deprecated, use get_step_structure instead", 
+            "step_to_structure is deprecated, use get_step_structure instead",
             DeprecationWarning)
         return self.get_step_structure(index=index, custom_kinds=custom_kinds)
-    
+
     def get_step_structure(self, index, custom_kinds=None):
         """
         Return an AiiDA :py:class:`aiida.orm.data.structure.StructureData` node
         (not stored yet!) with the coordinates of the given step, identified by
-        its index. If you know only the step value, use the 
+        its index. If you know only the step value, use the
         :py:meth:`.get_index_from_stepid` method to get the corresponding index.
-        
+
         .. note:: The periodic boundary conditions are always set to True.
-    
+
         .. versionadded:: 0.7
            Renamed from step_to_structure
-    
-        :param index: The index of the step that you want to retrieve, from 
+
+        :param index: The index of the step that you want to retrieve, from
            0 to ``self.numsteps- 1``.
         :param custom_kinds: (Optional) If passed must be a list of
           :py:class:`aiida.orm.data.structure.Kind` objects. There must be one
@@ -385,7 +385,7 @@ class TrajectoryData(ArrayData):
           ``kind.name`` set to this string.
           If this parameter is omitted, the automatic kind generation of AiiDA
           :py:class:`aiida.orm.data.structure.StructureData` nodes is used,
-          meaning that the strings in the ``symbols`` array must be valid 
+          meaning that the strings in the ``symbols`` array must be valid
           chemical symbols.
         """
         from aiida.orm.data.structure import StructureData, Kind, Site
@@ -425,11 +425,11 @@ class TrajectoryData(ArrayData):
 
     def _prepare_xsf(self,index=None):
         """
-        Write the given trajectory to a string of format XSF (for XCrySDen). 
+        Write the given trajectory to a string of format XSF (for XCrySDen).
         """
         from aiida.common.constants import elements
         _atomic_numbers = {data['symbol']: num for num, data in elements.iteritems()}
-        
+
         indices = range(self.numsteps)
         if index is not None:
             indices = [index]
@@ -582,3 +582,156 @@ class TrajectoryData(ArrayData):
                              "n=number of symbols={}".format(numsteps, numsites))
 
         self.set_array('velocities', velocities)
+
+
+    def show_pos(self, **kwargs):
+        """
+        Shows the positions as a function of time, separate for XYZ coordinates
+
+        :param int stepsize: The stepsize for the trajectory, set higher than 1 to
+            reduce number of points
+        :param int mintime: Time to start from
+        :param int maxtime: Maximum time
+        :param list elements:
+            A list of atomic symbols that should be displayed.
+            If not specified, all atoms are displayed.
+        :param list indices:
+            A list of indices of that atoms that can be displayed.
+            If not specified, all atoms of the correct species are displayed.
+        :param bool dont_block: If True, interpreter is not blocked when figure is displayed.
+
+        :todo: save to file?
+        """
+        from ase.data import atomic_numbers
+        from aiida.common.exceptions import InputValidationError
+
+
+        # Reading the arrays I need:
+        positions = self.get_positions()
+        times = self.get_times()
+        symbols = self.get_symbols()
+
+        # Try to get the units.
+        try:
+            positions_unit = self.get_attr('units|positions')
+        except KeyError:
+            positions_unit = 'A'
+        try:
+            times_unit = self.get_attr('units|times')
+        except KeyError:
+            times_unit = 'ps'
+
+        # Getting the keyword input
+        stepsize = kwargs.pop('stepsize', 1)
+        maxtime  = kwargs.pop('maxtime', times[-1])
+        mintime  = kwargs.pop('mintime', times[0])
+        element_list = kwargs.pop('elements', None)
+        index_list = kwargs.pop('indices', None)
+        dont_block = kwargs.pop('dont_block', False)
+        label = kwargs.pop('label', None) or self.label or self.__repr__()
+        # Choosing the color scheme
+
+        colors = kwargs.pop('colors', 'jmol')
+        if colors == 'jmol':
+            from ase.data.colors import jmol_colors as colors
+        elif colors == 'cpk':
+            from ase.data.colors import cpk_colors as colors
+        else:
+            raise InputValidationError("Unknown color spec {}".format(colors))
+        if kwargs:
+            raise InputValidationError(
+                    "Unrecognized keyword {}".format(kwargs.keys())
+            )
+
+        if element_list is None:
+            # If not all elements are allowed
+            allowed_elements = set(symbols)
+        else:
+            # A subset of elements are allowed
+            # TODO: maybe a check
+            allowed_elements = set(element_list)
+        color_dict = {s:colors[atomic_numbers[s]] for s in set(symbols)}
+        # Here I am trying to find out the atoms to show
+        if index_list is None:
+            # If not index_list was provided, I will see if an element_list
+            # was given to me
+            indices_to_show = [i for i, sym in enumerate(symbols) if sym in allowed_elements]
+        else:
+            indices_to_show = index_list
+            # I refrain from checking if indices are ok, will crash if not...
+
+
+        # The color_list is a list of colors (RGB) that I will
+        # pass, so the different species give different colors in the plot
+        # TODO: Color fading for different atoms:
+        color_list = [color_dict[s] for s in symbols]
+
+        # Reducing array size based on stepsize variable
+        T = times[::stepsize]
+        P = positions[::stepsize]
+
+        # Calling
+        plot_positions_XYZ(
+            T, P, indices_to_show, color_list, label,
+            positions_unit, times_unit,
+            dont_block, mintime, maxtime,
+        )
+
+def plot_positions_XYZ(
+            times, positions, indices_to_show, color_list, label,
+            positions_unit='A', times_unit='ps', dont_block=False,
+            mintime=None, maxtime=None, label_sparsity=10):
+
+        from matplotlib import pyplot as plt
+        from matplotlib.gridspec import GridSpec
+        import numpy as np
+        from random import choice
+
+        tlim = [times[0], times[-1]]
+        index_range = [0, len(times)]
+        if mintime is not None:
+            tlim[0] = mintime
+            index_range[0] = np.argmax(times>mintime)
+        if maxtime is not None:
+            tlim[1] = maxtime
+            index_range[1] = np.argmin(times<maxtime)
+
+        trajectories = zip(*positions.tolist())
+        cmap =  plt.get_cmap('jet_r')
+        fig = plt.figure(figsize = (12,7))
+
+        plt.suptitle(r'Trajectory of %s' % label, fontsize=16)
+        nr_of_axes = 3
+        gs = GridSpec(nr_of_axes,1, hspace = 0.0)
+
+        ax1 = fig.add_subplot(gs[0])
+        plt.ylabel(r'X Position $\left[{}\right]$'.format(positions_unit))
+        plt.xticks([])
+        plt.xlim(*tlim)
+        ax2 = fig.add_subplot(gs[1])
+        plt.ylabel(r'Y Position $\left[{}\right]$'.format(positions_unit))
+        plt.xticks([])
+        plt.xlim(*tlim)
+        ax3 = fig.add_subplot(gs[2])
+        plt.ylabel(r'Z Position $\left[{}\right]$'.format(positions_unit))
+        plt.xlabel('Time [{}]'.format(times_unit))
+        plt.xlim(*tlim)
+        sparse_indices = np.linspace(*index_range, num=label_sparsity, dtype=int)
+
+        for index, traj in enumerate(trajectories):
+            if index not in indices_to_show:
+                continue
+            color =  color_list[index]
+            X,Y,Z = zip(*traj)
+            ax1.plot(times, X, color=color)
+            ax2.plot(times, Y, color=color)
+            ax3.plot(times, Z, color=color)
+            for i in sparse_indices:
+                ax1.text(times[i], X[i], str(index), color=color, fontsize=5)
+                ax2.text(times[i], Y[i], str(index), color=color, fontsize=5)
+                ax3.text(times[i], Z[i], str(index), color=color, fontsize=5)
+        for ax in ax1, ax2, ax3:
+            yticks = ax.yaxis.get_major_ticks()
+            yticks[0].label1.set_visible(False)
+
+        plt.show(block=not(dont_block))

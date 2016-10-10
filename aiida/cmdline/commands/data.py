@@ -276,7 +276,7 @@ class Visualizable(object):
 
         if format is None:
             print >> sys.stderr, (
-                "Default format is not defined, please specify.\n" 
+                "Default format is not defined, please specify.\n"
                   "Valid formats are:")
             for i in self.get_show_plugins().keys():
                 print >> sys.stderr, "  {}".format(i)
@@ -384,7 +384,7 @@ class Exportable(object):
 
         if format is None:
             print >> sys.stderr, (
-                "Default format is not defined, please specify.\n" 
+                "Default format is not defined, please specify.\n"
                   "Valid formats are:")
             for i in self.get_export_plugins().keys():
                 print >> sys.stderr, "  {}".format(i)
@@ -474,7 +474,7 @@ class Importable(object):
 
         if format is None:
             print >> sys.stderr, (
-                "Default format is not defined, please specify.\n" 
+                "Default format is not defined, please specify.\n"
                   "Valid formats are:")
             for i in self.get_import_plugins().keys():
                 print >> sys.stderr, "  {}".format(i)
@@ -1625,6 +1625,46 @@ class _Trajectory(VerdiCommandWithSubcommands,
                     sys.exit(1)
                 else:
                     raise
+
+    def _show_pos_parameters(self, parser):
+        """
+        Describe command line parameters for _show_pos
+        """
+        parser.add_argument('-s', '--stepsize',
+                type=int,
+                help=''
+                    'The stepsize for the trajectory, set it higher to reduce '
+                    'number of points',
+                default=1
+            )
+        parser.add_argument('--mintime',
+                type=int, default=None,
+                help='The time to plot from'
+            )
+        parser.add_argument('--maxtime',
+                type=int, default=None,
+                help='The time to plot to'
+            )
+        parser.add_argument('-e', '--elements',
+                type=str, nargs='+',
+                help='Show only atoms of that species'
+            )
+        parser.add_argument('-i', '--indices',
+                type=int, nargs='+',
+                help='Show only these indices'
+            )
+        parser.add_argument('--dont-block',
+                action='store_true',
+                help="Don't block interpreter when showing plot"
+            )
+
+    def _show_pos(self, exec_name, trajectory_list, **kwargs):
+        """
+        Produces a matplotlib plot of the trajectory
+        """
+        for t in trajectory_list:
+            t.show_pos(**kwargs)
+
 
     def _export_xsf(self, node, **kwargs):
         """

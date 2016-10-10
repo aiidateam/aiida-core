@@ -1626,7 +1626,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
                 else:
                     raise
 
-    def _show_pos_parameters(self, parser):
+    def _show_mpl_pos_parameters(self, parser):
         """
         Describe command line parameters for _show_pos
         """
@@ -1658,12 +1658,31 @@ class _Trajectory(VerdiCommandWithSubcommands,
                 help="Don't block interpreter when showing plot"
             )
 
-    def _show_pos(self, exec_name, trajectory_list, **kwargs):
+    def _show_mpl_heatmap_parameters(self, parser):
+        """
+        Describe command line parameters for _show_mpl_heatmap
+        """
+        parser.add_argument('-c', '--contours',
+                type=float, nargs='+',
+                help='Isovalues to plot'
+            )
+        parser.add_argument( '--sampling-stepsize',
+                type=int,
+                help='Sample positions in plot every sampling_stepsize timestep'
+            )
+    def _show_mpl_pos(self, exec_name, trajectory_list, **kwargs):
         """
         Produces a matplotlib plot of the trajectory
         """
         for t in trajectory_list:
-            t.show_pos(**kwargs)
+            t.show_mpl_pos(**kwargs)
+
+    def _show_mpl_heatmap(self, exec_name, trajectory_list, **kwargs):
+        """
+        Produces a matplotlib plot of the trajectory
+        """
+        for t in trajectory_list:
+            t.show_mpl_heatmap(**kwargs)
 
 
     def _export_xsf(self, node, **kwargs):

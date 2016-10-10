@@ -584,7 +584,7 @@ class TrajectoryData(ArrayData):
         self.set_array('velocities', velocities)
 
 
-    def show_pos(self, **kwargs):
+    def show_mpl_pos(self, **kwargs):
         """
         Shows the positions as a function of time, separate for XYZ coordinates
 
@@ -676,6 +676,136 @@ class TrajectoryData(ArrayData):
             positions_unit, times_unit,
             dont_block, mintime, maxtime,
         )
+
+
+    def show_mpl_heatmap(self, **kwargs):
+        import numpy as np
+        from scipy import stats
+        from mayavi import mlab
+        from ase.data.colors import jmol_colors
+        from ase.data import covalent_radii, atomic_numbers
+        from aiida.common.exceptions import InputValidationError
+
+        def collapse_into_unit_cell(point, cell):
+            """
+            Applies linear transformation to coordinate system based on crystal
+            lattice, vectors. The inverse of that inverse transformation matrix with the
+            point given results in the point being given as a multiples of lattice vectors
+            Than take the integer of the rows to find how many times you have to shift
+            the point back"""
+            invcell = np.matrix(cell).T.I
+            # point in crystal coordinates
+            points_in_crystal = np.dot(invcell,point).tolist()[0]
+            #point collapsed into unit cell
+            points_in_unit_cell = [i%1 for i in points_in_crystal]
+            return np.dot(cell.T, points_in_unit_cell).tolist()
+
+
+        elements = kwargs.pop('elements', None)
+        mintime = kwargs.pop('mintime', None)
+        maxtime = kwargs.pop('maxtime', None)
+        stepsize = kwargs.pop('stepsize', None) or 1
+        contours = np.array(kwargs.pop('contours', None) or (0.1, 0.5))
+        sampling_stepsize = int(kwargs.pop('sampling_stepsize', None) or 0)
+
+
+        times = self.get_times()
+        if mintime is None:
+            minindex = 0
+        else:
+            minindex =  np.argmax(times>mintime)
+        if maxtime is None:
+            maxindex = len(times)
+        else:
+            maxindex = np.argmin(times < maxtime)
+        positions = self.get_positions()[minindex:maxindex:stepsize]
+
+
+        try:
+            if self.get_attr('units|positions') in ('bohr', 'atomic'):
+                from aiida.common.constants import bohr_to_ang
+                positions *= bohr_to_ang
+        except KeyError:
+            pass
+
+        symbols = self.get_symbols()
+        if elements is None:
+            elements = set(symbols)
+
+        cell = np.array(self.get_cells()[0])
+        storage_dict = {s:{} for s in elements}
+        for ele in elements:
+                storage_dict[ele] = [np.array([]),np.array([]),np.array([])]
+        for iat, ele in enumerate(symbols):
+            if ele in elements:
+                for idim in range(3):
+                    storage_dict[ele][idim] = np.concatenate((storage_dict[ele][idim], positions[:,iat,idim].flatten()))
+
+        for ele in elements:
+            storage_dict[ele] = np.array(storage_dict[ele]).T
+            storage_dict[ele] = np.array([collapse_into_unit_cell(pos, cell) for pos in storage_dict[ele]]).T
+
+        white = (1,1,1)
+        mlab.figure(bgcolor=white, size=(1080, 720))
+
+        for i1, a in enumerate(cell):
+            i2 = (i1 + 1) % 3
+            i3 = (i1 + 2) % 3
+            for b in [np.zeros(3), cell[i2]]:
+                for c in [np.zeros(3), cell[i3]]:
+                    p1 = b + c
+                    p2 = p1 + a
+                    mlab.plot3d(
+                            [p1[0], p2[0]],
+                            [p1[1], p2[1]],
+                            [p1[2], p2[2]],
+                            tube_radius=0.1
+                        )
+
+
+        for ele, data in storage_dict.items():
+            kde = stats.gaussian_kde(data, bw_method=0.15)
+
+            x = data[0,:]
+            y = data[1,:]
+            z = data[2,:]
+            xmin, ymin, zmin = x.min(), y.min(), z.min()
+            xmax, ymax, zmax = x.max(), y.max(), z.max()
+
+            xi, yi, zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]
+            coords = np.vstack([item.ravel() for item in [xi, yi, zi]])
+            density = kde(coords).reshape(xi.shape)
+
+            # Plot scatter with mayavi
+            #~ figure = mlab.figure('DensityPlot')
+            grid = mlab.pipeline.scalar_field(xi, yi, zi, density)
+            #~ min = density.min()
+            maxdens = density.max()
+            #~ mlab.pipeline.volume(grid, vmin=min, vmax=min + .5*(max-min))
+            surf = mlab.pipeline.iso_surface(grid, opacity=0.5, colormap='cool', contours=(maxdens*contours).tolist())
+            lut = surf.module_manager.scalar_lut_manager.lut.table.to_array()
+
+            # The lut is a 255x4 array, with the columns representing RGBA
+            # (red, green, blue, alpha) coded with integers going from 0 to 255.
+
+            # We modify the alpha channel to add a transparency gradient
+            lut[:, -1] = np.linspace(100, 255, 256)
+            lut[:,0:3] = 255*jmol_colors[atomic_numbers[ele]]
+            # and finally we put this LUT back in the surface object. We could have
+            # added any 255*4 array rather than modifying an existing LUT.
+            surf.module_manager.scalar_lut_manager.lut.table = lut
+
+            if sampling_stepsize > 0:
+                mlab.points3d(
+                        x[::sampling_stepsize], y[::sampling_stepsize], z[::sampling_stepsize],
+                        color=tuple(jmol_colors[atomic_numbers[ele]].tolist()),
+                        scale_mode='none', scale_factor=0.3, opacity=0.3
+                    )
+
+
+        mlab.view(azimuth=155, elevation=70, distance='auto')
+        mlab.show()
+
 
 def plot_positions_XYZ(
             times, positions, indices_to_show, color_list, label,

@@ -109,6 +109,7 @@ class WorkChain(Process):
         self._context = None
         self._stepper = None
 
+    @override
     def save_instance_state(self, out_state):
         super(WorkChain, self).save_instance_state(out_state)
         # Ask the context to save itself
@@ -183,6 +184,7 @@ class _ResultToContext(WaitOn):
         self._to_assign = kwargs
         self._ready_values = {}
 
+    @override
     def is_ready(self):
         # Check all the processes have finished
         try:
@@ -198,6 +200,7 @@ class _ResultToContext(WaitOn):
         else:
             return False
 
+    @override
     def save_instance_state(self, out_state):
         super(_ResultToContext, self).save_instance_state(out_state)
         out_state[self.PIDS] = self._to_assign

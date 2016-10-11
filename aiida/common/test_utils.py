@@ -18,28 +18,28 @@ class UniqueTest(unittest.TestCase):
     Tests for the get_unique_filename function.
     """
 
-    def ttest_unique_1(self):
+    def test_unique_1(self):
         filename = "different.txt"
         filename_list = ["file1.txt", "file2.txt"]
 
         self.assertEqual(filename,
                          utils.get_unique_filename(filename, filename_list))
 
-    def ttest_unique_2(self):
+    def test_unique_2(self):
         filename = "file1.txt"
         filename_list = ["file1.txt", "file2.txt"]
 
         self.assertEqual("file1-1.txt",
                          utils.get_unique_filename(filename, filename_list))
 
-    def ttest_unique_3(self):
+    def test_unique_3(self):
         filename = "file1.txt"
         filename_list = ["file1.txt", "file1-1.txt"]
 
         self.assertEqual("file1-2.txt",
                          utils.get_unique_filename(filename, filename_list))
 
-    def ttest_unique_4(self):
+    def test_unique_4(self):
         filename = "file1.txt"
         filename_list = ["file1.txt", "file1-2.txt"]
 
@@ -54,7 +54,7 @@ class UniqueTest(unittest.TestCase):
         self.seq += 1
         return self.seq
 
-    def ttest_query_yes_no(self):
+    def test_query_yes_no(self):
         """
         This method tests the query_yes_no method behaves as expected. To
         perform this, a lambda function is used to simulate the user input.
@@ -97,7 +97,7 @@ class UniqueTest(unittest.TestCase):
         utils.raw_input = lambda _: ""
         self.assertFalse(utils.query_yes_no("", "no"))
 
-    def ttest_query_string(self):
+    def test_query_string(self):
         """
         This method tests that the query_string method behaves as expected.
         """
@@ -117,7 +117,7 @@ class UniqueTest(unittest.TestCase):
         self.assertEqual(
             utils.query_string("", "Def_answer"), "Usr_answer")
 
-    def ttest_ask_backup_question(self):
+    def test_ask_backup_question(self):
         """
         This method checks that the combined use of query_string and
         query_yes_no by the ask_backup_question is done as expected.

@@ -52,8 +52,8 @@ class WorkChain(Process):
     @classmethod
     def _define(cls, spec):
         super(WorkChain, cls)._define(spec)
-        # For now fragmented workflows can accept any input and emit any output
-        # _If this changes in the future the spec should be updated here.
+        # For now workchains can accept any input and emit any output
+        # If this changes in the future the spec should be updated here.
         spec.dynamic_input()
         spec.dynamic_output()
 
@@ -75,7 +75,10 @@ class WorkChain(Process):
             return self._content[item]
 
         def __setitem__(self, key, value):
-            self._content.__setattr__(key, value)
+            self._content[key] = value
+
+        def __delitem__(self, key):
+            del self._content[key]
 
         def __getattr__(self, name):
             try:
@@ -83,6 +86,9 @@ class WorkChain(Process):
             except KeyError:
                 raise AttributeError("Context does not have a variable {}"
                                      .format(name))
+
+        def __delattr__(self, item):
+            del self._content[item]
 
         def __setattr__(self, name, value):
             self._content[name] = value
@@ -109,6 +115,10 @@ class WorkChain(Process):
         self._context = None
         self._stepper = None
 
+    @property
+    def context(self):
+        return self._context
+
     @override
     def save_instance_state(self, out_state):
         super(WorkChain, self).save_instance_state(out_state)
@@ -122,10 +132,6 @@ class WorkChain(Process):
             stepper_state = Bundle()
             self._stepper.save_position(stepper_state)
             out_state[self._STEPPER_STATE] = stepper_state
-
-    @property
-    def context(self):
-        return self._context
 
     @override
     def _run(self, **kwargs):

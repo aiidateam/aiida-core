@@ -94,6 +94,26 @@ class Wf(WorkChain):
         self.finished_steps[function_name] = True
 
 
+class TestContext(DbTestCase):
+    def test_attributes(self):
+        c = WorkChain.Context()
+        c.new_attr = 5
+        self.assertEqual(c.new_attr, 5)
+
+        del c.new_attr
+        with self.assertRaises(AttributeError):
+            c.new_attr
+
+    def test_dict(self):
+        c = WorkChain.Context()
+        c['new_attr'] = 5
+        self.assertEqual(c['new_attr'], 5)
+
+        del c['new_attr']
+        with self.assertRaises(KeyError):
+            c['new_attr']
+
+
 class TestWorkchain(DbTestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)

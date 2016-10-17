@@ -49,3 +49,6 @@ sphinx_rtd_theme
 
 # For the deamon to use kombu message passing
 kombu==3.0.35
+
+# For nice plotting:
+mayavi==4.5.0

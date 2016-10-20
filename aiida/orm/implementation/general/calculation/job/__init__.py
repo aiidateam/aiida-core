@@ -2,7 +2,7 @@
 
 from abc import abstractmethod
 import datetime
-from pytz.exceptions import NonExistentTimeError
+import copy
 
 from aiida.utils import timezone
 from aiida.common.utils import str_timedelta
@@ -813,12 +813,28 @@ class AbstractJobCalculation(object):
         else:
             return None
 
+    projection_to_qb_tag_map = {
+        'pk': ('calculation', 'id'),
+        'ctime': ('calculation', 'ctime'),
+        'mtime': ('calculation', 'mtime'),
+        'sched': ('calculation', 'attributes.scheduler_state'),
+        'state': ('calculation', 'state'),
+        'type': ('calculation', 'type'),
+        'description': ('calculation', 'description'),
+        'label': ('calculation', 'label'),
+        'uuid': ('calculation', 'uuid'),
+        'user': ('user', 'email'),
+        'computer': ('computer', 'name')
+    }
+
     @classmethod
     def _list_calculations(
             cls, states=None, past_days=None, group=None,
             group_pk=None, all_users=False, pks=tuple(),
             relative_ctime=True, with_scheduler_state=False,
-            order_by=None, limit=None):
+            order_by=None, limit=None,
+            projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type')
+    ):
         """
         Print a description of the AiiDA calculations.
 
@@ -850,6 +866,20 @@ class AbstractJobCalculation(object):
         from aiida.orm.querybuilder import QueryBuilder
         from tabulate import tabulate
 
+        projection_label_dict = {
+            'pk': 'PK',
+            'state': 'State',
+            'ctime': 'Creation',
+            'mtime': 'Modification',
+            'sched': 'Sched. state',
+            'computer': 'Computer',
+            'type': 'Type',
+            'description': 'Description',
+            'label': 'Label',
+            'uuid': 'UUID',
+            'user': 'User',
+        }
+
         now = timezone.now()
 
         # Let's check the states:
@@ -869,7 +899,7 @@ class AbstractJobCalculation(object):
             assert isinstance(limit, int), \
                 "Limit (set to {}) has to be an integer or None".format(limit)
 
-        print cls._get_last_daemon_check_string(now)
+        print(cls._get_last_daemon_check_string(now))
 
         calculation_filters = {}
 
@@ -904,25 +934,30 @@ class AbstractJobCalculation(object):
             else:
                 group_filters = None
 
-        calculation_projections = [
-            'id', 'state', 'attributes.state', 'ctime', 'type',
-            'attributes.scheduler_state'
-        ]
-        calc_list_header = ['PK', 'State', 'Creation', 'Sched. state',
-                            'Computer', 'Type']
+        calc_list_header = [projection_label_dict[p] for p in projections]
 
         qb = QueryBuilder()
         qb.append(
             cls,
             filters=calculation_filters,
-            project=calculation_projections,
             tag='calculation'
         )
         if group_filters is not None:
             qb.append(type="group", filters=group_filters,
                       group_of="calculation")
-        qb.append(type="computer", computer_of='calculation',
-                  project=['name'], tag='computer')
+        qb.append(type="computer", computer_of='calculation', tag='computer')
+        qb.append(type="user", creator_of="calculation", tag="user")
+        # The joining is done
+        # Now the projections:
+        projections_dict = {'calculation': [], 'user': [], 'computer': []}
+
+        for k, v in [cls.projection_to_qb_tag_map[p] for p in projections]:
+            projections_dict[k].append(v)
+
+        if 'state' in projections:
+            projections_dict['calculation'].append('attributes.state')
+        for k, v in projections_dict.iteritems():
+            qb.add_projection(k, v)
 
         # ORDER
         if order_by is not None:
@@ -931,8 +966,6 @@ class AbstractJobCalculation(object):
         # LIMIT
         if limit is not None:
             qb.limit(limit)
-        # I have removed order_by since it slows query down
-        # qb.order_by({'calculation':['ctime']})
 
         results_generator = qb.iterdict()
 
@@ -998,50 +1031,45 @@ class AbstractJobCalculation(object):
         return last_check_string
 
     @classmethod
-    def _get_calculation_info_row(cls, query_result, times_since=None):
+    def _get_calculation_info_row(cls, res, projections, times_since=None):
         """
         Get a row of information about a calculation.
 
-        :param query_result: Results from the calculations query.
+        :param res: Results from the calculations query.
         :param times_since: Times are relative to this timepoint, if None then
         absolute times will be used.
         :return: A list of string with information about the calculation.
         """
-        id = str(query_result['calculation']['id'])
+        d = copy.deepcopy(res)
 
-        ctime = query_result['calculation']['ctime']
-        if times_since:
-            try:
-                dt = timezone.delta(ctime, times_since)
-                calc_ctime = str_timedelta(dt, negative_to_zero=True, max_num_fields=1)
-            except NonExistentTimeError as e:
-                calc_ctime = "Error"
-                cls._logger.error(
-                    "Problem with node ({}) ctime.\n{}".format(id, e.message))
-        else:
-            calc_ctime = " ".join([
-                timezone.localtime(ctime).isoformat().split('T')[0],
-                timezone.localtime(ctime).isoformat().split('T')[
-                    1].split('.')[0].rsplit(":", 1)[0]])
-
-        state = str(query_result['calculation']['state'])
-        if state == calc_states.IMPORTED:
-            attrstate = query_result['calculation']['attributes.state']
-            if attrstate is None:
-                attrstate = 'UNKNOWN'
-            state = '{}/{}'.format(state, attrstate)
-
-        # Build the row of information
-        return [
-            id,
-            state,
-            str(calc_ctime),
-            str(query_result['calculation']['attributes.scheduler_state']),
-            str(query_result['computer']['name']),
-            from_type_to_pluginclassname(
-                query_result['calculation']['type']
+        try:
+            d['calculation']['type'] = from_type_to_pluginclassname(
+                d['calculation']['type']
             ).rsplit(".", 1)[0].lstrip('calculation.job.')
-        ]
+        except KeyError:
+            pass
+        for proj in ('ctime', 'mtime'):
+            try:
+                time = d['calculation'][proj]
+                if times_since:
+                    dt = timezone.delta(time, times_since)
+                    d['calculation'][proj] = str_timedelta(
+                        dt, negative_to_zero=True, max_num_fields=1)
+                else:
+                    d['calculation'][proj] = " ".join([
+                        timezone.localtime(time).isoformat().split('T')[0],
+                        timezone.localtime(time).isoformat().split('T')[
+                            1].split('.')[0].rsplit(":", 1)[0]])
+            except KeyError:
+                pass
+        try:
+            if d['calculation']['state'] == calc_states.IMPORTED:
+                d['calculation']['state'] = d['calculation']['attributes.state'] or "UNKNOWN"
+        except KeyError:
+            pass
+
+        return [d[cls.projection_to_qb_tag_map[p][0]][cls.projection_to_qb_tag_map[p][1]]
+                for p in projections]
 
     @classmethod
     def _get_all_with_state(
@@ -1081,7 +1109,7 @@ class AbstractJobCalculation(object):
 
         if state not in calc_states:
             cls._logger.warning("querying for calculation state='{}', but it "
-                               "is not a valid calculation state".format(state))
+                                "is not a valid calculation state".format(state))
 
         calcfilter = {'state': {'==': state}}
         computerfilter = {"enabled": {'==': True}}
@@ -1295,9 +1323,9 @@ class AbstractJobCalculation(object):
 
         old_state = self.get_state()
 
-        if old_state == calc_states.NEW or old_state == calc_states.TOSUBMIT:
+        if (old_state == calc_states.NEW or old_state == calc_states.TOSUBMIT):
             self._set_state(calc_states.FAILED)
-            self._logger.warning(
+            self.logger.warning(
                 "Calculation {} killed by the user "
                 "(it was in {} state)".format(self.pk, old_state))
             return

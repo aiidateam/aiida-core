@@ -483,6 +483,7 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.backends import settings
         from aiida.backends.djsite.settings import settings_profile
 
+        test_failures = list()
         db_test_list = []
         test_folders = []
         do_db = False
@@ -524,7 +525,8 @@ class Devel(VerdiCommandWithSubcommands):
             testsuite = unittest.defaultTestLoader.discover(
                 test_folder, top_level_dir=os.path.dirname(aiida.__file__))
             test_runner = unittest.TextTestRunner()
-            test_runner.run(testsuite)
+            test_result = test_runner.run(testsuite)
+            test_failures.extend(test_result.failures)
         if do_db:
             # As a first thing, I want to set the correct flags.
             # This allow to work on temporary DBs and a temporary repository.
@@ -557,6 +559,11 @@ class Devel(VerdiCommandWithSubcommands):
                    "                                  <<<")
             print "^" * 75
             pass_to_django_manage([execname, 'test', 'db'], profile=profile)
+
+        # If there was a failure in the non-db tests report it with the
+        # right exit code
+        if test_failures:
+            sys.exit(len(test_failures))
 
     def complete_tests(self, subargs_idx, subargs):
         """

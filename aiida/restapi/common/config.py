@@ -41,7 +41,7 @@ CACHING_TIMEOUTS = {
 #TODO add more verbose description
 import os
 schema_custom_config = os.path.join(os.path.split(__file__)[0], 'schema_custom.json')
-import ultrajson as uj
+import ujson as uj
 custom_schema = uj.load(open(schema_custom_config))
 
 # Database

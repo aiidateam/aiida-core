@@ -482,6 +482,10 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.common.setup import get_property
         from aiida.backends import settings
         from aiida.backends.djsite.settings import settings_profile
+        from aiida import is_dbenv_loaded, load_dbenv
+
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         test_failures = list()
         db_test_list = []
@@ -547,13 +551,20 @@ class Devel(VerdiCommandWithSubcommands):
             profile = "{}{}".format(profile_prefix,
                                     settings.AIIDADB_PROFILE if
                                     settings.AIIDADB_PROFILE is not None else 'default')
-            settings_profile.aiida_test_list = db_test_list
 
-            print "v" * 75
-            print (">>> Tests for django db application   "
-                   "                                  <<<")
-            print "^" * 75
-            pass_to_django_manage([execname, 'test', 'db'], profile=profile)
+            from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+            if settings.BACKEND == BACKEND_DJANGO:
+                settings_profile.aiida_test_list = db_test_list
+                print "v" * 75
+                print (">>> Tests for django db application   "
+                       "                                  <<<")
+                print "^" * 75
+                pass_to_django_manage([execname, 'test', 'db'], profile=profile)
+            elif settings.BACKEND == BACKEND_SQLA:
+                print "v" * 75
+                print (">>> Tests for SQLAlchemy db application"
+                       "                                 <<<")
+                print "^" * 75
 
         # If there was a failure in the non-db tests report it with the
         # right exit code

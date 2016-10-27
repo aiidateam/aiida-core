@@ -483,6 +483,8 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.backends.djsite.settings import settings_profile
         from aiida import is_dbenv_loaded, load_dbenv
         from aiida import settings as settings2
+        from aiida.common.setup import (TEST_REPO_PREFIX, TEST_DB_PREFIX,
+                                        TEST_PROFILE_PREFIX)
 
         test_failures = list()
         db_test_list = []
@@ -553,26 +555,30 @@ class Devel(VerdiCommandWithSubcommands):
                 load_dbenv()
 
             base_repo_path = os.path.basename(settings2.REPOSITORY_PATH)
-            if not settings.AIIDADB_PROFILE.startswith("test_") or \
-                    not base_repo_path.startswith("test"):
-                print "A non-test profile was given for tests."
+            if (not settings.AIIDADB_PROFILE.startswith(TEST_PROFILE_PREFIX) or
+                    not base_repo_path.startswith(TEST_REPO_PREFIX) or
+                    not settings2.DBNAME.startswith(TEST_DB_PREFIX)):
+                print "A non-test profile was given for tests. Please note " \
+                      "that the test profile should have test specific " \
+                      "database name and test specific repository name."
                 sys.exit(1)
 
             from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
             if settings.BACKEND == BACKEND_DJANGO:
-            # if True:
                 settings_profile.aiida_test_list = db_test_list
                 print "v" * 75
                 print (">>> Tests for django db application   "
                        "                                  <<<")
                 print "^" * 75
-
                 pass_to_django_manage([execname, 'test', 'db'])
+
             elif settings.BACKEND == BACKEND_SQLA:
                 print "v" * 75
                 print (">>> Tests for SQLAlchemy db application"
                        "                                 <<<")
                 print "^" * 75
+                from aiida.backends.sqlalchemy.tests.test_runner import run_tests
+                run_tests()
 
         # If there was a failure in the non-db tests report it with the
         # right exit code

@@ -73,11 +73,10 @@ class AiidaTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         from aiida.settings import REPOSITORY_PATH
-        from aiida.common.setup import TEMP_TEST_REPO_PREFIX
+        from aiida.common.setup import TEST_REPO_PREFIX
         from aiida.common.exceptions import InvalidOperation
-        if not REPOSITORY_PATH.startswith(
-                os.path.join("/", tempfile.gettempprefix(),
-                             TEMP_TEST_REPO_PREFIX)):
+        if not os.path.basename(REPOSITORY_PATH).startswith(
+                TEST_REPO_PREFIX):
             raise InvalidOperation("Be careful. The repository for the tests "
                                    "is not a test repository. I will not "
                                    "empty the database and I will not delete "

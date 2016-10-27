@@ -38,10 +38,15 @@ aiidadb_backend_key = "AIIDADB_BACKEND"
 # Profile values
 aiidadb_backend_value_django = "django"
 
-# Temporary repository for tests
+# Repository for tests
 TEMP_TEST_REPO = None
-TEMP_TEST_REPO_PREFIX = "test_"
+TEST_REPO_PREFIX = "test-"
 
+# Database for tests
+TEST_DB_PREFIX = "test_"
+
+# Profile for tests prefix
+TEST_PROFILE_PREFIX = "test_"
 
 def backup_config():
     """

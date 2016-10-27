@@ -40,7 +40,7 @@ aiidadb_backend_value_django = "django"
 
 # Temporary repository for tests
 TEMP_TEST_REPO = None
-TEMP_TEST_REPO_PREFIX = "aiida_repository_"
+TEMP_TEST_REPO_PREFIX = "test_"
 
 
 def backup_config():
@@ -449,21 +449,21 @@ def get_profile_config(profile, conf_dict=None, set_test_location=True):
         confs = conf_dict
 
     test_string = ""
-    is_test = False
-    use_sqlite_for_tests = False
-    test_prefix = "test_"
-    sqlitetest_prefix = "testsqlite_"
-    if profile.startswith(test_prefix):
-        # Use the same profile
-        profile = profile[len(test_prefix):]
-        is_test = True
-        test_string = "(test) "
-    elif profile.startswith(sqlitetest_prefix):
-        # Use the same profile
-        profile = profile[len(sqlitetest_prefix):]
-        is_test = True
-        use_sqlite_for_tests = True
-        test_string = "(sqlite-test) "
+    # is_test = False
+    # use_sqlite_for_tests = False
+    # test_prefix = "test_"
+    # sqlitetest_prefix = "testsqlite_"
+    # if profile.startswith(test_prefix):
+    #     # Use the same profile
+    #     profile = profile[len(test_prefix):]
+    #     is_test = True
+    #     test_string = "(test) "
+    # elif profile.startswith(sqlitetest_prefix):
+    #     # Use the same profile
+    #     profile = profile[len(sqlitetest_prefix):]
+    #     is_test = True
+    #     use_sqlite_for_tests = True
+    #     test_string = "(sqlite-test) "
 
     try:
         profile_info = confs['profiles'][profile]
@@ -473,33 +473,33 @@ def get_profile_config(profile, conf_dict=None, set_test_location=True):
             "allowed values are: {}.".format(test_string, profile,
                                              ", ".join(get_profiles_list())))
 
-    if is_test and set_test_location:
-        # import traceback
-        # traceback.print_stack()
-        # Change the repository and print a message
-        ###################################################################
-        # IMPORTANT! Choose a different repository location, otherwise
-        # real data will be destroyed during tests!!
-        # The location is automatically created with the tempfile module
-        # Typically, under linux this is created under /tmp
-        # and is not deleted at the end of the run.
-        global TEMP_TEST_REPO
-        if TEMP_TEST_REPO is None:
-            TEMP_TEST_REPO = tempfile.mkdtemp(prefix=TEMP_TEST_REPO_PREFIX)
-            # We write the local repository on stderr, so that the user running
-            # the tests knows where the files are being stored
-            print >> sys.stderr, "############################################"
-            print >> sys.stderr, "# Creating LOCAL AiiDA REPOSITORY FOR TESTS:"
-            print >> sys.stderr, "# {}".format(TEMP_TEST_REPO)
-            print >> sys.stderr, "############################################"
-        if 'AIIDADB_REPOSITORY_URI' not in profile_info:
-            raise ConfigurationError("Config file has not been found, run "
-                                     "verdi install first")
-        profile_info['AIIDADB_REPOSITORY_URI'] = 'file://' + TEMP_TEST_REPO
-
-        if use_sqlite_for_tests:
-            profile_info['AIIDADB_ENGINE'] = 'sqlite3'
-            profile_info['AIIDADB_NAME'] = ":memory:"
+    # if is_test and set_test_location:
+    #     # import traceback
+    #     # traceback.print_stack()
+    #     # Change the repository and print a message
+    #     ###################################################################
+    #     # IMPORTANT! Choose a different repository location, otherwise
+    #     # real data will be destroyed during tests!!
+    #     # The location is automatically created with the tempfile module
+    #     # Typically, under linux this is created under /tmp
+    #     # and is not deleted at the end of the run.
+    #     global TEMP_TEST_REPO
+    #     if TEMP_TEST_REPO is None:
+    #         TEMP_TEST_REPO = tempfile.mkdtemp(prefix=TEMP_TEST_REPO_PREFIX)
+    #         # We write the local repository on stderr, so that the user running
+    #         # the tests knows where the files are being stored
+    #         print >> sys.stderr, "############################################"
+    #         print >> sys.stderr, "# Creating LOCAL AiiDA REPOSITORY FOR TESTS:"
+    #         print >> sys.stderr, "# {}".format(TEMP_TEST_REPO)
+    #         print >> sys.stderr, "############################################"
+    #     if 'AIIDADB_REPOSITORY_URI' not in profile_info:
+    #         raise ConfigurationError("Config file has not been found, run "
+    #                                  "verdi install first")
+    #     profile_info['AIIDADB_REPOSITORY_URI'] = 'file://' + TEMP_TEST_REPO
+    #
+    #     if use_sqlite_for_tests:
+    #         profile_info['AIIDADB_ENGINE'] = 'sqlite3'
+    #         profile_info['AIIDADB_NAME'] = ":memory:"
 
     return profile_info
 

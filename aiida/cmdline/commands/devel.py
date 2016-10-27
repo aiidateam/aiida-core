@@ -479,13 +479,10 @@ class Devel(VerdiCommandWithSubcommands):
 
     def run_tests(self, *args):
         import unittest
-        from aiida.common.setup import get_property
         from aiida.backends import settings
         from aiida.backends.djsite.settings import settings_profile
         from aiida import is_dbenv_loaded, load_dbenv
-
-        # if not is_dbenv_loaded():
-        #     load_dbenv()
+        from aiida import settings as settings2
 
         test_failures = list()
         db_test_list = []
@@ -543,29 +540,39 @@ class Devel(VerdiCommandWithSubcommands):
 
             # The prefix is then checked inside get_profile_config and stripped
             # but it is needed to know if this is a test or not
-            if get_property('tests.use_sqlite'):
-                profile_prefix = 'testsqlite_'
-            else:
-                profile_prefix = 'test_'
+            # if get_property('tests.use_sqlite'):
+            #     profile_prefix = 'testsqlite_'
+            # else:
+            #     profile_prefix = 'test_'
+            #
+            # profile = "{}{}".format(profile_prefix,
+            #                         settings.AIIDADB_PROFILE if
+            #                         settings.AIIDADB_PROFILE is not None else 'default')
 
-            profile = "{}{}".format(profile_prefix,
-                                    settings.AIIDADB_PROFILE if
-                                    settings.AIIDADB_PROFILE is not None else 'default')
+            if not is_dbenv_loaded():
+                load_dbenv()
+
+            base_repo_path = os.path.basename(settings2.REPOSITORY_PATH)
+            if not settings.AIIDADB_PROFILE.startswith("test_") or \
+                    not base_repo_path.startswith("test"):
+                print "A non-test profile was given for tests."
+                sys.exit(1)
 
             from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
-            # if settings.BACKEND == BACKEND_DJANGO:
-            if True:
+            if settings.BACKEND == BACKEND_DJANGO:
+            # if True:
                 settings_profile.aiida_test_list = db_test_list
                 print "v" * 75
                 print (">>> Tests for django db application   "
                        "                                  <<<")
                 print "^" * 75
-                pass_to_django_manage([execname, 'test', 'db'], profile=profile)
-            # elif settings.BACKEND == BACKEND_SQLA:
-            #     print "v" * 75
-            #     print (">>> Tests for SQLAlchemy db application"
-            #            "                                 <<<")
-            #     print "^" * 75
+
+                pass_to_django_manage([execname, 'test', 'db'])
+            elif settings.BACKEND == BACKEND_SQLA:
+                print "v" * 75
+                print (">>> Tests for SQLAlchemy db application"
+                       "                                 <<<")
+                print "^" * 75
 
         # If there was a failure in the non-db tests report it with the
         # right exit code

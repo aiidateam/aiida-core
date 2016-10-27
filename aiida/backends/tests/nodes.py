@@ -16,7 +16,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestDataNode(AiidaTestCase):
+class TestDataNode():
     """
     These tests check the features of Data nodes that differ from the base Node
     """
@@ -52,7 +52,7 @@ class TestDataNode(AiidaTestCase):
             a._set_attr('i', 12)
 
 
-class TestTransitiveNoLoops(AiidaTestCase):
+class TestTransitiveNoLoops():
     """
     Test the creation of the transitive closure table
     """
@@ -71,7 +71,7 @@ class TestTransitiveNoLoops(AiidaTestCase):
             n1.add_link_from(n4, link_type=LinkType.CREATE)
 
 
-class TestTransitiveClosureDeletion(AiidaTestCase):
+class TestTransitiveClosureDeletion():
     """
     Test the creation of the transitive closure table
     """
@@ -164,7 +164,7 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
             len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
 
 
-class TestQueryWithAiidaObjects(AiidaTestCase):
+class TestQueryWithAiidaObjects():
     """
     Test if queries work properly also with aiida.orm.Node classes instead of
     aiida.backends.djsite.db.models.DbNode objects.
@@ -336,7 +336,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         self.assertEquals(nodes_with_given_attribute[0].uuid, a3.uuid)
 
 
-class TestNodeBasic(AiidaTestCase):
+class TestNodeBasic():
     """
     These tests check the basic features of nodes
     (setting of attributes, copying of files, ...)
@@ -1178,7 +1178,7 @@ class TestNodeBasic(AiidaTestCase):
             load_node()
 
 
-class TestSubNodesAndLinks(AiidaTestCase):
+class TestSubNodesAndLinks():
     def test_cachelink(self):
         """
         Test the proper functionality of the links cache, with different

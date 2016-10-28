@@ -28,7 +28,7 @@ class TestTransitiveNoLoopsSQLA(SqlAlchemyTests, TestTransitiveNoLoops):
     pass
 
 
-class TestTransitiveClosureDeletion(SqlAlchemyTests, TestTransitiveClosureDeletion):
+class TestTransitiveClosureDeletionSQLA(SqlAlchemyTests, TestTransitiveClosureDeletion):
     pass
 
 

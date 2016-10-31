@@ -21,6 +21,8 @@ from aiida.orm.computer import Computer
 
 from aiida.common.setup import get_profile_config
 
+from aiida.backends.settings import AIIDADB_PROFILE
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
@@ -37,7 +39,7 @@ class SqlAlchemyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
 
-        config = get_profile_config("sqla2")
+        config = get_profile_config(AIIDADB_PROFILE)
         engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
                       "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
         engine = create_engine(engine_url,
@@ -91,21 +93,6 @@ class SqlAlchemyTests(unittest.TestCase):
 
         return dec
 
-
-    # @classmethod
-    # def tearDownClass(cls):
-    #     # Clean what we added before
-    #     cls.connection.close()
-    #     config = get_profile_config("tests")
-    #     repo_dir = config["AIIDADB_REPOSITORY_URI"]
-    #     # We only treat the case where its a folder
-    #     if repo_dir.startswith("file://"):
-    #         repo_dir = repo_dir.split("file://")[-1]
-    #         try:
-    #             shutil.rmtree(repo_dir)
-    #         except OSError:
-    #             # If the folder doesn't exist, we don't care
-    #             pass
 
     @classmethod
     def tearDownClass(cls):
@@ -164,6 +151,8 @@ class SqlAlchemyTests(unittest.TestCase):
         from aiida.backends.sqlalchemy.models.log import DbLog
 
         DbLog.query.delete()
+
+        cls.connection.close()
 
         # I clean the test repository
         shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)

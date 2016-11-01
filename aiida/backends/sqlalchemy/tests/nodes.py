@@ -134,8 +134,6 @@ class TestTransitiveClosureDeletionSQLA(SqlAlchemyTests,
             1)
 
 
-
-
 class TestQueryWithAiidaObjectsSQLA(SqlAlchemyTests,
                                     TestQueryWithAiidaObjects):
     """

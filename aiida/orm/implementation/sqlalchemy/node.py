@@ -376,9 +376,15 @@ class Node(AbstractNode):
         self.dbnode.del_extra(key)
 
     def extras(self):
+        if self.dbnode.extras is None:
+            return dict()
+
         return self.dbnode.extras
 
     def iterextras(self):
+        if self.dbnode.extras is None:
+            return dict().iteritems()
+
         return self.dbnode.extras.iteritems()
 
     def iterattrs(self):

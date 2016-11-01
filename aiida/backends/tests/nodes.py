@@ -882,13 +882,11 @@ class TestNodeBasic():
             del extras_to_set[k]
             self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
 
-    def test_replace_extras(self):
+    def test_replace_extras_1(self):
         """
         Checks the ability of replacing extras, removing the subkeys also when
         these are dictionaries or lists.
         """
-        from aiida.backends.djsite.db.models import DbExtra
-
         a = Node().store()
         extras_to_set = {
             'bool': True,
@@ -927,14 +925,6 @@ class TestNodeBasic():
         # again
         extras_to_set.update(new_extras)
         self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
-
-        # Check (manually) that, when replacing lsit and dict with objects
-        # that have no deepness, no junk is left in the DB (i.e., no
-        # 'dict.a', 'list.3.h', ...
-        self.assertEquals(len(DbExtra.objects.filter(
-            dbnode=a, key__startswith=('list' + DbExtra._sep))), 0)
-        self.assertEquals(len(DbExtra.objects.filter(
-            dbnode=a, key__startswith=('dict' + DbExtra._sep))), 0)
 
     def test_versioning_lowlevel(self):
         """

@@ -196,7 +196,58 @@ class TestQueryWithAiidaObjectsDjango(AiidaTestCase, TestQueryWithAiidaObjects):
 
 
 class TestNodeBasicDango(AiidaTestCase, TestNodeBasic):
-    pass
+    def test_replace_extras_2(self):
+        """
+        This is a Django specific test which checks (manually) that,
+        when replacing list and dict with objects that have no deepness,
+        no junk is left in the DB (i.e., no 'dict.a', 'list.3.h', ...
+        """
+        from aiida.backends.djsite.db.models import DbExtra
+        from aiida.orm.node import Node
+
+        a = Node().store()
+        extras_to_set = {
+            'bool': True,
+            'integer': 12,
+            'float': 26.2,
+            'string': "a string",
+            'dict': {"a": "b",
+                     "sublist": [1, 2, 3],
+                     "subdict": {
+                         "c": "d"}},
+            'list': [1, True, "ggg", {'h': 'j'}, [9, 8, 7]],
+        }
+
+        # I redefine the keys with more complicated data, and
+        # changing the data type too
+        new_extras = {
+            'bool': 12,
+            'integer': [2, [3], 'a'],
+            'float': {'n': 'm', 'x': [1, 'r', {}]},
+            'string': True,
+            'dict': 'text',
+            'list': 66.3,
+        }
+
+        for k, v in extras_to_set.iteritems():
+            a.set_extra(k, v)
+
+        for k, v in new_extras.iteritems():
+            # I delete one by one the keys and check if the operation is
+            # performed correctly
+            a.set_extra(k, v)
+
+        # I update extras_to_set with the new entries, and do the comparison
+        # again
+        extras_to_set.update(new_extras)
+
+        # Check (manually) that, when replacing list and dict with objects
+        # that have no deepness, no junk is left in the DB (i.e., no
+        # 'dict.a', 'list.3.h', ...
+        self.assertEquals(len(DbExtra.objects.filter(
+            dbnode=a, key__startswith=('list' + DbExtra._sep))), 0)
+        self.assertEquals(len(DbExtra.objects.filter(
+            dbnode=a, key__startswith=('dict' + DbExtra._sep))), 0)
 
 
 class TestSubNodesAndLinksDjango(AiidaTestCase, TestSubNodesAndLinks):

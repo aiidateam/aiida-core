@@ -725,7 +725,7 @@ class TestNodeBasic():
         self.assertEqual(s1.getvalue(), "a")
 
     def test_settings_methods(self):
-        from aiida.backends.djsite.globalsettings import (
+        from aiida.backends.utils import (
             get_global_setting_description, get_global_setting,
             set_global_setting, del_global_setting)
 
@@ -734,7 +734,10 @@ class TestNodeBasic():
         self.assertEqual(get_global_setting('aaa'), {'b': 'c'})
         self.assertEqual(get_global_setting_description('aaa'), "pippo")
         self.assertEqual(get_global_setting('aaa.b'), 'c')
-        self.assertEqual(get_global_setting_description('aaa.b'), "")
+
+        # The following is disabled because it is not supported in SQLAlchemy
+        # Only top level elements can have descriptions
+        # self.assertEqual(get_global_setting_description('aaa.b'), "")
 
         del_global_setting('aaa')
 

@@ -218,7 +218,7 @@ class Node(AbstractNode):
             safety_counter = 0
             while True:
                 safety_counter += 1
-                if safety_counter > 3:
+                if safety_counter > 100:
                     # Well, if you have more than 100 concurrent addings
                     # to the same node, you are clearly doing something wrong...
                     raise InternalError("Hey! We found more than 100 concurrent"

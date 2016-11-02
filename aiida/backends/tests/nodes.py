@@ -662,25 +662,6 @@ class TestNodeBasic():
         self.assertEquals(self.dictval, b.get_attr('dict'))
         self.assertEquals(self.listval, b.get_attr('list'))
 
-    def test_attrs_and_extras_wrong_keyname(self):
-        """
-        Attribute keys cannot include the separator symbol in the key
-        """
-        from aiida.backends.djsite.db.models import DbAttributeBaseClass
-        from aiida.common.exceptions import ValidationError
-
-        separator = DbAttributeBaseClass._sep
-
-        a = Node()
-
-        with self.assertRaises(ValidationError):
-            # I did not store, I cannot modify
-            a._set_attr('name' + separator, 'blablabla')
-
-        with self.assertRaises(ValidationError):
-            # I did not store, I cannot modify
-            a.set_extra('bool' + separator, 'blablabla')
-
     def test_attr_and_extras(self):
         a = Node()
         a._set_attr('bool', self.boolval)

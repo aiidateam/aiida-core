@@ -8,6 +8,7 @@ from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.backends.tests.nodes import (
     TestDataNode, TestTransitiveNoLoops, TestTransitiveClosureDeletion,
     TestQueryWithAiidaObjects, TestNodeBasic, TestSubNodesAndLinks)
+from aiida.orm.node import Node
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -104,7 +105,6 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase, TestTransitiveClosureDe
         from aiida.backends.djsite.db.models import DbLink  # Direct links
         from aiida.backends.djsite.db.models import \
             DbPath  # The transitive closure table
-        from aiida.orm.node import Node
 
         n1 = Node().store()
         n2 = Node().store()
@@ -189,8 +189,6 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase, TestTransitiveClosureDe
             len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
 
 
-
-
 class TestQueryWithAiidaObjectsDjango(AiidaTestCase, TestQueryWithAiidaObjects):
     pass
 
@@ -203,7 +201,6 @@ class TestNodeBasicDango(AiidaTestCase, TestNodeBasic):
         no junk is left in the DB (i.e., no 'dict.a', 'list.3.h', ...
         """
         from aiida.backends.djsite.db.models import DbExtra
-        from aiida.orm.node import Node
 
         a = Node().store()
         extras_to_set = {
@@ -249,6 +246,24 @@ class TestNodeBasicDango(AiidaTestCase, TestNodeBasic):
         self.assertEquals(len(DbExtra.objects.filter(
             dbnode=a, key__startswith=('dict' + DbExtra._sep))), 0)
 
+    def test_attrs_and_extras_wrong_keyname(self):
+        """
+        Attribute keys cannot include the separator symbol in the key
+        """
+        from aiida.backends.djsite.db.models import DbAttributeBaseClass
+        from aiida.common.exceptions import ValidationError
+
+        separator = DbAttributeBaseClass._sep
+
+        a = Node()
+
+        with self.assertRaises(ValidationError):
+            # I did not store, I cannot modify
+            a._set_attr('name' + separator, 'blablabla')
+
+        with self.assertRaises(ValidationError):
+            # I did not store, I cannot modify
+            a.set_extra('bool' + separator, 'blablabla')
 
 class TestSubNodesAndLinksDjango(AiidaTestCase, TestSubNodesAndLinks):
     pass

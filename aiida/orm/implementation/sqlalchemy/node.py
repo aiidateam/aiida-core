@@ -147,14 +147,12 @@ class Node(AbstractNode):
         return q
 
     def _update_db_label_field(self, field_value):
-        from aiida.backends.sqlalchemy import session
         self.dbnode.label = field_value
         if not self._to_be_stored:
             self._dbnode.save(commit=False)
             self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
-        from aiida.backends.sqlalchemy import session
         self.dbnode.description = field_value
         if not self._to_be_stored:
             self._dbnode.save(commit=False)

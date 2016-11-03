@@ -1251,7 +1251,11 @@ class TestSubNodesAndLinks():
         with tempfile.NamedTemporaryFile() as f:
             d2 = SinglefileData(file=f.name).store()
 
-        code = Code(remote_computer_exec=(self.computer, '/bin/true')).store()
+        code = Code()
+        code._set_remote()
+        code.set_computer(self.computer)
+        code.set_remote_computer_exec((self.computer, '/bin/true'))
+        code.store()
 
         unsavedcomputer = Computer(name='localhost2', hostname='localhost')
 

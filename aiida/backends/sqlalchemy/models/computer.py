@@ -85,7 +85,7 @@ class DbComputer(Base):
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer.dbcomputer
         else:
-            raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
+            raise TypeError("Pass either a computer name, a DbComputer SQLAlchemy instance, a Computer id or a Computer object")
         return dbcomputer
 
     def get_aiida_class(self):

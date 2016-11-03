@@ -68,7 +68,6 @@ class SqlAlchemyTests(unittest.TestCase):
         if not has_computer:
             cls.computer = SqlAlchemyTests._create_computer()
             cls.computer.store()
-            sa.session.commit()
 
         # sa.session.close()
 

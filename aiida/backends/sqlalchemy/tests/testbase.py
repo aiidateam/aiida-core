@@ -70,7 +70,7 @@ class SqlAlchemyTests(unittest.TestCase):
             cls.computer.store()
             sa.session.commit()
 
-        sa.session.close()
+        # sa.session.close()
 
     @staticmethod
     def _create_computer(**kwargs):

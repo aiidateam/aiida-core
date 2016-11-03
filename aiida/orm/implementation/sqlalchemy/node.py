@@ -166,14 +166,19 @@ class Node(AbstractNode):
             self._add_dblink_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
-            self._remove_dblink_from(label)
-            self._add_dblink_from(src, label, link_type)
+            try:
+                self._remove_dblink_from(label)
+                self._add_dblink_from(src, label, link_type)
+                session.commit()
+            except:
+                session.rollback()
+                raise
 
     def _remove_dblink_from(self, label):
         from aiida.backends.sqlalchemy import session
-        link = self.dbnode.outputs.filter_by(label=label).first()
-        session.delete(link)
-        session.commit()
+        link = DbLink.query.filter_by(label=label).first()
+        if link is not None:
+            session.delete(link)
 
     def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.backends.sqlalchemy import session
@@ -236,12 +241,11 @@ class Node(AbstractNode):
     def _do_create_link(self, src, label, link_type):
         from aiida.backends.sqlalchemy import session
         try:
-            link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
-                          label=label, type=link_type.value)
-            session.add(link)
-            session.commit()
+            with session.begin_nested():
+                link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
+                              label=label, type=link_type.value)
+                session.add(link)
         except SQLAlchemyError as e:
-            session.rollback()
             raise UniquenessError("There is already a link with the same "
                                   "name (raw message was {})"
                                   "".format(e))

@@ -1166,13 +1166,13 @@ def translate_calculation_specific_values(calc, translator, **kwargs):
         '_dft_BZ_integration_smearing_method_other': 'get_integration_smearing_method_other',
         '_dft_BZ_integration_MP_order': 'get_integration_Methfessel_Paxton_order',
 
-        '_integration_grid_X': 'get_BZ_integration_grid_X',
-        '_integration_grid_Y': 'get_BZ_integration_grid_Y',
-        '_integration_grid_Z': 'get_BZ_integration_grid_Z',
+        '_dft_BZ_integration_grid_X': 'get_BZ_integration_grid_X',
+        '_dft_BZ_integration_grid_Y': 'get_BZ_integration_grid_Y',
+        '_dft_BZ_integration_grid_Z': 'get_BZ_integration_grid_Z',
 
-        '_integration_grid_shift_X': 'get_BZ_integration_grid_shift_X',
-        '_integration_grid_shift_Y': 'get_BZ_integration_grid_shift_Y',
-        '_integration_grid_shift_Z': 'get_BZ_integration_grid_shift_Z',
+        '_dft_BZ_integration_grid_shift_X': 'get_BZ_integration_grid_shift_X',
+        '_dft_BZ_integration_grid_shift_Y': 'get_BZ_integration_grid_shift_Y',
+        '_dft_BZ_integration_grid_shift_Z': 'get_BZ_integration_grid_shift_Z',
 
         '_dft_kinetic_energy_cutoff_wavefunctions': 'get_kinetic_energy_cutoff_wavefunctions',
         '_dft_kinetic_energy_cutoff_charge_density': 'get_kinetic_energy_cutoff_charge_density',

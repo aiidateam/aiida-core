@@ -265,5 +265,32 @@ class TestNodeBasicDango(AiidaTestCase, TestNodeBasic):
             # I did not store, I cannot modify
             a.set_extra('bool' + separator, 'blablabla')
 
+    def test_settings(self):
+        """
+        Test the settings table (similar to Attributes, but without the key.
+        """
+        from aiida.backends.djsite.db import models
+        from django.db import IntegrityError, transaction
+
+        models.DbSetting.set_value(key='pippo', value=[1, 2, 3])
+
+        s1 = models.DbSetting.objects.get(key='pippo')
+
+        self.assertEqual(s1.getvalue(), [1, 2, 3])
+
+        s2 = models.DbSetting(key='pippo')
+
+        sid = transaction.savepoint()
+        with self.assertRaises(IntegrityError):
+            # same name...
+            s2.save()
+        transaction.savepoint_rollback(sid)
+
+        # Should replace pippo
+        models.DbSetting.set_value(key='pippo', value="a")
+        s1 = models.DbSetting.objects.get(key='pippo')
+
+        self.assertEqual(s1.getvalue(), "a")
+
 class TestSubNodesAndLinksDjango(AiidaTestCase, TestSubNodesAndLinks):
     pass

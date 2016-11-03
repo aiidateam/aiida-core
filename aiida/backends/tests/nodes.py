@@ -697,33 +697,6 @@ class TestNodeBasic():
         # No problem, they are two different nodes
         n2.set_extra('samename', 1)
 
-    def test_settings(self):
-        """
-        Test the settings table (similar to Attributes, but without the key.
-        """
-        from aiida.backends.djsite.db import models
-        from django.db import IntegrityError, transaction
-
-        models.DbSetting.set_value(key='pippo', value=[1, 2, 3])
-
-        s1 = models.DbSetting.objects.get(key='pippo')
-
-        self.assertEqual(s1.getvalue(), [1, 2, 3])
-
-        s2 = models.DbSetting(key='pippo')
-
-        sid = transaction.savepoint()
-        with self.assertRaises(IntegrityError):
-            # same name...
-            s2.save()
-        transaction.savepoint_rollback(sid)
-
-        # Should replace pippo
-        models.DbSetting.set_value(key='pippo', value="a")
-        s1 = models.DbSetting.objects.get(key='pippo')
-
-        self.assertEqual(s1.getvalue(), "a")
-
     def test_settings_methods(self):
         from aiida.backends.utils import (
             get_global_setting_description, get_global_setting,

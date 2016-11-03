@@ -148,7 +148,35 @@ class TestNodeBasicSQLA(SqlAlchemyTests, TestNodeBasic):
     These tests check the basic features of nodes
     (setting of attributes, copying of files, ...)
     """
-    pass
+    def test_settings(self):
+        """
+        Test the settings table (similar to Attributes, but without the key.
+        """
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        from aiida.backends.sqlalchemy import session
+        from pytz import UTC
+        from aiida.utils import timezone
+        from sqlalchemy.exc import IntegrityError
+
+        DbSetting.set_value(key='pippo', value=[1, 2, 3])
+
+        # s1 = DbSetting.objects.get(key='pippo')
+        s1 = DbSetting.query.filter_by(key='pippo').first()
+
+        self.assertEqual(s1.getvalue(), [1, 2, 3])
+
+        s2 = DbSetting(key='pippo')
+        s2.time = timezone.datetime.now(tz=UTC)
+        with self.assertRaises(IntegrityError):
+            with session.begin_nested():
+                # same name...
+                session.add(s2)
+
+        # Should replace pippo
+        DbSetting.set_value(key='pippo', value="a")
+        s1 = DbSetting.query.filter_by(key='pippo').first()
+
+        self.assertEqual(s1.getvalue(), "a")
 
 
 class TestSubNodesAndLinksSQLA(SqlAlchemyTests, TestSubNodesAndLinks):

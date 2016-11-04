@@ -911,8 +911,8 @@ class TestNodeBasic():
         self.assertEquals(a._dbnode.nodeversion, 6)
 
     def test_comments(self):
-        # This is the best way to compare dates with the stored ones, instead of
-        # directly loading datetime.datetime.now(), or you can get a
+        # This is the best way to compare dates with the stored ones, instead
+        # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from aiida.utils import timezone
         from aiida.backends.utils import get_automatic_user
@@ -921,8 +921,8 @@ class TestNodeBasic():
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
             a.add_comment('text', user=get_automatic_user())
-        self.assertEquals(a.get_comments(), [])
         a.store()
+        self.assertEquals(a.get_comments(), [])
         before = timezone.now()
         time.sleep(1)  # I wait 1 second because MySql time precision is 1 sec
         a.add_comment('text', user=get_automatic_user())
@@ -1239,6 +1239,9 @@ class TestSubNodesAndLinks():
         with self.assertRaises(UniquenessError):
             n3._replace_link_from(n2, label='l4')
 
+        n2.store_all()
+        n3.store_all()
+
         n2_in_links = [(l, n.uuid) for l, n in n2.get_inputs_dict().iteritems()]
         self.assertEquals(sorted(n2_in_links), sorted([('l1', n1.uuid),
                                                        ]))
@@ -1246,9 +1249,6 @@ class TestSubNodesAndLinks():
         self.assertEquals(sorted(n3_in_links), sorted([('l2', n2.uuid),
                                                        ('l3', n1.uuid),
                                                        ]))
-
-        n2.store_all()
-        n3.store_all()
 
         n1_out_links = [(l, n.pk) for l, n in n1.get_outputs(also_labels=True)]
         self.assertEquals(sorted(n1_out_links), sorted([('l1', n2.pk),

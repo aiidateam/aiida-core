@@ -73,13 +73,11 @@ class DbComputer(Base):
                 dbcomputer = cls.session.query(cls).filter(cls.id==computer).one()
             except NoResultFound:
                 raise NotExistent("No computer found in the table of computers with "
-                                  "the given pk '{}'".format(computer))
-
+                                  "the given id '{}'".format(computer))
         elif isinstance(computer, DbComputer):
             if computer.id is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer
-
         elif isinstance(computer, Computer):
             if computer.dbcomputer.id is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")

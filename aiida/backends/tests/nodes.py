@@ -1120,6 +1120,26 @@ class TestSubNodesAndLinks():
         self.assertEqual(calc.get_code().uuid, code.uuid)
         self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
 
+    def test_calculation_load(self):
+        from aiida.orm import JobCalculation
+
+        # I check with a string, with an object and with the computer pk/id
+        calc = JobCalculation(computer=self.computer,
+                              resources={'num_machines': 1,
+                                         'num_mpiprocs_per_machine': 1}).store()
+        calc2 = JobCalculation(computer=self.computer.name,
+                               resources={'num_machines': 1,
+                                          'num_mpiprocs_per_machine': 1}).store()
+        calc3 = JobCalculation(computer=self.computer.id,
+                               resources={'num_machines': 1,
+                                          'num_mpiprocs_per_machine': 1}).store()
+        with self.assertRaises(Exception):
+            # I should get an error if I ask for a computer id/pk that doesn't
+            # exist
+            _ = JobCalculation(computer=20,
+                               resources={'num_machines': 2,
+                                          'num_mpiprocs_per_machine': 1}).store()
+
     def test_links_label_constraints(self):
         n1 = Node().store()
         n2 = Node().store()
@@ -1265,17 +1285,11 @@ class TestSubNodesAndLinks():
                                resources={'num_machines': 1,
                                           'num_mpiprocs_per_machine': 1}).store()
 
-        # I check both with a string or with an object
+        # Load calculations with two different ways
         calc = JobCalculation(computer=self.computer,
                               resources={'num_machines': 1,
                                          'num_mpiprocs_per_machine': 1}).store()
-        calc2 = JobCalculation(computer='localhost',
-                               resources={'num_machines': 1,
-                                          'num_mpiprocs_per_machine': 1}).store()
-        with self.assertRaises(TypeError):
-            # I don't want to call it with things that are neither
-            # strings nor Computer instances
-            _ = JobCalculation(computer=1,
+        calc2 = JobCalculation(computer=self.computer.name,
                                resources={'num_machines': 1,
                                           'num_mpiprocs_per_machine': 1}).store()
 

@@ -1033,7 +1033,7 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
     if author_name:
         kwargs['additional_tags']['_publ_author_name'] = author_name
     if replace:
-        kwargs['additional_tags']['_cod_database_code'] = replace
+        kwargs['additional_tags']['_tcod_database_code'] = replace
         kwargs['datablock_names'] = [replace]
 
     cif = export_cifnode(what, store=True, **kwargs)

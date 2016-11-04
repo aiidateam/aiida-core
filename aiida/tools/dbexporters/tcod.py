@@ -979,6 +979,8 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
     """
     from aiida.common.setup import get_property
 
+    parameters = {}
+
     if not what:
         raise ValueError("Node to be deposited is not supplied")
     if not type:
@@ -990,13 +992,17 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         if not username:
             raise ValueError("Depositor username is not supplied")
     if not password:
-        password = get_property('tcod.depositor_password')
-        if not password:
+        parameters['password'] = get_property('tcod.depositor_password')
+        if not parameters['password']:
             raise ValueError("Depositor password is not supplied")
     if not user_email:
         user_email = get_property('tcod.depositor_email')
         if not user_email:
             raise ValueError("Depositor email is not supplied")
+
+    parameters['deposition-type'] = type
+    parameters['username'] = username
+    parameters['user_email'] = user_email
 
     if type == 'published':
         pass
@@ -1050,11 +1056,6 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
     calc = code.new_calc(computer=computer)
     calc.set_resources({'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
-    parameters = {
-        'deposition-type': type,
-        'username'       : username,
-        'user_email'     : user_email,
-    }
     if password:
         import getpass
         parameters['password'] = getpass.getpass("Password: ")

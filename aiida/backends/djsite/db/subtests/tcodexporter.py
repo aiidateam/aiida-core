@@ -693,7 +693,7 @@ class TestTcodDbExporter(AiidaTestCase):
         test_quoted_printable(self, 'line\n;line', 'line\n=3Bline')
         test_quoted_printable(self, 'tabbed\ttext', 'tabbed=09text')
         test_quoted_printable(self, 'angstrom Å', 'angstrom =C3=85')
-        test_quoted_printable(self, 'line\rline\x00', 'line\rline=00')
+        test_quoted_printable(self, 'line\rline\x00', 'line=0Dline=00')
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         test_quoted_printable(self,

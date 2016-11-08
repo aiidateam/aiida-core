@@ -257,12 +257,12 @@ class TestTcodDbExporter(AiidaTestCase):
         })
         res = translate_calculation_specific_values(calc, PWT)
         self.assertEquals(res, {
-            '_integration_grid_X': 2,
-            '_integration_grid_Y': 3,
-            '_integration_grid_Z': 4,
-            '_integration_grid_shift_X': 0.25,
-            '_integration_grid_shift_Y': 0.5,
-            '_integration_grid_shift_Z': 0.75,
+            '_dft_BZ_integration_grid_X': 2,
+            '_dft_BZ_integration_grid_Y': 3,
+            '_dft_BZ_integration_grid_Z': 4,
+            '_dft_BZ_integration_grid_shift_X': 0.25,
+            '_dft_BZ_integration_grid_shift_Y': 0.5,
+            '_dft_BZ_integration_grid_shift_Z': 0.75,
             '_tcod_software_package': 'Quantum ESPRESSO',
             '_tcod_software_executable_path': '/test',
         })

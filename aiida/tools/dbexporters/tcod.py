@@ -53,17 +53,22 @@ tcod_loops = {
         '_tcod_atom_site_resid_force_Cartn_y',
         '_tcod_atom_site_resid_force_Cartn_z',
     ],
+    '_dft_pseudopotential_': [
+        '_dft_pseudopotential_atom_type',
+        '_dft_pseudopotential_type',
+        '_dft_pseudopotential_type_other_name',
+    ],
 }
 
 conforming_dictionaries = [
     {
         'name': 'cif_tcod.dic',
-        'version': '0.008',
+        'version': '0.009',
         'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_tcod.dic'
     },
     {
         'name': 'cif_dft.dic',
-        'version': '0.008',
+        'version': '0.020',
         'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_dft.dic'
     }
 ]
@@ -1179,6 +1184,10 @@ def translate_calculation_specific_values(calc, translator, **kwargs):
         '_dft_kinetic_energy_cutoff_charge_density': 'get_kinetic_energy_cutoff_charge_density',
         '_dft_kinetic_energy_cutoff_EEX': 'get_kinetic_energy_cutoff_EEX',
 
+        '_dft_pseudopotential_atom_type': 'get_pseudopotential_atom_type',
+        '_dft_pseudopotential_type': 'get_pseudopotential_type',
+        '_dft_pseudopotential_type_other_name': 'get_pseudopotential_type_other_name',
+
         ## Residual forces are no longer produced, as they should
         ## be in the same CIF loop with coordinates -- to be
         ## implemented later, since it's not yet clear how.
@@ -1194,6 +1203,10 @@ def translate_calculation_specific_values(calc, translator, **kwargs):
         except NotImplementedError as e:
             pass
         if value is not None:
+            if isinstance(value,list):
+                for i in range(0,len(value)):
+                    if value[i] is None:
+                        value[i] = '?'
             tags[tag] = value
 
     return tags

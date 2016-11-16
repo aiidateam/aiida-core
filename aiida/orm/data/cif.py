@@ -462,7 +462,8 @@ class CifData(SinglefileData):
         """
         if not kwargs and self._ase:
             return self.ase
-        e            return CifData.read_cif(
+        else:
+            return CifData.read_cif(
                 self._get_folder_pathsubfolder.open(self.filename), **kwargs)
 
     def set_ase(self, aseatoms):

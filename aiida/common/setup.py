@@ -40,13 +40,11 @@ aiidadb_backend_value_django = "django"
 
 # Repository for tests
 TEMP_TEST_REPO = None
-TEST_REPO_PREFIX = "test-"
 
-# Database for tests
-TEST_DB_PREFIX = "test_"
+# Keyword that is used in test profiles, databases and repositories to
+# differentiate them from non-testing ones.
+TEST_KEYWORD = "test_"
 
-# Profile for tests prefix
-TEST_PROFILE_PREFIX = "test_"
 
 def backup_config():
     """
@@ -536,6 +534,13 @@ def create_configuration(profile='default'):
 
     print("Setting up profile {}.".format(profile))
 
+    is_test_profile = False
+    if profile.startswith(TEST_KEYWORD):
+        print("This is a test profile. All the data that will be stored under "
+              "this profile are subjected to possible deletion or "
+              "modification (repository and database data).")
+        is_test_profile = True
+
     try:
         confs = get_config()
     except ConfigurationError:
@@ -670,8 +675,19 @@ def create_configuration(profile='default'):
             this_new_confs['AIIDADB_PORT'] = raw_input('PostgreSQL port: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
-                this_existing_confs.get('AIIDADB_NAME', 'aiidadb')))
-            this_new_confs['AIIDADB_NAME'] = raw_input('AiiDA Database name: ')
+                this_existing_confs.get('AIIDADB_NAME')))
+            db_name = ''
+            while True:
+                db_name = raw_input('AiiDA Database name: ')
+                if is_test_profile and db_name.startswith(TEST_KEYWORD):
+                    break
+                if (not is_test_profile and not
+                db_name.startswith(TEST_KEYWORD)):
+                    break
+                print("The test databases should start with the prefix {} and "
+                      "the non-test databases should not have this prefix."
+                      .format(TEST_KEYWORD))
+            this_new_confs['AIIDADB_NAME'] = db_name
 
             old_user = this_existing_confs.get('AIIDADB_USER', 'aiida')
             if not old_user:
@@ -702,8 +718,19 @@ def create_configuration(profile='default'):
             this_new_confs['AIIDADB_PORT'] = raw_input('mySQL port: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
-                this_existing_confs.get('AIIDADB_NAME', 'aiidadb')))
-            this_new_confs['AIIDADB_NAME'] = raw_input('AiiDA Database name: ')
+                this_existing_confs.get('AIIDADB_NAME')))
+            db_name = ''
+            while True:
+                db_name = raw_input('AiiDA Database name: ')
+                if is_test_profile and db_name.startswith(TEST_KEYWORD):
+                    break
+                if (not is_test_profile and not
+                db_name.startswith(TEST_KEYWORD)):
+                    break
+                print("The test databases should start with the prefix {} and "
+                      "the non-test databases should not have this prefix."
+                      .format(TEST_KEYWORD))
+            this_new_confs['AIIDADB_NAME'] = db_name
 
             old_user = this_existing_confs.get('AIIDADB_USER', 'aiida')
             if not old_user:
@@ -729,10 +756,32 @@ def create_configuration(profile='default'):
             existing_repo = existing_repo[len(default_protocol):]
         readline.set_startup_hook(lambda: readline.insert_text(existing_repo))
         new_repo_path = raw_input('AiiDA repository directory: ')
+
+        # Constructing the repo path
         new_repo_path = os.path.expanduser(new_repo_path)
         if not os.path.isabs(new_repo_path):
             raise ValueError("You must specify an absolute path")
-        if (not os.path.isdir(new_repo_path)):
+
+        # Check if the new repository is a test repository and if it already
+        # exists.
+        if is_test_profile:
+            if TEST_KEYWORD not in new_repo_path:
+                raise ValueError("The test prefix {} should be contained only"
+                                 "in repository names related to test "
+                                 "profiles.".format(TEST_KEYWORD))
+
+            if os.path.isdir(new_repo_path):
+                print("The repository {} already exists. It will be used for "
+                      "tests. Any content may be deleted."
+                      .format(new_repo_path))
+        else:
+            if TEST_KEYWORD in new_repo_path:
+                raise ValueError("Only test profiles can have a test "
+                                 "repository. Your repository contains the "
+                                 "test prefix {}.".format(TEST_KEYWORD))
+
+        if not os.path.isdir(new_repo_path):
+            print("The repository {} will be created.".format(new_repo_path))
             old_umask = os.umask(DEFAULT_UMASK)
             try:
                 os.makedirs(new_repo_path)
@@ -749,8 +798,6 @@ def create_configuration(profile='default'):
         return this_new_confs
     finally:
         readline.set_startup_hook(lambda: readline.insert_text(""))
-
-
 
 
 def create_configuration_old(profile='default'):

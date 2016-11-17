@@ -7,7 +7,6 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
 from aiida.common.exceptions import InternalError
-# from aiida.orm.utils import load_node
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -483,8 +482,7 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.backends.djsite.settings import settings_profile
         from aiida import is_dbenv_loaded, load_dbenv
         from aiida import settings as settings2
-        from aiida.common.setup import (TEST_REPO_PREFIX, TEST_DB_PREFIX,
-                                        TEST_PROFILE_PREFIX)
+        from aiida.common.setup import TEST_KEYWORD
 
         test_failures = list()
         db_test_list = []
@@ -554,13 +552,17 @@ class Devel(VerdiCommandWithSubcommands):
             if not is_dbenv_loaded():
                 load_dbenv()
 
-            base_repo_path = os.path.basename(settings2.REPOSITORY_PATH)
-            if (not settings.AIIDADB_PROFILE.startswith(TEST_PROFILE_PREFIX) or
-                    not base_repo_path.startswith(TEST_REPO_PREFIX) or
-                    not settings2.DBNAME.startswith(TEST_DB_PREFIX)):
+            base_repo_path = os.path.basename(
+                os.path.normpath(settings2.REPOSITORY_PATH))
+            if (not settings.AIIDADB_PROFILE.startswith(TEST_KEYWORD) or
+                    TEST_KEYWORD not in base_repo_path or
+                    not settings2.DBNAME.startswith(TEST_KEYWORD)):
                 print "A non-test profile was given for tests. Please note " \
                       "that the test profile should have test specific " \
                       "database name and test specific repository name."
+                print("Given profile: {}".format(settings.AIIDADB_PROFILE))
+                print("Related repository path: {}".format(base_repo_path))
+                print("Related database name: {}".format(settings2.DBNAME))
                 sys.exit(1)
 
             from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO

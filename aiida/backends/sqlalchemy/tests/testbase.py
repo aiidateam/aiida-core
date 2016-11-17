@@ -96,10 +96,9 @@ class SqlAlchemyTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         from aiida.settings import REPOSITORY_PATH
-        from aiida.common.setup import TEST_REPO_PREFIX
+        from aiida.common.setup import TEST_KEYWORD
         from aiida.common.exceptions import InvalidOperation
-        if not os.path.basename(REPOSITORY_PATH).startswith(
-                TEST_REPO_PREFIX):
+        if TEST_KEYWORD not in REPOSITORY_PATH:
             raise InvalidOperation("Be careful. The repository for the tests "
                                    "is not a test repository. I will not "
                                    "empty the database and I will not delete "

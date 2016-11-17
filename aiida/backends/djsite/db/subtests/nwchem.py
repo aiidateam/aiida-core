@@ -10,7 +10,6 @@ from aiida.orm.calculation.job.nwchem.nwcpymatgen import _prepare_pymatgen_dict
 from aiida.orm.data.structure import has_ase, has_pymatgen, StructureData
 from aiida.orm.data.cif import has_pycifrw
 from django.utils import unittest
-from pprint import pprint
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -149,13 +148,4 @@ nwpw
 end
 task pspw optimize
 '''
-        prefix = '/home/gargiulo/aiida_stuff/test_fixing/nwchem/'
-        fout = open(prefix + 'app.txt', 'w')
-        fout.write(app)
-        fout.close()
-
-        fout = open(prefix + 'target_string.txt', 'w')
-        fout.write(target_string)
-        fout.close()
-
         self.assertEquals(app, target_string)

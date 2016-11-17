@@ -8,7 +8,6 @@ from aiida.orm.data.structure import StructureData
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import classproperty
-from pprint import pprint
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."

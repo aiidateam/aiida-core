@@ -287,7 +287,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
 
 
     # This is the export version expected by this function
-    expected_export_version = ['0.1', '0.2']
+    expected_export_version = '0.2'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -330,7 +330,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
         ######################
         # PRELIMINARY CHECKS #
         ######################
-        if metadata['export_version'] not in expected_export_version:
+        if metadata['export_version'] != expected_export_version:
             raise ValueError("File export version is {}, but I can import only "
                              "version {}".format(metadata['export_version'],
                                                  expected_export_version))

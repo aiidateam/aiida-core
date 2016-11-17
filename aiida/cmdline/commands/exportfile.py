@@ -70,6 +70,8 @@ class Export(VerdiCommand):
 
         parsed_args = parser.parse_args(args)
 
+        print "Output file: ", parsed_args.output_file
+
         if parsed_args.nodes is None:
             node_pk_list = []
         else:

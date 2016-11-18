@@ -50,6 +50,7 @@ class SqlAlchemyTests(unittest.TestCase):
 
         session = Session(bind=cls.connection)
         sa.session = session
+        sa.session.expire_on_commit = False
 
         if cls.drop_all:
             Base.metadata.drop_all(cls.connection)
@@ -68,8 +69,6 @@ class SqlAlchemyTests(unittest.TestCase):
         if not has_computer:
             cls.computer = SqlAlchemyTests._create_computer()
             cls.computer.store()
-
-        # sa.session.close()
 
     @staticmethod
     def _create_computer(**kwargs):

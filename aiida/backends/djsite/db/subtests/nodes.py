@@ -3,7 +3,6 @@
 Tests for nodes, attributes and links
 """
 
-
 from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.backends.tests.nodes import (
     TestDataNode, TestTransitiveNoLoops, TestTransitiveClosureDeletion,

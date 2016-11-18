@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import importlib
+import inspect
+import sys
 import unittest
-import sys, inspect
-import aiida.backends.sqlalchemy.tests.nodes
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -19,8 +20,15 @@ def find_classes(module_str):
 
 
 def run_tests():
-    module_str = "aiida.backends.sqlalchemy.tests.nodes"
-    for test_class in find_classes(module_str):
-        print "Running ", test_class, " of module ", module_str, "."
-        suite = unittest.TestLoader().loadTestsFromTestCase(test_class)
-        unittest.TextTestRunner(verbosity=2).run(suite)
+    modules_str = [
+        "aiida.backends.sqlalchemy.tests.nodes",
+        "aiida.backends.sqlalchemy.tests.backup_script",
+    ]
+    for module_str in modules_str:
+        # Dynamically importing the module that interests us
+        importlib.import_module(module_str)
+
+        for test_class in find_classes(module_str):
+            print "Running ", test_class, " of module ", module_str, "."
+            suite = unittest.TestLoader().loadTestsFromTestCase(test_class)
+            unittest.TextTestRunner(verbosity=2).run(suite)

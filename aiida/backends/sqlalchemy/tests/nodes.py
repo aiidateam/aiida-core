@@ -4,9 +4,7 @@ Tests for nodes, attributes and links
 """
 
 from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
-from aiida.backends.tests.nodes import (
-    TestDataNode, TestTransitiveNoLoops, TestTransitiveClosureDeletion,
-    TestQueryWithAiidaObjects, TestNodeBasic, TestSubNodesAndLinks)
+from aiida.backends.tests.nodes import *
 
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -20,6 +18,7 @@ class TestDataNodeSQLA(SqlAlchemyTests, TestDataNode):
     These tests check the features of Data nodes that differ from the base Node
     """
     pass
+
 
 class TestTransitiveNoLoopsSQLA(SqlAlchemyTests, TestTransitiveNoLoops):
     """

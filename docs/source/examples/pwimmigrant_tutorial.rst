@@ -28,12 +28,12 @@ As usual, we load the database environment and load the ``PwimmigrantCalculation
 
 ::
 
+    # Load the database environment.
     from aiida import load_dbenv
+    load_dbenv()
+
     from aiida.orm.code import Code
     from aiida.orm import CalculationFactory
-
-    # Load the database environment.
-    load_dbenv()
 
     # Load the PwimmigrantCalculation class.
     PwimmigrantCalculation = CalculationFactory('quantumespresso.pwimmigrant')
@@ -58,7 +58,7 @@ Next, we load the code and computer that have already been configured to be repr
 ::
 
     # Load the Code node representative of the one used to perform the calculations.
-    code = Code.get('pw_on_TheHive')
+    code = Code.get_from_string('pw_on_TheHive@machinename')
 
     # Get the Computer node representative of the one the calculations were run on.
     computer = code.get_remote_computer()

@@ -238,7 +238,8 @@ class DbLink(Base):
     type = Column(String(255))
 
     __table_args__ = (
-        UniqueConstraint('input_id', 'output_id'),
+        # I cannot add twice the same link
+        # I want unique labels among all inputs of a node
         UniqueConstraint('output_id', 'label'),
     )
 

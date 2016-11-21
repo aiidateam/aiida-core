@@ -1,0 +1,42 @@
+&CONTROL
+  calculation = 'vc-relax'
+  outdir = './out/'
+  prefix = 'aiida'
+  pseudo_dir = './pseudo/'
+  restart_mode = 'from_scratch'
+  tprnfor = .true.
+  tstress = .true.
+  verbosity = 'high'
+  wf_collect = .true.
+/
+&SYSTEM
+  degauss =   1.0000000000d-02
+  ecutrho =   4.0000000000d+02
+  ecutwfc =   4.0000000000d+01
+  ibrav = 0
+  input_dft = 'vdw-df-ob86'
+  nat = 2
+  ntyp = 1
+  occupations = 'smearing'
+  smearing = 'mv'
+/
+&ELECTRONS
+  conv_thr =   1.0000000000d-10
+  mixing_beta =   5.0000000000d-01
+  mixing_mode = 'plain'
+/
+&IONS
+/
+&CELL
+/
+ATOMIC_SPECIES
+As     74.9216 as_pbe_v1.uspp.F.UPF
+ATOMIC_POSITIONS angstrom
+As           1.9041350222       1.0993528677      -0.6472062891 
+As           0.0000000000       0.0000000000       0.6472062840 
+K_POINTS automatic
+14 14 1 0 0 0
+CELL_PARAMETERS angstrom
+      3.8082700444       0.0000000000       0.0000000000
+     -1.9041350222       3.2980586029       0.0000000000
+      0.0000000000       0.0000000000      22.5513413113

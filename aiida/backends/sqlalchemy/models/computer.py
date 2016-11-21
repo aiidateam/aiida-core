@@ -74,19 +74,17 @@ class DbComputer(Base):
                 dbcomputer = cls.session.query(cls).filter(cls.id==computer).one()
             except NoResultFound:
                 raise NotExistent("No computer found in the table of computers with "
-                                  "the given pk '{}'".format(computer))
-
+                                  "the given id '{}'".format(computer))
         elif isinstance(computer, DbComputer):
             if computer.id is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer
-
         elif isinstance(computer, Computer):
             if computer.dbcomputer.id is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer.dbcomputer
         else:
-            raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
+            raise TypeError("Pass either a computer name, a DbComputer SQLAlchemy instance, a Computer id or a Computer object")
         return dbcomputer
 
     def get_aiida_class(self):

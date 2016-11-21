@@ -1,0 +1,41 @@
+&control
+   calculation = 'scf'
+   restart_mode='from_scratch',
+   prefix='False_False_gamma_unspecified_bohr',
+   pseudo_dir = '/Users/ehontz/bin/espresso/pseudo/',
+   outdir='./tmp'
+
+/
+
+&system
+    ibrav           = 0, 
+    
+    nat             = 4, ntyp= 1, occupations   ='fixed'
+
+    smearing        = 'methfessel-paxton'
+    degauss         = 0.02
+
+    ecutwfc         = 30.0
+    ecutrho         = 180.0
+    
+/
+
+&electrons
+    conv_thr        = 1.0d-5
+/
+
+ATOMIC_SPECIES
+C   12.00   C.pbe-rrkjus.UPF
+
+ATOMIC_POSITIONS bohr
+C  0.0000000  0.0000000  0.0000000
+C  0.0000000  2.6795807  0.0000000
+C  0.0000000  0.0000000  6.3268429
+C  2.3205850  1.3397904  6.3268429
+    
+CELL_PARAMETERS   
+ 4.6411700  0.0000000  0.0000000
+-2.3205850  4.0193692  0.0000000
+ 0.0000000  0.0000000  12.6536859  
+K_POINTS gamma
+ 

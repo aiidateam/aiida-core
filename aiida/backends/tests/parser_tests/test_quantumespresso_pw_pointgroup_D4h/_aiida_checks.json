@@ -1,0 +1,8 @@
+{
+   "output_parameters": {
+         "pointgroup_schoenflies":[{
+                   "comparison": "Equal",
+                   "value": "D_4h"
+                   }]
+         }
+}

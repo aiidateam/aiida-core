@@ -145,7 +145,14 @@ class TestQueryBuilder(AiidaTestCase):
         n5.add_link_from(n4, link_type=LinkType.CREATE)
 
         qb1 = QueryBuilder()
-        qb1.append(Node, filters={'attributes.foo': 1.000})
+        # qb1.append(Node, filters={'attributes.foo': 1.000})
+        # qb1.append(Node, filters={'attributes.foo': 1})
+        # qb1.append(Node)
+        qb1.append(Node, filters={'label': 'node4'})
+
+        print "<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+        print qb1.all()
+        print "<<<<<<<<<<<<<<<<<<<<<<<<<<<"
 
         self.assertEqual(len(qb1.all()), 2)
 

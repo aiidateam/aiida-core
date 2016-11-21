@@ -2,19 +2,18 @@
 """
 Tests for the NWChem input plugins.
 """
-import os
-import tempfile
 
 from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.orm.calculation.job.nwchem.nwcpymatgen import _prepare_pymatgen_dict
 from aiida.orm.data.structure import has_ase, has_pymatgen, StructureData
-from aiida.orm.data.cif import has_pycifrw
-from django.utils import unittest
+import unittest
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
+
+
 
 class TestNwchem(AiidaTestCase):
 
@@ -46,6 +45,7 @@ class TestNwchem(AiidaTestCase):
                         'nwpw': {'ewald_ncut': 8, 'simulation_cell': '\n  ngrid 16 16 16\n end'}
                     },
                     'basis_set': {},
+                    'basis_set_option': 'cartesian',
                     'charge': 0,
                     'operation': 'optimize',
                     'spin_multiplicity': None,
@@ -70,8 +70,11 @@ class TestNwchem(AiidaTestCase):
         ])
         s = StructureData(ase=a)
 
-        self.assertEquals(_prepare_pymatgen_dict(par,s),
-'''set nwpw:minimizer 2
+        ## Test 1
+        # Input file string prodiced by pymatgen
+        app = _prepare_pymatgen_dict(par, s)
+        # Target input file
+        target_string = '''set nwpw:minimizer 2
 set nwpw:psi_nolattice .true.
 set includestress .true.
 geometry units au center noautosym noautoz print
@@ -87,30 +90,31 @@ end
 
 title "pspw optimize"
 charge 0
-basis
+basis cartesian
 
 end
 driver
- clear 
- maxiter 40
+ clear \n maxiter 40
 end
 nwpw
  ewald_ncut 8
- simulation_cell 
-  ngrid 16 16 16
+ simulation_cell \n  ngrid 16 16 16
  end
 end
 task pspw optimize
-''')
+'''
+        self.assertEquals(app, target_string)
 
+        ## Test 2
         par['add_cell'] = True
 
-        self.assertEquals(_prepare_pymatgen_dict(par,s),
-'''set nwpw:minimizer 2
+        # Input file string prodiced by pymatgen
+        app = _prepare_pymatgen_dict(par, s)
+        # Target input file
+        target_string = '''set nwpw:minimizer 2
 set nwpw:psi_nolattice .true.
 set includestress .true.
-geometry units au center noautosym noautoz print 
-  system crystal
+geometry units au center noautosym noautoz print \n  system crystal
     lat_a 8.277
     lat_b 8.277
     lat_c 8.277
@@ -130,18 +134,17 @@ end
 
 title "pspw optimize"
 charge 0
-basis
+basis cartesian
 
 end
 driver
- clear 
- maxiter 40
+ clear \n maxiter 40
 end
 nwpw
  ewald_ncut 8
- simulation_cell 
-  ngrid 16 16 16
+ simulation_cell \n  ngrid 16 16 16
  end
 end
 task pspw optimize
-''')
+'''
+        self.assertEquals(app, target_string)

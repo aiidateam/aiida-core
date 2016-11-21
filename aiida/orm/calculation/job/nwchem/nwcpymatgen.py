@@ -15,7 +15,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 def _prepare_pymatgen_dict(parameters,struct=None):
-    from pymatgen.io.nwchemio import NwInput
+    from pymatgen.io.nwchem import NwInput
     import copy
 
     par = copy.deepcopy(parameters)

@@ -12,6 +12,7 @@ from aiida.orm import DataFactory
 from aiida.orm import load_node
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.importexport import export, import_data
+from aiida.backends.tests.export_and_import import TestPort
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -19,7 +20,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestPort(AiidaTestCase):
+class TestPortDjango(AiidaTestCase, TestPort):
     def test_1(self):
         from aiida.orm import delete_computer
 

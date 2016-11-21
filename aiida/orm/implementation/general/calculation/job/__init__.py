@@ -806,7 +806,9 @@ class AbstractJobCalculation(object):
             cls, states=None, past_days=None, group=None,
             group_pk=None, all_users=False, pks=tuple(),
             relative_ctime=True, with_scheduler_state=False,
-            order_by=None, limit=None):
+            order_by=None, limit=None,
+            projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type')
+        ):
         """
         Print a description of the AiiDA calculations.
 
@@ -831,6 +833,7 @@ class AbstractJobCalculation(object):
                                (like 2days ago). Default = True
         :param all_users: if True, list calculation belonging to all users.
                            Default = False
+        :param ldescription: if True, print the description of the calculation
 
         :return: a string with description of calculations.
         """
@@ -838,6 +841,35 @@ class AbstractJobCalculation(object):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.daemon.timestamps import get_last_daemon_timestamp
         from tabulate import tabulate
+
+
+        projection_to_qb_tag_map = {
+                'pk': ('calculation','id'),
+                'ctime':('calculation','ctime'),
+                'mtime':('calculation','mtime'),
+                'sched':('calculation','attributes.scheduler_state'),
+                'state':('calculation','state'),
+                'type':('calculation','type'),
+                'description':('calculation','description'),
+                'label':('calculation','label'),
+                'uuid':('calculation','uuid'),
+                'user':('user', 'email'),
+                'computer':('computer','name')
+            }
+        projection_label_dict = {
+                'pk': 'PK',
+                'state':'State',
+                'ctime':'Creation',
+                'mtime':'Modification',
+                'sched':'Sched. state',
+                'computer':'Computer',
+                'type':'Type',
+                'description':'Description',
+                'label':'Label',
+                'uuid':'UUID',
+                'user':'User',
+            }
+
 
         now = timezone.now()
 
@@ -883,7 +915,8 @@ class AbstractJobCalculation(object):
                         ).strftime("at %H:%M:%S on %Y-%m-%d")
                     )
                 )
-        print last_check_string
+        print(last_check_string)
+
 
         calculation_filters = {}
 
@@ -895,7 +928,7 @@ class AbstractJobCalculation(object):
             # The wanted behavior:
             # You know what you're looking for and specify pks,
             # Otherwise the other filters apply.
-            # Open question: Is that the best way?
+            # Open question: Is that the best way? 
 
             # filter for states:
             if states:
@@ -918,26 +951,32 @@ class AbstractJobCalculation(object):
             else:
                 group_filters = None
 
-        calculation_projections = [
-            'id', 'state', 'attributes.state', 'ctime', 'type',
-            'attributes.scheduler_state'
-        ]
-        calc_list_header = ['PK', 'State', 'Creation', 'Sched. state',
-                            'Computer', 'Type']
-        calc_list_data = []
+        calc_list_header = [projection_label_dict[p] for p in projections]
+
         qb = QueryBuilder()
         qb.append(
             cls,
             filters=calculation_filters,
-            project=calculation_projections,
             tag='calculation'
         )
         if group_filters is not None:
             qb.append(type="group", filters=group_filters,
                       group_of="calculation")
-        qb.append(type="computer", computer_of='calculation',
-                  project=['name'], tag='computer')
+        qb.append(type="computer", computer_of='calculation', tag='computer')
+        qb.append(type="user", creator_of="calculation", tag="user")
+        # The joining is done
+        # Now the projections:
+        projections_dict={'calculation':[], 'user':[], 'computer':[]}
 
+        
+        for k,v in [projection_to_qb_tag_map[p] for p in projections]:
+            projections_dict[k].append(v)
+        
+        if 'state' in projections:
+            projections_dict['calculation'].append('attributes.state')
+        for k,v in projections_dict.iteritems():
+            qb.add_projection(k,v)
+        
         # ORDER
         if order_by is not None:
             qb.order_by({'calculation': [order_by]})
@@ -945,52 +984,52 @@ class AbstractJobCalculation(object):
         # LIMIT
         if limit is not None:
             qb.limit(limit)
-        # I have removed order_by since it slows query down
-        # qb.order_by({'calculation':['ctime']})
 
         results_generator = qb.iterdict()
-
         counter = 0
+        calc_list_data = []
         while True:
             try:
                 for i in range(100):
                     res = results_generator.next()
-                    counter += 1
-                    ctime = res['calculation']['ctime']
-                    if relative_ctime:
-                        calc_ctime = str_timedelta(
-                            timezone.delta(ctime, now), negative_to_zero=True,
-                            max_num_fields=1)
-                    else:
-                        calc_ctime = " ".join([
-                            timezone.localtime(ctime).isoformat().split('T')[0],
-                            timezone.localtime(ctime).isoformat().split('T')[
-                                1].split('.')[0].rsplit(":", 1)[0]])
-                    state = str(res['calculation']['state'])
-                    if state == calc_states.IMPORTED:
-                        attrstate = res['calculation']['attributes.state']
-                        if attrstate is None:
-                            attrstate = 'UNKNOWN'
-                        state = '{}/{}'.format(state, attrstate)
-
+                    try:
+                        res['calculation']['type'] = from_type_to_pluginclassname(
+                                    res['calculation']['type']
+                                ).rsplit(".", 1)[0].lstrip('calculation.job.')
+                    except KeyError:
+                        pass
+                    for proj in ('ctime', 'mtime'):
+                        try:
+                            time = res['calculation'][proj]
+                            if relative_ctime:
+                                res['calculation'][proj] = str_timedelta(
+                                    timezone.delta(time, now), negative_to_zero=True,
+                                    max_num_fields=1)
+                            else:
+                                res['calculation'][proj] = " ".join([
+                                    timezone.localtime(time).isoformat().split('T')[0],
+                                    timezone.localtime(time).isoformat().split('T')[
+                                    1].split('.')[0].rsplit(":", 1)[0]])
+                        except KeyError:
+                            pass
+                    try:
+                        if  res['calculation']['state'] == 'IMPORTED':
+                            res['calculation']['state'] = res['calculation']['attributes.state'] or "UNKNOWN"
+                    except KeyError:
+                        pass
+                        
                     calc_list_data.append([
-                        str(res['calculation']['id']),
-                        state,
-                        str(calc_ctime),
-                        str(res['calculation']['attributes.scheduler_state']),
-                        str(res['computer']['name']),
-                        from_type_to_pluginclassname(
-                            res['calculation']['type']
-                        ).rsplit(".", 1)[0].lstrip('calculation.job.')
-                    ])
-
+                            res[projection_to_qb_tag_map[p][0]][projection_to_qb_tag_map[p][1]] 
+                            for p in projections
+                        ])
+                    counter += 1
                 print(tabulate(calc_list_data, headers=calc_list_header))
                 calc_list_data = []
             except StopIteration:
                 print(tabulate(calc_list_data, headers=calc_list_header))
                 break
 
-        print "\nNumber of rows: {}\n".format(counter)
+        print("\nNumber of rows: {}\n".format(counter))
 
     @classmethod
     def _get_all_with_state(
@@ -1375,9 +1414,9 @@ class AbstractJobCalculation(object):
         #   would return None, in which case the join method would raise
         #   an exception
         job_tmpl.prepend_text = "\n\n".join(_ for _ in
-                                            [computer.get_prepend_text(),
-                                             code.get_prepend_text(),
-                                             calcinfo.prepend_text,
+                                            [computer.get_prepend_text()]+
+                                             [code.get_prepend_text() for code in codes]+
+                                             [calcinfo.prepend_text,
                                              self.get_prepend_text()] if _)
 
         job_tmpl.append_text = "\n\n".join(_ for _ in

@@ -250,19 +250,27 @@ class TestTcodDbExporter(AiidaTestCase):
         kpoints = KpointsData()
         kpoints.set_kpoints_mesh([2, 3, 4], offset=[0.25, 0.5, 0.75])
 
+        def empty_list():
+            return []
+
         calc = FakeObject({
             "inp": {"parameters": ParameterData(dict={}),
                     "kpoints": kpoints, "code": code},
-            "out": {"output_parameters": ParameterData(dict={})}
+            "out": {"output_parameters": ParameterData(dict={})},
+            "get_inputs": empty_list
         })
+
         res = translate_calculation_specific_values(calc, PWT)
         self.assertEquals(res, {
-            '_integration_grid_X': 2,
-            '_integration_grid_Y': 3,
-            '_integration_grid_Z': 4,
-            '_integration_grid_shift_X': 0.25,
-            '_integration_grid_shift_Y': 0.5,
-            '_integration_grid_shift_Z': 0.75,
+            '_dft_BZ_integration_grid_X': 2,
+            '_dft_BZ_integration_grid_Y': 3,
+            '_dft_BZ_integration_grid_Z': 4,
+            '_dft_BZ_integration_grid_shift_X': 0.25,
+            '_dft_BZ_integration_grid_shift_Y': 0.5,
+            '_dft_BZ_integration_grid_shift_Z': 0.75,
+            '_dft_pseudopotential_atom_type': [],
+            '_dft_pseudopotential_type': [],
+            '_dft_pseudopotential_type_other_name': [],
             '_tcod_software_package': 'Quantum ESPRESSO',
             '_tcod_software_executable_path': '/test',
         })
@@ -273,13 +281,17 @@ class TestTcodDbExporter(AiidaTestCase):
             })},
             "out": {"output_parameters": ParameterData(dict={
                 'number_of_electrons': 10,
-            })}
+            })},
+            "get_inputs": empty_list
         })
         res = translate_calculation_specific_values(calc, PWT)
         self.assertEquals(res, {
             '_dft_cell_valence_electrons': 10,
             '_tcod_software_package': 'Quantum ESPRESSO',
             '_dft_BZ_integration_smearing_method': 'Gaussian',
+            '_dft_pseudopotential_atom_type': [],
+            '_dft_pseudopotential_type': [],
+            '_dft_pseudopotential_type_other_name': [],
             '_dft_kinetic_energy_cutoff_EEX': 2176.910676048,
             '_dft_kinetic_energy_cutoff_charge_density': 2176.910676048,
             '_dft_kinetic_energy_cutoff_wavefunctions': 544.227669012,
@@ -289,7 +301,8 @@ class TestTcodDbExporter(AiidaTestCase):
             "inp": {"parameters": ParameterData(dict={})},
             "out": {"output_parameters": ParameterData(dict={
                 'energy_xc': 5,
-            })}
+            })},
+            "get_inputs": empty_list
         })
         with self.assertRaises(ValueError):
             translate_calculation_specific_values(calc, PWT)
@@ -299,7 +312,8 @@ class TestTcodDbExporter(AiidaTestCase):
             "out": {"output_parameters": ParameterData(dict={
                 'energy_xc': 5,
                 'energy_xc_units': 'meV'
-            })}
+            })},
+            "get_inputs": empty_list
         })
         with self.assertRaises(ValueError):
             translate_calculation_specific_values(calc, PWT)
@@ -319,7 +333,8 @@ class TestTcodDbExporter(AiidaTestCase):
             "inp": {"parameters": ParameterData(dict={
                 'SYSTEM': {'smearing': 'mp'}
             })},
-            "out": {"output_parameters": ParameterData(dict=dct)}
+            "out": {"output_parameters": ParameterData(dict=dct)},
+            "get_inputs": empty_list
         })
         res = translate_calculation_specific_values(calc, PWT)
         self.assertEquals(res, {
@@ -332,6 +347,9 @@ class TestTcodDbExporter(AiidaTestCase):
             '_tcod_software_package': 'Quantum ESPRESSO',
             '_dft_BZ_integration_smearing_method': 'Methfessel-Paxton',
             '_dft_BZ_integration_MP_order': 1,
+            '_dft_pseudopotential_atom_type': [],
+            '_dft_pseudopotential_type': [],
+            '_dft_pseudopotential_type_other_name': [],
         })
         dct = energies
         dct['number_of_electrons'] = 10
@@ -341,7 +359,8 @@ class TestTcodDbExporter(AiidaTestCase):
             "inp": {"parameters": ParameterData(dict={
                 'SYSTEM': {'smearing': 'unknown-method'}
             })},
-            "out": {"output_parameters": ParameterData(dict=dct)}
+            "out": {"output_parameters": ParameterData(dict=dct)},
+            "get_inputs": empty_list
         })
         res = translate_calculation_specific_values(calc, CPT)
         self.assertEquals(res, {'_dft_cell_valence_electrons': 10,
@@ -355,13 +374,17 @@ class TestTcodDbExporter(AiidaTestCase):
                 'SYSTEM': {'smearing': 'unknown-method'}
             })},
             "out": {"output_parameters": ParameterData(dict={}),
-                    "output_array": ad}
+                    "output_array": ad},
+            "get_inputs": empty_list
         })
         res = translate_calculation_specific_values(calc, PWT)
         self.assertEquals(res, {
             '_tcod_software_package': 'Quantum ESPRESSO',
             '_dft_BZ_integration_smearing_method': 'other',
             '_dft_BZ_integration_smearing_method_other': 'unknown-method',
+            '_dft_pseudopotential_atom_type': [],
+            '_dft_pseudopotential_type': [],
+            '_dft_pseudopotential_type_other_name': [],
             ## Residual forces are no longer produced, as they should
             ## be in the same CIF loop with coordinates -- to be
             ## implemented later, since it's not yet clear how.
@@ -693,7 +716,7 @@ class TestTcodDbExporter(AiidaTestCase):
         test_quoted_printable(self, 'line\n;line', 'line\n=3Bline')
         test_quoted_printable(self, 'tabbed\ttext', 'tabbed=09text')
         test_quoted_printable(self, 'angstrom Å', 'angstrom =C3=85')
-        test_quoted_printable(self, 'line\rline\x00', 'line\rline=00')
+        test_quoted_printable(self, 'line\rline\x00', 'line=0Dline=00')
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         test_quoted_printable(self,

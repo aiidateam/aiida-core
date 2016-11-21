@@ -30,7 +30,7 @@ class NwcpymatgenParser(BasenwcParser):
         Extracts output nodes from the standard output and standard error
         files.
         """
-        from pymatgen.io.nwchemio import NwOutput
+        from pymatgen.io.nwchem import NwOutput
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.array.trajectory import TrajectoryData
 

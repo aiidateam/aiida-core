@@ -6,13 +6,13 @@ import os
 import shutil
 import tempfile
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
+from aiida.backends.tests.export_and_import import TestPort
 from aiida.common.folders import SandboxFolder
 from aiida.orm import DataFactory
 from aiida.orm import load_node
 from aiida.orm.calculation.job import JobCalculation
-from aiida.orm.importexport import export, import_data_dj
-from aiida.backends.tests.export_and_import import TestPort
+from aiida.orm.importexport import export, import_data_sqla
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -20,7 +20,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestPortDjango(AiidaTestCase, TestPort):
+class TestPortSQLA(SqlAlchemyTests, TestPort):
     def test_1(self):
         from aiida.orm import delete_computer
 
@@ -48,6 +48,25 @@ class TestPortDjango(AiidaTestCase, TestPort):
                     attrs[node.uuid][k] = node.get_attr(k)
 
             filename = os.path.join(temp_folder, "export.tar.gz")
+
+            # from aiida.backends import sqlalchemy as sa
+            # sa.session.commit()
+            # sa.session.flush()
+            # sa.session.close()
+            # from aiida.orm.querybuilder import QueryBuilder
+            # from aiida.orm.node import Node
+            # from aiida.orm.calculation import Calculation
+            # qb = QueryBuilder()
+            # qb.append(Node)
+            # print "<========================="
+            # print qb.all()
+            # print "=========================>"
+            # qb = QueryBuilder()
+            # qb.append(Calculation)
+            # print "<========================="
+            # print qb.all()
+            # print "=========================>"
+
             export([calc.dbnode], outfile=filename, silent=True)
 
             self.tearDownClass()
@@ -57,7 +76,7 @@ class TestPortDjango(AiidaTestCase, TestPort):
             # NOTE: it is better to load new nodes by uuid, rather than assuming
             # that they will have the first 3 pks. In fact, a recommended policy in
             # databases is that pk always increment, even if you've deleted elements
-            import_data_dj(filename, silent=True)
+            import_data_sqla(filename, silent=True)
             for uuid in attrs.keys():
                 node = load_node(uuid)
                 for k in node.attrs():
@@ -66,7 +85,7 @@ class TestPortDjango(AiidaTestCase, TestPort):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    def test_2(self):
+    def d_test_2(self):
         """
         Test the check for the export format version.
         """
@@ -102,13 +121,13 @@ class TestPortDjango(AiidaTestCase, TestPort):
             self.setUpClass()
 
             with self.assertRaises(ValueError):
-                import_data_dj(filename, silent=True)
+                import_data_sqla(filename, silent=True)
         finally:
             # Deleting the created temporary folders
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
-    def test_3(self):
+    def d_test_3(self):
         """
         Test importing of nodes, that have links to unknown nodes.
         """
@@ -146,14 +165,14 @@ class TestPortDjango(AiidaTestCase, TestPort):
             self.setUpClass()
 
             with self.assertRaises(ValueError):
-                import_data_dj(filename, silent=True)
+                import_data_sqla(filename, silent=True)
 
-            import_data_dj(filename, ignore_unknown_nodes=True, silent=True)
+            import_data_sqla(filename, ignore_unknown_nodes=True, silent=True)
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    def test_4(self):
+    def d_test_4(self):
         """
         Test control of licenses.
         """

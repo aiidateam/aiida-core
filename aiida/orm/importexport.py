@@ -740,6 +740,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
     from aiida.orm.querybuilder import QueryBuilder
+    from aiida.backends.sqlalchemy import session
 
     # This is the export version expected by this function
     expected_export_version = '0.2'

@@ -28,13 +28,13 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-Session = sessionmaker()
+Session = sessionmaker(expire_on_commit=False)
 
 
 class SqlAlchemyTests(unittest.TestCase):
 
     # Specify the need to drop the table at the beginning of a test case
-    drop_all = True
+    drop_all = False
 
     @classmethod
     def setUpClass(cls):
@@ -50,12 +50,13 @@ class SqlAlchemyTests(unittest.TestCase):
 
         session = Session(bind=cls.connection)
         sa.session = session
-        sa.session.expire_on_commit = False
 
         if cls.drop_all:
             Base.metadata.drop_all(cls.connection)
-        Base.metadata.create_all(cls.connection)
-        install_tc(cls.connection)
+            Base.metadata.create_all(cls.connection)
+            install_tc(cls.connection)
+        else:
+            cls.clean_db()
 
         email = get_configured_user_email()
 
@@ -91,19 +92,8 @@ class SqlAlchemyTests(unittest.TestCase):
 
         return dec
 
-
-    @classmethod
-    def tearDownClass(cls):
-        from aiida.settings import REPOSITORY_PATH
-        from aiida.common.setup import TEST_KEYWORD
-        from aiida.common.exceptions import InvalidOperation
-        if TEST_KEYWORD not in REPOSITORY_PATH:
-            raise InvalidOperation("Be careful. The repository for the tests "
-                                   "is not a test repository. I will not "
-                                   "empty the database and I will not delete "
-                                   "the repository. Repository path: "
-                                   "{}".format(REPOSITORY_PATH))
-
+    @staticmethod
+    def clean_db():
         from aiida.backends.sqlalchemy.models.computer import DbComputer
 
         # I first delete the workflows
@@ -149,13 +139,29 @@ class SqlAlchemyTests(unittest.TestCase):
 
         DbLog.query.delete()
 
+        sa.session.commit()
+
+    @classmethod
+    def tearDownClass(cls):
+        from aiida.settings import REPOSITORY_PATH
+        from aiida.common.setup import TEST_KEYWORD
+        from aiida.common.exceptions import InvalidOperation
+        if TEST_KEYWORD not in REPOSITORY_PATH:
+            raise InvalidOperation("Be careful. The repository for the tests "
+                                   "is not a test repository. I will not "
+                                   "empty the database and I will not delete "
+                                   "the repository. Repository path: "
+                                   "{}".format(REPOSITORY_PATH))
+
+        cls.clean_db()
+
         cls.connection.close()
 
         # I clean the test repository
         shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
         os.makedirs(REPOSITORY_PATH)
 
-    def setUp(self):
+    def ssetUp(self):
         connec = self.__class__.connection
         self.trans = connec.begin()
         self.session = Session(bind=connec)
@@ -178,7 +184,7 @@ class SqlAlchemyTests(unittest.TestCase):
 
                 session.begin_nested()
 
-    def tearDown(self):
+    def ttearDown(self):
         self.session.rollback()
         self.session.close()
         self.trans.rollback()

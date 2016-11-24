@@ -2088,6 +2088,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     entries_to_add = dict()
     for k, v in entries_ids_to_add.iteritems():
         qb = QueryBuilder()
+        qb.isouter = True
         qb.append(Node, filters={"id": {"in": v}}, project=project_cols, tag=k)
         entries_to_add[k] = qb
 
@@ -2124,6 +2125,11 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
         for temp_d in partial_query.iterdict():
             for k in temp_d.keys():
+                # This is a empty result of an outer join.
+                # It should not be taken into account.
+                if temp_d[k]["id"] is None:
+                    continue
+
                 temp_d2 = {temp_d[k]["id"]: serialize_dict(temp_d[k], remove_fields=['id'], rename_fields=sqla_fields_to_django[k])}
                 try:
                     export_data[sqla_to_django_schema[k]].update(temp_d2)

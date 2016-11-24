@@ -52,6 +52,8 @@ class AbstractQueryBuilder(object):
 
     def __init__(self, *args, **kwargs):
 
+        self.isouter = False
+
         # A list storing the path being traversed by the query
         self._path = []
 
@@ -1252,7 +1254,8 @@ class AbstractQueryBuilder(object):
                 aliased_edge.input_id == joined_entity.id
         ).join(
                 entity_to_join,
-                aliased_edge.output_id == entity_to_join.id
+                aliased_edge.output_id == entity_to_join.id,
+                isouter=self.isouter
         )
 
     def _join_inputs(self, joined_entity, entity_to_join, aliased_edge):
@@ -1274,7 +1277,8 @@ class AbstractQueryBuilder(object):
                 aliased_edge.output_id == joined_entity.id
         ).join(
                 entity_to_join,
-                aliased_edge.input_id == entity_to_join.id
+                aliased_edge.input_id == entity_to_join.id,
+                isouter=self.isouter
         )
 
     def _join_descendants(self, joined_entity, entity_to_join, aliased_path):
@@ -1299,7 +1303,8 @@ class AbstractQueryBuilder(object):
                 aliased_path.parent_id == joined_entity.id
         ).join(
                 entity_to_join,
-                aliased_path.child_id == entity_to_join.id
+                aliased_path.child_id == entity_to_join.id,
+                isouter=self.isouter
         )
 
     def _join_ancestors(self, joined_entity, entity_to_join, aliased_path):
@@ -1324,7 +1329,8 @@ class AbstractQueryBuilder(object):
                 aliased_path.child_id == joined_entity.id
         ).join(
                 entity_to_join,
-                aliased_path.parent_id == entity_to_join.id
+                aliased_path.parent_id == entity_to_join.id,
+                isouter=self.isouter
         )
     def _join_group_members(self, joined_entity, entity_to_join):
         """
@@ -1350,7 +1356,8 @@ class AbstractQueryBuilder(object):
                 aliased_group_nodes.c.dbgroup_id == joined_entity.id
         ).join(
                 entity_to_join,
-                entity_to_join.id == aliased_group_nodes.c.dbnode_id
+                entity_to_join.id == aliased_group_nodes.c.dbnode_id,
+                isouter=self.isouter
         )
     def _join_groups(self, joined_entity, entity_to_join):
         """
@@ -1373,7 +1380,8 @@ class AbstractQueryBuilder(object):
                 aliased_group_nodes.c.dbnode_id == joined_entity.id
         ).join(
                 entity_to_join,
-                entity_to_join.id == aliased_group_nodes.c.dbgroup_id
+                entity_to_join.id == aliased_group_nodes.c.dbgroup_id,
+                isouter=self.isouter
         )
     def _join_creator_of(self, joined_entity, entity_to_join):
         """
@@ -1387,7 +1395,8 @@ class AbstractQueryBuilder(object):
             )
         self._query = self._query.join(
                 entity_to_join,
-                entity_to_join.id == joined_entity.user_id
+                entity_to_join.id == joined_entity.user_id,
+                isouter=self.isouter
             )
     def _join_created_by(self, joined_entity, entity_to_join):
         """
@@ -1401,7 +1410,8 @@ class AbstractQueryBuilder(object):
             )
         self._query = self._query.join(
                 entity_to_join,
-                entity_to_join.user_id == joined_entity.id
+                entity_to_join.user_id == joined_entity.id,
+                isouter=self.isouter
             )
 
     def _join_to_computer_used(self, joined_entity, entity_to_join):
@@ -1417,7 +1427,8 @@ class AbstractQueryBuilder(object):
             )
         self._query = self._query.join(
                 entity_to_join,
-                entity_to_join.dbcomputer_id == joined_entity.id
+                entity_to_join.dbcomputer_id == joined_entity.id,
+                isouter=self.isouter
         )
 
     def _join_computer(self, joined_entity, entity_to_join):
@@ -1434,7 +1445,8 @@ class AbstractQueryBuilder(object):
             )
         self._query = self._query.join(
                 entity_to_join,
-                joined_entity.dbcomputer_id == entity_to_join.id
+                joined_entity.dbcomputer_id == entity_to_join.id,
+                isouter=self.isouter
         )
 
     def _get_function_map(self):

@@ -21,6 +21,13 @@ __authors__ = "The AiiDA team."
 
 
 class TestPortSQLA(SqlAlchemyTests, TestPort):
+
+    def d_test_sp1(self):
+        self.tearDownClass()
+        self.setUpClass(initial_data=False)
+
+        import_data_sqla("/home/aiida/foo5/export.tar.gz", silent=True)
+
     def test_1(self):
         from aiida.orm import delete_computer
 
@@ -70,8 +77,21 @@ class TestPortSQLA(SqlAlchemyTests, TestPort):
             export([calc.dbnode], outfile=filename, silent=True)
 
             self.tearDownClass()
-            self.setUpClass()
-            delete_computer(self.computer)
+            # self.setUpClass(initial_data=False)
+            self.setUpClass(initial_data=True)
+
+            # # delete_computer(self.computer)
+            # import aiida.backends.sqlalchemy
+            # from aiida.backends.sqlalchemy.models.computer import DbComputer
+            # from aiida.backends.sqlalchemy.models.user import DbUser
+            # aiida.backends.sqlalchemy.session.query(DbComputer).delete()
+            # aiida.backends.sqlalchemy.session.query(DbUser).delete()
+            # aiida.backends.sqlalchemy.session.commit()
+            #
+            # self.test_session.close()
+            # from sqlalchemy.orm import sessionmaker
+            # self.test_session = sessionmaker(bind=self.connection, expire_on_commit=False)
+            # aiida.backends.sqlalchemy.session = self.test_session
 
             # NOTE: it is better to load new nodes by uuid, rather than assuming
             # that they will have the first 3 pks. In fact, a recommended policy in
@@ -84,6 +104,7 @@ class TestPortSQLA(SqlAlchemyTests, TestPort):
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
+            # print temp_folder
 
     def d_test_2(self):
         """

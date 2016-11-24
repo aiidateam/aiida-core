@@ -18,10 +18,18 @@ def deserialize_attributes(attributes_data, conversion_data):
     import datetime
     import pytz
 
+    print "WWWWWWWWW => ", attributes_data, " ====== ", conversion_data
+    if conversion_data is None:
+        print "Lalala"
+
     if isinstance(attributes_data, dict):
         ret_data = {}
         for k, v in attributes_data.iteritems():
-            ret_data[k] = deserialize_attributes(v, conversion_data[k])
+            print "k: ", k, " v: ", v
+            if conversion_data is not None:
+                ret_data[k] = deserialize_attributes(v, conversion_data[k])
+            else:
+                ret_data[k] = deserialize_attributes(v, None)
     elif isinstance(attributes_data, (list, tuple)):
         ret_data = []
         for value, conversion in zip(attributes_data, conversion_data):
@@ -740,7 +748,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
     from aiida.orm.querybuilder import QueryBuilder
-    from aiida.backends.sqlalchemy import session
+    # from aiida.backends.sqlalchemy import session
+
 
     # This is the export version expected by this function
     expected_export_version = '0.2'
@@ -898,6 +907,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
         # DO ALL WITH A TRANSACTION
         # with transaction.commit_on_success():
         # if True
+        import aiida.backends.sqlalchemy
         try:
             foreign_ids_reverse_mappings = {}
             new_entries = {}
@@ -1013,8 +1023,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                 # Store them all in once; however, the PK are not set in this way...
                 # Model.objects.bulk_create(objects_to_create)
                 if objects_to_create:
-                    from aiida.backends.sqlalchemy import session
-                    session.add_all(objects_to_create)
+                    # from aiida.backends.sqlalchemy import session
+                    aiida.backends.sqlalchemy.session.add_all(objects_to_create)
                     # session.commit()
 
                 # Get back the just-saved entries
@@ -1023,9 +1033,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                 #            import_entry_ids.keys()}).values_list(unique_identifier, 'pk'))
                 if import_entry_ids.keys():
                     qb = QueryBuilder()
-                    # qb.append(Model, filters={
-                    #     unique_identifier: {"in": import_entry_ids.keys()}},
-                    #           tag="res")
                     qb.append(Model, filters={
                         unique_identifier: {"in": import_entry_ids.keys()}},
                               project=[unique_identifier, "id"], tag="res")
@@ -1048,8 +1055,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                             DbCalcState(dbnode_id=new_pk,
                                                state=calc_states.IMPORTED))
 
-                    from aiida.backends.sqlalchemy import session
-                    session.add_all(imported_states)
+                    # from aiida.backends.sqlalchemy import session
+                    aiida.backends.sqlalchemy.session.add_all(imported_states)
                     # session.commit()
                     # models.DbCalcState.objects.bulk_create(imported_states)
 
@@ -1098,8 +1105,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
 
                         if deserialized_attributes:
                             from aiida.backends.sqlalchemy.models.node import DbNode
-                            from aiida.backends.sqlalchemy import session
-                            nodes_to_change = session.query(DbNode).filter(
+                            # from aiida.backends.sqlalchemy import session
+                            nodes_to_change = aiida.backends.sqlalchemy.session.query(DbNode).filter(
                                 DbNode.uuid == UUID(unique_id)).first()
 
                             for k, v in deserialized_attributes.items():
@@ -1120,7 +1127,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
 
             # Needed for fast checks of existing links
             from aiida.backends.sqlalchemy.models.node import DbLink
-            existing_links_raw = session.query(DbLink.input, DbLink.output, DbLink.label).all()
+            existing_links_raw = aiida.backends.sqlalchemy.session.query(DbLink.input, DbLink.output, DbLink.label).all()
             # existing_links_raw = DbLink.objects.all().values_list(
             #     'input', 'output', 'label')
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
@@ -1172,8 +1179,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
             if links_to_store:
                 if not silent:
                     print "   ({} new links...)".format(len(links_to_store))
-                from aiida.backends.sqlalchemy import session
-                session.add_all(links_to_store)
+                # from aiida.backends.sqlalchemy import session
+                aiida.backends.sqlalchemy.session.add_all(links_to_store)
                 # session.commit()
                 # models.DbLink.objects.bulk_create(links_to_store)
             else:
@@ -1187,7 +1194,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                 # TODO: cache these to avoid too many queries
                 from aiida.backends.sqlalchemy.models.group import DbGroup
                 from uuid import UUID
-                group = session.query(DbGroup).filter(
+                group = aiida.backends.sqlalchemy.session.query(DbGroup).filter(
                     DbGroup.uuid == UUID(groupuuid)).all()
 
                 # group = DbGroup.objects.get(uuid=groupuuid)
@@ -1225,7 +1232,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                         group_name = "{}_{}".format(basename, counter)
                     try:
                         group = Group(name=group_name,
-                                      type_string=IMPORTGROUP_TYPE).store()
+                                      type_string=IMPORTGROUP_TYPE)
+                        aiida.backends.sqlalchemy.session.add(group._dbgroup)
                         created = True
                     except UniquenessError:
                         counter += 1
@@ -1233,7 +1241,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                 # Add all the nodes to the new group
                 # TODO: decide if we want to return the group name
                 from aiida.backends.sqlalchemy.models.node import DbNode
-                group.add_nodes(session.query(DbNode).filter(
+                group.add_nodes(aiida.backends.sqlalchemy.session.query(DbNode).filter(
                     DbNode.id.in_(pks_for_group)).distinct().all())
 
                 # group.add_nodes(models.DbNode.objects.filter(
@@ -1245,10 +1253,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                 if not silent:
                     print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
 
-            session.commit()
+            aiida.backends.sqlalchemy.session.commit()
         except:
             print "Rolling back"
-            session.rollback()
+            aiida.backends.sqlalchemy.session.rollback()
             raise
 
     if not silent:
@@ -1972,6 +1980,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     from aiida.orm import Node, Calculation
     from aiida.common.exceptions import LicensingException
     from aiida.common.folders import RepositoryFolder
+    from aiida.orm.querybuilder import QueryBuilder
 
     if not silent:
         print "STARTING EXPORT..."
@@ -2018,6 +2027,38 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     #                                ).values_list('pk', flat=True)
     #                                )))
     #         entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
+
+    # Better QB syntax
+    if also_parents:
+        # It is a defaultdict, it will provide an empty list
+        given_nodes = entries_ids_to_add[
+            "aiida.backends.sqlalchemy.models.node.DbNode"]
+        if given_nodes:
+            # Also add the parents (to any level) to the query
+            # parents =
+            qb = QueryBuilder()
+            qb.append(Node, tag='low_node', filters={'id': {'in': given_nodes}})
+            qb.append(Node, ancestor_of='low_node', project=['id'])
+            additional_ids = [_ for [_] in qb.all()]
+            given_nodes = list(set(given_nodes + additional_ids))
+            entries_ids_to_add[
+                "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
+
+    if also_calc_outputs:
+        given_nodes = entries_ids_to_add[
+            "aiida.backends.sqlalchemy.models.node.DbNode"]
+        if given_nodes:
+            # Add all (direct) outputs of a calculation object that was already
+             # selected
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='high_node',
+                      filters={'id': {'in': given_nodes}})
+            qb.append(Node, output_of='high_node', project=['id'])
+            additional_ids = [_ for [_] in qb.all()]
+            given_nodes = list(set(given_nodes + additional_ids))
+            entries_ids_to_add[
+                "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
+
 
     # Initial query to fire the generation of the export data
 

@@ -23,7 +23,8 @@ def run_tests():
     modules_str = [
 #        "aiida.backends.sqlalchemy.tests.nodes",
 #        "aiida.backends.sqlalchemy.tests.backup_script",
-        "aiida.backends.sqlalchemy.tests.nwchem"
+#        "aiida.backends.sqlalchemy.tests.nwchem",
+        "aiida.backends.sqlalchemy.tests.tcodexporter",
     ]
     for module_str in modules_str:
         # Dynamically importing the module that interests us

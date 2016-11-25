@@ -1000,10 +1000,12 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                 # are nodes). Note: only for new entries!
                 # if model_name == get_class_string("aiida.backends.djsite.db.models.DbNode"):
                 if model_name == "aiida.backends.djsite.db.models.DbNode":
+
                     if not silent:
-                        print "STORING NEW NODE FILES..."
+                        print "STORING NEW NODE FILES & ATTRIBUTES..."
                     for o in objects_to_create:
 
+                        # Creating the needed files
                         subfolder = folder.get_subfolder(os.path.join(
                             nodes_export_subfolder, export_shard_uuid(o.uuid)))
                         if not subfolder.exists():
@@ -1019,6 +1021,34 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                         # in any case the source is a SandboxFolder)
                         destdir.replace_with_folder(subfolder.abspath,
                                                     move=True, overwrite=True)
+
+                        # For DbNodes, we also have to store Attributes!
+                        import_entry_id = import_entry_ids[str(o.uuid)]
+                        # Get attributes from import file
+                        try:
+                            attributes = data['node_attributes'][
+                                str(import_entry_id)]
+
+                            attributes_conversion = data[
+                                'node_attributes_conversion'][
+                                str(import_entry_id)]
+                        except KeyError:
+                            raise ValueError(
+                                "Unable to find attribute info "
+                                "for DbNode with UUID = {}".format(
+                                    unique_id))
+
+                        # Here I have to deserialize the attributes
+                        deserialized_attributes = deserialize_attributes(
+                            attributes, attributes_conversion)
+
+                        if deserialized_attributes:
+                            from sqlalchemy.dialects.postgresql import JSONB
+                            o.attributes = dict()
+                            for k, v in deserialized_attributes.items():
+                                o.attributes[k] = v
+                            #     o.set_attr(k, v)
+
 
                 # Store them all in once; however, the PK are not set in this way...
                 # Model.objects.bulk_create(objects_to_create)
@@ -1078,45 +1108,49 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                                                        import_entry_id,
                                                        new_pk)
 
-                # For DbNodes, we also have to store Attributes!
-                if model_name == "aiida.backends.djsite.db.models.DbNode":
-                    if not silent:
-                        print "STORING NEW NODE ATTRIBUTES..."
-                    for unique_id, new_pk in just_saved.iteritems():
-                        from uuid import UUID
-                        if isinstance(unique_id, UUID):
-                            unique_id = str(unique_id)
-                        import_entry_id = import_entry_ids[unique_id]
-                        # Get attributes from import file
-                        try:
-                            attributes = data['node_attributes'][
-                                str(import_entry_id)]
-                            attributes_conversion = data[
-                                'node_attributes_conversion'][
-                                str(import_entry_id)]
-                        except KeyError:
-                            raise ValueError("Unable to find attribute info "
-                                             "for DbNode with UUID = {}".format(
-                                unique_id))
-
-                        # Here I have to deserialize the attributes
-                        deserialized_attributes = deserialize_attributes(
-                            attributes, attributes_conversion)
-
-                        if deserialized_attributes:
-                            from aiida.backends.sqlalchemy.models.node import DbNode
-                            # from aiida.backends.sqlalchemy import session
-                            nodes_to_change = aiida.backends.sqlalchemy.session.query(DbNode).filter(
-                                DbNode.uuid == UUID(unique_id)).first()
-
-                            for k, v in deserialized_attributes.items():
-                                nodes_to_change.set_attr(k, v)
-                            # session.flush()
-                            # session.commit()
-                            # models.DbAttribute.reset_values_for_node(
-                            #     dbnode=new_pk,
-                            #     attributes=deserialized_attributes,
-                            #     with_transaction=False)
+                # # For DbNodes, we also have to store Attributes!
+                # if model_name == "aiida.backends.djsite.db.models.DbNode":
+                #     if not silent:
+                #         print "STORING NEW NODE ATTRIBUTES..."
+                #     for unique_id, new_pk in just_saved.iteritems():
+                #         from uuid import UUID
+                #         if isinstance(unique_id, UUID):
+                #             unique_id = str(unique_id)
+                #         import_entry_id = import_entry_ids[unique_id]
+                #         # Get attributes from import file
+                #         try:
+                #             attributes = data['node_attributes'][
+                #                 str(import_entry_id)]
+                #             attributes_conversion = data[
+                #                 'node_attributes_conversion'][
+                #                 str(import_entry_id)]
+                #         except KeyError:
+                #             raise ValueError("Unable to find attribute info "
+                #                              "for DbNode with UUID = {}".format(
+                #                 unique_id))
+                #
+                #         # Here I have to deserialize the attributes
+                #         deserialized_attributes = deserialize_attributes(
+                #             attributes, attributes_conversion)
+                #
+                #         if deserialized_attributes:
+                #             from aiida.backends.sqlalchemy.models.node import DbNode
+                #             # from aiida.backends.sqlalchemy import session
+                #             node_to_change = aiida.backends.sqlalchemy.session.query(DbNode).filter(
+                #                 DbNode.uuid == UUID(unique_id)).one()
+                #
+                #             for k, v in deserialized_attributes.items():
+                #                 node_to_change.set_attr(k, v)
+                #
+                #             aiida.backends.sqlalchemy.session.begin(subtransactions=True)
+                #             aiida.backends.sqlalchemy.session.add(node_to_change)
+                #             aiida.backends.sqlalchemy.session.commit()
+                #             # session.flush()
+                #             # session.commit()
+                #             # models.DbAttribute.reset_values_for_node(
+                #             #     dbnode=new_pk,
+                #             #     attributes=deserialized_attributes,
+                #             #     with_transaction=False)
 
             if not silent:
                 print "STORING NODE LINKS..."

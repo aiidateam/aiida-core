@@ -99,8 +99,13 @@ class TestPortSQLA(SqlAlchemyTests, TestPort):
             import_data_sqla(filename, silent=True)
             for uuid in attrs.keys():
                 node = load_node(uuid)
-                for k in node.attrs():
-                    pass
+                # for k in node.attrs():
+                for k in attrs[uuid].keys():
+                    print "<--------------"
+                    print uuid, " - ", k
+                    print node.get_attr(k)
+                    print attrs[uuid][k]
+                    print "-------------->"
                     # print attrs[uuid][k], "<=======>" , node.get_attr(k)
                     # self.assertEquals(attrs[uuid][k], node.get_attr(k))
         finally:

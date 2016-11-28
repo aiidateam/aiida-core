@@ -722,7 +722,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
     return ret_dict
 
 
-def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
+def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 # def import_data(in_path, ignore_unknown_nodes=False,
 #                 silent=False):
     """
@@ -1107,50 +1107,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=True, silent=False):
                         print "NEW %s: %s (%s->%s)" % (model_name, unique_id,
                                                        import_entry_id,
                                                        new_pk)
-
-                # # For DbNodes, we also have to store Attributes!
-                # if model_name == "aiida.backends.djsite.db.models.DbNode":
-                #     if not silent:
-                #         print "STORING NEW NODE ATTRIBUTES..."
-                #     for unique_id, new_pk in just_saved.iteritems():
-                #         from uuid import UUID
-                #         if isinstance(unique_id, UUID):
-                #             unique_id = str(unique_id)
-                #         import_entry_id = import_entry_ids[unique_id]
-                #         # Get attributes from import file
-                #         try:
-                #             attributes = data['node_attributes'][
-                #                 str(import_entry_id)]
-                #             attributes_conversion = data[
-                #                 'node_attributes_conversion'][
-                #                 str(import_entry_id)]
-                #         except KeyError:
-                #             raise ValueError("Unable to find attribute info "
-                #                              "for DbNode with UUID = {}".format(
-                #                 unique_id))
-                #
-                #         # Here I have to deserialize the attributes
-                #         deserialized_attributes = deserialize_attributes(
-                #             attributes, attributes_conversion)
-                #
-                #         if deserialized_attributes:
-                #             from aiida.backends.sqlalchemy.models.node import DbNode
-                #             # from aiida.backends.sqlalchemy import session
-                #             node_to_change = aiida.backends.sqlalchemy.session.query(DbNode).filter(
-                #                 DbNode.uuid == UUID(unique_id)).one()
-                #
-                #             for k, v in deserialized_attributes.items():
-                #                 node_to_change.set_attr(k, v)
-                #
-                #             aiida.backends.sqlalchemy.session.begin(subtransactions=True)
-                #             aiida.backends.sqlalchemy.session.add(node_to_change)
-                #             aiida.backends.sqlalchemy.session.commit()
-                #             # session.flush()
-                #             # session.commit()
-                #             # models.DbAttribute.reset_values_for_node(
-                #             #     dbnode=new_pk,
-                #             #     attributes=deserialized_attributes,
-                #             #     with_transaction=False)
 
             if not silent:
                 print "STORING NODE LINKS..."
@@ -2034,42 +1990,12 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
         if class_string == group_class_string:
             groups_entries.append(entry)
 
-
-    # The following has to be written better in QB syntax
-
-    # if also_parents:
-    #     # It is a defaultdict, it will provide an empty list
-    #     given_nodes = entries_ids_to_add[get_class_string(models.node.DbNode)]
-    #
-    #     if given_nodes:
-    #         # Also add the parents (to any level) to the query
-    #         given_nodes = list(set(given_nodes +
-    #                                list(models.DbNode.objects.filter(
-    #                                    children__in=given_nodes).values_list('pk', flat=True))))
-    #         entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
-    #
-    # if also_calc_outputs:
-    #     given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
-    #
-    #     if given_nodes:
-    #         # Add all (direct) outputs of a calculation object that was already
-    #         # selected
-    #         given_nodes = list(set(given_nodes +
-    #                                list(models.DbNode.objects.filter(
-    #                                    inputs__pk__in=given_nodes,
-    #                                    inputs__type__startswith=Calculation._query_type_string
-    #                                ).values_list('pk', flat=True)
-    #                                )))
-    #         entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
-
-    # Better QB syntax
     if also_parents:
         # It is a defaultdict, it will provide an empty list
         given_nodes = entries_ids_to_add[
             "aiida.backends.sqlalchemy.models.node.DbNode"]
         if given_nodes:
             # Also add the parents (to any level) to the query
-            # parents =
             qb = QueryBuilder()
             qb.append(Node, tag='low_node', filters={'id': {'in': given_nodes}})
             qb.append(Node, ancestor_of='low_node', project=['id'])
@@ -2131,6 +2057,20 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
     # entries_to_add = {k: [Q(id__in=v)]for k, v
     #                   in entries_ids_to_add. iteritems()}
+
+
+    # TODO (Spyros) To see better! Especially for functional licenses
+    # Check the licenses of exported data.
+    if allowed_licenses is not None or forbidden_licenses is not None:
+        qb = QueryBuilder()
+        qb.append(Node, project=["id", "attributes.source.license"],
+                  filters={"id": {"in": entries_ids_to_add[
+                      'aiida.backends.sqlalchemy.models.node.DbNode']}})
+        node_licenses = list((a,b) for [a,b] in qb.all())
+        check_licences(node_licenses, allowed_licenses, forbidden_licenses)
+
+
+
 
     export_data = dict()
     ############################################################
@@ -2315,6 +2255,57 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
                                    dest_name='.')
 
 
+def check_licences(node_licenses, allowed_licenses, forbidden_licenses):
+    """
+
+
+    Someone should explain me what happens with the functional licenses.
+
+    :param node_licenses:
+    :param allowed_licenses:
+    :param forbidden_licenses:
+    :return:
+    """
+    from aiida.common.exceptions import LicensingException
+    from inspect import isfunction
+
+    for pk, license in node_licenses:
+        if allowed_licenses is not None:
+            try:
+                if isfunction(allowed_licenses):
+                    try:
+                        if not allowed_licenses(license):
+                            raise LicensingException
+                    except Exception as e:
+                        raise LicensingException
+                else:
+                    if license not in allowed_licenses:
+                        raise LicensingException
+            except LicensingException:
+                raise LicensingException("Node {} is licensed "
+                                         "under {} license, which "
+                                         "is not in the list of "
+                                         "allowed licenses".format(
+                    pk, license))
+        if forbidden_licenses is not None:
+            try:
+                if isfunction(forbidden_licenses):
+                    try:
+                        if forbidden_licenses(license):
+                            raise LicensingException
+                    except Exception as e:
+                        raise LicensingException
+                else:
+                    if license in forbidden_licenses:
+                        raise LicensingException
+            except LicensingException:
+                raise LicensingException("Node {} is licensed "
+                                         "under {} license, which "
+                                         "is in the list of "
+                                         "forbidden licenses".format(
+                    pk, license))
+
+
 def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
                 allowed_licenses=None, forbidden_licenses=None,
                 silent=False):
@@ -2401,46 +2392,48 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
 
     # Check the licenses of exported data.
     if allowed_licenses is not None or forbidden_licenses is not None:
-        from inspect import isfunction
+        # from inspect import isfunction
 
         node_licenses = list(aiida.backends.djsite.db.models.DbNode.objects.filter(
             reduce(operator.and_, entries_to_add['aiida.backends.djsite.db.models.DbNode']),
             dbattributes__key='source.license').values_list('pk', 'dbattributes__tval'))
-        for pk, license in node_licenses:
-            if allowed_licenses is not None:
-                try:
-                    if isfunction(allowed_licenses):
-                        try:
-                            if not allowed_licenses(license):
-                                raise LicensingException
-                        except Exception as e:
-                            raise LicensingException
-                    else:
-                        if license not in allowed_licenses:
-                            raise LicensingException
-                except LicensingException:
-                    raise LicensingException("Node {} is licensed "
-                                             "under {} license, which "
-                                             "is not in the list of "
-                                             "allowed licenses".format(
-                                              pk, license))
-            if forbidden_licenses is not None:
-                try:
-                    if isfunction(forbidden_licenses):
-                        try:
-                            if forbidden_licenses(license):
-                                raise LicensingException
-                        except Exception as e:
-                            raise LicensingException
-                    else:
-                        if license in forbidden_licenses:
-                            raise LicensingException
-                except LicensingException:
-                    raise LicensingException("Node {} is licensed "
-                                             "under {} license, which "
-                                             "is in the list of "
-                                             "forbidden licenses".format(
-                                              pk, license))
+        check_licences(node_licenses, allowed_licenses, forbidden_licenses)
+
+        # for pk, license in node_licenses:
+        #     if allowed_licenses is not None:
+        #         try:
+        #             if isfunction(allowed_licenses):
+        #                 try:
+        #                     if not allowed_licenses(license):
+        #                         raise LicensingException
+        #                 except Exception as e:
+        #                     raise LicensingException
+        #             else:
+        #                 if license not in allowed_licenses:
+        #                     raise LicensingException
+        #         except LicensingException:
+        #             raise LicensingException("Node {} is licensed "
+        #                                      "under {} license, which "
+        #                                      "is not in the list of "
+        #                                      "allowed licenses".format(
+        #                                       pk, license))
+        #     if forbidden_licenses is not None:
+        #         try:
+        #             if isfunction(forbidden_licenses):
+        #                 try:
+        #                     if forbidden_licenses(license):
+        #                         raise LicensingException
+        #                 except Exception as e:
+        #                     raise LicensingException
+        #             else:
+        #                 if license in forbidden_licenses:
+        #                     raise LicensingException
+        #         except LicensingException:
+        #             raise LicensingException("Node {} is licensed "
+        #                                      "under {} license, which "
+        #                                      "is in the list of "
+        #                                      "forbidden licenses".format(
+        #                                       pk, license))
 
     ############################################################
     ##### Start automatic recursive export data generation #####

@@ -22,13 +22,13 @@ __authors__ = "The AiiDA team."
 
 class TestPortSQLA(SqlAlchemyTests, TestPort):
 
-    def d_test_sp1(self):
-        self.tearDownClass()
-        self.setUpClass(initial_data=False)
+    # def d_test_sp1(self):
+    #     self.tearDownClass()
+    #     self.setUpClass(initial_data=False)
+    #
+    #     import_data_sqla("/home/aiida/foo5/export.tar.gz", silent=True)
 
-        import_data_sqla("/home/aiida/foo5/export.tar.gz", silent=True)
-
-    def test_1(self):
+    def d_test_1(self):
         from aiida.orm import delete_computer
 
         # Creating a folder for the import/export files
@@ -56,42 +56,11 @@ class TestPortSQLA(SqlAlchemyTests, TestPort):
 
             filename = os.path.join(temp_folder, "export.tar.gz")
 
-            # from aiida.backends import sqlalchemy as sa
-            # sa.session.commit()
-            # sa.session.flush()
-            # sa.session.close()
-            # from aiida.orm.querybuilder import QueryBuilder
-            # from aiida.orm.node import Node
-            # from aiida.orm.calculation import Calculation
-            # qb = QueryBuilder()
-            # qb.append(Node)
-            # print "<========================="
-            # print qb.all()
-            # print "=========================>"
-            # qb = QueryBuilder()
-            # qb.append(Calculation)
-            # print "<========================="
-            # print qb.all()
-            # print "=========================>"
-
             export([calc.dbnode], outfile=filename, silent=True)
 
             self.tearDownClass()
             # self.setUpClass(initial_data=False)
             self.setUpClass(initial_data=True)
-
-            # # delete_computer(self.computer)
-            # import aiida.backends.sqlalchemy
-            # from aiida.backends.sqlalchemy.models.computer import DbComputer
-            # from aiida.backends.sqlalchemy.models.user import DbUser
-            # aiida.backends.sqlalchemy.session.query(DbComputer).delete()
-            # aiida.backends.sqlalchemy.session.query(DbUser).delete()
-            # aiida.backends.sqlalchemy.session.commit()
-            #
-            # self.test_session.close()
-            # from sqlalchemy.orm import sessionmaker
-            # self.test_session = sessionmaker(bind=self.connection, expire_on_commit=False)
-            # aiida.backends.sqlalchemy.session = self.test_session
 
             # NOTE: it is better to load new nodes by uuid, rather than assuming
             # that they will have the first 3 pks. In fact, a recommended policy in
@@ -200,13 +169,13 @@ class TestPortSQLA(SqlAlchemyTests, TestPort):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    def d_test_4(self):
+    def test_4(self):
         """
         Test control of licenses.
         """
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
-        from aiida.orm.importexport import export_tree
+        from aiida.orm.importexport import export_tree_sqla
 
         StructureData = DataFactory('structure')
         sd = StructureData()
@@ -214,25 +183,25 @@ class TestPortSQLA(SqlAlchemyTests, TestPort):
         sd.store()
 
         folder = SandboxFolder()
-        export_tree([sd.dbnode], folder=folder, silent=True,
+        export_tree_sqla([sd.dbnode], folder=folder, silent=True,
                     allowed_licenses=['GPL'])
         # Folder should contain two files of metadata + nodes/
         self.assertEquals(len(folder.get_content_list()), 3)
 
         folder = SandboxFolder()
-        export_tree([sd.dbnode], folder=folder, silent=True,
+        export_tree_sqla([sd.dbnode], folder=folder, silent=True,
                     forbidden_licenses=['Academic'])
         # Folder should contain two files of metadata + nodes/
         self.assertEquals(len(folder.get_content_list()), 3)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree_sqla([sd.dbnode], folder=folder, silent=True,
                         allowed_licenses=['CC0'])
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree_sqla([sd.dbnode], folder=folder, silent=True,
                         forbidden_licenses=['GPL'])
 
         def cc_filter(license):
@@ -246,20 +215,20 @@ class TestPortSQLA(SqlAlchemyTests, TestPort):
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree_sqla([sd.dbnode], folder=folder, silent=True,
                         allowed_licenses=cc_filter)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree_sqla([sd.dbnode], folder=folder, silent=True,
                         forbidden_licenses=gpl_filter)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree_sqla([sd.dbnode], folder=folder, silent=True,
                         allowed_licenses=crashing_filter)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree_sqla([sd.dbnode], folder=folder, silent=True,
                         forbidden_licenses=crashing_filter)

@@ -22,7 +22,7 @@ def get_group_type_mapping():
     """
     from aiida.orm.data.upf import UPFGROUP_TYPE
     from aiida.orm.autogroup import VERDIAUTOGROUP_TYPE
-    from aiida.cmdline.commands.importfile import IMPORTGROUP_TYPE
+    from aiida.orm.importexport import IMPORTGROUP_TYPE
 
     return {'data.upf': UPFGROUP_TYPE,
             'import': IMPORTGROUP_TYPE,

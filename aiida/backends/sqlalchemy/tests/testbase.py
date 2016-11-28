@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 
-from aiida.backends import sqlalchemy as sa
+import aiida.backends.sqlalchemy
 from aiida.common.utils import get_configured_user_email
 from aiida.backends.sqlalchemy.utils import (install_tc, loads_json,
                                              dumps_json)
@@ -28,47 +28,54 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-Session = sessionmaker()
+# Session = sessionmaker(expire_on_commit=False)
+Session = sessionmaker(expire_on_commit=True)
 
 
 class SqlAlchemyTests(unittest.TestCase):
 
     # Specify the need to drop the table at the beginning of a test case
-    drop_all = True
+    drop_all = False
+
+    test_session = None
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, initial_data=True):
 
-        config = get_profile_config(AIIDADB_PROFILE)
-        engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-                      "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
-        engine = create_engine(engine_url,
-                               json_serializer=dumps_json,
-                               json_deserializer=loads_json)
+        if cls.test_session is None:
+            config = get_profile_config(AIIDADB_PROFILE)
+            engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+                          "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
+            engine = create_engine(engine_url,
+                                   json_serializer=dumps_json,
+                                   json_deserializer=loads_json)
 
-        cls.connection = engine.connect()
+            cls.connection = engine.connect()
 
-        session = Session(bind=cls.connection)
-        sa.session = session
-        sa.session.expire_on_commit = False
+            cls.test_session = Session(bind=cls.connection)
+            aiida.backends.sqlalchemy.session = cls.test_session
 
         if cls.drop_all:
             Base.metadata.drop_all(cls.connection)
-        Base.metadata.create_all(cls.connection)
-        install_tc(cls.connection)
+            Base.metadata.create_all(cls.connection)
+            install_tc(cls.connection)
+        else:
+            cls.clean_db()
 
-        email = get_configured_user_email()
+        if initial_data:
+            email = get_configured_user_email()
 
-        has_user = DbUser.query.filter(DbUser.email==email).first()
-        if not has_user:
-            cls.user = DbUser(get_configured_user_email(), "foo", "bar", "tests")
-            sa.session.add(cls.user)
-            sa.session.commit()
+            has_user = DbUser.query.filter(DbUser.email==email).first()
+            if not has_user:
+                cls.user = DbUser(get_configured_user_email(), "foo", "bar", "tests")
+                cls.test_session.add(cls.user)
+                cls.test_session.commit()
 
-        has_computer = DbComputer.query.filter(DbComputer.hostname == 'localhost').first()
-        if not has_computer:
-            cls.computer = SqlAlchemyTests._create_computer()
-            cls.computer.store()
+            has_computer = DbComputer.query.filter(DbComputer.hostname == 'localhost').first()
+            if not has_computer:
+                cls.computer = SqlAlchemyTests._create_computer()
+                cls.computer.store()
+
 
     @staticmethod
     def _create_computer(**kwargs):
@@ -91,6 +98,46 @@ class SqlAlchemyTests(unittest.TestCase):
 
         return dec
 
+    @classmethod
+    def clean_db(cls):
+        from aiida.backends.sqlalchemy.models.computer import DbComputer
+        from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
+        from aiida.backends.sqlalchemy.models.group import DbGroup
+        from aiida.backends.sqlalchemy.models.node import DbLink
+        from aiida.backends.sqlalchemy.models.node import DbNode
+        from aiida.backends.sqlalchemy.models.log import DbLog
+        from aiida.backends.sqlalchemy.models.user import DbUser
+
+        # Delete the workflows
+        cls.test_session.query(DbWorkflow).delete()
+
+        # Empty the relationship dbgroup.dbnode
+        dbgroups = cls.test_session.query(DbGroup).all()
+        for dbgroup in dbgroups:
+            dbgroup.dbnodes = []
+
+        # Delete the groups
+        cls.test_session.query(DbGroup).delete()
+
+        # I first need to delete the links, because in principle I could
+        # not delete input nodes, only outputs. For simplicity, since
+        # I am deleting everything, I delete the links first
+        cls.test_session.query(DbLink).delete()
+
+        # Then I delete the nodes, otherwise I cannot
+        # delete computers and users
+        cls.test_session.query(DbNode).delete()
+
+        # # Delete the users
+        # cls.test_session.query(DbUser).delete()
+
+        # Delete the computers
+        cls.test_session.query(DbComputer).delete()
+
+        # Delete the logs
+        cls.test_session.query(DbLog).delete()
+
+        cls.test_session.commit()
 
     @classmethod
     def tearDownClass(cls):
@@ -104,81 +151,14 @@ class SqlAlchemyTests(unittest.TestCase):
                                    "the repository. Repository path: "
                                    "{}".format(REPOSITORY_PATH))
 
-        from aiida.backends.sqlalchemy.models.computer import DbComputer
+        cls.clean_db()
 
-        # I first delete the workflows
-        from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
-
-        DbWorkflow.query.delete()
-
-        # Delete groups
-        # from aiida.backends.djsite.db.models import DbGroup
-        from aiida.backends.sqlalchemy.models.group import DbGroup
-
-        DbGroup.query.delete()
-        # DbGroup.objects.all().delete()
-
-        # I first need to delete the links, because in principle I could
-        # not delete input nodes, only outputs. For simplicity, since
-        # I am deleting everything, I delete the links first
-        # from aiida.backends.djsite.db.models import DbLink
-        from aiida.backends.sqlalchemy.models.node import DbLink
-
-        DbLink.query.delete()
-        # DbLink.objects.all().delete()
-
-        # Then I delete the nodes, otherwise I cannot
-        # delete computers and users
-        # from aiida.backends.djsite.db.models import DbNode
-        from aiida.backends.sqlalchemy.models.node import DbNode
-
-        DbNode.query.delete()
-        # DbNode.objects.all().delete()
-
-        ## I do not delete it, see discussion in setUpClass
-        # try:
-        #    DbUser.objects.get(email=get_configured_user_email()).delete()
-        # except ObjectDoesNotExist:
-        #    pass
-
-        # DbComputer.objects.all().delete()
-        DbComputer.query.delete()
-
-        # from aiida.backends.djsite.db.models import DbLog
-        from aiida.backends.sqlalchemy.models.log import DbLog
-
-        DbLog.query.delete()
+        cls.test_session.close()
+        cls.test_session = None
 
         cls.connection.close()
+
 
         # I clean the test repository
         shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
         os.makedirs(REPOSITORY_PATH)
-
-    def setUp(self):
-        connec = self.__class__.connection
-        self.trans = connec.begin()
-        self.session = Session(bind=connec)
-        sa.session = self.session
-
-        dbcomputer = DbComputer.query.filter_by(name="localhost").first()
-        self.computer = Computer(dbcomputer=dbcomputer)
-
-        self.session.begin_nested()
-
-        # then each time that SAVEPOINT ends, reopen it
-        @event.listens_for(self.session, "after_transaction_end")
-        def restart_savepoint(session, transaction):
-            if transaction.nested and not transaction._parent.nested:
-
-                # ensure that state is expired the way
-                # session.commit() at the top level normally does
-                # (optional step)
-                session.expire_all()
-
-                session.begin_nested()
-
-    def tearDown(self):
-        self.session.rollback()
-        self.session.close()
-        self.trans.rollback()

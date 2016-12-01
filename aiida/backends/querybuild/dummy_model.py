@@ -432,6 +432,7 @@ def get_aldjemy_session():
     return _Session()
 
 
+session = get_aldjemy_session()
 
 #~ if profile['AIIDADB_NAME'] == ':memory:':
     #~ session = get_aldjemy_session()

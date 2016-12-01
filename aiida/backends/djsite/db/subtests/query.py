@@ -9,10 +9,10 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-class TestQueryBuilder(AiidaTestCase): #, TestQueryBuilder):
+class TestQueryBuilderDjango(AiidaTestCase, TestQueryBuilder):
 
 
-    def test_querybuilder_classifications(self):
+    def test_clsf_django(self):
         """
         This tests the classifications of the QueryBuilder u. the django backend.
         """
@@ -91,5 +91,3 @@ class TestQueryBuilder(AiidaTestCase): #, TestQueryBuilder):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)
             self.assertTrue(issubclass(cls, DbNode))
-
- 

@@ -20,6 +20,7 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
+
 class DbComputer(Base):
     __tablename__ = "db_dbcomputer"
 

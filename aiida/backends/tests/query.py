@@ -259,6 +259,35 @@ class TestQueryBuilder():
         self.assertTrue(id(query2) == id(query3))
 
 
+    def test_operators_eq_lt_gt(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
+        
+        
+        nodes = [Node() for _ in range(8)]
+
+
+        nodes[0]._set_attr('fa', 1)
+        nodes[1]._set_attr('fa', 1.0)
+        nodes[2]._set_attr('fa', 1.01)
+        nodes[3]._set_attr('fa', 1.02)
+        nodes[4]._set_attr('fa', 1.03)
+        nodes[5]._set_attr('fa', 1.04)
+        nodes[6]._set_attr('fa', 1.05)
+        nodes[7]._set_attr('fa', 1.06)
+
+        [n.store() for n in nodes]
+
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'<':1}}).count(), 0)
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'==':1}}).count(), 2)
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'<':1.02}}).count(), 3)
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'<=':1.02}}).count(), 4)
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>':1.02}}).count(), 4)
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>=':1.02}}).count(), 5)
+
+        
+
+
 
 class QueryBuilderJoinsTests():
     def test_joins1(self):
@@ -343,4 +372,3 @@ class QueryBuilderJoinsTests():
                 ).count(), number_students)
 
 
-        

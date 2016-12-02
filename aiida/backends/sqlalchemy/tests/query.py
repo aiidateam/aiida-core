@@ -1,4 +1,4 @@
-from aiida.backends.tests.query import TestQueryBuilder
+from aiida.backends.tests.query import TestQueryBuilder, QueryBuilderJoinsTests
 from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
 
 
@@ -23,3 +23,8 @@ class TestQueryBuilderSQLA(SqlAlchemyTests, TestQueryBuilder):
             
             self.assertEqual(cls, ORMCls)
             self.assertEqual(query_type_string, typestr)
+
+
+
+class QueryBuilderJoinsTestsSQLA(SqlAlchemyTests, QueryBuilderJoinsTests):
+    pass

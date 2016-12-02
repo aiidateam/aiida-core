@@ -4,7 +4,6 @@ Base class for AiiDA tests
 """
 from django.utils import unittest
 import shutil
-import tempfile
 import os
 
 # Add a new entry here if you add a file with tests under aiida.backends.djsite.db.subtests
@@ -53,7 +52,12 @@ class AiidaTestCase(unittest.TestCase):
         from aiida.backends.djsite.db.models import DbUser
         from aiida.orm.computer import Computer
         from aiida.common.utils import get_configured_user_email
-        # I create the user only once:
+
+        # # Check if the database is initially empty
+        # from aiida.backends.djsite.db.models import DbComputer
+        # if DbComputer.objects.exists():
+        #     print "database not empty"
+        #     exit(0)
 
         # We create the user only once:
         # Otherwise, get_automatic_user() will fail when the
@@ -74,12 +78,14 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # exit(0)
         from aiida.settings import REPOSITORY_PATH
-        from aiida.common.setup import TEMP_TEST_REPO_PREFIX
+        from aiida.common.setup import TEST_KEYWORD
         from aiida.common.exceptions import InvalidOperation
-        if not REPOSITORY_PATH.startswith(
-                os.path.join("/", tempfile.gettempprefix(),
-                             TEMP_TEST_REPO_PREFIX)):
+
+        base_repo_path = os.path.basename(
+            os.path.normpath(REPOSITORY_PATH))
+        if TEST_KEYWORD not in base_repo_path:
             raise InvalidOperation("Be careful. The repository for the tests "
                                    "is not a test repository. I will not "
                                    "empty the database and I will not delete "

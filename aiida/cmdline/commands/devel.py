@@ -7,7 +7,6 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
 from aiida.common.exceptions import InternalError
-# from aiida.orm.utils import load_node
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -479,9 +478,11 @@ class Devel(VerdiCommandWithSubcommands):
 
     def run_tests(self, *args):
         import unittest
-        from aiida.common.setup import get_property
         from aiida.backends import settings
         from aiida.backends.djsite.settings import settings_profile
+        from aiida import is_dbenv_loaded, load_dbenv
+        from aiida import settings as settings2
+        from aiida.common.setup import TEST_KEYWORD
 
         test_failures = list()
         db_test_list = []
@@ -539,21 +540,47 @@ class Devel(VerdiCommandWithSubcommands):
 
             # The prefix is then checked inside get_profile_config and stripped
             # but it is needed to know if this is a test or not
-            if get_property('tests.use_sqlite'):
-                profile_prefix = 'testsqlite_'
-            else:
-                profile_prefix = 'test_'
+            # if get_property('tests.use_sqlite'):
+            #     profile_prefix = 'testsqlite_'
+            # else:
+            #     profile_prefix = 'test_'
+            #
+            # profile = "{}{}".format(profile_prefix,
+            #                         settings.AIIDADB_PROFILE if
+            #                         settings.AIIDADB_PROFILE is not None else 'default')
 
-            profile = "{}{}".format(profile_prefix,
-                                    settings.AIIDADB_PROFILE if
-                                    settings.AIIDADB_PROFILE is not None else 'default')
-            settings_profile.aiida_test_list = db_test_list
+            if not is_dbenv_loaded():
+                load_dbenv()
 
-            print "v" * 75
-            print (">>> Tests for django db application   "
-                   "                                  <<<")
-            print "^" * 75
-            pass_to_django_manage([execname, 'test', 'db'], profile=profile)
+            base_repo_path = os.path.basename(
+                os.path.normpath(settings2.REPOSITORY_PATH))
+            if (not settings.AIIDADB_PROFILE.startswith(TEST_KEYWORD) or
+                    TEST_KEYWORD not in base_repo_path or
+                    not settings2.DBNAME.startswith(TEST_KEYWORD)):
+                print "A non-test profile was given for tests. Please note " \
+                      "that the test profile should have test specific " \
+                      "database name and test specific repository name."
+                print("Given profile: {}".format(settings.AIIDADB_PROFILE))
+                print("Related repository path: {}".format(base_repo_path))
+                print("Related database name: {}".format(settings2.DBNAME))
+                sys.exit(1)
+
+            from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+            if settings.BACKEND == BACKEND_DJANGO:
+                settings_profile.aiida_test_list = db_test_list
+                print "v" * 75
+                print (">>> Tests for django db application   "
+                       "                                  <<<")
+                print "^" * 75
+                pass_to_django_manage([execname, 'test', 'db'])
+
+            elif settings.BACKEND == BACKEND_SQLA:
+                print "v" * 75
+                print (">>> Tests for SQLAlchemy db application"
+                       "                                 <<<")
+                print "^" * 75
+                from aiida.backends.sqlalchemy.tests.test_runner import run_tests
+                run_tests()
 
         # If there was a failure in the non-db tests report it with the
         # right exit code

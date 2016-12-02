@@ -177,6 +177,57 @@ class TestNodeBasicSQLA(SqlAlchemyTests, TestNodeBasic):
 
         self.assertEqual(s1.getvalue(), "a")
 
+    def test_load_nodes(self):
+        """
+        Test for load_node() function.
+        """
+        from aiida.orm import load_node
+        from aiida.common.exceptions import NotExistent
+        import aiida.backends.sqlalchemy
+
+        a = Node()
+        a.store()
+
+        self.assertEquals(a.pk, load_node(node_id=a.pk).pk)
+        self.assertEquals(a.pk, load_node(node_id=a.uuid).pk)
+        self.assertEquals(a.pk, load_node(pk=a.pk).pk)
+        self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)
+
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(ValueError):
+                load_node(node_id=a.pk, pk=a.pk)
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
+
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(ValueError):
+                load_node(pk=a.pk, uuid=a.uuid)
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
+
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(ValueError):
+                load_node(pk=a.uuid)
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
+
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(NotExistent):
+                load_node(uuid=a.pk)
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
+
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(ValueError):
+                load_node()
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
+
 
 class TestSubNodesAndLinksSQLA(SqlAlchemyTests, TestSubNodesAndLinks):
     """

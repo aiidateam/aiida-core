@@ -33,7 +33,7 @@ PyCifRW==3.6.2.1
 ## Support for ssh transport with authentification through Kerberos token
 ## NOTE: you need to install first libffi (sudo apt-get install libffi-dev under Ubuntu)
 pyasn1>=0.1.9
-python-gssapi>=0.6.4
+#python-gssapi>=0.6.4
 
 ## ICSD tools
 PyMySQL>=0.6.1

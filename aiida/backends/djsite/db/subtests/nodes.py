@@ -15,7 +15,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestDataNodeDjango(AiidaTestCase, TestDataNode):
+class TestDataNodeDjango(TestDataNode, AiidaTestCase, ):
     """
     These tests check the features of Data nodes that differ from the base Node
     """
@@ -192,7 +192,7 @@ class TestQueryWithAiidaObjectsDjango(AiidaTestCase, TestQueryWithAiidaObjects):
     pass
 
 
-class TestNodeBasicDango(AiidaTestCase, TestNodeBasic):
+class TestNodeBasicDjango(AiidaTestCase, TestNodeBasic):
     def test_replace_extras_2(self):
         """
         This is a Django specific test which checks (manually) that,
@@ -290,6 +290,28 @@ class TestNodeBasicDango(AiidaTestCase, TestNodeBasic):
         s1 = models.DbSetting.objects.get(key='pippo')
 
         self.assertEqual(s1.getvalue(), "a")
+
+    def test_load_nodes(self):
+        """
+        """
+        from aiida.orm import load_node
+        from aiida.common.exceptions import NotExistent
+
+        a = Node()
+        a.store()
+        self.assertEquals(a.pk, load_node(pk=a.pk).pk)
+        self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)
+
+        with self.assertRaises(ValueError):
+            load_node(node_id=a.pk, pk=a.pk)
+        with self.assertRaises(ValueError):
+            load_node(pk=a.pk, uuid=a.uuid)
+        with self.assertRaises(ValueError):
+            load_node(pk=a.uuid)
+        with self.assertRaises(NotExistent):
+            load_node(uuid=a.pk)
+        with self.assertRaises(ValueError):
+            load_node()
 
 class TestSubNodesAndLinksDjango(AiidaTestCase, TestSubNodesAndLinks):
     pass

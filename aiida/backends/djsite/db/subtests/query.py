@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from aiida.backends.djsite.db.testbase import AiidaTestCase
-from django.utils import unittest
+from aiida.backends.tests.query import TestQueryBuilder
+
 
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -8,21 +9,10 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-def is_postgres():
-    from aiida.backends import settings
-    from aiida.common.setup import get_profile_config
-    profile_conf = get_profile_config(settings.AIIDADB_PROFILE)
-    return profile_conf['AIIDADB_ENGINE'] == 'postgresql_psycopg2'
+class TestQueryBuilderDjango(AiidaTestCase, TestQueryBuilder):
 
 
-def is_django():
-    from aiida.backends import settings
-    return settings.BACKEND == 'django'
-
-
-@unittest.skipIf(not (is_django()), "Tests only works with Django backend")
-class TestQueryBuilder(AiidaTestCase):
-    def test_querybuilder_classifications(self):
+    def test_clsf_django(self):
         """
         This tests the classifications of the QueryBuilder u. the django backend.
         """
@@ -37,7 +27,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm import Group, User, Node, Computer, Data, Calculation
         from aiida.common.exceptions import InputValidationError
         qb = QueryBuilder()
-
+        
         with self.assertRaises(InputValidationError):
             qb._get_ormclass(None, 'data')
         with self.assertRaises(InputValidationError):

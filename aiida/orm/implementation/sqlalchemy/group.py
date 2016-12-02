@@ -114,7 +114,8 @@ class Group(AbstractGroup):
         if not self.is_stored:
             try:
                 self._dbgroup.save(commit=True)
-            except SQLAlchemyError:
+            except SQLAlchemyError as ex:
+                print ex.message
                 raise UniquenessError("A group with the same name (and of the "
                                       "same type) already "
                                       "exists, unable to store")

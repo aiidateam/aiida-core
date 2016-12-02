@@ -11,7 +11,8 @@ from aiida.common.folders import SandboxFolder
 from aiida.orm import DataFactory
 from aiida.orm import load_node
 from aiida.orm.calculation.job import JobCalculation
-from aiida.orm.importexport import export, import_data
+from aiida.orm.importexport import export, import_data_dj
+from aiida.backends.tests.export_and_import import TestPort
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -19,7 +20,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestPort(AiidaTestCase):
+class TestPortDjango(AiidaTestCase, TestPort):
     def test_1(self):
         from aiida.orm import delete_computer
 
@@ -56,14 +57,15 @@ class TestPort(AiidaTestCase):
             # NOTE: it is better to load new nodes by uuid, rather than assuming
             # that they will have the first 3 pks. In fact, a recommended policy in
             # databases is that pk always increment, even if you've deleted elements
-            import_data(filename, silent=True)
+            import_data_dj(filename, silent=True)
             for uuid in attrs.keys():
                 node = load_node(uuid)
                 for k in node.attrs():
                     self.assertEquals(attrs[uuid][k], node.get_attr(k))
         finally:
             # Deleting the created temporary folder
-            shutil.rmtree(temp_folder, ignore_errors=True)
+            # shutil.rmtree(temp_folder, ignore_errors=True)
+            print temp_folder
 
     def test_2(self):
         """
@@ -101,7 +103,7 @@ class TestPort(AiidaTestCase):
             self.setUpClass()
 
             with self.assertRaises(ValueError):
-                import_data(filename, silent=True)
+                import_data_dj(filename, silent=True)
         finally:
             # Deleting the created temporary folders
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
@@ -145,9 +147,9 @@ class TestPort(AiidaTestCase):
             self.setUpClass()
 
             with self.assertRaises(ValueError):
-                import_data(filename, silent=True)
+                import_data_dj(filename, silent=True)
 
-            import_data(filename, ignore_unknown_nodes=True, silent=True)
+            import_data_dj(filename, ignore_unknown_nodes=True, silent=True)
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)

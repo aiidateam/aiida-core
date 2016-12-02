@@ -1,0 +1,17 @@
+{
+    "output_parameters": {
+      "energy": [
+        {
+          "comparison": "AlmostEqual",
+          "value": -3700.911063426148
+        }
+      ],
+      "energy_units": [
+        {
+      	  "comparison": "Equal",
+          "value": "eV"
+        }
+      ]
+    }, 
+    "output_array": {}
+}

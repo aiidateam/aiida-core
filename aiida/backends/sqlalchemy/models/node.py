@@ -28,6 +28,7 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
+
 class DbNode(Base):
     __tablename__ = "db_dbnode"
 
@@ -238,7 +239,8 @@ class DbLink(Base):
     type = Column(String(255))
 
     __table_args__ = (
-        UniqueConstraint('input_id', 'output_id'),
+        # I cannot add twice the same link
+        # I want unique labels among all inputs of a node
         UniqueConstraint('output_id', 'label'),
     )
 

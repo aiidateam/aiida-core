@@ -405,8 +405,8 @@ class Node(AbstractNode):
             return
         else:
             extraslist = DbExtra.list_all_node_elements(self.dbnode)
-        for e in extraslist:
-            yield e.key
+            for e in extraslist:
+                yield e.key
 
     def iterextras(self):
         from aiida.backends.djsite.db.models import DbExtra

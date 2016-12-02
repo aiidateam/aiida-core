@@ -13,14 +13,14 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
+import aiida.backends.sqlalchemy
+
 try:
     import ultrajson
     from functools import partial
     json_loads = partial(ultrajson.loads, precise_float=True)
 except ImportError:
     from json import loads as json_loads
-
-
 
 from aiida.backends.querybuild.querybuilder_base import AbstractQueryBuilder
 from sa_init import (
@@ -30,7 +30,6 @@ from sa_init import (
     )
 
 from sqlalchemy_utils.types.choice import Choice
-from aiida.backends.sqlalchemy import session as sa_session
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
 from aiida.backends.sqlalchemy.models import DbPathBeta
 from aiida.backends.sqlalchemy.models.computer import DbComputer
@@ -38,7 +37,6 @@ from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.user import DbUser
 
 from aiida.common.exceptions import InputValidationError
-
 
 
 class QueryBuilder(AbstractQueryBuilder):
@@ -67,7 +65,7 @@ class QueryBuilder(AbstractQueryBuilder):
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
     def _get_session(self):
-        return sa_session
+        return aiida.backends.sqlalchemy.session
 
     def _modify_expansions(self, alias, expansions):
         """

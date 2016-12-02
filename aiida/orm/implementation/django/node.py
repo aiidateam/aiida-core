@@ -2,20 +2,19 @@
 
 import copy
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
 from django.db.models import F
-from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.backends.djsite.db.models import DbLink
+from aiida.backends.djsite.utils import get_automatic_user
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
-from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
-from aiida.common.links import LinkType
 from aiida.common.lang import override
-
-from aiida.backends.djsite.utils import get_automatic_user
-from aiida.backends.djsite.db.models import DbLink
+from aiida.common.links import LinkType
+from aiida.common.utils import get_new_uuid
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."

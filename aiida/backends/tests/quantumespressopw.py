@@ -11,16 +11,17 @@ TODO: to test:
 - empty namelists
 - content for non-existent namelists specified
 """
+
 import os
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
-from aiida.orm import CalculationFactory, DataFactory
-from aiida.orm.code import Code
-from aiida.common.folders import SandboxFolder
-from aiida.common.exceptions import InputValidationError
 import aiida
+from aiida.common.exceptions import InputValidationError
+from aiida.common.folders import SandboxFolder
+from aiida.orm import CalculationFactory, DataFactory
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For " \
+                u"further information please visit http://www.aiida.net/. All " \
+                u"rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
@@ -32,21 +33,7 @@ UpfData = DataFactory('upf')
 KpointsData = DataFactory('array.kpoints')
 
 
-class QETestCase(AiidaTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super(QETestCase, cls).setUpClass()
-        cls.calc_params = {
-            'computer': cls.computer,
-            'resources': {
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1}
-        }
-        cls.code = Code(remote_computer_exec=(cls.computer, '/x.x')).store()
-
-
-
-class TestQEPWInputGeneration(QETestCase):
+class TestQEPWInputGeneration():
     """
     Test if the input is correctly generated
     """
@@ -104,7 +91,7 @@ class TestQEPWInputGeneration(QETestCase):
         logging.disable(logging.NOTSET)
 
         inputdict = c.get_inputs_dict()
-        inputdict.pop('code',None)
+        inputdict.pop('code', None)
 
         with SandboxFolder() as f:
             # I use the same SandboxFolder more than once because nothing
@@ -157,12 +144,13 @@ class TestQEPWInputGeneration(QETestCase):
         ## I leave this as a reference, but I use instead the
         ## append_atom method
         # from aiida.orm.data.structure import Kind, Site
-        #s.append_kind(Kind(symbols='Ba', name='Ba1'))
-        #s.append_kind(Kind(symbols='Ba', name='Ba2'))
-        #s.append_site(Site(kind_name='Ba1', position=[0.,0.,0.]))
-        #s.append_site(Site(kind_name='Ba2', position=[1.4355,1.4355,1.4355]))
+        # s.append_kind(Kind(symbols='Ba', name='Ba1'))
+        # s.append_kind(Kind(symbols='Ba', name='Ba2'))
+        # s.append_site(Site(kind_name='Ba1', position=[0.,0.,0.]))
+        # s.append_site(Site(kind_name='Ba2', position=[1.4355,1.4355,1.4355]))
         s.append_atom(symbols='Ba', position=[0., 0., 0.], name='Ba1')
-        s.append_atom(symbols='Ba', position=[1.4355, 1.4355, 1.4355], name='Ba2')
+        s.append_atom(symbols='Ba', position=[1.4355, 1.4355, 1.4355],
+                      name='Ba2')
 
         input_params = {
             'CONTROL': {
@@ -174,8 +162,10 @@ class TestQEPWInputGeneration(QETestCase):
                 'ecutwfc': 47.,
                 'ecutrho': 568.,
                 'nspin': 2,
-                'starting_magnetization': {'Ba1': 0.5,
-                                           'Ba2': -0.5},
+                'starting_magnetization': {
+                    'Ba1': 0.5,
+                    'Ba2': -0.5
+                    },
             },
             'ELECTRONS': {
                 'conv_thr': 1.e-10,
@@ -254,11 +244,3 @@ class TestQEPWInputGeneration(QETestCase):
                     found2 = True
                     self.assertAlmostEquals(
                         float(l.split('=')[1].replace('d', 'e')), -0.5)
-
-
-
-
-
-
-
-

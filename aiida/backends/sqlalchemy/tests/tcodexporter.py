@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests for the NWChem input plugins.
+Tests for the Tcod exporter
 """
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -9,14 +9,14 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 #import the generic test class for nwchem
-from aiida.backends.djsite.db.testbase import AiidaTestCase
-from aiida.backends.tests.nwchem import TestNwchem
+from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
+from aiida.backends.tests.tcodexporter import TestTcodDbExporter
 
 
-class TestNwchemDjango(TestNwchem, AiidaTestCase):
+class TestTcodDbExporterSqla(SqlAlchemyTests, TestTcodDbExporter):
     """
-    These tests check the features of nwchem input file generator that differ
-    from the base Nwchem test
+    tcod database exporter tests that do need to be specified for sqlalchemy
+    backend
     """
     pass
 

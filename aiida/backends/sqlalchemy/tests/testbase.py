@@ -28,14 +28,14 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-# Session = sessionmaker(expire_on_commit=False)
-Session = sessionmaker(expire_on_commit=True)
+Session = sessionmaker(expire_on_commit=False)
+# Session = sessionmaker(expire_on_commit=True)
 
 
 class SqlAlchemyTests(unittest.TestCase):
 
     # Specify the need to drop the table at the beginning of a test case
-    drop_all = False
+    drop_all = True
 
     test_session = None
 
@@ -90,6 +90,7 @@ class SqlAlchemyTests(unittest.TestCase):
                         workdir='/tmp/aiida')
         defaults.update(kwargs)
         return Computer(**defaults)
+
 
     @staticmethod
     def inject_computer(f):

@@ -15,10 +15,16 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class QETestCase(SqlAlchemyTests):
+class TestQEPWInputGenerationSqla(SqlAlchemyTests, TestQEPWInputGeneration):
+    """
+    tests that are specific to Django
+    """
+
+    #The setupClass is overwritten to add specific objects
     @classmethod
     def setUpClass(cls):
-        super(QETestCase, cls).setUpClass()
+        super(TestQEPWInputGenerationSqla, cls).setUpClass()
+
         cls.calc_params = {
             'computer': cls.computer,
             'resources': {
@@ -26,13 +32,11 @@ class QETestCase(SqlAlchemyTests):
                 'num_mpiprocs_per_machine': 1
             }
         }
-        cls.code = Code(remote_computer_exec=(cls.computer, '/x.x'))
+
+        cls.code = Code()
+        cls.code.set_remote_computer_exec((cls.computer, '/x.x'))
         cls.code.store()
 
 
-class TestQEPWInputGenerationSqla(QETestCase, TestQEPWInputGeneration):
-    """
-    tests that are specific to Django
-    """
     pass
 

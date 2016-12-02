@@ -693,7 +693,10 @@ class Node(AbstractNode):
                 self._store_cached_input_links(with_transaction=False)
 
                 if with_transaction:
-                    self.dbnode.session.commit()
+                    try:
+                        self.dbnode.session.commit()
+                    except SQLAlchemyError as e:
+                        self.dbnode.session.rollback()
 
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception

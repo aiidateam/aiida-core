@@ -50,7 +50,7 @@ PEFIXES = [fnm.strip('.in') for fnm in os.listdir(TEST_JOB_DIR)
            if fnm.endswith('.in')]
 
 
-class LocalSetup():
+class LocalSetup(object):
     """
     Setup functions that are common to all backends
     """
@@ -186,7 +186,7 @@ class LocalSetup():
                         )
 
 
-class TestPwImmigrantCalculationManual():
+class TestPwImmigrantCalculationManual(object):
     """
     Tests for immigration, retrieval, and parsing of manual kpoint jobs.
     """
@@ -205,7 +205,7 @@ class TestPwImmigrantCalculationManual():
         self.run_tests_on_calcs_with_prefixes(manual_prefixes)
 
 
-class TestPwImmigrantCalculationAutomatic():
+class TestPwImmigrantCalculationAutomatic(object):
     """
     Tests for immigration, retrieval, and parsing of automatic kpoint jobs.
     """
@@ -222,7 +222,7 @@ class TestPwImmigrantCalculationAutomatic():
         self.run_tests_on_calcs_with_prefixes(automatic_prefixes)
 
 
-class TestPwImmigrantCalculationGamma():
+class TestPwImmigrantCalculationGamma(object):
     """
     Tests for immigration, retrieval, and parsing of gamma kpoint jobs.
     """

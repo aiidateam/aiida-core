@@ -7,6 +7,7 @@ Tests for the pwimmigrant plugin for Quantum Espresso specific to Django
 from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
 from aiida.orm.code import Code
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+import aiida.backends.sqlalchemy
 
 #Tests imports
 from aiida.backends.tests.quantumespressopwimmigrant import LocalSetup, \
@@ -31,7 +32,7 @@ class LocalTestCase(SqlAlchemyTests, LocalSetup):
     def setUpClass(cls):
         super(LocalTestCase, cls).setUpClass()
 
-        # Change transport type to local.
+        # Change transport type to local
         cls.computer.set_transport_type('local')
 
         # Configure authinfo for cls.computer and cls.user.
@@ -40,8 +41,9 @@ class LocalTestCase(SqlAlchemyTests, LocalSetup):
         authinfo.set_auth_params({})
         authinfo.save()
 
-        # Set up a code linked to cls.computer. The path is just a fake string.
-        cls.code = Code(remote_computer_exec=(cls.computer, '/x.x')).store()
+        cls.code = Code()
+        cls.code.set_remote_computer_exec((cls.computer, '/x.x'))
+        cls.code.store()
 
 class TestPwImmigrantCalculationManualSqla(LocalTestCase,
                                         TestPwImmigrantCalculationManual):

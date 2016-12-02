@@ -22,6 +22,7 @@ from aiida.backends.querybuild.dummy_model import (
     table_groups_nodes  as Dummy_table_groups_nodes,
     # session,                             # session with DB
 )
+import dummy_model
 
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
 
@@ -89,9 +90,7 @@ class QueryBuilder(AbstractQueryBuilder):
 
     @staticmethod
     def _get_session():
-        from dummy_model import get_aldjemy_session
-        return get_aldjemy_session()
-        
+        return dummy_model.session
 
     @classmethod
     def _get_filter_expr_from_attributes(

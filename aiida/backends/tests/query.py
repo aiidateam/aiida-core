@@ -180,11 +180,11 @@ class TestQueryBuilder():
         n0._set_attr('foo', 'bar')
 
         n1 = Node()
-        n1.label='foo',
+        n1.label='foo'
         n1.description='I am FoO'
 
         n2 = Node()
-        n2.label='bar',
+        n2.label='bar'
         n2.description='I am BaR'
 
         n2.add_link_from(n1, label='random_2')
@@ -229,7 +229,9 @@ class TestQueryBuilder():
         qb2 = QueryBuilder(**qh)
 
         resdict = qb2.dict()
+
         self.assertEqual(len(resdict), 1)
+
         resdict = resdict[0]
         self.assertTrue(isinstance(resdict['n1']['ctime'], datetime))
         self.assertEqual(resdict['n2']['label'], 'bar')

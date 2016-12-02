@@ -939,32 +939,6 @@ class TestNodeBasic(object):
                           [(self.user.email, 'text'),
                            (self.user.email, 'text2'), ])
 
-    def test_load_nodes(self):
-        """
-        Test for load_node() function.
-        """
-        from aiida.orm import load_node
-        from aiida.common.exceptions import NotExistent
-
-        a = Node()
-        a.store()
-
-        self.assertEquals(a.pk, load_node(node_id=a.pk).pk)
-        self.assertEquals(a.pk, load_node(node_id=a.uuid).pk)
-        self.assertEquals(a.pk, load_node(pk=a.pk).pk)
-        self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)
-
-        with self.assertRaises(ValueError):
-            load_node(node_id=a.pk, pk=a.pk)
-        with self.assertRaises(ValueError):
-            load_node(pk=a.pk, uuid=a.uuid)
-        with self.assertRaises(ValueError):
-            load_node(pk=a.uuid)
-        with self.assertRaises(NotExistent):
-            load_node(uuid=a.pk)
-        with self.assertRaises(ValueError):
-            load_node()
-
 
 class TestSubNodesAndLinks(object):
     def test_cachelink(self):

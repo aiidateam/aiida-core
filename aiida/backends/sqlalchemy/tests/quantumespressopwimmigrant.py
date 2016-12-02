@@ -4,10 +4,9 @@ Tests for the pwimmigrant plugin for Quantum Espresso specific to Django
 """
 
 # TODO: Test exception handling of user errors.
-
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
 from aiida.orm.code import Code
-from aiida.backends.djsite.db.models import DbAuthInfo
+from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 
 #Tests imports
 from aiida.backends.tests.quantumespressopwimmigrant import LocalSetup, \
@@ -20,11 +19,9 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class LocalTestCase(AiidaTestCase, LocalSetup):
+class LocalTestCase(SqlAlchemyTests, LocalSetup):
     """
-    AiidaTesetCase subclass specific to Django.
-    It uses local transport and
-    defs helper methods.
+    AiidaTesetCase subclass that uses local transport and defs helper methods.
 
     Also sets up authinfo, so calcs can be retrieved and parsed, and sets up a
     code, so test submissions can be run.
@@ -46,21 +43,20 @@ class LocalTestCase(AiidaTestCase, LocalSetup):
         # Set up a code linked to cls.computer. The path is just a fake string.
         cls.code = Code(remote_computer_exec=(cls.computer, '/x.x')).store()
 
-
-
-class TestPwImmigrantCalculationManualDjango(LocalTestCase, TestPwImmigrantCalculationManual):
+class TestPwImmigrantCalculationManualSqla(LocalTestCase,
+                                        TestPwImmigrantCalculationManual):
     """
     """
     pass
 
-class TestPwImmigrantCalculationAutomaticDjango(LocalTestCase,
+class TestPwImmigrantCalculationAutomaticSqla(LocalTestCase,
                                            TestPwImmigrantCalculationAutomatic):
     """
     """
     pass
 
 
-class TestPwImmigrantCalculationGammaDjango(LocalTestCase,
+class TestPwImmigrantCalculationGammaSqla(LocalTestCase,
                                        TestPwImmigrantCalculationGamma):
     """
     """

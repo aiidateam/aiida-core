@@ -69,7 +69,8 @@ class Node(AbstractNode):
         else:
             # TODO: allow to get the user from the parameters
             user = get_automatic_user()
-            self._dbnode = DbNode(user=user,
+
+            self._dbnode = DbNode(user_id=user.id,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 

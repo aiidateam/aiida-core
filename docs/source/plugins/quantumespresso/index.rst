@@ -7,12 +7,11 @@ Quantum Espresso
 Description
 ^^^^^^^^^^^
 `Quantum Espresso`_ is a suite of open-source codes for electronic-structure calculations from first principles, based on density-functional theory, plane waves, and pseudopotentials, freely `available online`_.
-Documentation of the code and its internal details can be found in the distributed software, and in the `online forum`_ (and its `search engine`_).
+Documentation of the code and its internal details can also be found in the `Quantum Espresso manual`_.
 
 .. _Quantum Espresso: http://www.quantum-espresso.org/
 .. _available online: http://qe-forge.org/gf/project/q-e/frs/?action=FrsReleaseBrowse&frs_package_id=18
-.. _search engine: https://www.google.com/cse/home?cx=000217952118062629757:xew9tb5yarq  
-.. _online forum: http://www.quantum-espresso.org/forum/
+.. _Quantum Espresso manual: http://www.quantum-espresso.org/users-manual/
 
 Currently supported codes are:
 

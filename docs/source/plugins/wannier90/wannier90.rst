@@ -8,12 +8,7 @@ Wannier90
 
 Description
 -----------
-Wannier90 is a tool for obtaining maximally localized wannier functions from
-DFT calculations. The Wannier90 code is freely available under the GNU LGPL license (the
-Wannier90 installation guide and the source can be found `here`_).
-
-In AiiDA, this plugin will support input to wannier90, through any calculations done in QE, via the
-pw2wannier90.x code.
+This plugin supports input to wannier90, through any calculations done in QE, via the pw2wannier90.x code.
 
 .. _here: http://www.wannier.org/index.html
 

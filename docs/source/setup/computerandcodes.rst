@@ -276,6 +276,13 @@ The configuration of computers happens in two steps.
      for how to use this option, and in particular the notes
      :ref:`here <ssh_proxycommand_notes>` for the format of this field.
    * **compress**: True to compress the traffic (recommended)
+   * **gss_auth**: yes when using Kerberos token to connect
+   * **gss_kex**: yes when using Kerberos token to connect, in some cases
+     (depending on your ``.ssh/config`` file)
+   * **gss_deleg_creds**: yes when using Kerberos token to connect, in 
+     some cases (depending on your ``.ssh/config`` file)
+   * **gss_host**: hostname when using Kerberos token to connect (default
+     to the remote computer hostname)
    * **load_system_host_keys**: True to load the known hosts keys from the
      default SSH location (recommended)
    * **key_policy**: What is the policy in case the host is not known.

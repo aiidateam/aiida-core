@@ -250,3 +250,27 @@ class BaseTcodtranslator(object):
         operator in eV.
         """
         raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_pseudopotential_atom_type(cls,calc,**kwargs):
+        """
+        Returns a list of atom types. Each atom type MUST occur only
+        once in this list. List MUST be sorted.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_pseudopotential_type(cls,calc,**kwargs):
+        """
+        Returns a list of pseudopotential types. List MUST be sorted
+        by atom types.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_pseudopotential_type_other_name(cls,calc,**kwargs):
+        """
+        Returns a list of other pseudopotential type names. List MUST be
+        sorted by atom types.
+        """
+        raise NotImplementedError("not implemented in base class")

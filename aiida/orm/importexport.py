@@ -513,7 +513,8 @@ def import_data(in_path,ignore_unknown_nodes=False,
                             nodes_export_subfolder, export_shard_uuid(o.uuid)))
                         if not subfolder.exists():
                             raise ValueError("Unable to find the repository "
-                                             "folder for node with UUID={} in the exported "
+                                             "folder for node with UUID={} " \
+                                             "in the exported "
                                              "file".format(o.uuid))
                         destdir = RepositoryFolder(
                             section=Node._section_name,

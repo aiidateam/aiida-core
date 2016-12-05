@@ -7,6 +7,10 @@
 ## NOTE: before running the command above, you need to install a recent version
 ## of pip from the website, and then possibly install/upgrade setuptools using
 ## sudo pip install --upgrade setuptools
+##
+## DEVELOPERS: When adding requirements here make sure you ALSO add them to
+## install_requires in setup.py!
+
 
 ## Django
 django==1.7.4

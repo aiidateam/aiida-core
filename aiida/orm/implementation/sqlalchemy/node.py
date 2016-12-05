@@ -70,7 +70,8 @@ class Node(AbstractNode):
         else:
             # TODO: allow to get the user from the parameters
             user = get_automatic_user()
-            self._dbnode = DbNode(user=user,
+
+            self._dbnode = DbNode(user_id=user.id,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 
@@ -698,7 +699,10 @@ class Node(AbstractNode):
                 self._store_cached_input_links(with_transaction=False)
 
                 if with_transaction:
-                    self.dbnode.session.commit()
+                    try:
+                        self.dbnode.session.commit()
+                    except SQLAlchemyError as e:
+                        self.dbnode.session.rollback()
 
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception

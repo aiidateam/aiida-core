@@ -30,12 +30,9 @@ of jobs, in order to test the correct preparation of the PwimmigrantCalculation.
 # TODO: Test exception handling of user errors.
 import os
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.orm.calculation.job.quantumespresso.pwimmigrant import PwimmigrantCalculation
 from aiida.daemon.execmanager import retrieve_jobs
 from aiida.common.folders import SandboxFolder
-from aiida.orm.code import Code
-from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.tools.codespecific.quantumespresso.pwinputparser import str2val
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -53,30 +50,10 @@ PEFIXES = [fnm.strip('.in') for fnm in os.listdir(TEST_JOB_DIR)
            if fnm.endswith('.in')]
 
 
-class LocalTestCase(AiidaTestCase):
+class LocalSetup(object):
     """
-    AiidaTesetCase subclass that uses local transport and defs helper methods.
-
-    Also sets up authinfo, so calcs can be retrieved and parsed, and sets up a
-    code, so test submissions can be run.
+    Setup functions that are common to all backends
     """
-
-    @classmethod
-    def setUpClass(cls):
-        super(LocalTestCase, cls).setUpClass()
-
-        # Change transport type to local.
-        cls.computer.set_transport_type('local')
-
-        # Configure authinfo for cls.computer and cls.user.
-        authinfo = DbAuthInfo(dbcomputer=cls.computer.dbcomputer,
-                              aiidauser=cls.user)
-        authinfo.set_auth_params({})
-        authinfo.save()
-
-        # Set up a code linked to cls.computer. The path is just a fake string.
-        cls.code = Code(remote_computer_exec=(cls.computer, '/x.x')).store()
-        
     def run_tests_on_calcs_with_prefixes(self, prefixes):
         """
         Test immigration, retrieval, and parsing of calcs for all prefixes.
@@ -209,7 +186,7 @@ class LocalTestCase(AiidaTestCase):
                         )
 
 
-class TestPwImmigrantCalculationManual(LocalTestCase):
+class TestPwImmigrantCalculationManual(object):
     """
     Tests for immigration, retrieval, and parsing of manual kpoint jobs.
     """
@@ -228,7 +205,7 @@ class TestPwImmigrantCalculationManual(LocalTestCase):
         self.run_tests_on_calcs_with_prefixes(manual_prefixes)
 
 
-class TestPwImmigrantCalculationAutomatic(LocalTestCase):
+class TestPwImmigrantCalculationAutomatic(object):
     """
     Tests for immigration, retrieval, and parsing of automatic kpoint jobs.
     """
@@ -245,7 +222,7 @@ class TestPwImmigrantCalculationAutomatic(LocalTestCase):
         self.run_tests_on_calcs_with_prefixes(automatic_prefixes)
 
 
-class TestPwImmigrantCalculationGamma(LocalTestCase):
+class TestPwImmigrantCalculationGamma(object):
     """
     Tests for immigration, retrieval, and parsing of gamma kpoint jobs.
     """

@@ -15,7 +15,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestDataNodeDjango(AiidaTestCase, TestDataNode):
+class TestDataNodeDjango(TestDataNode, AiidaTestCase, ):
     """
     These tests check the features of Data nodes that differ from the base Node
     """

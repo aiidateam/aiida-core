@@ -1479,8 +1479,6 @@ class AbstractQueryBuilder(object):
                 'master_of' : self._join_masters,# not implemented
                 'ancestor_of': self._join_ancestors,
                 'descendant_of': self._join_descendants,
-                'ancestor_of_beta': self._join_ancestors_beta, #not implemented
-                'descendant_of_beta': self._join_descendants_beta,
                 'direction' : None,
                 'group_of'  : self._join_groups,
                 'member_of' : self._join_group_members,

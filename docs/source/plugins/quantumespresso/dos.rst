@@ -21,8 +21,9 @@ Inputs
   for the best viewing results, though this is not mandatory.
 
 * **parameters**, class :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`
-  Input parameters of projwfc.x, as a nested dictionary, mapping the input of QE.
+  Input parameters of dos.x, as a nested dictionary, mapping the input of QE.
   See the QE documentation for the full list of variables and their meaning.
+
 
 Outputs
 -------

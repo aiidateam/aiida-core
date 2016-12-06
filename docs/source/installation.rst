@@ -250,7 +250,7 @@ in a new window.
   	export PATH=~/git/aiida/bin:~/Library/Python/2.7/bin:${PATH}
 
   To verify if this is the correct path to add, navigate to this location and
-  you should find the executable ``supervisord`` in the directory.
+  you should find the executable ``supervisord``, or ``celeryd``, in the directory.
 
 To verify if the path setup is OK:
 

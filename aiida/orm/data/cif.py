@@ -4,7 +4,7 @@ from aiida.orm.calculation.inline import optional_inline
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 ase_loops = {
@@ -347,13 +347,23 @@ class CifData(SinglefileData):
     @staticmethod
     def read_cif(fileobj, index=-1, **kwargs):
         """
-        A wrapper method that simulates the behaviour of the older versions of
-        the read_cif. It behaves similarly with the older and newer versions
-        of ase.io.cif.read_cif.
+        A wrapper method that simulates the behavior of the old
+        function ase.io.cif.read_cif by using the new generic ase.io.read
+        function.
         """
-        import ase.io.cif
-        return list(ase.io.cif.read_cif(
-            fileobj, index=slice(None), **kwargs))[index]
+        from ase.io import read
+
+        #the read function returns a list as a cif file might contain multiple
+        # structures
+        struct_list = read(fileobj, index=':', format='cif', **kwargs)
+
+        if index is None:
+            # If index is explicitely set to None, the list is returned as such.
+            return struct_list
+        else:
+            # otherwise return the desired structure specified by index.
+            # If no index is specified, the last structure is assumed by default
+            return struct_list[index]
 
     @classmethod
     def from_md5(cls, md5):

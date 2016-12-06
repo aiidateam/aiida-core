@@ -9,6 +9,7 @@ by operative decision doesn't have much structure encoded, [the values are simpl
 import xml.dom.minidom
 import os
 import string
+import re
 from aiida.parsers.plugins.quantumespresso.constants import ry_to_ev,hartree_to_ev,bohr_to_ang,ry_si,bohr_si
 from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 
@@ -17,9 +18,9 @@ from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 
 # parameter that will be used later for comparisons
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved"
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 lattice_tolerance = 1.e-5
@@ -1301,11 +1302,16 @@ def parse_pw_text_output(data, xml_data={}, structure_data={}, input_dict={}):
         elif 'point group' in line:
             if 'k-point group' not in line:
                 try:
-                    point_group_data = line.split()
-                    pg_international = point_group_data[-1].split('(')[1].split(')')[0]
-                    pg_schoenflies = point_group_data[-2]
+                    # Split line in components delimited by either space(s) or
+                    # parenthesis and filter out empty strings
+                    line_elems = filter(None, re.split(' +|\(|\)', line))
+
+                    pg_international = line_elems[-1]
+                    pg_schoenflies = line_elems[-2]
+
                     parsed_data['pointgroup_international'] = pg_international
                     parsed_data['pointgroup_schoenflies'] = pg_schoenflies
+
                 except Exception:
                     warning = "Problem parsing point group, I found: {}".format(line.strip())
                     parsed_data['warnings'].append(warning)

@@ -38,7 +38,7 @@ from sqlalchemy.ext.compiler import compiles
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 class jsonb_array_length(FunctionElement):
     name = 'jsonb_array_len'

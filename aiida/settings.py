@@ -13,7 +13,7 @@ from aiida.common.setup import (get_config, get_secret_key, get_property,
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 
 TIME_ZONE = "Europe/Paris"

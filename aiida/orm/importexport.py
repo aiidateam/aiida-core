@@ -7,7 +7,7 @@ from aiida.common.utils import (export_shard_uuid, get_class_string,
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 IMPORTGROUP_TYPE = 'aiida.import'
@@ -513,7 +513,8 @@ def import_data(in_path,ignore_unknown_nodes=False,
                             nodes_export_subfolder, export_shard_uuid(o.uuid)))
                         if not subfolder.exists():
                             raise ValueError("Unable to find the repository "
-                                             "folder for node with UUID={} in the exported "
+                                             "folder for node with UUID={} " \
+                                             "in the exported "
                                              "file".format(o.uuid))
                         destdir = RepositoryFolder(
                             section=Node._section_name,

@@ -81,6 +81,13 @@ setup(
         'console_scripts': [
             'verdi=aiida.cmdline.verdilib:run'
         ],
+        # following are AiiDA plugin entry points:
+        'aiida.calculations': [],
+        'aiida.parsers': [],
+        'aiida.cmdline': [],
+        'aiida.schedulers': [],
+        'aiida.transports': [],
+        'aiida.workflows': [],
     },
     scripts=['bin/runaiida'],
     long_description=open(path.join(aiida_folder, 'README.rst')).read(),

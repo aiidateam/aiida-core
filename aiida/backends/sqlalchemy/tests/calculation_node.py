@@ -3,7 +3,9 @@
 Tests for calculation nodes, attributes and links
 """
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+
+from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
+
 from aiida.backends.tests.calculation_node import TestCalcNode
 
 
@@ -12,5 +14,5 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-class TestCalcNodeDjango(AiidaTestCase, TestCalcNode):
+class TestCalcNodeSQLA(SqlAlchemyTests, TestCalcNode):
     pass

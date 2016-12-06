@@ -32,10 +32,11 @@ Inputs
       {"INPUTPH":{"ethr-ph":1e-16},
       }
   
-  See the QE documentation for the full list of variables and their meaning. 
-  Note: some keywords don't have to be specified or Calculation will enter 
-  the SUBMISSIONFAILED state, and are already taken care of by AiiDA (are related 
-  with the structure or with path to files)::
+  A full list of variables and their meaning is found in the `ph.x documentation`_.
+
+  .. _ph.x documentation: http://www.quantum-espresso.org/wp-content/uploads/Doc/INPUT_PH.html
+
+  Following keywords are already taken care of by AiiDA::
     
       'INPUTPH', 'outdir': scratch directory
       'INPUTPH', 'prefix': file prefix

@@ -46,7 +46,7 @@ setup(
         'supervisor==3.1.3',
         'meld3==1.0.0',
         'numpy',
-        'plum==0.4.3'
+        'plum==0.4.3',
         'SQLAlchemy==1.0.12',
         'SQLAlchemy-Utils==0.31.2',
         'ujson==1.35',
@@ -72,7 +72,7 @@ setup(
         ],
     },
     dependency_links=[
-        'git+https://bitbucket.org/aiida_team/plum.git@v0.4.3#egg=plum',
+        'https://bitbucket.org/aiida_team/plum/get/v0.4.3.zip#egg=plum-0.4.3',
     ],
     packages=find_packages(),
     scripts=[os.path.join(bin_folder, f) for f in os.listdir(bin_folder)

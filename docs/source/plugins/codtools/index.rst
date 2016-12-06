@@ -1,3 +1,5 @@
+.. _codtools_plugin:
+
 cod-tools
 ---------
 

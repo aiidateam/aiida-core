@@ -72,6 +72,9 @@ setup(
             'django-tastypie==0.12.1',
             'python-mimeparse==0.1.4',
         ],
+        'postgres': [
+            'psycopg2==2.6',
+        ],
     },
     dependency_links=[
         'https://bitbucket.org/aiida_team/plum/get/v0.4.3.zip#egg=plum-0.4.3',

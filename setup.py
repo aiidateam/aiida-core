@@ -21,6 +21,8 @@ setup(
     name='aiida',
     url='http://www.aiida.net/',
     license='MIT License',
+    author=__authors__,
+    author_email='developers@aiida.net',
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',

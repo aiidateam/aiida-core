@@ -5,7 +5,7 @@ Generic tests that need the use of the DB
 
 from aiida.orm.node import Node
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+import aiida
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -13,7 +13,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestComputer(AiidaTestCase):
+class TestComputer(object):
     """
     Test the Computer class.
     """
@@ -37,14 +37,22 @@ class TestComputer(AiidaTestCase):
                           'num_mpiprocs_per_machine': 1}
         }
 
-        _ = JobCalculation(**calc_params).store()
+        calc = JobCalculation(**calc_params).store()
+
+
+        from aiida.backends.sqlalchemy.models.node import DbNode
+        related_computer_id = aiida.backends.sqlalchemy.session.query(DbNode). filter(DbNode.id==calc.id)
+
+        print related_computer_id
+
+        print "pk from (computer, calc.get_computer, calc foreign_key): ", self.computer.pk, calc.get_computer(), related_computer_id
+
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
         with self.assertRaises(InvalidOperation):
             delete_computer(self.computer)
 
-
-class TestCode(AiidaTestCase):
+class TestCode(object):
     """
     Test the Code class.
     """
@@ -122,7 +130,7 @@ class TestCode(AiidaTestCase):
         self.assertFalse(code.can_run_on(othercomputer))
 
 
-class TestWfBasic(AiidaTestCase):
+class TestWfBasic(object):
     """
     Tests for the workflows
     """
@@ -154,7 +162,7 @@ class TestWfBasic(AiidaTestCase):
         self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
 
 
-class TestGroups(AiidaTestCase):
+class TestGroups(object):
     """
     Test groups.
     """
@@ -475,7 +483,7 @@ class TestGroups(AiidaTestCase):
         newuser.delete()
 
 
-class TestDbExtras(AiidaTestCase):
+class TestDbExtras(object):
     """
     Test DbAttributes.
     """

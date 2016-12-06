@@ -1,29 +1,14 @@
 .. _my-ref-to-pseudo-tutorial:
 
-Pseudopotential families tutorial
-=================================
+Handling pseudopotentials
+=========================
 
-What is a pseudopotential family
-++++++++++++++++++++++++++++++++
+Introduction: Pseudopotential families
+++++++++++++++++++++++++++++++++++++++
 
-As you might have seen in the previous ``PWscf`` tutorial, the procedure of 
-attaching a pseudopotential file to each atomic species could be a bit tedious.
-In many situations, you will not produce a different pseudopotential file 
-for every calculation you do. 
-More likely, when you start a project you will stick to a pseudopotential file 
-for as long as possible. 
-Moreover, in a high-throughput calculation, you will like to do calculation 
-over several elements keeping the same functional.
-That's also part of the reason why there are several projects 
-(like `PSLibrary <http://qe-forge.org/gf/project/pslibrary/frs/>`_ 
-or `GBRV <http://www.physics.rutgers.edu/gbrv/>`_ to name a few), 
-that intend to develop a set of pseudopotentials 
-that covers most of the periodic table for different functionals.
+As you might have seen in the previous ``PWscf`` tutorial, the procedure of attaching a pseudopotential file to each atomic species could be a bit tedious. In many situations, you will not produce a different pseudopotential file for every calculation you do. More likely, when you start a project you will stick to a pseudopotential file for as long as possible. Moreover, in a high-throughput calculation, you will like to do calculation over several elements keeping the same functional. That's also part of the reason why there are several projects (like `PSLibrary <http://qe-forge.org/gf/project/pslibrary/frs/>`_ or `GBRV <http://www.physics.rutgers.edu/gbrv/>`_ to name a few), that intend to develop a set of pseudopotentials that covers most of the periodic table for different functionals.
 
-That's why we introduced the *pseudopotential families*. 
-They are basically a set of pseudopotentials that are grouped together in a 
-special type of AiiDA Group of nodes, with the requirement that at most one
-pseudopotential can be present for a given chemical element.
+That's why we added the *pseudopotential families*. Each family is a set of pseudopotentials that are grouped together in a special type of `AiiDA Group of nodes`. Within each family, at most one pseudopotential can be present for a given chemical element.
 
 Of course, no requirements are enforced on the complete coverage of the periodic
 table (also because really complete pseudopotential sets for the whole periodic
@@ -93,13 +78,11 @@ For more help on the command line options, type::
 
 
 Manually loading pseudopotentials
-=================================
++++++++++++++++++++++++++++++++++
 
-If you do not want to use pseudopotentials from a family, it is also possible
-to load them manually (even if this is, in general, discouraged by us).
+If you do not want to use pseudopotentials from a family, it is also possible to load them manually (even if this is, in general, discouraged by us).
 
-A possible way of doing it is the following: we start by creating a list
-of pseudopotential filenames that we need to use::
+A possible way of doing it is the following: we start by creating a list of pseudopotential filenames that we need to use::
 
     raw_pseudos = [
        "Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF",

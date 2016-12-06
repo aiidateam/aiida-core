@@ -112,59 +112,6 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
                 f.flush()
 
 
-def read_test(outfolder):
-    """
-    Read a test folder created by output_test.
-
-    .. note:: This method should only be called in the testing
-        environment, because it's importing data in the current
-        database.
-    """
-    import os
-    import importlib
-    import json
-
-    from aiida.common.exceptions import NotExistent
-    from aiida.orm import JobCalculation
-    from aiida.orm.utils import load_node
-    from aiida.orm.importexport import import_data
-
-    imported = import_data(outfolder,
-                           ignore_unknown_nodes=True, silent=True)
-
-    calc = None
-    for _, pk in imported['aiida.backends.djsite.db.models.DbNode']['new']:
-        c = load_node(pk)
-        if issubclass(c.__class__, JobCalculation):
-            calc = c
-            break
-
-    retrieved = calc.out.retrieved
-
-    try:
-        with open(os.path.join(outfolder, '_aiida_checks.json')) as f:
-            tests = json.load(f)
-    except IOError:
-        raise ValueError("This test does not provide a check file!")
-    except ValueError:
-        raise ValueError("This test does provide a check file, but it cannot "
-                         "be JSON-decoded!")
-
-    mod_path = 'aiida.backends.djsite.db.subtests.parser_tests.{}'.format(
-        os.path.split(outfolder)[1])
-
-    skip_test = False
-    try:
-        m = importlib.import_module(mod_path)
-        skip_test = m.skip_condition()
-    except Exception:
-        pass
-
-    if skip_test:
-        raise SkipTestException
-
-    return calc, {'retrieved': retrieved}, tests
-
 
 def is_valid_folder_name(name):
     """
@@ -185,7 +132,7 @@ def is_valid_folder_name(name):
     return True
 
 
-class TestParsers(AiidaTestCase):
+class TestParsers(object):
     """
     This class dynamically finds all tests in a given subfolder, and loads
     them as different tests.
@@ -194,13 +141,23 @@ class TestParsers(AiidaTestCase):
     # msg specified by us
     longMessage = True
 
+    def read_test(self, outfolder):
+        """
+        Read a test folder created by output_test.
+
+        .. note:: This method should only be called in the testing
+            environment, because it's importing data in the current
+            database.
+        """
+        pass
+
     @classmethod
     def return_base_test(cls, folder):
         from inspect import isfunction
 
         def base_test(self):
             try:
-                calc, retrieved_nodes, tests = read_test(folder)
+                calc, retrieved_nodes, tests = self.read_test(folder)
             except SkipTestException:
                 return None
             Parser = calc.get_parserclass()

@@ -3,7 +3,7 @@
 Tests for specific subclasses of Data
 """
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
 from aiida.backends.tests.parsers import TestParsers
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -12,7 +12,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestParsersDjango(AiidaTestCase, TestParsers):
+class TestParsersSqla(SqlAlchemyTests, TestParsers):
     """
     """
     def read_test(self, outfolder):
@@ -24,9 +24,9 @@ class TestParsersDjango(AiidaTestCase, TestParsers):
         from aiida.common.exceptions import NotExistent
         from aiida.orm import JobCalculation
         from aiida.orm.utils import load_node
-        from aiida.orm.importexport import import_data_dj
+        from aiida.orm.importexport import import_data_sqla
 
-        imported = import_data_dj(outfolder,
+        imported = import_data_sqla(outfolder,
                                ignore_unknown_nodes=True, silent=True)
 
         calc = None

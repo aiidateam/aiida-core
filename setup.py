@@ -20,7 +20,12 @@ bin_folder = os.path.join(aiida_folder, 'bin')
 setup(
     name='aiida',
     url='http://www.aiida.net/',
-    license='MIT license, see LICENSE.txt',
+    license='MIT',
+    classifiers=[
+        'License :: OSI Approved :: MIT',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+    ],
     version=aiida_version,
     # Abstract dependencies.  Concrete versions are listed in
     # requirements.txt

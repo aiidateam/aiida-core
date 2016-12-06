@@ -10,33 +10,21 @@ As you might have seen in the previous ``PWscf`` tutorial, the procedure of atta
 
 That's why we added the *pseudopotential families*. Each family is a set of pseudopotentials that are grouped together in a special type of `AiiDA Group of nodes`. Within each family, at most one pseudopotential can be present for a given chemical element.
 
-Of course, no requirements are enforced on the complete coverage of the periodic
-table (also because really complete pseudopotential sets for the whole periodic
-table do not exist). In other words, this means that you can create a
-pseudopotential family containing the pseudopotentials only for a few elements
-that you are interested in.
+Of course, a pseudopotential family does not have to completely cover the periodic table (also because such pseudopotential sets do not exist). This means that you can create a pseudopotential family containing only the pseudopotentials for a few elements that you are interested in.
 
-.. note:: it is your responsibility to group together pseudopotentials of the
-  same type, or obtained using the same functionals, approximations
-  and/or levels of theory.
+.. note ::
+    In principle, you can group different kinds of pseudopotentials into the same family. It is your responsibility to group only those with the same type, or obtained using the same functionals, approximations and / or levels of theory.
 
-How to create a pseudopotential family
-++++++++++++++++++++++++++++++++++++++
+Creating a pseudopotential family
++++++++++++++++++++++++++++++++++
 
-Let's say for example that we want to create a family of LDA ultrasoft
-pseudopotentials. As the first step, 
-you need to get all the pseudopotential files in a single folder.
-For your convenience, it is useful to use a common name for your files, 
-for example with a structure like 'Element.a-short-description.UPF'.
+Let's say for example that we want to create a family of LDA ultrasoft pseudopotentials. As the first step, you need to get all the pseudopotential files in a single folder. For your convenience, it is useful to use a common name for your files, for example with a structure like 'Element.a-short-description.UPF'.
 
 The utility to upload a family of pseudopotentials is accessed via ``verdi``::
 
-  verdi data upf uploadfamily path/to/folder name_of_the_family "some description for your convenience"
+    verdi data upf uploadfamily path/to/folder name_of_the_family "some description for your convenience"
 
-where ``path/to/folder`` is the path to the folder where you collected all the
-UPF files that you want to add to the AiiDA database and to the family with
-name ``name_of_the_family``, and the final parameter is a string that is
-set in the ``description`` field of the group.
+where ``path/to/folder`` is the path to the folder where you collected all the UPF files that you want to add to the AiiDA database and to the family with name ``name_of_the_family``, and the final parameter is a string that is set in the ``description`` field of the group.
 
 .. note:: This command will first check the MD5 checksum of each file, and
   it will not create a new UPFData node if the pseudopotential is already 
@@ -55,8 +43,8 @@ the pseudopotentials in the folder will be added to the existing group. The
 code will raise an error if you try to add two (different) pseudopotentials for
 the same element.
 
-Get the list of existing families
-+++++++++++++++++++++++++++++++++
+Getting the list of existing families
++++++++++++++++++++++++++++++++++++++
 If you want to know what are the pseudopotential families already existing in 
 the DB, type::
    

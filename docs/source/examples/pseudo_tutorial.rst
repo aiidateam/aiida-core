@@ -69,14 +69,7 @@ A possible way of doing it is the following: we start by creating a list of pseu
        "Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF",
        "O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF"]
 
-(in this simple example, we expect the pseudopotentials to be in the same
-folder of the script).
-Then, we loop over the filenames and add them to the AiiDA database. The 
-``get_or_create`` method checks if the pseudopotential is already in the
-database (by checking its MD5 checksum) and either stores it, or just returns
-the node already present in the database (the second value returned is a
-boolean and tells us if the pseudo was already present or not).
-We also store the returned nodes in a list (``pseudos_to_use``).
+In this simple example, we expect the pseudopotentials to be in the same folder of the script. Then, we loop over the filenames and add them to the AiiDA database. The ``get_or_create`` method checks if the pseudopotential is already in the database and either stores it, or just returns the node already present in the database. The second value returned is a boolean and tells us if the pseudopotential was already present or not. We also store the returned nodes in a list (``pseudos_to_use``).
 
 ::
 
@@ -94,7 +87,6 @@ and attach its pseudopotential object to the calculation::
     for pseudo in pseudos_to_use:
         calc.use_pseudo(pseudo, kind=pseudo.element)
 
-.. note:: when the pseudopotential is created, it is parsed and the elements
-  to which it refers is stored in the database and can be accessed using the 
-  ``pseudo.element`` property, as shown above.
+.. note:: 
+    When the pseudopotential is created, it is parsed and the elements to which it refers is stored in the database and can be accessed using the ``pseudo.element`` property, as shown above.
 

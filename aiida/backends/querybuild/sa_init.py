@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
+
 """
 Imports used for the QueryBuilder.
 See
@@ -30,7 +37,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import Cast
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID, JSONB, INTEGER, array
 # TO COMPILE MY OWN FUNCTIONALITIES:
 from sqlalchemy.sql.expression import FunctionElement, cast
 from sqlalchemy.ext.compiler import compiles
@@ -49,6 +56,19 @@ def compile(element, compiler, **kw):
     Get length of array defined in a JSONB column
     """
     return "jsonb_array_length(%s)" % compiler.process(element.clauses)
+
+
+class array_length(FunctionElement):
+    name = 'array_len'
+
+@compiles(array_length)
+def compile(element, compiler, **kw):
+    """
+    Get length of array defined in a JSONB column
+    """
+    return "array_length(%s)" % compiler.process(element.clauses)
+
+
 
 class jsonb_typeof(FunctionElement):
     name = 'jsonb_typeof'

@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
+
 from datetime import datetime
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -25,6 +31,7 @@ from sa_init import (
 
 from sqlalchemy_utils.types.choice import Choice
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
+from aiida.backends.sqlalchemy.models import DbPathBeta
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.user import DbUser
@@ -45,6 +52,7 @@ class QueryBuilder(AbstractQueryBuilder):
         from aiida.orm.implementation.sqlalchemy.user import User as AiidaUser
         self.Link               = DbLink
         self.Path               = DbPath
+        self.PathBeta           = DbPathBeta
         self.Node               = DbNode
         self.Computer           = DbComputer
         self.User               = DbUser
@@ -58,6 +66,20 @@ class QueryBuilder(AbstractQueryBuilder):
 
     def _get_session(self):
         return aiida.backends.sqlalchemy.session
+
+    def _modify_expansions(self, alias, expansions):
+        """
+        For sqlalchemy, there are no additional expansions for now, so
+        I am returning an empty list
+        """
+        if issubclass(alias._sa_class_manager.class_, self.Computer):
+            try:
+                expansions.remove('metadata')
+                expansions.append('_metadata')
+            except KeyError:
+                pass
+
+        return expansions
 
     @classmethod
     def _get_filter_expr_from_attributes(
@@ -117,7 +139,7 @@ class QueryBuilder(AbstractQueryBuilder):
         elif operator in ('>=', '=>'):
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = and_(type_filter, casted_entity >= value)
-        elif operator == ('<=', '=<'):
+        elif operator in ('<=', '=<'):
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = and_(type_filter, casted_entity <= value)
         elif operator == 'of_type':

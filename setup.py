@@ -34,6 +34,7 @@ setup(
     # http://blog.miguelgrinberg.com/post/the-package-dependency-blues
     # for a useful discussion
     install_requires=[
+        'python-dateutil~=2.4.0',
         'django==1.7.4',
         'django_extensions==1.5',
         'pytz==2014.10',
@@ -67,7 +68,6 @@ setup(
         ],
         'REST': [
             'django-tastypie==0.12.1',
-            'python-dateutil==2.4.0',
             'python-mimeparse==0.1.4',
         ],
     },

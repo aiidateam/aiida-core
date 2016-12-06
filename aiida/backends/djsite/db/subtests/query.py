@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida.backends.djsite.db.testbase import AiidaTestCase
-from aiida.backends.tests.query import TestQueryBuilder
+from aiida.backends.tests.query import TestQueryBuilder, QueryBuilderJoinsTests
 
 
 
@@ -8,6 +8,9 @@ __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For fu
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
+
+class QueryBuilderJoinsTestsDjango(AiidaTestCase, QueryBuilderJoinsTests):
+    pass
 
 class TestQueryBuilderDjango(AiidaTestCase, TestQueryBuilder):
 
@@ -91,3 +94,4 @@ class TestQueryBuilderDjango(AiidaTestCase, TestQueryBuilder):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)
             self.assertTrue(issubclass(cls, DbNode))
+

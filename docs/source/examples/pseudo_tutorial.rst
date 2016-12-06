@@ -18,6 +18,9 @@ Of course, a pseudopotential family does not have to completely cover the period
 Creating a pseudopotential family
 +++++++++++++++++++++++++++++++++
 
+.. note ::
+    The following commands are specific to the Quantum ESPRESSO interface. For interfaces to other codes, please refer to the respective plugin documentation.
+
 In the following, we will go through creating a pseudopotential family. First, you need to collect the pseudopotential files which should go into the family in a single folder -- we'll call it ``path/to/folder``. You can then add the family to the AiiDA database with ``verdi``::
 
     verdi data upf uploadfamily path/to/folder name_of_the_family "some description for your convenience"

@@ -20,9 +20,9 @@ bin_folder = path.join(aiida_folder, 'bin')
 setup(
     name='aiida',
     url='http://www.aiida.net/',
-    license='MIT',
+    license='MIT License',
     classifiers=[
-        'License :: OSI Approved :: MIT',
+        'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
     ],

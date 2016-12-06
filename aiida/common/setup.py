@@ -7,7 +7,6 @@ import aiida
 # The username (email) used by the default superuser, that should also run
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
-from aiida.common.utils import query_yes_no
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -532,6 +531,7 @@ def create_configuration(profile='default'):
     import readline
     from aiida.common.exceptions import ConfigurationError
     from validate_email import validate_email
+    from aiida.common.utils import query_yes_no
 
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
 

@@ -18,30 +18,20 @@ Of course, a pseudopotential family does not have to completely cover the period
 Creating a pseudopotential family
 +++++++++++++++++++++++++++++++++
 
-Let's say for example that we want to create a family of LDA ultrasoft pseudopotentials. As the first step, you need to get all the pseudopotential files in a single folder. For your convenience, it is useful to use a common name for your files, for example with a structure like 'Element.a-short-description.UPF'.
-
-The utility to upload a family of pseudopotentials is accessed via ``verdi``::
+In the following, we will go through creating a pseudopotential family. First, you need to collect the pseudopotential files which should go into the family in a single folder -- we'll call it ``path/to/folder``. You can then add the family to the AiiDA database with ``verdi``::
 
     verdi data upf uploadfamily path/to/folder name_of_the_family "some description for your convenience"
 
-where ``path/to/folder`` is the path to the folder where you collected all the UPF files that you want to add to the AiiDA database and to the family with name ``name_of_the_family``, and the final parameter is a string that is set in the ``description`` field of the group.
+where ``name_of_the_family`` should be a unique name for the family, and the final parameter is a string that is set in the ``description`` field of the group. 
 
-.. note:: This command will first check the MD5 checksum of each file, and
-  it will not create a new UPFData node if the pseudopotential is already 
-  present in the DB. In this case, it will simply add that UpfData node
-  to the group with name ``name_of_the_family``.
-
-.. note:: if you add the optional flag ``--stop-if-existing``, 
-  the code will stop (without creating any new UPFData node, nor creating a group)
-  if at least one of the files in the folder is already found in the AiiDA DB.
+If the a pseudopotential family with the same ``name_of_the_family`` exists already, the pseudopotentials in the folder will be added to the existing group. The code will raise an error if you try to add two (different) pseudopotentials for the same element.
 
 After the upload (which may take some seconds, so please be patient) 
-the upffamily will be ready to be used.
+the upffamily will be ready to use.
 
-Note that if you pass as ``name_of_the_family`` a name that already exists,
-the pseudopotentials in the folder will be added to the existing group. The
-code will raise an error if you try to add two (different) pseudopotentials for
-the same element.
+.. hint:: 
+    If you upload pseudopotentials which are already present in your database, AiiDA will use the existing ``UPFData`` node instead of creating a duplicate one. You can use the optional flag ``--stop-if-existing`` to instead abort (without changing anything in the database) if an existing pseudopotential is found.
+
 
 Getting the list of existing families
 +++++++++++++++++++++++++++++++++++++

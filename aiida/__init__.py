@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import warnings
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.setup import get_property
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -15,6 +14,22 @@ if get_property("warnings.showdeprecations"):
     # print out the warnings coming from deprecation
     # in Python 2.7 it is suppressed by default
     warnings.simplefilter('default', DeprecationWarning)
+
+
+def load_dbenv(*argc, **argv):
+    """
+    Alias for `load_dbenv` from `aiida.backends.utils`
+    """
+    from aiida.backends.utils import load_dbenv
+    return load_dbenv(*argc, **argv)
+
+
+def is_dbenv_loaded(*argc, **argv):
+    """
+    Alias for `is_dbenv_loaded` from `aiida.backends.utils`
+    """
+    from aiida.backends.utils import is_dbenv_loaded
+    return is_dbenv_loaded(*argc, **argv)
 
 
 def get_version():

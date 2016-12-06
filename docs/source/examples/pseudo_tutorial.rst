@@ -38,22 +38,21 @@ the upffamily will be ready to use.
 
 Getting the list of existing families
 +++++++++++++++++++++++++++++++++++++
-If you want to know what are the pseudopotential families already existing in 
-the DB, type::
+To see wich pseudopotential families already exist in the database, type
+::
    
    verdi data upf listfamilies
 
-Add a ``-d`` (or ``--with-description``) flag if you want to read also the
-description of the family.
+Add a ``-d`` (or ``--with-description``) flag if you also want to read the description of each family.
 
-You can also filter the groups to get only a list of those containing 
-a set of given elements using the ``-e`` option. For instance, if you want
-to get only the families containing the elements ``Ba``, ``Ti`` and ``O``, use::
+You can also filter the groups to get only a list of those containing a given set of elements using the ``-e`` option. For instance, if you want to get only the families containing the elements ``Ba``, ``Ti`` and ``O``, use
+::
 
    verdi data upf listfamilies -e Ba Ti O
 
 
-For more help on the command line options, type::
+For more help on the command line options, type
+::
    
    verdi data upf listfamilies -h
 

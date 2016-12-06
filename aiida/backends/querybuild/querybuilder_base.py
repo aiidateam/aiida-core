@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
 
 """
 The general functionalities that all querybuilders need to have
@@ -292,7 +297,8 @@ class AbstractQueryBuilder(object):
 
     def append(self, cls=None, type=None, tag=None,
                 autotag=False, filters=None, project=None, subclassing=True,
-                edge_tag=None, edge_filters=None, edge_project=None, **kwargs
+                edge_tag=None, edge_filters=None, edge_project=None, 
+                outerjoin=False, **kwargs
         ):
         """
         Any iterative procedure to build the path for a graph query
@@ -306,14 +312,17 @@ class AbstractQueryBuilder(object):
         :param filters:
             Filters to apply for this vertice.
             See usage examples for details.
-        :param autotag:
+        :param bool autotag:
             Whether to search for a unique tag,
             (default **False**). If **True**, will find a unique tag.
             Cannot be set to **True** if tag is specified.
-        :param subclassing:
+        :param bool subclassing:
             Whether to include subclasses of the given class
             (default **True**).
             E.g. Specifying JobCalculation will include PwCalculation
+        :param bool outerjoin: 
+            If True, (default is False), will do a left outerjoin
+            instead of an inner join
 
         A small usage example how this can be invoked::
 
@@ -533,6 +542,9 @@ class AbstractQueryBuilder(object):
                 aliased_edge = aliased(self.Link)
             elif joining_keyword in ('ancestor_of', 'descendant_of'):
                 aliased_edge = aliased(self.Path)
+            elif joining_keyword in ('ancestor_of_beta', 'descendant_of_beta'):
+                #~ aliased_edge = aliased(self.PathBeta)
+                aliased_edge = self.PathBeta
 
             if aliased_edge is not None:
 
@@ -567,7 +579,7 @@ class AbstractQueryBuilder(object):
 
         path_extension = dict(
                 type=ormclasstype, tag=tag, joining_keyword=joining_keyword,
-                joining_value=joining_value
+                joining_value=joining_value, outerjoin=outerjoin,
             )
         if aliased_edge is not None:
             path_extension.update(dict(edge_tag=edge_tag))
@@ -836,6 +848,13 @@ class AbstractQueryBuilder(object):
 
 
 
+    @abstractmethod
+    def _modify_expansions(self, alias, expansions):
+        """
+        Modify names of projections if ** was specified.
+        This is important for the schema having attributes in a different table.
+        """
+        pass
 
     def _build_projections(self, tag, items_to_project=None):
 
@@ -855,7 +874,11 @@ class AbstractQueryBuilder(object):
             for projectable_entity_name, extraspec in projectable_spec.items():
                 if projectable_entity_name == '**':
                     # Need to expand
-                    entity_names = [str(c).replace(alias.__table__.name+'.','') for c in alias.__table__.columns]
+                    entity_names = self._modify_expansions(alias, [
+                            str(c).replace(alias.__table__.name+'.','')
+                            for c
+                            in alias.__table__.columns
+                        ])
                     #~ for s in ('attributes', 'extras'):
                         #~ try:
                             #~ entity_names.remove(s)
@@ -1235,7 +1258,7 @@ class AbstractQueryBuilder(object):
                 #~ call.caller_id == entity_to_join.id
             #~ )
 
-    def _join_outputs(self, joined_entity, entity_to_join, aliased_edge):
+    def _join_outputs(self, joined_entity, entity_to_join, aliased_edge, isouterjoin):
         """
         :param joined_entity: The (aliased) ORMclass that is an input
         :param entity_to_join: The (aliased) ORMClass that is an output.
@@ -1249,16 +1272,18 @@ class AbstractQueryBuilder(object):
                 (entity_to_join, self.Node),
                 'output_of'
             )
+
         self._query = self._query.join(
                 aliased_edge,
-                aliased_edge.input_id == joined_entity.id
+                aliased_edge.input_id == joined_entity.id,
+                isouter=isouterjoin
         ).join(
                 entity_to_join,
                 aliased_edge.output_id == entity_to_join.id,
-                isouter=self.isouter
+                isouter=isouterjoin
         )
 
-    def _join_inputs(self, joined_entity, entity_to_join, aliased_edge):
+    def _join_inputs(self, joined_entity, entity_to_join, aliased_edge,isouterjoin):
         """
         :param joined_entity: The (aliased) ORMclass that is an output
         :param entity_to_join: The (aliased) ORMClass that is an input.
@@ -1267,6 +1292,7 @@ class AbstractQueryBuilder(object):
         from **joined_entity** as output to **enitity_to_join** as input
         (**enitity_to_join** is an *input_of* **joined_entity**)
         """
+        
         self._check_dbentities(
                 (joined_entity, self.Node),
                 (entity_to_join, self.Node),
@@ -1274,14 +1300,64 @@ class AbstractQueryBuilder(object):
             )
         self._query = self._query.join(
                 aliased_edge,
-                aliased_edge.output_id == joined_entity.id
-        ).join(
+                aliased_edge.output_id == joined_entity.id,
+            ).join(
                 entity_to_join,
                 aliased_edge.input_id == entity_to_join.id,
-                isouter=self.isouter
+                isouter=isouterjoin
         )
 
-    def _join_descendants(self, joined_entity, entity_to_join, aliased_path):
+    def _join_descendants_beta(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
+        """
+        Beta version, joining descendants using the recursive functionality
+        """
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Node),
+                'descendant_of_beta'
+            )
+
+        self._query = self._query.join(
+                aliased_path,
+                aliased_path.ancestor_id == joined_entity.id
+            ).join(
+                entity_to_join,
+                aliased_path.descendant_id == entity_to_join.id,
+                isouter=isouterjoin
+            ).filter(
+                # it is necessary to put this filter so that the
+                # the node does not include itself as a ancestor/descendant
+                aliased_path.depth > -1
+            )
+
+    def _join_ancestors_beta(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
+        """
+        :param joined_entity: The (aliased) ORMclass that is a descendant
+        :param entity_to_join: The (aliased) ORMClass that is an ancestor.
+        :param aliased_path: An aliased instance of DbPath
+
+        """
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Node),
+                'ancestor_of_beta'
+            )
+        #~ aliased_path = aliased(self.Path)
+        self._query = self._query.join(
+                aliased_path,
+                aliased_path.descendant_id == joined_entity.id
+            ).join(
+                entity_to_join,
+                aliased_path.ancestor_id == entity_to_join.id,
+                isouter=isouterjoin
+            ).filter(
+                # it is necessary to put this filter so that the
+                # the node does not include itself as a ancestor/descendant
+                aliased_path.depth > -1
+            )
+
+
+    def _join_descendants(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
         """
         :param joined_entity: The (aliased) ORMclass that is an ancestor
         :param entity_to_join: The (aliased) ORMClass that is a descendant.
@@ -1297,17 +1373,17 @@ class AbstractQueryBuilder(object):
                 (entity_to_join, self.Node),
                 'descendant_of'
             )
-        
+
         self._query = self._query.join(
                 aliased_path,
                 aliased_path.parent_id == joined_entity.id
-        ).join(
+            ).join(
                 entity_to_join,
                 aliased_path.child_id == entity_to_join.id,
-                isouter=self.isouter
+                isouter=isouterjoin
         )
 
-    def _join_ancestors(self, joined_entity, entity_to_join, aliased_path):
+    def _join_ancestors(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
         """
         :param joined_entity: The (aliased) ORMclass that is a descendant
         :param entity_to_join: The (aliased) ORMClass that is an ancestor.
@@ -1327,12 +1403,12 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 aliased_path,
                 aliased_path.child_id == joined_entity.id
-        ).join(
+            ).join(
                 entity_to_join,
                 aliased_path.parent_id == entity_to_join.id,
-                isouter=self.isouter
+                isouter=isouterjoin
         )
-    def _join_group_members(self, joined_entity, entity_to_join):
+    def _join_group_members(self, joined_entity, entity_to_join, isouterjoin):
         """
         :param joined_entity:
             The (aliased) ORMclass that is
@@ -1354,12 +1430,12 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 aliased_group_nodes,
                 aliased_group_nodes.c.dbgroup_id == joined_entity.id
-        ).join(
+            ).join(
                 entity_to_join,
                 entity_to_join.id == aliased_group_nodes.c.dbnode_id,
-                isouter=self.isouter
+                isouter=isouterjoin
         )
-    def _join_groups(self, joined_entity, entity_to_join):
+    def _join_groups(self, joined_entity, entity_to_join, isouterjoin):
         """
         :param joined_entity: The (aliased) node in the database
         :param entity_to_join: The (aliased) Group
@@ -1378,12 +1454,12 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 aliased_group_nodes,
                 aliased_group_nodes.c.dbnode_id == joined_entity.id
-        ).join(
+            ).join(
                 entity_to_join,
                 entity_to_join.id == aliased_group_nodes.c.dbgroup_id,
-                isouter=self.isouter
+                isouter=isouterjoin
         )
-    def _join_creator_of(self, joined_entity, entity_to_join):
+    def _join_creator_of(self, joined_entity, entity_to_join, isouterjoin):
         """
         :param joined_entity: the aliased node
         :param entity_to_join: the aliased user to join to that node
@@ -1396,9 +1472,9 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 entity_to_join,
                 entity_to_join.id == joined_entity.user_id,
-                isouter=self.isouter
+                isouter=isouterjoin
             )
-    def _join_created_by(self, joined_entity, entity_to_join):
+    def _join_created_by(self, joined_entity, entity_to_join, isouterjoin):
         """
         :param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
@@ -1411,10 +1487,10 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 entity_to_join,
                 entity_to_join.user_id == joined_entity.id,
-                isouter=self.isouter
+                isouter=isouterjoin
             )
 
-    def _join_to_computer_used(self, joined_entity, entity_to_join):
+    def _join_to_computer_used(self, joined_entity, entity_to_join, isouterjoin):
         """
         :param joined_entity: the (aliased) computer entity
         :param entity_to_join: the (aliased) node entity
@@ -1428,10 +1504,10 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 entity_to_join,
                 entity_to_join.dbcomputer_id == joined_entity.id,
-                isouter=self.isouter
+                isouter=isouterjoin
         )
 
-    def _join_computer(self, joined_entity, entity_to_join):
+    def _join_computer(self, joined_entity, entity_to_join, isouterjoin):
         """
         :param joined_entity: An entity that can use a computer (eg a node)
         :param entity_to_join: aliased dbcomputer entity
@@ -1446,7 +1522,7 @@ class AbstractQueryBuilder(object):
         self._query = self._query.join(
                 entity_to_join,
                 joined_entity.dbcomputer_id == entity_to_join.id,
-                isouter=self.isouter
+                isouter=isouterjoin
         )
 
     def _get_function_map(self):
@@ -1457,6 +1533,8 @@ class AbstractQueryBuilder(object):
                 'master_of' : self._join_masters,# not implemented
                 'ancestor_of': self._join_ancestors,
                 'descendant_of': self._join_descendants,
+                'ancestor_of_beta': self._join_ancestors_beta, #not implemented
+                'descendant_of_beta': self._join_descendants_beta,
                 'direction' : None,
                 'group_of'  : self._join_groups,
                 'member_of' : self._join_group_members,
@@ -1587,7 +1665,12 @@ class AbstractQueryBuilder(object):
 
         if colname not in alias._sa_class_manager.mapper.c.keys():
             raise InputValidationError(
-                "\n{} is not a column of {}\n".format(colname, alias)
+                "\n{} is not a column of {}\n"
+                "Valid columns are:\n"
+                "{}".format(
+                        colname, alias,
+                        '\n'.join( alias._sa_class_manager.mapper.c.keys())
+                    )
             )
         return getattr(alias, colname)
 
@@ -1645,11 +1728,12 @@ class AbstractQueryBuilder(object):
                     index, **verticespec
                 )
             edge_tag = verticespec.get('edge_tag', None)
+            isouterjoin = verticespec.get('outerjoin')
             if edge_tag is None:
-                connection_func(toconnectwith, alias)
+                connection_func(toconnectwith, alias, outerjoin=outerjoin)
             else:
                 aliased_edge = self._tag_to_alias_map[edge_tag]
-                connection_func(toconnectwith, alias, aliased_edge)
+                connection_func(toconnectwith, alias, aliased_edge, isouterjoin=isouterjoin)
 
         ######################### FILTERS ##############################
 
@@ -1899,10 +1983,21 @@ class AbstractQueryBuilder(object):
 
         :returns: a generator
         """
-        return self.get_query().yield_per(batch_size)
+        try:
+            return self.get_query().yield_per(batch_size)
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
 
     def _all(self):
-        return self.get_query().all()
+        try:
+            return self.get_query().all()
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
 
     def _first(self):
         """
@@ -1910,7 +2005,13 @@ class AbstractQueryBuilder(object):
 
         :returns: One row of aiida results
         """
-        return self.get_query().first()
+        try:
+            return self.get_query().first()
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
 
     def first(self):
         """
@@ -1963,7 +2064,7 @@ class AbstractQueryBuilder(object):
         http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
 
 
-        :param int batch_size: 
+        :param int batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
 
@@ -1998,7 +2099,7 @@ class AbstractQueryBuilder(object):
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
 
-        :param int batch_size: 
+        :param int batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
             Leave the default (*None*) if speed is not critical or if you don't know
@@ -2016,19 +2117,19 @@ class AbstractQueryBuilder(object):
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
 
-        :param int batch_size: 
+        :param int batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
             Leave the default (*None*) if speed is not critical or if you don't know
             what you're doing!
 
-        :returns: 
+        :returns:
             a list of dictionaries of all projected entities.
             Each dictionary consists of key value pairs, where the key is the tag
             of the vertice and the value a dictionary of key-value pairs where key
             is the entity description (a column name or attribute path)
             and the value the value in the DB.
-        
+
         Usage::
 
             qb = QueryBuilder()
@@ -2043,7 +2144,7 @@ class AbstractQueryBuilder(object):
                 project=['type', 'id'],  # returns type (string) and id (string)
                 tag='descendant'
             )
-            
+
             # Return the dictionaries:
             print "qb.iterdict()"
             for d in qb.iterdict():
@@ -2073,7 +2174,7 @@ class AbstractQueryBuilder(object):
         http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
 
 
-        :param int batch_size: 
+        :param int batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
 
@@ -2125,7 +2226,7 @@ class AbstractQueryBuilder(object):
                 "User iterdict for generator or dict for list",
                 DeprecationWarning
             )
-        
+
         return self.iterdict()
 
     @abstractmethod

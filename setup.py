@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-import os
+
+from os import path
+from setuptools import setup, find_packages
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
-from setuptools import setup, find_packages
-
 # Get the version number
-aiida_folder = os.path.split(os.path.abspath(__file__))[0]
-fname = os.path.join(aiida_folder, 'aiida', '__init__.py')
+aiida_folder = path.split(path.abspath(__file__))[0]
+fname = path.join(aiida_folder, 'aiida', '__init__.py')
 with open(fname) as aiida_init:
     ns = {}
-    exec (aiida_init.read(), ns)
+    exec(aiida_init.read(), ns)
     aiida_version = ns['__version__']
 
-bin_folder = os.path.join(aiida_folder, 'bin')
+bin_folder = path.join(aiida_folder, 'bin')
 setup(
     name='aiida',
     url='http://www.aiida.net/',
@@ -81,5 +81,5 @@ setup(
         ],
     },
     scripts=['bin/runaiida'],
-    long_description=open(os.path.join(aiida_folder, 'README.rst')).read(),
+    long_description=open(path.join(aiida_folder, 'README.rst')).read(),
 )

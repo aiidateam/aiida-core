@@ -9,7 +9,7 @@ from aiida.backends.tests.dbimporters import TestTcodDbImporter
 from aiida.backends.tests.dbimporters import TestPcodDbImporter
 from aiida.backends.tests.dbimporters import TestMpodDbImporter
 from aiida.backends.tests.dbimporters import TestNnincDbImporter
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -17,31 +17,31 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestCodDbImporterDjango(TestCodDbImporter, AiidaTestCase):
+class TestCodDbImporterDjango(TestCodDbImporter, SqlAlchemyTests):
     """
     """
     pass
 
 
-class TestTcodDbImporterDjango(TestTcodDbImporter, AiidaTestCase):
+class TestTcodDbImporterDjango(TestTcodDbImporter, SqlAlchemyTests):
     """
     """
     pass
 
 
-class TestPcodDbImporterDjango(TestPcodDbImporter, AiidaTestCase):
+class TestPcodDbImporterDjango(TestPcodDbImporter, SqlAlchemyTests):
     """
     """
     pass
 
 
-class TestMpodDbImporterDjango(TestMpodDbImporter, AiidaTestCase):
+class TestMpodDbImporterDjango(TestMpodDbImporter, SqlAlchemyTests):
     """
     """
     pass
 
 
-class TestNnincDbImporterDjango(TestNnincDbImporter, AiidaTestCase):
+class TestNnincDbImporterDjango(TestNnincDbImporter, SqlAlchemyTests):
     """
     """
     pass

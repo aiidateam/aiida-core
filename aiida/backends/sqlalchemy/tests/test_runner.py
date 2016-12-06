@@ -30,6 +30,7 @@ def run_tests():
         # "aiida.backends.sqlalchemy.tests.quantumespressopwimmigrant",
         # "aiida.backends.sqlalchemy.tests.pwinputparser",
         # "aiida.backends.sqlalchemy.tests.parsers",
+        # "aiida.backends.sqlalchemy.tests.dbimporters",
     ]
     for module_str in modules_str:
         # Dynamically importing the module that interests us

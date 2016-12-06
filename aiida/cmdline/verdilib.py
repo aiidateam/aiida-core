@@ -740,3 +740,13 @@ def exec_from_cmdline(argv):
         print >> sys.stderr, "The profile specified is not valid!"
         print >> sys.stderr, e.message
         sys.exit(1)
+
+def run():
+    try:
+        aiida.cmdline.verdilib.exec_from_cmdline(sys.argv)
+    except KeyboardInterrupt:
+        print
+        "CTRL+C caught, exiting from verdi..."
+    except EOFError:
+        print
+        "CTRL+D caught, exiting from verdi..."

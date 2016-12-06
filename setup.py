@@ -75,7 +75,11 @@ setup(
         'https://bitbucket.org/aiida_team/plum/get/v0.4.3.zip#egg=plum-0.4.3',
     ],
     packages=find_packages(),
-    scripts=[os.path.join(bin_folder, f) for f in os.listdir(bin_folder)
-             if not os.path.isdir(os.path.join(bin_folder, f))],
+    entry_points={
+        'console_scripts': [
+            'verdi=aiida.cmdline.verdilib:run'
+        ],
+    },
+    scripts=['bin/runaiida'],
     long_description=open(os.path.join(aiida_folder, 'README.rst')).read(),
 )

@@ -57,10 +57,10 @@ For more help on the command line options, type
    verdi data upf listfamilies -h
 
 
-Manually loading pseudopotentials
-+++++++++++++++++++++++++++++++++
+Manually adding pseudopotentials
+++++++++++++++++++++++++++++++++
 
-If you do not want to use pseudopotentials from a family, it is also possible to load them manually (even if this is, in general, discouraged by us).
+If you do not want to use pseudopotentials from a family, it is also possible to manually add them to the database (even though we discourage this in general).
 
 A possible way of doing it is the following: we start by creating a list of pseudopotential filenames that we need to use::
 

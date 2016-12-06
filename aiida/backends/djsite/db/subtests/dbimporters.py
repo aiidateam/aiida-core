@@ -17,31 +17,31 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestCodDbImporterDjango(TestCodDbImporter, AiidaTestCase):
+class TestCodDbImporterDjango(AiidaTestCase, TestCodDbImporter):
     """
     """
     pass
 
 
-class TestTcodDbImporterDjango(TestTcodDbImporter, AiidaTestCase):
+class TestTcodDbImporterDjango(AiidaTestCase, TestTcodDbImporter):
     """
     """
     pass
 
 
-class TestPcodDbImporterDjango(TestPcodDbImporter, AiidaTestCase):
+class TestPcodDbImporterDjango(AiidaTestCase, TestPcodDbImporter):
     """
     """
     pass
 
 
-class TestMpodDbImporterDjango(TestMpodDbImporter, AiidaTestCase):
+class TestMpodDbImporterDjango(AiidaTestCase, TestMpodDbImporter):
     """
     """
     pass
 
 
-class TestNnincDbImporterDjango(TestNnincDbImporter, AiidaTestCase):
+class TestNnincDbImporterDjango(AiidaTestCase, TestNnincDbImporter):
     """
     """
     pass

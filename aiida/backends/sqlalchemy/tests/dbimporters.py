@@ -17,31 +17,31 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestCodDbImporterDjango(TestCodDbImporter, SqlAlchemyTests):
+class TestCodDbImporterSqla(SqlAlchemyTests, TestCodDbImporter):
     """
     """
     pass
 
 
-class TestTcodDbImporterDjango(TestTcodDbImporter, SqlAlchemyTests):
+class TestTcodDbImporterSqla(SqlAlchemyTests, TestTcodDbImporter):
     """
     """
     pass
 
 
-class TestPcodDbImporterDjango(TestPcodDbImporter, SqlAlchemyTests):
+class TestPcodDbImporterSqla(SqlAlchemyTests, TestPcodDbImporter):
     """
     """
     pass
 
 
-class TestMpodDbImporterDjango(TestMpodDbImporter, SqlAlchemyTests):
+class TestMpodDbImporterSqla(SqlAlchemyTests, TestMpodDbImporter):
     """
     """
     pass
 
 
-class TestNnincDbImporterDjango(TestNnincDbImporter, SqlAlchemyTests):
+class TestNnincDbImporterSqla(SqlAlchemyTests, TestNnincDbImporter):
     """
     """
     pass

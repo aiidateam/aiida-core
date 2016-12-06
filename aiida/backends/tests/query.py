@@ -8,16 +8,7 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-def is_postgres():
-    from aiida.backends import settings
-    from aiida.common.setup import get_profile_config
-    profile_conf = get_profile_config(settings.AIIDADB_PROFILE)
-    return profile_conf['AIIDADB_ENGINE'] == 'postgresql_psycopg2'
 
-
-def is_django():
-    from aiida.backends import settings
-    return settings.BACKEND == 'django'
 
 class TestQueryBuilder():
 
@@ -266,3 +257,118 @@ class TestQueryBuilder():
 
         self.assertTrue(id(query1) != id(query2))
         self.assertTrue(id(query2) == id(query3))
+
+
+    def test_operators_eq_lt_gt(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
+        
+        
+        nodes = [Node() for _ in range(8)]
+
+
+        nodes[0]._set_attr('fa', 1)
+        nodes[1]._set_attr('fa', 1.0)
+        nodes[2]._set_attr('fa', 1.01)
+        nodes[3]._set_attr('fa', 1.02)
+        nodes[4]._set_attr('fa', 1.03)
+        nodes[5]._set_attr('fa', 1.04)
+        nodes[6]._set_attr('fa', 1.05)
+        nodes[7]._set_attr('fa', 1.06)
+
+        [n.store() for n in nodes]
+
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'<':1}}).count(), 0)
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'==':1}}).count(), 2)
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'<':1.02}}).count(), 3)
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'<=':1.02}}).count(), 4)
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>':1.02}}).count(), 4)
+        self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>=':1.02}}).count(), 5)
+
+        
+
+
+
+class QueryBuilderJoinsTests():
+    def test_joins1(self):
+        from aiida.orm import Node, Data, Calculation
+        from aiida.orm.querybuilder import QueryBuilder
+        # Creating n1, who will be a parent:
+        parent=Node()
+        parent.label = 'mother'
+
+        good_child=Node()
+        good_child.label='good_child'
+        good_child._set_attr('is_good', True)
+
+        bad_child=Node()
+        bad_child.label='bad_child'
+        bad_child._set_attr('is_good', False)
+
+        unrelated = Node()
+        unrelated.label = 'unrelated'
+
+        for n in (good_child, bad_child, parent, unrelated):
+            n.store()
+
+        good_child.add_link_from(parent, label='parent')
+        bad_child.add_link_from(parent, label='parent')
+        
+        # Using a standard inner join
+        qb = QueryBuilder()
+        qb.append(Node, tag='parent')
+        qb.append(Node, tag='children', project='label', filters={'attributes.is_good':True})
+        self.assertEqual(qb.count(), 1)
+
+
+        qb = QueryBuilder()
+        qb.append(Node, tag='parent')
+        qb.append(Node, tag='children', outerjoin=True, project='label', filters={'attributes.is_good':True})
+        self.assertEqual(qb.count(), 1)
+
+    def test_joins2(self):
+        from aiida.orm import Node, Data, Calculation
+        from aiida.orm.querybuilder import QueryBuilder
+        # Creating n1, who will be a parent:
+
+        students = [Node() for i in range(10)]
+        advisors = [Node() for i in range(3)]
+        for i, a in enumerate(advisors):
+            a.label = 'advisor {}'.format(i)
+            a._set_attr('advisor_id', i)
+
+        for n in advisors+students:
+            n.store()
+        
+        
+        # advisor 0 get student 0, 1
+        for i in (0,1):
+            students[i].add_link_from(advisors[0], label='is_advisor')
+        
+        # advisor 1 get student 3, 4
+        for i in (3,4):
+            students[i].add_link_from(advisors[1], label='is_advisor')
+        
+        # advisor 2 get student 5, 6, 7
+        for i in (5,6,7):
+            students[i].add_link_from(advisors[2], label='is_advisor')
+
+        # let's add a differnt relationship than advisor:
+        students[9].add_link_from(advisors[2], label='lover')
+
+        
+        self.assertEqual(
+            QueryBuilder().append(
+                    Node
+                ).append(
+                    Node, edge_filters={'label':'is_advisor'}, tag='student'
+                ).count(), 7)
+
+        for adv_id, number_students in zip(range(3), (2,2,3)):
+            self.assertEqual(QueryBuilder().append(
+                    Node, filters={'attributes.advisor_id':adv_id}
+                ).append(
+                    Node, edge_filters={'label':'is_advisor'}, tag='student'
+                ).count(), number_students)
+
+

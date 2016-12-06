@@ -139,7 +139,7 @@ class QueryBuilder(AbstractQueryBuilder):
         elif operator in ('>=', '=>'):
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = and_(type_filter, casted_entity >= value)
-        elif operator == ('<=', '=<'):
+        elif operator in ('<=', '=<'):
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = and_(type_filter, casted_entity <= value)
         elif operator == 'of_type':

@@ -290,7 +290,6 @@ class QueryBuilder(AbstractQueryBuilder):
 
             attrkey = '.'.join(attrpath)
 
-
             exists_stmt = exists(select([1], correlate=True).select_from(
                     aliased_attributes
                 ).where(and_(

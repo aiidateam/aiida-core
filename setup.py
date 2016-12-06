@@ -61,7 +61,7 @@ setup(
         'tabulate==0.7.5',
         'ete3==3.0.0b35',
     ],
-    extra_require={
+    extras_require={
         'verdi_shell': ['ipython'],
         'ssh': [
             'paramiko==1.15.2',

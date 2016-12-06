@@ -22,8 +22,8 @@ class ProcessEventsTester(Process):
               "destroy", ]
 
     @classmethod
-    def _define(cls, spec):
-        super(ProcessEventsTester, cls)._define(spec)
+    def define(cls, spec):
+        super(ProcessEventsTester, cls).define(spec)
         for label in ["create", "run", "wait", "continue_",
                       "finish", "emitted", "stop", "destroy"]:
             spec.optional_output(label)

@@ -2,6 +2,7 @@
 import datetime
 import filecmp
 import functools
+import inspect
 import os.path
 import string
 import sys
@@ -186,7 +187,6 @@ def validate_list_of_string_tuples(val, tuple_length):
     return True
 
 
-
 def conv_to_fortran(val):
     """
     :param val: the value to be read and converted to a Fortran-friendly string.
@@ -210,6 +210,7 @@ def conv_to_fortran(val):
 
     return val_str
 
+
 def conv_to_fortran_withlists(val):
     """
     Same as conv_to_fortran but with extra logic to handle lists
@@ -217,12 +218,12 @@ def conv_to_fortran_withlists(val):
     """
     # Note that bool should come before integer, because a boolean matches also
     # isinstance(...,int)
-    if (isinstance(val,(list, tuple))):
+    if (isinstance(val, (list, tuple))):
         out_list = []
         for thing in val:
             out_list.append(conv_to_fortran(thing))
         val_str = ", ".join(out_list)
-        return  val_str
+        return val_str
     if (isinstance(val, bool)):
         if val:
             val_str = '.true.'
@@ -401,6 +402,21 @@ def create_display_name(field):
     return ' '.join(_.capitalize() for _ in field.split('_'))
 
 
+def get_object_string(obj):
+    """
+    Get a string that identifies this object which can be used to retrieve
+    it via :func:`get_object_from_string`.
+
+    :param obj: The object to get the string for
+    :return: The string that identifies the object
+    :rtype: str
+    """
+    if inspect.isfunction(obj):
+        return "{}.{}".format(obj.__module__, obj.__name__)
+    else:
+        return get_class_string(obj)
+
+
 def get_class_string(obj):
     """
     Return the string identifying the class of the object (module + object name,
@@ -408,16 +424,10 @@ def get_class_string(obj):
 
     It works both for classes and for class instances.
     """
-    import inspect
-
     if inspect.isclass(obj):
-        return "{}.{}".format(
-            obj.__module__,
-            obj.__name__)
+        return "{}.{}".format(obj.__module__, obj.__name__)
     else:
-        return "{}.{}".format(
-            obj.__module__,
-            obj.__class__.__name__)
+        return "{}.{}".format(obj.__module__, obj.__class__.__name__)
 
 
 def get_object_from_string(string):
@@ -889,4 +899,4 @@ def are_dir_trees_equal(dir1, dir2):
 
 
 def indent(txt, spaces=4):
-    return "\n".join(" "*spaces + ln for ln in txt.splitlines())
+    return "\n".join(" " * spaces + ln for ln in txt.splitlines())

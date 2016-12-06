@@ -309,6 +309,7 @@ class AbstractJobCalculation(object):
         Get the max wallclock time in seconds requested to the scheduler.
 
         :return: an integer
+        :rtype: int
         """
         return self.get_attr('max_wallclock_seconds', None)
 

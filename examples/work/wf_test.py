@@ -33,8 +33,8 @@ def add_multiply_wf(a, b, c):
 
 class AddMultiplyWf(WorkChain):
     @classmethod
-    def _define(cls, spec):
-        super(WorkChain, cls)._define(spec)
+    def define(cls, spec):
+        super(WorkChain, cls).define(spec)
 
         spec.input("a", valid_type=NumericType)
         spec.input("b", valid_type=NumericType)
@@ -44,11 +44,11 @@ class AddMultiplyWf(WorkChain):
             cls.prod
         )
 
-    def sum(self, ctx):
-        ctx.sum = self.inputs.a + self.inputs.b
+    def sum(self):
+        self.ctx.sum = self.inputs.a + self.inputs.b
 
-    def prod(self, ctx):
-        self.out(ctx.sum * self.inputs.c)
+    def prod(self):
+        self.out(self.ctx.sum * self.inputs.c)
 
 
 if __name__ == '__main__':

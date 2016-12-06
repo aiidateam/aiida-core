@@ -25,7 +25,12 @@ User's guide
    ../verdi/comments
    ../database/dbusage
    ../querying/index
-   ../workflow/index
+   ../work/index
    ../dbimporters/index
    ../dbexporters/index
    ../cmdline/scripting_and_shell.rst
+
+
+   ..
+      Removed this for now.
+      ../workflow/index

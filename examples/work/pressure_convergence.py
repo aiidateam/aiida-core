@@ -16,7 +16,7 @@ from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.work.run import run
 from aiida.work.workchain import (WorkChain,
-                                  ResultToContext, while_)
+                                  ToContext, while_)
 from aiida.work.workfunction import workfunction
 from common import generate_scf_input_params
 from diamond_fcc import rescale, create_diamond_fcc
@@ -98,7 +98,7 @@ class PressureConvergence(WorkChain):
     """
 
     @classmethod
-    def _define(cls, spec):
+    def define(cls, spec):
         """
         Workfunction definition
         """
@@ -118,7 +118,7 @@ class PressureConvergence(WorkChain):
         )
         spec.dynamic_output()
 
-    def init(self, ctx):
+    def init(self):
         """
         Launch the first calculation for the input structure,
         and a second calculation for a shifted volume (increased by 4 angstrom^3)
@@ -134,28 +134,29 @@ class PressureConvergence(WorkChain):
         inputs1 = generate_scf_input_params(
             scaled_structure, self.inputs.code, self.inputs.pseudo_family)
 
-        ctx.last_structure = scaled_structure
+        self.ctx.last_structure = scaled_structure
 
         # Run PW
         future0 = self.submit(PwProcess, inputs0)
         future1 = self.submit(PwProcess, inputs1)
 
         # Wait to complete before next step
-        return ResultToContext(r0=future0.pid, r1=future1.pid)
+        return ToContext(r0=future0.pid, r1=future1.pid)
 
-    def put_step0_in_ctx(self, ctx):
+    def put_step0_in_ctx(self):
         """
         Store the outputs of the very first step in a specific dictionary
         """
-        V, E, dE = get_volume_energy_and_derivative(ctx.r0['output_parameters'])
+        V, E, dE = get_volume_energy_and_derivative(
+            self.ctx.r0['output_parameters'])
 
-        ctx.step0 = {'V': V, 'E': E, 'dE': dE}
+        self.ctx.step0 = {'V': V, 'E': E, 'dE': dE}
 
         # Prepare the list containing the steps
         # step 1 will be stored here by move_next_step
-        ctx.steps = []
+        self.ctx.steps = []
 
-    def move_next_step(self, ctx):
+    def move_next_step(self):
         """
         Main routine that reads the two previous calculations r0 and r1,
         uses the Newton's algorithm on the pressure (i.e., fits the results
@@ -164,22 +165,23 @@ class PressureConvergence(WorkChain):
         r0 gets replaced with r1, r1 will get replaced by the results of the
         new calculation.
         """
-        ddE = get_second_derivative(ctx.r0['output_parameters'],
-                                    ctx.r1['output_parameters'])
-        V, E, dE = get_volume_energy_and_derivative(ctx.r1['output_parameters'])
+        ddE = get_second_derivative(self.ctx.r0['output_parameters'],
+                                    self.ctx.r1['output_parameters'])
+        V, E, dE = get_volume_energy_and_derivative(
+            self.ctx.r1['output_parameters'])
         a, b, c = get_abc(V, E, dE, ddE)
 
         new_step_data = {'V': V, 'E': E, 'dE': dE, 'ddE': ddE,
                          'a': a, 'b': b, 'c': c}
-        ctx.steps.append(new_step_data)
+        self.ctx.steps.append(new_step_data)
 
         # Minimum of a parabola
         new_volume = -b / 2. / a
 
         # remove older step
-        ctx.r0 = ctx.r1
+        self.ctx.r0 = self.ctx.r1
         scaled_structure = get_structure(self.inputs.structure, new_volume)
-        ctx.last_structure = scaled_structure
+        self.ctx.last_structure = scaled_structure
 
         inputs = generate_scf_input_params(
             scaled_structure, self.inputs.code, self.inputs.pseudo_family)
@@ -187,25 +189,25 @@ class PressureConvergence(WorkChain):
         # Run PW
         future = self.submit(PwProcess, inputs)
         # Replace r1
-        return ResultToContext(r1=future.pid)
+        return ToContext(r1=future.pid)
 
-    def not_converged(self, ctx):
+    def not_converged(self):
         """
         Return True if the worflow is not converged yet (i.e., the volume changed significantly)
         """
-        return abs(ctx.r1['output_parameters'].dict.volume -
-                   ctx.r0[
-                       'output_parameters'].dict.volume) > self.inputs.volume_tolerance
+        deltaV = abs(self.ctx.r1['output_parameters'].dict.volume -
+                     self.ctx.r0['output_parameters'].dict.volume)
+        return deltaV > self.inputs.volume_tolerance
 
-    def report(self, ctx):
+    def report(self):
         """
         Output final quantities
         """
         from aiida.orm import DataFactory
         self.out("steps", DataFactory('parameter')(dict={
-            'steps': ctx.steps,
-            'step0': ctx.step0}))
-        self.out("structure", ctx.last_structure)
+            'steps': self.ctx.steps,
+            'step0': self.ctx.step0}))
+        self.out("structure", self.ctx.last_structure)
 
 
 if __name__ == "__main__":

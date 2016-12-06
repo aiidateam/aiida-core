@@ -2,14 +2,15 @@
 
 from abc import ABCMeta, abstractmethod
 import inspect
-from plum.wait_ons import Checkpoint
-from plum.wait import WaitOn, WaitOnError
-from plum.persistence.bundle import Bundle
-from plum.knowledge_provider import NotKnown
 from aiida.work.process import Process, ProcessSpec
-from aiida.work.defaults import registry
-from plum.engine.execution_engine import Future
 from aiida.common.lang import override
+from aiida.common.utils import get_class_string, get_object_string,\
+    get_object_from_string
+from aiida.orm import load_node
+from plum.wait_ons import Checkpoint, WaitOnAll, WaitOnProcess
+from plum.wait import WaitOn
+from plum.persistence.bundle import Bundle
+from collections import namedtuple
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -38,7 +39,7 @@ class _WorkChainSpec(ProcessSpec):
         :param commands: One or more functions that make up this work chain.
         """
         self._outline = commands \
-            if isinstance(commands, _Step) else _Block(commands)
+            if isinstance(commands, _Instruction) else _Block(commands)
 
     def get_outline(self):
         return self._outline
@@ -48,10 +49,12 @@ class WorkChain(Process):
     _spec_type = _WorkChainSpec
     _CONTEXT = 'context'
     _STEPPER_STATE = 'stepper_state'
+    _BARRIERS = 'barriers'
+    _INTERSTEPS = 'intersteps'
 
     @classmethod
-    def _define(cls, spec):
-        super(WorkChain, cls)._define(spec)
+    def define(cls, spec):
+        super(WorkChain, cls).define(spec)
         # For now workchains can accept any input and emit any output
         # If this changes in the future the spec should be updated here.
         spec.dynamic_input()
@@ -114,9 +117,11 @@ class WorkChain(Process):
         super(WorkChain, self).__init__()
         self._context = None
         self._stepper = None
+        self._barriers = []
+        self._intersteps = None
 
     @property
-    def context(self):
+    def ctx(self):
         return self._context
 
     @override
@@ -124,7 +129,7 @@ class WorkChain(Process):
         super(WorkChain, self).save_instance_state(out_state)
         # Ask the context to save itself
         context_state = Bundle()
-        self.context.save_instance_state(context_state)
+        self.ctx.save_instance_state(context_state)
         out_state[self._CONTEXT] = context_state
 
         # Ask the stepper to save itself
@@ -133,17 +138,54 @@ class WorkChain(Process):
             self._stepper.save_position(stepper_state)
             out_state[self._STEPPER_STATE] = stepper_state
 
+    def insert_barrier(self, wait_on):
+        """
+        Insert a barrier that will cause the workchain to wait until the wait
+        on is finished before continuing to the next step.
+
+        :param wait_on: The thing to wait on
+        :type wait_on: :class:`plum.wait.wait_on`
+        """
+        self._barriers.append(wait_on)
+
+    def remove_barrier(self, wait_on):
+        """
+        Remove a barrier.
+
+        Precondition: must be a barrier that was previously inserted
+
+        :param wait_on:  The wait on to remove
+        :type wait_on: :class:`plum.wait.wait_on`
+        """
+        del self._barriers[wait_on]
+
     @override
     def _run(self, **kwargs):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
     def _do_step(self, wait_on=None):
+        if self._intersteps:
+            for i in self._intersteps:
+                i.on_next_step_starting(self)
+            self._intersteps = None
+        self._barriers = []
+
         finished, retval = self._stepper.step()
         if not finished:
-            if isinstance(retval, ResultToContext):
-                return _ResultToContext(self._do_step.__name__,
-                                        **retval.to_assign)
+            if retval is not None:
+                if isinstance(retval, tuple):
+                    self._intersteps = retval
+                elif isinstance(retval, Interstep):
+                    self._intersteps = (retval,)
+                else:
+                    raise TypeError(
+                        "Invalid value returned from step '{}'".format(retval))
+                for i in self._intersteps:
+                    i.on_last_step_finished(self)
+
+            if self._barriers:
+                return WaitOnAll(self._do_step.__name__, self._barriers)
             else:
                 return Checkpoint(self._do_step.__name__)
 
@@ -158,62 +200,125 @@ class WorkChain(Process):
         else:
             # Recreate the context
             self._context = self.Context(saved_instance_state[self._CONTEXT])
+
             # Recreate the stepper
             if self._STEPPER_STATE in saved_instance_state:
                 self._stepper = self.spec().get_outline().create_stepper(self)
                 self._stepper.load_position(
                     saved_instance_state[self._STEPPER_STATE])
 
-    @override
-    def on_continue(self, wait_on):
-        super(WorkChain, self).on_continue(wait_on)
-        if isinstance(wait_on, _ResultToContext):
-            wait_on.assign(self._context)
+            try:
+                self._intersteps = [_INTERSTEP_FACTORY.create(b) for
+                                    b in saved_instance_state[self._INTERSTEPS]]
+            except KeyError:
+                pass
+
+            try:
+                self._barriers = [WaitOn.create_from(b) for
+                                  b in saved_instance_state[self._BARRIERS]]
+            except KeyError:
+                pass
     #####################################################
 
 
-class ResultToContext(object):
+class Interstep(object):
+    """
+    An internstep is an action that is performed between steps of a workchain.
+    These allow the user to perform action when a step is finished and when
+    the next step (if there is one) is about the start.
+    """
+    __metaclass__ = ABCMeta
+
+    def on_last_step_finished(self, workchain):
+        """
+        Called when the last step has finished
+
+        :param workchain: The workchain this interstep belongs to
+        :type workchain: :class:`WorkChain`
+        """
+        pass
+
+    def on_next_step_starting(self, workchain):
+        """
+        Called when the next step is about to start
+
+        :param workchain: The workchain this interstep belongs to
+        :type workchain: :class:`WorkChain`
+        """
+        pass
+
+    @abstractmethod
+    def save_instance_state(self, out_state):
+        """
+        Save the state of this interstep so that it can be recreated later
+        by the factory.
+
+        :param out_state: The bundle that should be used to save the state
+        :type out_state: :class:`plum.persistence.bundle.Bundle`
+        """
+        pass
+
+
+class ToContext(Interstep):
+    TO_ASSIGN = 'to_assign'
+    WAITING_ON = 'waiting_on'
+
+    Action = namedtuple("Action", "pid fn")
+
     def __init__(self, **kwargs):
-        self.to_assign = kwargs
-
-
-class _ResultToContext(WaitOn):
-    PIDS = 'pids'
-
-    @classmethod
-    def create_from(cls, bundle):
-        return _ResultToContext(
-            bundle[cls.BundleKeys.CALLBACK_NAME.value], **bundle[cls.PIDS])
-
-    def __init__(self, callback_name, **kwargs):
-        super(_ResultToContext, self).__init__(callback_name)
-        self._to_assign = kwargs
-        self._ready_values = {}
+        self._to_assign = {}
+        for key, val in kwargs.iteritems():
+            if isinstance(val, self.Action):
+                self._to_assign[key] = val
+            else:
+                # Assume it's a pid
+                assert isinstance(val, int)
+                self._to_assign[key] = Calc(val)
 
     @override
-    def is_ready(self):
-        # Check all the processes have finished
-        try:
-            all_done = all(registry.has_finished(pid)
-                           for pid in self._to_assign.itervalues())
-        except NotKnown:
-            raise WaitOnError("Could not determine if processes are finished.")
+    def on_last_step_finished(self, workchain):
+        for action in self._to_assign.itervalues():
+            workchain.insert_barrier(WaitOnProcess(None, action.pid))
 
-        if all_done:
-            for key, pid in self._to_assign.iteritems():
-                self._ready_values[key] = registry.get_outputs(pid)
-            return True
-        else:
-            return False
+    @override
+    def on_next_step_starting(self, workchain):
+        for key, val in self._to_assign.iteritems():
+            fn = get_object_from_string(val.fn)
+            workchain.ctx[key] = fn(val.pid)
 
     @override
     def save_instance_state(self, out_state):
-        super(_ResultToContext, self).save_instance_state(out_state)
-        out_state[self.PIDS] = self._to_assign
+        out_state['class'] = get_class_string(ToContext)
+        out_state[self.TO_ASSIGN] = self._to_assign
 
-    def assign(self, context):
-        for name, value in self._ready_values.iteritems():
-            setattr(context, name, value)
+
+def _get_calc(pid):
+    return load_node(pid)
+
+
+def _get_outputs(pid):
+    return load_node(pid).get_outputs_dict()
+
+
+def Calc(pid):
+    return ToContext.Action(pid, get_object_string(_get_calc))
+
+
+def Outputs(pid):
+    return ToContext.Action(pid, get_object_string(_get_outputs))
+
+
+class _InterstepFactory(object):
+    def create(self, bundle):
+        class_string = bundle[Bundle.CLASS]
+        if class_string == get_class_string(ToContext):
+            return ToContext(**bundle[ToContext.TO_ASSIGN])
+        else:
+            raise ValueError(
+                "Unknown interstep class type '{}'".format(class_string))
+
+
+_INTERSTEP_FACTORY = _InterstepFactory()
 
 
 class Stepper(object):
@@ -224,6 +329,13 @@ class Stepper(object):
 
     @abstractmethod
     def step(self):
+        """
+        Execute on step of the instructions.
+        :return: A 2-tuple with entries:
+            0. True if the stepper has finished, False otherwise
+            1. The return value from the executed step
+        :rtype: tuple
+        """
         pass
 
     @abstractmethod
@@ -235,7 +347,12 @@ class Stepper(object):
         pass
 
 
-class _Step(object):
+class _Instruction(object):
+    """
+    This class represents an instruction in a a workchain.  To step through the
+    step you need to get a stepper by calling ``create_stepper()`` from which
+    you can call the :class:`~Stepper.step()` method.
+    """
     __metaclass__ = ABCMeta
 
     @abstractmethod
@@ -247,18 +364,25 @@ class _Step(object):
 
     @abstractmethod
     def get_description(self):
+        """
+        Get a text description of these instructions.
+        :return: The description
+        :rtype: str
+        """
         pass
 
     @staticmethod
     def check_command(command):
-        if not isinstance(command, _Step):
+        if not isinstance(command, _Instruction):
             assert issubclass(command.im_class, Process)
             args = inspect.getargspec(command)[0]
-            assert len(args) == 2,\
-                "Command function must take two arguments: self and context"
+            assert len(args) == 1, "Instruction must take one argument only: self"
 
 
-class _Block(_Step):
+class _Block(_Instruction):
+    """
+    Represents a block of instructions i.e. a sequential list of instructions.
+    """
     class Stepper(Stepper):
         _POSITION = 'pos'
         _STEPPER_POS = 'stepper_pos'
@@ -267,7 +391,7 @@ class _Block(_Step):
             super(_Block.Stepper, self).__init__(workflow)
 
             for c in commands:
-                _Step.check_command(c)
+                _Instruction.check_command(c)
             self._commands = commands
             self._current_stepper = None
             self._pos = 0
@@ -278,16 +402,15 @@ class _Block(_Step):
 
             command = self._commands[self._pos]
 
-            if self._current_stepper is None and isinstance(command, _Step):
+            if self._current_stepper is None and isinstance(command, _Instruction):
                 self._current_stepper = command.create_stepper(self._workflow)
 
             # If there is a stepper being used then call that, otherwise just
-            # call the command (function) directly
+            # call the command (class function) directly
             if self._current_stepper is not None:
                 finished, retval = self._current_stepper.step()
             else:
-                finished, retval = True, command(self._workflow,
-                                                 self._workflow.context)
+                finished, retval = True, command(self._workflow)
 
             if finished:
                 self._pos += 1
@@ -315,7 +438,7 @@ class _Block(_Step):
 
     def __init__(self, commands):
         for command in commands:
-            if not isinstance(command, _Step):
+            if not isinstance(command, _Instruction):
                 # Maybe it's a simple method
                 if not inspect.ismethod(command):
                     raise ValueError(
@@ -331,7 +454,7 @@ class _Block(_Step):
     def get_description(self):
         desc = []
         for c in self._commands:
-            if isinstance(c, _Step):
+            if isinstance(c, _Instruction):
                 desc.append(c.get_description())
             else:
                 if c.__doc__:
@@ -369,7 +492,7 @@ class _Conditional(object):
         return self._condition
 
     def is_true(self, workflow):
-        return self._condition(workflow, workflow.context)
+        return self._condition(workflow)
 
     def __call__(self, *commands):
         assert self._body is None
@@ -377,7 +500,7 @@ class _Conditional(object):
         return self._parent
 
 
-class _If(_Step):
+class _If(_Instruction):
     class Stepper(Stepper):
         _POSITION = 'pos'
         _STEPPER_POS = 'stepper_pos'
@@ -444,7 +567,8 @@ class _If(_Step):
 
     def else_(self, *commands):
         assert not self._sealed
-        cond = _Conditional(self, lambda x, y: True)
+        # Create a dummy conditional that always returns True
+        cond = _Conditional(self, lambda wf: True)
         cond(*commands)
         self._ifs.append(cond)
         # Can't do any more after the else
@@ -460,16 +584,16 @@ class _If(_Step):
 
     @override
     def get_description(self):
-        description = []
-        description.append("if {}:\n{}".format(
-            self._ifs[0].condition.__name__, self._ifs[0].body))
+        description = [
+            "if {}:\n{}".format(
+                self._ifs[0].condition.__name__, self._ifs[0].body)]
         for conditional in self._ifs[1:]:
             description.append("elif {}:\n{}".format(
                 conditional.condition.__name__, conditional.body))
         return "\n".join(description)
 
 
-class _While(_Conditional, _Step):
+class _While(_Conditional, _Instruction):
     class Stepper(Stepper):
         _STEPPER_POS = 'stepper_pos'
         _CHECK_CONDITION = 'check_condition'
@@ -540,9 +664,37 @@ class _While(_Conditional, _Step):
 
 
 def if_(condition):
+    """
+    A conditional that can be used in a workchain outline.
+
+    Use as:
+
+    if_(cls.conditional)(
+      cls.step1,
+      cls.step2
+    )
+
+    Each step can, of course, also be any valid workchain step e.g. conditional.
+
+    :param condition: The workchain method that will return True or False
+    """
     return _If(condition)
 
 
 def while_(condition):
+    """
+    A while loop that can be used in a workchain outline.
+
+    Use as:
+
+    while_(cls.conditional)(
+      cls.step1,
+      cls.step2
+    )
+
+    Each step can, of course, also be any valid workchain step e.g. conditional.
+
+    :param condition: The workchain method that will return True or False
+    """
     return _While(condition)
 

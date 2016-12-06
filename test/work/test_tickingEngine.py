@@ -15,8 +15,8 @@ __authors__ = "The AiiDA team."
 
 class DummyProcess(Process):
     @classmethod
-    def _define(cls, spec):
-        super(DummyProcess, cls)._define(spec)
+    def define(cls, spec):
+        super(DummyProcess, cls).define(spec)
         spec.dynamic_input()
         spec.dynamic_output()
 

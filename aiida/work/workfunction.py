@@ -15,6 +15,27 @@ __authors__ = "The AiiDA team."
 
 
 def workfunction(func):
+    """
+    A decorator to turn a standard python function into a workfunction.
+    Example usage:
+
+    >>> from aiida.orm.data.base import Int
+    >>> from aiida.work.workfunction import workfunction as wf
+    >>>
+    >>> # Define the workfunction
+    >>> @wf
+    >>> def sum(a, b):
+    >>>    return a + b
+    >>> # Run it with some input
+    >>> r = sum(Int(4), Int(5))
+    >>> print(r)
+    9
+    >>> r.get_inputs_dict() # doctest: +SKIP
+    {u'_return': <WorkCalculation: uuid: ce0c63b3-1c84-4bb8-ba64-7b70a36adf34 (pk: 3567)>}
+    >>> r.get_inputs_dict()['_return'].get_inputs()
+    [4, 5]
+
+    """
     @functools.wraps(func)
     def wrapped_function(*args, **kwargs):
         """

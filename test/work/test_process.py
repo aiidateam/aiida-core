@@ -123,7 +123,7 @@ class TestFunctionProcess(DbTestCase):
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
         FP = FunctionProcess.build(wf)
-        self.assertEqual(FP.run(inputs=inputs), inputs)
+        self.assertEqual(FP.run(**inputs), inputs)
 
     def test_kwargs(self):
         def wf_with_kwargs(**kwargs):
@@ -139,15 +139,15 @@ class TestFunctionProcess(DbTestCase):
         inputs = {'a': a}
 
         FP = FunctionProcess.build(wf_with_kwargs)
-        outs = FP.run(inputs=inputs)
+        outs = FP.run(**inputs)
         self.assertEqual(outs, inputs)
 
         FP = FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
-            FP.run(inputs=inputs)
+            FP.run(**inputs)
 
         FP = FunctionProcess.build(wf_fixed_args)
-        outs = FP.run(inputs=inputs)
+        outs = FP.run(**inputs)
         self.assertEqual(outs, inputs)
 
 

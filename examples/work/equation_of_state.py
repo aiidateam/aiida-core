@@ -10,7 +10,7 @@ from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.work.run import run, submit
 from aiida.work.workchain import WorkChain, \
-    ResultToContext, while_
+    ToContext, while_
 from examples.work.diamond_fcc import rescale
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work.workfunction import workfunction
@@ -112,19 +112,19 @@ def generate_scf_input_params(structure, codename, pseudo_family):
 
 class EquationOfState(WorkChain):
     @classmethod
-    def _define(cls, spec):
+    def define(cls, spec):
         spec.input("structure", valid_type=StructureData)
         spec.input("start", valid_type=NumericType, default=Float(0.96))
         spec.input("delta", valid_type=NumericType, default=Float(0.02))
         spec.input("end", valid_type=NumericType, default=Float(1.04))
-        spec.input("code", valid_type=BaseType)
-        spec.input("pseudo_family", valid_type=BaseType)
+        spec.input("code", valid_type=Str)
+        spec.input("pseudo_family", valid_type=Str)
         spec.outline(
             cls.run_pw,
             cls.print_eos
         )
 
-    def run_pw(self, ctx):
+    def run_pw(self):
         calcs = {}
 
         scale = self.inputs.start
@@ -143,18 +143,19 @@ class EquationOfState(WorkChain):
 
         # Ask the workflow to continue when the results are ready and store them
         # in the context
-        return ResultToContext(**calcs)
+        return ToContext(**calcs)
 
-    def print_eos(self, ctx):
-        for label in ctx:
+    def print_eos(self):
+        for label in self.ctx:
             if "s_" in label:
                 print "{} {}".format(
-                    label, ctx[label]['output_parameters'].dict.energy)
+                    label, self.ctx[label]['output_parameters'].dict.energy)
 
 
 class EquationOfState2(WorkChain):
     @classmethod
-    def _define(cls, spec):
+    def define(cls, spec):
+        super(EquationOfState2, cls).define(spec)
         spec.input("structure", valid_type=StructureData)
         spec.input("code", valid_type=BaseType)
         spec.input("pseudo_family", valid_type=BaseType)
@@ -166,15 +167,15 @@ class EquationOfState2(WorkChain):
             )
         )
 
-    def init(self, ctx):
-        ctx.scales = (0.96, 0.98, 1., 1.02, 1.04)
-        ctx.i = 0
+    def init(self):
+        self.ctx.scales = (0.96, 0.98, 1., 1.02, 1.04)
+        self.ctx.i = 0
 
-    def not_finished(self, ctx):
-        return ctx.i < len(ctx.scales)
+    def not_finished(self):
+        return self.ctx.i < len(self.ctx.scales)
 
-    def run_pw(self, ctx):
-        scale = ctx.scales[ctx.i]
+    def run_pw(self):
+        scale = self.ctx.scales[self.ctx.i]
         scaled = rescale(self.inputs.structure, scale)
 
         inputs = generate_scf_input_params(
@@ -183,12 +184,12 @@ class EquationOfState2(WorkChain):
         # Launch the code
         pid = self.submit(PwProcess, inputs).pid
 
-        ctx.i += 1
-        return ResultToContext(result=pid)
+        self.ctx.i += 1
+        return ToContext(result=pid)
 
-    def print_result(self, ctx):
-        print ctx.scales[ctx.i],\
-            ctx.result['output_parameters'].dict.energy
+    def print_result(self):
+        print self.ctx.scales[self.ctx.i],\
+            self.ctx.result['output_parameters'].dict.energy
 
 
 if __name__ == "__main__":
@@ -215,6 +216,6 @@ if __name__ == "__main__":
     #     code=Str(args.code), pseudo_family=Str(args.pseudo))
     submit(EquationOfState, structure=load_node(args.structure_pk),
            start=Float(start), end=Float(end), delta=Float(delta),
-           code=Float(args.code), pseudo_family=Float(args.pseudo))
+           code=Str(args.code), pseudo_family=Str(args.pseudo))
 
 

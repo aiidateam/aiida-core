@@ -14,5 +14,3 @@ class WorkCalculation(Calculation):
     workflows system.
     """
     pass
-
-

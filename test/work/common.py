@@ -13,8 +13,8 @@ class DummyProcess(Process):
     A Process that does nothing when it runs.
     """
     @classmethod
-    def _define(cls, spec):
-        super(DummyProcess, cls)._define(spec)
+    def define(cls, spec):
+        super(DummyProcess, cls).define(spec)
         spec.dynamic_input()
         spec.dynamic_output()
 
@@ -28,8 +28,8 @@ class BadOutput(Process):
     exception.
     """
     @classmethod
-    def _define(cls, spec):
-        super(BadOutput, cls)._define(spec)
+    def define(cls, spec):
+        super(BadOutput, cls).define(spec)
         spec.dynamic_output()
 
     def _run(self):

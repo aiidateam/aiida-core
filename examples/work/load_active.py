@@ -18,7 +18,7 @@ from aiida.work.db_types import to_db_type
 
 class Add(Process):
     @staticmethod
-    def _define(spec):
+    def define(spec):
         spec.input('a', default=0)
         spec.input('b', default=0)
         spec.output('value')
@@ -29,7 +29,7 @@ class Add(Process):
 
 class Mul(Process):
     @staticmethod
-    def _define(spec):
+    def define(spec):
         spec.input('a', default=1)
         spec.input('b', default=1)
         spec.output('value')
@@ -40,7 +40,7 @@ class Mul(Process):
 
 class MulAdd(Workflow):
     @staticmethod
-    def _define(spec):
+    def define(spec):
         spec.process(Mul)
         spec.process(Add)
 

@@ -122,8 +122,8 @@ class Process(plum.process.Process):
         PARENT_CALC_PID = 'parent_calc_pid'
 
     @classmethod
-    def _define(cls, spec):
-        super(Process, cls)._define(spec)
+    def define(cls, spec):
+        super(Process, cls).define(spec)
 
         spec.input("_store_provenance", valid_type=bool, default=True,
                    required=False)
@@ -387,7 +387,7 @@ class FunctionProcess(Process):
         args, varargs, keywords, defaults = inspect.getargspec(func)
 
         def _define(cls, spec):
-            super(FunctionProcess, cls)._define(spec)
+            super(FunctionProcess, cls).define(spec)
 
             for i in range(len(args)):
                 default = None
@@ -412,7 +412,7 @@ class FunctionProcess(Process):
 
         return type(func.__name__, (FunctionProcess,),
                     {'_func': staticmethod(func),
-                     '_define': classmethod(_define),
+                     Process.define.__name__: classmethod(_define),
                      '_func_args': args})
 
     @classmethod

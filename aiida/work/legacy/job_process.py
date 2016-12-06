@@ -24,7 +24,7 @@ class JobProcess(Process):
         from aiida.orm.computer import Computer
 
         def _define(cls_, spec):
-            super(JobProcess, cls_)._define(spec)
+            super(JobProcess, cls_).define(spec)
 
             # Calculation options
             options = {
@@ -59,7 +59,7 @@ class JobProcess(Process):
         class_name = "{}_{}".format(
             JobProcess.__name__, plum.util.fullname(calc_class))
         return type(class_name, (JobProcess,),
-                    {'_define': classmethod(_define),
+                    {Process.define.__name__: classmethod(_define),
                      '_CALC_CLASS': calc_class})
 
     def _run(self, **kwargs):

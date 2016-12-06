@@ -15,7 +15,7 @@ import time
 from aiida.orm.data.base import Int
 from aiida.work.run import async, run, submit
 from aiida.work.workfunction import workfunction
-from aiida.work.workchain import (WorkChain, ResultToContext)
+from aiida.work.workchain import (WorkChain, ToContext)
 
 
 @workfunction
@@ -37,58 +37,58 @@ def long_running(a):
 
 class F1(WorkChain):
     @classmethod
-    def _define(cls, spec):
-        super(F1, cls)._define(spec)
+    def define(cls, spec):
+        super(F1, cls).define(spec)
 
         spec.dynamic_input()
         spec.dynamic_output()
         spec.outline(cls.s1, cls.s2)
 
-    def s1(self, ctx):
+    def s1(self):
         p2 = async(LongRunning, a=self.inputs.inp)
-        ctx.a = 1  # Do some work...
-        return ResultToContext(r2=p2.pid)
+        self.ctx.a = 1  # Do some work...
+        return ToContext(r2=p2.pid)
 
-    def s2(self, ctx):
-        print("a={}".format(ctx.a))
-        print("r2={}".format(ctx.r2))
+    def s2(self):
+        print("a={}".format(self.ctx.a))
+        print("r2={}".format(self.ctx.r2))
 
-        self.out("r1", ctx.r2['r2'])
+        self.out("r1", self.ctx.r2['r2'])
 
 
 class LongRunning(WorkChain):
     @classmethod
-    def _define(cls, spec):
-        super(LongRunning, cls)._define(spec)
+    def define(cls, spec):
+        super(LongRunning, cls).define(spec)
 
         spec.dynamic_input()
         spec.dynamic_output()
         spec.outline(cls.s1)
 
-    def s1(self, ctx):
+    def s1(self):
         time.sleep(2)
         self.out("r2", self.inputs.a)
 
 
 class F1WaitFor(WorkChain):
     @classmethod
-    def _define(cls, spec):
-        super(F1WaitFor, cls)._define(spec)
+    def define(cls, spec):
+        super(F1WaitFor, cls).define(spec)
 
         spec.dynamic_input()
         spec.dynamic_output()
         spec.outline(cls.s1, cls.s2)
 
-    def s1(self, ctx):
+    def s1(self):
         p2 = async(long_running, a=self.inputs.inp)
-        ctx.a = 1
-        ctx.r2 = p2.result()
+        self.ctx.a = 1
+        self.ctx.r2 = p2.result()
 
-    def s2(self, ctx):
-        print("a={}".format(ctx.a))
-        print("r2={}".format(ctx.r2))
+    def s2(self):
+        print("a={}".format(self.ctx.a))
+        print("r2={}".format(self.ctx.r2))
 
-        self.out("r1", ctx.r2['r2'])
+        self.out("r1", self.ctx.r2['r2'])
 
 
 if __name__ == '__main__':

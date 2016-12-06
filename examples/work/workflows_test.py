@@ -41,7 +41,7 @@ def add_multiply_wf(a, b, c):
 
 class Add(Process):
     @classmethod
-    def _define(cls, spec):
+    def define(cls, spec):
         spec.input('a', default=0)
         spec.input('b', default=0)
         spec.output('value')
@@ -52,7 +52,7 @@ class Add(Process):
 
 class Mul(Process):
     @classmethod
-    def _define(cls, spec):
+    def define(cls, spec):
         spec.input('a', default=1)
         spec.input('b', default=1)
         spec.output('value')
@@ -63,7 +63,7 @@ class Mul(Process):
 
 class MulAdd(Workflow):
     @classmethod
-    def _define(cls, spec):
+    def define(cls, spec):
         spec.process(Mul)
         spec.process(Add)
 

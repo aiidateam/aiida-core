@@ -15,7 +15,7 @@ from aiida.work.run import run
 
 class W(WorkChain):
     @classmethod
-    def _define(cls, spec):
+    def define(cls, spec):
         spec.outline(
             cls.start,
             cls.s2,
@@ -36,53 +36,53 @@ class W(WorkChain):
         )
 
 
-    def start(self, ctx):
+    def start(self):
         print "s1"
-        ctx.v = 1
+        self.ctx.v = 1
 
         return 1, 2, 3, 4
 
-    def s2(self, ctx):
+    def s2(self):
         print "s2"
-        ctx.v = 2
-        ctx.w = 2
+        self.ctx.v = 2
+        self.ctx.w = 2
 
-    def cond1(self, ctx):
-        return ctx.v == 3
+    def cond1(self):
+        return self.ctx.v == 3
 
-    def s3(self, ctx):
+    def s3(self):
         print "s3"
 
-    def s4(self, ctx):
+    def s4(self):
         print "s4"
 
-    def s5(self, ctx):
+    def s5(self):
         print "s5"
 
-    def s6(self, ctx):
+    def s6(self):
         print "s6"
 
     #        f = async(slow)
     #        return Wait(f)
 
-    def cond2(self, ctx):
-        return ctx.w < 10
+    def cond2(self):
+        return self.ctx.w < 10
 
-    def cond3(self, ctx):
+    def cond3(self):
         return True
 
-    def s7(self, ctx):
+    def s7(self):
         print " s7"
-        ctx.w += 1
-        print "w=", ctx.w
+        self.ctx.w += 1
+        print "w=", self.ctx.w
 
-    def s8(self, ctx):
+    def s8(self):
         print "s8"
 
-    def s9(self, ctx):
+    def s9(self):
         print "s9, end"
 
-    def s11(self, ctx):
+    def s11(self):
         pass
 
 

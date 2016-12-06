@@ -1730,7 +1730,7 @@ class AbstractQueryBuilder(object):
             edge_tag = verticespec.get('edge_tag', None)
             isouterjoin = verticespec.get('outerjoin')
             if edge_tag is None:
-                connection_func(toconnectwith, alias, outerjoin=outerjoin)
+                connection_func(toconnectwith, alias, isouterjoin=isouterjoin)
             else:
                 aliased_edge = self._tag_to_alias_map[edge_tag]
                 connection_func(toconnectwith, alias, aliased_edge, isouterjoin=isouterjoin)

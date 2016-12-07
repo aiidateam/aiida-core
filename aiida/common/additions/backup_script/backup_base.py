@@ -5,17 +5,12 @@ import shutil
 import os
 import logging
 
+from abc import abstractmethod, ABCMeta
+
 from dateutil.parser import parse
 from aiida.utils import timezone as dtimezone
 from pytz import timezone as ptimezone
 
-from aiida.orm.node import Node
-from aiida.orm.workflow import Workflow
-
-from aiida.backends.djsite.db.models import DbNode
-from aiida.backends.djsite.db.models import DbWorkflow
-
-from aiida.common.folders import RepositoryFolder
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -23,7 +18,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class Backup(object):
+class AbstractBackup(object):
     """
     This class handles the backup of the AiiDA repository that is referenced
     by the current AiiDA database. The backup will start from the
@@ -32,6 +27,8 @@ class Backup(object):
     (in periods of *periodicity* days) until the ending date of the backup
     specified by *end_date_of_backup* or *days_to_backup*.
     """
+
+    __metaclass__ = ABCMeta
 
     # Keys in the dictionary loaded by the JSON file
     _oldest_object_bk_key = "oldest_object_backedup"
@@ -113,8 +110,16 @@ class Backup(object):
         # If the oldest backup date is not set, then find the oldest
         # creation timestamp and set it as the oldest backup date.
         if backup_variables.get(self._oldest_object_bk_key) is None:
-            query_node_res = DbNode.objects.all().order_by('ctime')[:1]
-            query_workflow_res = DbWorkflow.objects.all().order_by('ctime')[:1]
+
+            # qb = QueryBuilder()
+            # qb.append(
+            #     Node,
+            # )
+            # qb.order_by({Node: {'ctime': 'asc'}})
+            # query_node_res = qb.first()
+
+            query_node_res = self._query_first_node()
+            query_workflow_res = self._query_first_workflow()
 
             if (not query_node_res) and (not query_workflow_res):
                 self._logger.error("The oldest modification date "
@@ -291,12 +296,7 @@ class Backup(object):
             return -1, None
 
         # Construct the queries & query sets
-        query_sets = [DbNode.objects.filter(
-            mtime__gte=start_of_backup,
-            mtime__lte=backup_end_for_this_round),
-            DbWorkflow.objects.filter(
-                mtime__gte=start_of_backup,
-                mtime__lte=backup_end_for_this_round)]
+        query_sets = self._get_query_sets(start_of_backup, backup_end_for_this_round)
 
         # Set the new start of the backup
         self._oldest_object_bk = backup_end_for_this_round
@@ -307,16 +307,41 @@ class Backup(object):
 
         return 0, query_sets
 
+    def _get_repository_path(self):
+        from aiida.backends import settings
+        from aiida.common.setup import (get_config, get_profile_config,
+                                        parse_repository_uri)
+        from aiida.common.exceptions import ConfigurationError
+
+        try:
+            confs = get_config()
+        except ConfigurationError:
+            raise ConfigurationError(
+                "Please run the AiiDA Installation, no config found")
+
+        if settings.AIIDADB_PROFILE is None:
+            raise ConfigurationError(
+                "settings.AIIDADB_PROFILE not defined, did you load django"
+                "through the AiiDA load_dbenv()?")
+
+        profile_conf = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)
+
+        REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
+        REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
+
+        return REPOSITORY_PATH
+
     def _backup_needed_files(self, query_sets):
-        from aiida.backends.djsite.settings.settings import REPOSITORY_PATH
+        REPOSITORY_PATH = self._get_repository_path()
         repository_path = os.path.normpath(REPOSITORY_PATH)
 
         parent_dir_set = set()
         copy_counter = 0
 
         dir_no_to_copy = 0
+
         for query_set in query_sets:
-            dir_no_to_copy += query_set.count()
+            dir_no_to_copy += self._get_query_set_length(query_set)
 
         self._logger.info("Start copying {} directories".format(dir_no_to_copy))
 
@@ -324,23 +349,10 @@ class Backup(object):
         percent_progress = 0
 
         for query_set in query_sets:
-            for item in query_set.iterator():
-                if type(item) == DbWorkflow:
-                    source_dir = os.path.normpath(RepositoryFolder(
-                        section=Workflow._section_name,
-                        uuid=item.uuid).abspath)
-                elif type(item) == DbNode:
-                    source_dir = os.path.normpath(RepositoryFolder(
-                        section=Node._section_name,
-                        uuid=item.uuid).abspath)
-                else:
-                    # Raise exception
-                    self._logger.error(
-                        "Unexpected item type to backup: {}"
-                            .format(type(item)))
-                    raise BackupError(
-                        "Unexpected item type to backup: {}"
-                            .format(type(item)))
+            iterator = self._get_query_set_iterator(query_set)
+
+            for item in iterator:
+                source_dir = self._get_source_directory(item)
 
                 # Get the relative directory without the / which
                 # separates the repository_path from the relative_dir.
@@ -364,7 +376,7 @@ class Backup(object):
                     # Raise envEr
 
                 # Extract the needed parent directories
-                Backup._extract_parent_dirs(relative_dir, parent_dir_set)
+                AbstractBackup._extract_parent_dirs(relative_dir, parent_dir_set)
                 copy_counter += 1
 
                 if (self._logger.getEffectiveLevel() <= logging.INFO and
@@ -441,6 +453,53 @@ class Backup(object):
                 self._logger.info("Threshold is 0. "
                                   "Backed up one round and exiting.")
                 break
+
+    @abstractmethod
+    def _query_first_workflow(self):
+        """
+        Query first workflow
+        """
+        pass
+
+    @abstractmethod
+    def _query_first_node(self):
+        """
+        Query first node
+        """
+        pass
+
+    @abstractmethod
+    def _get_query_sets(self, start_of_backup, backup_end_for_this_round):
+        """
+        Get query set
+        """
+        pass
+
+
+    @abstractmethod
+    def _get_query_set_length(self, query_set):
+        """
+        Get query set length
+        """
+        pass
+
+
+    @abstractmethod
+    def _get_query_set_iterator(self, query_set):
+        """
+        Get query set iterator
+        """
+        pass
+
+    @abstractmethod
+    def _get_source_directory(self, item):
+        """
+        Get source directory of item
+        :param self:
+        :return:
+        """
+        pass
+
 
 
 class BackupError(Exception):

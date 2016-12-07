@@ -5,10 +5,20 @@ import shutil
 import tempfile
 import os
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.common import utils
 from aiida.common.additions.backup_script import backup_setup
-from aiida.common.additions.backup_script.backup import Backup
+from aiida.backends.settings import BACKEND
+from aiida.backends.utils import is_dbenv_loaded, load_dbenv
+
+if not is_dbenv_loaded():
+    load_dbenv()
+
+if BACKEND == "django":
+    from aiida.common.additions.backup_script.backup_django import Backup
+elif BACKEND == "slqalchemy":
+    from aiida.common.additions.backup_script.backup_sqlalchemy import Backup
+else:
+    raise ValueError("Unknown backend")
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -16,7 +26,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestBackupSetupScriptUnit(AiidaTestCase):
+class TestBackupSetupScriptUnit(object):
 
     def tearDown(self):
         utils.raw_input = None
@@ -57,7 +67,7 @@ class TestBackupSetupScriptUnit(AiidaTestCase):
         self.assertEqual(bk_vars[Backup._backup_length_threshold_key], 4)
 
 
-class TestBackupSetupScriptIntegration(AiidaTestCase):
+class TestBackupSetupScriptIntegration(object):
 
     def test_full_backup_setup_script(self):
         """

@@ -12,11 +12,20 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common import utils
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
 
-# Needed initialization for Django
 
 if not is_dbenv_loaded():
     load_dbenv()
-from backup import Backup
+
+from aiida.backends.settings import BACKEND
+
+#
+if BACKEND == "django":
+    from aiida.common.additions.backup_script.backup_django import Backup
+elif BACKEND == "sqlalchemy":
+    from aiida.common.additions.backup_script.backup_sqlalchemy import Backup
+else:
+    raise ValueError("Unknown backend")
+
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -229,7 +238,7 @@ class BackupSetup(object):
 """#!/usr/bin/env runaiida
 import logging
 
-from aiida.common.additions.backup_script.backup import Backup
+from aiida.common.additions.backup_script.backup_{} import Backup
 
 # Create the backup instance
 backup_inst = Backup(backup_info_filepath="{}", additional_back_time_mins = 2)
@@ -239,7 +248,7 @@ backup_inst._logger.setLevel(logging.INFO)
 
 # Start the backup
 backup_inst.run()
-""".format(final_conf_filepath)
+""".format(BACKEND, final_conf_filepath)
 
         # Script full path
         script_path = os.path.join(conf_backup_folder_abs,

@@ -2,11 +2,7 @@
 The ``verdi`` commands
 ######################
 
-For some the most common operations on the AiiDA software, you can work directly
-on the command line using the set of ``verdi`` commands.
-You already used the ``verdi install`` when installing the software.
-There are quite some more functionalities attached to this command, here's a
-list:
+For some of the most common operations in AiiDA, you can work directly from the command line using the a set of ``verdi`` commands. You already used ``verdi install`` when installing the software. There are quite some more functionalities attached to this command; here's a list:
 
 * :ref:`calculation<calculation>`:				query and interact with calculations
 * :ref:`code<code>`:                			setup and manage codes to be used
@@ -41,7 +37,7 @@ accessed simultaneously by AiiDA. To install a new profile, use the
 
 .. note:: This profile selection has no effect on the ``verdi daemon`` commands.
 
-Following below, a list with the subcommands available.
+Below is a list with all the available subcommands.
 
 .. _calculation:
 
@@ -116,20 +112,15 @@ autocompletion of the verdi commands.
 ++++++++++++++++++
 
   *  **setup**: creates a new computer object
-  *  **configure**: set up some extra info that can be used in the connection
-     with that computer.
-  *  **enable**: to enable a computer. If the computer is disabled, the daemon 
-     will not try to connect to the computer, so it will not retrieve or launch 
-     calculations. Useful if a computer is under mantainance. 
-  *  **rename**: changes the name of a computer.
-  *  **disable**: disable a computer (see enable for a larger description)
+  *  **configure**: set up some extra info that can be used in the connection with that computer.
+  *  **test**: tests if the current user (or a given user) can connect to the computer and if basic operations perform as expected (file copy, getting the list of jobs in the scheduler queue, ...)
   *  **show**: shows the details of an installed computer
   *  **list**: list all installed computers
-  *  **delete**: deletes a computer node. Works only if the computer node is 
-     a disconnected node in the database (has not been used yet)
-  *  **test**: tests if the current user (or a given user) can connect to the
-     computer and if basic operations perform as expected (file copy, getting
-     the list of jobs in the scheduler queue, ...)
+  *  **enable**: to enable a computer. If the computer is disabled, the daemon will not try to connect to the computer, so it will not retrieve or launch calculations. Useful if a computer is under mantainance. 
+  *  **disable**: disable a computer (see enable for a larger description)
+  *  **rename**: changes the name of a computer.
+  * **update**: change configuration of a computer. Works only if the computer node is a disconnected node in the database (has not been used yet).
+  *  **delete**: deletes a computer node. Works only if the computer node is a disconnected node in the database (has not been used yet)
 
 
 .. _daemon:

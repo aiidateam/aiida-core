@@ -220,14 +220,9 @@ Manages database data objects.
 ``verdi devel``
 +++++++++++++++
 
-Here there are some functions that are in the development stage, and that might 
-eventually find their way outside of this placeholder.
-As such, they are buggy, possibly difficult to use, not necessarily documented,
-and they might be subject to non back-compatible changes.
+Here there are some functions that are in the development stage, and that might eventually find their way outside of this placeholder. As such, they are buggy, possibly difficult to use, not necessarily documented, and they might be subject to non back-compatible changes.
 
-  * **delproperty**, **describeproperties**, **getproperty**, **listproperties**, 
-    **setproperty**: handle the properties, see :doc:`here<properties>` for more information.
-
+  * **delproperty**, **describeproperties**, **getproperty**, **listproperties**,  **setproperty**: handle the properties, see :doc:`here<properties>` for more information.
 
 .. _export:
 
@@ -243,7 +238,7 @@ See also ``verdi import`` to import this data on another database.
 ``verdi graph``
 +++++++++++++++
 
-  * **generate**: generates a graph from a given root node. TODO: describe format
+  * **generate**: generates a graph from a given root node, in ``.dot`` format. This can be rendered for example with the graphviz ``dot`` utility.
 
 .. _group:
 

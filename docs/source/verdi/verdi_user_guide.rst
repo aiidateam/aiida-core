@@ -58,6 +58,8 @@ Below is a list with all the available subcommands.
   * **gotocomputer**: open a shell to the calc folder on the cluster
   * **label**: view / set the label of a calculation
   * **description**: view / set the description of a calculation
+  * **res**: shows the calculation results (from calc.res).
+  * **cleanworkdir**: cleans the work directory (remote folder) of AiiDA calculations 
   
 .. note:: When using gotocomputer, be careful not to change any file
   that AiiDA created,
@@ -130,20 +132,17 @@ autocompletion of the verdi commands.
 Manages the daemon, i.e. the process that runs in background and that manages 
 submission/retrieval of calculations.
 
-  *  **status**: see the status of the daemon. Typically, it will either show
-     ``Daemon not running`` or you will see two
-     processes with state ``RUNNING``.
+  *  **status**: see the status of the daemon. Typically, it will either show ``Daemon not running`` or you will see two processes with state ``RUNNING``.
+     
+  *  **start**: starts the daemon.
     
   *  **stop**: stops the daemon
   
-  *  **configureuser**: sets the user which is running the daemon. See the 
-     installation guide for more details.
-     
-  *  **start**: starts the daemon.
+  *  **restart**: restarts the daemon.
+  
+  *  **configureuser**: sets the user which is running the daemon. See the installation guide for more details.
   
   *  **logshow**: show the last lines of the daemon log (use for debugging)
-  
-  *  **restart**: restarts the daemon.
   
   
 .. _data:

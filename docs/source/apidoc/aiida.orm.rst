@@ -9,7 +9,6 @@ Subpackages
     aiida.orm.calculation
     aiida.orm.data
     aiida.orm.implementation
-    aiida.orm.workflows2
 
 Submodules
 ----------

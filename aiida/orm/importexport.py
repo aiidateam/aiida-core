@@ -265,6 +265,23 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
                                       "file".format(dest_path))
 
 
+def import_data(in_path,ignore_unknown_nodes=False,
+                silent=False):
+
+    from aiida.backends.settings import BACKEND
+    from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+
+    if BACKEND == BACKEND_SQLA:
+        import_data_sqla(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
+                         silent=silent)
+    elif BACKEND == BACKEND_DJANGO:
+        import_data_dj(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
+                       silent=silent)
+    else:
+        raise Exception("Unknown settings.BACKEND: {}".format(
+            BACKEND))
+
+
 def import_data_dj(in_path,ignore_unknown_nodes=False,
                 silent=False):
     """
@@ -286,6 +303,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
 
     from aiida.orm import Node, Group
     from aiida.common.exceptions import UniquenessError
+    from sqlalchemy.exc import IntegrityError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
@@ -723,8 +741,6 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
 
 
 def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
-# def import_data(in_path, ignore_unknown_nodes=False,
-#                 silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls export_tree; otherwise, tries to
@@ -744,6 +760,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
     from aiida.orm import Node, Group
     from aiida.common.exceptions import UniquenessError
+    from sqlalchemy.exc import IntegrityError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
@@ -1220,12 +1237,15 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         group_name = basename
                     else:
                         group_name = "{}_{}".format(basename, counter)
-                    try:
-                        group = Group(name=group_name,
-                                      type_string=IMPORTGROUP_TYPE)
+
+                    group = Group(name=group_name,
+                                  type_string=IMPORTGROUP_TYPE)
+                    from aiida.backends.sqlalchemy.models.group import DbGroup
+                    if aiida.backends.sqlalchemy.session.query(DbGroup).filter(
+                        DbGroup.name == group._dbgroup.name).count() == 0:
                         aiida.backends.sqlalchemy.session.add(group._dbgroup)
                         created = True
-                    except UniquenessError:
+                    else:
                         counter += 1
 
                 # Add all the nodes to the new group
@@ -1920,7 +1940,7 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str):
     print "mydict", mydict
 
     partial_query.append(current_entity_mod, tag=str(current_entity_str),
-                         project=project_cols, **mydict)
+                         project=project_cols, outerjoin=True, **mydict)
 
     # prepare the recursion for the referenced entities
     foreign_fields = {k: v for k, v in
@@ -2048,8 +2068,9 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     entries_to_add = dict()
     for k, v in entries_ids_to_add.iteritems():
         qb = QueryBuilder()
-        qb.isouter = True
-        qb.append(Node, filters={"id": {"in": v}}, project=project_cols, tag=k)
+        # qb.isouter = True
+        qb.append(Node, filters={"id": {"in": v}}, project=project_cols,
+                  tag=k, outerjoin=True)
         entries_to_add[k] = qb
 
     print "entries_to_add ===>", entries_to_add
@@ -2072,13 +2093,13 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
 
 
-    export_data = dict()
     ############################################################
     ##### Start automatic recursive export data generation #####
     ############################################################
     if not silent:
         print "STORING DATABASE ENTRIES..."
-    export_data = {}
+
+    export_data = dict()
     for top_entity_str, partial_query in entries_to_add.iteritems():
 
         foreign_fields = {k: v for k, v in
@@ -2307,6 +2328,30 @@ def check_licences(node_licenses, allowed_licenses, forbidden_licenses):
 
 
 def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
+                allowed_licenses=None, forbidden_licenses=None,
+                silent=False):
+
+    from aiida.backends.settings import BACKEND
+    from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+
+    if BACKEND == BACKEND_SQLA:
+        export_tree_sqla(what, folder, also_parents = also_parents,
+                         also_calc_outputs=also_calc_outputs,
+                         allowed_licenses=allowed_licenses,
+                         forbidden_licenses=forbidden_licenses,
+                         silent=silent)
+    elif BACKEND == BACKEND_DJANGO:
+        export_tree_dj(what, folder, also_parents = also_parents,
+                       also_calc_outputs=also_calc_outputs,
+                       allowed_licenses=allowed_licenses,
+                       forbidden_licenses=forbidden_licenses,
+                       silent=silent)
+    else:
+        raise Exception("Unknown settings.BACKEND: {}".format(
+            BACKEND))
+
+
+def export_tree_dj(what, folder, also_parents = True, also_calc_outputs=True,
                 allowed_licenses=None, forbidden_licenses=None,
                 silent=False):
     """
@@ -2792,15 +2837,7 @@ def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
 
     folder = SandboxFolder()
     t1 = time.time()
-    from aiida.backends.settings import BACKEND
-    from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-    if BACKEND == BACKEND_SQLA:
-        export_tree_sqla(what, folder=folder, silent=silent, **kwargs)
-    elif BACKEND == BACKEND_DJANGO:
-        export_tree(what, folder=folder, silent=silent, **kwargs)
-    else:
-        raise Exception("Unknown settings.BACKEND: {}".format(
-            BACKEND))
+    export_tree(what, folder=folder, silent=silent, **kwargs)
 
     t2 = time.time()
 

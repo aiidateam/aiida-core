@@ -63,6 +63,15 @@ Modules provided with aiida
 
    module_guide/index
 
+
+API reference
++++++++++++++
+
+.. toctree::
+    :maxdepth: 3
+
+    apidoc/aiida
+
 Indices and tables
 ==================
 

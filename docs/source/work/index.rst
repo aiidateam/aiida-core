@@ -132,7 +132,7 @@ This way of writing the workflow is fairly straightforward and easy to read, but
 To overcome these problems and add additional functionality we introduced the concept of Workchains.
 
 Workchains
-==========
+++++++++++
 
 A workchain represents a series of instructions used to carry out a process with checkpoints being taken between each
 instruction such that the process can be paused/stopped/resumed, even if the computer crashes.  The most obvious

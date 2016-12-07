@@ -19,8 +19,9 @@ from aiida.work.util import ProcessStack
 from aiida.work.workfunction import workfunction
 from examples.work.common import run_scf
 
+
 @workfunction
-def create_diamond_fcc(element,alat):
+def create_diamond_fcc(element, alat):
     """
     Workfunction to create a diamond crystal structure with a given element.
 
@@ -29,8 +30,8 @@ def create_diamond_fcc(element,alat):
     """
     from numpy import array
     the_cell = array([[0., 0.5, 0.5],
-                [0.5, 0., 0.5],
-                [0.5, 0.5, 0.]]) * alat
+                      [0.5, 0., 0.5],
+                      [0.5, 0.5, 0.]]) * alat
     StructureData = DataFactory("structure")
     structure = StructureData(cell=the_cell)
     structure.append_atom(position=(0., 0., 0.), symbols=str(element))

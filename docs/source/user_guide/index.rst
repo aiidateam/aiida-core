@@ -26,11 +26,7 @@ User's guide
    ../database/dbusage
    ../querying/index
    ../work/index
+   ../workflow/index
    ../dbimporters/index
    ../dbexporters/index
    ../cmdline/scripting_and_shell.rst
-
-
-   ..
-      Removed this for now.
-      ../workflow/index

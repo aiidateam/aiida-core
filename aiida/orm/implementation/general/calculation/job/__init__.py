@@ -976,7 +976,8 @@ class AbstractJobCalculation(object):
             try:
                 for i in range(100):
                     res = results_generator.next()
-                    row = cls._get_calculation_info_row(res, now if relative_ctime else None)
+                    row = cls._get_calculation_info_row(
+                        res, projections, now if relative_ctime else None)
 
                     # Build the row of information
                     calc_list_data.append(row)
@@ -1037,8 +1038,12 @@ class AbstractJobCalculation(object):
         Get a row of information about a calculation.
 
         :param res: Results from the calculations query.
+        :type res: dict
         :param times_since: Times are relative to this timepoint, if None then
-        absolute times will be used.
+            absolute times will be used.
+        :param projections: The projections used in the calculation query
+        :type projections: list
+        :type times_since: :class:`datetime.datetime`
         :return: A list of string with information about the calculation.
         """
         d = copy.deepcopy(res)
@@ -1061,7 +1066,7 @@ class AbstractJobCalculation(object):
                         timezone.localtime(time).isoformat().split('T')[0],
                         timezone.localtime(time).isoformat().split('T')[
                             1].split('.')[0].rsplit(":", 1)[0]])
-            except KeyError:
+            except (KeyError, ValueError):
                 pass
         try:
             if d['calculation']['state'] == calc_states.IMPORTED:

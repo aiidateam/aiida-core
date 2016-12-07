@@ -67,7 +67,7 @@ Now, let's try making a slightly more complex workflow by composing workfunction
 >>> r = prod_sum(Int(2), Int(3), Int(4))
 >>>
 >>> from aiida.utils.ascii_vis import draw_parents
->>> draw_parents(r, dist=4, node_label='value') # doctest: +SKIP
+>>> draw_parents(r, dist=4) # doctest: +SKIP
                        /-4 [3582]
 -- /20 [3588]prod [3587]
                       |                  /-2 [3581]
@@ -99,8 +99,7 @@ Let's look at a slightly more complex example, that of performing an Equation of
         results = {}
         for s in (0.98, 0.99, 1.0, 1.02, 1.04):
             rescaled = rescale(structure, Float(s))
-            inputs = generate_scf_input_params(
-                        rescaled, codename, pseudo_family)
+            inputs = generate_scf_input_params(rescaled, codename, pseudo_family)
             outputs = run(Proc, **inputs)
             res = outputs['output_parameters'].dict
             results[str(s)] = res
@@ -177,7 +176,7 @@ between steps if the workchain is resumed.
 
 To run the workflow locally we call
 
->>> res = ProdSum.run(a=Int(2), b=Int(3), c=Int(4)})
+>>> res = ProdSum.run(a=Int(2), b=Int(3), c=Int(4))
 >>> print res
 {'result': 20}
 >>> draw_parents(res['result']) # doctest: +SKIP
@@ -194,7 +193,7 @@ connection explicit, as well as specifying what type they should be::
     class ProdSumEx(ProdSum):
         @classmethod
         def define(cls, spec):
-            super(ProdSumEx, cls)._define(spec)
+            super(ProdSumEx, cls).define(spec)
             spec.input('a', valid_type=Int, required=True)
             spec.input('b', valid_type=Int, required=True)
             spec.input('c', valid_type=Int, required=True)
@@ -202,9 +201,9 @@ connection explicit, as well as specifying what type they should be::
 
 Now the input types and their names are enforced.
 
->>> ProdSumEx.run(inputs={'a': Int(2), 'b': Int(3)})
+>>> ProdSumEx.run(a=Int(2), b=Int(3))
 TypeError: Cannot run process 'ProdSumEx' because required value was not provided for 'c'
->>> ProdSumEx.run(inputs={'a': Float(2), 'b': Int(3), 'c': Int(4)})
+>>> ProdSumEx.run(a=Float(2), b=Int(3), c=Int(4))
 TypeError: Cannot run process 'ProdSumEx' because value 'a' is not of the right type. Got '<class 'aiida.orm.data.base.Float'>', expected '<class 'aiida.orm.data.base.Int'>'
 
 This an example of the additional power of workchains.
@@ -221,7 +220,7 @@ usual, with the outline:
     class EquationOfState(WorkChain):
         @classmethod
         def define(cls, spec):
-            super(EquationOfState, cls)._define(spec)
+            super(EquationOfState, cls).define(spec)
             spec.input("structure", valid_type=StructureData)
             spec.input("code", valid_type=Str)
             spec.input("pseudo_family", valid_type=Str)
@@ -243,7 +242,7 @@ after each iteration.  Now all that remains is to define the contents of the ste
         self.ctx.i = 0
 
     def not_finished(self):
-        return self.ctx.i < len(ctx.scales)
+        return self.ctx.i < len(self.ctx.scales)
 
     def run_pw(self):
         scale = self.ctx.scales[self.ctx.i]
@@ -252,8 +251,8 @@ after each iteration.  Now all that remains is to define the contents of the ste
         inputs = generate_scf_input_params(
             scaled, self.inputs.code, self.inputs.pseudo_family)
         outputs = run(Proc, **inputs)
-        res = outputs['output_parameters'].dict
-        out(str(s), res)
+        res = outputs['output_parameters']
+        self.out(str(scale), res)
 
         self.ctx.i += 1
 
@@ -267,34 +266,31 @@ waiting for something to complete.  In the meantime the workchain can be suspend
     :linenos:
     :emphasize-lines: 22, 25
 
-
-    class WaitingEquationOfState(WorkChain):
+    class WaitingEquationOfState(EquationOfState):
         @classmethod
         def define(cls, spec):
-            super(EquationOfState, cls)._define(spec)
-            spec.input("structure", valid_type=StructureData)
-            spec.input("code", valid_type=Str)
-            spec.input("pseudo_family", valid_type=Str)
+            super(EquationOfState, cls).define(spec)
             spec.outline(
                 cls.launch_calculations,
                 cls.process_results
             )
 
-    def launch_calculations(self):
-        l = []
-        for s in (0.96, 0.98, 1., 1.02, 1.04):
-            scaled = rescale(self.inputs.structure, Float(s))
-            inputs = generate_scf_input_params(
-                scaled, self.inputs.code, self.inputs.pseudo_family)
-            pid = submit(Proc, **inputs)
-            l.append(pid)
+        def launch_calculations(self):
+            l = []
+            for s in (0.96, 0.98, 1., 1.02, 1.04):
+                scaled = rescale(self.inputs.structure, Float(s))
+                inputs = generate_scf_input_params(
+                    scaled, self.inputs.code, self.inputs.pseudo_family)
+                pid = submit(Proc, **inputs)
+                l.append(pid)
 
-        return ToContext(s_0.96=l[0], s_0.98=l[1], s_1=l[2], s_1.02=l[3], s_1.04=l[4])
+            return ToContext(s_0_96=l[0], s_0_98=l[1], s_1=l[2], s_1_02=l[3], s_1_04=l[4])
 
-    def process_results(self):
-        for key, outputs in self.ctx.iteritems():
-            if key.startswith("s_"):
-                self.out(Float(key[2:]), outputs['output_parameters'].dict)
+        def process_results(self):
+            for key, outputs in self.ctx.iteritems():
+                if key.startswith("s_"):
+                    scale = key[2:].replace("_", ".")
+                    self.out(Float(scale), outputs['output_parameters'].dict)
 
 
 Here, on line 22 we use a so called *interstep* command.  These are objects you return from a step that can perform

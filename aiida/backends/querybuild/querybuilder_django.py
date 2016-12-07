@@ -307,3 +307,32 @@ class QueryBuilder(AbstractQueryBuilder):
             entity = case([(exists_stmt, select_stmt), ], else_=None)
 
         return entity
+
+
+    def _yield_per(self, batch_size):
+        """
+        :param count: Number of rows to yield per step
+
+        Yields *count* rows at a time
+
+        :returns: a generator
+        """
+        from django.db import transaction
+        with transaction.atomic():
+            return self.get_query().yield_per(batch_size)
+
+
+    def _all(self):
+        from django.db import transaction
+        with transaction.atomic():
+            return self.get_query().all()
+
+    def _first(self):
+        """
+        Executes query in the backend asking for one instance.
+
+        :returns: One row of aiida results
+        """
+        from django.db import transaction
+        with transaction.atomic():
+            return self.get_query().first()

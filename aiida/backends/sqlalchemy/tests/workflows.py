@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from aiida.backends.tests.workflows import TestWorkflowBasic
-from aiida.backends.djsite.db.testbase import AiidaTestCase
-from aiida.backends.djsite.cmdline import get_workflow_list
+from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
+from aiida.backends.sqlalchemy.cmdline import get_workflow_list
 from aiida.workflows.test import WorkflowTestEmpty
 from aiida.common.datastructures import wf_states
 
@@ -12,7 +12,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestWorkflowBasicDjango(AiidaTestCase, TestWorkflowBasic):
+class TestWorkflowBasicSqla(SqlAlchemyTests, TestWorkflowBasic):
     """
     These tests check the basic features of workflows.
     Now only the load_workflow function is tested.
@@ -22,7 +22,8 @@ class TestWorkflowBasicDjango(AiidaTestCase, TestWorkflowBasic):
         """
         Test for load_node() function.
         """
-        from aiida.orm import load_workflow
+        from aiida.orm.utils import load_workflow
+        import aiida.backends.sqlalchemy
         from aiida.common.exceptions import NotExistent
 
         a = WorkflowTestEmpty()
@@ -33,16 +34,40 @@ class TestWorkflowBasicDjango(AiidaTestCase, TestWorkflowBasic):
         self.assertEquals(a.pk, load_workflow(pk=a.pk).pk)
         self.assertEquals(a.pk, load_workflow(uuid=a.uuid).pk)
 
-        with self.assertRaises(ValueError):
-            load_workflow(wf_id=a.pk, pk=a.pk)
-        with self.assertRaises(ValueError):
-            load_workflow(pk=a.pk, uuid=a.uuid)
-        with self.assertRaises(ValueError):
-            load_workflow(pk=a.uuid)
-        with self.assertRaises(ValueError):
-            load_workflow(uuid=a.pk)
-        with self.assertRaises(ValueError):
-            load_workflow()
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(ValueError):
+                load_workflow(wf_id=a.pk, pk=a.pk)
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
+
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(ValueError):
+                load_workflow(pk=a.pk, uuid=a.uuid)
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
+
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(ValueError):
+                load_workflow(pk=a.uuid)
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
+
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(ValueError):
+                load_workflow(uuid=a.pk)
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
+
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(ValueError):
+                load_workflow()
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
 
     def test_listing_workflows(self):
         """
@@ -60,14 +85,14 @@ class TestWorkflowBasicDjango(AiidaTestCase, TestWorkflowBasic):
         # Getting all the available workflows of the current user
         # and checking if we got the right one.
         wfqs = get_workflow_list(all_states=True, user=self.user)
-        self.assertTrue(wfqs.count() == 1, "We expect one workflow")
+        self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
                                                "one")
 
         # We ask all the running workflows. We should get one workflow.
         wfqs = get_workflow_list(all_states=True, user=self.user)
-        self.assertTrue(wfqs.count() == 1, "We expect one workflow")
+        self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
                                                "one")
@@ -78,21 +103,21 @@ class TestWorkflowBasicDjango(AiidaTestCase, TestWorkflowBasic):
         # Getting all the available workflows of the current user
         # and checking if we got the right one.
         wfqs = get_workflow_list(all_states=True, user=self.user)
-        self.assertTrue(wfqs.count() == 1, "We expect one workflow")
+        self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
                                                "one")
 
         # We ask all the running workflows. We should get zero results.
         wfqs = get_workflow_list(all_states=False, user=self.user)
-        self.assertTrue(wfqs.count() == 0, "We expect zero workflows")
+        self.assertTrue(len(wfqs) == 0, "We expect zero workflows")
 
         # We change the state of the workflow to INITIALIZED.
         a.set_state(wf_states.INITIALIZED)
 
                 # We ask all the running workflows. We should get one workflow.
         wfqs = get_workflow_list(all_states=True, user=self.user)
-        self.assertTrue(wfqs.count() == 1, "We expect one workflow")
+        self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
                                                "one")
@@ -102,4 +127,4 @@ class TestWorkflowBasicDjango(AiidaTestCase, TestWorkflowBasic):
 
         # We ask all the running workflows. We should get zero results.
         wfqs = get_workflow_list(all_states=False, user=self.user)
-        self.assertTrue(wfqs.count() == 0, "We expect zero workflows")
+        self.assertTrue(len(wfqs) == 0, "We expect zero workflows")

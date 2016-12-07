@@ -101,7 +101,7 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     """
     Return an AiiDA workflow given PK or UUID.
 
-    :param wf_id: PK (integer) or UUID (string) or a workflow
+    :param wf_id: PK (integer) or UUID (string) or UUID instance or a workflow
     :param pk: PK of a workflow
     :param uuid: UUID of a workflow
     :return: an AiiDA workflow
@@ -112,6 +112,7 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     # must have been already loaded. If you put it at the module level,
     # the implementation is frozen to the default one at import time.
     from aiida.orm.implementation import Workflow
+    from uuid import UUID as uuid_type
 
     if int(wf_id is None) + int(pk is None) + int(uuid is None) == 3:
         raise ValueError("one of the parameters 'wf_id', 'pk' and 'uuid' "
@@ -119,15 +120,27 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     if int(wf_id is None) + int(pk is None) + int(uuid is None) < 2:
         raise ValueError("only one of parameters 'wf_id', 'pk' and 'uuid' "
                          "has to be supplied")
+
     if wf_id is not None:
+        if wf_id and isinstance(wf_id, uuid_type):
+            wf_id = str(wf_id)
+
         if isinstance(wf_id, str) or isinstance(wf_id, unicode):
             return Workflow.get_subclass_from_uuid(wf_id)
         elif isinstance(wf_id, int):
             return Workflow.get_subclass_from_pk(wf_id)
         else:
-            raise ValueError("'wf_id' has to be either string, unicode or "
-                             "integer, {} given".format(type(wf_id)))
+            raise ValueError("'wf_id' has to be either string, unicode, "
+                             "integer or UUID instance, {} given".format(type(wf_id)))
     if pk is not None:
-        return Workflow.get_subclass_from_pk(pk)
+        if isinstance(pk, int):
+            return Workflow.get_subclass_from_pk(pk)
+        else:
+            raise ValueError("'pk' has to be an integer")
     else:
-        return Workflow.get_subclass_from_uuid(uuid)
+        if uuid and isinstance(uuid, uuid_type):
+            uuid = str(uuid)
+        if isinstance(uuid, str) or isinstance(uuid, unicode):
+            return Workflow.get_subclass_from_uuid(uuid)
+        else:
+            raise ValueError("'uuid' has to be a string, unicode or a UUID instance")

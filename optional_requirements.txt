@@ -19,7 +19,7 @@ psycopg2==2.6.1
 pysqlite==2.6.3
 
 # Support for NWChem I/O
-pymatgen
+pymatgen==4.5.3
 
 ## pyspglib for symmetry detection in aiida.orm.data.structure
 pyspglib

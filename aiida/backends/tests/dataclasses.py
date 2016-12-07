@@ -3,7 +3,6 @@
 Tests for specific subclasses of Data
 """
 from django.utils import unittest
-from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.orm import load_node
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 
@@ -22,7 +21,7 @@ def simplify(string):
     return "\n".join(s.strip() for s in string.split())
 
 
-class TestCalcStatus(AiidaTestCase):
+class TestCalcStatus(object):
     """
     Test the functionality of calculation states.
     """
@@ -71,7 +70,7 @@ class TestCalcStatus(AiidaTestCase):
             c._set_state(calc_states.WITHSCHEDULER)
 
 
-class TestSinglefileData(AiidaTestCase):
+class TestSinglefileData(object):
     """
     Test the SinglefileData class.
     """
@@ -112,7 +111,7 @@ class TestSinglefileData(AiidaTestCase):
             self.assertEquals(f.read(), file_content)
 
 
-class TestCifData(AiidaTestCase):
+class TestCifData(object):
     """
     Tests for CifData class.
     """
@@ -269,7 +268,7 @@ O 0.5 0.5 0.5
     def test_ase_primitive_and_conventional_cells_ase(self):
         """
         Checking the number of atoms per primitive/conventional cell
-        returned by ASE ase.io.cif.read_cif() method. Test input is
+        returned by ASE ase.io.read() method. Test input is
         adapted from http://www.crystallography.net/cod/9012064.cif@120115
         """
         import tempfile
@@ -310,7 +309,7 @@ O 0.5 0.5 0.5
         self.assertEquals(ase.get_number_of_atoms(), 15)
 
         ase = c._get_aiida_structure(converter='ase',
-                                     primitive_cell=True).get_ase()
+                                     primitive_cell=True, subtrans_included=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 5)
 
     @unittest.skipIf(not has_ase() or not has_pycifrw() or
@@ -321,7 +320,7 @@ O 0.5 0.5 0.5
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """
         Checking the number of atoms per primitive/conventional cell
-        returned by ASE ase.io.cif.read_cif() method. Test input is
+        returned by ASE ase.io.read() method. Test input is
         adapted from http://www.crystallography.net/cod/9012064.cif@120115
         """
         import tempfile
@@ -634,7 +633,7 @@ _publ_section_title                     'Test CIF'
             parse_formula("H0.5.2 O")
 
 
-class TestKindValidSymbols(AiidaTestCase):
+class TestKindValidSymbols(object):
     """
     Tests the symbol validation of the
     aiida.orm.data.structure.Kind class.
@@ -667,7 +666,7 @@ class TestKindValidSymbols(AiidaTestCase):
         _ = Kind(symbols=['H', 'He'], weights=[0.5, 0.5])
 
 
-class TestSiteValidWeights(AiidaTestCase):
+class TestSiteValidWeights(object):
     """
     Tests valid weight lists.
     """
@@ -749,7 +748,7 @@ class TestSiteValidWeights(AiidaTestCase):
         _ = Kind(symbols='Ba', weights=None)
 
 
-class TestKindTestGeneral(AiidaTestCase):
+class TestKindTestGeneral(object):
     """
     Tests the creation of Kind objects and their methods.
     """
@@ -824,7 +823,7 @@ class TestKindTestGeneral(AiidaTestCase):
         self.assertEqual(a.name, 'newstring')
 
 
-class TestKindTestMasses(AiidaTestCase):
+class TestKindTestMasses(object):
     """
     Tests the management of masses during the creation of Kind objects.
     """
@@ -875,7 +874,7 @@ class TestKindTestMasses(AiidaTestCase):
         self.assertAlmostEqual(a.mass, 1000.)
 
 
-class TestStructureDataInit(AiidaTestCase):
+class TestStructureDataInit(object):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
@@ -1006,7 +1005,7 @@ class TestStructureDataInit(AiidaTestCase):
         self.assertEqual(a.pbc, tuple([True, False, True]))
 
 
-class TestStructureData(AiidaTestCase):
+class TestStructureData(object):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
@@ -1480,7 +1479,7 @@ _chemical_formula_sum                   'Ba2 Ti'
 """))
 
 
-class TestStructureDataLock(AiidaTestCase):
+class TestStructureDataLock(object):
     """
     Tests that the structure is locked after storage
     """
@@ -1534,7 +1533,7 @@ class TestStructureDataLock(AiidaTestCase):
         b.pbc = [True, True, True]
 
 
-class TestStructureDataReload(AiidaTestCase):
+class TestStructureDataReload(object):
     """
     Tests the creation of StructureData, converting it to a raw format and
     converting it back.
@@ -1636,7 +1635,7 @@ class TestStructureDataReload(AiidaTestCase):
             self.assertAlmostEqual(c.sites[1].position[i], 1.)
 
 
-class TestStructureDataFromAse(AiidaTestCase):
+class TestStructureDataFromAse(object):
     """
     Tests the creation of Sites from/to a ASE object.
     """
@@ -1787,7 +1786,7 @@ class TestStructureDataFromAse(AiidaTestCase):
         self.assertEquals(kindnames, set(['Fe', 'Fe1', 'Fe4']))
 
 
-class TestStructureDataFromPymatgen(AiidaTestCase):
+class TestStructureDataFromPymatgen(object):
     """
     Tests the creation of StructureData from a pymatgen Structure and
     Molecule objects.
@@ -1804,7 +1803,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         cif_mark_disorder (from cod-tools) and abbreviated.
         """
         from aiida.orm.data.structure import StructureData
-        from pymatgen.io.smartio import read_structure
+        from pymatgen.io.cif import CifParser
 
         import tempfile
 
@@ -1835,7 +1834,8 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
                 Se2 0.00000 0.00000 0.21180 0.33333 0.02343 B 2
                 """)
             f.flush()
-            pymatgen_struct = read_structure(f.name)
+            pymatgen_parser = CifParser(f.name)
+            pymatgen_struct = pymatgen_parser.get_structures()[0]
 
         structs_to_test = [StructureData(pymatgen=pymatgen_struct),
                            StructureData(pymatgen_structure=pymatgen_struct)]
@@ -1872,7 +1872,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Input source: http://pymatgen.org/_static/Molecule.html
         """
         from aiida.orm.data.structure import StructureData
-        from pymatgen.io.smartio import read_mol
+        from pymatgen.io.xyz import XYZ
 
         import tempfile
 
@@ -1885,7 +1885,8 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
                 H -0.513360 -0.889165 -0.363000
                 H -0.513360 0.889165 -0.363000""")
             f.flush()
-            pymatgen_mol = read_mol(f.name)
+            pymatgen_xyz = XYZ.from_file(f.name)
+            pymatgen_mol = pymatgen_xyz.molecule
 
         for struct in [StructureData(pymatgen=pymatgen_mol),
                        StructureData(pymatgen_molecule=pymatgen_mol)]:
@@ -1909,7 +1910,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
                 [5.77, 5.89, 5.73])
 
 
-class TestPymatgenFromStructureData(AiidaTestCase):
+class TestPymatgenFromStructureData(object):
     """
     Tests the creation of pymatgen Structure and Molecule objects from
     StructureData.
@@ -1958,7 +1959,8 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         a_struct = StructureData(ase=aseatoms)
         p_struct = a_struct.get_pymatgen_structure()
 
-        coord_array = [x['abc'] for x in p_struct.to_dict['sites']]
+        p_struct_dict = p_struct.as_dict()
+        coord_array = [x['abc'] for x in p_struct_dict['sites']]
         for i in range(len(coord_array)):
             coord_array[i] = [round(x, 2) for x in coord_array[i]]
 
@@ -1993,14 +1995,15 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         a_struct = StructureData(ase=aseatoms)
         p_mol = a_struct.get_pymatgen_molecule()
 
-        self.assertEquals([x['xyz'] for x in p_mol.to_dict['sites']],
+        p_mol_dict = p_mol.as_dict()
+        self.assertEquals([x['xyz'] for x in p_mol_dict['sites']],
                           [[0.0, 0.0, 0.0],
                            [1.0, 1.0, 1.0],
                            [2.0, 2.0, 2.0],
                            [3.0, 3.0, 3.0]])
 
 
-class TestArrayData(AiidaTestCase):
+class TestArrayData(object):
     """
     Tests the ArrayData objects.
     """
@@ -2126,7 +2129,7 @@ class TestArrayData(AiidaTestCase):
                 self.assertAlmostEquals(abs(third - array).max(), 0.)
 
 
-class TestTrajectoryData(AiidaTestCase):
+class TestTrajectoryData(object):
     """
     Tests the TrajectoryData objects.
     """
@@ -2455,7 +2458,7 @@ class TestTrajectoryData(AiidaTestCase):
             td = TrajectoryData(structurelist=structurelist)
 
 
-class TestKpointsData(AiidaTestCase):
+class TestKpointsData(object):
     """
     Tests the TrajectoryData objects.
     """
@@ -2587,7 +2590,7 @@ class TestKpointsData(AiidaTestCase):
         self.assertTrue(numpy.allclose(klist, input_klist, atol=1e-16))
 
 
-class TestData(AiidaTestCase):
+class TestData(object):
     """
     Tests generic Data class.
     """

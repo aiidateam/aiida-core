@@ -314,8 +314,8 @@ O 0.5 0.5 0.5
 
     @unittest.skipIf(not has_ase() or not has_pycifrw() or
                      not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) <
-                     StrictVersion('3.0.13'), "Unable to import pymatgen"
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'), "Unable to import the correct version of pymatgen v4.5.3"
                                               "Unable to import ase, pycifrw or pymatgen")
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """
@@ -1795,8 +1795,8 @@ class TestStructureDataFromPymatgen(object):
     from aiida.orm.data.structure import has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) <
-                     StrictVersion('3.0.13'), "Unable to import pymatgen")
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'), "Unable to import the correct version of pymatgen v4.5.3")
     def test_1(self):
         """
         Test's imput is derived from COD entry 9011963, processed with
@@ -1865,8 +1865,8 @@ class TestStructureDataFromPymatgen(object):
         self.assertEquals(dict1, dict2)
 
     @unittest.skipIf(not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) <
-                     StrictVersion('3.0.13'), "Unable to import pymatgen")
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'), "Unable to import the correct version of pymatgen v4.5.3")
     def test_2(self):
         """
         Input source: http://pymatgen.org/_static/Molecule.html
@@ -1920,8 +1920,8 @@ class TestPymatgenFromStructureData(object):
         get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) <
-                     StrictVersion('3.0.13'), "Unable to import pymatgen")
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'), "Unable to import the correct version of pymatgen v4.5.3")
     def test_1(self):
         """
         Test the check of periodic boundary conditions.
@@ -1939,9 +1939,9 @@ class TestPymatgenFromStructureData(object):
 
     @unittest.skipIf(not has_ase() or
                      not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) <
-                     StrictVersion('3.0.13'),
-                     "Unable to import ase or pymatgen")
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
+                     "Unable to import ase or import the correct version of pymatgen v4.5.3")
     def test_2(self):
         from aiida.orm.data.structure import StructureData
         import ase
@@ -1972,9 +1972,9 @@ class TestPymatgenFromStructureData(object):
 
     @unittest.skipIf(not has_ase() or
                      not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) <
-                     StrictVersion('3.0.13'),
-                     "Unable to import ase or pymatgen")
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
+                     "Unable to import ase or import the correct version of pymatgen v4.5.3")
     def test_3(self):
         """
         Test the conversion of StructureData to pymatgen's Molecule.

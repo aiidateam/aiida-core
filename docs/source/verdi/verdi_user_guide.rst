@@ -13,6 +13,7 @@ For some of the most common operations in AiiDA, you can work directly from the 
 * :ref:`data<data>`:                			setup and manage data specific types
 * :ref:`devel<devel>`:               			AiiDA commands for developers
 * :ref:`export<export>`:              			export nodes and group of nodes
+* :ref:`graph<graph>`:                    create a graph from a given root node
 * :ref:`group<group>`:               			setup and manage groups
 * :ref:`import<import>`:              			export nodes and group of nodes
 * :ref:`install<install>`:             			install/setup aiida for the current user/create a new profile
@@ -154,58 +155,64 @@ Manages database data objects.
   * **upf**: handles the Pseudopotential Datas
   
     * **listfamilies**: list presently stored families of pseudopotentials
-    
+  
     * **uploadfamily**: install a new family (group) of pseudopotentials
-
-    * **import**: create or return (if already present) a database node,
-      having the contents of a supplied file
-
+  
+    * **import**: create or return (if already present) a database node, having the contents of a supplied file
+  
     * **exportfamily**: export a family of pseudopotential files into a folder
   
   * **structure**: handles the StructureData
   
     * **list**: list currently saved nodes of StructureData kind
-    
-    * **show**: use a third-party visualizer (like vmd or xcrysden) 
-      to graphically show the StructureData
-
+  
+    * **show**: use a third-party visualizer (like vmd or xcrysden) to graphically show the StructureData
+  
     * **export**: export the node as a string of a specified format
-
+  
     * **deposit**: deposit the node to a remote database
-
+  
   * **parameter**: handles the ParameterData objects
-
-    * **show**: output the content of the python dictionary in different
-      formats. 
-
+  
+    * **show**: output the content of the python dictionary in different formats. 
+  
   * **cif**: handles the CifData objects
-
+  
     * **list**: list currently saved nodes of CifData kind
-
-    * **show**: use third-party visualizer (like jmol) to graphically show
-      the CifData
-
-    * **import**: create or return (if already present) a database node,
-      having the contents of a supplied file
-
+  
+    * **show**: use third-party visualizer (like jmol) to graphically show the CifData
+  
+    * **import**: create or return (if already present) a database node, having the contents of a supplied file
+  
     * **export**: export the node as a string of a specified format
-
+  
     * **deposit**: deposit the node to a remote database
-
+  
   * **trajectory**: handles the TrajectoryData objects
-
+  
     * **list**: list currently saved nodes of TrajectoryData kind
-
-    * **show**: use third-party visualizer (like jmol) to graphically show
-      the TrajectoryData
-
+  
+    * **show**: use third-party visualizer (like jmol) to graphically show the TrajectoryData
+  
     * **export**: export the node as a string of a specified format
-
+  
     * **deposit**: deposit the node to a remote database
-
+  
   * **label**: view / set the label of a data
-
+  
   * **description**: view / set the description of a data
+  
+  * **array**: handles :class:`.ArrayData` objects
+  
+    * **show**: visualizes the data object
+  
+  * **bands**:  handles :class:`.BandsData` objects (band structure object)
+  
+    * **export**: export the node as a string of a specified format
+  
+    * **show**:   visualizes the data object
+  
+    * **list**:   list currently saved nodes of :class:`.BandsData` kind
 
 
 .. _devel:
@@ -230,6 +237,13 @@ and they might be subject to non back-compatible changes.
 Export data from the AiiDA database to a file. 
 See also ``verdi import`` to import this data on another database.
 
+
+.. _graph:
+
+``verdi graph``
++++++++++++++++
+
+  * **generate**: generates a graph from a given root node. TODO: describe format
 
 .. _group:
 

@@ -71,10 +71,6 @@ class AbstractNode(object):
                 newcls._query_type_string = get_query_type_string(
                         newcls._plugin_type_string
                     )
-            else:
-                raise InternalError("Class {} is not in a module under "
-                                    "aiida.orm. (module is {})".format(
-                    name, attrs['__module__']))
 
             return newcls
 

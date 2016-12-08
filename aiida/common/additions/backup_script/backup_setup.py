@@ -257,23 +257,6 @@ backup_inst._logger.setLevel(logging.INFO)
 backup_inst.run()
 """.format(AIIDADB_PROFILE, backup_import, final_conf_filepath)
 
-
-        #         script_content = \
-# """#!/usr/bin/env runaiida
-# import logging
-#
-# {}
-#
-# # Create the backup instance
-# backup_inst = Backup(backup_info_filepath="{}", additional_back_time_mins = 2)
-#
-# # Define the backup logging level
-# backup_inst._logger.setLevel(logging.INFO)
-#
-# # Start the backup
-# backup_inst.run()
-# """.format(backup_import, final_conf_filepath)
-
         # Script full path
         script_path = os.path.join(conf_backup_folder_abs,
                                    self._script_filename)

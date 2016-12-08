@@ -13,10 +13,6 @@ from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common import utils
 from aiida.common.additions.backup_script.backup_base import AbstractBackup
-from aiida.common.additions.backup_script.backup_django import (
-    Backup as BackupDJ)
-from aiida.common.additions.backup_script.backup_sqlalchemy import (
-    Backup as BackupSQLA)
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
 
 if not is_dbenv_loaded():
@@ -233,11 +229,11 @@ class BackupSetup(object):
 
         # The contents of the startup script
         if BACKEND == BACKEND_DJANGO:
-            backup_module = BackupDJ.__module__
-            class_name = BackupDJ.__name__
+            backup_import = ("from aiida.common.additions.backup_script."
+                             "backup_django import Backup")
         elif BACKEND == BACKEND_SQLA:
-            backup_module = BackupSQLA.__module__
-            class_name = BackupSQLA.__name__
+            backup_import = ("from aiida.common.additions.backup_script."
+                             "backup_sqlalchemy import Backup")
         else:
             raise ValueError("Unknown backend")
 
@@ -245,7 +241,7 @@ class BackupSetup(object):
 """#!/usr/bin/env runaiida
 import logging
 
-from {} import {}
+{}
 
 # Create the backup instance
 backup_inst = Backup(backup_info_filepath="{}", additional_back_time_mins = 2)
@@ -255,7 +251,7 @@ backup_inst._logger.setLevel(logging.INFO)
 
 # Start the backup
 backup_inst.run()
-""".format(backup_module, class_name, final_conf_filepath)
+""".format(backup_import, final_conf_filepath)
 
         # Script full path
         script_path = os.path.join(conf_backup_folder_abs,
@@ -273,6 +269,8 @@ backup_inst.run()
             self._logger.error("Problem setting the right permissions to the " +
                                "script {}.".format(script_path))
             raise
+
+        sys.stdout.write("Backup setup completed.")
 
 if __name__ == '__main__':
     BackupSetup().run()

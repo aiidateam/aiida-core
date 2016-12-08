@@ -43,7 +43,6 @@ class TestQEPWInputGeneration(AiidaTestCase):
     @classmethod
     def setUpClass(cls):
         super(TestQEPWInputGeneration, cls).setUpClass()
-
         cls.calc_params = {
             'computer': cls.computer,
             'resources': {

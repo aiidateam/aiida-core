@@ -33,6 +33,7 @@ class DjangoTests(object):
         from aiida.orm.computer import Computer
         from aiida.common.utils import get_configured_user_email
 
+        self.clean_db()
         # # Check if the database is initially empty
         # from aiida.backends.djsite.db.models import DbComputer
         # if DbComputer.objects.exists():
@@ -60,21 +61,7 @@ class DjangoTests(object):
                                 workdir='/tmp/aiida')
         self.computer.store()
 
-    # Note this is has to be a normal method, not a class method
-    def tearDownClass_method(self):
-        from aiida.settings import REPOSITORY_PATH
-        from aiida.common.setup import TEST_KEYWORD
-        from aiida.common.exceptions import InvalidOperation
-
-        base_repo_path = os.path.basename(
-            os.path.normpath(REPOSITORY_PATH))
-        if TEST_KEYWORD not in base_repo_path:
-            raise InvalidOperation("Be careful. The repository for the tests "
-                                   "is not a test repository. I will not "
-                                   "empty the database and I will not delete "
-                                   "the repository. Repository path: "
-                                   "{}".format(REPOSITORY_PATH))
-
+    def clean_db(self):
         from aiida.backends.djsite.db.models import DbComputer
 
         # I first delete the workflows
@@ -111,6 +98,23 @@ class DjangoTests(object):
         from aiida.backends.djsite.db.models import DbLog
 
         DbLog.objects.all().delete()
+
+    # Note this is has to be a normal method, not a class method
+    def tearDownClass_method(self):
+        from aiida.settings import REPOSITORY_PATH
+        from aiida.common.setup import TEST_KEYWORD
+        from aiida.common.exceptions import InvalidOperation
+
+        base_repo_path = os.path.basename(
+            os.path.normpath(REPOSITORY_PATH))
+        if TEST_KEYWORD not in base_repo_path:
+            raise InvalidOperation("Be careful. The repository for the tests "
+                                   "is not a test repository. I will not "
+                                   "empty the database and I will not delete "
+                                   "the repository. Repository path: "
+                                   "{}".format(REPOSITORY_PATH))
+
+        self.clean_db()
 
         # I clean the test repository
         shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)

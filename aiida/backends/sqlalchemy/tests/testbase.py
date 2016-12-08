@@ -45,6 +45,7 @@ class SqlAlchemyTests(object):
 
     def setUpClass_method(self):
 
+
         if self.test_session is None:
             config = get_profile_config(AIIDADB_PROFILE)
             engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
@@ -62,8 +63,8 @@ class SqlAlchemyTests(object):
             Base.metadata.drop_all(self.connection)
             Base.metadata.create_all(self.connection)
             install_tc(self.connection)
-        else:
-            self.clean_db()
+
+        self.clean_db()
 
         email = get_configured_user_email()
 

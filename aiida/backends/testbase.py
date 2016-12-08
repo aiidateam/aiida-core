@@ -4,6 +4,7 @@ import unittest
 
 
 from aiida.backends import settings
+from aiida.common.utils import classproperty
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError
 from aiida.backends.tests import get_db_test_list
 from unittest import (
@@ -75,13 +76,13 @@ class AiidaTestCase(unittest.TestCase):
         cls.__backend_instance = cls.get_backend_class()()
         cls.__backend_instance.setUpClass_method(*args, **kwargs)
 
-    @property
-    def computer(self):
-        return self.__backend_instance.computer
+    @classproperty
+    def computer(cls):
+        return cls.__backend_instance.computer
 
-    @property
-    def user_email(self):
-        return self.__backend_instance.user_email
+    @classproperty
+    def user_email(cls):
+        return cls.__backend_instance.user_email
 
     # @classmethod
     # def get_initialization_data(cls, dataname):

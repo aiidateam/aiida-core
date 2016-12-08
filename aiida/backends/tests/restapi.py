@@ -34,6 +34,8 @@ class ImportDataSetUp(object):
         kpoint.store()
 
         calc = Calculation()
+        calc._set_attr("attr1", "OK")
+        calc._set_attr("attr2", "OK")
         calc.store()
 
         calc.add_link_from(structure)
@@ -178,7 +180,6 @@ class RESTApiTestCase(object):
         with app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
-            print "\nres: ", response
 
             if expected_errormsg:
                 self.assertEqual(response["message"],expected_errormsg)
@@ -200,7 +201,6 @@ class RESTApiTestCase(object):
 
                 for expected_node, response_node in zip(expected_data,
                                                    response["data"][result_name]):
-                    print "\n", expected_node, response_node
                     self.assertTrue(all(item in response_node.items()
                                      for item in expected_node.items()))
 
@@ -624,6 +624,8 @@ class RESTApiTestSuit(RESTApiTestCase):
         RESTApiTestCase.node_list(self, "calculations", "/calculations?limit=1&offset=1&orderby=+id",
                                   expected_list_ids=[0])
 
+
+    ############### calculation inputs  #############
     def test_calculation_inputs(self):
         """
         Get the list of give calculation inputs
@@ -641,3 +643,43 @@ class RESTApiTestSuit(RESTApiTestCase):
                             result_name = "inputs")
 
 
+    ############### calculation attributes #############
+    def test_calculation_attributes(self):
+        """
+        Get list of calculation attributes
+        """
+        url = RESTApiTestCase._url_prefix + "/calculations/5/content/attributes"
+        app.config['TESTING'] = True
+        with app.test_client() as client:
+            rv = client.get(url)
+            response = json.loads(rv.data)
+            self.assertEqual(response["data"]["attributes"], 
+                                {'attr2': 'OK', 'attr1': 'OK'})
+            RESTApiTestCase.compare_extra_response_data(self, "calculations", url, 
+                                                                response, pk=5)
+
+    def test_calculation_attributes_nalist_filter(self):
+        """
+        Get list of calculation attributes with filter nalist
+        """
+        url = RESTApiTestCase._url_prefix + '/calculations/5/content/attributes?nalist="attr1"'
+        app.config['TESTING'] = True
+        with app.test_client() as client:
+            rv = client.get(url)
+            response = json.loads(rv.data)
+            self.assertEqual(response["data"]["attributes"], {'attr2': 'OK'})
+            RESTApiTestCase.compare_extra_response_data(self, "calculations", url, 
+                                                                response, pk=5)
+
+    def test_calculation_attributes_alist_filter(self):
+        """
+        Get list of calculation attributes with filter alist
+        """
+        url = RESTApiTestCase._url_prefix + '/calculations/5/content/attributes?alist="attr1"'
+        app.config['TESTING'] = True
+        with app.test_client() as client:
+            rv = client.get(url)
+            response = json.loads(rv.data)
+            self.assertEqual(response["data"]["attributes"], {'attr1': 'OK'})
+            RESTApiTestCase.compare_extra_response_data(self, "calculations", url, 
+                                                                response, pk=5)

@@ -523,6 +523,88 @@ key_explanation = {
 }
 
 
+def create_config_noniteractive(profile='default', values=[]):
+    '''
+    Non-interactively creates a profile.
+    :raises: a ValueError if the profile exists.
+    :raises: a ValueError if one of the values not a valid input
+    :param profile: The profile to be configured
+    :param values: The configuration inputs
+    :return: The populated profile that was also stored
+    '''
+    if not values:
+        raise ValueError('No configuration values')
+
+    try:
+        confs = get_config()
+    except ConfigurationError:
+        confs = {}
+
+    if 'profiles' not in confs:
+        confs['profiles'] = {}
+
+    existing_profile = confs['profiles'].get('profile', {})
+    if existing_profile:
+        raise ValueError(
+            ('profile {profile} exists! '
+             'Cannot non-interactively edit a profile.').format(profile=profile)
+        )
+
+    new_profile = {}
+
+    # setting backend
+    backend_possibilities = ['django', 'sqlalchemy']
+    backend_v = values.pop(0)
+    if backend_v in backend_possibilities:
+        new_profile['AIIDA_BACKEND'] = backend_v
+    else:
+        raise ValueError(
+            '{} is not a valid backend choice.'.format(
+                backend_v))
+
+    # setting timezone
+    from tzlocal import get_localzone
+    new_profile['TIMEZONE'] = get_localzone().zone
+
+    # Setting email
+    from validate_email import validate_email
+    email_v = values.pop(0)
+    if validate_email(email_v):
+        new_profile[DEFAULT_USER_CONFIG_FIELD] = email_v
+    else:
+        raise ValueError(
+            '{} is not a valid email address.'.format(
+                email_v))
+
+    # setting up db
+    db_v = values.pop(0)
+    dbhost_v, dbport_v = db_v.split(':')
+    new_profile['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
+    new_profile['AIIDADB_HOST'] = dbhost_v
+    new_profile['AIIDADB_PORT'] = dbport_v
+    new_profile['AIIDADB_NAME'] = values.pop(0)
+    new_profile['AIIDADB_USER'] = values.pop(0)
+    new_profile['AIIDADB_PASS'] = values.pop(0)
+
+    # setting repo
+    repo_v = values.pop(0)
+    repo_path = os.path.expanduser(repo_v)
+    if not os.path.isabs(repo_path):
+        raise ValueError('The repository path must be an absolute path')
+    if (not os.path.isdir(repo_path)):
+        old_umask = os.umask(DEFAULT_UMASK)
+        try:
+            os.makedirs(repo_path)
+        finally:
+            os.umask(old_umask)
+    new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
+
+    # finalizing
+    confs['profiles'][profile] = new_profile
+    backup_config()
+    store_config(confs)
+    return new_profile
+
 def create_configuration(profile='default'):
     """
     :param profile: The profile to be configured

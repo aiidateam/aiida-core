@@ -39,6 +39,7 @@ setup(
         'python-dateutil~=2.4.0',
         'django==1.7.4',
         'django_extensions==1.5',
+        'tzlocal',
         'pytz==2014.10',
         'django-celery==3.1.16',
         'celery==3.1.17',

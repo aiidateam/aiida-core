@@ -350,6 +350,6 @@ Manages the workflow. Valid subcommands:
 
   * **report**: display the information on how the workflow is evolving.
   * **kill**: kills a workflow.
-  * **list**: lists the workflows present in the database. 
-    By default, shows only the running ones. 
+  * **list**: lists the workflows present in the database. By default, shows only the running ones. 
+  * **logshow**: shows the log messages for the workflow.
 

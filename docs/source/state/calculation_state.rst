@@ -72,7 +72,7 @@ If you prefer, you can check the state of a calculation from within python. For 
 Note that you can also get a code by knowing its UUID, as specified in the comments. The advantage of the UUID is that will be preserved across different AiiDA databases, while the numeric ID typically changes when databases are merged.
 
 .. note :: 
-    ``calc.get_scheduler_state()`` returns the state on the scheduler (queued, held, running, ...) as seen the last time that the daemon connected to the remote computer. The time at which the last check was performed is returned by the ``calc.get_scheduler_lastchecktime()`` method. If no check has been performed yet, this returns ``None``.
+    ``calc.get_scheduler_state()`` returns the state on the scheduler (queued, held, running, ...) as seen the last time that the daemon connected to the remote computer. The time at which the last check was performed is returned by the ``calc.get_scheduler_lastchecktime()`` method. If no such check has been performed yet, this returns ``None``.
 
 
 The ``verdi calculation gotocomputer`` command
@@ -87,7 +87,7 @@ In this case, it is possible to run
   
 where ``CALCULATIONPK`` is the PK of the calculation. This will open a new connection to the computer (either simply a bash shell or a ssh connection, depending on the transport) and directly change directory to the appropriate folder where the code is running.
 
-.. note:: 
+.. warning:: 
     Be careful not to change any file that AiiDA created, modify the output files, or resubmit the calculation unless you **really** know what you are doing. Otherwise AiiDA may get very confused!   
 
 
@@ -96,7 +96,7 @@ Set calculation properties
 ==========================
 
 There are various methods which specify the calculation properties.
-Here follows a brief documentation of their action.
+Here follows a brief documentation of their action. You can also find them in the  :class:`.AbstractJobCalculation` API reference.
 
 * ``c.set_max_memory_kb``: require explicitely the memory to be allocated to the scheduler job.
 * ``c.set_append_text``: write a set of bash commands to be executed after the call to the executable. These commands are executed only for this instance of calculations. Look also at the computer and code append_text to write bash commands for any job run on that  computer or with that code.

@@ -40,6 +40,7 @@ from sqlalchemy.sql.elements import Cast
 from sqlalchemy.dialects.postgresql import UUID, JSONB, INTEGER, array
 # TO COMPILE MY OWN FUNCTIONALITIES:
 from sqlalchemy.sql.expression import FunctionElement, cast
+from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.ext.compiler import compiles
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."

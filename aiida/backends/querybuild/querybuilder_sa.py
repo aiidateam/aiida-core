@@ -276,3 +276,4 @@ class QueryBuilder(AbstractQueryBuilder):
             self._get_session().rollback()
             raise e
 
+

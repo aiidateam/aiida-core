@@ -415,12 +415,15 @@ class QueryBuilderPath():
                     Node, filters={'id':n1.pk}, tag='anc'
                 ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
                 ).count(), 0)
-        
-        self.assertEquals(
-                QueryBuilder().append(
+        q = QueryBuilder().append(
                     Node, filters={'id':n1.pk}, tag='anc'
                 ).append(Node, descendant_of_beta='anc',  filters={'id':n8.pk}
-                ).count(), 0)
+                )
+                
+        print '\n'
+        print q
+        print '\n'
+        self.assertEquals(q.count(), 0)
 
         self.assertEquals(
                 QueryBuilder().append(

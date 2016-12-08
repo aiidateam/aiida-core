@@ -22,7 +22,7 @@ from abc import abstractmethod, ABCMeta
 from inspect import isclass as inspect_isclass
 from sa_init import (
         aliased, and_, or_, not_, func as sa_func,
-        InstrumentedAttribute, Cast
+        InstrumentedAttribute, Cast, ImmutableColumnCollection
     )
 from aiida.common.exceptions import (
         InputValidationError, DbContentError, MissingPluginError
@@ -1307,10 +1307,29 @@ class AbstractQueryBuilder(object):
                 isouter=isouterjoin
         )
 
-    def _join_descendants_beta(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
+    def _join_descendants_beta_bkp(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
         """
         Beta version, joining descendants using the recursive functionality
         """
+                #~ descendants_beta = walk.union_all(
+            #~ select([
+                    #~ walk.c.ancestor_id,
+                    #~ node_aliased.id,
+                    #~ walk.c.depth + cast(1, Integer),
+                    #~ #, As above, but if arrays are supported
+                    #~ # This is the way to reconstruct the path (the sequence of nodes traversed)
+                #~ ]).select_from(
+                    #~ join(
+                        #~ node_aliased,
+                        #~ DbLink,
+                        #~ DbLink.output_id==node_aliased.id,
+                    #~ )
+                #~ ).where(
+                    #~ and_(
+                        #~ DbLink.input_id == walk.c.descendant_id,
+                    #~ )
+                #~ )
+            #~ )
         self._check_dbentities(
                 (joined_entity, self.Node),
                 (entity_to_join, self.Node),
@@ -1329,6 +1348,132 @@ class AbstractQueryBuilder(object):
                 # the node does not include itself as a ancestor/descendant
                 aliased_path.depth > -1
             )
+    def _join_descendants_beta(self, joined_entity, entity_to_join, aliased_path, isouterjoin, filter_dict, edge_tag):
+        """
+        Beta version, joining descendants using the recursive functionality
+        """
+        
+        from sqlalchemy.orm import aliased, mapper
+
+        from sqlalchemy import select, func, join, and_
+        from sqlalchemy.sql.expression import cast
+        from sqlalchemy.types import Integer
+
+
+        #~ node_aliased = aliased(DbNode)
+        
+        self._check_dbentities(
+                (joined_entity, self.Node),
+                (entity_to_join, self.Node),
+                'descendant_of_beta'
+            )
+        
+
+        if 1:
+            link1 = aliased(self.Link)
+            link2 = aliased(self.Link)
+            node1 = aliased(self.Node)
+            in_recursive_filters = self._build_filters(node1, filter_dict)
+
+            walk = select([
+                    link1.input_id.label('ancestor_id'),
+                    link1.output_id.label('descendant_id'),
+                    cast(0, Integer).label('depth'),
+                    #~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
+                ]).select_from(
+                    join(
+                        node1, link1, link1.input_id==node1.id
+                    )
+                ).where(in_recursive_filters).cte(recursive=True)
+            
+            aliased_walk = aliased(walk)
+
+
+            descendants_beta = aliased(aliased_walk.union_all(
+                select([
+                        aliased_walk.c.ancestor_id.label('ancestor_id'),
+                        link2.output_id.label('descendant_id'),
+                        (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
+                        #~ (walk.c.path+array([node_aliased.id])).label('path')
+                        #, As above, but if arrays are supported
+                        # This is the way to reconstruct the path (the sequence of nodes traversed)
+                    ]).select_from(
+                        join(
+                            aliased_walk,
+                            link2,
+                            link2.input_id == aliased_walk.c.descendant_id,
+                        )
+                    )
+                )) #.alias()
+        else:
+            walk = select([
+                    self.Link.input_id.label('ancestor_id'),
+                    self.Link.output_id.label('descendant_id'),
+                    cast(0, Integer).label('depth'),
+                    #~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
+                ]).select_from(
+                    join(
+                        self.Node, self.Link, self.Link.input_id==self.Node.id
+                    )
+                ).where(in_recursive_filters).cte(recursive=True)
+            aliased_walk = aliased(walk)
+
+
+            aliased_path = aliased(walk.union_all(
+                select([
+                        walk.c.ancestor_id.label('ancestor_id'),
+                        self.Link.output_id.label('descendant_id'),
+                        (walk.c.depth + cast(1, Integer)).label('current_depth'),
+                        #~ (walk.c.path+array([node_aliased.id])).label('path')
+                        #, As above, but if arrays are supported
+                        # This is the way to reconstruct the path (the sequence of nodes traversed)
+                    ]).select_from(
+                        join(
+                            walk,
+                            self.Link,
+                            self.Link.input_id == walk.c.descendant_id,
+                        )
+                    )
+                )) 
+                
+        #.alias()
+
+
+        #~ class DbPathBeta(object):
+            
+            #~ def __init__(self, start, end, depth):
+                #~ self.start = start
+                #~ self.out = end
+                #~ self.depth = depth
+
+        #~ mapper(DbPathBeta, descendants_beta)
+
+        #~ aliased_path = aliased(descendants_beta)
+        
+        #~ print '\n'
+        #~ print self._query
+        #~ raw_input()
+
+        #~ self._query = self._query.join(
+                #~ aliased_path,
+                #~ aliased_path.c.ancestor_id == joined_entity.id
+            #~ ).join(
+                #~ entity_to_join,
+                #~ aliased_path.c.descendant_id == entity_to_join.id,
+                #~ isouter=isouterjoin
+            #~ )
+        self._tag_to_alias_map[edge_tag] = descendants_beta.c
+        self._query = self._query.join(
+                descendants_beta,
+                descendants_beta.c.ancestor_id == joined_entity.id
+            ).join(
+                entity_to_join,
+                descendants_beta.c.descendant_id == entity_to_join.id,
+                isouter=isouterjoin
+            )
+        #~ print '\n'
+        #~ print self._query
+        #~ raw_input()
 
     def _join_ancestors_beta(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
         """
@@ -1662,17 +1807,21 @@ class AbstractQueryBuilder(object):
         """
         Return the column for the projection, if the column name is specified.
         """
+        
 
-        if colname not in alias._sa_class_manager.mapper.c.keys():
+        
+        try:
+            return getattr(alias, colname)
+        except:
             raise InputValidationError(
                 "\n{} is not a column of {}\n"
                 "Valid columns are:\n"
                 "{}".format(
                         colname, alias,
-                        '\n'.join( alias._sa_class_manager.mapper.c.keys())
+                        '\n'.join(alias._sa_class_manager.mapper.c.keys())
                     )
             )
-        return getattr(alias, colname)
+        #~ return 
 
     def _build_order(self, alias, entitytag, entityspec):
 
@@ -1718,6 +1867,9 @@ class AbstractQueryBuilder(object):
         self._query = self._get_session().query(firstalias)
 
         ######################### JOINS ################################
+        #~ print self._query
+        #~ print '\n\n\n'
+        #~ raw_input()
 
         for index, verticespec in  enumerate(self._path[1:], start=1):
             alias = self._tag_to_alias_map[verticespec['tag']]
@@ -1731,10 +1883,16 @@ class AbstractQueryBuilder(object):
             isouterjoin = verticespec.get('outerjoin')
             if edge_tag is None:
                 connection_func(toconnectwith, alias, isouterjoin=isouterjoin)
+            elif verticespec['joining_keyword'] in ('descendant_of_beta',):
+                filter_dict = self._filters.pop(verticespec['joining_value'], {})
+                aliased_edge = self._tag_to_alias_map[edge_tag]
+                connection_func(toconnectwith, alias, aliased_edge, isouterjoin=isouterjoin, filter_dict=filter_dict, edge_tag=edge_tag)
             else:
                 aliased_edge = self._tag_to_alias_map[edge_tag]
                 connection_func(toconnectwith, alias, aliased_edge, isouterjoin=isouterjoin)
-
+            #~ print self._query
+            #~ print '\n\n\n'
+            #~ raw_input()
         ######################### FILTERS ##############################
 
         for tag, filter_specs in self._filters.items():

@@ -38,7 +38,7 @@ class BackupSetup(object):
 
     def __init__(self):
         # The backup directory names
-        self._conf_backup_folder_rel = "backup"
+        self._conf_backup_folder_rel = "backup_{}".format(AIIDADB_PROFILE)
         self._file_backup_folder_rel = "backup_dest"
 
         # The backup configuration file (& template) names
@@ -46,7 +46,7 @@ class BackupSetup(object):
         self._backup_info_tmpl_filename = "backup_info.json.tmpl"
 
         # The name of the script that initiates the backup
-        self._script_filename = "start_backup_{}.py".format(AIIDADB_PROFILE)
+        self._script_filename = "start_backup.py".format(AIIDADB_PROFILE)
 
         # Configuring the logging
         logging.basicConfig(

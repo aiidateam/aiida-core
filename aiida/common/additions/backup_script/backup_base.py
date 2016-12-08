@@ -341,7 +341,7 @@ class AbstractBackup(object):
         dir_no_to_copy = 0
 
         for query_set in query_sets:
-            dir_no_to_copy += query_set.count()
+            dir_no_to_copy += self._get_query_set_length(query_set)
 
         self._logger.info("Start copying {} directories".format(dir_no_to_copy))
 
@@ -465,6 +465,13 @@ class AbstractBackup(object):
     def _query_first_node(self):
         """
         Query first node
+        """
+        pass
+
+    @abstractmethod
+    def _get_query_set_length(self, query_set):
+        """
+        Get query set length
         """
         pass
 

@@ -47,6 +47,12 @@ class Backup(AbstractBackup):
 
         return [res]
 
+    def _get_query_set_length(self, query_set):
+        """
+        Get query set length
+        """
+        return query_set.count()
+
     def _get_query_sets(self, start_of_backup, backup_end_for_this_round):
         """
         Get Nodes and Worflows query set from start to en

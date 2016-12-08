@@ -5,17 +5,12 @@ import shutil
 import os
 import logging
 
+from abc import abstractmethod, ABCMeta
+
 from dateutil.parser import parse
 from aiida.utils import timezone as dtimezone
 from pytz import timezone as ptimezone
 
-from aiida.orm.node import Node
-from aiida.orm.workflow import Workflow
-
-from aiida.backends.djsite.db.models import DbNode
-from aiida.backends.djsite.db.models import DbWorkflow
-
-from aiida.common.folders import RepositoryFolder
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -23,7 +18,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class Backup(object):
+class AbstractBackup(object):
     """
     This class handles the backup of the AiiDA repository that is referenced
     by the current AiiDA database. The backup will start from the
@@ -33,13 +28,15 @@ class Backup(object):
     specified by *end_date_of_backup* or *days_to_backup*.
     """
 
+    __metaclass__ = ABCMeta
+
     # Keys in the dictionary loaded by the JSON file
-    _oldest_object_bk_key = "oldest_object_backedup"
-    _backup_dir_key = "backup_dir"
-    _days_to_backup_key = "days_to_backup"
-    _end_date_of_backup_key = "end_date_of_backup"
-    _periodicity_key = "periodicity"
-    _backup_length_threshold_key = "backup_length_threshold"
+    OLDEST_OBJECT_BK_KEY = "oldest_object_backedup"
+    BACKUP_DIR_KEY = "backup_dir"
+    DAYS_TO_BACKUP_KEY = "days_to_backup"
+    END_DATE_OF_BACKUP_KEY = "end_date_of_backup"
+    PERIODICITY_KEY = "periodicity"
+    BACKUP_LENGTH_THRESHOLD_KEY = "backup_length_threshold"
 
     # Backup parameters that will be populated by the JSON file
 
@@ -112,9 +109,17 @@ class Backup(object):
         #
         # If the oldest backup date is not set, then find the oldest
         # creation timestamp and set it as the oldest backup date.
-        if backup_variables.get(self._oldest_object_bk_key) is None:
-            query_node_res = DbNode.objects.all().order_by('ctime')[:1]
-            query_workflow_res = DbWorkflow.objects.all().order_by('ctime')[:1]
+        if backup_variables.get(self.OLDEST_OBJECT_BK_KEY) is None:
+
+            # qb = QueryBuilder()
+            # qb.append(
+            #     Node,
+            # )
+            # qb.order_by({Node: {'ctime': 'asc'}})
+            # query_node_res = qb.first()
+
+            query_node_res = self._query_first_node()
+            query_workflow_res = self._query_first_workflow()
 
             if (not query_node_res) and (not query_workflow_res):
                 self._logger.error("The oldest modification date "
@@ -137,7 +142,7 @@ class Backup(object):
         else:
             try:
                 self._oldest_object_bk = parse(
-                    backup_variables.get(self._oldest_object_bk_key))
+                    backup_variables.get(self.OLDEST_OBJECT_BK_KEY))
                 if self._oldest_object_bk.tzinfo is None:
                     curr_timezone = str(dtimezone.get_current_timezone())
                     self._oldest_object_bk = ptimezone(
@@ -155,7 +160,7 @@ class Backup(object):
 
         # Setting the backup directory & normalizing it
         self._backup_dir = os.path.normpath(
-            backup_variables.get(self._backup_dir_key))
+            backup_variables.get(self.BACKUP_DIR_KEY))
         if (not self._ignore_backup_dir_existence_check and
                 not os.path.isdir(self._backup_dir)):
             self._logger.error("The given backup directory doesn't exist.")
@@ -163,18 +168,18 @@ class Backup(object):
 
         # You can not set an end-of-backup date and end days from the backup
         # that you should stop.
-        if (backup_variables.get(self._days_to_backup_key) is not None and
+        if (backup_variables.get(self.DAYS_TO_BACKUP_KEY) is not None and
                     backup_variables.get(
-                        self._end_date_of_backup_key) is not None):
+                        self.END_DATE_OF_BACKUP_KEY) is not None):
             self._logger.error("Only one end of backup date can be set.")
             raise BackupError("Only one backup end can be set (date or "
                               "days from backup start.")
 
         # Check if there is an end-of-backup date
-        elif backup_variables.get(self._end_date_of_backup_key) is not None:
+        elif backup_variables.get(self.END_DATE_OF_BACKUP_KEY) is not None:
             try:
                 self._end_date_of_backup = parse(backup_variables.get(
-                    self._end_date_of_backup_key))
+                    self.END_DATE_OF_BACKUP_KEY))
 
                 if self._end_date_of_backup.tzinfo is None:
                     curr_timezone = str(dtimezone.get_current_timezone())
@@ -192,10 +197,10 @@ class Backup(object):
                 raise
 
         # Check if there is defined a days to backup
-        elif backup_variables.get(self._days_to_backup_key) is not None:
+        elif backup_variables.get(self.DAYS_TO_BACKUP_KEY) is not None:
             try:
                 self._days_to_backup = int(
-                    backup_variables.get(self._days_to_backup_key))
+                    backup_variables.get(self.DAYS_TO_BACKUP_KEY))
                 self._internal_end_date_of_backup = (
                     self._oldest_object_bk +
                     datetime.timedelta(days=self._days_to_backup))
@@ -207,7 +212,7 @@ class Backup(object):
         # Parse the backup periodicity.
         try:
             self._periodicity = int(backup_variables.get(
-                self._periodicity_key))
+                self.PERIODICITY_KEY))
         except ValueError:
             self._logger.error("The backup _periodicity should be an integer")
             raise
@@ -215,7 +220,7 @@ class Backup(object):
         # Parse the backup length threshold
         try:
             hours_th = int(backup_variables.get(
-                self._backup_length_threshold_key))
+                self.BACKUP_LENGTH_THRESHOLD_KEY))
             self._backup_length_threshold = datetime.timedelta(hours=hours_th)
         except ValueError:
             self._logger.error("The backup length threshold should be "
@@ -227,15 +232,15 @@ class Backup(object):
         This dictionarises the backup information and returns the dictionary.
         """
         backup_variables = {
-            self._oldest_object_bk_key:
+            self.OLDEST_OBJECT_BK_KEY:
                 str(self._oldest_object_bk),
-            self._backup_dir_key: self._backup_dir,
-            self._days_to_backup_key: self._days_to_backup,
-            self._end_date_of_backup_key:
+            self.BACKUP_DIR_KEY: self._backup_dir,
+            self.DAYS_TO_BACKUP_KEY: self._days_to_backup,
+            self.END_DATE_OF_BACKUP_KEY:
                 None if self._end_date_of_backup is None
                 else str(self._end_date_of_backup),
-            self._periodicity_key: self._periodicity,
-            self._backup_length_threshold_key:
+            self.PERIODICITY_KEY: self._periodicity,
+            self.BACKUP_LENGTH_THRESHOLD_KEY:
                 int((self._backup_length_threshold.total_seconds() / 3600))
         }
 
@@ -291,12 +296,7 @@ class Backup(object):
             return -1, None
 
         # Construct the queries & query sets
-        query_sets = [DbNode.objects.filter(
-            mtime__gte=start_of_backup,
-            mtime__lte=backup_end_for_this_round),
-            DbWorkflow.objects.filter(
-                mtime__gte=start_of_backup,
-                mtime__lte=backup_end_for_this_round)]
+        query_sets = self._get_query_sets(start_of_backup, backup_end_for_this_round)
 
         # Set the new start of the backup
         self._oldest_object_bk = backup_end_for_this_round
@@ -307,16 +307,41 @@ class Backup(object):
 
         return 0, query_sets
 
+    def _get_repository_path(self):
+        from aiida.backends import settings
+        from aiida.common.setup import (get_config, get_profile_config,
+                                        parse_repository_uri)
+        from aiida.common.exceptions import ConfigurationError
+
+        try:
+            confs = get_config()
+        except ConfigurationError:
+            raise ConfigurationError(
+                "Please run the AiiDA Installation, no config found")
+
+        if settings.AIIDADB_PROFILE is None:
+            raise ConfigurationError(
+                "settings.AIIDADB_PROFILE not defined, did you load django"
+                "through the AiiDA load_dbenv()?")
+
+        profile_conf = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)
+
+        REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
+        REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
+
+        return REPOSITORY_PATH
+
     def _backup_needed_files(self, query_sets):
-        from aiida.backends.djsite.settings.settings import REPOSITORY_PATH
+        REPOSITORY_PATH = self._get_repository_path()
         repository_path = os.path.normpath(REPOSITORY_PATH)
 
         parent_dir_set = set()
         copy_counter = 0
 
         dir_no_to_copy = 0
+
         for query_set in query_sets:
-            dir_no_to_copy += query_set.count()
+            dir_no_to_copy += self._get_query_set_length(query_set)
 
         self._logger.info("Start copying {} directories".format(dir_no_to_copy))
 
@@ -324,23 +349,10 @@ class Backup(object):
         percent_progress = 0
 
         for query_set in query_sets:
-            for item in query_set.iterator():
-                if type(item) == DbWorkflow:
-                    source_dir = os.path.normpath(RepositoryFolder(
-                        section=Workflow._section_name,
-                        uuid=item.uuid).abspath)
-                elif type(item) == DbNode:
-                    source_dir = os.path.normpath(RepositoryFolder(
-                        section=Node._section_name,
-                        uuid=item.uuid).abspath)
-                else:
-                    # Raise exception
-                    self._logger.error(
-                        "Unexpected item type to backup: {}"
-                            .format(type(item)))
-                    raise BackupError(
-                        "Unexpected item type to backup: {}"
-                            .format(type(item)))
+            iterator = self._get_query_set_iterator(query_set)
+
+            for item in iterator:
+                source_dir = self._get_source_directory(item)
 
                 # Get the relative directory without the / which
                 # separates the repository_path from the relative_dir.
@@ -364,7 +376,7 @@ class Backup(object):
                     # Raise envEr
 
                 # Extract the needed parent directories
-                Backup._extract_parent_dirs(relative_dir, parent_dir_set)
+                AbstractBackup._extract_parent_dirs(relative_dir, parent_dir_set)
                 copy_counter += 1
 
                 if (self._logger.getEffectiveLevel() <= logging.INFO and
@@ -441,6 +453,51 @@ class Backup(object):
                 self._logger.info("Threshold is 0. "
                                   "Backed up one round and exiting.")
                 break
+
+    @abstractmethod
+    def _query_first_workflow(self):
+        """
+        Query first workflow
+        """
+        pass
+
+    @abstractmethod
+    def _query_first_node(self):
+        """
+        Query first node
+        """
+        pass
+
+    @abstractmethod
+    def _get_query_set_length(self, query_set):
+        """
+        Get query set length
+        """
+        pass
+
+    @abstractmethod
+    def _get_query_sets(self, start_of_backup, backup_end_for_this_round):
+        """
+        Get query set
+        """
+        pass
+
+    @abstractmethod
+    def _get_query_set_iterator(self, query_set):
+        """
+        Get query set iterator
+        """
+        pass
+
+    @abstractmethod
+    def _get_source_directory(self, item):
+        """
+        Get source directory of item
+        :param self:
+        :return:
+        """
+        pass
+
 
 
 class BackupError(Exception):

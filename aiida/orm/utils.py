@@ -8,23 +8,15 @@ __version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
-def CalculationFactory(module, from_abstract=False):
+def CalculationFactory(module):
     """
     Return a suitable JobCalculation subclass.
 
     :param module: a valid string recognized as a Calculation plugin
-    :param from_abstract: A boolean. If False (default), actually look only
-      to subclasses to JobCalculation, not to the base Calculation class.
-      If True, check for valid strings for plugins of the Calculation base class.
     """
-    from aiida.orm.calculation import Calculation
-    from aiida.orm.calculation.job import JobCalculation
 
-    if from_abstract:
-        return BaseFactory(module, Calculation, "aiida.orm.calculation")
-    else:
-        return BaseFactory(module, JobCalculation, "aiida.orm.calculation.job",
-                           suffix="Calculation")
+    from aiida.common.ep_pluginloader import get_plugin
+    return get_plugin('calculations', module)
 
 
 def DataFactory(module):

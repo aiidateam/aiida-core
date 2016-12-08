@@ -20,9 +20,8 @@ def TransportFactory(module):
     :param str module: name of the module containing the Transport subclass
     :return: the transport subclass located in module 'module'
     """
-    from aiida.common.pluginloader import BaseFactory
-
-    return BaseFactory(module, Transport, "aiida.transport.plugins")
+    from aiida.common.ep_pluginloader import get_plugin
+    return get_plugin('transports', module)
 
 
 class FileAttribute(FixedFieldsAttributeDict):
@@ -153,9 +152,8 @@ class Transport(object):
         """
         :return: a list of existing plugin names
         """
-        from aiida.common.pluginloader import existing_plugins
-
-        return existing_plugins(Transport, "aiida.transport.plugins")
+        from aiida.common.ep_pluginloader import plugin_list
+        return plugin_list('transports')
 
     @classmethod
     def get_valid_auth_params(cls):

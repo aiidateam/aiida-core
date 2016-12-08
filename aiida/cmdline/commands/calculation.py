@@ -54,12 +54,9 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.common.pluginloader import existing_plugins
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.common.ep_pluginloader import plugin_list
 
-        plugins = sorted(existing_plugins(JobCalculation,
-                                          'aiida.orm.calculation.job',
-                                          suffix='Calculation'))
+        plugins = sorted(plugin_list('calculations'))
         # Do not return plugins that are already on the command line
         other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
         return_plugins = [_ for _ in plugins if _ not in other_subargs]
@@ -364,8 +361,7 @@ class Calculation(VerdiCommandWithSubcommands):
             load_dbenv()
 
         from aiida.orm import CalculationFactory
-        from aiida.orm.calculation.job import JobCalculation
-        from aiida.common.pluginloader import existing_plugins
+        from aiida.common.ep_pluginloader import plugin_list
         from aiida.common.exceptions import MissingPluginError
 
         if args:
@@ -386,9 +382,7 @@ class Calculation(VerdiCommandWithSubcommands):
                 except MissingPluginError:
                     print "! {}: NOT FOUND!".format(arg)
         else:
-            plugins = sorted(existing_plugins(JobCalculation,
-                                              'aiida.orm.calculation.job',
-                                              suffix='Calculation'))
+            plugins = sorted(plugin_list('calculations'))
             if plugins:
                 print("## Pass as a further parameter one (or more) "
                       "plugin names to get more details on a given plugin.")

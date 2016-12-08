@@ -31,7 +31,7 @@ from aiida.restapi.database.resources import (McloudUserResource,
 
 ## Error handling for error raised for invalid urls (not for non existing
 # resources!)
-@app.errorhandler(RestInputValidationError)
+@app.errorhandler(Exception)
 def error_handler(error):
     if isinstance(error, RestValidationError):
         response = jsonify({'message': error.message})

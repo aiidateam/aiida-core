@@ -11,18 +11,39 @@ class LocalSetup(SqlAlchemyTests, ImportDataSetUp):
             base.setUpClass()
 
         from aiida.orm.computer import Computer
-        info = {
-            "name": "test1",
-            "hostname": "test1.epfl.ch",
-            "transport_type":'ssh',
-            "scheduler_type":'torque',
-            "workdir": '/tmp/aiida'
-        }
-        cls.computer = Computer(**info)
-        cls.computer.store()
+
+        dummy_computers = [
+            {
+                "name": "test1",
+                "hostname": "test1.epfl.ch",
+                "transport_type": "ssh",
+                "scheduler_type": "pbspro",
+            },
+            {
+                "name": "test2",
+                "hostname": "test2.epfl.ch",
+                "transport_type": "ssh",
+                "scheduler_type": "torque",
+            },
+            {
+                "name": "test3",
+                "hostname": "test3.epfl.ch",
+                "transport_type": "local",
+                "scheduler_type": "slurm",
+            },
+            {
+                "name": "test4",
+                "hostname": "test4.epfl.ch",
+                "transport_type": "ssh",
+                "scheduler_type": "slurm",
+            }
+        ]
+        for dummy_computer in dummy_computers:
+            cls.computer = Computer(**dummy_computer)
+            cls.computer.store()
 
 
-class SqlaRESTApiTestSuit(LocalSetup, RESTApiTestSuit):
+class RESTApiTestSuitSqla(LocalSetup, RESTApiTestSuit):
     """
 
     """

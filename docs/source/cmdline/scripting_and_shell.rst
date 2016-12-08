@@ -1,6 +1,9 @@
 Run scripts and open an interactive shell with AiiDA
 ====================================================
 
+.. contents :: Contents
+    :local:
+
 How to run a script
 +++++++++++++++++++
 In order to run a script that interacts with the database, you need

@@ -2,6 +2,9 @@
 Calculations
 ############
 
+.. contents :: Contents
+    :local:
+
 AiiDA calculations can be of two kinds:
 
 * :py:class:`JobCalculation <aiida.orm.calculation.job.JobCalculation>`:

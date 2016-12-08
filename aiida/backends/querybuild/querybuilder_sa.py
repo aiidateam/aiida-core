@@ -239,3 +239,40 @@ class QueryBuilder(AbstractQueryBuilder):
         return returnval
 
 
+    def _yield_per(self, batch_size):
+        """
+        :param count: Number of rows to yield per step
+
+        Yields *count* rows at a time
+
+        :returns: a generator
+        """
+        try:
+            return self.get_query().yield_per(batch_size)
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
+
+    def _all(self):
+        try:
+            return self.get_query().all()
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
+    def _first(self):
+        """
+        Executes query in the backend asking for one instance.
+
+        :returns: One row of aiida results
+        """
+        try:
+            return self.get_query().first()
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+

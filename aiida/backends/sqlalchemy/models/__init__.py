@@ -43,7 +43,7 @@ walk = select([
         DbNode.id.label('ancestor_id'),
         DbNode.id.label('descendant_id'),
         cast(-1, Integer).label('depth'),
-        array([DbNode.id]).label('path')   #Arrays can only be used with postgres
+        #~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
     ]).select_from(DbNode).cte(recursive=True) #, name="incl_aliased3")
 
 
@@ -52,7 +52,7 @@ descendants_beta = walk.union_all(
             walk.c.ancestor_id,
             node_aliased.id,
             walk.c.depth + cast(1, Integer),
-            (walk.c.path+array([node_aliased.id])).label('path')
+            #~ (walk.c.path+array([node_aliased.id])).label('path')
             #, As above, but if arrays are supported
             # This is the way to reconstruct the path (the sequence of nodes traversed)
         ]).select_from(

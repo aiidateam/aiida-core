@@ -49,6 +49,7 @@ def get_session(config):
     :returns: A sqlalchemy session (connection to DB)
     """
     Session = sessionmaker(bind=get_engine(config))
+
     return Session()
 
 

@@ -240,6 +240,76 @@ class TestNodeBasic(AiidaTestCase):
             # I get a non-existing attribute
             a.get_attr('nonexisting')
 
+
+    def test_get_attrs_before_storing(self):
+        a = Node()
+        a._set_attr('k1', self.boolval)
+        a._set_attr('k2', self.intval)
+        a._set_attr('k3', self.floatval)
+        a._set_attr('k4', self.stringval)
+        a._set_attr('k5', self.dictval)
+        a._set_attr('k6', self.listval)
+        a._set_attr('k7', self.emptydict)
+        a._set_attr('k8', self.emptylist)
+        a._set_attr('k9', None)
+
+        target_attrs = {
+            'k1': self.boolval,
+            'k2': self.intval,
+            'k3': self.floatval,
+            'k4': self.stringval,
+            'k5': self.dictval,
+            'k6': self.listval,
+            'k7': self.emptydict,
+            'k8': self.emptylist,
+            'k9': None
+        }
+
+        # Now I check if I can retrieve them, before the storage
+        self.assertEquals(a.get_attrs(), target_attrs)
+
+        # And now I try to delete the keys
+        a._del_attr('k1')
+        a._del_attr('k2')
+        a._del_attr('k3')
+        a._del_attr('k4')
+        a._del_attr('k5')
+        a._del_attr('k6')
+        a._del_attr('k7')
+        a._del_attr('k8')
+        a._del_attr('k9')
+
+        self.assertEquals(a.get_attrs(), {})
+
+    def test_get_attrs_after_storing(self):
+        a = Node()
+        a._set_attr('k1', self.boolval)
+        a._set_attr('k2', self.intval)
+        a._set_attr('k3', self.floatval)
+        a._set_attr('k4', self.stringval)
+        a._set_attr('k5', self.dictval)
+        a._set_attr('k6', self.listval)
+        a._set_attr('k7', self.emptydict)
+        a._set_attr('k8', self.emptylist)
+        a._set_attr('k9', None)
+
+        a.store()
+
+        target_attrs = {
+            'k1': self.boolval,
+            'k2': self.intval,
+            'k3': self.floatval,
+            'k4': self.stringval,
+            'k5': self.dictval,
+            'k6': self.listval,
+            'k7': self.emptydict,
+            'k8': self.emptylist,
+            'k9': None
+        }
+
+        # Now I check if I can retrieve them, before the storage
+        self.assertEquals(a.get_attrs(), target_attrs)
+
     def DISABLED(self):
         """
         This test routine is disabled for the time being; I will re-enable

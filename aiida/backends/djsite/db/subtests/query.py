@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida.backends.djsite.db.testbase import AiidaTestCase
-from aiida.backends.tests.query import TestQueryBuilder, QueryBuilderJoinsTests
+from aiida.backends.tests.query import TestQueryBuilder, QueryBuilderJoinsTests, QueryBuilderPath
 
 
 
@@ -10,6 +10,9 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
 class QueryBuilderJoinsTestsDjango(AiidaTestCase, QueryBuilderJoinsTests):
+    pass
+
+class QueryBuilderPathDjango(AiidaTestCase, QueryBuilderPath):
     pass
 
 class TestQueryBuilderDjango(AiidaTestCase, TestQueryBuilder):

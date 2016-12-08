@@ -11,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 
 import aiida.backends.sqlalchemy
+# from aiida.backends.sqlalchemy import session as sa
 from aiida.common.utils import get_configured_user_email
 from aiida.backends.sqlalchemy.utils import (install_tc, loads_json,
                                              dumps_json)

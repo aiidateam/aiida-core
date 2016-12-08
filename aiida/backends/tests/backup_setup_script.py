@@ -5,10 +5,11 @@ import shutil
 import tempfile
 import os
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.common import utils
 from aiida.common.additions.backup_script import backup_setup
-from aiida.common.additions.backup_script.backup import Backup
+from aiida.common.additions.backup_script.backup_base import AbstractBackup
+
+from aiida.backends.settings import AIIDADB_PROFILE
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -16,7 +17,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestBackupSetupScriptUnit(AiidaTestCase):
+class TestBackupSetupScriptUnit(object):
 
     def tearDown(self):
         utils.raw_input = None
@@ -36,11 +37,11 @@ class TestBackupSetupScriptUnit(AiidaTestCase):
         utils.raw_input = lambda _: answers[ac.array_counter()]
         bk_vars = _backup_setup_inst.construct_backup_variables("")
         # Check the parsed answers
-        self.assertIsNone(bk_vars[Backup._oldest_object_bk_key])
-        self.assertIsNone(bk_vars[Backup._days_to_backup_key])
-        self.assertIsNone(bk_vars[Backup._end_date_of_backup_key])
-        self.assertEqual(bk_vars[Backup._periodicity_key], 1)
-        self.assertEqual(bk_vars[Backup._backup_length_threshold_key], 2)
+        self.assertIsNone(bk_vars[AbstractBackup.OLDEST_OBJECT_BK_KEY])
+        self.assertIsNone(bk_vars[AbstractBackup.DAYS_TO_BACKUP_KEY])
+        self.assertIsNone(bk_vars[AbstractBackup.END_DATE_OF_BACKUP_KEY])
+        self.assertEqual(bk_vars[AbstractBackup.PERIODICITY_KEY], 1)
+        self.assertEqual(bk_vars[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY], 2)
 
         # Checking parsing of backup variables with all the answers given
         ac = utils.ArrayCounter()
@@ -50,14 +51,14 @@ class TestBackupSetupScriptUnit(AiidaTestCase):
         utils.raw_input = lambda _: answers[ac.array_counter()]
         bk_vars = _backup_setup_inst.construct_backup_variables("")
         # Check the parsed answers
-        self.assertEqual(bk_vars[Backup._oldest_object_bk_key], answers[0])
-        self.assertEqual(bk_vars[Backup._days_to_backup_key], 2)
-        self.assertEqual(bk_vars[Backup._end_date_of_backup_key], answers[4])
-        self.assertEqual(bk_vars[Backup._periodicity_key], 3)
-        self.assertEqual(bk_vars[Backup._backup_length_threshold_key], 4)
+        self.assertEqual(bk_vars[AbstractBackup.OLDEST_OBJECT_BK_KEY], answers[0])
+        self.assertEqual(bk_vars[AbstractBackup.DAYS_TO_BACKUP_KEY], 2)
+        self.assertEqual(bk_vars[AbstractBackup.END_DATE_OF_BACKUP_KEY], answers[4])
+        self.assertEqual(bk_vars[AbstractBackup.PERIODICITY_KEY], 3)
+        self.assertEqual(bk_vars[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY], 4)
 
 
-class TestBackupSetupScriptIntegration(AiidaTestCase):
+class TestBackupSetupScriptIntegration(object):
 
     def test_full_backup_setup_script(self):
         """
@@ -111,13 +112,13 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
             with open(os.path.join(temp_aiida_folder, "backup_info.json")
                       ) as conf_jfile:
                 conf_cont = json.load(conf_jfile)
-                self.assertEqual(conf_cont[Backup._oldest_object_bk_key],
+                self.assertEqual(conf_cont[AbstractBackup.OLDEST_OBJECT_BK_KEY],
                                  "2014-07-18 13:54:53.688484+00:00")
-                self.assertEqual(conf_cont[Backup._days_to_backup_key], None)
-                self.assertEqual(conf_cont[Backup._end_date_of_backup_key],
+                self.assertEqual(conf_cont[AbstractBackup.DAYS_TO_BACKUP_KEY], None)
+                self.assertEqual(conf_cont[AbstractBackup.END_DATE_OF_BACKUP_KEY],
                                  "2015-04-11 13:55:53.688484+00:00")
-                self.assertEqual(conf_cont[Backup._periodicity_key], 1)
+                self.assertEqual(conf_cont[AbstractBackup.PERIODICITY_KEY], 1)
                 self.assertEqual(
-                    conf_cont[Backup._backup_length_threshold_key], 2)
+                    conf_cont[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY], 2)
         finally:
             shutil.rmtree(temp_folder, ignore_errors=True)

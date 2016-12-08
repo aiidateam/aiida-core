@@ -9,9 +9,13 @@ import tempfile
 from dateutil.parser import parse
 
 from aiida.common import utils
-from aiida.common.additions.backup_script import backup
 from aiida.common.additions.backup_script import backup_setup
 from aiida.orm.node import Node
+from aiida.backends.utils import is_dbenv_loaded, load_dbenv
+
+if not is_dbenv_loaded():
+    load_dbenv()
+
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -169,7 +173,7 @@ class TestBackupScriptUnit(object):
         In the parsed JSON string, the endDateOfBackup & daysToBackuplimit
         are set which should lead to an exception.
         """
-        from aiida.common.additions.backup_script.backup import BackupError
+        from aiida.common.additions.backup_script.backup_base import BackupError
 
         backup_variables = json.loads(self._json_test_input_5)
         self._backup_setup_inst._ignore_backup_dir_existence_check = True
@@ -185,8 +189,9 @@ class TestBackupScriptUnit(object):
         """
         for input_string in (self._json_test_input_1, self._json_test_input_2,
                              self._json_test_input_3, self._json_test_input_4):
+            self.setUp()
 
-            backup_inst = backup.Backup("", 2)
+            backup_inst = self._backup_setup_inst
 
             input_variables = json.loads(input_string)
             backup_inst._ignore_backup_dir_existence_check = True
@@ -199,6 +204,8 @@ class TestBackupScriptUnit(object):
                           " the serialization deserialization test.\n" +
                           "Input variables: {}\n".format(input_variables) +
                           "Output variables: {}\n".format(target_variables))
+
+            self.tearDown()
 
     def test_timezone_addition_and_dir_correction(self):
         """

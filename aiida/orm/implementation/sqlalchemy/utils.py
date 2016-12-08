@@ -15,7 +15,7 @@ from sqlalchemy.types import Integer, Boolean
 from aiida.backends import sqlalchemy as sa
 from aiida.common.exceptions import InvalidOperation
 from aiida.orm.implementation.sqlalchemy.computer import Computer
-
+import aiida
 
 def delete_computer(computer):
     """
@@ -32,11 +32,12 @@ def delete_computer(computer):
                         "aiida.orm.computer.Computer")
 
     try:
-        sa.session.delete(computer.dbcomputer)
-        sa.session.commit()
+        aiida.backends.sqlalchemy.session.delete(computer.dbcomputer)
+        aiida.backends.sqlalchemy.session.commit()
     except SQLAlchemyError:
-        raise InvalidOperation("Unable to delete the requested computer: there"
+        raise InvalidOperation("Unable to delete the requested computer: there "
                                "is at least one node using this computer")
+
 
 def iter_dict(attrs):
     if isinstance(attrs, dict):

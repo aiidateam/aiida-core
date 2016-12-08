@@ -2087,7 +2087,8 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
         qb.append(Node, project=["id", "attributes.source.license"],
                   filters={"id": {"in": entries_ids_to_add[
                       'aiida.backends.sqlalchemy.models.node.DbNode']}})
-        node_licenses = list((a,b) for [a,b] in qb.all())
+        # Skip those nodes where the license is not set (this is the standard behavior with Django)
+        node_licenses = list((a,b) for [a,b] in qb.all() if b is not None)
         check_licences(node_licenses, allowed_licenses, forbidden_licenses)
 
 

@@ -156,7 +156,7 @@ class RESTApiTestCase(object):
     ###### node details and list with limit, offset, page, perpage ####
     def node_list(self, node_type, url, full_list=False, empty_list=False,
                   expected_list_ids=[], expected_range=[],
-                  expected_errormsg=None, pk=None):
+                  expected_errormsg=None, pk=None, result_node_type=None, result_name=None):
         """
         Get the full list of nodes from database
         :param node_type: url requested fot the type of the node
@@ -167,7 +167,12 @@ class RESTApiTestCase(object):
         :param expected_range: [start, stop] range of expected ids from data
         :param expected_errormsg: expected error message in response
         :param pk: url requested for the node pk
+        :param result_node_type: node type in response data
+        :param result_name: result name in response e.g. inputs, outputs
         """
+        if result_node_type == None and result_name == None:
+            result_node_type = node_type
+            result_name = node_type
         url = RESTApiTestCase._url_prefix + url
         app.config['TESTING'] = True
         with app.test_client() as client:
@@ -179,27 +184,27 @@ class RESTApiTestCase(object):
                 self.assertEqual(response["message"],expected_errormsg)
             else:
                 if full_list:
-                    expected_data = RESTApiTestCase.dummydata[node_type]
+                    expected_data = RESTApiTestCase.dummydata[result_node_type]
                 elif empty_list:
                     expected_data = []
                 elif len(expected_list_ids)>0:
-                    expected_data = [RESTApiTestCase.dummydata[node_type][i]
+                    expected_data = [RESTApiTestCase.dummydata[result_node_type][i]
                              for i in expected_list_ids]
                 elif expected_range != []:
-                    expected_data = RESTApiTestCase.dummydata[node_type][expected_range[0]:expected_range[1]]
+                    expected_data = RESTApiTestCase.dummydata[result_node_type][expected_range[0]:expected_range[1]]
                 else:
                     from aiida.common.exceptions import InputValidationError
                     raise InputValidationError("Pass the expected range of the dummydata")
 
-                self.assertTrue(len(response["data"][node_type]) == len(expected_data))
+                self.assertTrue(len(response["data"][result_name]) == len(expected_data))
 
                 for expected_node, response_node in zip(expected_data,
-                                                   response["data"][node_type]):
+                                                   response["data"][result_name]):
+                    print "\n", expected_node, response_node
                     self.assertTrue(all(item in response_node.items()
                                      for item in expected_node.items()))
 
                 self.compare_extra_response_data(node_type, url, response, pk)
-
 
 
     ######## check exception #########
@@ -606,7 +611,8 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         Get the full list of calculations from database
         """
-        RESTApiTestCase.node_list(self, "calculations", "/calculations?orderby=-id", full_list=True)
+        RESTApiTestCase.node_list(self, "calculations", "/calculations?orderby=-id", 
+											full_list=True)
 
     def test_calculations_list_limit_offset(self):
         """
@@ -617,3 +623,21 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         RESTApiTestCase.node_list(self, "calculations", "/calculations?limit=1&offset=1&orderby=+id",
                                   expected_list_ids=[0])
+
+    def test_calculation_inputs(self):
+        """
+        Get the list of give calculation inputs
+        """
+        self.node_list("calculations", "/calculations/5/io/inputs?orderby=id",
+                            expected_list_ids=[3,2], pk=5, result_node_type="data",
+                            result_name = "inputs")
+
+    def test_calculation_input_filters(self):
+        """
+        Get filtered inputs list for given calculations
+        """
+        self.node_list("calculations", '/calculations/5/io/inputs?type="data.parameter.ParameterData."',
+                            expected_list_ids=[2], pk=5, result_node_type="data",
+                            result_name = "inputs")
+
+

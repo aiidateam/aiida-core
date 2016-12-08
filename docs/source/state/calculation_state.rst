@@ -15,9 +15,9 @@ In the following, we will refer to the JobCalculations as a Calculation for the 
 simplicity, unless we explicitly say otherwise. In the same way, also the command 
 ``verdi calculation`` refers to JobCalculation's.
 
-
+###############################
 Check the state of calculations
-===============================
+###############################
 
 Once a calculation has been submitted to AiiDA, everything else will be
 managed by AiiDA: the inputs will be checked to verify
@@ -128,8 +128,9 @@ running.
 
 
 
+##########################
 Set calculation properties
-==========================
+##########################
 
 There are various methods which specify the calculation properties.
 Here follows a brief documentation of their action.

@@ -1,4 +1,3 @@
-
 from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.backends.tests.restapi import ImportDataSetUp, RESTApiTestSuit
 
@@ -18,6 +17,7 @@ class LocalSetup(AiidaTestCase, ImportDataSetUp):
                                 scheduler_type='torque',
                                 workdir='/tmp/aiida')
         cls.computer.store()
+
 
 class DjangoRESTApiTestSuit(LocalSetup, RESTApiTestSuit):
     """

@@ -1,5 +1,6 @@
 from aiida.orm import DataFactory
-from aiida.orm.calculation.inline import InlineCalculation
+from aiida.orm.calculation import Calculation
+from aiida.common.links import LinkType
 from aiida.restapi.api import app
 import json
 
@@ -32,10 +33,15 @@ class ImportDataSetUp(object):
         kpoint.set_kpoints_mesh([4, 4, 4])
         kpoint.store()
 
-        #parameter2.add_link_from(structure)
-        #parameter2.add_link_from(parameter1)
-        #kpoint.add_link_from(parameter2)
+        calc = Calculation()
+        calc.store()
 
+        calc.add_link_from(structure)
+        calc.add_link_from(parameter1)
+        kpoint.add_link_from(calc, link_type=LinkType.CREATE)
+
+        calc1 = Calculation()
+        calc1.store()
 
 class RESTApiTestCase(object):
 
@@ -52,8 +58,40 @@ class RESTApiTestCase(object):
                         "transport_type": "ssh",
                         "scheduler_type": "torque",
                     }],
-                    "data": [{
-                        }]
+                    "data": [
+                                {
+                                    "type": "data.array.kpoints.KpointsData.",
+                                    "user_id": 1,
+                                    "id": 4
+                                },
+                                {
+                                    "type": "data.parameter.ParameterData.",
+                                    "user_id": 1,
+                                    "id": 3
+                                },
+                                {
+                                    "type": "data.parameter.ParameterData.",
+                                    "user_id": 1,
+                                    "id": 2
+                                },
+                                {
+                                    "type": "data.structure.StructureData.",
+                                    "user_id": 1,
+                                    "id": 1
+                                },
+                            ],
+                    "calculations": [
+                                {
+                                    "type": "calculation.Calculation.",
+                                    "user_id": 1,
+                                    "id": 6
+                                },
+                                {
+                                    "type": "calculation.Calculation.",
+                                    "user_id": 1,
+                                    "id": 5
+                                },
+                            ]
                 }
     _url_prefix = "/api/v2"
 
@@ -115,7 +153,7 @@ class RESTApiTestCase(object):
         with app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
-            print "res: ", response
+            print "\nres: ", response
 
             if expected_errormsg:
                 self.assertEqual(response["message"],expected_errormsg)
@@ -171,5 +209,4 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         Get the full list of calculations from database
         """
-        #self.node_list("data", "/data", full_list=True)
-        pass
+        self.node_list("calculations", "/calculations", full_list=True)

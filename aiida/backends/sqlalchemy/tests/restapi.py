@@ -7,7 +7,8 @@ class LocalSetup(SqlAlchemyTests, ImportDataSetUp):
     """
     @classmethod
     def setUpClass(cls):
-        super(LocalSetup, cls).setUpClass()
+        for base in LocalSetup.__bases__:
+            base.setUpClass()
 
         from aiida.orm.computer import Computer
         info = {
@@ -17,10 +18,8 @@ class LocalSetup(SqlAlchemyTests, ImportDataSetUp):
             "scheduler_type":'torque',
             "workdir": '/tmp/aiida'
         }
-        computer = Computer(**info)
-        computer.store()
-
-
+        cls.computer = Computer(**info)
+        cls.computer.store()
 
 
 class SqlaRESTApiTestSuit(LocalSetup, RESTApiTestSuit):

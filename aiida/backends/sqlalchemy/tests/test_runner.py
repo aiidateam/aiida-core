@@ -21,20 +21,20 @@ def find_classes(module_str):
 
 def run_tests():
     modules_str = [
-        # "aiida.backends.sqlalchemy.tests.query",
-        # "aiida.backends.sqlalchemy.tests.nodes",
-        #"aiida.backends.sqlalchemy.tests.backup_script",
-        #"aiida.backends.sqlalchemy.tests.backup_setup_script",
-
-        #  "aiida.backends.sqlalchemy.tests.export_and_import",
-         #"aiida.backends.sqlalchemy.tests.nwchem",
-         #"aiida.backends.sqlalchemy.tests.quantumespressopw",
-         #"aiida.backends.sqlalchemy.tests.quantumespressopwimmigrant",
-         #"aiida.backends.sqlalchemy.tests.calculation_node",
-        #"aiida.backends.sqlalchemy.tests.codtools",
+        # "aiida.backends.sqlalchemy.tests.backup_script",
+        # "aiida.backends.sqlalchemy.tests.export_and_import",
+        # "aiida.backends.sqlalchemy.tests.nwchem",
+        # "aiida.backends.sqlalchemy.tests.quantumespressopw",
+        # "aiida.backends.sqlalchemy.tests.quantumespressopwimmigrant",
+        # "aiida.backends.sqlalchemy.tests.generic",
+        # "aiida.backends.sqlalchemy.tests.calculation_node",
+        # "aiida.backends.sqlalchemy.tests.codtools",
         # "aiida.backends.sqlalchemy.tests.pwinputparser",
         # "aiida.backends.sqlalchemy.tests.parsers",
         # "aiida.backends.sqlalchemy.tests.dbimporters",
+        # "aiida.backends.sqlalchemy.tests.dataclasses",
+        # "aiida.backends.sqlalchemy.tests.workflows",
+        # "aiida.backends.sqlalchemy.tests.tcodexporter",
     ]
     for module_str in modules_str:
         # Dynamically importing the module that interests us

@@ -4,9 +4,9 @@ import os
 
 import aiida
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.backends.utils import load_dbenv
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import pass_to_django_manage, execname
-from aiida.common.exceptions import InternalError
+from aiida.common.exceptions import InternalError, TestsNotAllowedError
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -87,7 +87,10 @@ class Devel(VerdiCommandWithSubcommands):
     _dbprefix = _dbrawprefix + "."
 
     def __init__(self, *args, **kwargs):
-        from aiida.backends.djsite.db.testbase import db_test_list
+        from aiida.backends.tests import get_db_test_names
+        from aiida.backends import settings
+
+        db_test_list = get_db_test_names()
 
         super(Devel, self).__init__(*args, **kwargs)
 
@@ -111,6 +114,7 @@ class Devel(VerdiCommandWithSubcommands):
         self.allowed_test_folders = {}
         for k in self.base_allowed_test_folders:
             self.allowed_test_folders[k] = None
+
         for dbtest in db_test_list:
             self.allowed_test_folders["{}{}".format(self._dbprefix, dbtest)] = [dbtest]
         self.allowed_test_folders[self._dbrawprefix] = db_test_list
@@ -479,10 +483,8 @@ class Devel(VerdiCommandWithSubcommands):
     def run_tests(self, *args):
         import unittest
         from aiida.backends import settings
-        from aiida.backends.djsite.settings import settings_profile
-        from aiida import is_dbenv_loaded, load_dbenv
-        from aiida import settings as settings2
-        from aiida.common.setup import TEST_KEYWORD
+        from aiida.backends.testbase import run_aiida_db_tests
+        from aiida.backends.testbase import check_if_tests_can_run
 
         test_failures = list()
         db_test_list = []
@@ -529,60 +531,25 @@ class Devel(VerdiCommandWithSubcommands):
             test_result = test_runner.run(testsuite)
             test_failures.extend(test_result.failures)
         if do_db:
-            # As a first thing, I want to set the correct flags.
-            # This allow to work on temporary DBs and a temporary repository.
-
-            ## Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory
-            ## and not on disk.
-            # if you define such a variable to False, it will use the same backend
-            # that you have already configured also for tests. Otherwise,
-            # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
-
-            # The prefix is then checked inside get_profile_config and stripped
-            # but it is needed to know if this is a test or not
-            # if get_property('tests.use_sqlite'):
-            #     profile_prefix = 'testsqlite_'
-            # else:
-            #     profile_prefix = 'test_'
-            #
-            # profile = "{}{}".format(profile_prefix,
-            #                         settings.AIIDADB_PROFILE if
-            #                         settings.AIIDADB_PROFILE is not None else 'default')
-
             if not is_dbenv_loaded():
                 load_dbenv()
 
-            base_repo_path = os.path.basename(
-                os.path.normpath(settings2.REPOSITORY_PATH))
-            if (not settings.AIIDADB_PROFILE.startswith(TEST_KEYWORD) or
-                    TEST_KEYWORD not in base_repo_path or
-                    not settings2.DBNAME.startswith(TEST_KEYWORD)):
-                print "A non-test profile was given for tests. Please note " \
-                      "that the test profile should have test specific " \
-                      "database name and test specific repository name."
-                print("Given profile: {}".format(settings.AIIDADB_PROFILE))
-                print("Related repository path: {}".format(base_repo_path))
-                print("Related database name: {}".format(settings2.DBNAME))
+            # Even if each test would fail if we are not in a test profile,
+            # it's still better to not even run them in the case the profile
+            # is not a test one.
+            try:
+                check_if_tests_can_run()
+            except TestsNotAllowedError as e:
+                print >> sys.stderr, e.message
                 sys.exit(1)
 
-            from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
-            if settings.BACKEND == BACKEND_DJANGO:
-                settings_profile.aiida_test_list = db_test_list
-                print "v" * 75
-                print (">>> Tests for django db application   "
-                       "                                  <<<")
-                print "^" * 75
-                pass_to_django_manage([execname, 'test', 'db'])
+            print "v" * 75
+            print (">>> Tests for {} db application".format(settings.BACKEND))
+            print "^" * 75
+            db_failures = run_aiida_db_tests(db_test_list)
+            test_failures.extend(db_failures)
 
-            elif settings.BACKEND == BACKEND_SQLA:
-                print "v" * 75
-                print (">>> Tests for SQLAlchemy db application"
-                       "                                 <<<")
-                print "^" * 75
-                from aiida.backends.sqlalchemy.tests.test_runner import run_tests
-                run_tests()
-
-        # If there was a failure in the non-db tests report it with the
+        # If there was any failure report it with the
         # right exit code
         if test_failures:
             sys.exit(len(test_failures))

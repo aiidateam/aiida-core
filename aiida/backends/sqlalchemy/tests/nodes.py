@@ -3,9 +3,8 @@
 Tests for nodes, attributes and links
 """
 
-from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
-from aiida.backends.tests.nodes import *
-
+from aiida.backends.testbase import AiidaTestCase
+from aiida.orm.node import Node
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -13,22 +12,8 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestDataNodeSQLA(SqlAlchemyTests, TestDataNode):
-    """
-    These tests check the features of Data nodes that differ from the base Node
-    """
-    pass
 
-
-class TestTransitiveNoLoopsSQLA(SqlAlchemyTests, TestTransitiveNoLoops):
-    """
-    Test the creation of the transitive closure table
-    """
-    pass
-
-
-class TestTransitiveClosureDeletionSQLA(SqlAlchemyTests,
-                                        TestTransitiveClosureDeletion):
+class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
     """
     Test the creation of the transitive closure table
     """
@@ -133,16 +118,8 @@ class TestTransitiveClosureDeletionSQLA(SqlAlchemyTests,
             1)
 
 
-class TestQueryWithAiidaObjectsSQLA(SqlAlchemyTests,
-                                    TestQueryWithAiidaObjects):
-    """
-    Test if queries work properly also with aiida.orm.Node classes instead of
-    aiida.backends.djsite.db.models.DbNode objects.
-    """
-    pass
 
-
-class TestNodeBasicSQLA(SqlAlchemyTests, TestNodeBasic):
+class TestNodeBasicSQLA(AiidaTestCase):
     """
     These tests check the basic features of nodes
     (setting of attributes, copying of files, ...)
@@ -229,9 +206,3 @@ class TestNodeBasicSQLA(SqlAlchemyTests, TestNodeBasic):
             aiida.backends.sqlalchemy.session.rollback()
 
 
-class TestSubNodesAndLinksSQLA(SqlAlchemyTests, TestSubNodesAndLinks):
-    """
-    Test the proper functionality of the links cache, with different
-    scenarios.
-    """
-    pass

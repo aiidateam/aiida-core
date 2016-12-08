@@ -3,7 +3,6 @@
 Tests for the NWChem input plugins.
 """
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.orm.calculation.job.nwchem.nwcpymatgen import _prepare_pymatgen_dict
 from aiida.orm.data.structure import has_ase, has_pymatgen, StructureData
 import unittest
@@ -15,7 +14,7 @@ __authors__ = "The AiiDA team."
 
 
 
-class TestNwchem(AiidaTestCase):
+class TestNwchem(object):
 
     @unittest.skipIf((not has_ase()) or (not has_pymatgen()),
                       "Unable to import ASE and pymatgen")

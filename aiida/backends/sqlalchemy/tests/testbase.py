@@ -31,18 +31,20 @@ __version__ = "0.7.0"
 Session = sessionmaker(expire_on_commit=False)
 # Session = sessionmaker(expire_on_commit=True)
 
-
-class SqlAlchemyTests(unittest.TestCase):
+# This contains the codebase for the setUpClass and tearDown methods used internally by the AiidaTestCase
+# This inherits only from 'object' to avoid that it is picked up by the automatic discovery of tests
+# (It shouldn't, as it risks to destroy the DB if there are not the checks in place, and these are
+# implemented in the AiidaTestCase
+class SqlAlchemyTests(object):
 
     # Specify the need to drop the table at the beginning of a test case
     drop_all = False
 
     test_session = None
 
-    @classmethod
-    def setUpClass(cls, initial_data=True):
+    def setUpClass_method(self):
 
-        if cls.test_session is None:
+        if self.test_session is None:
             config = get_profile_config(AIIDADB_PROFILE)
             engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
                           "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
@@ -50,35 +52,38 @@ class SqlAlchemyTests(unittest.TestCase):
                                    json_serializer=dumps_json,
                                    json_deserializer=loads_json)
 
-            cls.connection = engine.connect()
+            self.connection = engine.connect()
 
-            cls.test_session = Session(bind=cls.connection)
-            aiida.backends.sqlalchemy.session = cls.test_session
+            self.test_session = Session(bind=self.connection)
+            aiida.backends.sqlalchemy.session = self.test_session
 
-        if cls.drop_all:
-            Base.metadata.drop_all(cls.connection)
-            Base.metadata.create_all(cls.connection)
-            install_tc(cls.connection)
+        if self.drop_all:
+            Base.metadata.drop_all(self.connection)
+            Base.metadata.create_all(self.connection)
+            install_tc(self.connection)
         else:
-            cls.clean_db()
+            self.clean_db()
 
-        if initial_data:
-            email = get_configured_user_email()
+        email = get_configured_user_email()
 
-            has_user = DbUser.query.filter(DbUser.email==email).first()
-            if not has_user:
-                cls.user = DbUser(get_configured_user_email(), "foo", "bar", "tests")
-                cls.test_session.add(cls.user)
-                cls.test_session.commit()
-            else:
-                cls.user = has_user
+        has_user = DbUser.query.filter(DbUser.email==email).first()
+        if not has_user:
+            self.user = DbUser(get_configured_user_email(), "foo", "bar", "tests")
+            self.test_session.add(self.user)
+            self.test_session.commit()
+        else:
+            self.user = has_user
 
-            has_computer = DbComputer.query.filter(DbComputer.hostname == 'localhost').first()
-            if not has_computer:
-                cls.computer = SqlAlchemyTests._create_computer()
-                cls.computer.store()
-            else:
-                cls.computer = has_computer
+        ## Reqired by the calling class
+        self.user_email = self.user.email
+
+        ## Also self.computer is required by the calling class
+        has_computer = DbComputer.query.filter(DbComputer.hostname == 'localhost').first()
+        if not has_computer:
+            self.computer = SqlAlchemyTests._create_computer()
+            self.computer.store()
+        else:
+            self.computer = has_computer
 
 
     @staticmethod
@@ -103,8 +108,7 @@ class SqlAlchemyTests(unittest.TestCase):
 
         return dec
 
-    @classmethod
-    def clean_db(cls):
+    def clean_db(self):
         from aiida.backends.sqlalchemy.models.computer import DbComputer
         from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
         from aiida.backends.sqlalchemy.models.group import DbGroup
@@ -114,38 +118,37 @@ class SqlAlchemyTests(unittest.TestCase):
         from aiida.backends.sqlalchemy.models.user import DbUser
 
         # Delete the workflows
-        cls.test_session.query(DbWorkflow).delete()
+        self.test_session.query(DbWorkflow).delete()
 
         # Empty the relationship dbgroup.dbnode
-        dbgroups = cls.test_session.query(DbGroup).all()
+        dbgroups = self.test_session.query(DbGroup).all()
         for dbgroup in dbgroups:
             dbgroup.dbnodes = []
 
         # Delete the groups
-        cls.test_session.query(DbGroup).delete()
+        self.test_session.query(DbGroup).delete()
 
         # I first need to delete the links, because in principle I could
         # not delete input nodes, only outputs. For simplicity, since
         # I am deleting everything, I delete the links first
-        cls.test_session.query(DbLink).delete()
+        self.test_session.query(DbLink).delete()
 
         # Then I delete the nodes, otherwise I cannot
         # delete computers and users
-        cls.test_session.query(DbNode).delete()
+        self.test_session.query(DbNode).delete()
 
         # # Delete the users
-        # cls.test_session.query(DbUser).delete()
+        # self.test_session.query(DbUser).delete()
 
         # Delete the computers
-        cls.test_session.query(DbComputer).delete()
+        self.test_session.query(DbComputer).delete()
 
         # Delete the logs
-        cls.test_session.query(DbLog).delete()
+        self.test_session.query(DbLog).delete()
 
-        cls.test_session.commit()
+        self.test_session.commit()
 
-    @classmethod
-    def tearDownClass(cls):
+    def tearDownClass_method(self):
         from aiida.settings import REPOSITORY_PATH
         from aiida.common.setup import TEST_KEYWORD
         from aiida.common.exceptions import InvalidOperation
@@ -156,12 +159,12 @@ class SqlAlchemyTests(unittest.TestCase):
                                    "the repository. Repository path: "
                                    "{}".format(REPOSITORY_PATH))
 
-        cls.clean_db()
+        self.clean_db()
 
-        cls.test_session.close()
-        cls.test_session = None
+        self.test_session.close()
+        self.test_session = None
 
-        cls.connection.close()
+        self.connection.close()
 
 
         # I clean the test repository

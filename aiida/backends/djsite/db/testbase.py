@@ -16,36 +16,17 @@ __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
-db_test_list = {
-    'generic': ['aiida.backends.djsite.db.subtests.generic'],
-    'nodes': ['aiida.backends.djsite.db.subtests.nodes'],
-    'nwchem': ['aiida.backends.djsite.db.subtests.nwchem'],
-    'dataclasses': ['aiida.backends.djsite.db.subtests.dataclasses'],
-    'qepw': ['aiida.backends.djsite.db.subtests.quantumespressopw'],
-    'codtools': ['aiida.backends.djsite.db.subtests.codtools'],
-    'dbimporters': ['aiida.backends.djsite.db.subtests.dbimporters'],
-    'export_and_import': ['aiida.backends.djsite.db.subtests.export_and_import'],
-    'migrations': ['aiida.backends.djsite.db.subtests.migrations'],
-    'parsers': ['aiida.backends.djsite.db.subtests.parsers'],
-    'qepwinputparser': ['aiida.backends.djsite.db.subtests.pwinputparser'],
-    'qepwimmigrant': ['aiida.backends.djsite.db.subtests.quantumespressopwimmigrant'],
-    'tcodexporter': ['aiida.backends.djsite.db.subtests.tcodexporter'],
-    'workflows': ['aiida.backends.djsite.db.subtests.workflows'],
-    'query': ['aiida.backends.djsite.db.subtests.query'],
-    'backup': ['aiida.backends.djsite.db.subtests.backup_script',
-               'aiida.backends.djsite.db.subtests.backup_setup_script'],
-    'calculation_node': ['aiida.backends.djsite.db.subtests.calculation_node'],
-}
-
-
-class AiidaTestCase(unittest.TestCase):
+# This contains the codebase for the setUpClass and tearDown methods used internally by the AiidaTestCase
+# This inherits only from 'object' to avoid that it is picked up by the automatic discovery of tests
+# (It shouldn't, as it risks to destroy the DB if there are not the checks in place, and these are
+# implemented in the AiidaTestCase
+class DjangoTests(object):
     """
     Automatically takes care of the setUpClass and TearDownClass, when needed.
     """
 
-    @classmethod
-    def setUpClass(cls, initial_data=True):
-
+    # Note this is has to be a normal method, not a class method
+    def setUpClass_method(self):
         from django.core.exceptions import ObjectDoesNotExist
 
         from aiida.backends.djsite.db.models import DbUser
@@ -63,22 +44,24 @@ class AiidaTestCase(unittest.TestCase):
         # user is recreated because it caches the user!
         # In any case, store it in cls.user though
         # Other possibility: flush the user cache on delete
-        if initial_data:
-            try:
-                cls.user = DbUser.objects.get(email=get_configured_user_email())
-            except ObjectDoesNotExist:
-                cls.user = DbUser.objects.create_user(get_configured_user_email(),
-                                                      'fakepwd')
-            cls.computer = Computer(name='localhost',
-                                    hostname='localhost',
-                                    transport_type='local',
-                                    scheduler_type='pbspro',
-                                    workdir='/tmp/aiida')
-            cls.computer.store()
+        try:
+            self.user = DbUser.objects.get(email=get_configured_user_email())
+        except ObjectDoesNotExist:
+            self.user = DbUser.objects.create_user(get_configured_user_email(),
+                                                  'fakepwd')
+        ## Reqired by the calling class
+        self.user_email = self.user.email
 
-    @classmethod
-    def tearDownClass(cls):
-        # exit(0)
+        ## Also self.computer is required by the calling class
+        self.computer = Computer(name='localhost',
+                                hostname='localhost',
+                                transport_type='local',
+                                scheduler_type='pbspro',
+                                workdir='/tmp/aiida')
+        self.computer.store()
+
+    # Note this is has to be a normal method, not a class method
+    def tearDownClass_method(self):
         from aiida.settings import REPOSITORY_PATH
         from aiida.common.setup import TEST_KEYWORD
         from aiida.common.exceptions import InvalidOperation

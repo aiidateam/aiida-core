@@ -3,10 +3,7 @@
 Tests for nodes, attributes and links
 """
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
-from aiida.backends.tests.nodes import (
-    TestDataNode, TestTransitiveNoLoops, TestTransitiveClosureDeletion,
-    TestQueryWithAiidaObjects, TestNodeBasic, TestSubNodesAndLinks)
+from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -15,7 +12,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestDataNodeDjango(AiidaTestCase, TestDataNode):
+class TestDataNodeDjango(AiidaTestCase):
     """
     These tests check the features of Data nodes that differ from the base Node
     """
@@ -92,18 +89,10 @@ class TestDataNodeDjango(AiidaTestCase, TestDataNode):
         self.assertEquals(nodes_with_given_attribute[0].uuid, a3.uuid)
 
 
-class TestTransitiveNoLoopsDjango(AiidaTestCase, TestTransitiveNoLoops):
-    """
-    Test the creation of the transitive closure table
-    """
-    pass
-
-
-class TestTransitiveClosureDeletionDjango(AiidaTestCase, TestTransitiveClosureDeletion):
+class TestTransitiveClosureDeletionDjango(AiidaTestCase):
     def test_creation_and_deletion(self):
         from aiida.backends.djsite.db.models import DbLink  # Direct links
-        from aiida.backends.djsite.db.models import \
-            DbPath  # The transitive closure table
+        from aiida.backends.djsite.db.models import DbPath  # The transitive closure table
 
         n1 = Node().store()
         n2 = Node().store()
@@ -187,12 +176,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase, TestTransitiveClosureDe
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
 
-
-class TestQueryWithAiidaObjectsDjango(AiidaTestCase, TestQueryWithAiidaObjects):
-    pass
-
-
-class TestNodeBasicDjango(AiidaTestCase, TestNodeBasic):
+class TestNodeBasicDjango(AiidaTestCase):
     def test_replace_extras_2(self):
         """
         This is a Django specific test which checks (manually) that,
@@ -314,5 +298,3 @@ class TestNodeBasicDjango(AiidaTestCase, TestNodeBasic):
             load_node()
 
 
-class TestSubNodesAndLinksDjango(AiidaTestCase, TestSubNodesAndLinks):
-    pass

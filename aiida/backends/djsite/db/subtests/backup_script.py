@@ -23,7 +23,6 @@ class TestBackupScriptUnitDjango(AiidaTestCase, TestBackupScriptUnit):
         self._backup_setup_inst = None
 
 
-
 class TestBackupScriptIntegrationDjango(AiidaTestCase,
-                                      TestBackupScriptIntegration):
+                                        TestBackupScriptIntegration):
     pass

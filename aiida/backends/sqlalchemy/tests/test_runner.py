@@ -24,6 +24,7 @@ def run_tests():
         # "aiida.backends.sqlalchemy.tests.query",
         # "aiida.backends.sqlalchemy.tests.nodes",
         "aiida.backends.sqlalchemy.tests.backup_script",
+        "aiida.backends.sqlalchemy.tests.backup_setup_script",
 
         #  "aiida.backends.sqlalchemy.tests.export_and_import",
          #"aiida.backends.sqlalchemy.tests.nwchem",

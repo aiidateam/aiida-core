@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import json
-import shutil
-import tempfile
-import os
-
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
 from aiida.backends.tests.backup_setup_script import *
 
 
@@ -15,11 +10,11 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestBackupSetupScriptUnitDjango(AiidaTestCase,
-                                      TestBackupSetupScriptUnit):
+class TestBackupSetupScriptUnitSQLA(SqlAlchemyTests,
+                                    TestBackupSetupScriptUnit):
     pass
 
 
-class TestBackupSetupScriptIntegration(AiidaTestCase,
-                                       TestBackupSetupScriptIntegration):
+class TestBackupSetupScriptIntegrationSQLA(SqlAlchemyTests,
+                                           TestBackupSetupScriptIntegration):
     pass

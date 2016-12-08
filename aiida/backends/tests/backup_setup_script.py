@@ -7,18 +7,7 @@ import os
 
 from aiida.common import utils
 from aiida.common.additions.backup_script import backup_setup
-from aiida.backends.settings import BACKEND
-from aiida.backends.utils import is_dbenv_loaded, load_dbenv
-
-if not is_dbenv_loaded():
-    load_dbenv()
-
-if BACKEND == "django":
-    from aiida.common.additions.backup_script.backup_django import Backup
-elif BACKEND == "slqalchemy":
-    from aiida.common.additions.backup_script.backup_sqlalchemy import Backup
-else:
-    raise ValueError("Unknown backend")
+from aiida.common.additions.backup_script.backup_base import AbstractBackup
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -46,11 +35,11 @@ class TestBackupSetupScriptUnit(object):
         utils.raw_input = lambda _: answers[ac.array_counter()]
         bk_vars = _backup_setup_inst.construct_backup_variables("")
         # Check the parsed answers
-        self.assertIsNone(bk_vars[Backup.OLDEST_OBJECT_BK_KEY])
-        self.assertIsNone(bk_vars[Backup.DAYS_TO_BACKUP_KEY])
-        self.assertIsNone(bk_vars[Backup.END_DATE_OF_BACKUP_KEY])
-        self.assertEqual(bk_vars[Backup.PERIODICITY_KEY], 1)
-        self.assertEqual(bk_vars[Backup.BACKUP_LENGTH_THRESHOLD_KEY], 2)
+        self.assertIsNone(bk_vars[AbstractBackup.OLDEST_OBJECT_BK_KEY])
+        self.assertIsNone(bk_vars[AbstractBackup.DAYS_TO_BACKUP_KEY])
+        self.assertIsNone(bk_vars[AbstractBackup.END_DATE_OF_BACKUP_KEY])
+        self.assertEqual(bk_vars[AbstractBackup.PERIODICITY_KEY], 1)
+        self.assertEqual(bk_vars[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY], 2)
 
         # Checking parsing of backup variables with all the answers given
         ac = utils.ArrayCounter()
@@ -60,11 +49,11 @@ class TestBackupSetupScriptUnit(object):
         utils.raw_input = lambda _: answers[ac.array_counter()]
         bk_vars = _backup_setup_inst.construct_backup_variables("")
         # Check the parsed answers
-        self.assertEqual(bk_vars[Backup.OLDEST_OBJECT_BK_KEY], answers[0])
-        self.assertEqual(bk_vars[Backup.DAYS_TO_BACKUP_KEY], 2)
-        self.assertEqual(bk_vars[Backup.END_DATE_OF_BACKUP_KEY], answers[4])
-        self.assertEqual(bk_vars[Backup.PERIODICITY_KEY], 3)
-        self.assertEqual(bk_vars[Backup.BACKUP_LENGTH_THRESHOLD_KEY], 4)
+        self.assertEqual(bk_vars[AbstractBackup.OLDEST_OBJECT_BK_KEY], answers[0])
+        self.assertEqual(bk_vars[AbstractBackup.DAYS_TO_BACKUP_KEY], 2)
+        self.assertEqual(bk_vars[AbstractBackup.END_DATE_OF_BACKUP_KEY], answers[4])
+        self.assertEqual(bk_vars[AbstractBackup.PERIODICITY_KEY], 3)
+        self.assertEqual(bk_vars[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY], 4)
 
 
 class TestBackupSetupScriptIntegration(object):
@@ -121,13 +110,13 @@ class TestBackupSetupScriptIntegration(object):
             with open(os.path.join(temp_aiida_folder, "backup_info.json")
                       ) as conf_jfile:
                 conf_cont = json.load(conf_jfile)
-                self.assertEqual(conf_cont[Backup.OLDEST_OBJECT_BK_KEY],
+                self.assertEqual(conf_cont[AbstractBackup.OLDEST_OBJECT_BK_KEY],
                                  "2014-07-18 13:54:53.688484+00:00")
-                self.assertEqual(conf_cont[Backup.DAYS_TO_BACKUP_KEY], None)
-                self.assertEqual(conf_cont[Backup.END_DATE_OF_BACKUP_KEY],
+                self.assertEqual(conf_cont[AbstractBackup.DAYS_TO_BACKUP_KEY], None)
+                self.assertEqual(conf_cont[AbstractBackup.END_DATE_OF_BACKUP_KEY],
                                  "2015-04-11 13:55:53.688484+00:00")
-                self.assertEqual(conf_cont[Backup.PERIODICITY_KEY], 1)
+                self.assertEqual(conf_cont[AbstractBackup.PERIODICITY_KEY], 1)
                 self.assertEqual(
-                    conf_cont[Backup.BACKUP_LENGTH_THRESHOLD_KEY], 2)
+                    conf_cont[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY], 2)
         finally:
             shutil.rmtree(temp_folder, ignore_errors=True)

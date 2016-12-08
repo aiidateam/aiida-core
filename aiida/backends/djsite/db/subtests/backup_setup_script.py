@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import json
-import shutil
-import tempfile
-import os
-
 from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.backends.tests.backup_setup_script import *
 
@@ -15,9 +10,11 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestBackupSetupScriptUnitDjango(AiidaTestCase, TestBackupSetupScriptUnit):
+class TestBackupSetupScriptUnitDjango(AiidaTestCase,
+                                      TestBackupSetupScriptUnit):
     pass
 
 
-class TestBackupSetupScriptIntegration(AiidaTestCase, TestBackupSetupScriptIntegration):
+class TestBackupSetupScriptIntegrationDjango(AiidaTestCase,
+                                             TestBackupSetupScriptIntegration):
     pass

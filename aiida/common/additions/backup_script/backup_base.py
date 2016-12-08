@@ -31,12 +31,12 @@ class AbstractBackup(object):
     __metaclass__ = ABCMeta
 
     # Keys in the dictionary loaded by the JSON file
-    _oldest_object_bk_key = "oldest_object_backedup"
-    _backup_dir_key = "backup_dir"
-    _days_to_backup_key = "days_to_backup"
-    _end_date_of_backup_key = "end_date_of_backup"
-    _periodicity_key = "periodicity"
-    _backup_length_threshold_key = "backup_length_threshold"
+    OLDEST_OBJECT_BK_KEY = "oldest_object_backedup"
+    BACKUP_DIR_KEY = "backup_dir"
+    DAYS_TO_BACKUP_KEY = "days_to_backup"
+    END_DATE_OF_BACKUP_KEY = "end_date_of_backup"
+    PERIODICITY_KEY = "periodicity"
+    BACKUP_LENGTH_THRESHOLD_KEY = "backup_length_threshold"
 
     # Backup parameters that will be populated by the JSON file
 
@@ -109,7 +109,7 @@ class AbstractBackup(object):
         #
         # If the oldest backup date is not set, then find the oldest
         # creation timestamp and set it as the oldest backup date.
-        if backup_variables.get(self._oldest_object_bk_key) is None:
+        if backup_variables.get(self.OLDEST_OBJECT_BK_KEY) is None:
 
             # qb = QueryBuilder()
             # qb.append(
@@ -142,7 +142,7 @@ class AbstractBackup(object):
         else:
             try:
                 self._oldest_object_bk = parse(
-                    backup_variables.get(self._oldest_object_bk_key))
+                    backup_variables.get(self.OLDEST_OBJECT_BK_KEY))
                 if self._oldest_object_bk.tzinfo is None:
                     curr_timezone = str(dtimezone.get_current_timezone())
                     self._oldest_object_bk = ptimezone(
@@ -160,7 +160,7 @@ class AbstractBackup(object):
 
         # Setting the backup directory & normalizing it
         self._backup_dir = os.path.normpath(
-            backup_variables.get(self._backup_dir_key))
+            backup_variables.get(self.BACKUP_DIR_KEY))
         if (not self._ignore_backup_dir_existence_check and
                 not os.path.isdir(self._backup_dir)):
             self._logger.error("The given backup directory doesn't exist.")
@@ -168,18 +168,18 @@ class AbstractBackup(object):
 
         # You can not set an end-of-backup date and end days from the backup
         # that you should stop.
-        if (backup_variables.get(self._days_to_backup_key) is not None and
+        if (backup_variables.get(self.DAYS_TO_BACKUP_KEY) is not None and
                     backup_variables.get(
-                        self._end_date_of_backup_key) is not None):
+                        self.END_DATE_OF_BACKUP_KEY) is not None):
             self._logger.error("Only one end of backup date can be set.")
             raise BackupError("Only one backup end can be set (date or "
                               "days from backup start.")
 
         # Check if there is an end-of-backup date
-        elif backup_variables.get(self._end_date_of_backup_key) is not None:
+        elif backup_variables.get(self.END_DATE_OF_BACKUP_KEY) is not None:
             try:
                 self._end_date_of_backup = parse(backup_variables.get(
-                    self._end_date_of_backup_key))
+                    self.END_DATE_OF_BACKUP_KEY))
 
                 if self._end_date_of_backup.tzinfo is None:
                     curr_timezone = str(dtimezone.get_current_timezone())
@@ -197,10 +197,10 @@ class AbstractBackup(object):
                 raise
 
         # Check if there is defined a days to backup
-        elif backup_variables.get(self._days_to_backup_key) is not None:
+        elif backup_variables.get(self.DAYS_TO_BACKUP_KEY) is not None:
             try:
                 self._days_to_backup = int(
-                    backup_variables.get(self._days_to_backup_key))
+                    backup_variables.get(self.DAYS_TO_BACKUP_KEY))
                 self._internal_end_date_of_backup = (
                     self._oldest_object_bk +
                     datetime.timedelta(days=self._days_to_backup))
@@ -212,7 +212,7 @@ class AbstractBackup(object):
         # Parse the backup periodicity.
         try:
             self._periodicity = int(backup_variables.get(
-                self._periodicity_key))
+                self.PERIODICITY_KEY))
         except ValueError:
             self._logger.error("The backup _periodicity should be an integer")
             raise
@@ -220,7 +220,7 @@ class AbstractBackup(object):
         # Parse the backup length threshold
         try:
             hours_th = int(backup_variables.get(
-                self._backup_length_threshold_key))
+                self.BACKUP_LENGTH_THRESHOLD_KEY))
             self._backup_length_threshold = datetime.timedelta(hours=hours_th)
         except ValueError:
             self._logger.error("The backup length threshold should be "
@@ -232,15 +232,15 @@ class AbstractBackup(object):
         This dictionarises the backup information and returns the dictionary.
         """
         backup_variables = {
-            self._oldest_object_bk_key:
+            self.OLDEST_OBJECT_BK_KEY:
                 str(self._oldest_object_bk),
-            self._backup_dir_key: self._backup_dir,
-            self._days_to_backup_key: self._days_to_backup,
-            self._end_date_of_backup_key:
+            self.BACKUP_DIR_KEY: self._backup_dir,
+            self.DAYS_TO_BACKUP_KEY: self._days_to_backup,
+            self.END_DATE_OF_BACKUP_KEY:
                 None if self._end_date_of_backup is None
                 else str(self._end_date_of_backup),
-            self._periodicity_key: self._periodicity,
-            self._backup_length_threshold_key:
+            self.PERIODICITY_KEY: self._periodicity,
+            self.BACKUP_LENGTH_THRESHOLD_KEY:
                 int((self._backup_length_threshold.total_seconds() / 3600))
         }
 

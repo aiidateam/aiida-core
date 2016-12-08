@@ -8,23 +8,21 @@ import stat
 import sys
 from os.path import expanduser
 
+from aiida.backends.profile import BACKEND_DJANGO
+from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common import utils
+from aiida.common.additions.backup_script.backup_base import AbstractBackup
+from aiida.common.additions.backup_script.backup_django import (
+    Backup as BackupDJ)
+from aiida.common.additions.backup_script.backup_sqlalchemy import (
+    Backup as BackupSQLA)
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
-
 
 if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.backends.settings import BACKEND
-
-#
-if BACKEND == "django":
-    from aiida.common.additions.backup_script.backup_django import Backup
-elif BACKEND == "sqlalchemy":
-    from aiida.common.additions.backup_script.backup_sqlalchemy import Backup
-else:
-    raise ValueError("Unknown backend")
 
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -71,17 +69,17 @@ class BackupSetup(object):
             datetime.datetime, True)
 
         if oldest_object_bk is None:
-            backup_variables[Backup._oldest_object_bk_key] = None
+            backup_variables[AbstractBackup.OLDEST_OBJECT_BK_KEY] = None
         else:
-            backup_variables[Backup._oldest_object_bk_key] = str(
+            backup_variables[AbstractBackup.OLDEST_OBJECT_BK_KEY] = str(
                 oldest_object_bk)
 
         # Setting the backup directory
-        backup_variables[Backup._backup_dir_key] = file_backup_folder_abs
+        backup_variables[AbstractBackup.BACKUP_DIR_KEY] = file_backup_folder_abs
 
         # Setting the days_to_backup
         backup_variables[
-            Backup._days_to_backup_key] = utils.ask_question(
+            AbstractBackup.DAYS_TO_BACKUP_KEY] = utils.ask_question(
             "Please provide the number of days to backup.", int, True)
 
         # Setting the end date
@@ -90,19 +88,19 @@ class BackupSetup(object):
             "(e.g. 2014-07-18 13:54:53.688484+00:00).",
             datetime.datetime, True)
         if end_date_of_backup_key is None:
-            backup_variables[Backup._end_date_of_backup_key] = None
+            backup_variables[AbstractBackup.END_DATE_OF_BACKUP_KEY] = None
         else:
             backup_variables[
-                Backup._end_date_of_backup_key] = str(end_date_of_backup_key)
+                AbstractBackup.END_DATE_OF_BACKUP_KEY] = str(end_date_of_backup_key)
 
         # Setting the backup periodicity
         backup_variables[
-            Backup._periodicity_key] = utils.ask_question(
+            AbstractBackup.PERIODICITY_KEY] = utils.ask_question(
             "Please periodicity (in days).", int, False)
 
         # Setting the backup threshold
         backup_variables[
-            Backup._backup_length_threshold_key] = utils.ask_question(
+            AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY] = utils.ask_question(
             "Please provide the backup threshold (in hours).", int, False)
 
         return backup_variables
@@ -234,11 +232,20 @@ class BackupSetup(object):
                                            self._backup_info_filename)))
 
         # The contents of the startup script
+        if BACKEND == BACKEND_DJANGO:
+            backup_module = BackupDJ.__module__
+            class_name = BackupDJ.__name__
+        elif BACKEND == BACKEND_SQLA:
+            backup_module = BackupSQLA.__module__
+            class_name = BackupSQLA.__name__
+        else:
+            raise ValueError("Unknown backend")
+
         script_content = \
 """#!/usr/bin/env runaiida
 import logging
 
-from aiida.common.additions.backup_script.backup_{} import Backup
+from {} import {}
 
 # Create the backup instance
 backup_inst = Backup(backup_info_filepath="{}", additional_back_time_mins = 2)
@@ -248,7 +255,7 @@ backup_inst._logger.setLevel(logging.INFO)
 
 # Start the backup
 backup_inst.run()
-""".format(BACKEND, final_conf_filepath)
+""".format(backup_module, class_name, final_conf_filepath)
 
         # Script full path
         script_path = os.path.join(conf_backup_folder_abs,

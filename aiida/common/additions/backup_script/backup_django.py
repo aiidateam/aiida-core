@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 
+import os
+
+from aiida.backends.djsite.db.models import DbNode
+from aiida.backends.djsite.db.models import DbWorkflow
+from aiida.common.additions.backup_script.backup_base import AbstractBackup, BackupError
+from aiida.common.folders import RepositoryFolder
+from aiida.orm.node import Node
+from aiida.orm.workflow import Workflow
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
-
-import os
-
-from aiida.common.additions.backup_script.backup_base import AbstractBackup, BackupError
-from aiida.backends.djsite.db.models import DbNode
-from aiida.backends.djsite.db.models import DbWorkflow
-
-from aiida.orm.node import Node
-from aiida.orm.workflow import Workflow
-
-from aiida.common.folders import RepositoryFolder
 
 
 class Backup(AbstractBackup):

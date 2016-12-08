@@ -217,52 +217,6 @@ class RESTApiTestSuit(RESTApiTestCase):
     """
     """
 
-    @classmethod
-    def setUpClass(cls):
-        """
-        """
-        from aiida.orm.computer import Computer
-
-        dummy_computers = [
-            {
-                "name": "test1",
-                "hostname": "test1.epfl.ch",
-                "transport_type": "ssh",
-                "scheduler_type": "pbspro",
-            },
-            {
-                "name": "test2",
-                "hostname": "test2.epfl.ch",
-                "transport_type": "ssh",
-                "scheduler_type": "torque",
-            },
-            {
-                "name": "test3",
-                "hostname": "test3.epfl.ch",
-                "transport_type": "local",
-                "scheduler_type": "slurm",
-            },
-            {
-                "name": "test4",
-                "hostname": "test4.epfl.ch",
-                "transport_type": "ssh",
-                "scheduler_type": "slurm",
-            }
-        ]
-        for dummy_computer in dummy_computers:
-            cls.computer = Computer(**dummy_computer)
-            cls.computer.store()
-
-        dummy_computers.insert(0, {
-            "name": "localhost",
-            "hostname": "localhost",
-            "transport_type": "local",
-            "scheduler_type": "pbspro",
-        })
-
-        data['computers'] = dummy_computers
-
-
     ############### single computer ########################
     def test_computers_details(self):
         """
@@ -638,9 +592,28 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         pass
 
+
+    ############### single calculation ########################
+    def test_calculations_details(self):
+        """
+        Requests the details of single calculation
+        """
+        RESTApiTestCase.node_list(self, "calculations", "/calculations/6",
+                                  expected_list_ids=[0], pk=6)
+
     ############### full list with limit, offset, page, perpage #############
     def test_calculations_list(self):
         """
         Get the full list of calculations from database
         """
-        self.node_list("calculations", "/calculations?orderby=-id", full_list=True)
+        RESTApiTestCase.node_list(self, "calculations", "/calculations?orderby=-id", full_list=True)
+
+    def test_calculations_list_limit_offset(self):
+        """
+        Get the list of calculations from database using limit
+        and offset parameter.
+        It should return the no of rows specified in limit from
+        database starting from the no. specified in offset
+        """
+        RESTApiTestCase.node_list(self, "calculations", "/calculations?limit=1&offset=1&orderby=+id",
+                                  expected_list_ids=[0])

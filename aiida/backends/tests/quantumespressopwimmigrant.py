@@ -34,6 +34,8 @@ from aiida.orm.calculation.job.quantumespresso.pwimmigrant import PwimmigrantCal
 from aiida.daemon.execmanager import retrieve_jobs
 from aiida.common.folders import SandboxFolder
 from aiida.tools.codespecific.quantumespresso.pwinputparser import str2val
+from aiida.orm import Code
+from aiida.backends.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -50,10 +52,29 @@ PEFIXES = [fnm.strip('.in') for fnm in os.listdir(TEST_JOB_DIR)
            if fnm.endswith('.in')]
 
 
-class LocalSetup(object):
+class LocalSetup(AiidaTestCase):
     """
     Setup functions that are common to all backends
+    Base class for the tests.
     """
+
+    @classmethod
+    def setUpClass(cls):
+        super(LocalSetup, cls).setUpClass()
+
+        # Change transport type to local
+        cls.computer.set_transport_type('local')
+
+        # # Configure authinfo for cls.computer and cls.user.
+        # authinfo = DbAuthInfo(dbcomputer=cls.computer.dbcomputer,
+        #                       aiidauser=cls.user)
+        # authinfo.set_auth_params({})
+        # authinfo.save()
+
+        cls.code = Code()
+        cls.code.set_remote_computer_exec((cls.computer, '/x.x'))
+        cls.code.store()
+
     def run_tests_on_calcs_with_prefixes(self, prefixes):
         """
         Test immigration, retrieval, and parsing of calcs for all prefixes.
@@ -186,7 +207,7 @@ class LocalSetup(object):
                         )
 
 
-class TestPwImmigrantCalculationManual(object):
+class TestPwImmigrantCalculationManual(LocalSetup):
     """
     Tests for immigration, retrieval, and parsing of manual kpoint jobs.
     """
@@ -205,7 +226,7 @@ class TestPwImmigrantCalculationManual(object):
         self.run_tests_on_calcs_with_prefixes(manual_prefixes)
 
 
-class TestPwImmigrantCalculationAutomatic(object):
+class TestPwImmigrantCalculationAutomatic(LocalSetup):
     """
     Tests for immigration, retrieval, and parsing of automatic kpoint jobs.
     """
@@ -222,7 +243,7 @@ class TestPwImmigrantCalculationAutomatic(object):
         self.run_tests_on_calcs_with_prefixes(automatic_prefixes)
 
 
-class TestPwImmigrantCalculationGamma(object):
+class TestPwImmigrantCalculationGamma(LocalSetup):
     """
     Tests for immigration, retrieval, and parsing of gamma kpoint jobs.
     """

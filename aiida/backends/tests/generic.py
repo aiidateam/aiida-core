@@ -5,7 +5,7 @@ Generic tests that need the use of the DB
 
 from aiida.orm.node import Node
 from aiida.common.exceptions import ModificationNotAllowed
-import aiida
+from aiida.backends.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -13,7 +13,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestComputer(object):
+class TestComputer(AiidaTestCase):
     """
     Test the Computer class.
     """
@@ -44,7 +44,7 @@ class TestComputer(object):
         with self.assertRaises(InvalidOperation):
             delete_computer(self.computer)
 
-class TestCode(object):
+class TestCode(AiidaTestCase):
     """
     Test the Code class.
     """
@@ -122,7 +122,7 @@ class TestCode(object):
         self.assertFalse(code.can_run_on(othercomputer))
 
 
-class TestWfBasic(object):
+class TestWfBasic(AiidaTestCase):
     """
     Tests for the workflows
     """
@@ -154,7 +154,7 @@ class TestWfBasic(object):
         self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
 
 
-class TestGroups(object):
+class TestGroups(AiidaTestCase):
     """
     Test groups.
     """
@@ -475,7 +475,7 @@ class TestGroups(object):
         newuser.delete()
 
 
-class TestDbExtras(object):
+class TestDbExtras(AiidaTestCase):
     """
     Test Extras
     """

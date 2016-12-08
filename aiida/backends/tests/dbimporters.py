@@ -3,6 +3,7 @@
 Tests for subclasses of DbImporter, DbSearchResults and DbEntry
 """
 from django.utils import unittest
+from aiida.backends.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -10,7 +11,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestCodDbImporter(object):
+class TestCodDbImporter(AiidaTestCase):
     """
     Test the CodDbImporter class.
     """
@@ -145,7 +146,7 @@ class TestCodDbImporter(object):
         })
 
 
-class TestTcodDbImporter(object):
+class TestTcodDbImporter(AiidaTestCase):
     """
     Test the TcodDbImporter class.
     """
@@ -175,7 +176,7 @@ class TestTcodDbImporter(object):
                            "http://www.crystallography.net/tcod/20000000.cif@1234"])
 
 
-class TestPcodDbImporter(object):
+class TestPcodDbImporter(AiidaTestCase):
     """
     Test the PcodDbImporter class.
     """
@@ -199,7 +200,7 @@ class TestPcodDbImporter(object):
                           ["http://www.crystallography.net/pcod/cif/1/123/12345678.cif"])
 
 
-class TestMpodDbImporter(object):
+class TestMpodDbImporter(AiidaTestCase):
     """
     Test the MpodDbImporter class.
     """
@@ -223,7 +224,7 @@ class TestMpodDbImporter(object):
                           ["http://mpod.cimav.edu.mx/datafiles/1234567.mpod"])
 
 
-class TestNnincDbImporter(object):
+class TestNnincDbImporter(AiidaTestCase):
     """
     Test the UpfEntry class.
     """

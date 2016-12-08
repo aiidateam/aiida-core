@@ -11,7 +11,10 @@ from dateutil.parser import parse
 from aiida.common import utils
 from aiida.common.additions.backup_script import backup_setup
 from aiida.orm.node import Node
-from aiida.backends.utils import is_dbenv_loaded, load_dbenv
+from aiida.backends.utils import is_dbenv_loaded, load_dbenv, BACKEND_SQLA, BACKEND_DJANGO
+from aiida.backends.settings import BACKEND
+from aiida.backends.testbase import AiidaTestCase
+
 
 if not is_dbenv_loaded():
     load_dbenv()
@@ -23,7 +26,8 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestBackupScriptUnit(object):
+class TestBackupScriptUnit(AiidaTestCase):
+
 
     _json_test_input_1 = '{"backup_length_threshold": 2, "periodicity": 2,' + \
         ' "oldest_object_backedup": "2014-07-18 13:54:53.688484+00:00", ' + \
@@ -56,6 +60,24 @@ class TestBackupScriptUnit(object):
         '"end_date_of_backup": "2014-07-22 14:54:53.688484", ' + \
         '"days_to_backup": null, ' \
         '"backup_dir": "/scratch/./aiida_user////backup//"}'
+
+    def setUp(self):
+        super(TestBackupScriptUnit, self).setUp()
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        if BACKEND == BACKEND_SQLA:
+            from aiida.common.additions.backup_script.backup_sqlalchemy import Backup
+        elif BACKEND == BACKEND_DJANGO:
+            from aiida.common.additions.backup_script.backup_django import Backup
+        else:
+            self.skipTest("Unknown backend")
+
+        self._backup_setup_inst = Backup("", 2)
+
+    def tearDown(self):
+        super(TestBackupScriptUnit, self).tearDown()
+        self._backup_setup_inst = None
 
     def test_loading_basic_params_from_file(self):
         """
@@ -240,7 +262,7 @@ class TestBackupScriptUnit(object):
             "not normalized as expected.")
 
 
-class TestBackupScriptIntegration(object):
+class TestBackupScriptIntegration(AiidaTestCase):
 
     _aiida_rel_path = ".aiida"
     _backup_rel_path = "backup"

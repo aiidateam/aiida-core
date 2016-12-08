@@ -8,8 +8,7 @@ import os
 from aiida.common import utils
 from aiida.common.additions.backup_script import backup_setup
 from aiida.common.additions.backup_script.backup_base import AbstractBackup
-
-from aiida.backends.settings import AIIDADB_PROFILE
+from aiida.backends.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -17,7 +16,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestBackupSetupScriptUnit(object):
+class TestBackupSetupScriptUnit(AiidaTestCase):
 
     def tearDown(self):
         utils.raw_input = None
@@ -58,7 +57,7 @@ class TestBackupSetupScriptUnit(object):
         self.assertEqual(bk_vars[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY], 4)
 
 
-class TestBackupSetupScriptIntegration(object):
+class TestBackupSetupScriptIntegration(AiidaTestCase):
 
     def test_full_backup_setup_script(self):
         """

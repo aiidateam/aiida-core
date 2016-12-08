@@ -19,6 +19,7 @@ import numpy as np
 
 from aiida.tools.codespecific.quantumespresso import pwinputparser
 from aiida.orm.data.structure import StructureData
+from aiida.backends.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -34,7 +35,7 @@ INPUT_FILES = [os.path.join(TEST_JOB_DIR, x) for x in os.listdir(TEST_JOB_DIR)
                if x.endswith('.in')]
 
 
-class TestPwInputFile(object):
+class TestPwInputFile(AiidaTestCase):
     """
     Unittest for testing the PwInputFile class of pwinputparser.
 

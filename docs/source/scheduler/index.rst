@@ -7,8 +7,7 @@ AiiDA schedulers
 Supported schedulers
 ++++++++++++++++++++
 
-The list below describes the supported *schedulers*, i.e. the batch job
-schedulers that manage the job queues and execution on any given computer.
+The list below describes the supported *schedulers*, i.e. the batch job schedulers that manage the job queues and execution on any given computer.
 
 PBSPro
 ------
@@ -16,8 +15,7 @@ The `PBSPro`_ scheduler is supported (and it has been tested with version 12.1).
 
 All the main features are supported with this scheduler.
 
-The JobResource class to be used when setting the job resources is the
-:ref:`NodeNumberJobResource`
+The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`NodeNumberJobResource`
 
 .. _PBSPro: http://www.pbsworks.com/Product.aspx?id=1
 
@@ -28,8 +26,7 @@ The `SLURM`_ scheduler is supported (and it has been tested with version 2.5.4).
 
 All the main features are supported with this scheduler.
 
-The JobResource class to be used when setting the job resources is the
-:ref:`NodeNumberJobResource`
+The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`NodeNumberJobResource`
 
 .. _SLURM: https://computing.llnl.gov/linux/slurm/
 
@@ -42,44 +39,36 @@ together with some of the main variants/forks.
 
 All the main features are supported with this scheduler.
 
-The JobResource class to be used when setting the job resources is the
-:ref:`ParEnvJobResource`
+The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`ParEnvJobResource`
 
 .. _SGE: http://www.oracle.com/us/products/tools/oracle-grid-engine-075549.html
 
 
 PBS/Torque & Loadleveler
 ------------------------
-PBS/Torque and Loadleveler are not fully supported yet, even if their support is one of our
-top priorities. For the moment, you can try the PBSPro plugin instead of PBS/Torque, that *may*
-also work for PBS/Torque (even if there will probably be some small issues).
+PBS/Torque and Loadleveler are not fully supported yet, even if their support is one of our top priorities. For the moment, you can try the PBSPro plugin instead of PBS/Torque, that *may* also work for PBS/Torque (even if there will probably be some small issues).
 
 Direct execution (bypassing schedulers)
 ---------------------------------------
 
-The direct scheduler, to be used mainly for debugging, is an implementation 
-of a scheduler plugin that does not require a real scheduler installed, 
-but instead directly executes a command, puts it in the background, and checks 
-for its process ID (PID) to discover if the execution is completed.
+The direct scheduler, to be used mainly for debugging, is an implementation of a scheduler plugin that does not require a real scheduler installed, but instead directly executes a command, puts it in the background, and checks for its process ID (PID) to discover if the execution is completed.
 
-.. warning:: The direct execution mode is very fragile. Currently, it
-    spawns a separate Bash shell to execute a job and track each shell by
-    process ID (PID). This poses following problems:
+.. warning:: 
+    The direct execution mode is very fragile. Currently, it spawns a separate Bash shell to execute a job and track each shell by process ID (PID). This poses following problems:
 
     * PID numeration is reset during reboots;
-    * PID numeration is different from machine to machine, thus direct
-      execution is *not* possible in multi-machine clusters, redirecting
-      each SSH login to a different node in round-robin fashion;
-    * there is no real queueing, hence, all calculation started will be run in
-      parallel.
+    * PID numeration is different from machine to machine, thus direct execution is *not* possible in multi-machine clusters, redirecting each SSH login to a different node in round-robin fashion;
+    * there is no real queueing, hence, all calculation started will be run in parallel.
 
-.. warning:: Direct execution bypasses schedulers, so it should be used
-    with care in order not to disturb the functioning of machines.
+.. warning::
+    Direct execution bypasses schedulers, so it should be used with care in order not to disturb the functioning of machines.
 
 All the main features are supported with this scheduler.
 
-The JobResource class to be used when setting the job resources is the
-:ref:`NodeNumberJobResource`
+The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`NodeNumberJobResource`
+
+
+.. _job_resources:
 
 Job resources
 +++++++++++++

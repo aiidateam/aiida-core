@@ -156,7 +156,7 @@ class RESTApiTestCase(object):
 
 
     ###### node details and list with limit, offset, page, perpage ####
-    def node_list(self, node_type, url, full_list=False, empty_list=False,
+    def process_test(self, node_type, url, full_list=False, empty_list=False,
                   expected_list_ids=[], expected_range=[],
                   expected_errormsg=None, pk=None, result_node_type=None, result_name=None):
         """
@@ -227,7 +227,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         Requests the details of single computer
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers/1",
+        RESTApiTestCase.process_test(self, "computers", "/computers/1",
                                   expected_list_ids=[0], pk=1)
 
     ############### full list with limit, offset, page, perpage #############
@@ -235,7 +235,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         Get the full list of computers from database
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?orderby=+id", full_list=True)
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=+id", full_list=True)
 
     def test_computers_list_limit_offset(self):
         """
@@ -244,7 +244,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         It should return the no of rows specified in limit from
         database starting from the no. specified in offset
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?limit=2&offset=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?limit=2&offset=2&orderby=+id",
                                   expected_range=[2,4])
 
     def test_computers_list_limit_only(self):
@@ -254,7 +254,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         It should return the no of rows specified in limit from
         database.
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?limit=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?limit=2&orderby=+id",
                                   expected_range=[None,2])
 
 
@@ -265,7 +265,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         It should return all the rows from database starting from
         the no. specified in offset
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?offset=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?offset=2&orderby=+id",
                                   expected_range=[2,None])
 
 
@@ -275,7 +275,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         would return the error message.
         """
         expected_error = "perpage key is incompatible with limit and offset"
-        RESTApiTestCase.node_list(self, "computers", "/computers?offset=2&limit=1&perpage=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?offset=2&limit=1&perpage=2&orderby=+id",
                                   expected_errormsg=expected_error)
 
     def test_computers_list_page_limit_offset(self):
@@ -284,7 +284,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         would return the error message.
         """
         expected_error = "requesting a specific page is incompatible with limit and offset"
-        RESTApiTestCase.node_list(self, "computers", "/computers/page/2?offset=2&limit=1&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers/page/2?offset=2&limit=1&orderby=+id",
                                   expected_errormsg=expected_error)
 
 
@@ -294,7 +294,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         would return the error message.
         """
         expected_error = "perpage key is incompatible with limit and offset"
-        RESTApiTestCase.node_list(self, "computers", "/computers/page/2?offset=2&limit=1&perpage=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers/page/2?offset=2&limit=1&perpage=2&orderby=+id",
                                   expected_errormsg=expected_error)
 
 
@@ -307,7 +307,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         "/page" acts as "/page/1?perpage=default_value"
 
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers/page?orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers/page?orderby=+id",
                                   full_list=True)
 
 
@@ -316,7 +316,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         **** no.of pages = total no. of computers in database / perpage
         Using this formula it returns the no. of rows for requested page
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers/page/1?perpage=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers/page/1?perpage=2&orderby=+id",
                                   expected_range=[None,2])
 
     def test_computers_list_page_perpage_exceed(self):
@@ -327,7 +327,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         it would return the error message.
         """
         expected_error = "Non existent page requested. The page range is [1 : 3]"
-        RESTApiTestCase.node_list(self, "computers", "/computers/page/4?perpage=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers/page/4?perpage=2&orderby=+id",
                                   expected_errormsg=expected_error)
 
     ############### list filters ########################
@@ -336,7 +336,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter on the id of computer and get the filtered computer
         list (e.g. id=1)
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?id=1",
+        RESTApiTestCase.process_test(self, "computers", "/computers?id=1",
                                   expected_list_ids=[0])
 
     def test_computers_filter_id2(self):
@@ -344,7 +344,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter on the id of computer and get the filtered computer
         list (e.g. id > 2)
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?id>2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?id>2&orderby=+id",
                                   expected_range=[2,None])
 
 
@@ -353,7 +353,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter on the id of computer and get the filtered computer
         list (e.g. id >= 2)
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?id>=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?id>=2&orderby=+id",
                                   expected_range=[1, None])
 
 
@@ -362,7 +362,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter on the id of computer and get the filtered computer
         list (e.g. id < 3)
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?id<2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?id<2&orderby=+id",
                                   expected_range=[None,1])
 
     def test_computers_filter_id5(self):
@@ -370,7 +370,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter on the id of computer and get the filtered computer
         list (e.g. id < 3)
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?id<=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?id<=2&orderby=+id",
                                   expected_range=[None,2])
 
     def test_computers_filter_pk(self):
@@ -378,7 +378,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter on the id of computer and get the filtered computer
         list (e.g. id=1)
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?pk=1",
+        RESTApiTestCase.process_test(self, "computers", "/computers?pk=1",
                                   expected_list_ids=[0])
 
 
@@ -387,7 +387,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter for the name of computer and get the filtered computer
         list
         """
-        RESTApiTestCase.node_list(self, "computers", '/computers?name="test1"',
+        RESTApiTestCase.process_test(self, "computers", '/computers?name="test1"',
                                   expected_list_ids=[1])
 
 
@@ -396,7 +396,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter for the hostname of computer and get the filtered computer
         list
         """
-        RESTApiTestCase.node_list(self, "computers", '/computers?hostname="test1.epfl.ch"',
+        RESTApiTestCase.process_test(self, "computers", '/computers?hostname="test1.epfl.ch"',
                                   expected_list_ids=[1])
 
 
@@ -405,7 +405,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter for the transport_type of computer and get the filtered computer
         list
         """
-        RESTApiTestCase.node_list(self, "computers", '/computers?transport_type="local"&orderby=+id',
+        RESTApiTestCase.process_test(self, "computers", '/computers?transport_type="local"&orderby=+id',
                                   expected_list_ids=[0,3])
 
 
@@ -415,7 +415,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Returns the computers list ordered by "id" in ascending
         order
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?orderby=id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=id",
                                   full_list=True)
 
 
@@ -424,7 +424,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Returns the computers list ordered by "+id" in ascending
         order
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=+id",
                                   full_list=True)
 
     def test_computers_orderby_id_desc(self):
@@ -432,7 +432,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Returns the computers list ordered by "id" in descending
         order
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?orderby=-id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=-id",
                                   expected_list_ids=[4,3,2,1,0])
 
     def test_computers_orderby_name_asc(self):
@@ -440,7 +440,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Returns the computers list ordered by "name" in ascending
         order
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?orderby=name",
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=name",
                                   full_list=True)
 
     def test_computers_orderby_name_asc_sign(self):
@@ -448,7 +448,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Returns the computers list ordered by "+name" in ascending
         order
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?orderby=+name",
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=+name",
                                   full_list=True)
 
     def test_computers_orderby_name_desc(self):
@@ -456,7 +456,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Returns the computers list ordered by "name" in descending
         order
         """
-        RESTApiTestCase.node_list(self, "computers", "/computers?orderby=-name",
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=-name",
                                   expected_list_ids=[4, 3, 2, 1, 0])
 
     def test_computers_orderby_scheduler_type_asc(self):
@@ -464,7 +464,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Returns the computers list ordered by "scheduler_type" in ascending
         order
         """
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   "/computers?orderby=scheduler_type",
                                   expected_list_ids=[0,1,3,4,2])
 
@@ -474,7 +474,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Returns the computers list ordered by "+scheduler_type" in ascending
         order
         """
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   "/computers?orderby=+scheduler_type",
                                   expected_list_ids=[0, 1, 3, 4, 2])
 
@@ -483,7 +483,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Returns the computers list ordered by "scheduler_type" in descending
         order
         """
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   "/computers?orderby=-scheduler_type",
                                   expected_list_ids=[2,3,4,0,1])
 
@@ -494,7 +494,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         ascending order and if it is having same transport_type, order it
         by "id"
         """
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   "/computers?orderby=transport_type,id",
                                   expected_list_ids=[0,3,1,2,4])
 
@@ -505,7 +505,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         descending order and if it is having same scheduler_type, order it
         by "name"
         """
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   "/computers?orderby=-scheduler_type,name",
                                   expected_list_ids=[2,3,4,0,1])
 
@@ -531,7 +531,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         test1 test4
 
 
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   "/computers?orderby=+scheduler_type,-hostname",
                                   expected_list_ids=[1,0,4,3,2])
         """
@@ -544,7 +544,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter for the hostname and id of computer and get the
         filtered computer list
         """
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   '/computers?id>1&hostname="test1.epfl.ch"',
                                   expected_list_ids=[1])
 
@@ -554,7 +554,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         Add filter for the id, hostname and transport_type of the computer
         and get the filtered computer list
         """
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   '/computers?id>1&hostname="test3.epfl.ch"&transport_type="ssh"',
                                   empty_list=True)
 
@@ -565,7 +565,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         url parameters: id, limit and offset
         """
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   "/computers?id>1&limit=2&offset=3",
                                   expected_list_ids=[4])
 
@@ -573,7 +573,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         url parameters: id, page, perpage
         """
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   "/computers/page/2?id>1&perpage=2&orderby=+id",
                                   expected_list_ids=[3,4])
 
@@ -582,7 +582,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         url parameters: id, transport_type, orderby
         """
-        RESTApiTestCase.node_list(self, "computers",
+        RESTApiTestCase.process_test(self, "computers",
                                   '/computers?id>=1&transport_type="ssh"&orderby=-id&limit=2',
                                   expected_list_ids=[4,2])
 
@@ -603,7 +603,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         Requests the details of single calculation
         """
-        RESTApiTestCase.node_list(self, "calculations", "/calculations/6",
+        RESTApiTestCase.process_test(self, "calculations", "/calculations/6",
                                   expected_list_ids=[0], pk=6)
 
     ############### full list with limit, offset, page, perpage #############
@@ -611,7 +611,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         Get the full list of calculations from database
         """
-        RESTApiTestCase.node_list(self, "calculations", "/calculations?orderby=-id", 
+        RESTApiTestCase.process_test(self, "calculations", "/calculations?orderby=-id", 
 											full_list=True)
 
     def test_calculations_list_limit_offset(self):
@@ -621,7 +621,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         It should return the no of rows specified in limit from
         database starting from the no. specified in offset
         """
-        RESTApiTestCase.node_list(self, "calculations", "/calculations?limit=1&offset=1&orderby=+id",
+        RESTApiTestCase.process_test(self, "calculations", "/calculations?limit=1&offset=1&orderby=+id",
                                   expected_list_ids=[0])
 
 
@@ -630,7 +630,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         Get the list of give calculation inputs
         """
-        self.node_list("calculations", "/calculations/5/io/inputs?orderby=id",
+        self.process_test("calculations", "/calculations/5/io/inputs?orderby=id",
                             expected_list_ids=[3,2], pk=5, result_node_type="data",
                             result_name = "inputs")
 
@@ -638,7 +638,7 @@ class RESTApiTestSuit(RESTApiTestCase):
         """
         Get filtered inputs list for given calculations
         """
-        self.node_list("calculations", '/calculations/5/io/inputs?type="data.parameter.ParameterData."',
+        self.process_test("calculations", '/calculations/5/io/inputs?type="data.parameter.ParameterData."',
                             expected_list_ids=[2], pk=5, result_node_type="data",
                             result_name = "inputs")
 

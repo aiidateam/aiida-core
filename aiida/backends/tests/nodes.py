@@ -1174,7 +1174,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(Exception):
             # I should get an error if I ask for a computer id/pk that doesn't
             # exist
-            _ = JobCalculation(computer=20,
+            _ = JobCalculation(computer=self.computer.id+100000,
                                resources={'num_machines': 2,
                                           'num_mpiprocs_per_machine': 1}).store()
 

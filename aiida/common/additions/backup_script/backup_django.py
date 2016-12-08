@@ -16,6 +16,7 @@ from aiida.orm.workflow import Workflow
 
 from aiida.common.folders import RepositoryFolder
 
+
 class Backup(AbstractBackup):
     """
     Backup for django backend
@@ -29,7 +30,7 @@ class Backup(AbstractBackup):
 
     def _query_first_node(self):
         """
-        Query first noder
+        Query first node
         :return:
         """
         return DbNode.objects.all().order_by('ctime')[:1]

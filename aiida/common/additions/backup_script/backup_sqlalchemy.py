@@ -18,6 +18,7 @@ from aiida.common.folders import RepositoryFolder
 
 import aiida.backends.sqlalchemy
 
+
 class Backup(AbstractBackup):
     """
     Backup for sqlalchemy backend
@@ -29,7 +30,8 @@ class Backup(AbstractBackup):
         Query first workflow
         :return:
         """
-        res = aiida.backends.sqlalchemy.session.query(DbWorkflow).order_by(DbWorkflow.ctime).first()
+        res = aiida.backends.sqlalchemy.session.query(
+            DbWorkflow).order_by(DbWorkflow.ctime).first()
 
         if res is None:
             return list()
@@ -38,17 +40,16 @@ class Backup(AbstractBackup):
 
     def _query_first_node(self):
         """
-        Query first noder
+        Query first node
         :return:
         """
-        res =  aiida.backends.sqlalchemy.session.query(DbNode).order_by(DbNode.ctime).first()
+        res = aiida.backends.sqlalchemy.session.query(
+            DbNode).order_by(DbNode.ctime).first()
 
         if res is None:
             return list()
 
         return [res]
-
-
 
     def _get_query_sets(self, start_of_backup, backup_end_for_this_round):
         """
@@ -59,14 +60,15 @@ class Backup(AbstractBackup):
         :param backup_end_for_this_round:
         :return:
         """
-        q_nodes = aiida.backends.sqlalchemy.session.query(DbNode).filter(DbNode.mtime >= start_of_backup) \
-            .filter(DbNode.mtime <= backup_end_for_this_round)
-        q_workflows = aiida.backends.sqlalchemy.session.query(DbWorkflow)\
-            .filter(DbWorkflow.mtime >= start_of_backup).filter(DbWorkflow.mtime <= backup_end_for_this_round)
+        q_nodes = aiida.backends.sqlalchemy.session.query(
+            DbNode).filter(DbNode.mtime >= start_of_backup).filter(
+            DbNode.mtime <= backup_end_for_this_round)
 
-        query_sets = [q_nodes, q_workflows]
+        q_workflows = aiida.backends.sqlalchemy.session.query(
+            DbWorkflow).filter(DbWorkflow.mtime >= start_of_backup).filter(
+            DbWorkflow.mtime <= backup_end_for_this_round)
 
-        return query_sets
+        return [q_nodes, q_workflows]
 
     def _get_query_set_length(self, query_set):
         """
@@ -74,7 +76,7 @@ class Backup(AbstractBackup):
         :param query_set:
         :return:
         """
-        return len(query_set)
+        return query_set.count()
 
     def _get_query_set_iterator(self, query_set):
         """

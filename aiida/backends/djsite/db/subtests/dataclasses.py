@@ -269,7 +269,7 @@ O 0.5 0.5 0.5
     def test_ase_primitive_and_conventional_cells_ase(self):
         """
         Checking the number of atoms per primitive/conventional cell
-        returned by ASE ase.io.cif.read_cif() method. Test input is
+        returned by ASE ase.io.read() method. Test input is
         adapted from http://www.crystallography.net/cod/9012064.cif@120115
         """
         import tempfile
@@ -321,7 +321,7 @@ O 0.5 0.5 0.5
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """
         Checking the number of atoms per primitive/conventional cell
-        returned by ASE ase.io.cif.read_cif() method. Test input is
+        returned by ASE ase.io.read() method. Test input is
         adapted from http://www.crystallography.net/cod/9012064.cif@120115
         """
         import tempfile

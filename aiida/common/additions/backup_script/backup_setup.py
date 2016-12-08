@@ -12,13 +12,13 @@ from aiida.backends.profile import BACKEND_DJANGO
 from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common import utils
-from aiida.common.additions.backup_script.backup_base import AbstractBackup
+from aiida.common.additions.backup_script.backup_base import AbstractBackup, BackupError
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
 
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.backends.settings import BACKEND
+from aiida.backends.settings import BACKEND, AIIDADB_PROFILE
 
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -45,8 +45,8 @@ class BackupSetup(object):
         self._backup_info_filename = "backup_info.json"
         self._backup_info_tmpl_filename = "backup_info.json.tmpl"
 
-        # The name of the sctipt that initiates the backup
-        self._script_filename = "start_backup.py"
+        # The name of the script that initiates the backup
+        self._script_filename = "start_backup_{}.py".format(AIIDADB_PROFILE)
 
         # Configuring the logging
         logging.basicConfig(
@@ -235,11 +235,15 @@ class BackupSetup(object):
             backup_import = ("from aiida.common.additions.backup_script."
                              "backup_sqlalchemy import Backup")
         else:
-            raise ValueError("Unknown backend")
+            raise BackupError("Following backend is unknown: ".format(BACKEND))
 
         script_content = \
-"""#!/usr/bin/env runaiida
+"""#!/usr/bin/env python
 import logging
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
+if not is_dbenv_loaded():
+    load_dbenv(profile="{}")
 
 {}
 
@@ -251,7 +255,24 @@ backup_inst._logger.setLevel(logging.INFO)
 
 # Start the backup
 backup_inst.run()
-""".format(backup_import, final_conf_filepath)
+""".format(AIIDADB_PROFILE, backup_import, final_conf_filepath)
+
+
+        #         script_content = \
+# """#!/usr/bin/env runaiida
+# import logging
+#
+# {}
+#
+# # Create the backup instance
+# backup_inst = Backup(backup_info_filepath="{}", additional_back_time_mins = 2)
+#
+# # Define the backup logging level
+# backup_inst._logger.setLevel(logging.INFO)
+#
+# # Start the backup
+# backup_inst.run()
+# """.format(backup_import, final_conf_filepath)
 
         # Script full path
         script_path = os.path.join(conf_backup_folder_abs,

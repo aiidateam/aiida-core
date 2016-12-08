@@ -9,6 +9,8 @@ from aiida.common import utils
 from aiida.common.additions.backup_script import backup_setup
 from aiida.common.additions.backup_script.backup_base import AbstractBackup
 
+from aiida.backends.settings import AIIDADB_PROFILE
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.0"
@@ -100,7 +102,7 @@ class TestBackupSetupScriptIntegration(object):
                             len(backup_conf_records) == 4 and
                             "backup_dest" in backup_conf_records and
                             "backup_info.json.tmpl" in backup_conf_records and
-                            "start_backup.py" in backup_conf_records and
+                            "start_backup_{}.py".format(AIIDADB_PROFILE) in backup_conf_records and
                             "backup_info.json" in backup_conf_records,
                             "The created backup folder doesn't have the "
                             "expected files. "

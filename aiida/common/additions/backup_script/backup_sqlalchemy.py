@@ -66,14 +66,6 @@ class Backup(AbstractBackup):
 
         return [q_nodes, q_workflows]
 
-    def _get_query_set_length(self, query_set):
-        """
-        Get the length of a query set
-        :param query_set:
-        :return:
-        """
-        return query_set.count()
-
     def _get_query_set_iterator(self, query_set):
         """
         Get query set iterator

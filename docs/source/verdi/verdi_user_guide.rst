@@ -284,10 +284,12 @@ to the new schema.
 ``verdi node``
 +++++++++++++++
 
-  * **repo**: Show files and their contents in the local repository
+  * **repo**: shows files and their contents in the local repository
 
-  * **show**: Show basic node information (PK, UUID, class, inputs and
+  * **show**: shows basic node information (PK, UUID, class, inputs and
     outputs)
+    
+  * **tree**: shows a tree of the nodes
 
 
 .. _profile:

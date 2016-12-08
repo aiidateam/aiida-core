@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 
 import aiida.backends.sqlalchemy
-from aiida.backends.sqlalchemy import session as sa
+# from aiida.backends.sqlalchemy import session as sa
 from aiida.common.utils import get_configured_user_email
 from aiida.backends.sqlalchemy.utils import (install_tc, loads_json,
                                              dumps_json)
@@ -53,8 +53,8 @@ class SqlAlchemyTests(unittest.TestCase):
             cls.connection = engine.connect()
 
             cls.test_session = Session(bind=cls.connection)
-            # aiida.backends.sqlalchemy.session = cls.test_session
-            sa = cls.test_session
+            aiida.backends.sqlalchemy.session = cls.test_session
+            # sa = cls.test_session
         if cls.drop_all:
             Base.metadata.drop_all(cls.connection)
             Base.metadata.create_all(cls.connection)
@@ -134,7 +134,7 @@ class SqlAlchemyTests(unittest.TestCase):
         cls.test_session.query(DbNode).delete()
 
         # # Delete the users
-        cls.test_session.query(DbUser).delete()
+        # cls.test_session.query(DbUser).delete()
 
         # Delete the computers
         cls.test_session.query(DbComputer).delete()

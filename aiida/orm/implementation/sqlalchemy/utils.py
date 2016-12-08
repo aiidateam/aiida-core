@@ -35,7 +35,7 @@ def delete_computer(computer):
         aiida.backends.sqlalchemy.session.delete(computer.dbcomputer)
         aiida.backends.sqlalchemy.session.commit()
     except SQLAlchemyError:
-        raise InvalidOperation("Unable to delete the requested computer: there"
+        raise InvalidOperation("Unable to delete the requested computer: there "
                                "is at least one node using this computer")
 
 

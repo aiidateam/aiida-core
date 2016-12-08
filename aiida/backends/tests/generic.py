@@ -37,15 +37,7 @@ class TestComputer(object):
                           'num_mpiprocs_per_machine': 1}
         }
 
-        calc = JobCalculation(**calc_params).store()
-
-
-        from aiida.backends.sqlalchemy.models.node import DbNode
-        related_computer_id = aiida.backends.sqlalchemy.session.query(DbNode). filter(DbNode.id==calc.id)
-
-        print related_computer_id
-
-        print "pk from (computer, calc.get_computer, calc foreign_key): ", self.computer.pk, calc.get_computer(), related_computer_id
+        _ = JobCalculation(**calc_params).store()
 
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
@@ -485,33 +477,10 @@ class TestGroups(object):
 
 class TestDbExtras(object):
     """
-    Test DbAttributes.
+    Test Extras
     """
+    pass
 
-    def test_replacement_1(self):
-        from aiida.backends.djsite.db.models import DbExtra
-
-        n1 = Node().store()
-        n2 = Node().store()
-
-        DbExtra.set_value_for_node(n1.dbnode, "pippo", [1, 2, 'a'])
-        DbExtra.set_value_for_node(n1.dbnode, "pippobis", [5, 6, 'c'])
-        DbExtra.set_value_for_node(n2.dbnode, "pippo2", [3, 4, 'b'])
-
-        self.assertEquals(n1.dbnode.extras, {'pippo': [1, 2, 'a'],
-                                             'pippobis': [5, 6, 'c']})
-        self.assertEquals(n2.dbnode.extras, {'pippo2': [3, 4, 'b']})
-
-        new_attrs = {"newval1": "v", "newval2": [1, {"c": "d", "e": 2}]}
-
-        DbExtra.reset_values_for_node(n1.dbnode, attributes=new_attrs)
-        self.assertEquals(n1.dbnode.extras, new_attrs)
-        self.assertEquals(n2.dbnode.extras, {'pippo2': [3, 4, 'b']})
-
-        DbExtra.del_value_for_node(n1.dbnode, key='newval2')
-        del new_attrs['newval2']
-        self.assertEquals(n1.dbnode.extras, new_attrs)
-        # Also check that other nodes were not damaged
-        self.assertEquals(n2.dbnode.extras, {'pippo2': [3, 4, 'b']})
-
+    def test_replacement(self):
+        pass
 

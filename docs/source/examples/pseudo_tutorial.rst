@@ -3,6 +3,9 @@
 Handling pseudopotentials
 =========================
 
+.. contents :: Contents
+    :local:
+
 Introduction: Pseudopotential families
 ++++++++++++++++++++++++++++++++++++++
 

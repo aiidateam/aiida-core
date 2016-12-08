@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-
+from aiida.backends.testbase import AiidaTestCase
 
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -10,7 +10,7 @@ __version__ = "0.7.0"
 
 
 
-class TestQueryBuilder():
+class TestQueryBuilder(AiidaTestCase):
 
     def test_classification(self):
         """
@@ -289,7 +289,7 @@ class TestQueryBuilder():
 
 
 
-class QueryBuilderJoinsTests():
+class QueryBuilderJoinsTests(AiidaTestCase):
     def test_joins1(self):
         from aiida.orm import Node, Data, Calculation
         from aiida.orm.querybuilder import QueryBuilder
@@ -372,7 +372,7 @@ class QueryBuilderJoinsTests():
                 ).count(), number_students)
 
 
-class QueryBuilderPath():
+class QueryBuilderPath(AiidaTestCase):
     def test_query_path(self):
 
         from aiida.orm.querybuilder import QueryBuilder

@@ -4,6 +4,7 @@ Tests for the export and import routines.
 """
 
 from aiida.orm.importexport import import_data
+from aiida.backends.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -11,7 +12,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestSpecificImport(object):
+class TestSpecificImport(AiidaTestCase):
     def test_import(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
@@ -152,7 +153,7 @@ class TestSpecificImport(object):
                                              "query.")
 
 
-class TestSimple(object):
+class TestSimple(AiidaTestCase):
 
     def test_1(self):
         import os
@@ -376,7 +377,7 @@ class TestSimple(object):
                         forbidden_licenses=crashing_filter)
 
 
-class TestComplex(object):
+class TestComplex(AiidaTestCase):
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly

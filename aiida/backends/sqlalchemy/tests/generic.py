@@ -2,42 +2,13 @@
 """
 Generic tests that need the be specific to sqlalchemy
 """
-from aiida.backends.tests.generic import TestCode, TestComputer, TestDbExtras, TestGroups, TestWfBasic
-from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
+from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
 
 
-class TestComputerSqla(SqlAlchemyTests, TestComputer):
+class TestDbExtrasSqla(AiidaTestCase):
     """
-    No characterization required
-    """
-    pass
-
-
-class TestCodeSqla(SqlAlchemyTests, TestCode):
-    """
-     No characterization required
-     """
-    pass
-
-
-class TestWfBasicSqla(SqlAlchemyTests, TestWfBasic):
-    """
-     No characterization required
-     """
-    pass
-
-
-class TestGroupsSqla(SqlAlchemyTests, TestGroups):
-    """
-     No characterization required
-     """
-    pass
-
-
-class TestDbExtrasSqla(SqlAlchemyTests, TestDbExtras):
-    """
-     No characterization required
+     No characterization required (sqlachemy specific)
      """
     def test_replacement_1(self):
 

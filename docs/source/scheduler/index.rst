@@ -182,6 +182,6 @@ Some examples:
 
     res = ParEnvJobResource(parallel_env='mpi', tot_num_mpiprocs=64)
 
-* even better, directly calling the :py:meth:`set_resources <aiida.orm.calculation.job.JobCalculation.set_resources>` method of the :py:meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` class (assuming here that ``calc`` is your calculation object)::
+* even better, directly calling the :meth:`set_resources <aiida.orm.calculation.job.JobCalculation.set_resources>` method of the :meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` class (assuming here that ``calc`` is your calculation object)::
 
     calc.set_resources({"parallel_env": 'mpi', "tot_num_mpiprocs": 64})

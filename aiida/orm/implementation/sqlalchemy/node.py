@@ -26,6 +26,7 @@ from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
+from aiida.orm.mixins import SealableMixin
 
 import aiida.orm.autogroup
 
@@ -502,7 +503,8 @@ class Node(AbstractNode):
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
         for k, v in self.iterattrs():
-            newobject._set_attr(k, v)
+            if k != SealableMixin.SEALED_KEY:
+                newobject._set_attr(k, v)
 
         for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path), path)

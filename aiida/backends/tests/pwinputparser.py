@@ -17,7 +17,6 @@ import os
 
 import numpy as np
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.tools.codespecific.quantumespresso import pwinputparser
 from aiida.orm.data.structure import StructureData
 
@@ -35,7 +34,7 @@ INPUT_FILES = [os.path.join(TEST_JOB_DIR, x) for x in os.listdir(TEST_JOB_DIR)
                if x.endswith('.in')]
 
 
-class TestPwInputFile(AiidaTestCase):
+class TestPwInputFile(object):
     """
     Unittest for testing the PwInputFile class of pwinputparser.
 

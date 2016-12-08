@@ -18,7 +18,6 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
     """
     Get a list of workflow.
     """
-    pass
     from aiida.orm.workflow import Workflow
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
     from aiida.common.datastructures import wf_states

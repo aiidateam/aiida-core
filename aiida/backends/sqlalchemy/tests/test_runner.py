@@ -29,6 +29,14 @@ def run_tests():
         #  "aiida.backends.sqlalchemy.tests.quantumespressopw",
         #  "aiida.backends.sqlalchemy.tests.quantumespressopwimmigrant",
          "aiida.backends.sqlalchemy.tests.generic"
+        # "aiida.backends.sqlalchemy.tests.calculation_node",
+        # "aiida.backends.sqlalchemy.tests.codtools",
+        # "aiida.backends.sqlalchemy.tests.pwinputparser",
+        # "aiida.backends.sqlalchemy.tests.parsers",
+        # "aiida.backends.sqlalchemy.tests.dbimporters",
+        # "aiida.backends.sqlalchemy.tests.dataclasses",
+        # "aiida.backends.sqlalchemy.tests.workflows",
+        # "aiida.backends.sqlalchemy.tests.tcodexporter",
     ]
     for module_str in modules_str:
         # Dynamically importing the module that interests us

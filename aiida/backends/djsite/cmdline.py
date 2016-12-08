@@ -41,7 +41,6 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
     """
     Get a list of workflow.
     """
-
     from aiida.backends.djsite.db.models import DbWorkflow
 
     if pk_list:

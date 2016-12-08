@@ -34,8 +34,7 @@ db_test_list = {
     'query': ['aiida.backends.djsite.db.subtests.query'],
     'backup': ['aiida.backends.djsite.db.subtests.backup_script',
                'aiida.backends.djsite.db.subtests.backup_setup_script'],
-    "restapi":["aiida.backends.djsite.db.subtests.restapi_tests.computers",
-                "aiida.backends.djsite.db.subtests.restapi_tests.users"]
+    "restapi":["aiida.backends.djsite.db.subtests.restapi"],
 }
 
 

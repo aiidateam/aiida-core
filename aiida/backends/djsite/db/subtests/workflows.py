@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from aiida.backends.tests.workflows import TestWorkflowBasic
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.djsite.cmdline import get_workflow_list
 from aiida.workflows.test import WorkflowTestEmpty
 from aiida.common.datastructures import wf_states
@@ -12,7 +11,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestWorkflowBasicDjango(AiidaTestCase, TestWorkflowBasic):
+class TestWorkflowBasicDjango(AiidaTestCase):
     """
     These tests check the basic features of workflows.
     Now only the load_workflow function is tested.

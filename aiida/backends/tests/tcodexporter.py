@@ -4,7 +4,7 @@ Tests for TestTcodDbExporter
 """
 import unittest
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."

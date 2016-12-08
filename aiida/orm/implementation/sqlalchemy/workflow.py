@@ -19,6 +19,7 @@ from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.orm.implementation.sqlalchemy.utils import django_filter
 from aiida.utils import timezone
 from aiida.utils.logger import get_dblogger_extra
+import aiida.backends.sqlalchemy.session
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -523,7 +524,12 @@ class Workflow(AbstractWorkflow):
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
-        dbworkflowinstance = DbWorkflow.query.filter_by(id=pk).first()
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            dbworkflowinstance = DbWorkflow.query.filter_by(id=pk).first()
+        except:
+            aiida.backends.sqlalchemy.session.rollback()
+            raise
 
         if not dbworkflowinstance:
             raise NotExistent("No entry with pk= {} found".format(pk))
@@ -533,7 +539,12 @@ class Workflow(AbstractWorkflow):
 
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
-        dbworkflowinstance = DbWorkflow.query.filter_by(uuid=uuid).first()
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            dbworkflowinstance = DbWorkflow.query.filter_by(uuid=uuid).first()
+        except:
+            aiida.backends.sqlalchemy.session.rollback()
+            raise
 
         if not dbworkflowinstance:
             raise NotExistent("No entry with the UUID {} found".format(uuid))

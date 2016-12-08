@@ -56,7 +56,7 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
 
     wf_list = DbWorkflow.objects.filter(filters).order_by('ctime')
 
-    return wf_list
+    return list(wf_list)
 
 
 def get_log_messages(obj):

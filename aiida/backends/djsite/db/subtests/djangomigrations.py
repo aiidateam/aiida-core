@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."

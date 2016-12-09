@@ -563,10 +563,17 @@ class Devel(VerdiCommandWithSubcommands):
 
         print "Final summary of the run of tests:"
         print "* Tests skipped: {}".format(len(test_skipped))
+        if test_skipped:
+            print "  Reasons for skipping:"
+            for reason in sorted(set([_[1] for _ in test_skipped])):
+                print "  - {}".format(reason)
+
         print "* Tests run:     {}".format(tot_num_tests)
         print "* Tests OK:      {}".format(tot_num_tests - len(test_errors) - len(test_failures))
         print "* Tests failed:  {}".format(len(test_failures))
         print "* Tests errored: {}".format(len(test_errors))
+
+
 
         # If there was any failure report it with the
         # right exit code

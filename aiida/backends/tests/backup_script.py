@@ -204,30 +204,61 @@ class TestBackupScriptUnit(AiidaTestCase):
         with self.assertRaises(BackupError):
             self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 
-    def test_full_deserialization_serialization(self):
+    def check_full_deserialization_serialization(self, input_string, backup_inst):
+        input_variables = json.loads(input_string)
+        backup_inst._ignore_backup_dir_existence_check = True
+        backup_inst._read_backup_info_from_dict(input_variables)
+        target_variables = backup_inst._dictionarize_backup_info()
+
+        self.assertIs(cmp(input_variables, target_variables), 0,
+                      "The test string {} did not succeed".format(
+                          input_string) +
+                      " the serialization deserialization test.\n" +
+                      "Input variables: {}\n".format(input_variables) +
+                      "Output variables: {}\n".format(target_variables))
+
+    def test_full_deserialization_serialization_1(self):
         """
         This method tests the correct deserialization / serialization of the
         variables that should be stored in a file.
         """
-        for input_string in (self._json_test_input_1, self._json_test_input_2,
-                             self._json_test_input_3, self._json_test_input_4):
-            self.setUp()
+        input_string = self._json_test_input_1
+        backup_inst = self._backup_setup_inst
 
-            backup_inst = self._backup_setup_inst
+        self.check_full_deserialization_serialization(input_string, backup_inst)
 
-            input_variables = json.loads(input_string)
-            backup_inst._ignore_backup_dir_existence_check = True
-            backup_inst._read_backup_info_from_dict(input_variables)
-            target_variables = backup_inst._dictionarize_backup_info()
+    def test_full_deserialization_serialization_2(self):
+        """
+        This method tests the correct deserialization / serialization of the
+        variables that should be stored in a file.
+        """
+        input_string = self._json_test_input_2
+        backup_inst = self._backup_setup_inst
 
-            self.assertIs(cmp(input_variables, target_variables), 0,
-                          "The test string {} did not succeed".format(
-                              input_string) +
-                          " the serialization deserialization test.\n" +
-                          "Input variables: {}\n".format(input_variables) +
-                          "Output variables: {}\n".format(target_variables))
+        self.check_full_deserialization_serialization(input_string, backup_inst)
 
-            self.tearDown()
+
+    def test_full_deserialization_serialization_3(self):
+        """
+        This method tests the correct deserialization / serialization of the
+        variables that should be stored in a file.
+        """
+        input_string = self._json_test_input_3
+        backup_inst = self._backup_setup_inst
+
+        self.check_full_deserialization_serialization(input_string, backup_inst)
+
+
+    def test_full_deserialization_serialization_4(self):
+        """
+        This method tests the correct deserialization / serialization of the
+        variables that should be stored in a file.
+        """
+        input_string = self._json_test_input_4
+        backup_inst = self._backup_setup_inst
+
+        self.check_full_deserialization_serialization(input_string, backup_inst)
+
 
     def test_timezone_addition_and_dir_correction(self):
         """

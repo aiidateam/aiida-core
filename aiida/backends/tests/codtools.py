@@ -14,6 +14,7 @@ from aiida.orm.calculation.job.codtools.ciffilter import CiffilterCalculation
 from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
 from aiida.parsers.plugins.codtools.cifcodcheck import CifcodcheckParser
 from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
+from aiida.backends.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -21,7 +22,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestCodtools(object):
+class TestCodtools(AiidaTestCase):
     from aiida.orm.data.cif import has_pycifrw
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")

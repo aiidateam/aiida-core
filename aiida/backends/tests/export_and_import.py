@@ -4,6 +4,7 @@ Tests for the export and import routines.
 """
 
 from aiida.orm.importexport import import_data
+from aiida.backends.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -11,7 +12,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestSpecificImport(object):
+class TestSpecificImport(AiidaTestCase):
     def test_import(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
@@ -27,8 +28,7 @@ class TestSpecificImport(object):
         test_file_path = os.path.join(folder_path, relative_folder_path)
 
         # Clean the database
-        self.tearDownClass()
-        self.setUpClass(initial_data=False)
+        self.clean_db()
 
         # Import the needed data
         import_data(test_file_path, silent=True)
@@ -91,7 +91,7 @@ class TestSpecificImport(object):
         qb.append(StructureData, project=["attributes.cell"], filters={
             'uuid': {"==": "45670237-dc1e-4300-8e0b-4d3639dc77cf"}})
         for [cell] in qb.all():
-            print cell
+            #print cell
             self.assertEquals(cell,
                               [[8.34, 0.0, 0.0], [0.298041701839357,
                                                   8.53479766274308, 0.0],
@@ -152,7 +152,7 @@ class TestSpecificImport(object):
                                              "query.")
 
 
-class TestSimple(object):
+class TestSimple(AiidaTestCase):
 
     def test_1(self):
         import os
@@ -191,9 +191,7 @@ class TestSimple(object):
 
             export([calc.dbnode], outfile=filename, silent=True)
 
-            self.tearDownClass()
-            # self.setUpClass(initial_data=False)
-            self.setUpClass(initial_data=False)
+            self.clean_db()
 
             # NOTE: it is better to load new nodes by uuid, rather than assuming
             # that they will have the first 3 pks. In fact, a recommended policy in
@@ -298,8 +296,7 @@ class TestSimple(object):
             with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.add(unpack.abspath, arcname="")
 
-            self.tearDownClass()
-            self.setUpClass(initial_data=False)
+            self.clean_db()
 
             with self.assertRaises(ValueError):
                 import_data(filename, silent=True)
@@ -376,7 +373,7 @@ class TestSimple(object):
                         forbidden_licenses=crashing_filter)
 
 
-class TestComplex(object):
+class TestComplex(AiidaTestCase):
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly
@@ -445,8 +442,7 @@ class TestComplex(object):
             filename = os.path.join(temp_folder, "export.tar.gz")
             export([fd1.dbnode], outfile=filename, silent=True)
 
-            self.tearDownClass()
-            self.setUpClass(initial_data=False)
+            self.clean_db()
 
             import_data(filename, silent=True, ignore_unknown_nodes=True)
 
@@ -471,11 +467,11 @@ class TestComplex(object):
         qb.append(Node, filters={
             'uuid': {"==": "99d516d5-fafe-40d3-979f-12726e626648"}},
                   project=["*"], tag="res")
-        for [node] in qb.all():
-            print node.get_attrs()
-            print node.uuid
-            print node.id
-            print "=============="
+        #for [node] in qb.all():
+        #    print node.get_attrs()
+        #    print node.uuid
+        #    print node.id
+        #    print "=============="
 
         g = Graph()
         g.graph_generate((str(node.id)))

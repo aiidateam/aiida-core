@@ -11,9 +11,6 @@
 ## For postgreSQL
 psycopg2==2.6.1
 
-## For MySQL
-MySQL-python==1.2.5
-
 ## To have a decent recent version of sqlite
 ## Note that django uses pysqlite instead of the system-provided
 ## sqlite3, if pysqlite is available: django/db/backends/sqlite3/base.py

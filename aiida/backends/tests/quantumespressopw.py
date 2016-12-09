@@ -18,6 +18,9 @@ import aiida
 from aiida.common.exceptions import InputValidationError
 from aiida.common.folders import SandboxFolder
 from aiida.orm import CalculationFactory, DataFactory
+from aiida.backends.testbase import AiidaTestCase
+from aiida.orm import Code
+
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For " \
                 u"further information please visit http://www.aiida.net/. All " \
@@ -33,10 +36,24 @@ UpfData = DataFactory('upf')
 KpointsData = DataFactory('array.kpoints')
 
 
-class TestQEPWInputGeneration():
+class TestQEPWInputGeneration(AiidaTestCase):
     """
     Test if the input is correctly generated
     """
+    @classmethod
+    def setUpClass(cls):
+        super(TestQEPWInputGeneration, cls).setUpClass()
+        cls.calc_params = {
+            'computer': cls.computer,
+            'resources': {
+                'num_machines': 1,
+                'num_mpiprocs_per_machine': 1
+            }
+        }
+
+        cls.code = Code()
+        cls.code.set_remote_computer_exec((cls.computer, '/x.x'))
+        cls.code.store()
 
     def test_inputs(self):
         import logging

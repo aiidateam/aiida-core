@@ -9,13 +9,15 @@ from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
 from aiida.orm.data import Data
 
+from aiida.backends.testbase import AiidaTestCase
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestDataNode(object):
+class TestDataNode(AiidaTestCase):
     """
     These tests check the features of Data nodes that differ from the base Node
     """
@@ -51,7 +53,7 @@ class TestDataNode(object):
             a._set_attr('i', 12)
 
 
-class TestTransitiveNoLoops(object):
+class TestTransitiveNoLoops(AiidaTestCase):
     """
     Test the creation of the transitive closure table
     """
@@ -70,14 +72,8 @@ class TestTransitiveNoLoops(object):
             n1.add_link_from(n4, link_type=LinkType.CREATE)
 
 
-class TestTransitiveClosureDeletion(object):
-    """
-    Test the creation of the transitive closure table
-    """
-    pass
 
-
-class TestQueryWithAiidaObjects(object):
+class TestQueryWithAiidaObjects(AiidaTestCase):
     """
     Test if queries work properly also with aiida.orm.Node classes instead of
     aiida.backends.djsite.db.models.DbNode objects.
@@ -177,7 +173,7 @@ class TestQueryWithAiidaObjects(object):
                           set([]))
 
 
-class TestNodeBasic(object):
+class TestNodeBasic(AiidaTestCase):
     """
     These tests check the basic features of nodes
     (setting of attributes, copying of files, ...)
@@ -1006,11 +1002,11 @@ class TestNodeBasic(object):
             self.assertTrue(time < after)
 
         self.assertEquals([(i['user__email'], i['content']) for i in comments],
-                          [(self.user.email, 'text'),
-                           (self.user.email, 'text2'), ])
+                          [(self.user_email, 'text'),
+                           (self.user_email, 'text2'), ])
 
 
-class TestSubNodesAndLinks(object):
+class TestSubNodesAndLinks(AiidaTestCase):
     def test_cachelink(self):
         """
         Test the proper functionality of the links cache, with different
@@ -1178,7 +1174,7 @@ class TestSubNodesAndLinks(object):
         with self.assertRaises(Exception):
             # I should get an error if I ask for a computer id/pk that doesn't
             # exist
-            _ = JobCalculation(computer=20,
+            _ = JobCalculation(computer=self.computer.id+100000,
                                resources={'num_machines': 2,
                                           'num_mpiprocs_per_machine': 1}).store()
 
@@ -1331,7 +1327,7 @@ class TestSubNodesAndLinks(object):
         calc = JobCalculation(computer=self.computer,
                               resources={'num_machines': 1,
                                          'num_mpiprocs_per_machine': 1}).store()
-        calc2 = JobCalculation(computer=self.computer.name,
+        calc2 = JobCalculation(computer=self.computer,
                                resources={'num_machines': 1,
                                           'num_mpiprocs_per_machine': 1}).store()
 

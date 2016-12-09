@@ -5,6 +5,7 @@ Tests for specific subclasses of Data
 from django.utils import unittest
 from aiida.orm import load_node
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
+from aiida.backends.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -21,7 +22,7 @@ def simplify(string):
     return "\n".join(s.strip() for s in string.split())
 
 
-class TestCalcStatus(object):
+class TestCalcStatus(AiidaTestCase):
     """
     Test the functionality of calculation states.
     """
@@ -70,7 +71,7 @@ class TestCalcStatus(object):
             c._set_state(calc_states.WITHSCHEDULER)
 
 
-class TestSinglefileData(object):
+class TestSinglefileData(AiidaTestCase):
     """
     Test the SinglefileData class.
     """
@@ -111,7 +112,7 @@ class TestSinglefileData(object):
             self.assertEquals(f.read(), file_content)
 
 
-class TestCifData(object):
+class TestCifData(AiidaTestCase):
     """
     Tests for CifData class.
     """
@@ -613,27 +614,9 @@ _publ_section_title                     'Test CIF'
         with self.assertRaises(ValueError):
             ret_dict = refine_inline(c)
 
-    def test_parse_formula(self):
-        from aiida.orm.data.cif import parse_formula
-
-        self.assertEqual(parse_formula("C H"),
-                         {'C': 1, 'H': 1})
-
-        self.assertEqual(parse_formula("C5 H1"),
-                         {'C': 5, 'H': 1})
-
-        self.assertEqual(parse_formula("Ca5 Ho"),
-                         {'Ca': 5, 'Ho': 1})
-
-        self.assertEqual(parse_formula("H0.5 O"),
-                         {'H': 0.5, 'O': 1})
-
-        # Invalid literal for float()
-        with self.assertRaises(ValueError):
-            parse_formula("H0.5.2 O")
 
 
-class TestKindValidSymbols(object):
+class TestKindValidSymbols(AiidaTestCase):
     """
     Tests the symbol validation of the
     aiida.orm.data.structure.Kind class.
@@ -666,7 +649,7 @@ class TestKindValidSymbols(object):
         _ = Kind(symbols=['H', 'He'], weights=[0.5, 0.5])
 
 
-class TestSiteValidWeights(object):
+class TestSiteValidWeights(AiidaTestCase):
     """
     Tests valid weight lists.
     """
@@ -748,7 +731,7 @@ class TestSiteValidWeights(object):
         _ = Kind(symbols='Ba', weights=None)
 
 
-class TestKindTestGeneral(object):
+class TestKindTestGeneral(AiidaTestCase):
     """
     Tests the creation of Kind objects and their methods.
     """
@@ -823,7 +806,7 @@ class TestKindTestGeneral(object):
         self.assertEqual(a.name, 'newstring')
 
 
-class TestKindTestMasses(object):
+class TestKindTestMasses(AiidaTestCase):
     """
     Tests the management of masses during the creation of Kind objects.
     """
@@ -874,7 +857,7 @@ class TestKindTestMasses(object):
         self.assertAlmostEqual(a.mass, 1000.)
 
 
-class TestStructureDataInit(object):
+class TestStructureDataInit(AiidaTestCase):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
@@ -1005,7 +988,7 @@ class TestStructureDataInit(object):
         self.assertEqual(a.pbc, tuple([True, False, True]))
 
 
-class TestStructureData(object):
+class TestStructureData(AiidaTestCase):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
@@ -1479,7 +1462,7 @@ _chemical_formula_sum                   'Ba2 Ti'
 """))
 
 
-class TestStructureDataLock(object):
+class TestStructureDataLock(AiidaTestCase):
     """
     Tests that the structure is locked after storage
     """
@@ -1533,7 +1516,7 @@ class TestStructureDataLock(object):
         b.pbc = [True, True, True]
 
 
-class TestStructureDataReload(object):
+class TestStructureDataReload(AiidaTestCase):
     """
     Tests the creation of StructureData, converting it to a raw format and
     converting it back.
@@ -1635,7 +1618,7 @@ class TestStructureDataReload(object):
             self.assertAlmostEqual(c.sites[1].position[i], 1.)
 
 
-class TestStructureDataFromAse(object):
+class TestStructureDataFromAse(AiidaTestCase):
     """
     Tests the creation of Sites from/to a ASE object.
     """
@@ -1786,7 +1769,7 @@ class TestStructureDataFromAse(object):
         self.assertEquals(kindnames, set(['Fe', 'Fe1', 'Fe4']))
 
 
-class TestStructureDataFromPymatgen(object):
+class TestStructureDataFromPymatgen(AiidaTestCase):
     """
     Tests the creation of StructureData from a pymatgen Structure and
     Molecule objects.
@@ -1910,7 +1893,7 @@ class TestStructureDataFromPymatgen(object):
                 [5.77, 5.89, 5.73])
 
 
-class TestPymatgenFromStructureData(object):
+class TestPymatgenFromStructureData(AiidaTestCase):
     """
     Tests the creation of pymatgen Structure and Molecule objects from
     StructureData.
@@ -2003,7 +1986,7 @@ class TestPymatgenFromStructureData(object):
                            [3.0, 3.0, 3.0]])
 
 
-class TestArrayData(object):
+class TestArrayData(AiidaTestCase):
     """
     Tests the ArrayData objects.
     """
@@ -2129,7 +2112,7 @@ class TestArrayData(object):
                 self.assertAlmostEquals(abs(third - array).max(), 0.)
 
 
-class TestTrajectoryData(object):
+class TestTrajectoryData(AiidaTestCase):
     """
     Tests the TrajectoryData objects.
     """
@@ -2458,7 +2441,7 @@ class TestTrajectoryData(object):
             td = TrajectoryData(structurelist=structurelist)
 
 
-class TestKpointsData(object):
+class TestKpointsData(AiidaTestCase):
     """
     Tests the TrajectoryData objects.
     """
@@ -2590,7 +2573,7 @@ class TestKpointsData(object):
         self.assertTrue(numpy.allclose(klist, input_klist, atol=1e-16))
 
 
-class TestData(object):
+class TestData(AiidaTestCase):
     """
     Tests generic Data class.
     """

@@ -4,7 +4,7 @@ Tests for TestTcodDbExporter
 """
 import unittest
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -38,7 +38,7 @@ class TestTcodDbExporter(AiidaTestCase):
     from aiida.orm.data.structure import has_ase, has_pyspglib
     from aiida.orm.data.cif import has_pycifrw
 
-    def test_contents_encoding(self):
+    def test_contents_encoding_1(self):
         """
         Testing the logic of choosing the encoding and the process of
         encoding contents.
@@ -655,14 +655,14 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags)
 
-    def test_contents_encoding(self):
+    def test_contents_encoding_2(self):
         """
         Testing the logic of choosing the encoding and the process of
         encoding contents.
         """
         from aiida.tools.dbexporters.tcod import decode_textfield
 
-        def test_ncr(self, inp, out):
+        def check_ncr(self, inp, out):
             from aiida.tools.dbexporters.tcod import (encode_textfield_ncr,
                                                       decode_textfield_ncr)
             encoded = encode_textfield_ncr(inp)
@@ -672,7 +672,7 @@ class TestTcodDbExporter(AiidaTestCase):
             self.assertEquals(decoded, inp)
             self.assertEquals(decoded_universal, inp)
 
-        def test_quoted_printable(self, inp, out):
+        def check_quoted_printable(self, inp, out):
             from aiida.tools.dbexporters.tcod import (encode_textfield_quoted_printable,
                                                       decode_textfield_quoted_printable)
             encoded = encode_textfield_quoted_printable(inp)
@@ -682,7 +682,7 @@ class TestTcodDbExporter(AiidaTestCase):
             self.assertEquals(decoded, inp)
             self.assertEquals(decoded_universal, inp)
 
-        def test_base64(self, inp, out):
+        def check_base64(self, inp, out):
             from aiida.tools.dbexporters.tcod import (encode_textfield_base64,
                                                       decode_textfield_base64)
             encoded = encode_textfield_base64(inp)
@@ -692,7 +692,7 @@ class TestTcodDbExporter(AiidaTestCase):
             self.assertEquals(decoded, inp)
             self.assertEquals(decoded_universal, inp)
 
-        def test_gzip_base64(self, text):
+        def check_gzip_base64(self, text):
             from aiida.tools.dbexporters.tcod import (encode_textfield_gzip_base64,
                                                       decode_textfield_gzip_base64)
             encoded = encode_textfield_gzip_base64(text)
@@ -701,28 +701,28 @@ class TestTcodDbExporter(AiidaTestCase):
             self.assertEquals(text, decoded)
             self.assertEquals(text, decoded_universal)
 
-        test_ncr(self, '.', '&#46;')
-        test_ncr(self, '?', '&#63;')
-        test_ncr(self, ';\n', '&#59;\n')
-        test_ncr(self, 'line\n;line', 'line\n&#59;line')
-        test_ncr(self, 'tabbed\ttext', 'tabbed&#9;text')
-        test_ncr(self, 'angstrom Å', 'angstrom &#195;&#133;')
-        test_ncr(self, '<html>&#195;&#133;</html>',
+        check_ncr(self, '.', '&#46;')
+        check_ncr(self, '?', '&#63;')
+        check_ncr(self, ';\n', '&#59;\n')
+        check_ncr(self, 'line\n;line', 'line\n&#59;line')
+        check_ncr(self, 'tabbed\ttext', 'tabbed&#9;text')
+        check_ncr(self, 'angstrom Å', 'angstrom &#195;&#133;')
+        check_ncr(self, '<html>&#195;&#133;</html>',
                  '<html>&#38;#195;&#38;#133;</html>')
 
-        test_quoted_printable(self, '.', '=2E')
-        test_quoted_printable(self, '?', '=3F')
-        test_quoted_printable(self, ';\n', '=3B\n')
-        test_quoted_printable(self, 'line\n;line', 'line\n=3Bline')
-        test_quoted_printable(self, 'tabbed\ttext', 'tabbed=09text')
-        test_quoted_printable(self, 'angstrom Å', 'angstrom =C3=85')
-        test_quoted_printable(self, 'line\rline\x00', 'line=0Dline=00')
+        check_quoted_printable(self, '.', '=2E')
+        check_quoted_printable(self, '?', '=3F')
+        check_quoted_printable(self, ';\n', '=3B\n')
+        check_quoted_printable(self, 'line\n;line', 'line\n=3Bline')
+        check_quoted_printable(self, 'tabbed\ttext', 'tabbed=09text')
+        check_quoted_printable(self, 'angstrom Å', 'angstrom =C3=85')
+        check_quoted_printable(self, 'line\rline\x00', 'line=0Dline=00')
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
-        test_quoted_printable(self,
+        check_quoted_printable(self,
                               "Å{};a".format("".join("a" for i in range(0, 69))),
                               '=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
                               'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
 
-        test_base64(self, 'angstrom ÅÅÅ', 'YW5nc3Ryb20gw4XDhcOF')
-        test_gzip_base64(self, 'angstrom ÅÅÅ')
+        check_base64(self, 'angstrom ÅÅÅ', 'YW5nc3Ryb20gw4XDhcOF')
+        check_gzip_base64(self, 'angstrom ÅÅÅ')

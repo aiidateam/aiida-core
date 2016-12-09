@@ -1,8 +1,7 @@
-from aiida.backends.tests.query import TestQueryBuilder, QueryBuilderJoinsTests, QueryBuilderPath
-from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
+from aiida.backends.testbase import AiidaTestCase
 
 
-class TestQueryBuilderSQLA(SqlAlchemyTests, TestQueryBuilder):
+class TestQueryBuilderSQLA(AiidaTestCase):
     def test_clsf_sqla(self):
         from aiida.orm import Group, User, Computer, Node, Data, Calculation
         from aiida.backends.sqlalchemy.models.node import DbNode
@@ -24,12 +23,6 @@ class TestQueryBuilderSQLA(SqlAlchemyTests, TestQueryBuilder):
             self.assertEqual(cls, ORMCls)
             self.assertEqual(query_type_string, typestr)
 
-
-class QueryBuilderJoinsTestsSQLA(SqlAlchemyTests, QueryBuilderJoinsTests):
-    pass
-
-class QueryBuilderPathSQLA(SqlAlchemyTests, QueryBuilderPath):
-    pass
 
 
 

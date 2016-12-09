@@ -125,7 +125,7 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
         if wf_id and isinstance(wf_id, uuid_type):
             wf_id = str(wf_id)
 
-        if isinstance(wf_id, str) or isinstance(wf_id, unicode):
+        if isinstance(wf_id, basestring):
             return Workflow.get_subclass_from_uuid(wf_id)
         elif isinstance(wf_id, int):
             return Workflow.get_subclass_from_pk(wf_id)

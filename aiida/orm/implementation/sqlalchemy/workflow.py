@@ -523,7 +523,13 @@ class Workflow(AbstractWorkflow):
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
-        dbworkflowinstance = DbWorkflow.query.filter_by(id=pk).first()
+        import aiida.backends.sqlalchemy.session
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            dbworkflowinstance = DbWorkflow.query.filter_by(id=pk).first()
+        except:
+            aiida.backends.sqlalchemy.session.rollback()
+            raise
 
         if not dbworkflowinstance:
             raise NotExistent("No entry with pk= {} found".format(pk))
@@ -533,7 +539,13 @@ class Workflow(AbstractWorkflow):
 
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
-        dbworkflowinstance = DbWorkflow.query.filter_by(uuid=uuid).first()
+        import aiida.backends.sqlalchemy.session
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            dbworkflowinstance = DbWorkflow.query.filter_by(uuid=uuid).first()
+        except:
+            aiida.backends.sqlalchemy.session.rollback()
+            raise
 
         if not dbworkflowinstance:
             raise NotExistent("No entry with the UUID {} found".format(uuid))

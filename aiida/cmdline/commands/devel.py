@@ -486,7 +486,12 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.backends.testbase import run_aiida_db_tests
         from aiida.backends.testbase import check_if_tests_can_run
 
-        test_failures = list()
+        # For final summary
+        test_failures = []
+        test_errors = []
+        test_skipped = []
+        tot_num_tests = 0
+
         db_test_list = []
         test_folders = []
         do_db = False
@@ -528,8 +533,12 @@ class Devel(VerdiCommandWithSubcommands):
             testsuite = unittest.defaultTestLoader.discover(
                 test_folder, top_level_dir=os.path.dirname(aiida.__file__))
             test_runner = unittest.TextTestRunner()
-            test_result = test_runner.run(testsuite)
-            test_failures.extend(test_result.failures)
+            test_results = test_runner.run(testsuite)
+            test_failures.extend(test_results.failures)
+            test_errors.extend(test_results.errors)
+            test_skipped.extend(test_results.skipped)
+            tot_num_tests += test_results.testsRun
+
         if do_db:
             if not is_dbenv_loaded():
                 load_dbenv()
@@ -546,8 +555,18 @@ class Devel(VerdiCommandWithSubcommands):
             print "v" * 75
             print (">>> Tests for {} db application".format(settings.BACKEND))
             print "^" * 75
-            db_failures = run_aiida_db_tests(db_test_list)
-            test_failures.extend(db_failures)
+            db_results = run_aiida_db_tests(db_test_list)
+            test_skipped.extend(db_results.skipped)
+            test_failures.extend(db_results.failures)
+            test_errors.extend(db_results.errors)
+            tot_num_tests += db_results.testsRun
+
+        print "Final summary of the run of tests:"
+        print "* Tests skipped: {}".format(len(test_skipped))
+        print "* Tests run:     {}".format(tot_num_tests)
+        print "* Tests OK:      {}".format(tot_num_tests - len(test_errors) - len(test_failures))
+        print "* Tests failed:  {}".format(len(test_failures))
+        print "* Tests errored: {}".format(len(test_errors))
 
         # If there was any failure report it with the
         # right exit code

@@ -116,7 +116,7 @@ class AiidaTestCase(unittest.TestCase):
 def run_aiida_db_tests(tests_to_run, verbose=False):
     """
     Run all tests specified in tests_to_run.
-    Return the list of test failures.
+    Return the list of test results.
     """
     # Empty test suite that will be populated
     test_suite = TestSuite()
@@ -148,4 +148,4 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
     if verbose:
         print "Run tests: {}".format(results.testsRun)
 
-    return results.failures
+    return results

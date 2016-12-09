@@ -7,11 +7,8 @@ __authors__ = "The AiiDA team."
 
 from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
-# GP: In the future, keep only the list of tests that are *specific* to a given
-# backend in the backend dictionaries, and put all the rest in the 'common'
-# dictionary to be used for both.
-# Even better, define only folders in which tests should be put, and each
-# file defines a new test
+# TODO: define only folders in which tests should be put, and each
+#       file defines a new test
 db_test_list = {
     BACKEND_DJANGO: {
         'generic': ['aiida.backends.djsite.db.subtests.generic'],

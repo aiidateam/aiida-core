@@ -5,16 +5,15 @@ import unittest
 
 from aiida.backends import settings
 from aiida.common.utils import classproperty
-from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError
+from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
 from aiida.backends.tests import get_db_test_list
 from unittest import (
     TestSuite, TestResult,
     main as unittest_main, defaultTestLoader as test_loader)
 
-
 def check_if_tests_can_run():
     """
-    Check if the tests can run (i.e., if we are in a test profile.
+    Check if the tests can run (i.e., if we are in a test profile).
     Otherwise, raise TestsNotAllowedError.
     """
     from aiida import settings as settings2
@@ -39,20 +38,16 @@ class AiidaTestCase(unittest.TestCase):
     """
     This is the base class for AiiDA tests, independent of the backend.
 
-    Each of them should contain two standard methods (i.e., *not* classmethods), called
-    respectively ``setUpClass_method`` and ``tearDownClass_method``.
-    They can set local properties (e.g. self.xxx = yyy) but xxx is not visible to this class.
-
-    Moreover, it is required that they define in the setUpClass_method the two properties:
-
-    - ``self.computer`` that must be a Computer object
-    - ``self.user_email`` that must be a string
-
-    These two are exposed to this test class.
+    Internally it loads the AiidaTestImplementation subclass according to the current backend
     """
+    _class_was_setup = False
+
     @classmethod
     def get_backend_class(cls):
+        from aiida.backends.testimplbase import AiidaTestImplementation
+
         from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+        # Freeze the __impl_class after the first run
         if not hasattr(cls, '__impl_class'):
             if settings.BACKEND == BACKEND_SQLA:
                 from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
@@ -62,6 +57,14 @@ class AiidaTestCase(unittest.TestCase):
                 cls.__impl_class = DjangoTests
             else:
                 raise ConfigurationError("Unknown backend type")
+
+
+            # Check that it is of the right class
+            if not issubclass(cls.__impl_class, AiidaTestImplementation):
+                raise InternalError("The AiiDA test implementation is not of type "
+                    "{}, that is not a subclass of AiidaTestImplementation".format(
+                    cls.__impl_class.__name__
+                ))
 
         return cls.__impl_class
 
@@ -76,24 +79,30 @@ class AiidaTestCase(unittest.TestCase):
         cls.__backend_instance = cls.get_backend_class()()
         cls.__backend_instance.setUpClass_method(*args, **kwargs)
 
+        cls._class_was_setup = True
+
+    @classmethod
+    def clean_db(cls):
+
+        # Note: this will raise an exception, that will be seen as a test
+        # failure. To be safe, you should do the same check also in the tearDownClass
+        # to avoid that it is run
+        check_if_tests_can_run()
+
+        from aiida.common.exceptions import InvalidOperation
+
+        if not cls._class_was_setup:
+            raise InvalidOperation("You cannot call clean_db before running the setUpClass")
+
+        cls.__backend_instance.clean_db()
+
     @classproperty
     def computer(cls):
-        return cls.__backend_instance.computer
+        return cls.__backend_instance.get_computer()
 
     @classproperty
     def user_email(cls):
-        return cls.__backend_instance.user_email
-
-    # @classmethod
-    # def get_initialization_data(cls, dataname):
-    #     """
-    #     This function returns the object saved as self.dataname in the
-    #     backend instance (function setUpClass_method of the backend_instance).
-    #
-    #     :param dataname: a string with the name of the object saved in the initialization (e.g., 'user')
-    #     :return: the data value
-    #     """
-    #     return getattr(cls.__backend_instance, dataname)
+        return cls.__backend_instance.get_user_email()
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
@@ -104,9 +113,9 @@ class AiidaTestCase(unittest.TestCase):
 
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)
 
-def run_aiida_db_tests(tests_to_run, verbose=True):
+def run_aiida_db_tests(tests_to_run, verbose=False):
     """
-    Run all sqlalchemy tests specified in tests_to_run.
+    Run all tests specified in tests_to_run.
     Return the list of test failures.
     """
     # Empty test suite that will be populated
@@ -129,8 +138,6 @@ def run_aiida_db_tests(tests_to_run, verbose=True):
 
         num_tests_expected = test_suite.countTestCases()
 
-    obj = None  # To avoid double runnings of the last test
-
     if verbose:
         print >> sys.stderr, (
             "DB tests that will be run: {} (expecting {} tests)".format(
@@ -138,6 +145,7 @@ def run_aiida_db_tests(tests_to_run, verbose=True):
 
     results = unittest.TextTestRunner().run(test_suite)
 
-    print "Run tests: {}".format(results.testsRun)
+    if verbose:
+        print "Run tests: {}".format(results.testsRun)
 
     return results.failures

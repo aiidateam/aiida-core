@@ -23,6 +23,7 @@ from aiida.orm.computer import Computer
 from aiida.common.setup import get_profile_config
 
 from aiida.backends.settings import AIIDADB_PROFILE
+from aiida.backends.testimplbase import AiidaTestImplementation
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -36,7 +37,7 @@ Session = sessionmaker(expire_on_commit=False)
 # This inherits only from 'object' to avoid that it is picked up by the automatic discovery of tests
 # (It shouldn't, as it risks to destroy the DB if there are not the checks in place, and these are
 # implemented in the AiidaTestCase
-class SqlAlchemyTests(object):
+class SqlAlchemyTests(AiidaTestImplementation):
 
     # Specify the need to drop the table at the beginning of a test case
     drop_all = False
@@ -66,6 +67,12 @@ class SqlAlchemyTests(object):
 
         self.clean_db()
 
+        self.insert_data()
+
+    def insert_data(self):
+        """
+        Insert default data in DB.
+        """
         email = get_configured_user_email()
 
         has_user = DbUser.query.filter(DbUser.email==email).first()

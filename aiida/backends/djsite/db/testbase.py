@@ -5,6 +5,7 @@ Base class for AiiDA tests
 from django.utils import unittest
 import shutil
 import os
+from aiida.backends.testimplbase import AiidaTestImplementation
 
 # Add a new entry here if you add a file with tests under aiida.backends.djsite.db.subtests
 # The key is the name to use in the 'verdi test' command (e.g., a key 'generic'
@@ -20,31 +21,29 @@ __authors__ = "The AiiDA team."
 # This inherits only from 'object' to avoid that it is picked up by the automatic discovery of tests
 # (It shouldn't, as it risks to destroy the DB if there are not the checks in place, and these are
 # implemented in the AiidaTestCase
-class DjangoTests(object):
+class DjangoTests(AiidaTestImplementation):
     """
     Automatically takes care of the setUpClass and TearDownClass, when needed.
     """
 
     # Note this is has to be a normal method, not a class method
     def setUpClass_method(self):
+        self.clean_db()
+        self.insert_data()
+
+    def insert_data(self):
+        """
+        Insert default data in DB.
+        """
         from django.core.exceptions import ObjectDoesNotExist
 
         from aiida.backends.djsite.db.models import DbUser
         from aiida.orm.computer import Computer
         from aiida.common.utils import get_configured_user_email
-
-        self.clean_db()
-        # # Check if the database is initially empty
-        # from aiida.backends.djsite.db.models import DbComputer
-        # if DbComputer.objects.exists():
-        #     print "database not empty"
-        #     exit(0)
-
         # We create the user only once:
         # Otherwise, get_automatic_user() will fail when the
         # user is recreated because it caches the user!
-        # In any case, store it in cls.user though
-        # Other possibility: flush the user cache on delete
+        # In any case, store it in self.user though
         try:
             self.user = DbUser.objects.get(email=get_configured_user_email())
         except ObjectDoesNotExist:

@@ -103,6 +103,9 @@ def do_tree(node_label, depth, pks):
 @click.command('checkpoint', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
 def do_checkpoint(pks):
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
     import aiida.work.persistence
     storage = aiida.work.persistence.get_default()
 

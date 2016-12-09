@@ -84,30 +84,33 @@ Again, we start by loading a node from the database. Unlike before, this can be 
     from aiida.orm import load_node
     node = load_node(17)
 
-Now, we want to find the nodes which have a direct link to this node. There are several methods to extract this information (for developers see all the methods and their docstring: ``get_outputs``, ``get_outputs_dict``, ``c.get_inputs`` and ``c.get_inputs_dict``). The most practical way to access this information, especially when working on the ``verdi shell``, is by means of the ``inp`` and ``out`` methods.
+Now, we want to find the nodes which have a direct link to this node. The node has several methods to extract this information: :meth:`get_outputs() <aiida.orm.implementation.general.node.AbstractNode.get_outputs>`, :meth:`get_outputs_dict() <aiida.orm.implementation.general.node.AbstractNode.get_outputs_dict>`, :meth:`get_inputs() <aiida.orm.implementation.general.node.AbstractNode.get_inputs>` and :meth:`get_inputs_dict() <aiida.orm.implementation.general.node.AbstractNode.get_inputs_dict>`. The most practical way to access this information, especially when working on the ``verdi shell``, is by means of the ``inp`` and ``out`` attributes.
 
-The ``inp`` method is used to list and access the nodes with a direct link to 
-``node`` in input. The names of the input links can be printed by ``list(n.inp)`` or interactively by ``node.inp. + TAB``. As an example, suppose that ``node`` has an input ``KpointsData`` object under the linkname ``kpoints``. The command
+The ``inp`` attribute can be used to list and access the nodes with a direct link to 
+``node`` in input. The names of the input links can be printed by ``list(node.inp)`` or interactively by ``node.inp. + TAB``. As an example, suppose that ``node`` has an input ``KpointsData`` object under the linkname ``kpoints``. The command
 ::
 
-  node.inp.kpoints
+    node.inp.kpoints
   
 returns the ``KpointsData`` object.
 
-Similar methods exists for the ``out`` method, which will display the names of links in output from ``node`` and can be used to access such output nodes. Suppose that ``node`` has an output ``FolderData`` with linkname ``retrieved``, than the command
+Similarly the ``out`` attribute can be used to display the names of links in output from ``node`` and access these nodes. Suppose that ``node`` has an output ``FolderData`` with linkname ``retrieved``, then the command
 ::
 
   node.out.retrieved
   
-returns the FolderData object. 
+returns the ``FolderData`` object. 
 
 .. note:: 
-    At variance with input, there can be more than one output objects with the same linkname (for example: a code object can be used by several calculations always with the same linkname ``code``). As such, for every output linkname, we append the string ``_pk``, with the pk of the output node. There is also a linkname without pk appended, which is assigned to the oldest link. As an example, imagine that ``node`` is a code, which is used by calculation #18 and #19, the linknames shown by ``node.out`` are::
+    For the input, there can be only one object for a given linkname. In contrast, there can be more than one output object with the same linkname. For example, a code object can be used by several calculations with the same linkname ``code``. For this reason, we append the string ``_pk`` indicating the pk of the output code to the linkname. A linkname without ``_pk`` still exists, and refers to the oldest link. 
+    
+    As an example, imagine that ``node`` is a code, which is used by calculation #18 and #19. The linknames shown by ``node.out`` are
+    ::
   
         node.out.  >>
           * code
           * code_18
           * code_19
     
-    The method ``node.out.code_18`` and ``node.out.code_19`` will return two different calculation objects, and ``node.out.code`` will return the oldest (the reference is the creation time) between calculation 18 and 19. If one calculation (say 18) exist only in output, there is then less ambiguity, and you are sure that the output of ``node.out.code`` coincides with ``node.out.code_18``. 
+    The attributes ``node.out.code_18`` and ``node.out.code_19`` will return two different calculation objects, and ``node.out.code`` will return the older one of the two. 
 

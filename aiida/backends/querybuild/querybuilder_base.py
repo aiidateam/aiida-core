@@ -1884,7 +1884,7 @@ class AbstractQueryBuilder(object):
             if edge_tag is None:
                 connection_func(toconnectwith, alias, isouterjoin=isouterjoin)
             elif verticespec['joining_keyword'] in ('descendant_of_beta',):
-                filter_dict = self._filters.pop(verticespec['joining_value'], {})
+                filter_dict = self._filters.get(verticespec['joining_value'], {})
                 aliased_edge = self._tag_to_alias_map[edge_tag]
                 connection_func(toconnectwith, alias, aliased_edge, isouterjoin=isouterjoin, filter_dict=filter_dict, edge_tag=edge_tag)
             else:

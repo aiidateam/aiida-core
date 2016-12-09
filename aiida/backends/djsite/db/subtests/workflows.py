@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-Tests for workflows
-"""
 
+from aiida.backends.tests.workflows import TestWorkflowBasic
 from aiida.backends.djsite.db.testbase import AiidaTestCase
+from aiida.backends.djsite.cmdline import get_workflow_list
 from aiida.workflows.test import WorkflowTestEmpty
 from aiida.common.datastructures import wf_states
-from aiida.backends.djsite.cmdline import get_workflow_list
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -14,7 +12,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestWorkflowBasic(AiidaTestCase):
+class TestWorkflowBasicDjango(AiidaTestCase, TestWorkflowBasic):
     """
     These tests check the basic features of workflows.
     Now only the load_workflow function is tested.
@@ -41,7 +39,7 @@ class TestWorkflowBasic(AiidaTestCase):
             load_workflow(pk=a.pk, uuid=a.uuid)
         with self.assertRaises(ValueError):
             load_workflow(pk=a.uuid)
-        with self.assertRaises(NotExistent):
+        with self.assertRaises(ValueError):
             load_workflow(uuid=a.pk)
         with self.assertRaises(ValueError):
             load_workflow()

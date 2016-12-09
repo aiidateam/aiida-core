@@ -3,7 +3,6 @@
 Tests for calculation nodes, attributes and links
 """
 
-from aiida.backends.djsite.db.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 
 
@@ -12,7 +11,7 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-class TestCalcNode(AiidaTestCase):
+class TestCalcNode(object):
     """
     These tests check the features of Calculation nodes that differ from the
     base Node type

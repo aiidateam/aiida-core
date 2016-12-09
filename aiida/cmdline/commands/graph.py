@@ -39,7 +39,6 @@ class Graph(VerdiCommandWithSubcommands):
         :param args: root_pk
         :return: Generate a .dot file that can be rendered by graphviz utility dot
         """
-
         # Usual boilerplate to load certain classes and functions
         if not is_dbenv_loaded():
             load_dbenv()
@@ -198,6 +197,7 @@ class Graph(VerdiCommandWithSubcommands):
 
         # Generate name of the output file. Default
         out_file_name = "{}.dot".format(root_pk)
+        print "out_file_name ", out_file_name
         with open(out_file_name,'w') as fout:
 
             fout.write("digraph G {\n")

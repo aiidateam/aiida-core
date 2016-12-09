@@ -3,18 +3,11 @@
 Tests for the codtools input plugins.
 """
 import tempfile
-import aiida
-
-from django.utils import unittest
-
-from aiida.backends.djsite.db.testbase import AiidaTestCase
+import unittest
 from aiida.common.folders import SandboxFolder
-from aiida.orm import CalculationFactory, DataFactory
 from aiida.orm.data.cif import CifData
-from aiida.orm.data.folder import FolderData
 from aiida.orm.data.parameter import ParameterData
-from aiida.common.datastructures import calc_states
-from aiida.common.exceptions import FeatureNotAvailable, InputValidationError
+from aiida.common.exceptions import FeatureNotAvailable
 from aiida.orm.calculation.job.codtools.cifcellcontents import CifcellcontentsCalculation
 from aiida.orm.calculation.job.codtools.cifcodcheck import CifcodcheckCalculation
 from aiida.orm.calculation.job.codtools.ciffilter import CiffilterCalculation
@@ -28,7 +21,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestCodtools(AiidaTestCase):
+class TestCodtools(object):
     from aiida.orm.data.cif import has_pycifrw
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")

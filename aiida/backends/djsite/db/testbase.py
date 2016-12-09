@@ -34,6 +34,8 @@ db_test_list = {
     'query': ['aiida.backends.djsite.db.subtests.query'],
     'backup': ['aiida.backends.djsite.db.subtests.backup_script',
                'aiida.backends.djsite.db.subtests.backup_setup_script'],
+    'restapi' : ['aiida.backends.djsite.db.subtests.restapi'],
+    'calculation_node': ['aiida.backends.djsite.db.subtests.calculation_node'],
 }
 
 
@@ -43,7 +45,7 @@ class AiidaTestCase(unittest.TestCase):
     """
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, initial_data=True):
 
         from django.core.exceptions import ObjectDoesNotExist
 
@@ -62,17 +64,18 @@ class AiidaTestCase(unittest.TestCase):
         # user is recreated because it caches the user!
         # In any case, store it in cls.user though
         # Other possibility: flush the user cache on delete
-        try:
-            cls.user = DbUser.objects.get(email=get_configured_user_email())
-        except ObjectDoesNotExist:
-            cls.user = DbUser.objects.create_user(get_configured_user_email(),
-                                                  'fakepwd')
-        cls.computer = Computer(name='localhost',
-                                hostname='localhost',
-                                transport_type='local',
-                                scheduler_type='pbspro',
-                                workdir='/tmp/aiida')
-        cls.computer.store()
+        if initial_data:
+            try:
+                cls.user = DbUser.objects.get(email=get_configured_user_email())
+            except ObjectDoesNotExist:
+                cls.user = DbUser.objects.create_user(get_configured_user_email(),
+                                                      'fakepwd')
+            cls.computer = Computer(name='localhost',
+                                    hostname='localhost',
+                                    transport_type='local',
+                                    scheduler_type='pbspro',
+                                    workdir='/tmp/aiida')
+            cls.computer.store()
 
     @classmethod
     def tearDownClass(cls):

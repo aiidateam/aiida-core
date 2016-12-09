@@ -15,6 +15,7 @@ from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.mixins import SealableMixin
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -556,7 +557,8 @@ class Node(AbstractNode):
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
         for k, v in self.iterattrs():
-            newobject._set_attr(k, v)
+            if k != SealableMixin.SEALED_KEY:
+                newobject._set_attr(k, v)
 
         for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path), path)

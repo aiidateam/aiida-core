@@ -15,7 +15,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestDataNodeDjango(TestDataNode, AiidaTestCase, ):
+class TestDataNodeDjango(AiidaTestCase, TestDataNode):
     """
     These tests check the features of Data nodes that differ from the base Node
     """
@@ -312,6 +312,7 @@ class TestNodeBasicDjango(AiidaTestCase, TestNodeBasic):
             load_node(uuid=a.pk)
         with self.assertRaises(ValueError):
             load_node()
+
 
 class TestSubNodesAndLinksDjango(AiidaTestCase, TestSubNodesAndLinks):
     pass

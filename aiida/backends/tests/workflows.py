@@ -52,7 +52,7 @@ class TestWorkflowBasic(AiidaTestCase):
         workflows or workflows with errors).
         """
         # Assuming there is only one user
-        user = User.search_for_users(email=self.user_email)[0]
+        dbuser = User.search_for_users(email=self.user_email)[0]
         # Creating a workflow & storing it
         a = WorkflowTestEmpty()
         a.store()
@@ -62,14 +62,14 @@ class TestWorkflowBasic(AiidaTestCase):
 
         # Getting all the available workflows of the current user
         # and checking if we got the right one.
-        wfqs = get_workflow_list(all_states=True, user=user)
+        wfqs = get_workflow_list(all_states=True, user=dbuser)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
                                                "one")
 
         # We ask all the running workflows. We should get one workflow.
-        wfqs = get_workflow_list(all_states=True, user=user)
+        wfqs = get_workflow_list(all_states=True, user=dbuser)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
@@ -80,21 +80,21 @@ class TestWorkflowBasic(AiidaTestCase):
 
         # Getting all the available workflows of the current user
         # and checking if we got the right one.
-        wfqs = get_workflow_list(all_states=True, user=user)
+        wfqs = get_workflow_list(all_states=True, user=dbuser)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
                                                "one")
 
         # We ask all the running workflows. We should get zero results.
-        wfqs = get_workflow_list(all_states=False, user=user)
+        wfqs = get_workflow_list(all_states=False, user=dbuser)
         self.assertTrue(len(wfqs) == 0, "We expect zero workflows")
 
         # We change the state of the workflow to INITIALIZED.
         a.set_state(wf_states.INITIALIZED)
 
                 # We ask all the running workflows. We should get one workflow.
-        wfqs = get_workflow_list(all_states=True, user=user)
+        wfqs = get_workflow_list(all_states=True, user=dbuser)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
@@ -104,5 +104,5 @@ class TestWorkflowBasic(AiidaTestCase):
         a.set_state(wf_states.ERROR)
 
         # We ask all the running workflows. We should get zero results.
-        wfqs = get_workflow_list(all_states=False, user=user)
+        wfqs = get_workflow_list(all_states=False, user=dbuser)
         self.assertTrue(len(wfqs) == 0, "We expect zero workflows")

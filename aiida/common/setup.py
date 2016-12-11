@@ -523,7 +523,7 @@ key_explanation = {
 }
 
 
-def create_config_noniteractive(profile='default', values=[]):
+def create_config_noninteractive(profile='default', values=()):
     '''
     Non-interactively creates a profile.
     :raises: a ValueError if the profile exists.
@@ -535,6 +535,7 @@ def create_config_noniteractive(profile='default', values=[]):
     if not values:
         raise ValueError('No configuration values')
 
+    values = list(values)
     try:
         confs = get_config()
     except ConfigurationError:
@@ -543,7 +544,7 @@ def create_config_noniteractive(profile='default', values=[]):
     if 'profiles' not in confs:
         confs['profiles'] = {}
 
-    existing_profile = confs['profiles'].get('profile', {})
+    existing_profile = confs['profiles'].get(profile, {})
     if existing_profile:
         raise ValueError(
             ('profile {profile} exists! '
@@ -556,7 +557,7 @@ def create_config_noniteractive(profile='default', values=[]):
     backend_possibilities = ['django', 'sqlalchemy']
     backend_v = values.pop(0)
     if backend_v in backend_possibilities:
-        new_profile['AIIDA_BACKEND'] = backend_v
+        new_profile['AIIDADB_BACKEND'] = backend_v
     else:
         raise ValueError(
             '{} is not a valid backend choice.'.format(

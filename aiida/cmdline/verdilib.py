@@ -304,6 +304,7 @@ class Help(VerdiCommand):
             print ""
 
 
+import click
 class Install(VerdiCommand):
     """
     Install/setup aiida for the current user
@@ -315,35 +316,67 @@ class Install(VerdiCommand):
     """
 
     def run(self, *args):
-        from aiida.common.setup import (create_base_dirs, create_configuration,
-                                        set_default_profile, DEFAULT_UMASK)
-        from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
-        from aiida.backends.utils import set_backend_type, get_backend_type
-        from aiida.common.exceptions import InvalidOperation
+        ctx = _do_install.make_context('install', sys.argv[2:])
+        with ctx:
+            _do_install.invoke(ctx)
 
-        cmdline_args = list(args)
 
-        only_user_config = False
-        try:
-            cmdline_args.remove('--only-config')
-            only_user_config = True
-        except ValueError:
-            # Parameter not provided
-            pass
+    def complete(self, subargs_idx, subargs):
+        """
+        No completion after 'verdi install'.
+        """
+        print ""
 
-        if cmdline_args:
-            print >> sys.stderr, "Unknown parameters on the command line: "
-            print >> sys.stderr, ", ".join(cmdline_args)
-            sys.exit(1)
 
-        # create the directories to store the configuration files
-        create_base_dirs()
-        # gprofile = 'default' if profile is None else profile
-        gprofile = 'default' if settings_profile.AIIDADB_PROFILE is None \
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+@click.command('install', context_settings=CONTEXT_SETTINGS)
+@click.argument('profile', default='default', type=str)
+@click.option('--only-config', is_flag=True)
+@click.option('--noninteractive', nargs=7, type=str)
+def _do_install(profile, only_config, noninteractive):
+    from aiida.common.setup import (create_base_dirs, create_configuration,
+                                    set_default_profile, DEFAULT_UMASK,
+                                    create_config_noninteractive)
+    from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+    from aiida.backends.utils import set_backend_type, get_backend_type
+    from aiida.common.exceptions import InvalidOperation
+
+    # ~ cmdline_args = list(args)
+
+    # ~ only_user_config = False
+    # ~ try:
+        # ~ cmdline_args.remove('--only-config')
+        # ~ only_user_config = True
+    # ~ except ValueError:
+        # ~ # Parameter not provided
+        # ~ pass
+    only_user_config = only_config
+
+    # ~ if cmdline_args:
+        # ~ print >> sys.stderr, "Unknown parameters on the command line: "
+        # ~ print >> sys.stderr, ", ".join(cmdline_args)
+        # ~ sys.exit(1)
+
+    # create the directories to store the configuration files
+    create_base_dirs()
+    # gprofile = 'default' if profile is None else profile
+    if profile == 'default':
+        gprofile = profile if settings_profile.AIIDADB_PROFILE is None \
             else settings_profile.AIIDADB_PROFILE
+    else:
+        gprofile = profile
 
-        created_conf = None
-        # ask and store the configuration of the DB
+    created_conf = None
+    # ask and store the configuration of the DB
+    if noninteractive:
+        click.echo(noninteractive)
+        try:
+            created_conf = create_config_noninteractive(profile=gprofile, values=noninteractive)
+        except ValueError as e:
+            click.echo("Error during configuation: {}".format(e.message), err=True)
+            sys.exit(1)
+    else:
         try:
             created_conf = create_configuration(profile=gprofile)
         except ValueError as e:
@@ -351,135 +384,223 @@ class Install(VerdiCommand):
                 e.message)
             sys.exit(1)
 
-        # set default DB profiles
-        set_default_profile('verdi', gprofile, force_rewrite=False)
-        set_default_profile('daemon', gprofile, force_rewrite=False)
+    # set default DB profiles
+    set_default_profile('verdi', gprofile, force_rewrite=False)
+    set_default_profile('daemon', gprofile, force_rewrite=False)
 
-        if only_user_config:
-            print ("Only user configuration requested, "
-                   "skipping the migrate command")
-        else:
-            print "Executing now a migrate command..."
+    if only_user_config:
+        print ("Only user configuration requested, "
+                "skipping the migrate command")
+    else:
+        print "Executing now a migrate command..."
 
-            backend_choice = created_conf['AIIDADB_BACKEND']
-            if backend_choice == BACKEND_DJANGO:
-                print("...for Django backend")
-                # The correct profile is selected within load_dbenv.
-                # Setting os.umask here since sqlite database gets created in
-                # this step.
-                old_umask = os.umask(DEFAULT_UMASK)
+        backend_choice = created_conf['AIIDADB_BACKEND']
+        if backend_choice == BACKEND_DJANGO:
+            print("...for Django backend")
+            # The correct profile is selected within load_dbenv.
+            # Setting os.umask here since sqlite database gets created in
+            # this step.
+            old_umask = os.umask(DEFAULT_UMASK)
 
-                # This check should be done more properly
-                # try:
-                #     backend_type = get_backend_type()
-                # except KeyError:
-                #     backend_type = None
-                #
-                # if backend_type is not None and backend_type != BACKEND_DJANGO:
-                #     raise InvalidOperation("An already existing database found"
-                #                            "and a different than the selected"
-                #                            "backend was used for its "
-                #                            "management.")
+            # This check should be done more properly
+            # try:
+            #     backend_type = get_backend_type()
+            # except KeyError:
+            #     backend_type = None
+            #
+            # if backend_type is not None and backend_type != BACKEND_DJANGO:
+            #     raise InvalidOperation("An already existing database found"
+            #                            "and a different than the selected"
+            #                            "backend was used for its "
+            #                            "management.")
 
-                try:
-                    pass_to_django_manage([execname, 'migrate'],
-                                          profile=gprofile)
-                finally:
-                    os.umask(old_umask)
+            try:
+                pass_to_django_manage([execname, 'migrate'],
+                                        profile=gprofile)
+            finally:
+                os.umask(old_umask)
 
-                set_backend_type(BACKEND_DJANGO)
+            set_backend_type(BACKEND_DJANGO)
 
-            elif backend_choice == BACKEND_SQLA:
-                print("...for SQLAlchemy backend")
-                from aiida.backends.sqlalchemy.models.base import Base
-                from aiida.backends.sqlalchemy.utils import (get_engine,
-                                                             install_tc)
-                from aiida.common.setup import get_profile_config
-                from aiida import is_dbenv_loaded, load_dbenv
+        elif backend_choice == BACKEND_SQLA:
+            print("...for SQLAlchemy backend")
+            from aiida.backends.sqlalchemy.models.base import Base
+            from aiida.backends.sqlalchemy.utils import (get_engine,
+                                                            install_tc)
+            from aiida.common.setup import get_profile_config
+            from aiida import is_dbenv_loaded, load_dbenv
 
-                if not is_dbenv_loaded():
-                    load_dbenv()
-
-                # This check should be done more properly
-                # try:
-                #     backend_type = get_backend_type()
-                # except KeyError:
-                #     backend_type = None
-                #
-                # if backend_type is not None and backend_type != BACKEND_SQLA:
-                #     raise InvalidOperation("An already existing database found"
-                #                            "and a different than the selected"
-                #                            "backend was used for its "
-                #                            "management.")
-
-                # Those imports are necessary for SQLAlchemy to correctly
-                # create the needed database tables.
-                from aiida.backends.sqlalchemy.models.authinfo import (
-                    DbAuthInfo)
-                from aiida.backends.sqlalchemy.models.comment import DbComment
-                from aiida.backends.sqlalchemy.models.computer import (
-                    DbComputer)
-                from aiida.backends.sqlalchemy.models.group import (
-                    DbGroup, table_groups_nodes)
-                from aiida.backends.sqlalchemy.models.lock import DbLock
-                from aiida.backends.sqlalchemy.models.log import DbLog
-                from aiida.backends.sqlalchemy.models.node import (
-                    DbLink, DbNode, DbPath, DbCalcState)
-                from aiida.backends.sqlalchemy.models.user import DbUser
-                from aiida.backends.sqlalchemy.models.workflow import (
-                    DbWorkflow, DbWorkflowData, DbWorkflowStep)
-                from aiida.backends.sqlalchemy.models.settings import DbSetting
-
-                connection = get_engine(get_profile_config(gprofile))
-                Base.metadata.create_all(connection)
-                install_tc(connection)
-
-                set_backend_type(BACKEND_SQLA)
-
-            else:
-                raise InvalidOperation("Not supported backend selected.")
-
-        print "Database was created successfully"
-
-        # I create here the default user
-        print "Loading new environment..."
-        if only_user_config:
-            from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-            # db environment has not been loaded in this case
             if not is_dbenv_loaded():
                 load_dbenv()
 
-        from aiida.common.setup import DEFAULT_AIIDA_USER
-        from aiida.orm.user import User as AiiDAUser
+            # This check should be done more properly
+            # try:
+            #     backend_type = get_backend_type()
+            # except KeyError:
+            #     backend_type = None
+            #
+            # if backend_type is not None and backend_type != BACKEND_SQLA:
+            #     raise InvalidOperation("An already existing database found"
+            #                            "and a different than the selected"
+            #                            "backend was used for its "
+            #                            "management.")
 
-        if not AiiDAUser.search_for_users(email=DEFAULT_AIIDA_USER):
-            print "Installing default AiiDA user..."
-            nuser = AiiDAUser(email=DEFAULT_AIIDA_USER)
-            nuser.first_name = "AiiDA"
-            nuser.last_name = "Daemon"
-            nuser.is_staff = True
-            nuser.is_active = True
-            nuser.is_superuser = True
-            nuser.force_save()
+            # Those import are necessary for SQLAlchemy to correctly create
+            # the needed database tables.
+            from aiida.backends.sqlalchemy.models.authinfo import (
+                DbAuthInfo)
+            from aiida.backends.sqlalchemy.models.comment import DbComment
+            from aiida.backends.sqlalchemy.models.computer import (
+                DbComputer)
+            from aiida.backends.sqlalchemy.models.group import (
+                DbGroup, table_groups_nodes)
+            from aiida.backends.sqlalchemy.models.lock import DbLock
+            from aiida.backends.sqlalchemy.models.log import DbLog
+            from aiida.backends.sqlalchemy.models.node import (
+                DbLink, DbNode, DbPath, DbCalcState)
+            from aiida.backends.sqlalchemy.models.user import DbUser
+            from aiida.backends.sqlalchemy.models.workflow import (
+                DbWorkflow, DbWorkflowData, DbWorkflowStep)
+            from aiida.backends.sqlalchemy.models.settings import DbSetting
 
-        from aiida.common.utils import get_configured_user_email
-        email = get_configured_user_email()
-        print "Starting user configuration for {}...".format(email)
-        if email == DEFAULT_AIIDA_USER:
-            print "You set up AiiDA using the default Daemon email ({}),".format(
-                email)
-            print "therefore no further user configuration will be asked."
+            connection = get_engine(get_profile_config(gprofile))
+            Base.metadata.create_all(connection)
+            install_tc(connection)
+
+            set_backend_type(BACKEND_SQLA)
+
         else:
-            # Ask to configure the new user
-            User().user_configure(email)
+            raise InvalidOperation("Not supported backend selected.")
 
-        print "Install finished."
+    print "Database was created successfully"
 
-    def complete(self, subargs_idx, subargs):
-        """
-        No completion after 'verdi install'.
-        """
-        print ""
+    # I create here the default user
+    print "Loading new environment..."
+    if only_user_config:
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        # db environment has not been loaded in this case
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+    from aiida.common.setup import DEFAULT_AIIDA_USER
+    from aiida.orm.user import User as AiiDAUser
+
+    if not AiiDAUser.search_for_users(email=DEFAULT_AIIDA_USER):
+        print "Installing default AiiDA user..."
+        nuser = AiiDAUser(email=DEFAULT_AIIDA_USER)
+        nuser.first_name = "AiiDA"
+        nuser.last_name = "Daemon"
+        nuser.is_staff = True
+        nuser.is_active = True
+        nuser.is_superuser = True
+        nuser.force_save()
+
+    from aiida.common.utils import get_configured_user_email
+    email = get_configured_user_email()
+    print "Starting user configuration for {}...".format(email)
+    if email == DEFAULT_AIIDA_USER:
+        print "You set up AiiDA using the default Daemon email ({}),".format(
+            email)
+        print "therefore no further user configuration will be asked."
+    else:
+        # Ask to configure the new user
+        User().user_configure(email)
+
+    print "Install finished."
+
+
+class Quicksetup(VerdiCommand):
+    '''
+    Quick setup for the new user.
+    Tries to stay out of the way of serious users.
+    Makes sure not to overwrite existing databases or profiles.
+    '''
+
+    _create_user_command = 'CREATE USER {} WITH PASSWORD {}'
+    _create_db_command = 'CREATE DATABASE {} OWNER {}'
+    _grant_priv_command = 'GRANT ALL PRIVILEGES ON DATABASE {} TO {}'
+
+    def run(self, *args):
+        aiida_dir = os.path.expanduser('~/.aiida')
+        dbuser = self._check_db_user('aiidaquick')
+        dbname = self._check_db_name('aiida_quicksetup')
+        dbpass = 'aiidaquick_pw'
+        pg_user = self._get_postgres_user()
+        try:
+            from psycopg2 import connect
+            connect(database='template1', user=pg_user)
+            self._create_db(dbuser, dbname, dbpass, user=pg_user)
+        except:
+            print('Oops! Something went wrong while creating the database for you')
+            print('No worries, all that means is you will have to do it manually')
+            print('Please run as the user setup for PostgreSQL')
+            print('')
+            print('$ psql template1')
+            print('==> '+_create_user_command.format(dbuser, dbpass))
+            print('==> '+_create_db_command.format(dbname, dbuser))
+            print('==> '+_grant_priv_command.format(dbname, dbuser))
+
+        install_args = [
+            'quicksetup',
+            '--noninteractive',
+            'django',
+            'quicksetup@localhost',
+            'localhost:5432',
+            'aiida_quicksetup',
+            'aiidaquick',
+            'aiidaquick_pw',
+            os.path.join(aiida_dir, 'repository-quicksetup/')
+        ]
+        ctx = _do_install.make_context('install', install_args)
+        with ctx:
+            _do_install.invoke(ctx)
+
+    def _get_postgres_user(self):
+        from psycopg2 import connect, OperationalError
+        from getpass import getuser
+        username = getuser()
+        try:
+            conn = connect(database='template1', user=username)
+        except OperationalError as e:
+            if 'role' in e.message and 'does not exist' in e.message:
+                username = 'postgres'
+                try:
+                    conn = connect(database='template1', user=username)
+                except OperationalError as e:
+                    if 'role' in e.message and 'does not exist' in e.message:
+                        print(('we do not know who'))
+
+    def _create_db(self, uname, dbname, passw, user=None):
+        from psycopg2 import connect
+        conn = connect(database='template1', user=user)
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(_create_user_command.format(dbuser, dbpass))
+                cur.execute(_create_db_command.format(dbname, dbuser))
+                cur.execute(_grant_priv_command.format(dbname, dbuser))
+
+
+    def _check_db_user(self, dbuser, user=None):
+        from psycopg2 import connect
+        conn = connect(database='template1', user=None)
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT usename FROM pg_user WHERE usename='{}'".format(dbuser))
+                if cur.fetchall():
+                    import uuid
+                    dbuser = dbuser+str(uuid.uuid1())
+        return dbuser
+
+    def _check_db_name(self, dbname, user=None):
+        from psycopg2 import connect
+        conn = connect(database='template1', user=user)
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname))
+                if cur.fetchall():
+                    import uuid
+                    dbname = dbname+str(uuid.uuid1())
+        return dbname
 
 
 class Runserver(VerdiCommand):

@@ -11,7 +11,7 @@ from aiida.workflows2.util import ProcessStack
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 class ProcessRegistry(plum.process_registry.ProcessRegistry,
                       plum.process.ProcessListener):

@@ -5,11 +5,15 @@ Generic tests that need the be specific to sqlalchemy
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.1"
 
 class TestDbExtrasSqla(AiidaTestCase):
     """
-     No characterization required (sqlachemy specific)
-     """
+    No characterization required (sqlachemy specific)
+    """
     def test_replacement_1(self):
 
         n1 = Node().store()

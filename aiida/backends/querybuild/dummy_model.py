@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
-
-
 """
 The dummy model encodes the model defined by django in backends.djsite
 using SQLAlchemy.
 This is done to query the database with more performant ORM of SA.
 """
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.1"
 
 from sqlalchemy.ext.declarative import declarative_base
 from sa_init import (
@@ -41,9 +38,6 @@ from aiida.common.exceptions import DbContentError, MissingPluginError
 # MISC
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.utils import timezone
-
-
-
 
 Base = declarative_base()
 

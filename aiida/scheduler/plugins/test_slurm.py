@@ -11,7 +11,7 @@ from aiida.scheduler.plugins.slurm import *
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 text_squeue_to_test = """862540^^^PD^^^Dependency^^^n/a^^^user1^^^20^^^640^^^(Dependency)^^^normal^^^1-00:00:00^^^0:00^^^N/A^^^longsqw_L24_q_10_0^^^2013-05-22T01:41:11

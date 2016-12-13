@@ -11,6 +11,7 @@ from unittest import (
     TestSuite, TestResult,
     main as unittest_main, defaultTestLoader as test_loader)
 
+
 def check_if_tests_can_run():
     """
     Check if the tests can run (i.e., if we are in a test profile).
@@ -112,6 +113,7 @@ class AiidaTestCase(unittest.TestCase):
         check_if_tests_can_run()
 
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)
+
 
 def run_aiida_db_tests(tests_to_run, verbose=False):
     """

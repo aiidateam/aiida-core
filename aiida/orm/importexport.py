@@ -18,14 +18,14 @@ def deserialize_attributes(attributes_data, conversion_data):
     import datetime
     import pytz
 
-    print "WWWWWWWWW => ", attributes_data, " ====== ", conversion_data
-    if conversion_data is None:
-        print "Lalala"
+    # print "WWWWWWWWW => ", attributes_data, " ====== ", conversion_data
+    # if conversion_data is None:
+    #     print "Lalala"
 
     if isinstance(attributes_data, dict):
         ret_data = {}
         for k, v in attributes_data.iteritems():
-            print "k: ", k, " v: ", v
+            # print "k: ", k, " v: ", v
             if conversion_data is not None:
                 ret_data[k] = deserialize_attributes(v, conversion_data[k])
             else:
@@ -1009,7 +1009,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
                                        for k, v in entry_data.iteritems())
 
-                    print "================================> INSIDE"
+                    # print "================================> INSIDE"
                     objects_to_create.append(Model(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
 
@@ -1083,7 +1083,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     qb.append(Model, filters={
                         unique_identifier: {"in": import_entry_ids.keys()}},
                               project=[unique_identifier, "id"], tag="res")
-                    print qb.all()
+                    # print qb.all()
                     # exit(0)
                     just_saved = {v[0]: v[1] for v in qb.all()}
                 else:
@@ -1574,21 +1574,21 @@ def get_all_fields_info_sqla_old():
 
         for model_name in missing_models:
             Model = get_object_from_string(model_name)
-            print "===================="
-            print "Model", Model
+            # print "===================="
+            # print "Model", Model
             thisinfo = {}
             exclude_fields = all_exclude_fields.get(model_name, [])
             for field in class_mapper(Model).iterate_properties:
-                print "--------------------"
-                print field.key, field.__class__
+                # print "--------------------"
+                # print field.key, field.__class__
 
                 if field.key not in exclude_fields:
                     continue
 
                 if isinstance(field, sorm.relationships.RelationshipProperty):
-                    print "field.local_columns", field.local_columns
-                    print "field.mapper.entity", field.mapper.entity
-                    print "field.backref[0]", field.backref[0]
+                    # print "field.local_columns", field.local_columns
+                    # print "field.mapper.entity", field.mapper.entity
+                    # print "field.backref[0]", field.backref[0]
                     rel_model_name = get_class_string(field.mapper.entity)
                     related_name = field.key
                     thisinfo[field.backref[0]] = {
@@ -1599,8 +1599,8 @@ def get_all_fields_info_sqla_old():
                         }
                     export_models.add(rel_model_name)
                 elif isinstance(field, sorm.properties.ColumnProperty):
-                    print field.columns[0].type
-                    print field.columns[0].type.__class__
+                    # print field.columns[0].type
+                    # print field.columns[0].type.__class__
                     if isinstance(field.columns[0].type, (stypes.Integer,
                                   stypes.Boolean, stypes.String,
                                   stypes.Text, stypes.Float)):
@@ -1750,12 +1750,12 @@ def get_all_fields_info():
 
         for model_name in missing_models:
             Model = get_object_from_string(model_name)
-            print "===================="
-            print "Model", Model
+            # print "===================="
+            # print "Model", Model
             thisinfo = {}
             exclude_fields = all_exclude_fields.get(model_name, [])
             for field in Model._meta.fields:
-                print "field.name", field.name
+                # print "field.name", field.name
                 if field.name in exclude_fields:
                     continue
                 if isinstance(field, djf.AutoField):
@@ -1773,9 +1773,9 @@ def get_all_fields_info():
                     thisinfo[field.name] = {}
                 elif isinstance(field, djf.related.ForeignKey):
                     rel_model_name = get_class_string(field.rel.to)
-                    print "rel_model_name", rel_model_name
-                    if rel_model_name == "aiida.backends.djsite.models.node.DbCalcState":
-                        print "!!!!!!!!!!!!WWWWWWWWWWWWWWWWWWW"
+                    # print "rel_model_name", rel_model_name
+                    # if rel_model_name == "aiida.backends.djsite.models.node.DbCalcState":
+                    #     print "!!!!!!!!!!!!WWWWWWWWWWWWWWWWWWW"
                     related_name = field.rel.related_name
                     thisinfo[field.name] = {
                         # The 'values' method will return the id (an integer),
@@ -1901,9 +1901,9 @@ relationship_dic = {
 def fill_in_query(partial_query, originating_entity_str, current_entity_str):
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
-    print current_entity_str
+    # print current_entity_str
     sqla_current_entity_str = sqla_to_django_schema[current_entity_str]
-    print all_fields_info[sqla_current_entity_str]
+    # print all_fields_info[sqla_current_entity_str]
 
     # current_entity_mod = get_object_from_string(current_entity_str)
 
@@ -1924,20 +1924,20 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str):
     # Here we should reference the entity of the main query
     current_entity_mod = get_object_from_string(current_entity_str)
 
-    print("lalalalalal")
-    print(originating_entity_str)
-    print(current_entity_str)
+    # print("lalalalalal")
+    # print(originating_entity_str)
+    # print(current_entity_str)
 
     aiida_current_entity_str = current_entity_str.split(".")[-1][2:]
-    print aiida_current_entity_str
+    # print aiida_current_entity_str
     aiida_originating_entity_str = originating_entity_str.split(".")[-1][2:]
-    print aiida_originating_entity_str
+    # print aiida_originating_entity_str
 
-    print relationship_dic[aiida_current_entity_str]
+    # print relationship_dic[aiida_current_entity_str]
     rel_string = relationship_dic[aiida_current_entity_str][aiida_originating_entity_str]
-    print rel_string
+    # print rel_string
     mydict= {rel_string: originating_entity_str}
-    print "mydict", mydict
+    # print "mydict", mydict
 
     partial_query.append(current_entity_mod, tag=str(current_entity_str),
                          project=project_cols, outerjoin=True, **mydict)
@@ -2042,9 +2042,9 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
 
     # Initial query to fire the generation of the export data
 
-    print entries_ids_to_add
-    for k, v in entries_ids_to_add.iteritems():
-        print k, v
+    # print entries_ids_to_add
+    # for k, v in entries_ids_to_add.iteritems():
+    #     print k, v
 
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.node import Node
@@ -2073,7 +2073,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
                   tag=k, outerjoin=True)
         entries_to_add[k] = qb
 
-    print "entries_to_add ===>", entries_to_add
+    # print "entries_to_add ===>", entries_to_add
     # sys.exit()
 
     # entries_to_add = {k: [Q(id__in=v)]for k, v
@@ -2115,7 +2115,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
             fill_in_query(partial_query, top_entity_str, new_ref_model_name)
 
 
-        print "===============> "
+        # print "===============> "
         # print str(partial_query)
         # print partial_query.dict()
 
@@ -2132,7 +2132,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
                 except KeyError:
                     export_data[sqla_to_django_schema[k]] = temp_d2
 
-    print export_data
+    # print export_data
 
     # Until here
     # sys.exit()
@@ -2203,9 +2203,9 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     linksquery = session.query(DbLink).filter(
         DbLink.output_id.in_(all_nodes_pk)).distinct()
 
-    print "================="
-
-    print linksquery.all()
+    # print "================="
+    #
+    # print linksquery.all()
 
     # I have to find a way to project only specific columns -
     # To be seen with Leo

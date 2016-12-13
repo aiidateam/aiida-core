@@ -527,14 +527,19 @@ class Quicksetup(VerdiCommand):
     _create_user_command = 'CREATE USER "{}" WITH PASSWORD \'{}\''
     _create_db_command = 'CREATE DATABASE "{}" OWNER "{}"'
     _grant_priv_command = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
+    _get_users_command = "SELECT usename FROM pg_user WHERE usename='{}'"
 
     def run(self, *args):
         aiida_dir = os.path.expanduser('~/.aiida')
-        dbuser, idstr = self._check_db_user('aiidaquick')
-        dbname = self._check_db_name(dbuser + '_db')
-        dbpass = dbuser + '_pw'
-        pg_user = self._get_postgres_user()
+        pg_user = None
+        dbuser = None
+        dbname = None
+        dbpass = None
         try:
+            pg_user = self._get_postgres_user()
+            dbuser, idstr = self._check_db_user('aiidaquick', user=pg_user)
+            dbname = self._check_db_name(dbuser + '_db', user=pg_user)
+            dbpass = dbuser + '_pw'
             from psycopg2 import connect
             # ~ connect(database='template1', user=pg_user)
             connect(database='template1')
@@ -542,7 +547,7 @@ class Quicksetup(VerdiCommand):
         except Exception as e:
             print('Oops! Something went wrong while creating the database for you.')
             print('For aiida to work correctly you will have to do that yourself as follows.')
-            print('Please run the following commands as the user for PostgreSQL:')
+            print('Please run the following commands as the user for PostgreSQL (Ubuntu: $sudo su postgres):')
             print('')
             print('\t$ psql template1')
             print('\t==> ' + self._create_user_command.format(dbuser, dbpass))
@@ -583,19 +588,33 @@ class Quicksetup(VerdiCommand):
         from psycopg2 import connect, OperationalError
         from getpass import getuser
         username = getuser()
+        password = None
         try:
             conn = connect(database='template1', user=username)
         except OperationalError as e:
             if 'role' in e.message and 'does not exist' in e.message:
-                username = 'postgres'
                 try:
-                    conn = connect(database='template1', user=username)
+                    conn = connect(database='template1', user='postgres')
+                    username = 'postgres'
                 except OperationalError as e:
                     if 'role' in e.message and 'does not exist' in e.message:
                         pass
         return username
 
-    def _create_db(self, dbuser, dbname, dbpass, user=None):
+    def _user_has_pg_access(self):
+        '''Check if the current user can connect to template1'''
+        from psycopg2 import connect, OperationalError
+        from getpass import getuser
+        username = getuser()
+        has_pg_access = False
+        try:
+            conn = connect(database='template1', user=username)
+            has_pg_access = True
+        except:
+            pass
+        return has_pg_access
+
+    def _create_db_pg(self, dbuser, dbname, dbpass, user=None):
         from psycopg2 import connect
         conn = connect(database='template1', user=user)
         conn.autocommit = True
@@ -609,20 +628,43 @@ class Quicksetup(VerdiCommand):
             with conn.cursor() as cur:
                 cur.execute(self._grant_priv_command.format(dbname, dbuser))
 
-    def _check_db_user(self, dbuser, user=None):
+    def _pg_execute_sh(self, command, user='postgres'):
+        try:
+            import subprocess32 as sp
+        except ImportError:
+            import subprocess as sp
+        return sp.check_output(['sudo', 'su', user, '-c', 'psql -c "{}"'.format(command)])
+
+    def _create_db_sh(self, dbuser, dbname, dbpass, user='postgres'):
+        self._pg_execute_sh(self._create_user_command.format(dbuser, dbpass))
+        self._pg_execute_sh(self._create_db_command.format(dbname, dbuser))
+        self._pg_execute_sh(self._grant_priv_command.format(dbname, dbuser))
+
+    def _get_unique_name_and_id(self, name):
+        import uuid
+        idstr = '-' + str(uuid.uuid1())
+        name = name + idstr
+        return name, idstr
+
+    def _check_db_user_pg(self, dbuser, user=None):
         from psycopg2 import connect
-        conn = connect(database='template1', user=None)
+        conn = connect(database='template1', user=user)
         idstr = ''
         with conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT usename FROM pg_user WHERE usename='{}'".format(dbuser))
+                cur.execute(self._get_users_command.format(dbuser))
                 if cur.fetchall():
-                    import uuid
-                    idstr = '-' + str(uuid.uuid1())
-                    dbuser = dbuser + idstr
+                    dbuser, idstr = self._get_unique_name_and_id(dbuser)
         return dbuser, idstr
 
-    def _check_db_name(self, dbname, user=None):
+    def _check_db_user_sh(self, dbuser, user=None):
+        users = self._pg_execute(self._get_users_command.format(dbuser)).split()
+        idstr = ''
+        if dbuser in users:
+            dbuser, idstr = self._get_unique_name_and_id(dbuser)
+        return dbuser, idstr
+
+    def _check_db_name_pg(self, dbname, user=None):
         from psycopg2 import connect
         conn = connect(database='template1', user=user)
         with conn:

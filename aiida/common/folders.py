@@ -172,7 +172,7 @@ class Folder(object):
 
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
-        dest_abs_path = self.get_abs_path(filename)
+        dest_abs_path = self.get_abs_path(filename).encode('utf8')
 
         if not os.path.isabs(src):
             raise ValueError("src must be an absolute path in insert_file")

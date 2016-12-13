@@ -4,7 +4,7 @@ import json
 
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -19,6 +19,7 @@ __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For fu
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
+
 
 class DbComputer(Base):
     __tablename__ = "db_dbcomputer"
@@ -38,10 +39,13 @@ class DbComputer(Base):
     transport_params = Column(JSONB)
     _metadata = Column('metadata', JSONB)
 
+    #We do not need this relationship from parent to child because we already have one from child to parent which uses backref flag and you add it to either class. See http://docs.sqlalchemy.org/en/latest/orm/basic_relationships.html One-to-many relations. Additionally, I decided to put it in the child because I need to use passive_deletes='all' which does not work with maby-to-one (node to computer) relationship which would be the case (instead we have the opposite one to many (computer to node))
     dbnodes_q = relationship(
             'DbNode',
-            lazy='dynamic'
+            backref=backref('dbnodes'),
+            lazy='dynamic',
         )
+
     def __init__(self, *args, **kwargs):
         self.enabled = True
         self._metadata = {}
@@ -73,19 +77,17 @@ class DbComputer(Base):
                 dbcomputer = cls.session.query(cls).filter(cls.id==computer).one()
             except NoResultFound:
                 raise NotExistent("No computer found in the table of computers with "
-                                  "the given pk '{}'".format(computer))
-
+                                  "the given id '{}'".format(computer))
         elif isinstance(computer, DbComputer):
             if computer.id is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer
-
         elif isinstance(computer, Computer):
             if computer.dbcomputer.id is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer.dbcomputer
         else:
-            raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
+            raise TypeError("Pass either a computer name, a DbComputer SQLAlchemy instance, a Computer id or a Computer object")
         return dbcomputer
 
     def get_aiida_class(self):

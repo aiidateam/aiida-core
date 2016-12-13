@@ -12,7 +12,7 @@ __version__ = "0.7.1"
 
 class SealableMixin(object):
 
-    # The name of the attribute to indiate if the node is sealed or not.
+    # The name of the attribute to indicate if the node is sealed or not.
     SEALED_KEY = '_sealed'
 
     def add_link_from(self, src, label=None, link_type=LinkType.INPUT):

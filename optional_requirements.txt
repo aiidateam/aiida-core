@@ -11,9 +11,6 @@
 ## For postgreSQL
 psycopg2==2.6.1
 
-## For MySQL
-MySQL-python==1.2.5
-
 ## To have a decent recent version of sqlite
 ## Note that django uses pysqlite instead of the system-provided
 ## sqlite3, if pysqlite is available: django/db/backends/sqlite3/base.py
@@ -22,7 +19,7 @@ MySQL-python==1.2.5
 pysqlite==2.6.3
 
 # Support for NWChem I/O
-pymatgen
+pymatgen==4.5.3
 
 ## pyspglib for symmetry detection in aiida.orm.data.structure
 pyspglib
@@ -33,7 +30,7 @@ PyCifRW==3.6.2.1
 ## Support for ssh transport with authentification through Kerberos token
 ## NOTE: you need to install first libffi (sudo apt-get install libffi-dev under Ubuntu)
 pyasn1>=0.1.9
-python-gssapi>=0.6.4
+#python-gssapi>=0.6.4
 
 ## ICSD tools
 PyMySQL>=0.6.1

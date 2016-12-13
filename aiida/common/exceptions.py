@@ -189,3 +189,11 @@ class LicensingException(AiidaException):
     Raised when requirements for data licensing are not met.
     """
     pass
+
+class TestsNotAllowedError(AiidaException):
+    """
+    Raised when tests are required to be run/loaded, but we are not in a testing environment.
+
+    This is to prevent data loss.
+    """
+    pass

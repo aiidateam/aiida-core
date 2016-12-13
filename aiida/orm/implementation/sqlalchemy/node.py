@@ -26,6 +26,7 @@ from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
+from aiida.orm.mixins import SealableMixin
 
 import aiida.orm.autogroup
 
@@ -69,7 +70,8 @@ class Node(AbstractNode):
         else:
             # TODO: allow to get the user from the parameters
             user = get_automatic_user()
-            self._dbnode = DbNode(user=user,
+
+            self._dbnode = DbNode(user_id=user.id,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 
@@ -147,14 +149,12 @@ class Node(AbstractNode):
         return q
 
     def _update_db_label_field(self, field_value):
-        from aiida.backends.sqlalchemy import session
         self.dbnode.label = field_value
         if not self._to_be_stored:
             self._dbnode.save(commit=False)
             self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
-        from aiida.backends.sqlalchemy import session
         self.dbnode.description = field_value
         if not self._to_be_stored:
             self._dbnode.save(commit=False)
@@ -166,14 +166,19 @@ class Node(AbstractNode):
             self._add_dblink_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
-            self._remove_dblink_from(label)
-            self._add_dblink_from(src, label, link_type)
+            try:
+                self._remove_dblink_from(label)
+                self._add_dblink_from(src, label, link_type)
+                session.commit()
+            except:
+                session.rollback()
+                raise
 
     def _remove_dblink_from(self, label):
         from aiida.backends.sqlalchemy import session
-        link = self.dbnode.outputs.filter_by(label=label).first()
-        session.delete(link)
-        session.commit()
+        link = DbLink.query.filter_by(label=label).first()
+        if link is not None:
+            session.delete(link)
 
     def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.backends.sqlalchemy import session
@@ -218,7 +223,7 @@ class Node(AbstractNode):
             safety_counter = 0
             while True:
                 safety_counter += 1
-                if safety_counter > 3:
+                if safety_counter > 100:
                     # Well, if you have more than 100 concurrent addings
                     # to the same node, you are clearly doing something wrong...
                     raise InternalError("Hey! We found more than 100 concurrent"
@@ -236,12 +241,11 @@ class Node(AbstractNode):
     def _do_create_link(self, src, label, link_type):
         from aiida.backends.sqlalchemy import session
         try:
-            link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
-                          label=label, type=link_type.value)
-            session.add(link)
-            session.commit()
+            with session.begin_nested():
+                link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
+                              label=label, type=link_type.value)
+                session.add(link)
         except SQLAlchemyError as e:
-            session.rollback()
             raise UniquenessError("There is already a link with the same "
                                   "name (raw message was {})"
                                   "".format(e))
@@ -376,9 +380,15 @@ class Node(AbstractNode):
         self.dbnode.del_extra(key)
 
     def extras(self):
+        if self.dbnode.extras is None:
+            return dict()
+
         return self.dbnode.extras
 
     def iterextras(self):
+        if self.dbnode.extras is None:
+            return dict().iteritems()
+
         return self.dbnode.extras.iteritems()
 
     def iterattrs(self):
@@ -493,7 +503,8 @@ class Node(AbstractNode):
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
         for k, v in self.iterattrs():
-            newobject._set_attr(k, v)
+            if k != SealableMixin.SEALED_KEY:
+                newobject._set_attr(k, v)
 
         for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path), path)
@@ -684,7 +695,10 @@ class Node(AbstractNode):
                 self._store_cached_input_links(with_transaction=False)
 
                 if with_transaction:
-                    self.dbnode.session.commit()
+                    try:
+                        self.dbnode.session.commit()
+                    except SQLAlchemyError as e:
+                        self.dbnode.session.rollback()
 
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception

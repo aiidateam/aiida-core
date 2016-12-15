@@ -5,7 +5,7 @@ Generic tests that need the use of the DB
 
 from aiida.orm.node import Node
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.backends.testbase import AiidaTestCase
+import aiida
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -13,7 +13,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestComputer(AiidaTestCase):
+class TestComputer(object):
     """
     Test the Computer class.
     """
@@ -23,12 +23,13 @@ class TestComputer(AiidaTestCase):
         from aiida.orm import delete_computer, JobCalculation
         from aiida.common.exceptions import InvalidOperation
 
+
         newcomputer = Computer(name="testdeletioncomputer", hostname='localhost',
                                transport_type='local',
                                scheduler_type='pbspro',
                                workdir='/tmp/aiida').store()
 
-        # This should be possible, because nothing is using this computer
+        # # This should be possible, because nothing is using this computer
         delete_computer(newcomputer)
 
         calc_params = {
@@ -39,12 +40,14 @@ class TestComputer(AiidaTestCase):
 
         _ = JobCalculation(**calc_params).store()
 
+        print "Node stored with pk:",  _.dbnode.pk
+
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
         with self.assertRaises(InvalidOperation):
             delete_computer(self.computer)
 
-class TestCode(AiidaTestCase):
+class TestCode(object):
     """
     Test the Code class.
     """
@@ -122,7 +125,7 @@ class TestCode(AiidaTestCase):
         self.assertFalse(code.can_run_on(othercomputer))
 
 
-class TestWfBasic(AiidaTestCase):
+class TestWfBasic(object):
     """
     Tests for the workflows
     """
@@ -154,7 +157,7 @@ class TestWfBasic(AiidaTestCase):
         self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
 
 
-class TestGroups(AiidaTestCase):
+class TestGroups(object):
     """
     Test groups.
     """
@@ -411,71 +414,7 @@ class TestGroups(AiidaTestCase):
         # To avoid to find it in further tests
         g.delete()
 
-    def test_query(self):
-        """
-        Test if queries are working
-        """
-        from aiida.orm.group import Group
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        from aiida.backends.djsite.db.models import DbUser
-        from aiida.backends.djsite.utils import get_automatic_user
-
-        g1 = Group(name='testquery1').store()
-        g2 = Group(name='testquery2').store()
-
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
-        n4 = Node().store()
-
-        g1.add_nodes([n1, n2])
-        g2.add_nodes([n1, n3])
-
-        newuser = DbUser.objects.create_user(email='test@email.xx', password='')
-        g3 = Group(name='testquery3', user=newuser).store()
-
-        # I should find it
-        g1copy = Group.get(uuid=g1.uuid)
-        self.assertEquals(g1.pk, g1copy.pk)
-
-        # Try queries
-        res = Group.query(nodes=n4)
-        self.assertEquals([_.pk for _ in res], [])
-
-        res = Group.query(nodes=n1)
-        self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1, g2]])
-
-        res = Group.query(nodes=n2)
-        self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1]])
-
-
-        # I try to use 'get' with zero or multiple results
-        with self.assertRaises(NotExistent):
-            Group.get(nodes=n4)
-        with self.assertRaises(MultipleObjectsError):
-            Group.get(nodes=n1)
-
-        self.assertEquals(Group.get(nodes=n2).pk, g1.pk)
-
-        # Query by user
-        res = Group.query(user=newuser)
-        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
-
-        # Same query, but using a string (the username=email) instead of
-        # a DbUser object
-        res = Group.query(user=newuser.email)
-        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
-
-        res = Group.query(user=get_automatic_user())
-        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
-
-        # Final cleanup
-        g1.delete()
-        g2.delete()
-        newuser.delete()
-
-
-class TestDbExtras(AiidaTestCase):
+class TestDbExtras(object):
     """
     Test Extras
     """

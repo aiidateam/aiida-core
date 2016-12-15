@@ -523,7 +523,7 @@ key_explanation = {
 }
 
 
-def create_config_noninteractive(profile='default', values=()):
+def create_config_noninteractive(profile='default', **kwargs):
     '''
     Non-interactively creates a profile.
     :raises: a ValueError if the profile exists.
@@ -532,10 +532,10 @@ def create_config_noninteractive(profile='default', values=()):
     :param values: The configuration inputs
     :return: The populated profile that was also stored
     '''
-    if not values:
-        raise ValueError('No configuration values')
+    #if not values:
+    #    raise ValueError('No configuration values')
 
-    values = list(values)
+    #values = list(values)
     try:
         confs = get_config()
     except ConfigurationError:
@@ -555,7 +555,7 @@ def create_config_noninteractive(profile='default', values=()):
 
     # setting backend
     backend_possibilities = ['django', 'sqlalchemy']
-    backend_v = values.pop(0)
+    backend_v = kwargs.pop('backend')
     if backend_v in backend_possibilities:
         new_profile['AIIDADB_BACKEND'] = backend_v
     else:
@@ -569,7 +569,7 @@ def create_config_noninteractive(profile='default', values=()):
 
     # Setting email
     from validate_email import validate_email
-    email_v = values.pop(0)
+    email_v = kwargs.pop('email')
     if validate_email(email_v):
         new_profile[DEFAULT_USER_CONFIG_FIELD] = email_v
     else:
@@ -578,17 +578,15 @@ def create_config_noninteractive(profile='default', values=()):
                 email_v))
 
     # setting up db
-    db_v = values.pop(0)
-    dbhost_v, dbport_v = db_v.split(':')
     new_profile['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
-    new_profile['AIIDADB_HOST'] = dbhost_v
-    new_profile['AIIDADB_PORT'] = dbport_v
-    new_profile['AIIDADB_NAME'] = values.pop(0)
-    new_profile['AIIDADB_USER'] = values.pop(0)
-    new_profile['AIIDADB_PASS'] = values.pop(0)
+    new_profile['AIIDADB_HOST'] = kwargs.pop('db_host')
+    new_profile['AIIDADB_PORT'] = kwargs.pop('db_port')
+    new_profile['AIIDADB_NAME'] = kwargs.pop('db_name')
+    new_profile['AIIDADB_USER'] = kwargs.pop('db_user')
+    new_profile['AIIDADB_PASS'] = kwargs.pop('db_pass')
 
     # setting repo
-    repo_v = values.pop(0)
+    repo_v = kwargs.pop('repo')
     repo_path = os.path.expanduser(repo_v)
     if not os.path.isabs(repo_path):
         raise ValueError('The repository path must be an absolute path')

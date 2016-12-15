@@ -15,6 +15,7 @@ short description, the following ones the long description.
 import sys
 import os
 import contextlib
+import click
 
 import aiida
 from aiida.common.exceptions import (
@@ -304,7 +305,6 @@ class Help(VerdiCommand):
             print ""
 
 
-import click
 
 
 class Install(VerdiCommand):
@@ -335,12 +335,28 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command('install', context_settings=CONTEXT_SETTINGS)
 @click.argument('profile', default='default', type=str)
 @click.option('--only-config', is_flag=True)
-@click.option('--noninteractive', nargs=7, type=str)
-def _do_install(profile, only_config, noninteractive):
-    _do_setup(profile, only_config, noninteractive)
+@click.option('--non-interactive', is_flag=True)
+@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']))
+@click.option('--email', type=str)
+@click.option('--db_host', type=str)
+@click.option('--db_port', type=int)
+@click.option('--db_name', type=str)
+@click.option('--db_user', type=str)
+@click.option('--db_pass', type=str)
+def _do_install(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass):
+    _do_setup(profile=profile,
+              only_config=only_config,
+              non_interactive=non_interactive,
+              backend=backend,
+              email=email,
+              db_host=db_host,
+              db_port=db_port,
+              db_name=db_name,
+              db_user=db_user,
+              db_pass=db_pass)
 
 
-def _do_setup(profile, only_config, arguments):
+def _do_setup(profile, only_config, non_interactive, **kwargs):
     from aiida.common.setup import (create_base_dirs, create_configuration,
                                     set_default_profile, DEFAULT_UMASK,
                                     create_config_noninteractive)
@@ -375,9 +391,19 @@ def _do_setup(profile, only_config, arguments):
 
     created_conf = None
     # ask and store the configuration of the DB
-    if arguments:
+    if non_interactive:
         try:
-            created_conf = create_config_noninteractive(profile=gprofile, values=arguments)
+            created_conf = create_config_noninteractive(
+                profile=gprofile,
+                backend=kwargs['backend'],
+                email=kwargs['email'],
+                db_host=kwargs['db_host'],
+                db_port=kwargs['db_port'],
+                db_name=kwargs['db_name'],
+                db_user=kwargs['db_user'],
+                db_pass=kwargs['db_pass'],
+                repo=kwargs['repo']
+            )
         except ValueError as e:
             click.echo("Error during configuation: {}".format(e.message), err=True)
             sys.exit(1)
@@ -511,15 +537,27 @@ def _do_setup(profile, only_config, arguments):
         pass
     else:
         # Ask to configure the new user
-        User().user_configure(email)
+        if not non_interactive:
+            User().user_configure(email)
+        else:
+            #or don't ask
+            User().user_configure(
+                kwargs['email'],
+                '--first-name='+kwargs.get('first_name'),
+                '--last-name='+kwargs.get('last_name'),
+                '--institution=' + kwargs.get('institution')
+            )
+
 
     print "Install finished."
 
 
 class Quicksetup(VerdiCommand):
     '''
-    Quick setup for the new user.
+    Quick setup for the most common usecase, one user on one machine.
 
+    Uses click for options. Creates a database user 'aiida' if it doesn't exist.
+    Creates a unique 'aiida_qs[-<uuid>]' database.
     Tries to stay out of the way of serious users.
     Makes sure not to overwrite existing databases or profiles.
     '''
@@ -530,60 +568,191 @@ class Quicksetup(VerdiCommand):
     _get_users_command = "SELECT usename FROM pg_user WHERE usename='{}'"
 
     def run(self, *args):
+        ctx = self._quicksetup_cmd.make_context('quicksetup', list(args))
+        with ctx:
+            ctx.obj = self
+            self._quicksetup_cmd.invoke(ctx)
+
+    def _get_pg_access(self):
+        # find out if we run as a postgres superuser or can connect as postgres
+        # This will work on OSX in some setups but not in the default Debian one
+        can_connect = False
+        can_subcmd = None
+        dbinfo = {'user': None}
+        for pg_user in [None, 'postgres']:
+            if self._try_connect(user=None):
+                can_connect = True
+                dbinfo['user'] = pg_user
+                break
+
+        # This will work for the default Debian postgres setup
+        if not can_connect:
+            if self._try_subcmd(user='postgres'):
+                can_subcmd = True
+                dbinfo['user'] = 'postgres'
+            else:
+                can_subcmd = False
+
+        # This is to allow for any other setup
+        if not can_connect and not can_subcmd:
+            click.echo('Detected no known postgres setup, some information is needed to create the aiida database and grant aiida access to it.')
+            click.echo('If you feel unsure about the following parameters, first check if postgresql is installed.')
+            click.echo('If postgresql is not installed please exit and install it, then run verdi quicksetup again.')
+            click.echo('If postgresql is installed, please ask your system manager to provide you with the following parameters:')
+            dbinfo = self._prompt_db_info()
+
+        pg_method = None
+        if can_connect:
+            pg_method = self._pg_execute_psyco
+        elif can_subcmd:
+            pg_method = self._pg_execute_sh
+
+        result = {
+            'method': pg_method,
+            'dbinfo': dbinfo,
+        }
+        return result
+
+    def _prompt_db_info(self):
+        access = False
+        while access == False:
+            dbinfo = {}
+            dbinfo['host'] = click.prompt('postgres host', default='localhost', type=str)
+            dbinfo['port'] = click.prompt('postgres port', default=5432, type=int)
+            dbinfo['database'] = click.prompt('template', default='template1', type=str)
+            dbinfo['user'] = click.prompt('postgres super user', default='postgres', type=str)
+            click.echo('')
+            click.echo('trying to access postgres..')
+            if self._try_connect(**dbinfo):
+                access = True
+            else:
+                dbinfo['password'] = click.prompt('postgres password of {}'.format(dbinfo['user']), input_hidden=True, type=str)
+                if self._try_connect(**dbinfo):
+                    access = True
+                else:
+                    click.echo('you may get prompted for a super user password and again for your postgres super user password')
+                    if self._try_subcmd(**dbinfo):
+                        access = True
+                    else:
+                        click.echo('Unable to connect to postgres, please try again')
+        return dbinfo
+
+    @click.command('quicksetup', context_settings=CONTEXT_SETTINGS)
+    @click.option('--email', prompt='Email Address (for publishing experiments)', type=str,
+                  help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')
+    @click.option('--first-name', prompt='First Name', type=str)
+    @click.option('--last-name', prompt='Last Name', type=str)
+    @click.option('--institution', prompt='Institution', type=str)
+    @click.option('--backend', type=click.Choice(['django', 'sqlalchemy']), default='django')
+    @click.pass_obj
+    def _quicksetup_cmd(self, email, first_name, last_name, institution, backend):
+        '''setup a sane aiida configuration with as little interaction as possible.'''
         aiida_dir = os.path.expanduser('~/.aiida')
-        pg_user = None
-        dbuser = None
-        dbname = None
-        dbpass = None
+
+        # access postgres
+        pg_info = self._get_pg_access()
+        pg_execute = pg_info['method']
+        dbinfo = pg_info['dbinfo']
+
+        # check if a database setup already exists
+        # otherwise setup the database user aiida
+        # setup the database aiida_qs
+        dbuser = 'aiida_qs'
+        dbpass = 'aiidadb_qs'
+        dbname = 'aiidapw_qs'
         try:
-            pg_user = self._get_postgres_user()
-            dbuser, idstr = self._check_db_user('aiidaquick', user=pg_user)
-            dbname = self._check_db_name(dbuser + '_db', user=pg_user)
-            dbpass = dbuser + '_pw'
-            from psycopg2 import connect
-            # ~ connect(database='template1', user=pg_user)
-            connect(database='template1')
-            self._create_db(dbuser, dbname, dbpass, user=pg_user)
+            create = True
+            if not self._dbuser_exists(dbuser, pg_execute, **dbinfo):
+                self._create_dbuser(dbuser, dbpass, pg_execute, **dbinfo)
+            else:
+                dbname, create = self._check_db_name(dbname, pg_execute, **dbinfo)
+            if create:
+                self._create_db(dbuser, dbname, pg_execute, **dbinfo)
         except Exception as e:
-            print('Oops! Something went wrong while creating the database for you.')
-            print('For aiida to work correctly you will have to do that yourself as follows.')
-            print('Please run the following commands as the user for PostgreSQL (Ubuntu: $sudo su postgres):')
-            print('')
-            print('\t$ psql template1')
-            print('\t==> ' + self._create_user_command.format(dbuser, dbpass))
-            print('\t==> ' + self._create_db_command.format(dbname, dbuser))
-            print('\t==> ' + self._grant_priv_command.format(dbname, dbuser))
-            print('')
-            print('Or setup your user to have permissions to create databases and rerun quicksetup.')
-            print('')
+            click.echo('\n'.join([
+                'Oops! Something went wrong while creating the database for you.',
+                'You may continue with the quicksetup, however:',
+                'For aiida to work correctly you will have to do that yourself as follows.',
+                'Please run the following commands as the user for PostgreSQL (Ubuntu: $sudo su postgres):',
+                '',
+                '\t$ psql template1',
+                '\t==> ' + self._create_user_command.format(dbuser, dbpass),
+                '\t==> ' + self._create_db_command.format(dbname, dbuser),
+                '\t==> ' + self._grant_priv_command.format(dbname, dbuser),
+                '',
+                'Or setup your (OS-level) user to have permissions to create databases and rerun quicksetup.',
+                '']))
             raise e
 
-        profile_name = 'quicksetup' + idstr
-        setup_args = [
-            'django',
-            dbuser + '@localhost',
-            'localhost:5432',
-            dbname,
-            dbuser,
-            dbpass,
-            os.path.join(aiida_dir, 'repository-quicksetup' + idstr + '/')
-        ]
-        _do_setup(profile_name, False, setup_args)
-
+        # create a uniquely named profile
         from aiida.common.setup import (set_default_profile, get_config)
-        # overrride previous quicksetup default profile
-        # assuming there is a reason to run quicksetup again
+        try:
+            confs = get_config()
+        except Exception:
+            confs = {}
+
+        profile_name = 'quicksetup'
+        write_profile = False
+        while not write_profile:
+            if profile_name in confs.get('profiles', {}):
+                if click.confirm('overwrite existing profile?'):
+                    write_profile = True
+                else:
+                    profile_name = click.prompt('new profile name', default=profile_name, type=str)
+            else:
+                write_profile = True
+
+        dbhost = dbinfo.get('host', 'localhost')
+        dbport = dbinfo.get('port', '5432')
+
+        setup_args = {
+            'backend': backend,
+            'email': email,
+            'db_host': dbhost,
+            'db_port': dbport,
+            'db_name': dbname,
+            'db_user': dbuser,
+            'db_pass': dbpass,
+            'repo': os.path.join(aiida_dir, 'repository-{}/'.format(profile_name)),
+            'first_name': first_name,
+            'last_name': last_name,
+            'institution': institution
+        }
+        _do_setup(profile_name, only_config=False, non_interactive=True, **setup_args)
+
+        # set as new default profile
         # prompt if there is another non-quicksetup profile
-        confs = get_config()
         use_new = False
         defprof = confs.get('default_profiles', {})
-        if defprof.get('verdi', '').startswith('quicksetup'):
-            set_default_profile('verdi', profile_name, force_rewrite=True)
-        elif defprof.get('verdi'):
-            use_new = click.confirm('There is already a profile setup, do you want to use the quicksetup instead? (The old profile remains stored and you can switch back to it using \'verdi profile\').')
+        if defprof.get('daemon', '').startswith('quicksetup'):
+            use_new = click.confirm('The daemon default profile is set to {}, do you want to set the quicksetup as new default? (can be changed back later)'.format(defprof['daemon']))
             if use_new:
                 set_default_profile('daemon', profile_name, force_rewrite=True)
+        if defprof.get('verdi'):
+            use_new = click.confirm('The verdi default profile is set to {}, do you want to set the quicksetup as new default? (can be changed back later)'.format(defprof['verdi']))
+            if use_new:
+                set_default_profile('verdi', profile_name, force_rewrite=True)
 
+    def _try_connect(self, **kwargs):
+        from psycopg2 import connect
+        success = False
+        if not kwargs:
+            kwargs['database': 'template1']
+        try:
+            connect(**kwargs)
+            success = True
+        except:
+            pass
+        return success
+
+    def _try_subcmd(self, **kwargs):
+        success = False
+        try:
+            self._pg_execute_sh('\q', **kwargs)
+            success = True
+        except:
+            pass
+        return success
     def _get_postgres_user(self):
         from psycopg2 import connect, OperationalError
         from getpass import getuser
@@ -614,66 +783,69 @@ class Quicksetup(VerdiCommand):
             pass
         return has_pg_access
 
-    def _create_db_pg(self, dbuser, dbname, dbpass, user=None):
-        from psycopg2 import connect
-        conn = connect(database='template1', user=user)
-        conn.autocommit = True
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(self._create_user_command.format(dbuser, dbpass))
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(self._create_db_command.format(dbname, dbuser))
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(self._grant_priv_command.format(dbname, dbuser))
+    def _create_dbuser(self, dbuser, dbpass, method=None, **kwargs):
+        method(self._create_user_command.format(dbuser, dbpass), **kwargs)
 
-    def _pg_execute_sh(self, command, user='postgres'):
+    def _create_db(self, dbuser, dbname, method=None, **kwargs):
+        method(self._create_db_command.format(dbname, dbuser), **kwargs)
+        method(self._grant_priv_command.format(dbname, dbuser), **kwargs)
+
+    def _pg_execute_psyco(self, command, **kwargs):
+        '''executes a postgres commandline through psycopg2'''
+        from psycopg2 import connect
+        conn = connect(**kwargs)
+        conn.autocommit = True
+        output = None
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(command)
+                output = cur.fetchall()
+        return output
+
+    def _pg_execute_sh(self, command, user='postgres', **kwargs):
+        '''executes a postgres command line as another system user'''
+        options = ''
+        database = kwargs.pop('database', None)
+        if database:
+            options += '-d {}'.format(database)
+        password = kwargs.pop('password', None)
+        host = kwargs.pop('host', None)
+        if host:
+            options += '-h {}'.format(host)
+        port = kwargs.pop('port', None)
+        if port:
+            options += '-p {}'.format(port)
         try:
             import subprocess32 as sp
         except ImportError:
             import subprocess as sp
-        return sp.check_output(['sudo', 'su', user, '-c', 'psql -c "{}"'.format(command)])
-
-    def _create_db_sh(self, dbuser, dbname, dbpass, user='postgres'):
-        self._pg_execute_sh(self._create_user_command.format(dbuser, dbpass))
-        self._pg_execute_sh(self._create_db_command.format(dbname, dbuser))
-        self._pg_execute_sh(self._grant_priv_command.format(dbname, dbuser))
+        return sp.check_output(['sudo', 'su', user, '-c', 'psql {options} -tc "{}"'.format(command, options=options)], **kwargs)
 
     def _get_unique_name_and_id(self, name):
         import uuid
-        idstr = '-' + str(uuid.uuid1())
+        idstr = '_' + str(uuid.uuid1()).replace('-', '_')
         name = name + idstr
         return name, idstr
 
-    def _check_db_user_pg(self, dbuser, user=None):
-        from psycopg2 import connect
-        conn = connect(database='template1', user=user)
-        idstr = ''
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(self._get_users_command.format(dbuser))
-                if cur.fetchall():
-                    dbuser, idstr = self._get_unique_name_and_id(dbuser)
-        return dbuser, idstr
+    def _dbuser_exists(self, dbuser, method, **kwargs):
+        return bool(method(self._get_users_command.format(dbuser), **kwargs).strip())
 
     def _check_db_user_sh(self, dbuser, user=None):
-        users = self._pg_execute(self._get_users_command.format(dbuser)).split()
+        users = self._pg_execute(self._get_users_command.format(dbuser), user=user).split()
         idstr = ''
         if dbuser in users:
             dbuser, idstr = self._get_unique_name_and_id(dbuser)
         return dbuser, idstr
 
-    def _check_db_name_pg(self, dbname, user=None):
-        from psycopg2 import connect
-        conn = connect(database='template1', user=user)
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname))
-                if cur.fetchall():
-                    import uuid
-                    dbname = dbname+str(uuid.uuid1())
-        return dbname
+    def _check_db_name(self, dbname, method=None, **kwargs):
+        create = True
+        if method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs):
+            click.echo('database aiida_qs already exists!')
+            if not click.confirm('Use it?'):
+                dbname = click.prompt('new name', type=str, default=dbname)
+            else:
+                create = False
+        return dbname, create
 
 
 class Runserver(VerdiCommand):

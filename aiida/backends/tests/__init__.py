@@ -20,6 +20,7 @@ db_test_list = {
         'generic': ['aiida.backends.sqlalchemy.tests.generic'],
         'nodes': ['aiida.backends.sqlalchemy.tests.nodes'],
         'query': ['aiida.backends.sqlalchemy.tests.query'],
+        'session': ['aiida.backends.sqlalchemy.tests.session'],
     },
     # Must be always defined (in the worst case, an empty dict)
     'common': {

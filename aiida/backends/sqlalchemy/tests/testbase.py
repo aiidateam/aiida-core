@@ -46,7 +46,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def setUpClass_method(self):
 
-
         if self.test_session is None:
             config = get_profile_config(AIIDADB_PROFILE)
             engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"

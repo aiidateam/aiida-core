@@ -31,6 +31,10 @@ def delete_computer(computer):
         raise TypeError("computer must be an instance of "
                         "aiida.orm.computer.Computer")
 
+    if computer.to_be_stored:
+        raise InvalidOperation("You are attempting to delete a computer "
+                               "object that has not been stored yet")
+
     try:
         aiida.backends.sqlalchemy.session.delete(computer.dbcomputer)
         aiida.backends.sqlalchemy.session.commit()

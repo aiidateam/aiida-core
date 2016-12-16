@@ -71,7 +71,10 @@ class Node(AbstractNode):
             # TODO: allow to get the user from the parameters
             user = get_automatic_user()
 
-            self._dbnode = DbNode(user_id=user.id,
+            #import aiida.backends.sqlalchemy
+
+            # aiida.backends.sqlalchemy.session.add(user)
+            self._dbnode = DbNode(user=user,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 
@@ -360,6 +363,21 @@ class Node(AbstractNode):
 
         self.dbnode.set_extra(key, value)
         self._increment_version_number_db()
+
+    def reset_extras(self, new_extras):
+
+        if type(new_extras) is not dict:
+            raise ValueError("The new extras have to be a dictionary")
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The extras of a node can be set only after "
+                "storing the node")
+
+        # self.dbnode.reset_extras(new_extras)
+        self.dbnode.extras = new_extras
+        self._increment_version_number_db()
+
 
     def get_extra(self, key, default=None):
         # TODO SP: in the Django implementation, if the node is not stored,
@@ -677,7 +695,9 @@ class Node(AbstractNode):
             self._repository_folder.replace_with_folder(
                 self._get_temp_folder().abspath, move=True, overwrite=True)
 
+        #    import aiida.backends.sqlalchemy
             try:
+                # aiida.backends.sqlalchemy.session.add(self._dbnode)
                 self._dbnode.save(commit=False)
                 # Save its attributes 'manually' without incrementing
                 # the version for each add.
@@ -696,9 +716,13 @@ class Node(AbstractNode):
 
                 if with_transaction:
                     try:
+                        # aiida.backends.sqlalchemy.session.commit()
                         self.dbnode.session.commit()
                     except SQLAlchemyError as e:
+                        print "Cannot store the node. Original exception: {" \
+                              "}".format(e)
                         self.dbnode.session.rollback()
+                        # aiida.backends.sqlalchemy.session.rollback()
 
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception

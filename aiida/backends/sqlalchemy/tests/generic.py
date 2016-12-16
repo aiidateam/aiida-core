@@ -6,26 +6,26 @@ from aiida.backends.tests.generic import TestCode, TestComputer, TestDbExtras, T
 from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
 from aiida.orm.node import Node
 
-#
-# class TestComputerSqla(SqlAlchemyTests, TestComputer):
-#     """
-#     No characterization required
-#     """
-#     pass
-#
-#
-# class TestCodeSqla(SqlAlchemyTests, TestCode):
-#     """
-#      No characterization required
-#      """
-#     pass
-#
-#
-# class TestWfBasicSqla(SqlAlchemyTests, TestWfBasic):
-#     """
-#      No characterization required
-#      """
-#     pass
+
+class TestComputerSqla(SqlAlchemyTests, TestComputer):
+    """
+    No characterization required
+    """
+    pass
+
+
+class TestCodeSqla(SqlAlchemyTests, TestCode):
+    """
+     No characterization required
+     """
+    pass
+
+
+class TestWfBasicSqla(SqlAlchemyTests, TestWfBasic):
+    """
+     No characterization required
+     """
+    pass
 
 
 class TestGroupsSqla(SqlAlchemyTests, TestGroups):

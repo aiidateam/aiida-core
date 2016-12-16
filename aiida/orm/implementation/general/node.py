@@ -170,13 +170,13 @@ class AbstractNode(object):
         return not self._to_be_stored
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def __str__(self):
-        if not self.is_stored:
-            return "uuid: {} (unstored)".format(self.uuid)
-        else:
-            return "uuid: {} (pk: {})".format(self.uuid, self.pk)
+         if not self.is_stored:
+             return "uuid: {} (unstored)".format(self.uuid)
+         else:
+             return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
     def _init_internal_params(self):
         """
@@ -729,6 +729,16 @@ class AbstractNode(object):
                 self.set_extra(key, value)
         except AttributeError:
             raise AttributeError("set_extras takes a dictionary as argument")
+
+
+    @abstractmethod
+    def reset_extras(self, new_extras):
+        """
+        Deletes existing extras and creates new ones.
+        :param new_extras: dictionary with new extras
+        :return: nothing, an exceptions is raised in several circumnstances
+        """
+        pass
 
     @abstractmethod
     def get_extra(self, key, *args):

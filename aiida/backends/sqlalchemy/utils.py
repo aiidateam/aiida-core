@@ -50,6 +50,10 @@ def get_session(config):
     """
     Session = sessionmaker(bind=get_engine(config))
 
+    # Return a scoped session class instead of a
+    # from sqlalchemy.orm import scoped_session
+    # ScopedSession  = scoped_session(Session)
+    # return ScopedSession()
     return Session()
 
 

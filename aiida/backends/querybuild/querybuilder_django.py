@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
+
 from datetime import datetime
+from json import loads as json_loads
 
 from querybuilder_base import (
     AbstractQueryBuilder,
@@ -14,14 +21,17 @@ from aiida.backends.querybuild.dummy_model import (
     DbLink      as DummyLink,
     DbCalcState as DummyState,
     DbPath      as DummyPath,
+    DbPathBeta  as DummyPathBeta,
     DbUser      as DummyUser,
     DbComputer  as DummyComputer,
     DbGroup     as DummyGroup,
     DbExtra     as DummyExtra,
     DbAttribute as DummyAttribute,
+    descendants_beta as DummyDescendants_beta,
     table_groups_nodes  as Dummy_table_groups_nodes,
-    session,                             # session with DB
+    # session,                             # session with DB
 )
+import dummy_model
 
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
 
@@ -47,15 +57,18 @@ class QueryBuilder(AbstractQueryBuilder):
 
         self.Link               = DummyLink
         self.Path               = DummyPath
+        self.PathBeta           = DummyPathBeta
         self.Node               = DummyNode
         self.Computer           = DummyComputer
         self.User               = DummyUser
         self.Group              = DummyGroup
         self.table_groups_nodes = Dummy_table_groups_nodes
+        self.descendants_beta   = DummyDescendants_beta
         self.AiidaNode          = AiidaNode
         self.AiidaGroup         = AiidaGroup
         self.AiidaComputer      = AiidaComputer
         self.AiidaUser          = AiidaUser
+
 
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
@@ -70,16 +83,33 @@ class QueryBuilder(AbstractQueryBuilder):
 
         :returns: an aiida-compatible instance
         """
-        if key.startswith('attributes'):
+
+        if key.startswith('attributes.'):
+            # If you want a specific attributes, that key was stored in res.
+            # So I call the getvalue method to expand into a dictionary
             try:
                 returnval = DbAttribute.objects.get(id=res).getvalue()
             except ObjectDoesNotExist:
+                # If the object does not exist, return None. This is consistent
+                # with SQLAlchemy inside the JSON
                 returnval = None
-        elif key.startswith('extras'):
+        elif key.startswith('extras.'):
+            # Same as attributes
             try:
                 returnval = DbExtra.objects.get(id=res).getvalue()
             except ObjectDoesNotExist:
                 returnval = None
+        elif key == 'attributes':
+            # If you asked for all attributes, the QB return the ID of the node
+            # I use DbAttribute.get_all_values_for_nodepk
+            # to get the dictionary
+            return DbAttribute.get_all_values_for_nodepk(res)
+        elif key == 'extras':
+            # same as attributes
+            return DbExtra.get_all_values_for_nodepk(res)
+        elif key in ('_metadata', 'transport_params'):
+            # Metadata and transport_params are stored as json strings in the DB:
+            return json_loads(res)
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
             returnval =  res.get_aiida_class()
         else:
@@ -89,7 +119,7 @@ class QueryBuilder(AbstractQueryBuilder):
 
     @staticmethod
     def _get_session():
-        return session
+        return dummy_model.session
 
     @classmethod
     def _get_filter_expr_from_attributes(
@@ -211,6 +241,23 @@ class QueryBuilder(AbstractQueryBuilder):
         return expr
 
 
+    def _modify_expansions(self, alias, expansions):
+        """
+        For the Django schema, we have as additioanl expansions 'attributes'
+        and 'extras'
+        """
+
+        if issubclass(alias._sa_class_manager.class_, self.Node):
+            expansions.append("attributes")
+            expansions.append("extras")
+        elif issubclass(alias._sa_class_manager.class_, self.Computer):
+            try:
+                expansions.remove('metadata')
+                expansions.append('_metadata')
+            except KeyError:
+                pass
+
+        return expansions
 
     def _get_projectable_attribute(
             self, alias, column_name, attrpath,
@@ -221,35 +268,70 @@ class QueryBuilder(AbstractQueryBuilder):
                 "Casting is not implemented in the Django backend"
             )
         if not attrpath:
-            raise NotImplementedError(
-                "Cannot project all attributes in the Django backend\n"
-                "(You did not provide a key)"
-            )
+            # If the user with Django backend wants all the attributes or all
+            # the extras, I will select as entity the ID of the node.
+            # in _get_aiida_res, this is transformed to the dictionary of attributes.
+            if column_name in ('attributes', 'extras'):
+                entity = alias.id
+            else:
+                raise NotImplementedError(
+                        "Whatever you asked for "
+                        "({}) is not implemented"
+                        "".format(column_name)
+                    )
+        else:
+            aliased_attributes = aliased(getattr(alias, column_name).prop.mapper.class_)
 
-        aliased_attributes = aliased(getattr(alias, column_name).prop.mapper.class_)
+            if not issubclass(alias._aliased_insp.class_,self.Node):
+                NotImplementedError(
+                    "Other classes than Nodes are not implemented yet"
+                )
 
-        if not issubclass(alias._aliased_insp.class_,self.Node):
-            NotImplementedError(
-                "Other classes than Nodes are not implemented yet"
-            )
+            attrkey = '.'.join(attrpath)
 
-        attrkey = '.'.join(attrpath)
+            exists_stmt = exists(select([1], correlate=True).select_from(
+                    aliased_attributes
+                ).where(and_(
+                    aliased_attributes.key==attrkey,
+                    aliased_attributes.dbnode_id==alias.id
+                )))
 
+            select_stmt = select(
+                    [aliased_attributes.id], correlate=True
+                ).select_from(aliased_attributes).where(and_(
+                    aliased_attributes.key==attrkey,
+                    aliased_attributes.dbnode_id==alias.id
+                )).label('miao')
 
-        exists_stmt = exists(select([1], correlate=True).select_from(
-                aliased_attributes
-            ).where(and_(
-                aliased_attributes.key==attrkey,
-                aliased_attributes.dbnode_id==alias.id
-            )))
-
-        select_stmt = select(
-                [aliased_attributes.id], correlate=True
-            ).select_from(aliased_attributes).where(and_(
-                aliased_attributes.key==attrkey,
-                aliased_attributes.dbnode_id==alias.id
-            )).label('miao')
-
-        entity = case([(exists_stmt, select_stmt), ], else_=None)
+            entity = case([(exists_stmt, select_stmt), ], else_=None)
 
         return entity
+
+
+    def _yield_per(self, batch_size):
+        """
+        :param count: Number of rows to yield per step
+
+        Yields *count* rows at a time
+
+        :returns: a generator
+        """
+        from django.db import transaction
+        with transaction.atomic():
+            return self.get_query().yield_per(batch_size)
+
+
+    def _all(self):
+        from django.db import transaction
+        with transaction.atomic():
+            return self.get_query().all()
+
+    def _first(self):
+        """
+        Executes query in the backend asking for one instance.
+
+        :returns: One row of aiida results
+        """
+        from django.db import transaction
+        with transaction.atomic():
+            return self.get_query().first()

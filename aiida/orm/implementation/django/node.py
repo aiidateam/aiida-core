@@ -2,20 +2,20 @@
 
 import copy
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
 from django.db.models import F
-from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.backends.djsite.db.models import DbLink
+from aiida.backends.djsite.utils import get_automatic_user
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
-from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
-from aiida.common.links import LinkType
 from aiida.common.lang import override
-
-from aiida.backends.djsite.utils import get_automatic_user
-from aiida.backends.djsite.db.models import DbLink
+from aiida.common.links import LinkType
+from aiida.common.utils import get_new_uuid
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.mixins import Sealable
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -405,8 +405,8 @@ class Node(AbstractNode):
             return
         else:
             extraslist = DbExtra.list_all_node_elements(self.dbnode)
-        for e in extraslist:
-            yield e.key
+            for e in extraslist:
+                yield e.key
 
     def iterextras(self):
         from aiida.backends.djsite.db.models import DbExtra
@@ -552,7 +552,8 @@ class Node(AbstractNode):
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
         for k, v in self.iterattrs():
-            newobject._set_attr(k, v)
+            if k != Sealable.SEALED_KEY:
+                newobject._set_attr(k, v)
 
         for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path), path)

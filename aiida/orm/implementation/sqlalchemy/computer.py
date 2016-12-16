@@ -306,10 +306,10 @@ class Util(ComputerUtil):
         Delete the computer with the given pk.
         :param pk: The computer pk.
         """
-        from aiida.backends.sqlalchemy import session
+        import aiida.backends.sqlalchemy
         try:
-            DbComputer.query.filter_by(id=pk).delete()
-            session.commit()
+            aiida.backends.sqlalchemy.session.query(DbComputer).get(pk).delete()
+            aiida.backends.sqlalchemy.session.commit()
         except SQLAlchemyError:
             raise InvalidOperation("Unable to delete the requested computer: there"
                                    "is at least one node using this computer")

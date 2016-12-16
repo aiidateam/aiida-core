@@ -33,6 +33,7 @@ class DbUser(Base):
     last_login = Column(DateTime(timezone=True), default=timezone.now)
     date_joined = Column(DateTime(timezone=True), default=timezone.now)
 
+    # Probably this is not neded either, look into DbComputer model
     dbnodes_q = relationship(
             'DbNode',
             lazy='dynamic'

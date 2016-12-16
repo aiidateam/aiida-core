@@ -110,7 +110,7 @@ def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
 
     .. note:: requires pymatgen module.
     """
-    from pymatgen.io.cifio import CifParser
+    from pymatgen.io.cif import CifParser
     from aiida.orm.data.structure import StructureData
 
     kwargs = {}

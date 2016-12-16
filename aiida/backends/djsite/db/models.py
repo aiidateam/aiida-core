@@ -1450,6 +1450,12 @@ class DbComputer(m.Model):
             except MultipleObjectsReturned:
                 raise DbContentError("There is more than one computer with name '{}', "
                                      "pass a Django Computer instance".format(computer))
+        elif isinstance(computer, int):
+            try:
+                dbcomputer = DbComputer.objects.get(pk=computer)
+            except ObjectDoesNotExist:
+                raise NotExistent("No computer found in the table of computers with "
+                                  "the given pk '{}'".format(computer))
         elif isinstance(computer, DbComputer):
             if computer.pk is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
@@ -1459,7 +1465,7 @@ class DbComputer(m.Model):
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer.dbcomputer
         else:
-            raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
+            raise TypeError("Pass either a computer name, a DbComputer django instance, a Computer pk or a Computer object")
         return dbcomputer
 
     def get_aiida_class(self):

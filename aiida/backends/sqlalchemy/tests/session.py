@@ -78,6 +78,7 @@ class TestSessionSqla(AiidaTestCase):
         aiida.backends.sqlalchemy.session = None
         self.connection.close()
 
+    @unittest.skip("")
     def test_session_update_and_expiration_1(self):
 
         self.set_connection(expire_on_commit=True)
@@ -108,6 +109,7 @@ class TestSessionSqla(AiidaTestCase):
 
         self.drop_connection()
 
+    @unittest.skip("")
     def test_session_update_and_expiration_2(self):
         from aiida.backends.sqlalchemy.models.user import DbUser
         from aiida.backends.sqlalchemy.models.computer import DbComputer
@@ -152,6 +154,7 @@ class TestSessionSqla(AiidaTestCase):
 
         self.drop_connection()
 
+    @unittest.skip("")
     def test_session_update_and_expiration_3(self):
 
         self.set_connection(expire_on_commit=False)
@@ -182,6 +185,7 @@ class TestSessionSqla(AiidaTestCase):
 
         self.drop_connection()
 
+    @unittest.skip("")
     def test_session_update_and_expiration_4(self):
 
         self.set_connection(expire_on_commit=False)
@@ -211,6 +215,7 @@ class TestSessionSqla(AiidaTestCase):
 
         self.drop_connection()
 
+    @unittest.skip("")
     def test_multiple_node_creation(self):
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.common.utils import get_new_uuid
@@ -274,6 +279,7 @@ class TestSessionSqla(AiidaTestCase):
 
         self.drop_connection()
 
+    @unittest.skip("")
     def test_multiple_node_creation_gio(self):
         from aiida.orm.user import User
         from aiida.backends.sqlalchemy.models.node import DbNode

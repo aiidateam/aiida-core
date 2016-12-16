@@ -371,12 +371,8 @@ class Node(AbstractNode):
                 "The extras of a node can be set only after "
                 "storing the node")
 
-        self._dbnode.extras.clear()
-        self._dbnode.extras.update(new_extras)
-        # self._dbnode.extras = new_extras
-        flag_modified(self.dbnode, "extras")
+        self.dbnode.reset_extras(new_extras)
         self._increment_version_number_db()
-
 
     def get_extra(self, key, default=None):
         # TODO SP: in the Django implementation, if the node is not stored,
@@ -420,7 +416,7 @@ class Node(AbstractNode):
             yield (k, v)
 
     def get_attrs(self):
-        return self.dbnode.attributes
+        return dict(self.iterattrs())
 
     def attrs(self):
         if self._to_be_stored:

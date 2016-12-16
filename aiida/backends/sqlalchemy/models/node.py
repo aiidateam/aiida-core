@@ -200,6 +200,11 @@ class DbNode(Base):
         DbNode._set_attr(self.extras, key, value)
         flag_modified(self, "extras")
 
+    def reset_extras(self, new_extras):
+        self.extras.clear()
+        self.extras.update(new_extras)
+        flag_modified(self, "extras")
+
     def del_attr(self, key):
         DbNode._del_attr(self.attributes, key)
         flag_modified(self, "attributes")

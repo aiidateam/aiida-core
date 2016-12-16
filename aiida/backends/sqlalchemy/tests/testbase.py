@@ -30,6 +30,10 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
+# Querying for expired objects automatically doesn't seem to work.
+# That's why expire on commit=False resolves many issues of objects beeing
+# obsolete
+
 # Session = sessionmaker(expire_on_commit=False)
 Session = sessionmaker(expire_on_commit=True)
 

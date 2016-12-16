@@ -7,24 +7,29 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
+from aiida.backends import settings
+from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
 class Util(BackendDelegateWithDefault):
     @classmethod
     def create_default(cls):
-        # Fall back to Django
-        from aiida.orm.implementation.django.computer import Util as ComputerUtil
-        return Util(ComputerUtil())
+        if settings.BACKEND == BACKEND_DJANGO:        
+            from aiida.orm.implementation.django.computer import Util as ComputerUtil
+            return Util(ComputerUtil())
+        elif settings.BACKEND == BACKEND_SQLA:
+            from aiida.orm.implementation.sqlalchemy.computer import Util as ComputerUtil
+            return Util(ComputerUtil())
+
 
     def delete_computer(self, pk):
         return self._backend.delete_computer(pk)
 
 
 def delete_computer(computer=None, pk=None):
-    if not isinstance(computer, Computer):
-        raise TypeError("computer must be an instance of "
-                        "aiida.orm.computer.Computer")
-
     if computer is not None:
+        if not isinstance(computer, Computer):
+            raise TypeError("computer must be an instance of "
+                            "aiida.orm.computer.Computer")
         if pk is not None:
             assert computer.pk == pk, "Computer and pk do not match"
         else:

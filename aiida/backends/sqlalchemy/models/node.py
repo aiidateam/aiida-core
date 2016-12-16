@@ -44,6 +44,9 @@ class DbNode(Base):
     mtime = Column(DateTime(timezone=True), default=timezone.now)
     nodeversion = Column(Integer, default=1)
     public = Column(Boolean, default=False)
+    attributes = Column(JSONB)
+    extras = Column(JSONB)
+
 
     dbcomputer_id = Column(
         Integer,
@@ -67,10 +70,6 @@ class DbNode(Base):
     #     nullable=False
     # )
 
-
-    attributes = Column(JSONB, default={})
-    extras = Column(JSONB, default={})
-
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
     # won't take care of automatic deleting in the DbLink table. This still
     # isn't exactly the same behaviour than with Django. The solution to
@@ -79,18 +78,18 @@ class DbNode(Base):
 
     ######### RELATIONSSHIPS ################
 
-    # dbcomputer = relationship(
-    #     'DbComputer',
-    #     backref=backref('dbnodes')
-    #     # backref = backref('dbnodes', passive_deletes='all')
-    # )
-    #
-    # # User
-    # user = relationship(
-    #     'DbUser',
-    #     backref=backref('dbnodes'),
-    #     # backref=backref('dbnodes', passive_deletes='all')
-    # )
+    dbcomputer = relationship(
+        'DbComputer',
+        # backref=backref('dbnodes')
+        backref = backref('dbnodes', passive_deletes='all')
+    )
+
+    # User
+    user = relationship(
+        'DbUser',
+        # backref=backref('dbnodes'),
+        backref=backref('dbnodes', passive_deletes='all')
+    )
 
     # outputs via db_dblink table
     outputs = relationship(
@@ -137,6 +136,16 @@ class DbNode(Base):
         lazy='dynamic',
         passive_deletes=True
     )
+
+    def __init__(self, *args, **kwargs):
+        super(DbNode, self).__init__(*args, **kwargs)
+
+        if self.attributes is None:
+            self.attributes = dict()
+
+        if self.extras is None:
+            self.extras = dict()
+
 
     # XXX repetition between django/sqlalchemy here.
     def get_aiida_class(self):

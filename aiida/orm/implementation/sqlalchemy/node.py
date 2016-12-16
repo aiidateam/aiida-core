@@ -71,9 +71,6 @@ class Node(AbstractNode):
             # TODO: allow to get the user from the parameters
             user = get_automatic_user()
 
-            #import aiida.backends.sqlalchemy
-
-            # aiida.backends.sqlalchemy.session.add(user)
             self._dbnode = DbNode(user=user,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
@@ -374,8 +371,8 @@ class Node(AbstractNode):
                 "The extras of a node can be set only after "
                 "storing the node")
 
-        # self.dbnode.reset_extras(new_extras)
-        self.dbnode.extras = new_extras
+        self.dbnode.extras.clear()
+        self.dbnode.extras.update(new_extras)
         self._increment_version_number_db()
 
 

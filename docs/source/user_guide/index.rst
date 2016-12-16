@@ -25,6 +25,7 @@ User's guide
    ../verdi/comments
    ../database/dbusage
    ../querying/index
+   ../work/index
    ../workflow/index
    ../dbimporters/index
    ../dbexporters/index

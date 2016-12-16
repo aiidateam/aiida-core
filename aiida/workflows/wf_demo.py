@@ -188,8 +188,8 @@ class BranchWorkflowDemo(Workflow):
 
         self.append_to_report("recollect launched")
 
-        if (self.get_step(self.branch_b_one).is_finished() and
-                self.get_step(self.branch_a_two).is_finished()):
+        if (self.get_step(self.branch_b_one).has_finished() and
+                self.get_step(self.branch_a_two).has_finished()):
 
             self.append_to_report("All the steps have been done")
             self.next(self.finalize)

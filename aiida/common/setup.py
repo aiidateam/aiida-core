@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import uritools
 
 import aiida
 
@@ -22,6 +23,8 @@ SECRET_KEY_FNAME = 'secret_key.dat'
 DAEMON_SUBDIR = "daemon"
 LOG_SUBDIR = "daemon/log"
 DAEMON_CONF_FILE = "aiida_daemon.conf"
+
+WORKFLOWS_SUBDIR = "workflows"
 
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
@@ -391,7 +394,7 @@ def set_default_profile(process, profile, force_rewrite = False):
         confs['default_profiles']
     except KeyError:
         confs['default_profiles'] = {}
-        
+
     if force_rewrite:
         confs['default_profiles'][process] = profile
     else:
@@ -432,7 +435,7 @@ def get_profiles_list():
 def get_profile_config(profile, conf_dict=None, set_test_location=True):
     """
     Return the profile specific configurations
-    
+
     :param conf_dict: if passed, use the provided dictionary rather than reading
         it from file.
     :param set_test_location: if True, sets a new folder for storing repository
@@ -1242,18 +1245,17 @@ def parse_repository_uri(repository_uri):
 
     :return: a tuple (protocol, address).
     """
+    parts = uritools.urisplit(repository_uri)
 
-    protocol, _, address = repository_uri.partition('://')
 
-    if protocol != 'file':
+    if parts.scheme != u'file':
         raise ConfigurationError("The current AiiDA version supports only a "
                                  "local repository")
 
-    if protocol == 'file':
-        if not os.path.isabs(address):
+    if parts.scheme == u'file':
+        if not os.path.isabs(parts.path):
             raise ConfigurationError("The current repository is specified with a "
                                      "file protocol but with a relative path")
-        address = os.path.expanduser(address)
 
-    # Normalize address to its absolute path
-    return (protocol, address)
+        # Normalize path to its absolute path
+        return parts.scheme, os.path.expanduser(parts.path)

@@ -6,7 +6,9 @@ import collections
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.general.computer import AbstractComputer
+from aiida.backends.djsite.db.models import DbComputer
+from aiida.common.lang import override
+from aiida.orm.implementation.general.computer import AbstractComputer, Util as ComputerUtil
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
 
@@ -30,7 +32,6 @@ class Computer(AbstractComputer):
         return self._dbcomputer.pk
 
     def __init__(self, **kwargs):
-        from aiida.backends.djsite.db.models import DbComputer
         super(Computer, self).__init__()
 
         uuid = kwargs.pop('uuid', None)
@@ -295,3 +296,18 @@ class Computer(AbstractComputer):
         self.dbcomputer.transport_type = val
         if not self.to_be_stored:
             self.dbcomputer.save()
+
+
+class Util(ComputerUtil):
+    @override
+    def delete_computer(self, pk):
+        """
+        Delete the computer with the given pk.
+        :param pk: The computer pk.
+        """
+        from django.db.models.deletion import ProtectedError
+        try:
+            DbComputer.objects.filter(pk=pk).delete()
+        except ProtectedError:
+            raise InvalidOperation("Unable to delete the requested computer: there"
+                                   "is at least one node using this computer")

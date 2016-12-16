@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from abc import ABCMeta, abstractmethod
 from aiida.common.pluginloader import BaseFactory
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -144,3 +145,31 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
             return Workflow.get_subclass_from_uuid(uuid)
         else:
             raise ValueError("'uuid' has to be a string, unicode or a UUID instance")
+
+
+class BackendDelegateWithDefault(object):
+    """
+    This class is a helper to implement the delegation pattern [1] by
+    delegating functionality (i.e. calling through) to the backend class
+    which will do the actual work.
+
+
+    [1] https://en.wikipedia.org/wiki/Delegation_pattern
+    """
+    __metaclass__ = ABCMeta
+
+    _DEFAULT = None
+
+    @classmethod
+    @abstractmethod
+    def create_default(cls):
+        raise NotImplementedError("The subclass should implement this")
+
+    @classmethod
+    def get_default(cls):
+        if cls._DEFAULT is None:
+            cls._DEFAULT = cls.create_default()
+        return cls._DEFAULT
+
+    def __init__(self, backend):
+        self._backend = backend

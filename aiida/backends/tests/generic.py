@@ -3,9 +3,11 @@
 Generic tests that need the use of the DB
 """
 
-from aiida.orm.node import Node
+import unittest
+
+from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
-import aiida
+from aiida.orm.node import Node
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -13,7 +15,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestComputer(object):
+class TestComputer(AiidaTestCase):
     """
     Test the Computer class.
     """
@@ -22,6 +24,7 @@ class TestComputer(object):
         from aiida.orm.computer import Computer
         from aiida.orm import delete_computer, JobCalculation
         from aiida.common.exceptions import InvalidOperation
+        import aiida.backends.sqlalchemy
 
 
         newcomputer = Computer(name="testdeletioncomputer", hostname='localhost',
@@ -44,10 +47,15 @@ class TestComputer(object):
 
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
-        with self.assertRaises(InvalidOperation):
-            delete_computer(self.computer)
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(InvalidOperation):
+                delete_computer(self.computer)
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
 
-class TestCode(object):
+
+class TestCode(AiidaTestCase):
     """
     Test the Code class.
     """
@@ -72,7 +80,6 @@ class TestCode(object):
         self.assertTrue(code.can_run_on(self.computer))
         self.assertTrue(code.get_local_executable(), 'test.sh')
         self.assertTrue(code.get_execname(), 'stest.sh')
-
 
     def test_remote(self):
         import tempfile
@@ -125,7 +132,7 @@ class TestCode(object):
         self.assertFalse(code.can_run_on(othercomputer))
 
 
-class TestWfBasic(object):
+class TestWfBasic(AiidaTestCase):
     """
     Tests for the workflows
     """
@@ -157,7 +164,7 @@ class TestWfBasic(object):
         self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
 
 
-class TestGroups(object):
+class TestGroups(AiidaTestCase):
     """
     Test groups.
     """
@@ -414,7 +421,8 @@ class TestGroups(object):
         # To avoid to find it in further tests
         g.delete()
 
-class TestDbExtras(object):
+
+class TestDbExtras(AiidaTestCase):
     """
     Test Extras
     """

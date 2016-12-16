@@ -30,6 +30,10 @@ class AiidaTestImplementation(object):
         pass
 
     @abstractmethod
+    def setUp_method(self):
+        pass
+
+    @abstractmethod
     def tearDownClass_method(self):
         """
         This class implements the tear down methods (e.g. cleans up the DB).

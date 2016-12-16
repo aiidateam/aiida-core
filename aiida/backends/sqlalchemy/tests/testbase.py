@@ -30,8 +30,8 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-Session = sessionmaker(expire_on_commit=False)
-# Session = sessionmaker(expire_on_commit=True)
+# Session = sessionmaker(expire_on_commit=False)
+Session = sessionmaker(expire_on_commit=True)
 
 # This contains the codebase for the setUpClass and tearDown methods used internally by the AiidaTestCase
 # This inherits only from 'object' to avoid that it is picked up by the automatic discovery of tests
@@ -40,7 +40,7 @@ Session = sessionmaker(expire_on_commit=False)
 class SqlAlchemyTests(AiidaTestImplementation):
 
     # Specify the need to drop the table at the beginning of a test case
-    drop_all = False
+    drop_all = True
 
     test_session = None
 
@@ -63,10 +63,15 @@ class SqlAlchemyTests(AiidaTestImplementation):
             Base.metadata.drop_all(self.connection)
             Base.metadata.create_all(self.connection)
             install_tc(self.connection)
-
-        self.clean_db()
+        else:
+            self.clean_db()
 
         self.insert_data()
+
+    def setUp_method(self):
+        import aiida.backends.sqlalchemy
+        aiida.backends.sqlalchemy.session.refresh(self.user)
+        aiida.backends.sqlalchemy.session.refresh(self.computer._dbcomputer)
 
     def insert_data(self):
         """
@@ -82,17 +87,16 @@ class SqlAlchemyTests(AiidaTestImplementation):
         else:
             self.user = has_user
 
-        ## Reqired by the calling class
+        # Reqired by the calling class
         self.user_email = self.user.email
 
-        ## Also self.computer is required by the calling class
+        # Also self.computer is required by the calling class
         has_computer = DbComputer.query.filter(DbComputer.hostname == 'localhost').first()
         if not has_computer:
             self.computer = SqlAlchemyTests._create_computer()
             self.computer.store()
         else:
             self.computer = has_computer
-
 
     @staticmethod
     def _create_computer(**kwargs):
@@ -146,7 +150,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
         self.test_session.query(DbNode).delete()
 
         # # Delete the users
-        # self.test_session.query(DbUser).delete()
+        self.test_session.query(DbUser).delete()
 
         # Delete the computers
         self.test_session.query(DbComputer).delete()

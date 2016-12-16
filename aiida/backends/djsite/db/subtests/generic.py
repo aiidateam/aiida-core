@@ -3,9 +3,8 @@
 Generic tests that need the use of the DB
 """
 
+from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
-from aiida.backends.tests.generic import TestGroups, TestWfBasic, TestDbExtras, TestComputer, TestCode
-from aiida.backends.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -13,27 +12,7 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestComputerDjango(AiidaTestCase, TestComputer):
-    """
-    Test the Computer class.
-    """
-    pass
-
-class TestCodeDjango(AiidaTestCase, TestCode):
-    """
-    Test the Code class.
-    """
-    pass
-
-
-class TestWfBasicDjango(AiidaTestCase, TestWfBasic):
-    """
-    Tests for the workflows
-    """
-    pass
-
-
-class TestGroupsDjango(AiidaTestCase, TestGroups):
+class TestGroupsDjango(AiidaTestCase):
     """
     Test groups.
     """
@@ -102,7 +81,7 @@ class TestGroupsDjango(AiidaTestCase, TestGroups):
         newuser.delete()
 
 
-class TestDbExtrasDjango(AiidaTestCase, TestDbExtras):
+class TestDbExtrasDjango(AiidaTestCase):
     """
     Test DbAttributes.
     """

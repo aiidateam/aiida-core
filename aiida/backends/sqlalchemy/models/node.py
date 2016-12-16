@@ -81,14 +81,14 @@ class DbNode(Base):
     dbcomputer = relationship(
         'DbComputer',
         # backref=backref('dbnodes')
-        backref = backref('dbnodes', passive_deletes='all')
+        backref = backref('dbnodes', passive_deletes='all', cascade='merge')
     )
 
     # User
     user = relationship(
         'DbUser',
         # backref=backref('dbnodes'),
-        backref=backref('dbnodes', passive_deletes='all')
+        backref=backref('dbnodes', passive_deletes='all', cascade='merge')
     )
 
     # outputs via db_dblink table

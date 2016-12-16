@@ -2,33 +2,13 @@
 """
 Generic tests that need the be specific to sqlalchemy
 """
-from aiida.backends.tests.generic import TestCode, TestComputer, TestDbExtras, TestGroups, TestWfBasic
-from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
+import unittest
+
+from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
 
 
-class TestComputerSqla(SqlAlchemyTests, TestComputer):
-    """
-    No characterization required
-    """
-    pass
-
-
-class TestCodeSqla(SqlAlchemyTests, TestCode):
-    """
-     No characterization required
-     """
-    pass
-
-
-class TestWfBasicSqla(SqlAlchemyTests, TestWfBasic):
-    """
-     No characterization required
-     """
-    pass
-
-
-class TestGroupsSqla(SqlAlchemyTests, TestGroups):
+class TestGroupsSqla(AiidaTestCase):
     """
      Characterized functions
      """
@@ -90,10 +70,6 @@ class TestGroupsSqla(SqlAlchemyTests, TestGroups):
 
         res = Group.query(user=get_automatic_user())
 
-        for re in res:
-            print re.pk
-        print
-
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
         # Final cleanup
@@ -102,10 +78,11 @@ class TestGroupsSqla(SqlAlchemyTests, TestGroups):
         newuser.delete()
 
 
-class TestDbExtrasSqla(SqlAlchemyTests, TestDbExtras):
+class TestDbExtrasSqla(AiidaTestCase):
     """
      Characterized functions
      """
+
     def test_replacement_1(self):
 
         n1 = Node().store()
@@ -113,21 +90,9 @@ class TestDbExtrasSqla(SqlAlchemyTests, TestDbExtras):
 
         n1.set_extra("pippo", [1, 2, u'a'])
 
-        print "###First set####"
-        print "n1 extra", n1.get_extras()
-        print "n2 extra", n2.get_extras()
-
         n1.set_extra("pippobis", [5, 6, u'c'])
 
-        print "###Second set####"
-        print "n1 extra", n1.get_extras()
-        print "n2 extra", n2.get_extras()
-
         n2.set_extra("pippo2", [3, 4, u'b'])
-
-        print "###Third set####"
-        print "n1 extra", n1.get_extras()
-        print "n2 extra", n2.get_extras()
 
         self.assertEqual(n1.get_extras(),{'pippo': [1, 2, u'a'], 'pippobis': [5, 6, u'c']})
 

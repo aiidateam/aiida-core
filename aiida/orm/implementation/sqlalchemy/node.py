@@ -371,8 +371,10 @@ class Node(AbstractNode):
                 "The extras of a node can be set only after "
                 "storing the node")
 
-        self.dbnode.extras.clear()
-        self.dbnode.extras.update(new_extras)
+        self._dbnode.extras.clear()
+        self._dbnode.extras.update(new_extras)
+        # self._dbnode.extras = new_extras
+        flag_modified(self.dbnode, "extras")
         self._increment_version_number_db()
 
 

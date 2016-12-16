@@ -40,11 +40,11 @@ class DbComputer(Base):
     _metadata = Column('metadata', JSONB)
 
     #We do not need this relationship from parent to child because we already have one from child to parent which uses backref flag and you add it to either class. See http://docs.sqlalchemy.org/en/latest/orm/basic_relationships.html One-to-many relations. Additionally, I decided to put it in the child because I need to use passive_deletes='all' which does not work with maby-to-one (node to computer) relationship which would be the case (instead we have the opposite one to many (computer to node))
-    dbnodes_q = relationship(
-            'DbNode',
-            backref=backref('dbnodes'),
-            lazy='dynamic',
-        )
+    # dbnodes_q = relationship(
+    #         'DbNode',
+    #         backref=backref('dbnodes'),
+    #         lazy='dynamic',
+    #     )
 
     def __init__(self, *args, **kwargs):
         self.enabled = True

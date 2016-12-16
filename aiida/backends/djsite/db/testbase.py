@@ -31,6 +31,9 @@ class DjangoTests(AiidaTestImplementation):
         self.clean_db()
         self.insert_data()
 
+    def setUp_method(self):
+        pass
+
     def insert_data(self):
         """
         Insert default data in DB.

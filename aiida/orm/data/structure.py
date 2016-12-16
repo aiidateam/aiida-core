@@ -38,7 +38,7 @@ def _get_valid_cell(inputcell):
     :raise ValueError: whenever the format is not valid.
     """
     try:
-        the_cell = tuple(tuple(float(c) for c in i) for i in inputcell)
+        the_cell = list(list(float(c) for c in i) for i in inputcell)
         if len(the_cell) != 3:
             raise ValueError
         if any(len(i) != 3 for i in the_cell):

@@ -412,8 +412,8 @@ class Install(VerdiCommand):
                 #                            "backend was used for its "
                 #                            "management.")
 
-                # Those import are necessary for SQLAlchemy to correctly create
-                # the needed database tables.
+                # Those imports are necessary for SQLAlchemy to correctly
+                # create the needed database tables.
                 from aiida.backends.sqlalchemy.models.authinfo import (
                     DbAuthInfo)
                 from aiida.backends.sqlalchemy.models.comment import DbComment

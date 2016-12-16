@@ -106,6 +106,7 @@ class Code(AbstractCode):
               remote_exec_path is the absolute path of the main executable on
               remote computer.
         """
+
         if (not isinstance(remote_computer_exec, (list, tuple))
             or len(remote_computer_exec) != 2):
             raise ValueError("remote_computer_exec must be a list or tuple "

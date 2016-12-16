@@ -364,6 +364,10 @@ class Node(AbstractNode):
                                    stop_if_existing=True)
         self._increment_version_number_db()
 
+    def reset_extras(self, new_extras):
+        raise NotImplementedError("Reset of extras has not been implemented"
+                                  "for Django backend.")
+
     def get_extra(self, key, *args):
         from aiida.backends.djsite.db.models import DbExtra
         if len(args) > 1:

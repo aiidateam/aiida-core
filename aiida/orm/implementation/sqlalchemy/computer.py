@@ -66,13 +66,18 @@ class Computer(AbstractComputer):
             self.set(**kwargs)
 
     def set(self, **kwargs):
+
+        is_modified = False
+
         for key, val in kwargs.iteritems():
             if hasattr(self._dbcomputer, key):
                 setattr(self._dbcomputer, key, val)
             else:
                 self._dbcomputer._metadata[key] = val
+                is_modified = True
 
-        flag_modified(self._dbcomputer, "_metadata")
+        if is_modified:
+            flag_modified(self._dbcomputer, "_metadata")
 
 
     @classmethod

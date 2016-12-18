@@ -34,8 +34,8 @@ __version__ = "0.7.0"
 # That's why expire on commit=False resolves many issues of objects beeing
 # obsolete
 
-# Session = sessionmaker(expire_on_commit=False)
-Session = sessionmaker(expire_on_commit=True)
+expire_on_commit = True
+Session = sessionmaker(expire_on_commit=expire_on_commit)
 
 # This contains the codebase for the setUpClass and tearDown methods used internally by the AiidaTestCase
 # This inherits only from 'object' to avoid that it is picked up by the automatic discovery of tests

@@ -36,7 +36,7 @@ class DjangoTests(AiidaTestImplementation):
 
     def insert_data(self):
         """
-        Insert default data in DB.
+        Insert default data into the DB.
         """
         from django.core.exceptions import ObjectDoesNotExist
 
@@ -51,11 +51,11 @@ class DjangoTests(AiidaTestImplementation):
             self.user = DbUser.objects.get(email=get_configured_user_email())
         except ObjectDoesNotExist:
             self.user = DbUser.objects.create_user(get_configured_user_email(),
-                                                  'fakepwd')
-        ## Reqired by the calling class
+                                                   'fakepwd')
+        # Reqired by the calling class
         self.user_email = self.user.email
 
-        ## Also self.computer is required by the calling class
+        # Also self.computer is required by the calling class
         self.computer = Computer(name='localhost',
                                 hostname='localhost',
                                 transport_type='local',

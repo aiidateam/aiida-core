@@ -73,19 +73,21 @@ class SqlAlchemyTests(AiidaTestImplementation):
         self.insert_data()
 
     def setUp_method(self):
-        import aiida.backends.sqlalchemy
-        aiida.backends.sqlalchemy.session.refresh(self.user)
-        aiida.backends.sqlalchemy.session.refresh(self.computer._dbcomputer)
+        pass
+        # import aiida.backends.sqlalchemy
+        # aiida.backends.sqlalchemy.session.refresh(self.user)
+        # aiida.backends.sqlalchemy.session.refresh(self.computer._dbcomputer)
 
     def insert_data(self):
         """
-        Insert default data in DB.
+        Insert default data into the DB.
         """
         email = get_configured_user_email()
 
         has_user = DbUser.query.filter(DbUser.email==email).first()
         if not has_user:
-            self.user = DbUser(get_configured_user_email(), "foo", "bar", "tests")
+            self.user = DbUser(get_configured_user_email(), "foo", "bar",
+                               "tests")
             self.test_session.add(self.user)
             self.test_session.commit()
         else:
@@ -95,7 +97,8 @@ class SqlAlchemyTests(AiidaTestImplementation):
         self.user_email = self.user.email
 
         # Also self.computer is required by the calling class
-        has_computer = DbComputer.query.filter(DbComputer.hostname == 'localhost').first()
+        has_computer = DbComputer.query.filter(DbComputer.hostname ==
+                                               'localhost').first()
         if not has_computer:
             self.computer = SqlAlchemyTests._create_computer()
             self.computer.store()

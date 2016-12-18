@@ -43,10 +43,16 @@ class AiidaTestImplementation(object):
     @abstractmethod
     def clean_db(self):
         """
-        This class implements the logic to fully clean the DB.
+        This method implements the logic to fully clean the DB.
         """
         pass
 
+    @abstractmethod
+    def insert_data(self):
+        """
+        This method inserts default data into the database.
+        """
+        pass
 
     def get_computer(self):
         """

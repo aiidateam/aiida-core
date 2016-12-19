@@ -152,7 +152,7 @@ class QueryBuilder(AbstractQueryBuilder):
 
             return mapped_entity
         if column:
-            mapped_class = db_column.prop.mapper.class_
+            mapped_class = column.prop.mapper.class_
         else:
             column = getattr(alias, column_name)
             mapped_class = column.prop.mapper.class_

@@ -262,8 +262,8 @@ class TestQueryBuilder(AiidaTestCase):
     def test_operators_eq_lt_gt(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
-        
-        
+
+
         nodes = [Node() for _ in range(8)]
 
 
@@ -285,7 +285,7 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>':1.02}}).count(), 4)
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>=':1.02}}).count(), 5)
 
-        
+
 
 
 
@@ -313,7 +313,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         good_child.add_link_from(parent, label='parent')
         bad_child.add_link_from(parent, label='parent')
-        
+
         # Using a standard inner join
         qb = QueryBuilder()
         qb.append(Node, tag='parent')
@@ -339,16 +339,16 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         for n in advisors+students:
             n.store()
-        
-        
+
+
         # advisor 0 get student 0, 1
         for i in (0,1):
             students[i].add_link_from(advisors[0], label='is_advisor')
-        
+
         # advisor 1 get student 3, 4
         for i in (3,4):
             students[i].add_link_from(advisors[1], label='is_advisor')
-        
+
         # advisor 2 get student 5, 6, 7
         for i in (5,6,7):
             students[i].add_link_from(advisors[2], label='is_advisor')
@@ -356,7 +356,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         # let's add a differnt relationship than advisor:
         students[9].add_link_from(advisors[2], label='lover')
 
-        
+
         self.assertEqual(
             QueryBuilder().append(
                     Node
@@ -379,22 +379,31 @@ class QueryBuilderPath(AiidaTestCase):
         from aiida.orm import Node
 
         n1 = Node()
+        n1.label='n1'
         n1.store()
         n2 = Node()
+        n2.label='n2'
         n2.store()
         n3 = Node()
+        n3.label='n3'
         n3.store()
         n4 = Node()
+        n4.label='n4'
         n4.store()
         n5 = Node()
+        n5.label='n5'
         n5.store()
         n6 = Node()
+        n6.label='n6'
         n6.store()
         n7 = Node()
+        n7.label='n7'
         n7.store()
         n8 = Node()
+        n8.label='n8'
         n8.store()
         n9 = Node()
+        n9.label='n9'
         n9.store()
 
         # I create a strange graph, inserting links in a order
@@ -415,12 +424,20 @@ class QueryBuilderPath(AiidaTestCase):
                     Node, filters={'id':n1.pk}, tag='anc'
                 ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
                 ).count(), 0)
-        
-        self.assertEquals(
-                QueryBuilder().append(
-                    Node, filters={'id':n1.pk}, tag='anc'
-                ).append(Node, descendant_of_beta='anc',  filters={'id':n8.pk}
-                ).count(), 0)
+
+
+        q = QueryBuilder()
+        q.append(
+                Node,
+                filters={'id':n1.pk}, tag='anc'
+            )
+        q.append(
+                Node, descendant_of_beta='anc',
+                filters={'id':n8.pk}
+            )
+
+
+        self.assertEquals(q.count(), 0)
 
         self.assertEquals(
                 QueryBuilder().append(
@@ -432,22 +449,27 @@ class QueryBuilderPath(AiidaTestCase):
                     Node, filters={'id':n8.pk}, tag='desc'
                 ).append(Node, ancestor_of_beta='desc',  filters={'id':n1.pk}
                 ).count(), 0)
-        
-        
-        
+
+
+
         n6.add_link_from(n5)
         # Yet, now 2 links from 1 to 8
+
         self.assertEquals(
             QueryBuilder().append(
                     Node, filters={'id':n1.pk}, tag='anc'
                 ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
                 ).count(), 2
             )
+        q = QueryBuilder()
+        q.append(
+                Node, filters={'id':n1.pk}, tag='anc',  project='label',
+            )
+        q.append(Node, descendant_of_beta='anc',  filters={'id':n8.pk}, project='label'
+            )
+
         self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n1.pk}, tag='anc'
-                ).append(Node, descendant_of_beta='anc',  filters={'id':n8.pk}
-                ).count(), 2
+            q.count(), 2
             )
         self.assertEquals(
                 QueryBuilder().append(
@@ -462,7 +484,7 @@ class QueryBuilderPath(AiidaTestCase):
 
         n7.add_link_from(n9)
         # Still two links...
-        
+
         self.assertEquals(
             QueryBuilder().append(
                     Node, filters={'id':n1.pk}, tag='anc'
@@ -489,7 +511,7 @@ class QueryBuilderPath(AiidaTestCase):
 
         n9.add_link_from(n6)
         # And now there should be 4 nodes
-        
+
         self.assertEquals(
             QueryBuilder().append(
                     Node, filters={'id':n1.pk}, tag='anc'

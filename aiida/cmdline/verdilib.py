@@ -377,7 +377,7 @@ def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, d
           db_pass=db_pass)
 
 
-def setup(profile, only_config, non_interactive, **kwargs):
+def setup(profile, only_config, non_interactive=False, **kwargs):
     '''
     setup an aiida profile and aiida user (and the aiida default user).
 
@@ -724,12 +724,8 @@ class Quicksetup(VerdiCommand):
             raise e
 
         # create a uniquely named profile
-        from aiida.common.setup import (set_default_profile, get_config)
-        try:
-            confs = get_config()
-        except Exception:
-            confs = {}
-
+        from aiida.common.setup import (set_default_profile, get_or_create_config)
+        confs = get_or_create_config()
         profile_name = 'quicksetup'
         write_profile = False
         while not write_profile:
@@ -756,7 +752,7 @@ class Quicksetup(VerdiCommand):
             'first_name': first_name,
             'last_name': last_name,
             'institution': institution,
-            'force_overwrite': write_profile
+            'force_overwrite': write_profile,
         }
         setup(profile_name, only_config=False, non_interactive=True, **setup_args)
 

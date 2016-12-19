@@ -344,14 +344,14 @@ def ask_for_timezone(existing_timezone):
     return answer
 
 
-def create_base_dirs():
+def create_base_dirs(config_dir=None):
     """
     Create dirs for AiiDA, and install default daemon files.
     """
     import getpass
 
     # For the daemon, to be hard-coded when ok
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+    aiida_dir = os.path.expanduser(config_dir or AIIDA_CONFIG_FOLDER)
     aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_SUBDIR)
     aiida_log_dir = os.path.join(aiida_dir, LOG_SUBDIR)
     local_user = getpass.getuser()

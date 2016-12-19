@@ -83,7 +83,6 @@ class User(VerdiCommandWithSubcommands):
             #print "Institution:  {}".format(user.institution)
             configure_user = False
             reply = click.confirm("Do you want to reconfigure it?")
-            reply = reply.strip()
             #if not reply:
             #    pass
             #elif reply.lower() == 'n':

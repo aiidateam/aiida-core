@@ -288,6 +288,43 @@ class TestQueryBuilder(AiidaTestCase):
 
 
 
+    def test_subclassing(self):
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm import Node, Data
+        from aiida.orm.querybuilder import QueryBuilder
+        s = StructureData()
+        s._set_attr('cat', 'miau')
+        s.store()
+
+        d = Data()
+        d._set_attr('cat', 'miau')
+        d.store()
+
+        p = ParameterData(dict=dict(cat='miau'))
+        p.store()
+
+        n = Node()
+        n._set_attr('cat', 'miau')
+        n.store()
+
+        # Now when asking for a node with attr.cat==miau, I want 4 esults:
+        qb = QueryBuilder().append(Node, filters={'attributes.cat':'miau'})
+        self.assertEqual(qb.count(), 4)
+
+        qb = QueryBuilder().append(Data, filters={'attributes.cat':'miau'})
+        self.assertEqual(qb.count(), 3)
+
+        # If I'm asking for the specific lowest subclass, I want one result
+        for cls in (StructureData, ParameterData):
+            qb = QueryBuilder().append(cls, filters={'attributes.cat':'miau'})
+            self.assertEqual(qb.count(), 1)
+
+        # Now I am not allow the subclassing, which should give 1 result for each
+        for cls in (StructureData, ParameterData, Node, Data):
+            qb = QueryBuilder().append(cls, filters={'attributes.cat':'miau'}, subclassing=False)
+            self.assertEqual(qb.count(), 1)
+        
 
 class QueryBuilderJoinsTests(AiidaTestCase):
     def test_joins1(self):

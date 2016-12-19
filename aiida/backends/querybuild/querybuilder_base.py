@@ -402,6 +402,7 @@ class AbstractQueryBuilder(object):
 
         if 'link_tag' in kwargs:
             raise DeprecationWarning("link_tag is deprecated, use edge_tag instead")
+
         ormclass, ormclasstype, query_type_string = self._get_ormclass(cls, type)
         ############################### TAG #################################
         # Let's get a tag
@@ -482,7 +483,8 @@ class AbstractQueryBuilder(object):
         # This so far only is necessary for AiidaNodes
         # GROUPS?
         if query_type_string is not None:
-            self._add_type_filter(tag, query_type_string, subclassing)
+            plugin_type_string = ormclasstype
+            self._add_type_filter(tag, query_type_string, plugin_type_string, subclassing)
         # The order has to be first _add_type_filter and then add_filter.
         # If the user adds a query on the type column, it overwrites what I did
 
@@ -750,8 +752,8 @@ class AbstractQueryBuilder(object):
         self._filters[tag].update(filter_spec)
 
     def _add_type_filter(
-        self, tagspec, query_type_string,
-        ormclasstype, subclassing=True):
+            self, tagspec, query_type_string,
+            plugin_type_string, subclassing):
         """
         Add a filter on the type based on the query_type_string
         """
@@ -760,7 +762,7 @@ class AbstractQueryBuilder(object):
         if subclassing:
             node_type_flt = {'like':'{}%'.format(query_type_string)}
         else:
-            node_type_flt = {'==':ormclasstype}
+            node_type_flt = {'==':plugin_type_string}
 
         self.add_filter(tagspec, {'type':node_type_flt})
 

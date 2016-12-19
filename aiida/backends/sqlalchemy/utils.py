@@ -42,13 +42,14 @@ from aiida.backends.profile import (is_profile_loaded,
 #     """
 #     return sqlalchemy.session is not None
 
-def get_session(engine=None):
+def get_session(engine=None, expire_on_commit=True):
     """
     :param engine: the engine that will be used by the sessionmaker
+    :param expire_on_commit: should the session expire on commits?
 
     :returns: A sqlalchemy session (connection to DB)
     """
-    Session = sessionmaker(bind=engine)
+    Session = sessionmaker(bind=engine, expire_on_commit=expire_on_commit)
 
     # Return a scoped session class instead of a
     # from sqlalchemy.orm import scoped_session

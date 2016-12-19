@@ -206,7 +206,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
     def test_multiple_node_creation(self):
         """
         This test checks that a node is not added automatically to the session
-        (and subsequently comitted) when a user is in the session.
+        (and subsequently committed) when a user is in the session.
         It tests the fix for the issue #234
         """
         from aiida.backends.sqlalchemy.models.node import DbNode

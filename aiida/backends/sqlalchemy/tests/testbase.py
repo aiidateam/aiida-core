@@ -102,7 +102,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
         defaults.update(kwargs)
         return Computer(**defaults)
 
-
     @staticmethod
     def inject_computer(f):
         @functools.wraps(f)
@@ -171,7 +170,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
         self.test_session = None
 
         self.connection.close()
-
 
         # I clean the test repository
         shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)

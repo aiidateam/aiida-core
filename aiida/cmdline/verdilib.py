@@ -761,7 +761,7 @@ class Quicksetup(VerdiCommand):
         from psycopg2 import connect
         success = False
         if not kwargs:
-            kwargs['database': 'template1']
+            kwargs['database'] = 'template1'
         try:
             connect(**kwargs)
             success = True

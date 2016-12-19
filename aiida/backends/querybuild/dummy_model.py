@@ -382,48 +382,6 @@ DbNode.state = column_property(
 
 
 
-# Recursive query that replaces DbPath
-# Note: Does not work with sqlite
-node_aliased = aliased(DbNode)
-
-walk = select([
-        DbNode.id.label('ancestor_id'),
-        DbNode.id.label('descendant_id'),
-        cast(-1, Integer).label('depth'),
-        array([DbNode.id]).label('path') # Arrays can only be used with postgres
-    ]).select_from(DbNode).cte(recursive=True) #, name="incl_aliased3")
-
-
-descendants_beta = walk.union_all(
-    select([
-            walk.c.ancestor_id,
-            node_aliased.id,
-            walk.c.depth + cast(1, Integer),
-            # This is the way to reconstruct the path (the sequence of nodes traversed)
-            (walk.c.path+array([node_aliased.id])).label('path')
-        ]).select_from(
-            join(
-                node_aliased,
-                DbLink,
-                DbLink.output_id==node_aliased.id,
-            )
-        ).where(
-            and_(
-                DbLink.input_id == walk.c.descendant_id,
-            )
-        )
-    )
-
-
-class DbPathBeta(object):
-
-    def __init__(self, start, end, depth):
-        self.start = start
-        self.out = end
-        self.depth = depth
-
-mapper(DbPathBeta, descendants_beta)
-
 #~ DbAttribute.value_str = column_property(
         #~ case([
             #~ (DbAttribute.datatype == 'txt', DbAttribute.tval),

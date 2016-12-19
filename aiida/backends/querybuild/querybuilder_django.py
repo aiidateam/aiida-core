@@ -8,30 +8,11 @@ __version__ = "0.7.0"
 
 from datetime import datetime
 from json import loads as json_loads
+import datetime
 
-from querybuilder_base import (
-    AbstractQueryBuilder,
-    datetime,
-    InputValidationError
-)
-
-from aiida.backends.querybuild.dummy_model import (
-    # Tables:
-    DbNode      as DummyNode,
-    DbLink      as DummyLink,
-    DbCalcState as DummyState,
-    DbPath      as DummyPath,
-    DbPathBeta  as DummyPathBeta,
-    DbUser      as DummyUser,
-    DbComputer  as DummyComputer,
-    DbGroup     as DummyGroup,
-    DbExtra     as DummyExtra,
-    DbAttribute as DummyAttribute,
-    descendants_beta as DummyDescendants_beta,
-    table_groups_nodes  as Dummy_table_groups_nodes,
-    # session,                             # session with DB
-)
-import dummy_model
+from aiida.common.exceptions import InputValidationError
+from querybuilder_base import AbstractQueryBuilder
+import aiida.backends.querybuild.dummy_model as dummy_model
 
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
 
@@ -55,23 +36,22 @@ class QueryBuilder(AbstractQueryBuilder):
         from aiida.orm.implementation.django.computer import Computer as AiidaComputer
         from aiida.orm.implementation.django.user import User as AiidaUser
 
-        self.Link               = DummyLink
-        self.Path               = DummyPath
-        self.PathBeta           = DummyPathBeta
-        self.Node               = DummyNode
-        self.Computer           = DummyComputer
-        self.User               = DummyUser
-        self.Group              = DummyGroup
-        self.table_groups_nodes = Dummy_table_groups_nodes
-        self.descendants_beta   = DummyDescendants_beta
+        self.Link               = dummy_model.DbLink
+        self.Node               = dummy_model.DbNode
+        self.Computer           = dummy_model.DbComputer
+        self.User               = dummy_model.DbUser
+        self.Group              = dummy_model.DbGroup
+        self.table_groups_nodes = dummy_model.table_groups_nodes
         self.AiidaNode          = AiidaNode
         self.AiidaGroup         = AiidaGroup
         self.AiidaComputer      = AiidaComputer
         self.AiidaUser          = AiidaUser
 
-
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
+    def _prepare_with_dbpath(self):
+        from aiida.backends.querybuild.dummy_model import DbPath as DummyPath
+        self.Path = DummyPath
 
     def _get_aiida_res(self, key, res):
         """
@@ -200,9 +180,9 @@ class QueryBuilder(AbstractQueryBuilder):
 
 
         elif operator=='has_key':
-            if issubclass(mapped_class, DummyAttribute):
+            if issubclass(mapped_class, dummy_model.DbAttribute):
                 expr = alias.attributes.any(mapped_class.key == '.'.join(attr_key+[value]))
-            elif issubclass(mapped_class, DummyExtra):
+            elif issubclass(mapped_class, dummy_model.DbExtra):
                 expr = alias.extras.any(mapped_class.key == '.'.join(attr_key+[value]))
             else:
                 raise Exception("I was given {} as an attribute base class".format(mapped_class))

@@ -56,8 +56,18 @@ class AbstractQueryBuilder(object):
 
 
     def __init__(self, *args, **kwargs):
+        """
+        Instantiates a QueryBuilder instance
 
-        self.isouter = False
+        :param bool with_dbpath: 
+            Whether to use the DbPath table (if existing) 
+            to query ancestor-descendant relations
+        :param list path: A list of the vertices to traverse
+        :param dict filters: The filters to apply
+        :param dict project: The projections to apply
+        :param int limit: Limit the number of rows
+        :param dict order_by: How to order the results
+        """
 
         # A list storing the path being traversed by the query
         self._path = []
@@ -87,17 +97,21 @@ class AbstractQueryBuilder(object):
 
         # The cls_to_tag_map in this case would be:
         # {PwCalculation:'PwCalculation', StructureData:'StructureData'}
-
-        self._cls_to_tag_map = {}
-
-        self._hash = None
-
-        self._injected = False
         if args:
             raise InputValidationError(
                     "Arguments are not accepted\n"
                     "when instantiating a QueryBuilder instance"
                 )
+
+        self._cls_to_tag_map = {}
+        self._hash = None
+        self._injected = False
+
+        self._with_dbpath = kwargs.pop('with_dbpath', True)
+        if self._with_dbpath:
+            self._prepare_with_dbpath()
+
+
 
         path = kwargs.pop('path', [])
         if not isinstance(path, (tuple, list)):
@@ -131,10 +145,9 @@ class AbstractQueryBuilder(object):
         if order_spec:
             self.order_by(order_spec)
 
+
         if kwargs:
-            valid_keys = [
-                    'path', 'filters', 'project', 'limit', 'order_by'
-            ]
+            valid_keys = ('path', 'filters', 'project', 'limit', 'order_by', 'with_dbpath')
             raise InputValidationError(
                     "Received additional keywords: {}"
                     "\nwhich I cannot process"
@@ -167,6 +180,18 @@ class AbstractQueryBuilder(object):
             )
         )
 
+    @abstractmethod
+    def _prepare_with_dbpath(self):
+        """
+        A method to use the DbPath, if this is supported, or throw an
+        exception if not.
+        The overrider must fill add the DbPath-ORM as an attribute to self::
+
+            from aiida.backends.implementation.model import DbPath
+            self.path = DbPath
+
+        """
+        pass
 
 
     def _get_ormclass(self, cls, ormclasstype):
@@ -541,12 +566,21 @@ class AbstractQueryBuilder(object):
             if joining_keyword in ('input_of', 'output_of'):
                 aliased_edge = aliased(self.Link)
             elif joining_keyword in ('ancestor_of', 'descendant_of'):
-                aliased_edge = aliased(self.Path)
-            elif joining_keyword in ('ancestor_of_beta', 'descendant_of_beta'):
-                #~ aliased_edge = aliased(self.PathBeta)
-                aliased_edge = self.PathBeta
+                if self._with_dbpath:
+                    aliased_edge = aliased(self.Path)
+                else:
+                    # An aliased_edge is created on the fly if I'm not using
+                    # the DbPath with a recursive query.
+                    # I don't have a way (yet) to add filters here,
+                    # since aliased_edge is None.
+                    # Every filter on the path should be dealt inside the function
+                    # ._join_ancestor... _join_descendant
+                    pass
+
+
 
             if aliased_edge is not None:
+
 
                 # Ok, so here we are joining through a m2m relationship,
                 # e.g. input or output.
@@ -1307,162 +1341,64 @@ class AbstractQueryBuilder(object):
                 isouter=isouterjoin
         )
 
-    def _join_descendants_beta_bkp(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
+    def _join_descendants_recursive(self, joined_entity, entity_to_join, isouterjoin, filter_dict, edge_tag):
         """
-        Beta version, joining descendants using the recursive functionality
-        """
-                #~ descendants_beta = walk.union_all(
-            #~ select([
-                    #~ walk.c.ancestor_id,
-                    #~ node_aliased.id,
-                    #~ walk.c.depth + cast(1, Integer),
-                    #~ #, As above, but if arrays are supported
-                    #~ # This is the way to reconstruct the path (the sequence of nodes traversed)
-                #~ ]).select_from(
-                    #~ join(
-                        #~ node_aliased,
-                        #~ DbLink,
-                        #~ DbLink.output_id==node_aliased.id,
-                    #~ )
-                #~ ).where(
-                    #~ and_(
-                        #~ DbLink.input_id == walk.c.descendant_id,
-                    #~ )
-                #~ )
-            #~ )
-        self._check_dbentities(
-                (joined_entity, self.Node),
-                (entity_to_join, self.Node),
-                'descendant_of_beta'
-            )
-
-        self._query = self._query.join(
-                aliased_path,
-                aliased_path.ancestor_id == joined_entity.id
-            ).join(
-                entity_to_join,
-                aliased_path.descendant_id == entity_to_join.id,
-                isouter=isouterjoin
-            ).filter(
-                # it is necessary to put this filter so that the
-                # the node does not include itself as a ancestor/descendant
-                aliased_path.depth > -1
-            )
-    def _join_descendants_beta(self, joined_entity, entity_to_join, aliased_path, isouterjoin, filter_dict, edge_tag):
-        """
-        Beta version, joining descendants using the recursive functionality
+        joining descendants using the recursive functionality
+        :TODO: Move the filters to be done inside the recursive query (for example on depth)
+        :TODO: Pass an option to also show the path, if this is wanted.
         """
 
         from sqlalchemy.orm import aliased, mapper
-
         from sqlalchemy import select, func, join, and_
         from sqlalchemy.sql.expression import cast
         from sqlalchemy.types import Integer
 
-
-        #~ node_aliased = aliased(DbNode)
-
         self._check_dbentities(
                 (joined_entity, self.Node),
                 (entity_to_join, self.Node),
                 'descendant_of_beta'
             )
 
+        link1 = aliased(self.Link)
+        link2 = aliased(self.Link)
+        node1 = aliased(self.Node)
+        in_recursive_filters = self._build_filters(node1, filter_dict)
 
-        if 1:
-            link1 = aliased(self.Link)
-            link2 = aliased(self.Link)
-            node1 = aliased(self.Node)
-            in_recursive_filters = self._build_filters(node1, filter_dict)
+        walk = select([
+                link1.input_id.label('ancestor_id'),
+                link1.output_id.label('descendant_id'),
+                cast(0, Integer).label('depth'),
+                # Un-commenting the next line will allow to store the path as
+                # an array:
+                #~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
+            ]).select_from(
+                join(
+                    node1, link1, link1.input_id==node1.id
+                )
+            ).where(in_recursive_filters).cte(recursive=True)
 
-            walk = select([
-                    link1.input_id.label('ancestor_id'),
-                    link1.output_id.label('descendant_id'),
-                    cast(0, Integer).label('depth'),
-                    #~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
+        aliased_walk = aliased(walk)
+
+
+        descendants_beta = aliased(aliased_walk.union_all(
+            select([
+                    aliased_walk.c.ancestor_id.label('ancestor_id'),
+                    link2.output_id.label('descendant_id'),
+                    (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
+                    #~ (walk.c.path+array([node_aliased.id])).label('path')
+                    #, As above, but if arrays are supported
+                    # This is the way to reconstruct the path (the sequence of nodes traversed)
                 ]).select_from(
                     join(
-                        node1, link1, link1.input_id==node1.id
+                        aliased_walk,
+                        link2,
+                        link2.input_id == aliased_walk.c.descendant_id,
                     )
-                ).where(in_recursive_filters).cte(recursive=True)
+                )
+            )) #.alias()
 
-            aliased_walk = aliased(walk)
-
-
-            descendants_beta = aliased(aliased_walk.union_all(
-                select([
-                        aliased_walk.c.ancestor_id.label('ancestor_id'),
-                        link2.output_id.label('descendant_id'),
-                        (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
-                        #~ (walk.c.path+array([node_aliased.id])).label('path')
-                        #, As above, but if arrays are supported
-                        # This is the way to reconstruct the path (the sequence of nodes traversed)
-                    ]).select_from(
-                        join(
-                            aliased_walk,
-                            link2,
-                            link2.input_id == aliased_walk.c.descendant_id,
-                        )
-                    )
-                )) #.alias()
-        else:
-            walk = select([
-                    self.Link.input_id.label('ancestor_id'),
-                    self.Link.output_id.label('descendant_id'),
-                    cast(0, Integer).label('depth'),
-                    #~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
-                ]).select_from(
-                    join(
-                        self.Node, self.Link, self.Link.input_id==self.Node.id
-                    )
-                ).where(in_recursive_filters).cte(recursive=True)
-            aliased_walk = aliased(walk)
-
-
-            aliased_path = aliased(walk.union_all(
-                select([
-                        walk.c.ancestor_id.label('ancestor_id'),
-                        self.Link.output_id.label('descendant_id'),
-                        (walk.c.depth + cast(1, Integer)).label('current_depth'),
-                        #~ (walk.c.path+array([node_aliased.id])).label('path')
-                        #, As above, but if arrays are supported
-                        # This is the way to reconstruct the path (the sequence of nodes traversed)
-                    ]).select_from(
-                        join(
-                            walk,
-                            self.Link,
-                            self.Link.input_id == walk.c.descendant_id,
-                        )
-                    )
-                ))
-
-        #.alias()
-
-
-        #~ class DbPathBeta(object):
-
-            #~ def __init__(self, start, end, depth):
-                #~ self.start = start
-                #~ self.out = end
-                #~ self.depth = depth
-
-        #~ mapper(DbPathBeta, descendants_beta)
-
-        #~ aliased_path = aliased(descendants_beta)
-
-        #~ print '\n'
-        #~ print self._query
-        #~ raw_input()
-
-        #~ self._query = self._query.join(
-                #~ aliased_path,
-                #~ aliased_path.c.ancestor_id == joined_entity.id
-            #~ ).join(
-                #~ entity_to_join,
-                #~ aliased_path.c.descendant_id == entity_to_join.id,
-                #~ isouter=isouterjoin
-            #~ )
         self._tag_to_alias_map[edge_tag] = descendants_beta.c
+
         self._query = self._query.join(
                 descendants_beta,
                 descendants_beta.c.ancestor_id == joined_entity.id
@@ -1471,38 +1407,76 @@ class AbstractQueryBuilder(object):
                 descendants_beta.c.descendant_id == entity_to_join.id,
                 isouter=isouterjoin
             )
-        #~ print '\n'
-        #~ print self._query
-        #~ raw_input()
 
-    def _join_ancestors_beta(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
+
+    def _join_ancestors_recursive(self, joined_entity, entity_to_join, isouterjoin, filter_dict, edge_tag):
         """
-        :param joined_entity: The (aliased) ORMclass that is a descendant
-        :param entity_to_join: The (aliased) ORMClass that is an ancestor.
-        :param aliased_path: An aliased instance of DbPath
+        joining ancestors using the recursive functionality
+        :TODO: Move the filters to be done inside the recursive query (for example on depth)
+        :TODO: Pass an option to also show the path, if this is wanted.
 
         """
+        from sqlalchemy.orm import aliased, mapper
+        from sqlalchemy import select, func, join, and_
+        from sqlalchemy.sql.expression import cast
+        from sqlalchemy.types import Integer
+
         self._check_dbentities(
                 (joined_entity, self.Node),
                 (entity_to_join, self.Node),
-                'ancestor_of_beta'
+                'descendant_of_beta'
             )
-        #~ aliased_path = aliased(self.Path)
+
+        link1 = aliased(self.Link)
+        link2 = aliased(self.Link)
+        node1 = aliased(self.Node)
+        in_recursive_filters = self._build_filters(node1, filter_dict)
+
+        walk = select([
+                link1.input_id.label('ancestor_id'),
+                link1.output_id.label('descendant_id'),
+                cast(0, Integer).label('depth'),
+                # Un-commenting the next line will allow to store the path as
+                # an array:
+                #~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
+            ]).select_from(
+                join(
+                    node1, link1, link1.output_id==node1.id
+                )
+            ).where(in_recursive_filters).cte(recursive=True)
+
+        aliased_walk = aliased(walk)
+
+
+        ancestors_recursive = aliased(aliased_walk.union_all(
+            select([
+                    link2.input_id.label('ancestor_id'),
+                    aliased_walk.c.descendant_id.label('descendant_id'),
+                    (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
+                    #~ (walk.c.path+array([node_aliased.id])).label('path')
+                    #, As above, but if arrays are supported
+                    # This is the way to reconstruct the path (the sequence of nodes traversed)
+                ]).select_from(
+                    join(
+                        aliased_walk,
+                        link2,
+                        link2.output_id == aliased_walk.c.ancestor_id,
+                    )
+                )
+            ))
+
+        self._tag_to_alias_map[edge_tag] = ancestors_recursive.c
+
         self._query = self._query.join(
-                aliased_path,
-                aliased_path.descendant_id == joined_entity.id
+                ancestors_recursive,
+                ancestors_recursive.c.descendant_id == joined_entity.id
             ).join(
                 entity_to_join,
-                aliased_path.ancestor_id == entity_to_join.id,
+                ancestors_recursive.c.ancestor_id == entity_to_join.id,
                 isouter=isouterjoin
-            ).filter(
-                # it is necessary to put this filter so that the
-                # the node does not include itself as a ancestor/descendant
-                aliased_path.depth > -1
             )
 
-
-    def _join_descendants(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
+    def _join_descendants_u_dbpath(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
         """
         :param joined_entity: The (aliased) ORMclass that is an ancestor
         :param entity_to_join: The (aliased) ORMClass that is a descendant.
@@ -1528,7 +1502,7 @@ class AbstractQueryBuilder(object):
                 isouter=isouterjoin
         )
 
-    def _join_ancestors(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
+    def _join_ancestors_u_dbpath(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
         """
         :param joined_entity: The (aliased) ORMclass that is a descendant
         :param entity_to_join: The (aliased) ORMClass that is an ancestor.
@@ -1676,10 +1650,6 @@ class AbstractQueryBuilder(object):
                 'output_of' : self._join_outputs,
                 'slave_of'  : self._join_slaves, # not implemented
                 'master_of' : self._join_masters,# not implemented
-                'ancestor_of': self._join_ancestors,
-                'descendant_of': self._join_descendants,
-                'ancestor_of_beta': self._join_ancestors_beta, #not implemented
-                'descendant_of_beta': self._join_descendants_beta,
                 'direction' : None,
                 'group_of'  : self._join_groups,
                 'member_of' : self._join_group_members,
@@ -1688,7 +1658,15 @@ class AbstractQueryBuilder(object):
                 'created_by' : self._join_created_by,
                 'creator_of' : self._join_creator_of,
         }
+        if self._with_dbpath:
+            d['ancestor_of'] = self._join_ancestors_u_dbpath
+            d['descendant_of'] = self._join_descendants_u_dbpath
+        else:
+            d['ancestor_of'] = self._join_ancestors_recursive
+            d['descendant_of'] = self._join_descendants_recursive
         return d
+
+
     def _get_connecting_node(
             self, index,
             joining_keyword=None, joining_value=None, **kwargs
@@ -1881,12 +1859,12 @@ class AbstractQueryBuilder(object):
                 )
             edge_tag = verticespec.get('edge_tag', None)
             isouterjoin = verticespec.get('outerjoin')
-            if edge_tag is None:
-                connection_func(toconnectwith, alias, isouterjoin=isouterjoin)
-            elif verticespec['joining_keyword'] in ('descendant_of_beta',):
+
+            if ( verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of') ) and not(self._with_dbpath):
                 filter_dict = self._filters.get(verticespec['joining_value'], {})
-                aliased_edge = self._tag_to_alias_map[edge_tag]
-                connection_func(toconnectwith, alias, aliased_edge, isouterjoin=isouterjoin, filter_dict=filter_dict, edge_tag=edge_tag)
+                connection_func(toconnectwith, alias, isouterjoin=isouterjoin, filter_dict=filter_dict, edge_tag=edge_tag)
+            elif edge_tag is None:
+                connection_func(toconnectwith, alias, isouterjoin=isouterjoin)
             else:
                 aliased_edge = self._tag_to_alias_map[edge_tag]
                 connection_func(toconnectwith, alias, aliased_edge, isouterjoin=isouterjoin)

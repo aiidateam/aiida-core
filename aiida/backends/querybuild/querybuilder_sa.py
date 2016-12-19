@@ -31,7 +31,6 @@ from sa_init import (
 
 from sqlalchemy_utils.types.choice import Choice
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
-from aiida.backends.sqlalchemy.models import DbPathBeta
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.user import DbUser
@@ -51,8 +50,6 @@ class QueryBuilder(AbstractQueryBuilder):
         from aiida.orm.implementation.sqlalchemy.computer import Computer as AiidaComputer
         from aiida.orm.implementation.sqlalchemy.user import User as AiidaUser
         self.Link               = DbLink
-        self.Path               = DbPath
-        self.PathBeta           = DbPathBeta
         self.Node               = DbNode
         self.Computer           = DbComputer
         self.User               = DbUser
@@ -63,6 +60,10 @@ class QueryBuilder(AbstractQueryBuilder):
         self.AiidaComputer      = AiidaComputer
         self.AiidaUser          = AiidaUser
         super(QueryBuilder, self).__init__(*args, **kwargs)
+
+    def _prepare_with_dbpath(self):
+        from aiida.backends.sqlalchemy.models.node import DbPath
+        self.Path = DbPath
 
     def _get_session(self):
         return aiida.backends.sqlalchemy.session

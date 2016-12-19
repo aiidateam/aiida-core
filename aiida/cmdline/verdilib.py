@@ -305,8 +305,6 @@ class Help(VerdiCommand):
             print ""
 
 
-
-
 class Install(VerdiCommand):
     """
     Install/setup aiida for the current user
@@ -330,7 +328,6 @@ class Install(VerdiCommand):
         print ""
 
 
-
 class Setup(VerdiCommand):
     """
     Setup aiida for the current user
@@ -352,7 +349,6 @@ class Setup(VerdiCommand):
         print ""
 
 
-
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
@@ -368,19 +364,33 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--db_user', type=str)
 @click.option('--db_pass', type=str)
 def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass):
+    '''verdi setup command, forward cmdline arguments to the setup function.'''
     setup(profile=profile,
-              only_config=only_config,
-              non_interactive=non_interactive,
-              backend=backend,
-              email=email,
-              db_host=db_host,
-              db_port=db_port,
-              db_name=db_name,
-              db_user=db_user,
-              db_pass=db_pass)
+          only_config=only_config,
+          non_interactive=non_interactive,
+          backend=backend,
+          email=email,
+          db_host=db_host,
+          db_port=db_port,
+          db_name=db_name,
+          db_user=db_user,
+          db_pass=db_pass)
 
 
 def setup(profile, only_config, non_interactive, **kwargs):
+    '''
+    setup an aiida profile and aiida user (and the aiida default user).
+
+    :param profile: Profile name
+    :param only_config: do not create a new user
+    :param non_interactive: do not prompt for configuration values, fail if not all values are given as kwargs.
+    :param backend: one of 'django', 'sqlalchemy'
+    :param email: valid email address for the user
+    :param db_host: hostname for the database
+    :param db_port: port to connect to the database
+    :param db_user: name of the db user
+    :param db_pass: password of the db user
+    '''
     from aiida.common.setup import (create_base_dirs, create_configuration,
                                     set_default_profile, DEFAULT_UMASK,
                                     create_config_noninteractive)
@@ -563,14 +573,13 @@ def setup(profile, only_config, non_interactive, **kwargs):
         if not non_interactive:
             User().user_configure(email)
         else:
-            #or don't ask
+            # or don't ask
             User().user_configure(
                 kwargs['email'],
                 '--first-name='+kwargs.get('first_name'),
                 '--last-name='+kwargs.get('last_name'),
                 '--institution=' + kwargs.get('institution')
             )
-
 
     print "Setup finished."
 
@@ -597,6 +606,12 @@ class Quicksetup(VerdiCommand):
             self._quicksetup_cmd.invoke(ctx)
 
     def _get_pg_access(self):
+        '''
+        find out how postgres can be accessed.
+
+        Depending on how postgres is set up, psycopg2 can be used to create dbs and db users, otherwise a subprocess has to be used that executes psql as an os user with the right permissions.
+        :return: (method, info) where method is a method that executes psql commandlines and info is a dict with keyword arguments to be used with method.
+        '''
         # find out if we run as a postgres superuser or can connect as postgres
         # This will work on OSX in some setups but not in the default Debian one
         can_connect = False
@@ -637,8 +652,9 @@ class Quicksetup(VerdiCommand):
         return result
 
     def _prompt_db_info(self):
+        '''prompt interactively for postgres database connectino details.'''
         access = False
-        while access == False:
+        ess:
             dbinfo = {}
             dbinfo['host'] = click.prompt('postgres host', default='localhost', type=str)
             dbinfo['port'] = click.prompt('postgres port', default=5432, type=int)
@@ -649,7 +665,7 @@ class Quicksetup(VerdiCommand):
             if self._try_connect(**dbinfo):
                 access = True
             else:
-                dbinfo['password'] = click.prompt('postgres password of {}'.format(dbinfo['user']), input_hidden=True, type=str)
+                dbinfo['password'] = click.prompt('postgres password of {}'.format(dbinfo['user']), hide_input=True, type=str)
                 if self._try_connect(**dbinfo):
                     access = True
                 else:
@@ -758,6 +774,11 @@ class Quicksetup(VerdiCommand):
                 set_default_profile('verdi', profile_name, force_rewrite=True)
 
     def _try_connect(self, **kwargs):
+        '''
+        try to start a psycopg2 connection.
+
+        :return: True if successful, False otherwise
+        '''
         from psycopg2 import connect
         success = False
         try:
@@ -768,6 +789,11 @@ class Quicksetup(VerdiCommand):
         return success
 
     def _try_subcmd(self, **kwargs):
+        '''
+        try to run psql in a subprocess.
+
+        :return: True if successful, False otherwise
+        '''
         success = False
         try:
             self._pg_execute_sh('\q', **kwargs)
@@ -775,6 +801,7 @@ class Quicksetup(VerdiCommand):
         except:
             pass
         return success
+
     def _get_postgres_user(self):
         from psycopg2 import connect, OperationalError
         from getpass import getuser

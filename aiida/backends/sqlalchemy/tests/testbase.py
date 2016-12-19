@@ -1,29 +1,22 @@
 # -*- coding: utf-8 -*-
 
-import unittest
 import functools
-import shutil
 import os
+import shutil
 
-
-from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
-
 import aiida.backends.sqlalchemy
-# from aiida.backends.sqlalchemy import session as sa
-from aiida.common.utils import get_configured_user_email
-from aiida.backends.sqlalchemy.utils import (install_tc, loads_json,
-                                             dumps_json)
-from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.orm.computer import Computer
-
-from aiida.common.setup import get_profile_config
-
 from aiida.backends.settings import AIIDADB_PROFILE
+from aiida.backends.sqlalchemy.models.base import Base
+from aiida.backends.sqlalchemy.models.computer import DbComputer
+from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.sqlalchemy.utils import get_session, get_engine
+from aiida.backends.sqlalchemy.utils import (install_tc)
 from aiida.backends.testimplbase import AiidaTestImplementation
+from aiida.common.setup import get_profile_config
+from aiida.common.utils import get_configured_user_email
+from aiida.orm.computer import Computer
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -52,12 +45,9 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
         if self.test_session is None:
             config = get_profile_config(AIIDADB_PROFILE)
-            engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-                          "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
-            engine = create_engine(engine_url,
-                                   json_serializer=dumps_json,
-                                   json_deserializer=loads_json)
+            engine = get_engine(config)
 
+            self.test_session = get_session(engine=engine)
             self.connection = engine.connect()
 
             self.test_session = Session(bind=self.connection)
@@ -74,9 +64,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def setUp_method(self):
         pass
-        # import aiida.backends.sqlalchemy
-        # aiida.backends.sqlalchemy.session.refresh(self.user)
-        # aiida.backends.sqlalchemy.session.refresh(self.computer._dbcomputer)
 
     def insert_data(self):
         """

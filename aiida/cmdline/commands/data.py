@@ -1070,7 +1070,7 @@ class _Structure(VerdiCommandWithSubcommands,
 
         entry_list = []
         if struc_list_data.count() > 0:
-            for [id, label, akinds, asites] in struc_list_data.iterall():
+            for [id, label, akinds, asites] in struc_list_data.all():
 
                 # If symbols are defined there is a filtering of the structures
                 # based on the element

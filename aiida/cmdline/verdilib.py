@@ -601,9 +601,9 @@ class Quicksetup(VerdiCommand):
         # This will work on OSX in some setups but not in the default Debian one
         can_connect = False
         can_subcmd = None
-        dbinfo = {'user': None}
+        dbinfo = {'user': None, 'database': 'template1'}
         for pg_user in [None, 'postgres']:
-            if self._try_connect(user=None):
+            if self._try_connect(**dbinfo):
                 can_connect = True
                 dbinfo['user'] = pg_user
                 break
@@ -760,8 +760,6 @@ class Quicksetup(VerdiCommand):
     def _try_connect(self, **kwargs):
         from psycopg2 import connect
         success = False
-        if not kwargs:
-            kwargs['database'] = 'template1'
         try:
             connect(**kwargs)
             success = True
@@ -816,14 +814,17 @@ class Quicksetup(VerdiCommand):
 
     def _pg_execute_psyco(self, command, **kwargs):
         '''executes a postgres commandline through psycopg2'''
-        from psycopg2 import connect
+        from psycopg2 import connect, ProgrammingError
         conn = connect(**kwargs)
         conn.autocommit = True
         output = None
         with conn:
             with conn.cursor() as cur:
                 cur.execute(command)
-                output = cur.fetchall()
+                try:
+                    output = cur.fetchall()
+                except ProgrammingError:
+                    pass
         return output
 
     def _pg_execute_sh(self, command, user='postgres', **kwargs):
@@ -843,7 +844,11 @@ class Quicksetup(VerdiCommand):
             import subprocess32 as sp
         except ImportError:
             import subprocess as sp
-        return sp.check_output(['sudo', 'su', user, '-c', 'psql {options} -tc "{}"'.format(command, options=options)], **kwargs)
+        result = sp.check_output(['sudo', 'su', user, '-c', 'psql {options} -tc "{}"'.format(command, options=options)], **kwargs)
+        if isinstance(result, str):
+            result = result.strip().split('\n')
+            result = [i for i in result if i]
+        return result
 
     def _get_unique_name_and_id(self, name):
         import uuid
@@ -852,7 +857,7 @@ class Quicksetup(VerdiCommand):
         return name, idstr
 
     def _dbuser_exists(self, dbuser, method, **kwargs):
-        return bool(method(self._get_users_command.format(dbuser), **kwargs).strip())
+        return bool(method(self._get_users_command.format(dbuser), **kwargs))
 
     def _check_db_user_sh(self, dbuser, user=None):
         users = self._pg_execute(self._get_users_command.format(dbuser), user=user).split()

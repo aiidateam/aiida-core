@@ -318,9 +318,10 @@ class Install(VerdiCommand):
     """
 
     def run(self, *args):
-        ctx = _do_install.make_context('install', sys.argv[2:])
+        click.echo('\nwarning: verdi install is deprecated, use verdi setup.\n')
+        ctx = _setup_cmd.make_context('setup', sys.argv[2:])
         with ctx:
-            _do_install.invoke(ctx)
+            _setup_cmd.invoke(ctx)
 
     def complete(self, subargs_idx, subargs):
         """
@@ -329,10 +330,33 @@ class Install(VerdiCommand):
         print ""
 
 
+
+class Setup(VerdiCommand):
+    """
+    Setup aiida for the current user
+
+    This command creates the ~/.aiida folder in the home directory
+    of the user, interactively asks for the database settings and
+    the repository location, does a setup of the daemon and runs
+    a migrate command to create/setup the database.
+    """
+    def run(self, *args):
+        ctx = _setup_cmd.make_context('setup', sys.argv[2:])
+        with ctx:
+            _setup_cmd.invoke(ctx)
+
+    def complete(self, subargs_idx, subargs):
+        """
+        No completion after 'verdi install'.
+        """
+        print ""
+
+
+
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
-@click.command('install', context_settings=CONTEXT_SETTINGS)
+@click.command('setup', context_settings=CONTEXT_SETTINGS)
 @click.argument('profile', default='default', type=str)
 @click.option('--only-config', is_flag=True)
 @click.option('--non-interactive', is_flag=True)
@@ -343,8 +367,8 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--db_name', type=str)
 @click.option('--db_user', type=str)
 @click.option('--db_pass', type=str)
-def _do_install(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass):
-    _do_setup(profile=profile,
+def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass):
+    setup(profile=profile,
               only_config=only_config,
               non_interactive=non_interactive,
               backend=backend,
@@ -356,7 +380,7 @@ def _do_install(profile, only_config, non_interactive, backend, email, db_host, 
               db_pass=db_pass)
 
 
-def _do_setup(profile, only_config, non_interactive, **kwargs):
+def setup(profile, only_config, non_interactive, **kwargs):
     from aiida.common.setup import (create_base_dirs, create_configuration,
                                     set_default_profile, DEFAULT_UMASK,
                                     create_config_noninteractive)
@@ -549,7 +573,7 @@ def _do_setup(profile, only_config, non_interactive, **kwargs):
             )
 
 
-    print "Install finished."
+    print "Setup finished."
 
 
 class Quicksetup(VerdiCommand):
@@ -718,7 +742,7 @@ class Quicksetup(VerdiCommand):
             'last_name': last_name,
             'institution': institution
         }
-        _do_setup(profile_name, only_config=False, non_interactive=True, **setup_args)
+        setup(profile_name, only_config=False, non_interactive=True, **setup_args)
 
         # set as new default profile
         # prompt if there is another non-quicksetup profile

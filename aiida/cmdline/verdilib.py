@@ -739,7 +739,8 @@ class Quicksetup(VerdiCommand):
             'repo': os.path.join(aiida_dir, 'repository-{}/'.format(profile_name)),
             'first_name': first_name,
             'last_name': last_name,
-            'institution': institution
+            'institution': institution,
+            'force_overwrite': write_profile
         }
         setup(profile_name, only_config=False, non_interactive=True, **setup_args)
 

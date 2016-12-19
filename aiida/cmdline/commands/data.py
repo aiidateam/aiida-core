@@ -846,7 +846,7 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         entry_list = []
         already_visited_bdata = set()
         if list_data.count() > 0:
-            for [bid, blabel, bdate, sid, akinds, asites] in list_data.iterall():
+            for [bid, blabel, bdate, sid, akinds, asites] in list_data.all():
 
                 # We process only one StructureData per BandsData.
                 # We want to process the closest StructureData to

@@ -566,9 +566,9 @@ def xyz_parser_iterator(string):
 ^                                                                             # Linestart
 [ \t]*                                                                        # Optional white space
 (?P<sym>[A-Za-z]+[A-Za-z0-9]*)\s+                                             # get the symbol
-(?P<x> [\-|\+]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([E | e][+|-]?\d+)? ) [ \t]+  # Get x
-(?P<y> [\-|\+]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([E | e][+|-]?\d+)? ) [ \t]+  # Get y
-(?P<z> [\-|\+]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([E | e][+|-]?\d+)? )         # Get z
+(?P<x> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get x
+(?P<y> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get y
+(?P<z> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? )            # Get z
 """, re.X | re.M)
     pos_block_regex = re.compile(r"""
                                                             # First line contains an integer
@@ -582,16 +582,22 @@ def xyz_parser_iterator(string):
             (
                 [A-Za-z]+[A-Za-z0-9]*                       # Element spec
                 (
-                   \s+                                      # White space in front of the number
-                   [\- | \+ ]?                              # Plus or minus in front of the number (optional)
-                    (\d*                                    # optional decimal in the beginning .0001 is ok, for example
-                    [\.]                                    # There has to be a dot followed by
-                    \d+)                                    # at least one decimal
-                    |                                       # OR
-                    (\d+                                    # at least one decimal, followed by
-                    [\.]?                                   # an optional dot
-                    \d*)                                    # followed by optional decimals
-                    ([E | e][+|-]?\d+)?                     # optional exponents E+03, e-05
+                    \s+                                     # White space in front of the number
+                    [\+\-]?                                 # Plus or minus in front of the number (optional)
+                    (
+                        (
+                            \d*                             # optional decimal in the beginning .0001 is ok, for example
+                            [\.]                            # There has to be a dot followed by
+                            \d+                             # at least one decimal
+                        )
+                        |                                   # OR
+                        (
+                            \d+                             # at least one decimal, followed by
+                            [\.]?                           # an optional dot
+                            \d*                             # followed by optional decimals
+                        )
+                    )
+                    ([Ee][\+\-]?\d+)?                       # optional exponents E+03, e-05
                 ){3}                                        # I expect three float values
                 |
                 \#                                          # If a line is commented out, that is also ok

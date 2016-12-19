@@ -297,7 +297,7 @@ class AbstractQueryBuilder(object):
 
     def append(self, cls=None, type=None, tag=None,
                 autotag=False, filters=None, project=None, subclassing=True,
-                edge_tag=None, edge_filters=None, edge_project=None, 
+                edge_tag=None, edge_filters=None, edge_project=None,
                 outerjoin=False, **kwargs
         ):
         """
@@ -320,7 +320,7 @@ class AbstractQueryBuilder(object):
             Whether to include subclasses of the given class
             (default **True**).
             E.g. Specifying JobCalculation will include PwCalculation
-        :param bool outerjoin: 
+        :param bool outerjoin:
             If True, (default is False), will do a left outerjoin
             instead of an inner join
 
@@ -1292,7 +1292,7 @@ class AbstractQueryBuilder(object):
         from **joined_entity** as output to **enitity_to_join** as input
         (**enitity_to_join** is an *input_of* **joined_entity**)
         """
-        
+
         self._check_dbentities(
                 (joined_entity, self.Node),
                 (entity_to_join, self.Node),
@@ -1352,7 +1352,7 @@ class AbstractQueryBuilder(object):
         """
         Beta version, joining descendants using the recursive functionality
         """
-        
+
         from sqlalchemy.orm import aliased, mapper
 
         from sqlalchemy import select, func, join, and_
@@ -1361,13 +1361,13 @@ class AbstractQueryBuilder(object):
 
 
         #~ node_aliased = aliased(DbNode)
-        
+
         self._check_dbentities(
                 (joined_entity, self.Node),
                 (entity_to_join, self.Node),
                 'descendant_of_beta'
             )
-        
+
 
         if 1:
             link1 = aliased(self.Link)
@@ -1385,7 +1385,7 @@ class AbstractQueryBuilder(object):
                         node1, link1, link1.input_id==node1.id
                     )
                 ).where(in_recursive_filters).cte(recursive=True)
-            
+
             aliased_walk = aliased(walk)
 
 
@@ -1434,13 +1434,13 @@ class AbstractQueryBuilder(object):
                             self.Link.input_id == walk.c.descendant_id,
                         )
                     )
-                )) 
-                
+                ))
+
         #.alias()
 
 
         #~ class DbPathBeta(object):
-            
+
             #~ def __init__(self, start, end, depth):
                 #~ self.start = start
                 #~ self.out = end
@@ -1449,7 +1449,7 @@ class AbstractQueryBuilder(object):
         #~ mapper(DbPathBeta, descendants_beta)
 
         #~ aliased_path = aliased(descendants_beta)
-        
+
         #~ print '\n'
         #~ print self._query
         #~ raw_input()
@@ -1807,9 +1807,9 @@ class AbstractQueryBuilder(object):
         """
         Return the column for the projection, if the column name is specified.
         """
-        
 
-        
+
+
         try:
             return getattr(alias, colname)
         except:
@@ -1821,7 +1821,7 @@ class AbstractQueryBuilder(object):
                         '\n'.join(alias._sa_class_manager.mapper.c.keys())
                     )
             )
-        #~ return 
+        #~ return
 
     def _build_order(self, alias, entitytag, entityspec):
 
@@ -2203,6 +2203,7 @@ class AbstractQueryBuilder(object):
         que = self.get_query()
         return que.count()
 
+    @abstractmethod
     def iterall(self, batch_size=100):
         """
         Same as :func:`QueryBuilderBase.all`, but returns a generator.
@@ -2217,28 +2218,8 @@ class AbstractQueryBuilder(object):
 
         :returns: a generator of lists
         """
+        pass
 
-        if batch_size is not None:
-            results = self._yield_per(batch_size)
-        else:
-            results = self._all()
-        try:
-            for resultrow in results:
-                yield [
-                    self._get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
-                    for colindex, rowitem
-                    in enumerate(resultrow)
-                ]
-        except TypeError:
-            # resultrow not an iterable:
-            # Checked, result that raises exception is included
-            if len(self._attrkeys_as_in_sql_result) > 1:
-                raise Exception(
-                    "I have not received an iterable\n"
-                    "but the number of projections is > 1"
-                )
-            for rowitem in results:
-                yield [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], rowitem)]
 
     def all(self, batch_size=None):
         """
@@ -2313,6 +2294,7 @@ class AbstractQueryBuilder(object):
         return list(self.iterdict(batch_size=batch_size))
 
 
+    @abstractmethod
     def iterdict(self, batch_size=100):
         """
         Same as :func:`QueryBuilderBase.dict`, but returns a generator.
@@ -2327,41 +2309,7 @@ class AbstractQueryBuilder(object):
 
         :returns: a generator of dictionaries
         """
-
-        if batch_size is not None:
-            results = self._yield_per(batch_size=batch_size)
-        else:
-            results = self._all()
-        try:
-            for this_result in results:
-                yield {
-                    tag:{
-                        attrkey:self._get_aiida_res(
-                                attrkey, this_result[index_in_sql_result]
-                            )
-                        for attrkey, index_in_sql_result
-                        in projected_entities_dict.items()
-                    }
-                    for tag, projected_entities_dict
-                    in self.tag_to_projected_entity_dict.items()
-                }
-        except TypeError:
-            # resultrow not an iterable:
-            # Checked, result that raises exception is included
-            if len(self._attrkeys_as_in_sql_result) > 1:
-                raise Exception(
-                    "I have not received an iterable\n"
-                    "but the number of projections is > 1"
-                )
-
-            for this_result in results:
-                yield {
-                    tag:{
-                        attrkey : self._get_aiida_res(attrkey, this_result)
-                        for attrkey, position in projected_entities_dict.items()
-                    }
-                    for tag, projected_entities_dict in self.tag_to_projected_entity_dict.items()
-                }
+        pass
 
     def get_results_dict(self):
         """
@@ -2374,7 +2322,7 @@ class AbstractQueryBuilder(object):
                 DeprecationWarning
             )
 
-        return self.iterdict()
+        return self.dict()
 
     @abstractmethod
     def _get_aiida_res(self, key, res):

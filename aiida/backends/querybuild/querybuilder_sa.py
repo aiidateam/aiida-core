@@ -276,4 +276,80 @@ class QueryBuilder(AbstractQueryBuilder):
             self._get_session().rollback()
             raise e
 
+    def iterall(self, batch_size=100):
+        """
+        Basic version of the iterall. Use with care!
+        """
 
+        if batch_size is not None:
+            results = self._yield_per(batch_size)
+        else:
+            results = self._all()
+        try:
+            for resultrow in results:
+                yield [
+                    self._get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
+                    for colindex, rowitem
+                    in enumerate(resultrow)
+                ]
+        except TypeError:
+            # resultrow not an iterable:
+            # Checked, result that raises exception is included
+            if len(self._attrkeys_as_in_sql_result) > 1:
+                raise Exception(
+                    "I have not received an iterable\n"
+                    "but the number of projections is > 1"
+                )
+            for rowitem in results:
+                yield [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], rowitem)]
+
+
+    def iterdict(self, batch_size=100):
+        """
+        Same as :func:`QueryBuilderBase.dict`, but returns a generator.
+        Be aware that this is only safe if no commit will take place during this
+        transaction. You might also want to read the SQLAlchemy documentation on
+        http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
+
+
+        :param int batch_size:
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+
+        :returns: a generator of dictionaries
+        """
+
+        if batch_size is not None:
+            results = self._yield_per(batch_size=batch_size)
+        else:
+            results = self._all()
+        try:
+            for this_result in results:
+                yield {
+                    tag:{
+                        attrkey:self._get_aiida_res(
+                                attrkey, this_result[index_in_sql_result]
+                            )
+                        for attrkey, index_in_sql_result
+                        in projected_entities_dict.items()
+                    }
+                    for tag, projected_entities_dict
+                    in self.tag_to_projected_entity_dict.items()
+                }
+        except TypeError:
+            # resultrow not an iterable:
+            # Checked, result that raises exception is included
+            if len(self._attrkeys_as_in_sql_result) > 1:
+                raise Exception(
+                    "I have not received an iterable\n"
+                    "but the number of projections is > 1"
+                )
+
+            for this_result in results:
+                yield {
+                    tag:{
+                        attrkey : self._get_aiida_res(attrkey, this_result)
+                        for attrkey, position in projected_entities_dict.items()
+                    }
+                    for tag, projected_entities_dict in self.tag_to_projected_entity_dict.items()
+                }

@@ -8,6 +8,45 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
 
 
+class TestComputer(AiidaTestCase):
+    """
+    Test the Computer class.
+    """
+
+    def test_deletion(self):
+        from aiida.orm.computer import Computer
+        from aiida.orm import delete_computer, JobCalculation
+        from aiida.common.exceptions import InvalidOperation
+        import aiida.backends.sqlalchemy
+
+        newcomputer = Computer(name="testdeletioncomputer", hostname='localhost',
+                               transport_type='local',
+                               scheduler_type='pbspro',
+                               workdir='/tmp/aiida').store()
+
+        # # This should be possible, because nothing is using this computer
+        delete_computer(newcomputer)
+
+        calc_params = {
+            'computer': self.computer,
+            'resources': {'num_machines': 1,
+                          'num_mpiprocs_per_machine': 1}
+        }
+
+        _ = JobCalculation(**calc_params).store()
+
+        print "Node stored with pk:",  _.dbnode.pk
+
+        # This should fail, because there is at least a calculation
+        # using this computer (the one created just above)
+        try:
+            aiida.backends.sqlalchemy.session.begin_nested()
+            with self.assertRaises(InvalidOperation):
+                delete_computer(self.computer)
+        finally:
+            aiida.backends.sqlalchemy.session.rollback()
+
+
 class TestGroupsSqla(AiidaTestCase):
     """
      Characterized functions

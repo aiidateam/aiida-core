@@ -42,13 +42,13 @@ from aiida.backends.profile import (is_profile_loaded,
 #     """
 #     return sqlalchemy.session is not None
 
-def get_session(config):
+def get_session(engine=None):
     """
-    :param config: the configuration for the set profile
+    :param engine: the engine that will be used by the sessionmaker
 
     :returns: A sqlalchemy session (connection to DB)
     """
-    Session = sessionmaker(bind=get_engine(config))
+    Session = sessionmaker(bind=engine)
 
     # Return a scoped session class instead of a
     # from sqlalchemy.orm import scoped_session
@@ -106,7 +106,8 @@ def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
 
     if not connection:
-        sqlalchemy.session = get_session(config)
+        engine = get_engine(config)
+        sqlalchemy.session = get_session(engine=engine)
     else:
         Session = sessionmaker()
         sqlalchemy.session = Session(bind=connection)

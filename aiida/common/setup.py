@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 import os
-import uritools
-
 import aiida
 
 # The username (email) used by the default superuser, that should also run
@@ -1364,6 +1362,7 @@ def parse_repository_uri(repository_uri):
 
     :return: a tuple (protocol, address).
     """
+    import uritools
     parts = uritools.urisplit(repository_uri)
 
 

@@ -654,7 +654,7 @@ class Quicksetup(VerdiCommand):
     def _prompt_db_info(self):
         '''prompt interactively for postgres database connectino details.'''
         access = False
-        ess:
+        while access:
             dbinfo = {}
             dbinfo['host'] = click.prompt('postgres host', default='localhost', type=str)
             dbinfo['port'] = click.prompt('postgres port', default=5432, type=int)
@@ -802,45 +802,37 @@ class Quicksetup(VerdiCommand):
             pass
         return success
 
-    def _get_postgres_user(self):
-        from psycopg2 import connect, OperationalError
-        from getpass import getuser
-        username = getuser()
-        password = None
-        try:
-            conn = connect(database='template1', user=username)
-        except OperationalError as e:
-            if 'role' in e.message and 'does not exist' in e.message:
-                try:
-                    conn = connect(database='template1', user='postgres')
-                    username = 'postgres'
-                except OperationalError as e:
-                    if 'role' in e.message and 'does not exist' in e.message:
-                        pass
-        return username
-
-    def _user_has_pg_access(self):
-        '''Check if the current user can connect to template1'''
-        from psycopg2 import connect, OperationalError
-        from getpass import getuser
-        username = getuser()
-        has_pg_access = False
-        try:
-            conn = connect(database='template1', user=username)
-            has_pg_access = True
-        except:
-            pass
-        return has_pg_access
-
     def _create_dbuser(self, dbuser, dbpass, method=None, **kwargs):
+        '''
+        create a database user in postgres
+
+        :param dbuser: Name of the user to be created.
+        :param dbpass: Password the user should be given.
+        :param method: callable with signature method(psql_command, **connection_info)
+            where connection_info contains keys for psycopg2.connect.
+        :param kwargs: connection info as for psycopg2.connect.
+        '''
         method(self._create_user_command.format(dbuser, dbpass), **kwargs)
 
     def _create_db(self, dbuser, dbname, method=None, **kwargs):
+        '''create a database in postgres
+
+        :param dbuser: Name of the user which should own the db.
+        :param dbname: Name of the database.
+        :param method: callable with signature method(psql_command, **connection_info)
+            where connection_info contains keys for psycopg2.connect.
+        :param kwargs: connection info as for psycopg2.connect.
+        '''
         method(self._create_db_command.format(dbname, dbuser), **kwargs)
         method(self._grant_priv_command.format(dbname, dbuser), **kwargs)
 
     def _pg_execute_psyco(self, command, **kwargs):
-        '''executes a postgres commandline through psycopg2'''
+        '''
+        executes a postgres commandline through psycopg2
+
+        :param command: A psql command line as a str
+        :param kwargs: will be forwarded to psycopg2.connect
+        '''
         from psycopg2 import connect, ProgrammingError
         conn = connect(**kwargs)
         conn.autocommit = True
@@ -855,12 +847,18 @@ class Quicksetup(VerdiCommand):
         return output
 
     def _pg_execute_sh(self, command, user='postgres', **kwargs):
-        '''executes a postgres command line as another system user'''
+        '''
+        executes a postgres command line as another system user in a subprocess.
+
+        :param command: A psql command line as a str
+        :param user: Name of a system user with postgres permissions
+        :param kwargs: connection details to forward to psql, signature as in psycopg2.connect
+        '''
         options = ''
         database = kwargs.pop('database', None)
         if database:
             options += '-d {}'.format(database)
-        password = kwargs.pop('password', None)
+        kwargs.pop('password', None)
         host = kwargs.pop('host', None)
         if host:
             options += '-h {}'.format(host)
@@ -878,22 +876,22 @@ class Quicksetup(VerdiCommand):
         return result
 
     def _get_unique_name_and_id(self, name):
+        '''
+        add a '_' followed by a uuid to a given string.
+
+        :return: tuple (changed name, the uuid as string)
+        '''
         import uuid
         idstr = '_' + str(uuid.uuid1()).replace('-', '_')
         name = name + idstr
         return name, idstr
 
     def _dbuser_exists(self, dbuser, method, **kwargs):
+        '''return True if postgres user with name dbuser exists, False otherwise.'''
         return bool(method(self._get_users_command.format(dbuser), **kwargs))
 
-    def _check_db_user_sh(self, dbuser, user=None):
-        users = self._pg_execute(self._get_users_command.format(dbuser), user=user).split()
-        idstr = ''
-        if dbuser in users:
-            dbuser, idstr = self._get_unique_name_and_id(dbuser)
-        return dbuser, idstr
-
     def _check_db_name(self, dbname, method=None, **kwargs):
+        '''looks up if a database with the name exists, prompts for using or creating a differently named one'''
         create = True
         while create and method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs):
             click.echo('database {} already exists!'.format(dbname))

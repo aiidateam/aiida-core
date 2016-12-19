@@ -19,6 +19,7 @@ django==1.7.4
 django_extensions==1.5
 
 ## For timezone support
+tzlocal
 pytz==2014.10
 
 ## For the daemon

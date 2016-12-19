@@ -61,6 +61,8 @@ setup(
         'click==6.6',
         'tabulate==0.7.5',
         'ete3==3.0.0b35',
+        'uritools==1.0.2',
+        'psycopg2==2.6',
     ],
     extras_require={
         'verdi_shell': ['ipython'],
@@ -72,9 +74,6 @@ setup(
         'REST': [
             'django-tastypie==0.12.1',
             'python-mimeparse==0.1.4',
-        ],
-        'postgres': [
-            'psycopg2==2.6',
         ],
     },
     dependency_links=[

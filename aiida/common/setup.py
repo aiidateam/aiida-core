@@ -85,6 +85,16 @@ def get_config():
         raise ConfigurationError("No configuration file found")
 
 
+def get_or_create_config():
+    from aiida.common.exceptions import ConfigurationError
+    try:
+        config = get_config()
+    except ConfigurationError:
+        config = {}
+        store_config(config)
+    return config
+
+
 def store_config(confs):
     """
     Given a configuration dictionary, stores it in the configuration file.
@@ -523,7 +533,49 @@ key_explanation = {
 }
 
 
-def create_config_noninteractive(profile='default', **kwargs):
+def profile_exists(profile):
+    '''return True if profile exists, else return False'''
+    config = get_or_create_config()
+    profiles = config.get('profiles', {})
+    return profile in profiles
+
+
+def update_config(settings, write=True):
+    '''
+    back up the config file, create or change config.
+
+    :param settings: dictionary with the new or changed configuration
+    :param write: if False, do not touch the config file (dryrun)
+    :return: the new / changed configuration
+    '''
+    config = get_or_create_config()
+    config.update(settings)
+    if write:
+        backup_config()
+        store_config(config)
+    return config
+
+
+def update_profile(profile, updates, write=True):
+    '''
+    back up the config file, create or changes profile
+
+    :param profile: name of the profile
+    :param updates: dictionary with the new or changed profile
+    :param write: if False, do not touch the config file (dryrun)
+    :return: the new / changed profile
+    '''
+    config = get_or_create_config()
+    config['profiles'] = config.get('profiles', {})
+    profiles = config['profiles']
+    profiles[profile] = profiles.get(profile, {})
+    profile = profiles[profile]
+    profile.update(updates)
+    update_config(config, write=write)
+    return profile
+
+
+def create_config_noninteractive(profile='default', force_overwrite=False, dry_run=False, **kwargs):
     '''
     Non-interactively creates a profile.
     :raises: a ValueError if the profile exists.
@@ -532,20 +584,7 @@ def create_config_noninteractive(profile='default', **kwargs):
     :param values: The configuration inputs
     :return: The populated profile that was also stored
     '''
-    #if not values:
-    #    raise ValueError('No configuration values')
-
-    #values = list(values)
-    try:
-        confs = get_config()
-    except ConfigurationError:
-        confs = {}
-
-    if 'profiles' not in confs:
-        confs['profiles'] = {}
-
-    existing_profile = confs['profiles'].get(profile, {})
-    if existing_profile:
+    if profile_exists(profile) and not force_overwrite:
         raise ValueError(
             ('profile {profile} exists! '
              'Cannot non-interactively edit a profile.').format(profile=profile)
@@ -599,9 +638,8 @@ def create_config_noninteractive(profile='default', **kwargs):
     new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
 
     # finalizing
-    confs['profiles'][profile] = new_profile
-    backup_config()
-    store_config(confs)
+    write = not dry_run
+    new_profile = update_profile(profile, new_profile, write=write)
     return new_profile
 
 def create_configuration(profile='default'):

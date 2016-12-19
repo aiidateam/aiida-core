@@ -426,7 +426,8 @@ def setup(profile, only_config, non_interactive, **kwargs):
                 db_name=kwargs['db_name'],
                 db_user=kwargs['db_user'],
                 db_pass=kwargs['db_pass'],
-                repo=kwargs['repo']
+                repo=kwargs['repo'],
+                force_overwrite=kwargs.get('force_overwrite', False)
             )
         except ValueError as e:
             click.echo("Error during configuation: {}".format(e.message), err=True)
@@ -557,8 +558,6 @@ def setup(profile, only_config, non_interactive, **kwargs):
         print "You set up AiiDA using the default Daemon email ({}),".format(
             email)
         print "therefore no further user configuration will be asked."
-    elif email.startswith('aiidaquick'):
-        pass
     else:
         # Ask to configure the new user
         if not non_interactive:
@@ -749,11 +748,11 @@ class Quicksetup(VerdiCommand):
         use_new = False
         defprof = confs.get('default_profiles', {})
         if defprof.get('daemon', '').startswith('quicksetup'):
-            use_new = click.confirm('The daemon default profile is set to {}, do you want to set the quicksetup as new default? (can be changed back later)'.format(defprof['daemon']))
+            use_new = click.confirm('The daemon default profile is set to {}, do you want to set the newly created one as default? (can be changed back later)'.format(defprof['daemon']))
             if use_new:
                 set_default_profile('daemon', profile_name, force_rewrite=True)
         if defprof.get('verdi'):
-            use_new = click.confirm('The verdi default profile is set to {}, do you want to set the quicksetup as new default? (can be changed back later)'.format(defprof['verdi']))
+            use_new = click.confirm('The verdi default profile is set to {}, do you want to set the newly created one as new default? (can be changed back later)'.format(defprof['verdi']))
             if use_new:
                 set_default_profile('verdi', profile_name, force_rewrite=True)
 
@@ -863,8 +862,8 @@ class Quicksetup(VerdiCommand):
 
     def _check_db_name(self, dbname, method=None, **kwargs):
         create = True
-        if method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs):
-            click.echo('database aiida_qs already exists!')
+        while create and method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs):
+            click.echo('database {} already exists!'.format(dbname))
             if not click.confirm('Use it?'):
                 dbname = click.prompt('new name', type=str, default=dbname)
             else:

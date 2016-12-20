@@ -75,6 +75,11 @@ class AbstractWorkflow(object):
     # The name of the subfolder in which to put the files/directories added with add_path
     _path_subfolder_name = 'path'
 
+    @classmethod
+    def process(cls):
+        from aiida.work.legacy.workflow_process import WorkflowProcess
+        return WorkflowProcess.build(cls)
+
     @abstractmethod
     def __init__(self, **kwargs):
         """

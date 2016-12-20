@@ -417,11 +417,11 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
     # create the directories to store the configuration files
     create_base_dirs()
     # gprofile = 'default' if profile is None else profile
-    if profile == 'default':
-        gprofile = profile if settings_profile.AIIDADB_PROFILE is None \
-            else settings_profile.AIIDADB_PROFILE
-    else:
-        gprofile = profile
+    # ~ gprofile = profile if settings_profile.AIIDADB_PROFILE is None \
+        # ~ else settings_profile.AIIDADB_PROFILE
+    gprofile = settings_profile.AIIDADB_PROFILE or profile
+    if gprofile == profile:
+        settings_profile.AIIDADB_PROFILE = profile
 
     created_conf = None
     # ask and store the configuration of the DB
@@ -442,6 +442,8 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
         except ValueError as e:
             click.echo("Error during configuation: {}".format(e.message), err=True)
             sys.exit(1)
+        except KeyError as e:
+            sys.exit("--non-interactive requires all values to be given on the commandline! {}".format(e.message), err=True)
     else:
         try:
             created_conf = create_configuration(profile=gprofile)
@@ -490,14 +492,14 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
 
         elif backend_choice == BACKEND_SQLA:
             print("...for SQLAlchemy backend")
+            from aiida import is_dbenv_loaded, load_dbenv
+            if not is_dbenv_loaded():
+                load_dbenv()
+
             from aiida.backends.sqlalchemy.models.base import Base
             from aiida.backends.sqlalchemy.utils import (get_engine,
                                                             install_tc)
             from aiida.common.setup import get_profile_config
-            from aiida import is_dbenv_loaded, load_dbenv
-
-            if not is_dbenv_loaded():
-                load_dbenv()
 
             # This check should be done more properly
             # try:
@@ -585,13 +587,13 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
 
 
 class Quicksetup(VerdiCommand):
+    from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
     '''
     Quick setup for the most common usecase, one user on one machine.
 
-    Uses click for options. Creates a database user 'aiida' if it doesn't exist.
-    Creates a unique 'aiida_qs[-<uuid>]' database.
-    Tries to stay out of the way of serious users.
-    Makes sure not to overwrite existing databases or profiles.
+    Uses click for options. Creates a database user 'aiida_qs_<username>' with random password if it doesn't exist.
+    Creates a 'aiidadb_qs_<username>' database (prompts to use or change the name if already exists).
+    Makes sure not to overwrite existing databases or profiles without prompting for confirmation.
     '''
 
     _create_user_command = 'CREATE USER "{}" WITH PASSWORD \'{}\''
@@ -682,9 +684,13 @@ class Quicksetup(VerdiCommand):
     @click.option('--first-name', prompt='First Name', type=str)
     @click.option('--last-name', prompt='Last Name', type=str)
     @click.option('--institution', prompt='Institution', type=str)
-    @click.option('--backend', type=click.Choice(['django', 'sqlalchemy']), default='django')
+    @click.option('--backend', type=click.Choice([BACKEND_DJANGO,BACKEND_SQLA]), default=BACKEND_SQLA)
+    @click.option('--db-user', type=str)
+    @click.option('--db-user-pw', type=str)
+    @click.option('--db-name', type=str)
+    @click.option('--profile', type=str)
     @click.pass_obj
-    def _quicksetup_cmd(self, email, first_name, last_name, institution, backend):
+    def _quicksetup_cmd(self, email, first_name, last_name, institution, backend, db_user, db_user_pw, db_name, profile):
         '''setup a sane aiida configuration with as little interaction as possible.'''
         aiida_dir = os.path.expanduser('~/.aiida')
 
@@ -695,10 +701,12 @@ class Quicksetup(VerdiCommand):
 
         # check if a database setup already exists
         # otherwise setup the database user aiida
-        # setup the database aiida_qs
-        dbuser = 'aiida_qs'
-        dbpass = 'aiidadb_qs'
-        dbname = 'aiidapw_qs'
+        # setup the database aiida_qs_<username>
+        from getpass import getuser
+        osuser = getuser()
+        dbuser = db_user or 'aiida_qs_' + osuser
+        dbpass = db_user_pw or self._get_underscored_uuid()
+        dbname = db_name or 'aiidadb_qs_' + osuser
         try:
             create = True
             if not self._dbuser_exists(dbuser, pg_execute, **dbinfo):
@@ -723,10 +731,11 @@ class Quicksetup(VerdiCommand):
                 '']))
             raise e
 
-        # create a uniquely named profile
+        # create a profile, by default 'quicksetup' and prompt the user if
+        # already exists
         from aiida.common.setup import (set_default_profile, get_or_create_config)
         confs = get_or_create_config()
-        profile_name = 'quicksetup'
+        profile_name = profile or 'quicksetup'
         write_profile = False
         while not write_profile:
             if profile_name in confs.get('profiles', {}):
@@ -761,11 +770,11 @@ class Quicksetup(VerdiCommand):
         use_new = False
         defprof = confs.get('default_profiles', {})
         if defprof.get('daemon', '').startswith('quicksetup'):
-            use_new = click.confirm('The daemon default profile is set to {}, do you want to set the newly created one as default? (can be changed back later)'.format(defprof['daemon']))
+            use_new = click.confirm('The daemon default profile is set to {}, do you want to set the newly created one ({}) as default? (can be changed back later)'.format(defprof['daemon'], profile_name))
             if use_new:
                 set_default_profile('daemon', profile_name, force_rewrite=True)
         if defprof.get('verdi'):
-            use_new = click.confirm('The verdi default profile is set to {}, do you want to set the newly created one as new default? (can be changed back later)'.format(defprof['verdi']))
+            use_new = click.confirm('The verdi default profile is set to {}, do you want to set the newly created one ({}) as new default? (can be changed back later)'.format(defprof['verdi'], profile_name))
             if use_new:
                 set_default_profile('verdi', profile_name, force_rewrite=True)
 
@@ -871,16 +880,15 @@ class Quicksetup(VerdiCommand):
             result = [i for i in result if i]
         return result
 
-    def _get_unique_name_and_id(self, name):
+    def _get_underscored_uuid(self):
         '''
-        add a '_' followed by a uuid to a given string.
+        replace all '-' in a uuid with '_'
 
-        :return: tuple (changed name, the uuid as string)
+        :return: tuple the uuid as string
         '''
         import uuid
-        idstr = '_' + str(uuid.uuid1()).replace('-', '_')
-        name = name + idstr
-        return name, idstr
+        idstr = str(uuid.uuid1()).replace('-', '_')
+        return idstr
 
     def _dbuser_exists(self, dbuser, method, **kwargs):
         '''return True if postgres user with name dbuser exists, False otherwise.'''

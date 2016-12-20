@@ -120,6 +120,16 @@ class AbstractGroup(object):
         """
         pass
 
+    @staticmethod
+    @abstractmethod
+    def get_db_columns():
+        """
+        This method returns a list with the column names and types of the table
+        corresponding to this class.
+        :return: a list with the names of the columns
+        """
+        pass
+
     @classmethod
     def get_or_create(cls, *args, **kwargs):
         """

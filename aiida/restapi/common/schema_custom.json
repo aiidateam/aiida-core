@@ -1,0 +1,111 @@
+{
+    "fields": {
+        "description": {
+            "help_text": "short description of the Computer"
+        },
+        "enabled": {
+            "help_text": "Is the computer enabled to run jobs"
+        },
+        "hostname": {
+            "help_text": "Host name of the computer"
+        },
+        "id": {
+            "help_text": "Id of the object"
+        },
+        "name": {
+            "help_text": "Name of the computer"
+        },
+        "scheduler_type": {
+            "help_text": "Scheduler type",
+            "valid_choices": {
+                "direct": {
+                    "doc": "Support for the direct execution bypassing schedulers."
+                },
+                "pbsbaseclasses.PbsBaseClass": {
+                    "doc": "Base class with support for the PBSPro scheduler"
+                },
+                "pbspro": {
+                    "doc": "Subclass to support the PBSPro scheduler"
+                },
+                "sge": {
+                    "doc": "Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...)"
+                },
+                "slurm": {
+                    "doc": "Support for the SLURM scheduler (http://slurm.schedmd.com/)."
+                },
+                "torque": {
+                    "doc": "Subclass to support the Torque scheduler.."
+                }
+            }
+        },
+        "transport_params": {
+            "help_text": "Transport Parameters"
+        },
+        "transport_type": {
+            "help_text": "Transport Type",
+            "valid_choices": {
+                "local": {
+                    "doc": "Support copy and command execution on the same host on which AiiDA is running via direct file copy and execution commands."
+                },
+                "ssh": {
+                    "doc": "Support connection, command execution and data transfer to remote computers via SSH+SFTP."
+                }
+            }
+        },
+      "label": {"help_text": ""},
+      "type": {"help_text": ""},
+      "uuid": {"help_text": ""},
+      "ctime": {"help_text": ""},
+      "mtime": {"help_text": ""},
+      "state": {"help_text": ""},
+      "first_name": {"help_text": ""},
+      "last_name": {"help_text": ""},
+      "email": {"help_text": ""},
+      "institution": {"help_text": ""},
+      "date_joined": {"help_text": ""},
+      "last_login": {"help_text": ""},
+      "is_active": {"help_text": ""},
+      "user_id": {"help_text": ""}
+    },
+  "columns": {
+    "nodes": [
+      "id",
+      "label",
+      "type",
+      "state",
+      "ctime",
+      "mtime",
+      "uuid",
+      "user_id"
+    ],
+    "groups": [
+      "id",
+      "name",
+      "type",
+      "description",
+      "user_id",
+      "uuid"
+    ],
+    "computers": [
+      "id",
+      "name",
+      "hostname",
+      "description",
+      "enabled",
+      "scheduler_type",
+      "transport_type",
+      "transport_params",
+      "uuid"
+    ],
+    "users": [
+      "id",
+      "first_name",
+      "last_name",
+      "email",
+      "institution",
+      "date_joined",
+      "last_login",
+      "is_active"
+    ]
+  }
+}

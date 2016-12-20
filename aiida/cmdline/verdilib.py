@@ -363,7 +363,8 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--db_name', type=str)
 @click.option('--db_user', type=str)
 @click.option('--db_pass', type=str)
-def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass):
+@click.option('--repo', type=str)
+def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass, repo):
     '''verdi setup command, forward cmdline arguments to the setup function.'''
     setup(profile=profile,
           only_config=only_config,
@@ -580,7 +581,8 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 kwargs['email'],
                 '--first-name='+kwargs.get('first_name'),
                 '--last-name='+kwargs.get('last_name'),
-                '--institution=' + kwargs.get('institution')
+                '--institution=' + kwargs.get('institution'),
+                '--no-password'
             )
 
     print "Setup finished."
@@ -654,7 +656,7 @@ class Quicksetup(VerdiCommand):
         return result
 
     def _prompt_db_info(self):
-        '''prompt interactively for postgres database connectino details.'''
+        '''prompt interactively for postgres database connecting details.'''
         access = False
         while access:
             dbinfo = {}
@@ -689,10 +691,14 @@ class Quicksetup(VerdiCommand):
     @click.option('--db-user-pw', type=str)
     @click.option('--db-name', type=str)
     @click.option('--profile', type=str)
+    @click.option('--repo', type=str)
     @click.pass_obj
-    def _quicksetup_cmd(self, email, first_name, last_name, institution, backend, db_user, db_user_pw, db_name, profile):
+    def _quicksetup_cmd(self, email, first_name, last_name, institution, backend, db_user, db_user_pw, db_name, profile, repo):
         '''setup a sane aiida configuration with as little interaction as possible.'''
-        aiida_dir = os.path.expanduser('~/.aiida')
+        from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
+        create_base_dirs()
+
+        aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
 
         # access postgres
         pg_info = self._get_pg_access()
@@ -708,6 +714,19 @@ class Quicksetup(VerdiCommand):
         dbuser = db_user or 'aiida_qs_' + osuser
         dbpass = db_user_pw or generate_random_secret_key()
         dbname = db_name or 'aiidadb_qs_' + osuser
+
+        # check if there is a profile that contains the db user already
+        # and if yes, take the db user password from there
+        # This is ok because a user can only see his own config files
+        from aiida.common.setup import (set_default_profile, get_or_create_config)
+        confs = get_or_create_config()
+        profs = confs.get('profiles', {})
+        for v in profs.itervalues():
+            if v.get('AIIDADB_USER', '') == dbuser and not db_user_pw:
+                dbpass = v.get('AIIDADB_PASS')
+                print 'using found password for {}'.format(dbuser)
+                break
+
         try:
             create = True
             if not self._dbuser_exists(dbuser, pg_execute, **dbinfo):
@@ -734,21 +753,27 @@ class Quicksetup(VerdiCommand):
 
         # create a profile, by default 'quicksetup' and prompt the user if
         # already exists
-        from aiida.common.setup import (set_default_profile, get_or_create_config)
+        profile_name = profile or 'quicksetup'
+        write_profile = False
         confs = get_or_create_config()
         profile_name = profile or 'quicksetup'
         write_profile = False
         while not write_profile:
             if profile_name in confs.get('profiles', {}):
-                if click.confirm('overwrite existing profile?'):
+                if click.confirm('overwrite existing profile {}?'.format(profile_name)):
                     write_profile = True
                 else:
-                    profile_name = click.prompt('new profile name', default=profile_name, type=str)
+                    profile_name = click.prompt('new profile name', type=str)
             else:
                 write_profile = True
 
         dbhost = dbinfo.get('host', 'localhost')
         dbport = dbinfo.get('port', '5432')
+
+        from os.path import isabs
+        repo = repo or 'repository-{}/'.format(profile_name)
+        if not isabs(repo):
+            repo = os.path.join(aiida_dir, repo)
 
         setup_args = {
             'backend': backend,
@@ -758,7 +783,7 @@ class Quicksetup(VerdiCommand):
             'db_name': dbname,
             'db_user': dbuser,
             'db_pass': dbpass,
-            'repo': os.path.join(aiida_dir, 'repository-{}/'.format(profile_name)),
+            'repo': repo,
             'first_name': first_name,
             'last_name': last_name,
             'institution': institution,
@@ -891,7 +916,7 @@ class Quicksetup(VerdiCommand):
         create = True
         while create and method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs):
             click.echo('database {} already exists!'.format(dbname))
-            if not click.confirm('Use it?'):
+            if not click.confirm('Use it (make sure it is not used by another profile)?'):
                 dbname = click.prompt('new name', type=str, default=dbname)
             else:
                 create = False

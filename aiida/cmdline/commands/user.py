@@ -53,8 +53,9 @@ class User(VerdiCommandWithSubcommands):
     @click.option('--first-name', prompt='First Name', type=str)
     @click.option('--last-name', prompt='Last Name', type=str)
     @click.option('--institution', prompt='Institution', type=str)
+    @click.option('--no-password', is_flag=True)
     @click.pass_obj
-    def _user_configure_cmd(self, email, first_name, last_name, institution):
+    def _user_configure_cmd(self, email, first_name, last_name, institution, no_password):
         from aiida.backends.utils import is_dbenv_loaded
         if not is_dbenv_loaded():
             load_dbenv()
@@ -119,43 +120,46 @@ class User(VerdiCommandWithSubcommands):
                 setattr(user, k, v)
 
             change_password = False
-            if user.has_usable_password():
-                reply = raw_input("Do you want to replace the user password? [y/N] ")
-                reply = reply.strip()
-                if not reply:
-                    pass
-                elif reply.lower() == 'n':
-                    pass
-                elif reply.lower() == 'y':
-                    change_password = True
-                else:
-                    print "Invalid answer, assuming answer was 'NO'"
-            else:
-                reply = raw_input("The user has no password, do you want to set one? [y/N] ")
-                reply = reply.strip()
-                if not reply:
-                    pass
-                elif reply.lower() == 'n':
-                    pass
-                elif reply.lower() == 'y':
-                    change_password = True
-                else:
-                    print "Invalid answer, assuming answer was 'NO'"
-
-            if change_password:
-                match = False
-                while not match:
-                    new_password = getpass.getpass("Insert the new password: ")
-                    new_password_check = getpass.getpass(
-                        "Insert the new password (again): ")
-                    if new_password == new_password_check:
-                        match = True
-                    else:
-                        print "ERROR, the two passwords do not match."
-                ## Set the password here
-                user.password = new_password
-            else:
+            if no_password:
                 user.password = None
+            else:
+                if user.has_usable_password():
+                    reply = raw_input("Do you want to replace the user password? [y/N] ")
+                    reply = reply.strip()
+                    if not reply:
+                        pass
+                    elif reply.lower() == 'n':
+                        pass
+                    elif reply.lower() == 'y':
+                        change_password = True
+                    else:
+                        print "Invalid answer, assuming answer was 'NO'"
+                else:
+                    reply = raw_input("The user has no password, do you want to set one? [y/N] ")
+                    reply = reply.strip()
+                    if not reply:
+                        pass
+                    elif reply.lower() == 'n':
+                        pass
+                    elif reply.lower() == 'y':
+                        change_password = True
+                    else:
+                        print "Invalid answer, assuming answer was 'NO'"
+
+                if change_password:
+                    match = False
+                    while not match:
+                        new_password = getpass.getpass("Insert the new password: ")
+                        new_password_check = getpass.getpass(
+                            "Insert the new password (again): ")
+                        if new_password == new_password_check:
+                            match = True
+                        else:
+                            print "ERROR, the two passwords do not match."
+                    ## Set the password here
+                    user.password = new_password
+                else:
+                    user.password = None
 
             user.force_save()
             print ">> User {} {} saved. <<".format(user.first_name,

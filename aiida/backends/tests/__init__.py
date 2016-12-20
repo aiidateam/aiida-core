@@ -41,6 +41,7 @@ db_test_list = {
         'calculation_node': ['aiida.backends.tests.calculation_node'],
         'backup_script': ['aiida.backends.tests.backup_script'],
         'backup_setup_script': ['aiida.backends.tests.backup_setup_script'],
+        'restapi': ['aiida.backends.tests.restapi']
     }
 }
 

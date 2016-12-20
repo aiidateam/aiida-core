@@ -391,14 +391,15 @@ class Install(VerdiCommand):
 
             elif backend_choice == BACKEND_SQLA:
                 print("...for SQLAlchemy backend")
-                from aiida.backends.sqlalchemy.models.base import Base
-                from aiida.backends.sqlalchemy.utils import (get_engine,
-                                                             install_tc)
-                from aiida.common.setup import get_profile_config
                 from aiida import is_dbenv_loaded, load_dbenv
 
                 if not is_dbenv_loaded():
                     load_dbenv()
+
+                from aiida.backends.sqlalchemy.models.base import Base
+                from aiida.backends.sqlalchemy.utils import (get_engine,
+                                                             install_tc)
+                from aiida.common.setup import get_profile_config
 
                 # This check should be done more properly
                 # try:

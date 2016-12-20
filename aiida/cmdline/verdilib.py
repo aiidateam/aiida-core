@@ -1170,8 +1170,6 @@ def run():
     try:
         aiida.cmdline.verdilib.exec_from_cmdline(sys.argv)
     except KeyboardInterrupt:
-        print
-        "CTRL+C caught, exiting from verdi..."
+        pass # print "CTRL+C caught, exiting from verdi..."
     except EOFError:
-        print
-        "CTRL+D caught, exiting from verdi..."
+        pass # print "CTRL+D caught, exiting from verdi..."

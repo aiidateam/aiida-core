@@ -874,7 +874,8 @@ class Quicksetup(VerdiCommand):
             import subprocess32 as sp
         except ImportError:
             import subprocess as sp
-        result = sp.check_output(['sudo', 'su', user, '-c', 'psql {options} -tc "{}"'.format(command, options=options)], **kwargs)
+        from aiida.common.utils import escape_for_bash
+        result = sp.check_output(['sudo', 'su', user, '-c', 'psql {options} -tc {}'.format(escape_for_bash(command), options=options)], **kwargs)
         if isinstance(result, str):
             result = result.strip().split('\n')
             result = [i for i in result if i]

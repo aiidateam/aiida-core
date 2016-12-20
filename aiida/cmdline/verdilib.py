@@ -703,9 +703,10 @@ class Quicksetup(VerdiCommand):
         # otherwise setup the database user aiida
         # setup the database aiida_qs_<username>
         from getpass import getuser
+        from aiida.common.setup import generate_random_secret_key
         osuser = getuser()
         dbuser = db_user or 'aiida_qs_' + osuser
-        dbpass = db_user_pw or self._get_underscored_uuid()
+        dbpass = db_user_pw or generate_random_secret_key()
         dbname = db_name or 'aiidadb_qs_' + osuser
         try:
             create = True
@@ -880,16 +881,6 @@ class Quicksetup(VerdiCommand):
             result = result.strip().split('\n')
             result = [i for i in result if i]
         return result
-
-    def _get_underscored_uuid(self):
-        '''
-        replace all '-' in a uuid with '_'
-
-        :return: tuple the uuid as string
-        '''
-        import uuid
-        idstr = str(uuid.uuid1()).replace('-', '_')
-        return idstr
 
     def _dbuser_exists(self, dbuser, method, **kwargs):
         '''return True if postgres user with name dbuser exists, False otherwise.'''

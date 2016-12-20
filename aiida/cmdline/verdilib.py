@@ -453,9 +453,9 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 e.message)
             sys.exit(1)
 
-    # set default DB profiles
-    set_default_profile('verdi', gprofile, force_rewrite=False)
-    set_default_profile('daemon', gprofile, force_rewrite=False)
+        # set default DB profiles
+        set_default_profile('verdi', gprofile, force_rewrite=False)
+        set_default_profile('daemon', gprofile, force_rewrite=False)
 
     if only_user_config:
         print ("Only user configuration requested, "

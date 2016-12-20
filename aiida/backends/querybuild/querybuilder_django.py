@@ -31,6 +31,7 @@ from aiida.backends.querybuild.dummy_model import (
     table_groups_nodes  as Dummy_table_groups_nodes,
     # session,                             # session with DB
 )
+
 import dummy_model
 
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist

@@ -17,6 +17,8 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
 
 from aiida.orm.implementation.general.group import AbstractGroup
 
+from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
@@ -60,6 +62,10 @@ class Group(AbstractGroup):
 
             self._dbgroup = DbGroup(name=name, description=description,
                                     user=user, type=group_type)
+
+    @staticmethod
+    def get_db_columns():
+        return get_db_columns(DbGroup)
 
     @property
     def name(self):

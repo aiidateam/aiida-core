@@ -90,6 +90,11 @@ class Node(AbstractNode):
             # stop
             self._set_with_defaults(**kwargs)
 
+    @staticmethod
+    def get_db_columns():
+        return get_db_columns(DbNode)
+
+
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
         try:

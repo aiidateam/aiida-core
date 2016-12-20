@@ -33,12 +33,6 @@ class DbUser(Base):
     last_login = Column(DateTime(timezone=True), default=timezone.now)
     date_joined = Column(DateTime(timezone=True), default=timezone.now)
 
-    # Probably this is not neded either, look into DbComputer model
-    dbnodes_q = relationship(
-            'DbNode',
-            lazy='dynamic'
-        )
-
     # XXX is it safe to set name and institution to an empty string ?
     def __init__(self, email, first_name="", last_name="", institution="", **kwargs):
         self.email = email

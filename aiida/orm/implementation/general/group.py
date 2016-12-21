@@ -6,7 +6,7 @@ from aiida.common.exceptions import UniquenessError, NotExistent, MultipleObject
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
@@ -22,7 +22,7 @@ def get_group_type_mapping():
     """
     from aiida.orm.data.upf import UPFGROUP_TYPE
     from aiida.orm.autogroup import VERDIAUTOGROUP_TYPE
-    from aiida.cmdline.commands.importfile import IMPORTGROUP_TYPE
+    from aiida.orm.importexport import IMPORTGROUP_TYPE
 
     return {'data.upf': UPFGROUP_TYPE,
             'import': IMPORTGROUP_TYPE,
@@ -117,6 +117,16 @@ class AbstractGroup(object):
     def uuid(self):
         """
         :return: a string with the uuid
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_db_columns():
+        """
+        This method returns a list with the column names and types of the table
+        corresponding to this class.
+        :return: a list with the names of the columns
         """
         pass
 

@@ -1,11 +1,19 @@
 # -*- coding: utf-8 -*-
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.0"
+
+
 from datetime import datetime
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
+
+import aiida.backends.sqlalchemy
 
 try:
     import ultrajson
@@ -13,8 +21,6 @@ try:
     json_loads = partial(ultrajson.loads, precise_float=True)
 except ImportError:
     from json import loads as json_loads
-
-
 
 from aiida.backends.querybuild.querybuilder_base import AbstractQueryBuilder
 from sa_init import (
@@ -24,14 +30,12 @@ from sa_init import (
     )
 
 from sqlalchemy_utils.types.choice import Choice
-from aiida.backends.sqlalchemy import session as sa_session
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.user import DbUser
 
 from aiida.common.exceptions import InputValidationError
-
 
 
 class QueryBuilder(AbstractQueryBuilder):
@@ -46,7 +50,6 @@ class QueryBuilder(AbstractQueryBuilder):
         from aiida.orm.implementation.sqlalchemy.computer import Computer as AiidaComputer
         from aiida.orm.implementation.sqlalchemy.user import User as AiidaUser
         self.Link               = DbLink
-        self.Path               = DbPath
         self.Node               = DbNode
         self.Computer           = DbComputer
         self.User               = DbUser
@@ -58,8 +61,26 @@ class QueryBuilder(AbstractQueryBuilder):
         self.AiidaUser          = AiidaUser
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
+    def _prepare_with_dbpath(self):
+        from aiida.backends.sqlalchemy.models.node import DbPath
+        self.Path = DbPath
+
     def _get_session(self):
-        return sa_session
+        return aiida.backends.sqlalchemy.session
+
+    def _modify_expansions(self, alias, expansions):
+        """
+        For sqlalchemy, there are no additional expansions for now, so
+        I am returning an empty list
+        """
+        if issubclass(alias._sa_class_manager.class_, self.Computer):
+            try:
+                expansions.remove('metadata')
+                expansions.append('_metadata')
+            except KeyError:
+                pass
+
+        return expansions
 
     @classmethod
     def _get_filter_expr_from_attributes(
@@ -119,7 +140,7 @@ class QueryBuilder(AbstractQueryBuilder):
         elif operator in ('>=', '=>'):
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = and_(type_filter, casted_entity >= value)
-        elif operator == ('<=', '=<'):
+        elif operator in ('<=', '=<'):
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = and_(type_filter, casted_entity <= value)
         elif operator == 'of_type':
@@ -219,3 +240,117 @@ class QueryBuilder(AbstractQueryBuilder):
         return returnval
 
 
+    def _yield_per(self, batch_size):
+        """
+        :param count: Number of rows to yield per step
+
+        Yields *count* rows at a time
+
+        :returns: a generator
+        """
+        try:
+            return self.get_query().yield_per(batch_size)
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
+
+    def _all(self):
+        try:
+            return self.get_query().all()
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
+    def _first(self):
+        """
+        Executes query in the backend asking for one instance.
+
+        :returns: One row of aiida results
+        """
+        try:
+            return self.get_query().first()
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
+    def iterall(self, batch_size=100):
+        """
+        Basic version of the iterall. Use with care!
+        """
+
+        if batch_size is not None:
+            results = self._yield_per(batch_size)
+        else:
+            results = self._all()
+        try:
+            for resultrow in results:
+                yield [
+                    self._get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
+                    for colindex, rowitem
+                    in enumerate(resultrow)
+                ]
+        except TypeError:
+            # resultrow not an iterable:
+            # Checked, result that raises exception is included
+            if len(self._attrkeys_as_in_sql_result) > 1:
+                raise Exception(
+                    "I have not received an iterable\n"
+                    "but the number of projections is > 1"
+                )
+            for rowitem in results:
+                yield [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], rowitem)]
+
+
+    def iterdict(self, batch_size=100):
+        """
+        Same as :func:`QueryBuilderBase.dict`, but returns a generator.
+        Be aware that this is only safe if no commit will take place during this
+        transaction. You might also want to read the SQLAlchemy documentation on
+        http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
+
+
+        :param int batch_size:
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+
+        :returns: a generator of dictionaries
+        """
+
+        if batch_size is not None:
+            results = self._yield_per(batch_size=batch_size)
+        else:
+            results = self._all()
+        try:
+            for this_result in results:
+                yield {
+                    tag:{
+                        attrkey:self._get_aiida_res(
+                                attrkey, this_result[index_in_sql_result]
+                            )
+                        for attrkey, index_in_sql_result
+                        in projected_entities_dict.items()
+                    }
+                    for tag, projected_entities_dict
+                    in self.tag_to_projected_entity_dict.items()
+                }
+        except TypeError:
+            # resultrow not an iterable:
+            # Checked, result that raises exception is included
+            if len(self._attrkeys_as_in_sql_result) > 1:
+                raise Exception(
+                    "I have not received an iterable\n"
+                    "but the number of projections is > 1"
+                )
+
+            for this_result in results:
+                yield {
+                    tag:{
+                        attrkey : self._get_aiida_res(attrkey, this_result)
+                        for attrkey, position in projected_entities_dict.items()
+                    }
+                    for tag, projected_entities_dict in self.tag_to_projected_entity_dict.items()
+                }

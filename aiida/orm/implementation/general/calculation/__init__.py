@@ -4,11 +4,11 @@ import collections
 
 from aiida.common.utils import classproperty
 from aiida.common.links import LinkType
-from aiida.orm.mixins import SealableWithUpdatableAttributesMixin
+from aiida.orm.mixins import SealableWithUpdatableAttributes
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
@@ -69,7 +69,7 @@ def _parse_single_arg(function_name, additional_parameter,
         return None
 
 
-class AbstractCalculation(SealableWithUpdatableAttributesMixin):
+class AbstractCalculation(SealableWithUpdatableAttributes):
     """
     This class provides the definition of an "abstract" AiiDA calculation.
     A calculation in this sense is any computation that converts data into data.

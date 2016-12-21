@@ -26,13 +26,14 @@ from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
+from aiida.orm.mixins import Sealable
 
 import aiida.orm.autogroup
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 
 class Node(AbstractNode):
@@ -69,6 +70,7 @@ class Node(AbstractNode):
         else:
             # TODO: allow to get the user from the parameters
             user = get_automatic_user()
+
             self._dbnode = DbNode(user=user,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
@@ -87,6 +89,11 @@ class Node(AbstractNode):
             # Automatically set all *other* attributes, if possible, otherwise
             # stop
             self._set_with_defaults(**kwargs)
+
+    @staticmethod
+    def get_db_columns():
+        return get_db_columns(DbNode)
+
 
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
@@ -147,14 +154,12 @@ class Node(AbstractNode):
         return q
 
     def _update_db_label_field(self, field_value):
-        from aiida.backends.sqlalchemy import session
         self.dbnode.label = field_value
         if not self._to_be_stored:
             self._dbnode.save(commit=False)
             self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
-        from aiida.backends.sqlalchemy import session
         self.dbnode.description = field_value
         if not self._to_be_stored:
             self._dbnode.save(commit=False)
@@ -166,14 +171,19 @@ class Node(AbstractNode):
             self._add_dblink_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
-            self._remove_dblink_from(label)
-            self._add_dblink_from(src, label, link_type)
+            try:
+                self._remove_dblink_from(label)
+                self._add_dblink_from(src, label, link_type)
+                session.commit()
+            except:
+                session.rollback()
+                raise
 
     def _remove_dblink_from(self, label):
         from aiida.backends.sqlalchemy import session
-        link = self.dbnode.outputs.filter_by(label=label).first()
-        session.delete(link)
-        session.commit()
+        link = DbLink.query.filter_by(label=label).first()
+        if link is not None:
+            session.delete(link)
 
     def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.backends.sqlalchemy import session
@@ -218,7 +228,7 @@ class Node(AbstractNode):
             safety_counter = 0
             while True:
                 safety_counter += 1
-                if safety_counter > 3:
+                if safety_counter > 100:
                     # Well, if you have more than 100 concurrent addings
                     # to the same node, you are clearly doing something wrong...
                     raise InternalError("Hey! We found more than 100 concurrent"
@@ -236,12 +246,11 @@ class Node(AbstractNode):
     def _do_create_link(self, src, label, link_type):
         from aiida.backends.sqlalchemy import session
         try:
-            link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
-                          label=label, type=link_type.value)
-            session.add(link)
-            session.commit()
+            with session.begin_nested():
+                link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
+                              label=label, type=link_type.value)
+                session.add(link)
         except SQLAlchemyError as e:
-            session.rollback()
             raise UniquenessError("There is already a link with the same "
                                   "name (raw message was {})"
                                   "".format(e))
@@ -357,6 +366,19 @@ class Node(AbstractNode):
         self.dbnode.set_extra(key, value)
         self._increment_version_number_db()
 
+    def reset_extras(self, new_extras):
+
+        if type(new_extras) is not dict:
+            raise ValueError("The new extras have to be a dictionary")
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The extras of a node can be set only after "
+                "storing the node")
+
+        self.dbnode.reset_extras(new_extras)
+        self._increment_version_number_db()
+
     def get_extra(self, key, default=None):
         # TODO SP: in the Django implementation, if the node is not stored,
         # we can't get an extra. In the SQLA one, because this is simply a
@@ -376,9 +398,15 @@ class Node(AbstractNode):
         self.dbnode.del_extra(key)
 
     def extras(self):
+        if self.dbnode.extras is None:
+            return dict()
+
         return self.dbnode.extras
 
     def iterextras(self):
+        if self.dbnode.extras is None:
+            return dict().iteritems()
+
         return self.dbnode.extras.iteritems()
 
     def iterattrs(self):
@@ -393,7 +421,7 @@ class Node(AbstractNode):
             yield (k, v)
 
     def get_attrs(self):
-        return self.dbnode.attributes
+        return dict(self.iterattrs())
 
     def attrs(self):
         if self._to_be_stored:
@@ -493,7 +521,8 @@ class Node(AbstractNode):
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
         for k, v in self.iterattrs():
-            newobject._set_attr(k, v)
+            if k != Sealable.SEALED_KEY:
+                newobject._set_attr(k, v)
 
         for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path), path)
@@ -666,7 +695,9 @@ class Node(AbstractNode):
             self._repository_folder.replace_with_folder(
                 self._get_temp_folder().abspath, move=True, overwrite=True)
 
+        #    import aiida.backends.sqlalchemy
             try:
+                # aiida.backends.sqlalchemy.session.add(self._dbnode)
                 self._dbnode.save(commit=False)
                 # Save its attributes 'manually' without incrementing
                 # the version for each add.
@@ -684,7 +715,14 @@ class Node(AbstractNode):
                 self._store_cached_input_links(with_transaction=False)
 
                 if with_transaction:
-                    self.dbnode.session.commit()
+                    try:
+                        # aiida.backends.sqlalchemy.session.commit()
+                        self.dbnode.session.commit()
+                    except SQLAlchemyError as e:
+                        print "Cannot store the node. Original exception: {" \
+                              "}".format(e)
+                        self.dbnode.session.rollback()
+                        # aiida.backends.sqlalchemy.session.rollback()
 
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception

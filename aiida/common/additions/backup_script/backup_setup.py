@@ -8,19 +8,22 @@ import stat
 import sys
 from os.path import expanduser
 
+from aiida.backends.profile import BACKEND_DJANGO
+from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common import utils
+from aiida.common.additions.backup_script.backup_base import AbstractBackup, BackupError
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
-
-# Needed initialization for Django
 
 if not is_dbenv_loaded():
     load_dbenv()
-from backup import Backup
+
+from aiida.backends.settings import BACKEND, AIIDADB_PROFILE
+
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
@@ -35,15 +38,15 @@ class BackupSetup(object):
 
     def __init__(self):
         # The backup directory names
-        self._conf_backup_folder_rel = "backup"
+        self._conf_backup_folder_rel = "backup_{}".format(AIIDADB_PROFILE)
         self._file_backup_folder_rel = "backup_dest"
 
         # The backup configuration file (& template) names
         self._backup_info_filename = "backup_info.json"
         self._backup_info_tmpl_filename = "backup_info.json.tmpl"
 
-        # The name of the sctipt that initiates the backup
-        self._script_filename = "start_backup.py"
+        # The name of the script that initiates the backup
+        self._script_filename = "start_backup.py".format(AIIDADB_PROFILE)
 
         # Configuring the logging
         logging.basicConfig(
@@ -62,17 +65,17 @@ class BackupSetup(object):
             datetime.datetime, True)
 
         if oldest_object_bk is None:
-            backup_variables[Backup._oldest_object_bk_key] = None
+            backup_variables[AbstractBackup.OLDEST_OBJECT_BK_KEY] = None
         else:
-            backup_variables[Backup._oldest_object_bk_key] = str(
+            backup_variables[AbstractBackup.OLDEST_OBJECT_BK_KEY] = str(
                 oldest_object_bk)
 
         # Setting the backup directory
-        backup_variables[Backup._backup_dir_key] = file_backup_folder_abs
+        backup_variables[AbstractBackup.BACKUP_DIR_KEY] = file_backup_folder_abs
 
         # Setting the days_to_backup
         backup_variables[
-            Backup._days_to_backup_key] = utils.ask_question(
+            AbstractBackup.DAYS_TO_BACKUP_KEY] = utils.ask_question(
             "Please provide the number of days to backup.", int, True)
 
         # Setting the end date
@@ -81,19 +84,19 @@ class BackupSetup(object):
             "(e.g. 2014-07-18 13:54:53.688484+00:00).",
             datetime.datetime, True)
         if end_date_of_backup_key is None:
-            backup_variables[Backup._end_date_of_backup_key] = None
+            backup_variables[AbstractBackup.END_DATE_OF_BACKUP_KEY] = None
         else:
             backup_variables[
-                Backup._end_date_of_backup_key] = str(end_date_of_backup_key)
+                AbstractBackup.END_DATE_OF_BACKUP_KEY] = str(end_date_of_backup_key)
 
         # Setting the backup periodicity
         backup_variables[
-            Backup._periodicity_key] = utils.ask_question(
+            AbstractBackup.PERIODICITY_KEY] = utils.ask_question(
             "Please periodicity (in days).", int, False)
 
         # Setting the backup threshold
         backup_variables[
-            Backup._backup_length_threshold_key] = utils.ask_question(
+            AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY] = utils.ask_question(
             "Please provide the backup threshold (in hours).", int, False)
 
         return backup_variables
@@ -225,11 +228,24 @@ class BackupSetup(object):
                                            self._backup_info_filename)))
 
         # The contents of the startup script
-        script_content = \
-"""#!/usr/bin/env runaiida
-import logging
+        if BACKEND == BACKEND_DJANGO:
+            backup_import = ("from aiida.common.additions.backup_script."
+                             "backup_django import Backup")
+        elif BACKEND == BACKEND_SQLA:
+            backup_import = ("from aiida.common.additions.backup_script."
+                             "backup_sqlalchemy import Backup")
+        else:
+            raise BackupError("Following backend is unknown: ".format(BACKEND))
 
-from aiida.common.additions.backup_script.backup import Backup
+        script_content = \
+"""#!/usr/bin/env python
+import logging
+from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
+if not is_dbenv_loaded():
+    load_dbenv(profile="{}")
+
+{}
 
 # Create the backup instance
 backup_inst = Backup(backup_info_filepath="{}", additional_back_time_mins = 2)
@@ -239,7 +255,7 @@ backup_inst._logger.setLevel(logging.INFO)
 
 # Start the backup
 backup_inst.run()
-""".format(final_conf_filepath)
+""".format(AIIDADB_PROFILE, backup_import, final_conf_filepath)
 
         # Script full path
         script_path = os.path.join(conf_backup_folder_abs,
@@ -257,6 +273,8 @@ backup_inst.run()
             self._logger.error("Problem setting the right permissions to the " +
                                "script {}.".format(script_path))
             raise
+
+        sys.stdout.write("Backup setup completed.")
 
 if __name__ == '__main__':
     BackupSetup().run()

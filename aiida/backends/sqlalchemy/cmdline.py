@@ -5,7 +5,7 @@ from aiida.utils.logger import get_dblogger_extra
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 
 def get_group_list(user, type_string, n_days_ago=None,
@@ -17,8 +17,12 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
                       n_days_ago=None):
     """
     Get a list of workflow.
+    :param user: A ORM User class if you want to filter by user
+    :param pk_list: Limit the results to this list of PKs
+    :param all_states: if False, limit results to "active" (e.g., running) wfs
+    :param n_days_ago: an integer number of days. If specifies, limit results to
+      workflows started up to this number of days ago
     """
-    pass
     from aiida.orm.workflow import Workflow
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
     from aiida.common.datastructures import wf_states
@@ -26,7 +30,7 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
     if pk_list:
         q = DbWorkflow.query.filter(DbWorkflow.id.in_(pk_list))
     else:
-        q = DbWorkflow.query.filter() # (user=user)
+        q = DbWorkflow.query.filter(DbWorkflow.user_id==user._dbuser.id) # (user=user)
 
         if not all_states:
             q = q.filter(DbWorkflow.state.in_([wf_states.CREATED, 

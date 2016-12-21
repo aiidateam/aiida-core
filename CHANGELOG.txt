@@ -1,3 +1,24 @@
+== v0.7.1 ==
+
+Functionalities
+
+    Implemented support for Kerberos authentication in the ssh transport plugin.
+    Added _get_submit_script_footer to scheduler base class.
+    Improvements of the SLURM scheduler plugin.
+    Fully functional parsers for Quantumespresso CP and PW.
+    Better parsing of atomic species from PW output.
+    Array classes for projection & xy, and changes in kpoints class.
+    Added codespecific tools for Quantumespresso.
+    'verdi code list' now shows local codes too.
+    'verdi export' can now export non user-defined groups (from their pk).
+     
+Fixes
+
+    Fixed bugs in (old) workflow manager and daemon.
+    Improvements of the efficiency of the (old) workflow manager.
+    Fixed JobCalculation text prepend with multiple codes.
+    
+
 == v0.7.0 ==
 
 This release introduces a lot and significant changes & enhancements.

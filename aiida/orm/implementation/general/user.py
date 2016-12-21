@@ -5,7 +5,7 @@ from aiida.common.hashing import is_password_usable
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
@@ -150,4 +150,31 @@ class AbstractUser(object):
     @classmethod
     @abstractmethod
     def search_for_users(cls, **kwargs):
+        """
+        Search for a user the passed keys.
+
+        :param kwargs: The keys to search for the user with.
+        :return: A list of users matching the search criteria.
+        """
+        pass
+
+
+class Util(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def delete_user(self, pk):
+        """
+        Delete the user with the given pk.
+        :param pk: The user pk.
+        """
+        pass
+
+    @staticmethod
+    def get_db_columns():
+        """
+        This method returns a list with the column names and types of the table
+        corresponding to this class.
+        :return: a list with the names of the columns
+        """
         pass

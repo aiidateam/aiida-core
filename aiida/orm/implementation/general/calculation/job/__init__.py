@@ -2,6 +2,7 @@
 
 from abc import abstractmethod
 import datetime
+import copy
 
 from aiida.utils import timezone
 from aiida.common.utils import str_timedelta
@@ -20,7 +21,7 @@ from aiida.common.pluginloader import from_type_to_pluginclassname
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 _input_subfolder = 'raw_input'
@@ -34,7 +35,7 @@ class AbstractJobCalculation(object):
 
     @classmethod
     def process(cls):
-        from aiida.workflows2.legacy.job_process import JobProcess
+        from aiida.work.legacy.job_process import JobProcess
         return JobProcess.build(cls)
 
     def _init_internal_params(self):
@@ -114,7 +115,7 @@ class AbstractJobCalculation(object):
         super(AbstractJobCalculation, self)._validate()
 
         if self.get_computer() is None:
-            raise ValidationError("You did not specify any computer")
+            raise ValidationError("You did not specify a computer")
 
         if self.get_state() not in calc_states:
             raise ValidationError("Calculation state '{}' is not valid".format(
@@ -308,6 +309,7 @@ class AbstractJobCalculation(object):
         Get the max wallclock time in seconds requested to the scheduler.
 
         :return: an integer
+        :rtype: int
         """
         return self.get_attr('max_wallclock_seconds', None)
 
@@ -506,11 +508,12 @@ class AbstractJobCalculation(object):
 
     def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
         """
-        Replace a link. Add the additional constratint that this is
+        Replace a link. Add the additional constraint that this is
         only possible if the calculation is in state NEW.
 
         :param src: a node of the database. It cannot be a Calculation object.
-        :param str label: Name of the link.
+        :param label: Name of the link.
+        :type label: str
         """
         valid_states = [calc_states.NEW]
 
@@ -619,6 +622,16 @@ class AbstractJobCalculation(object):
             calc_states.RETRIEVING,
             calc_states.PARSING
         ]
+
+    def has_finished(self):
+        """
+        Determine if the calculation is finished for whatever reason.
+        This may be because it finished successfully or because of a failure.
+
+        :return: True if the job has finished running, False otherwise.
+        :rtype: bool
+        """
+        return self.has_finished_ok() or self.has_failed()
 
     def has_finished_ok(self):
         """
@@ -801,6 +814,20 @@ class AbstractJobCalculation(object):
         else:
             return None
 
+    projection_to_qb_tag_map = {
+        'pk': ('calculation', 'id'),
+        'ctime': ('calculation', 'ctime'),
+        'mtime': ('calculation', 'mtime'),
+        'sched': ('calculation', 'attributes.scheduler_state'),
+        'state': ('calculation', 'state'),
+        'type': ('calculation', 'type'),
+        'description': ('calculation', 'description'),
+        'label': ('calculation', 'label'),
+        'uuid': ('calculation', 'uuid'),
+        'user': ('user', 'email'),
+        'computer': ('computer', 'name')
+    }
+
     @classmethod
     def _list_calculations(
             cls, states=None, past_days=None, group=None,
@@ -808,7 +835,7 @@ class AbstractJobCalculation(object):
             relative_ctime=True, with_scheduler_state=False,
             order_by=None, limit=None,
             projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type')
-        ):
+    ):
         """
         Print a description of the AiiDA calculations.
 
@@ -833,43 +860,26 @@ class AbstractJobCalculation(object):
                                (like 2days ago). Default = True
         :param all_users: if True, list calculation belonging to all users.
                            Default = False
-        :param ldescription: if True, print the description of the calculation
 
         :return: a string with description of calculations.
         """
 
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.daemon.timestamps import get_last_daemon_timestamp
         from tabulate import tabulate
 
-
-        projection_to_qb_tag_map = {
-                'pk': ('calculation','id'),
-                'ctime':('calculation','ctime'),
-                'mtime':('calculation','mtime'),
-                'sched':('calculation','attributes.scheduler_state'),
-                'state':('calculation','state'),
-                'type':('calculation','type'),
-                'description':('calculation','description'),
-                'label':('calculation','label'),
-                'uuid':('calculation','uuid'),
-                'user':('user', 'email'),
-                'computer':('computer','name')
-            }
         projection_label_dict = {
-                'pk': 'PK',
-                'state':'State',
-                'ctime':'Creation',
-                'mtime':'Modification',
-                'sched':'Sched. state',
-                'computer':'Computer',
-                'type':'Type',
-                'description':'Description',
-                'label':'Label',
-                'uuid':'UUID',
-                'user':'User',
-            }
-
+            'pk': 'PK',
+            'state': 'State',
+            'ctime': 'Creation',
+            'mtime': 'Modification',
+            'sched': 'Sched. state',
+            'computer': 'Computer',
+            'type': 'Type',
+            'description': 'Description',
+            'label': 'Label',
+            'uuid': 'UUID',
+            'user': 'User',
+        }
 
         now = timezone.now()
 
@@ -883,40 +893,14 @@ class AbstractJobCalculation(object):
         valid_order_parameters = (None, 'id', 'ctime')
         assert order_by in valid_order_parameters, \
             "invalid order by parameter {}\n" \
-             "valid parameters are:\n".format(order_by, valid_order_parameters)
+            "valid parameters are:\n".format(order_by, valid_order_parameters)
 
         # Limit:
         if limit is not None:
-            assert isinstance(limit, int),  \
+            assert isinstance(limit, int), \
                 "Limit (set to {}) has to be an integer or None".format(limit)
 
-        # get the last daemon check:
-        try:
-            last_daemon_check = \
-                get_last_daemon_timestamp('updater', when='stop')
-        except ValueError:
-            last_check_string = (
-                "# Last daemon state_updater check: "
-                "(Error while retrieving the information)"
-            )
-        else:
-            if last_daemon_check is None:
-                last_check_string = "# Last daemon state_updater check: (Never)"
-            else:
-                last_check_string = (
-                    "# Last daemon state_updater check: "
-                    "{} ({})".format(
-                        str_timedelta(
-                            timezone.delta(last_daemon_check, now),
-                            negative_to_zero=True
-                        ),
-                        timezone.localtime(
-                            last_daemon_check
-                        ).strftime("at %H:%M:%S on %Y-%m-%d")
-                    )
-                )
-        print(last_check_string)
-
+        print(cls._get_last_daemon_check_string(now))
 
         calculation_filters = {}
 
@@ -928,7 +912,7 @@ class AbstractJobCalculation(object):
             # The wanted behavior:
             # You know what you're looking for and specify pks,
             # Otherwise the other filters apply.
-            # Open question: Is that the best way? 
+            # Open question: Is that the best way?
 
             # filter for states:
             if states:
@@ -966,17 +950,16 @@ class AbstractJobCalculation(object):
         qb.append(type="user", creator_of="calculation", tag="user")
         # The joining is done
         # Now the projections:
-        projections_dict={'calculation':[], 'user':[], 'computer':[]}
+        projections_dict = {'calculation': [], 'user': [], 'computer': []}
 
-        
-        for k,v in [projection_to_qb_tag_map[p] for p in projections]:
+        for k, v in [cls.projection_to_qb_tag_map[p] for p in projections]:
             projections_dict[k].append(v)
-        
+
         if 'state' in projections:
             projections_dict['calculation'].append('attributes.state')
-        for k,v in projections_dict.iteritems():
-            qb.add_projection(k,v)
-        
+        for k, v in projections_dict.iteritems():
+            qb.add_projection(k, v)
+
         # ORDER
         if order_by is not None:
             qb.order_by({'calculation': [order_by]})
@@ -986,50 +969,113 @@ class AbstractJobCalculation(object):
             qb.limit(limit)
 
         results_generator = qb.iterdict()
+
         counter = 0
-        calc_list_data = []
         while True:
+            calc_list_data = []
             try:
                 for i in range(100):
                     res = results_generator.next()
-                    try:
-                        res['calculation']['type'] = from_type_to_pluginclassname(
-                                    res['calculation']['type']
-                                ).rsplit(".", 1)[0].lstrip('calculation.job.')
-                    except KeyError:
-                        pass
-                    for proj in ('ctime', 'mtime'):
-                        try:
-                            time = res['calculation'][proj]
-                            if relative_ctime:
-                                res['calculation'][proj] = str_timedelta(
-                                    timezone.delta(time, now), negative_to_zero=True,
-                                    max_num_fields=1)
-                            else:
-                                res['calculation'][proj] = " ".join([
-                                    timezone.localtime(time).isoformat().split('T')[0],
-                                    timezone.localtime(time).isoformat().split('T')[
-                                    1].split('.')[0].rsplit(":", 1)[0]])
-                        except KeyError:
-                            pass
-                    try:
-                        if  res['calculation']['state'] == 'IMPORTED':
-                            res['calculation']['state'] = res['calculation']['attributes.state'] or "UNKNOWN"
-                    except KeyError:
-                        pass
-                        
-                    calc_list_data.append([
-                            res[projection_to_qb_tag_map[p][0]][projection_to_qb_tag_map[p][1]] 
-                            for p in projections
-                        ])
+                    row = cls._get_calculation_info_row(
+                        res, projections, now if relative_ctime else None)
+
+                    # Build the row of information
+                    calc_list_data.append(row)
+
                     counter += 1
+
                 print(tabulate(calc_list_data, headers=calc_list_header))
-                calc_list_data = []
+
             except StopIteration:
                 print(tabulate(calc_list_data, headers=calc_list_header))
                 break
 
-        print("\nNumber of rows: {}\n".format(counter))
+        print("\nTotal results: {}\n".format(counter))
+
+    @classmethod
+    def _get_last_daemon_check_string(cls, since):
+        """
+        Get a string showing the how long it has been since the daemon was
+        last ticked relative to a particular timepoint.
+
+        :param since: The timepoint to get the last check time since.
+        :return: A string indicating the elapsed period, or an information
+        message.
+        """
+        from aiida.daemon.timestamps import get_last_daemon_timestamp
+
+        # get the last daemon check:
+        try:
+            last_daemon_check = \
+                get_last_daemon_timestamp('updater', when='stop')
+        except ValueError:
+            last_check_string = (
+                "# Last daemon state_updater check: "
+                "(Error while retrieving the information)"
+            )
+        else:
+            if last_daemon_check is None:
+                last_check_string = "# Last daemon state_updater check: (Never)"
+            else:
+                last_check_string = (
+                    "# Last daemon state_updater check: "
+                    "{} ({})".format(
+                        str_timedelta(
+                            timezone.delta(last_daemon_check, since),
+                            negative_to_zero=True
+                        ),
+                        timezone.localtime(
+                            last_daemon_check
+                        ).strftime("at %H:%M:%S on %Y-%m-%d")
+                    )
+                )
+
+        return last_check_string
+
+    @classmethod
+    def _get_calculation_info_row(cls, res, projections, times_since=None):
+        """
+        Get a row of information about a calculation.
+
+        :param res: Results from the calculations query.
+        :type res: dict
+        :param times_since: Times are relative to this timepoint, if None then
+            absolute times will be used.
+        :param projections: The projections used in the calculation query
+        :type projections: list
+        :type times_since: :class:`datetime.datetime`
+        :return: A list of string with information about the calculation.
+        """
+        d = copy.deepcopy(res)
+
+        try:
+            d['calculation']['type'] = from_type_to_pluginclassname(
+                d['calculation']['type']
+            ).rsplit(".", 1)[0].lstrip('calculation.job.')
+        except KeyError:
+            pass
+        for proj in ('ctime', 'mtime'):
+            try:
+                time = d['calculation'][proj]
+                if times_since:
+                    dt = timezone.delta(time, times_since)
+                    d['calculation'][proj] = str_timedelta(
+                        dt, negative_to_zero=True, max_num_fields=1)
+                else:
+                    d['calculation'][proj] = " ".join([
+                        timezone.localtime(time).isoformat().split('T')[0],
+                        timezone.localtime(time).isoformat().split('T')[
+                            1].split('.')[0].rsplit(":", 1)[0]])
+            except (KeyError, ValueError):
+                pass
+        try:
+            if d['calculation']['state'] == calc_states.IMPORTED:
+                d['calculation']['state'] = d['calculation']['attributes.state'] or "UNKNOWN"
+        except KeyError:
+            pass
+
+        return [d[cls.projection_to_qb_tag_map[p][0]][cls.projection_to_qb_tag_map[p][1]]
+                for p in projections]
 
     @classmethod
     def _get_all_with_state(
@@ -1068,8 +1114,8 @@ class AbstractJobCalculation(object):
         from aiida.orm.querybuilder import QueryBuilder
 
         if state not in calc_states:
-            cls.logger.warning("querying for calculation state='{}', but it "
-                               "is not a valid calculation state".format(state))
+            cls._logger.warning("querying for calculation state='{}', but it "
+                                "is not a valid calculation state".format(state))
 
         calcfilter = {'state': {'==': state}}
         computerfilter = {"enabled": {'==': True}}
@@ -1311,14 +1357,14 @@ class AbstractJobCalculation(object):
                 "An error occurred while trying to kill "
                 "calculation {} (jobid {}), see log "
                 "(maybe the calculation already finished?)"
-                .format(self.pk, self.get_job_id()))
+                    .format(self.pk, self.get_job_id()))
         else:
             # Do not set the state, but let the parser do its job
             # self._set_state(calc_states.FAILED)
-            self.logger.warning(
+            self._logger.warning(
                 "Calculation {} killed by the user "
                 "(it was {})".format(self.pk,
-                                                     calc_states.WITHSCHEDULER))
+                                     calc_states.WITHSCHEDULER))
 
     def _presubmit(self, folder, use_unstored_links=False):
         """
@@ -1414,9 +1460,9 @@ class AbstractJobCalculation(object):
         #   would return None, in which case the join method would raise
         #   an exception
         job_tmpl.prepend_text = "\n\n".join(_ for _ in
-                                            [computer.get_prepend_text()]+
-                                             [code.get_prepend_text() for code in codes]+
-                                             [calcinfo.prepend_text,
+                                            [computer.get_prepend_text()] +
+                                            [code.get_prepend_text() for code in codes] +
+                                            [calcinfo.prepend_text,
                                              self.get_prepend_text()] if _)
 
         job_tmpl.append_text = "\n\n".join(_ for _ in
@@ -1797,7 +1843,7 @@ class CalculationResultManager(object):
     """
     An object used internally to interface the calculation object with the Parser
     and consequentially with the ParameterData object result.
-    It shouldn't be used explicitely by a user.
+    It shouldn't be used explicitly by a user.
     """
 
     def __init__(self, calc):

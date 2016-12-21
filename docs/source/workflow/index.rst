@@ -1,6 +1,6 @@
-===============
-AiiDA workflows
-===============
+===================
+Old AiiDA workflows
+===================
 
 Workflows are one of the most important components for real high-throughput calculations, allowing the user
 to scale well defined chains of calculations on any number of input structures, both generated or acquired from an external source.

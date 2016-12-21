@@ -10,7 +10,7 @@ from aiida.common.exceptions import MultipleObjectsError
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
@@ -846,7 +846,7 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         entry_list = []
         already_visited_bdata = set()
         if list_data.count() > 0:
-            for [bid, blabel, bdate, sid, akinds, asites] in list_data.iterall():
+            for [bid, blabel, bdate, sid, akinds, asites] in list_data.all():
 
                 # We process only one StructureData per BandsData.
                 # We want to process the closest StructureData to
@@ -1070,7 +1070,7 @@ class _Structure(VerdiCommandWithSubcommands,
 
         entry_list = []
         if struc_list_data.count() > 0:
-            for [id, label, akinds, asites] in struc_list_data.iterall():
+            for [id, label, akinds, asites] in struc_list_data.all():
 
                 # If symbols are defined there is a filtering of the structures
                 # based on the element

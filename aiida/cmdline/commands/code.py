@@ -10,7 +10,7 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
@@ -755,12 +755,12 @@ class Code(VerdiCommandWithSubcommands):
     @staticmethod
     def print_list_res(qb_query, show_owner):
         if qb_query.count > 0:
-            for tuple in qb_query.iterall():
-                if len(tuple) == 3:
-                    (pk, label, useremail) = tuple
+            for tuple_ in qb_query.all():
+                if len(tuple_) == 3:
+                    (pk, label, useremail) = tuple_
                     computername = None
-                elif len(tuple) == 4:
-                    (pk, label, useremail, computername) = tuple
+                elif len(tuple_) == 4:
+                    (pk, label, useremail, computername) = tuple_
                 else:
                     print "Wrong tuple size"
                     return

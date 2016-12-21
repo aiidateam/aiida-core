@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
-
 """
 The dummy model encodes the model defined by django in backends.djsite
 using SQLAlchemy.
 This is done to query the database with more performant ORM of SA.
 """
 
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.1"
 
 from sqlalchemy.ext.declarative import declarative_base
 from sa_init import (
     Column, Table, ForeignKey,
     Integer, String, DateTime, Float, Boolean, Text,  # basic column types
-    UUID, JSONB,                                      # Fancy column types
+    UUID, JSONB, array,                               # Fancy column types
     UniqueConstraint,aliased,
     select, func, join, and_, or_, not_, except_,     # join and filter ops
     relationship, backref, column_property,           # Table to table relationsships
@@ -35,13 +38,6 @@ from aiida.common.exceptions import DbContentError, MissingPluginError
 # MISC
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.utils import timezone
-
-
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 Base = declarative_base()
 
@@ -385,33 +381,34 @@ DbNode.state = column_property(
 )
 
 
-DbAttribute.value_str = column_property(
-        case([
-            (DbAttribute.datatype == 'txt', DbAttribute.tval),
-            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
-            (DbAttribute.datatype == 'int', cast(DbAttribute.ival, String)),
-            (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, String)),
-            (DbAttribute.datatype == 'date', cast(DbAttribute.dval, String)),
-            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, String)),
-            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
-            (DbAttribute.datatype == 'list', None),
-            (DbAttribute.datatype == 'dict', None),
-        ])
-    )
 
-DbAttribute.value_float = column_property(
-        case([
-            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
-            (DbAttribute.datatype == 'float', DbAttribute.fval),
-            (DbAttribute.datatype == 'int', cast(DbAttribute.ival, Float)),
-            (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, Float)),
-            (DbAttribute.datatype == 'date', cast(DbAttribute.dval, Float)),
-            (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
-            (DbAttribute.datatype == 'float', cast(DbAttribute.fval, Float)),
-            (DbAttribute.datatype == 'list', None),
-            (DbAttribute.datatype == 'dict', None),
-        ])
-    )
+#~ DbAttribute.value_str = column_property(
+        #~ case([
+            #~ (DbAttribute.datatype == 'txt', DbAttribute.tval),
+            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
+            #~ (DbAttribute.datatype == 'int', cast(DbAttribute.ival, String)),
+            #~ (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, String)),
+            #~ (DbAttribute.datatype == 'date', cast(DbAttribute.dval, String)),
+            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, String)),
+            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
+            #~ (DbAttribute.datatype == 'list', None),
+            #~ (DbAttribute.datatype == 'dict', None),
+        #~ ])
+    #~ )
+#~
+#~ DbAttribute.value_float = column_property(
+        #~ case([
+            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
+            #~ (DbAttribute.datatype == 'float', DbAttribute.fval),
+            #~ (DbAttribute.datatype == 'int', cast(DbAttribute.ival, Float)),
+            #~ (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, Float)),
+            #~ (DbAttribute.datatype == 'date', cast(DbAttribute.dval, Float)),
+            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
+            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, Float)),
+            #~ (DbAttribute.datatype == 'list', None),
+            #~ (DbAttribute.datatype == 'dict', None),
+        #~ ])
+    #~ )
 
 
 
@@ -432,26 +429,28 @@ def get_aldjemy_session():
     return _Session()
 
 
-if profile['AIIDADB_NAME'] == ':memory:':
-    session = get_aldjemy_session()
-else:
-    engine = profile["AIIDADB_ENGINE"]
-    if engine == "sqlite3":
-        engine_url = (
-            "sqlite:///{AIIDADB_NAME}"
-            ).format(**get_profile_config(settings.AIIDADB_PROFILE))
-    elif engine.startswith("mysql"):
-        engine_url = (
-            "mysql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-            "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-            ).format(**get_profile_config(settings.AIIDADB_PROFILE))
-    elif engine.startswith("postgre"):
-        engine_url = (
-            "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-            "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-            ).format(**get_profile_config(settings.AIIDADB_PROFILE))
-    else:
-        raise ConfigurationError("Unknown DB engine: {}".format(engine))
-    session = sessionmaker(bind=create_engine(engine_url))()
+session = get_aldjemy_session()
+
+#~ if profile['AIIDADB_NAME'] == ':memory:':
+    #~ session = get_aldjemy_session()
+#~ else:
+    #~ engine = profile["AIIDADB_ENGINE"]
+    #~ if engine == "sqlite3":
+        #~ engine_url = (
+            #~ "sqlite:///{AIIDADB_NAME}"
+            #~ ).format(**get_profile_config(settings.AIIDADB_PROFILE))
+    #~ elif engine.startswith("mysql"):
+        #~ engine_url = (
+            #~ "mysql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+            #~ "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+            #~ ).format(**get_profile_config(settings.AIIDADB_PROFILE))
+    #~ elif engine.startswith("postgre"):
+        #~ engine_url = (
+            #~ "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+            #~ "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+            #~ ).format(**get_profile_config(settings.AIIDADB_PROFILE))
+    #~ else:
+        #~ raise ConfigurationError("Unknown DB engine: {}".format(engine))
+    #~ session = sessionmaker(bind=create_engine(engine_url))()
 
 

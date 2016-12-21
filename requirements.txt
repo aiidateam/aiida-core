@@ -55,7 +55,7 @@ ujson==1.35
 
 # For workflows
 enum34==1.1.2
-git+https://bitbucket.org/aiida_team/plum.git@v0.4.3#egg=plum
+git+https://bitbucket.org/aiida_team/plum.git@v0.7.4#egg=plum
 voluptuous==0.8.11
 
 # For the QueryBuilder in Django when testing:
@@ -74,3 +74,21 @@ tabulate==0.7.5
 
 # To get ASCII trees, may make this optional later
 ete3==3.0.0b35
+
+# REST API
+flask==0.10.1
+flask_restful==0.3.5
+flask-cors==3.0.1
+pyparsing==2.1.8
+pattern==2.6
+Flask-SqlAlchemy==2.1
+SQLAlchemy-migrate==0.10.0
+marshmallow-sqlalchemy==0.10.0
+flask-marshmallow==0.7.0
+itsdangerous==0.24
+flask-httpauth==3.2.0
+flask-cache==0.13.1
+python-memcached==1.58
+
+# For treating the repository location using URIs
+uritools==1.0.2

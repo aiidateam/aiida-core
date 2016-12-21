@@ -6,7 +6,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.types import Integer, String, DateTime
 
-from aiida.backends.sqlalchemy import session
+import aiida.backends.sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.utils import timezone
 
@@ -14,7 +14,8 @@ from aiida.utils import timezone
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
+
 
 class DbSetting(Base):
     __tablename__ = "db_dbsetting"
@@ -36,7 +37,7 @@ class DbSetting(Base):
                   subspecifier_value=None, other_attribs={},
                   stop_if_existing=False):
 
-        setting = session.query(DbSetting).filter_by(key=key).first()
+        setting = sa.session.query(DbSetting).filter_by(key=key).first()
         if setting is not None:
             if stop_if_existing:
                 return
@@ -66,7 +67,7 @@ class DbSetting(Base):
 
     @classmethod
     def del_value(cls, key, only_children=False, subspecifier_value=None):
-        setting = session.query(DbSetting).filter(key=key)
+        setting = sa.session.query(DbSetting).filter(key=key)
         setting.val = None
         setting.time = timezone.datetime.utcnow()
         flag_modified(setting, "val")

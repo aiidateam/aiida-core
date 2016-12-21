@@ -12,3 +12,5 @@
 /venv*/
 /.idea/
 /aiida.egg-info/
+
+aiida/restapi/database/mcloud.db

@@ -2,24 +2,24 @@
 
 import copy
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
 from django.db.models import F
-from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.backends.djsite.db.models import DbLink
+from aiida.backends.djsite.utils import get_automatic_user
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
-from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
-from aiida.common.links import LinkType
 from aiida.common.lang import override
-
-from aiida.backends.djsite.utils import get_automatic_user
-from aiida.backends.djsite.db.models import DbLink
+from aiida.common.links import LinkType
+from aiida.common.utils import get_new_uuid
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.mixins import Sealable
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
@@ -35,6 +35,11 @@ class Node(AbstractNode):
             raise NotExistent("UUID={} is not an instance of {}".format(
                 uuid, cls.__name__))
         return node
+
+    @staticmethod
+    def get_db_columns():
+        from aiida.backends.djsite.db.models import DbNode
+        return get_db_columns(DbNode)
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
@@ -364,6 +369,10 @@ class Node(AbstractNode):
                                    stop_if_existing=True)
         self._increment_version_number_db()
 
+    def reset_extras(self, new_extras):
+        raise NotImplementedError("Reset of extras has not been implemented"
+                                  "for Django backend.")
+
     def get_extra(self, key, *args):
         from aiida.backends.djsite.db.models import DbExtra
         if len(args) > 1:
@@ -405,8 +414,8 @@ class Node(AbstractNode):
             return
         else:
             extraslist = DbExtra.list_all_node_elements(self.dbnode)
-        for e in extraslist:
-            yield e.key
+            for e in extraslist:
+                yield e.key
 
     def iterextras(self):
         from aiida.backends.djsite.db.models import DbExtra
@@ -552,7 +561,8 @@ class Node(AbstractNode):
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
         for k, v in self.iterattrs():
-            newobject._set_attr(k, v)
+            if k != Sealable.SEALED_KEY:
+                newobject._set_attr(k, v)
 
         for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path), path)

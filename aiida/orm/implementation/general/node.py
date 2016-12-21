@@ -14,7 +14,7 @@ from aiida.common.pluginloader import get_query_type_string
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
@@ -88,6 +88,15 @@ class AbstractNode(object):
     # A list of tuples, saying which attributes cannot be set at the same time
     # See documentation in the set() method.
     _set_incompatibilities = []
+
+    @staticmethod
+    def get_db_columns():
+        """
+        This method returns a list with the column names and types of the table
+        corresponding to this class.
+        :return: a list with the names of the columns
+        """
+        pass
 
     @property
     def logger(self):
@@ -170,13 +179,13 @@ class AbstractNode(object):
         return not self._to_be_stored
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def __str__(self):
-        if not self.is_stored:
-            return "uuid: {} (unstored)".format(self.uuid)
-        else:
-            return "uuid: {} (pk: {})".format(self.uuid, self.pk)
+         if not self.is_stored:
+             return "uuid: {} (unstored)".format(self.uuid)
+         else:
+             return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
     def _init_internal_params(self):
         """
@@ -617,6 +626,7 @@ class AbstractNode(object):
                 If True, return a list of tuples, where each tuple has the
                 following format: ('label', Node), with 'label' the link label,
                 and Node a Node instance or subclass
+        :param link_type: Only return outputs connected by links of this type.
         """
         pass
 
@@ -729,6 +739,16 @@ class AbstractNode(object):
                 self.set_extra(key, value)
         except AttributeError:
             raise AttributeError("set_extras takes a dictionary as argument")
+
+
+    @abstractmethod
+    def reset_extras(self, new_extras):
+        """
+        Deletes existing extras and creates new ones.
+        :param new_extras: dictionary with new extras
+        :return: nothing, an exceptions is raised in several circumnstances
+        """
+        pass
 
     @abstractmethod
     def get_extra(self, key, *args):

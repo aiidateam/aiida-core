@@ -24,7 +24,9 @@ User's guide
    ../state/calculation_state
    ../verdi/comments
    ../querying/index
+   ../work/index
    ../workflow/index
    ../dbimporters/index
    ../dbexporters/index
    ../cmdline/scripting_and_shell.rst
+   ../restapi/index

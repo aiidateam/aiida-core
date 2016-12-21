@@ -13,7 +13,7 @@ from aiida.common.exceptions import (
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 
 def is_dbenv_loaded():
@@ -159,19 +159,23 @@ def set_daemon_user(user_email):
 def get_global_setting(key):
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.globalsettings import get_global_setting
-        from django.db import connection
-        if 'db_dbsetting' not in connection.introspection.table_names():
-            raise KeyError("No table found")
     elif settings.BACKEND == BACKEND_SQLA:
-        from sqlalchemy.engine import reflection
-        from aiida.backends import sqlalchemy as sa
-        inspector = reflection.Inspector.from_engine(sa.session.bind)
-        if 'db_dbsetting' not in inspector.get_table_names():
-            raise KeyError("No table found")
         from aiida.backends.sqlalchemy.globalsettings import get_global_setting
     else:
         raise Exception("unknown backend {}".format(settings.BACKEND))
     return get_global_setting(key)
+
+
+def get_global_setting_description(key):
+    if settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.globalsettings import (
+            get_global_setting_description)
+    elif settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.globalsettings import (
+            get_global_setting_description)
+    else:
+        raise Exception("unknown backend {}".format(settings.BACKEND))
+    return get_global_setting_description(key)
 
 
 def get_db_schema_version():
@@ -202,6 +206,17 @@ def set_global_setting(key, value, description=None):
         raise Exception("unknown backend {}".format(settings.BACKEND))
 
     set_global_setting(key, value, description)
+
+
+def del_global_setting(key):
+    if settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.globalsettings import del_global_setting
+    elif settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.globalsettings import del_global_setting
+    else:
+        raise Exception("unknown backend {}".format(settings.BACKEND))
+
+    del_global_setting(key)
 
 
 def set_db_schema_version(version):

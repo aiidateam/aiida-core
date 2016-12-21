@@ -12,7 +12,7 @@ from aiida.common.utils import get_repository_folder
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 group_writable = True
@@ -170,8 +170,6 @@ class Folder(object):
         if not isinstance(src, unicode):
             src = unicode(src)
 
-        # I get the full path of the filename, checking also that I don't
-        # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)
 
         if not os.path.isabs(src):

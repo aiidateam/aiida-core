@@ -10,7 +10,7 @@ from aiida.backends.sqlalchemy.models.base import Base
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 
 class DbUser(Base):
@@ -32,11 +32,6 @@ class DbUser(Base):
 
     last_login = Column(DateTime(timezone=True), default=timezone.now)
     date_joined = Column(DateTime(timezone=True), default=timezone.now)
-
-    dbnodes_q = relationship(
-            'DbNode',
-            lazy='dynamic'
-        )
 
     # XXX is it safe to set name and institution to an empty string ?
     def __init__(self, email, first_name="", last_name="", institution="", **kwargs):

@@ -13,7 +13,7 @@ from aiida.utils.logger import get_dblogger_extra
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 
 def get_group_list(user, type_string, n_days_ago=None,
@@ -40,14 +40,18 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
                       n_days_ago=None):
     """
     Get a list of workflow.
+    :param user: A ORM User class if you want to filter by user
+    :param pk_list: Limit the results to this list of PKs
+    :param all_states: if False, limit results to "active" (e.g., running) wfs
+    :param n_days_ago: an integer number of days. If specifies, limit results to
+      workflows started up to this number of days ago
     """
-
     from aiida.backends.djsite.db.models import DbWorkflow
 
     if pk_list:
         filters = Q(pk__in=pk_list)
     else:
-        filters = Q(user=user)
+        filters = Q(user=user._dbuser)
 
         if not all_states:
             filters &= ~Q(state=wf_states.FINISHED) & ~Q(state=wf_states.ERROR)
@@ -57,7 +61,7 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
 
     wf_list = DbWorkflow.objects.filter(filters).order_by('ctime')
 
-    return wf_list
+    return list(wf_list)
 
 
 def get_log_messages(obj):

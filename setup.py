@@ -3,7 +3,7 @@ import os
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 try:
@@ -38,13 +38,13 @@ setup(
     # See https://caremad.io/2013/07/setup-vs-requirement/ for an explanation
     # of the difference and
     # http://blog.miguelgrinberg.com/post/the-package-dependency-blues
-    # for a useful dicussion
+    # for a useful discussion
     install_requires=[
         'django', 'django_extensions', 'pytz', 'django-celery',
         'celery', 'billiard', 'anyjson', 'six', 'supervisor',
         'meld3', 'paramiko', 'ecdsa', 'pycrypto', 'numpy', 'django-tastypie',
         'python-dateutil', 'python-mimeparse', 'plum', 'enum34', 'voluptuous',
-        'click', 'ujson'
+        'click', 'ujson', 'uritools',
     ],
     packages=find_packages(),
     scripts=[os.path.join(bin_folder, f) for f in os.listdir(bin_folder)

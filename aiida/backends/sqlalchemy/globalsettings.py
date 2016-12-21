@@ -10,7 +10,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
@@ -43,8 +43,15 @@ def get_global_setting(key):
     
     :raise KeyError: if the setting does not exist in the DB
     """
+    from aiida.backends.sqlalchemy.models.utils import get_value_of_sub_field
+
+    # Check first that the table exists
+    table_check_test()
+
     try:
-        return session.query(DbSetting).filter_by(key=key).one().getvalue()
+        return get_value_of_sub_field(
+            key, lambda given_key: session.query(DbSetting).filter_by(
+                key=given_key).one().getvalue())
     except NoResultFound:
         raise KeyError("No global setting with key={}".format(key))
 
@@ -52,10 +59,31 @@ def get_global_setting(key):
 def get_global_setting_description(key):
     """
     Return the description for the given setting variable, as stored in the
-    DB, or raise a KeyError if the setting is not present in the DB.
+    DB, or raise a KeyError if the setting is not present in the DB or the
+    table doesn't exist.
     """
+    from aiida.backends.sqlalchemy.models.utils import validate_key
+
+    # Check first that the table exists
+    table_check_test()
+
+    validate_key(key)
+
     try:
         return (session.query(DbSetting).filter_by(key=key).
                 one().get_description())
     except NoResultFound:
         raise KeyError("No global setting with key={}".format(key))
+
+
+def table_check_test():
+    """
+    Checks if the db_setting table exists in the database. If it doesn't exist
+    it rainses a KeyError.
+    """
+    from sqlalchemy.engine import reflection
+    from aiida.backends import sqlalchemy as sa
+    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    if 'db_dbsetting' not in inspector.get_table_names():
+        raise KeyError("No table found")
+

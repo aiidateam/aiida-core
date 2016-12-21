@@ -9,7 +9,7 @@ from aiida.common.exceptions import NotExistent
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 
@@ -39,7 +39,6 @@ class Graph(VerdiCommandWithSubcommands):
         :param args: root_pk
         :return: Generate a .dot file that can be rendered by graphviz utility dot
         """
-
         # Usual boilerplate to load certain classes and functions
         if not is_dbenv_loaded():
             load_dbenv()
@@ -198,6 +197,7 @@ class Graph(VerdiCommandWithSubcommands):
 
         # Generate name of the output file. Default
         out_file_name = "{}.dot".format(root_pk)
+        print "out_file_name ", out_file_name
         with open(out_file_name,'w') as fout:
 
             fout.write("digraph G {\n")

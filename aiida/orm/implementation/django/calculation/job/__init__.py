@@ -17,7 +17,7 @@ from aiida.utils import timezone
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 
 class JobCalculation(AbstractJobCalculation, Calculation):
@@ -123,7 +123,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
 
         .. todo:: does not support the query for the IMPORTED state (since it
           checks the state in the Attributes, not in the DbCalcState table).
-          Decide which is the correct logi and implement the correct query.
+          Decide which is the correct logic and implement the correct query.
 
         :param states: a list of string with states. If set, print only the
             calculations in the states "states", otherwise shows all.

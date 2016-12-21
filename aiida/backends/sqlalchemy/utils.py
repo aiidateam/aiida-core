@@ -4,7 +4,7 @@
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 try:
     import ultrajson as json
@@ -42,13 +42,19 @@ from aiida.backends.profile import (is_profile_loaded,
 #     """
 #     return sqlalchemy.session is not None
 
-def get_session(config):
+def get_session(engine=None, expire_on_commit=True):
     """
-    :param config: the configuration for the set profile
+    :param engine: the engine that will be used by the sessionmaker
+    :param expire_on_commit: should the session expire on commits?
 
     :returns: A sqlalchemy session (connection to DB)
     """
-    Session = sessionmaker(bind=get_engine(config))
+    Session = sessionmaker(bind=engine, expire_on_commit=expire_on_commit)
+
+    # Return a scoped session class instead of a
+    # from sqlalchemy.orm import scoped_session
+    # ScopedSession  = scoped_session(Session)
+    # return ScopedSession()
     return Session()
 
 
@@ -101,7 +107,8 @@ def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
 
     if not connection:
-        sqlalchemy.session = get_session(config)
+        engine = get_engine(config)
+        sqlalchemy.session = get_session(engine=engine)
     else:
         Session = sessionmaker()
         sqlalchemy.session = Session(bind=connection)
@@ -111,10 +118,10 @@ _aiida_autouser_cache = None
 
 def get_automatic_user():
     from aiida.common.utils import get_configured_user_email
-    global _aiida_autouser_cache
+    # global _aiida_autouser_cache
 
-    if _aiida_autouser_cache is not None:
-        return _aiida_autouser_cache
+    # if _aiida_autouser_cache is not None:
+    #     return _aiida_autouser_cache
 
     from aiida.backends.sqlalchemy.models.user import DbUser
     from aiida.common.utils import get_configured_user_email

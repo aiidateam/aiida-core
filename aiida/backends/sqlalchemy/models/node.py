@@ -2,9 +2,9 @@
 
 from sqlalchemy import ForeignKey, select, func, join, and_
 from sqlalchemy.orm import (
-        relationship, backref, Query, mapper,
-        foreign, column_property,
-    )
+    relationship, backref, Query, mapper,
+    foreign, column_property, aliased
+)
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
@@ -26,7 +26,8 @@ from aiida.common.datastructures import calc_states
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
+
 
 class DbNode(Base):
     __tablename__ = "db_dbnode"
@@ -36,27 +37,38 @@ class DbNode(Base):
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
     type = Column(String(255), index=True)
-    label = Column(String(255), index=True, nullable=True, default="") # Does it make sense to be nullable and have a default?
+    label = Column(String(255), index=True, nullable=True,
+                   default="")  # Does it make sense to be nullable and have a default?
     description = Column(Text(), nullable=True, default="")
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now)
     nodeversion = Column(Integer, default=1)
     public = Column(Boolean, default=False)
-    dbcomputer_id = Column(
-            Integer,
-            ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED"),
-            nullable=True
-        )
+    attributes = Column(JSONB)
+    extras = Column(JSONB)
 
+
+    dbcomputer_id = Column(
+        Integer,
+        ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED", ondelete="RESTRICT"),
+        nullable=True
+    )
+
+    # This should have the same ondelet behaviour as db_computer_id, right?
     user_id = Column(
-            Integer,
-            ForeignKey(
-                    'db_dbuser.id',deferrable=True,initially="DEFERRED"
-                ),
-            nullable=False
-        )
-    attributes = Column(JSONB, default={})
-    extras = Column(JSONB, default={})
+        Integer,
+        ForeignKey(
+            'db_dbuser.id', deferrable=True, initially="DEFERRED", ondelete="restrict"
+        ),
+        nullable=False
+    )
+    # user_id = Column(
+    #     Integer,
+    #     ForeignKey(
+    #         'db_dbuser.id', deferrable=True, initially="DEFERRED", ondelete="cascade"
+    #     ),
+    #     nullable=False
+    # )
 
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
     # won't take care of automatic deleting in the DbLink table. This still
@@ -66,58 +78,47 @@ class DbNode(Base):
 
     ######### RELATIONSSHIPS ################
 
-    # Computer & user
     dbcomputer = relationship(
-            'DbComputer',
-            backref=backref('dbnodes', passive_deletes=True)
-        )
-    user = relationship('DbUser', backref='dbnodes')
+        'DbComputer',
+        # backref=backref('dbnodes')
+        backref = backref('dbnodes', passive_deletes='all', cascade='merge')
+    )
+
+    # User
+    user = relationship(
+        'DbUser',
+        # backref=backref('dbnodes'),
+        backref=backref('dbnodes', passive_deletes='all', cascade='merge')
+    )
 
     # outputs via db_dblink table
     outputs = relationship(
-            "DbNode", secondary="db_dblink",
-            primaryjoin="DbNode.id == DbLink.input_id",
-            secondaryjoin="DbNode.id == DbLink.output_id",
-            backref=backref("inputs", passive_deletes=True),
-            passive_deletes=True
-        )
+        "DbNode", secondary="db_dblink",
+        primaryjoin="DbNode.id == DbLink.input_id",
+        secondaryjoin="DbNode.id == DbLink.output_id",
+        backref=backref("inputs", passive_deletes=True),
+        passive_deletes=True
+    )
 
     # children via db_dbpath
     # suggest change name to descendants
     children = relationship(
-            "DbNode", secondary="db_dbpath",
-            primaryjoin="DbNode.id == DbPath.parent_id",
-            secondaryjoin="DbNode.id == DbPath.child_id",
-            backref=backref("parents", passive_deletes=True),
-            passive_deletes=True,
-        )
+        "DbNode", secondary="db_dbpath",
+        primaryjoin="DbNode.id == DbPath.parent_id",
+        secondaryjoin="DbNode.id == DbPath.child_id",
+        backref=backref("parents", passive_deletes=True),
+        passive_deletes=True,
+    )
 
-    # Appender-query, so one can query the results:
-    #~ dbcomputer_q = relationship(
-            #~ 'DbComputer',
-            #~ backref=backref('dbnodes_q', passive_deletes=True, lazy='dynamic'),
-            #~ lazy='dynamic'
-        #~ )
-    outputs_q = relationship(
-            "DbNode", secondary="db_dblink",
-            primaryjoin= "DbNode.id == DbLink.input_id",
-            secondaryjoin= "DbNode.id == DbLink.output_id",
-            backref=backref(
-                "inputs_q",
-                passive_deletes=True,
-                lazy='dynamic'
-            ),
-            passive_deletes=True,
-            lazy = 'dynamic'
-        )
-    children_q = relationship(
-            "DbNode", secondary="db_dbpath",
-            primaryjoin="DbNode.id == DbPath.parent_id",
-            secondaryjoin="DbNode.id == DbPath.child_id",
-            backref=backref("parents_q", lazy='dynamic', passive_deletes=True),
-            lazy='dynamic',
-            passive_deletes=True
-        )
+    def __init__(self, *args, **kwargs):
+        super(DbNode, self).__init__(*args, **kwargs)
+
+        if self.attributes is None:
+            self.attributes = dict()
+
+        if self.extras is None:
+            self.extras = dict()
+
 
     # XXX repetition between django/sqlalchemy here.
     def get_aiida_class(self):
@@ -127,7 +128,6 @@ class DbNode(Base):
         """
         from aiida.common.pluginloader import from_type_to_pluginclassname
         from aiida.orm.node import Node
-
 
         try:
             pluginclassname = from_type_to_pluginclassname(self.type)
@@ -171,6 +171,11 @@ class DbNode(Base):
 
     def set_extra(self, key, value):
         DbNode._set_attr(self.extras, key, value)
+        flag_modified(self, "extras")
+
+    def reset_extras(self, new_extras):
+        self.extras.clear()
+        self.extras.update(new_extras)
         flag_modified(self, "extras")
 
     def del_attr(self, key):
@@ -217,28 +222,28 @@ class DbLink(Base):
 
     id = Column(Integer, primary_key=True)
     input_id = Column(
-            Integer,
-            ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-        )
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+    )
     output_id = Column(
-            Integer,
-            ForeignKey(
-                    'db_dbnode.id',
-                    ondelete="CASCADE",
-                    deferrable=True,
-                    initially="DEFERRED"
-                )
+        Integer,
+        ForeignKey(
+            'db_dbnode.id',
+            ondelete="CASCADE",
+            deferrable=True,
+            initially="DEFERRED"
         )
+    )
 
     input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
-
 
     label = Column(String(255), index=True, nullable=False)
     type = Column(String(255))
 
     __table_args__ = (
-        UniqueConstraint('input_id', 'output_id'),
+        # I cannot add twice the same link
+        # I want unique labels among all inputs of a node
         UniqueConstraint('output_id', 'label'),
     )
 
@@ -256,24 +261,24 @@ class DbPath(Base):
 
     id = Column(Integer, primary_key=True)
     parent_id = Column(
-            Integer,
-            ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-        )
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+    )
     child_id = Column(
-            Integer,
-            ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-        )
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+    )
 
     parent = relationship(
-            "DbNode",
-            primaryjoin="DbPath.parent_id == DbNode.id",
-            backref="child_paths"
-        )
+        "DbNode",
+        primaryjoin="DbPath.parent_id == DbNode.id",
+        backref="child_paths"
+    )
     child = relationship(
-            "DbNode",
-            primaryjoin="DbPath.child_id == DbNode.id",
-            backref="parent_paths"
-        )
+        "DbNode",
+        primaryjoin="DbPath.child_id == DbNode.id",
+        backref="parent_paths"
+    )
 
     depth = Column(Integer)
 
@@ -304,22 +309,21 @@ class DbPath(Base):
             return path_entry + path_direct + path_exit
 
 
-
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
 
     id = Column(Integer, primary_key=True)
 
     dbnode_id = Column(
-            Integer,
-            ForeignKey(
-                    'db_dbnode.id', ondelete="CASCADE",
-                    deferrable=True, initially="DEFERRED"
-                )
+        Integer,
+        ForeignKey(
+            'db_dbnode.id', ondelete="CASCADE",
+            deferrable=True, initially="DEFERRED"
         )
+    )
     dbnode = relationship(
-            'DbNode', backref=backref('dbstates', passive_deletes=True)
-        )
+        'DbNode', backref=backref('dbstates', passive_deletes=True)
+    )
 
     state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
 
@@ -330,49 +334,48 @@ class DbCalcState(Base):
     )
 
 
-
 # Magic to make the most recent state given in DbCalcState an attribute
 # of the DbNode (None if node is not a calculation)
 
 # First, find the most recent state for all nodes in DbCalcState table
 # using a select statement:
 states = select(
-        [
-            DbCalcState.dbnode_id.label('dbnode_id'),
-            func.max(DbCalcState.time).label('lasttime'),
-        ]
-    ).group_by(DbCalcState.dbnode_id).alias()
+    [
+        DbCalcState.dbnode_id.label('dbnode_id'),
+        func.max(DbCalcState.time).label('lasttime'),
+    ]
+).group_by(DbCalcState.dbnode_id).alias()
 
 # recent_states is something compatible with DbNode, so that we can map
 recent_states = select([
-        DbCalcState.id.label('id'),
-        DbCalcState.dbnode_id.label('dbnode_id'),
-        DbCalcState.state.label('state'),
-        states.c.lasttime.label('time')
-    ]).\
+    DbCalcState.id.label('id'),
+    DbCalcState.dbnode_id.label('dbnode_id'),
+    DbCalcState.state.label('state'),
+    states.c.lasttime.label('time')
+]). \
     select_from(
-        join(
-            DbCalcState,
-            states,
-            and_(
-                DbCalcState.dbnode_id == states.c.dbnode_id,
-                DbCalcState.time == states.c.lasttime,
-            )
+    join(
+        DbCalcState,
+        states,
+        and_(
+            DbCalcState.dbnode_id == states.c.dbnode_id,
+            DbCalcState.time == states.c.lasttime,
         )
-    ).alias() # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
+    )
+).alias()  # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
 
 # Use a mapper to create a "table"
 state_mapper = mapper(
     DbCalcState,
     recent_states,
-    primary_key= recent_states.c.dbnode_id,
+    primary_key=recent_states.c.dbnode_id,
     non_primary=True,
 )
 
 # State_instance is a relationship that returns the row of DbCalcState
 DbNode.state_instance = relationship(
     state_mapper,
-    primaryjoin = recent_states.c.dbnode_id == foreign(DbNode.id),
+    primaryjoin=recent_states.c.dbnode_id == foreign(DbNode.id),
     viewonly=True,
 )
 
@@ -380,5 +383,5 @@ DbNode.state_instance = relationship(
 # most recent state's state (the string) for this dbnode
 DbNode.state = column_property(
     select([recent_states.c.state]).
-    where(recent_states.c.dbnode_id == foreign(DbNode.id))
+        where(recent_states.c.dbnode_id == foreign(DbNode.id))
 )

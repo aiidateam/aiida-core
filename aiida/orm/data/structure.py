@@ -14,7 +14,7 @@ import copy
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 _mass_threshold = 1.e-3
@@ -38,7 +38,7 @@ def _get_valid_cell(inputcell):
     :raise ValueError: whenever the format is not valid.
     """
     try:
-        the_cell = tuple(tuple(float(c) for c in i) for i in inputcell)
+        the_cell = list(list(float(c) for c in i) for i in inputcell)
         if len(the_cell) != 3:
             raise ValueError
         if any(len(i) != 3 for i in the_cell):
@@ -920,6 +920,7 @@ class StructureData(Data):
             raise TypeError("The data does not contain any XYZ data")
 
         self.clear_kinds()
+        self.pbc = (False, False, False)
 
         for sym, position in atoms:
             self.append_atom(symbols=sym, position=position)

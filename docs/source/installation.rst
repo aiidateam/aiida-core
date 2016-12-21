@@ -351,55 +351,6 @@ More commandline options are available in case you custom configured your postgr
 .. 
 ..     sudo pip install -U -r requirements.txt
 
-.. note:: if the ``pip install`` command gives you an error that
-  resembles the one
-  shown below, you might need to downgrade to an older version of pip::
-
-	Cannot fetch index base URL https://pypi.python.org/simple/
-
-  To downgrade pip, use the following command::
-
-	sudo easy_install pip==1.2.1
-
-.. note:: Several users reported the need to install also ``libqp-dev``::
-
-    apt-get install libqp-dev
-
-  But under Ubuntu 12.04 this is not needed.
-
-.. note:: If the installation fails while installing the packages related
-  to the database, you may have not installed or set up the database
-  libraries as described in the section :ref:`other_core_dependencies`.
-
-  In particular, on Mac OS X, if you installed the binary package of
-  PostgreSQL, it is possible that the PATH environment variable is not
-  set correctly, and you get a "Error: pg_config executable not found." error.
-  In this case, discover where the binary is located, then add a line to
-  your ``~/.bashrc`` file similar to the following::
-
-    export PATH=/the/path/to/the/pg_config/file:${PATH}
-
-  and then open a new bash shell.
-  Some possible paths can be found at this
-  `Stackoverflow link`_ and a non-exhaustive list of possible
-  paths is the following (version number may change):
-
-  * ``/Applications/Postgres93.app/Contents/MacOS/bin``
-  * ``/Applications/Postgres.app/Contents/Versions/9.3/bin``
-  * ``/Library/PostgreSQL/9.3/bin/pg_config``
-
-  Similarly, if the package installs but then errors occur during the first
-  of AiiDA (with ``Symbol not found`` errors or similar), you may need to
-  point to the path where the dynamical libraries are. A way to do it is to
-  add a line similar to the following to the ``~/.bashrc`` and then open
-  a new shell::
-
-    export DYLD_FALLBACK_LIBRARY_PATH=/Library/PostgreSQL/9.3/lib:$DYLD_FALLBACK_LIBRARY_PATH
-
-  (you should of course adapt the path to the PostgreSQL libraries).
-
-.. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
-
 Additional bash configuration for AiiDA
 +++++++++++++++++++++++++++++++++++++++
 
@@ -488,13 +439,14 @@ If you chose to work with multiple aiida versions or just prefer explicitly work
 Adding and Editing Profiles
 +++++++++++++++++++++++++++
 
-If you wish aiida to try to automatically create a database for your new profile you can add a profile using::
+If you wish aiida to try to automatically create a database for your new profile and to guess sensible defaults for all the values you leave out you can add a profile using::
 
    verdi quicksetup --profile=<profile>
+   # verdi quicksetup -h for possible commandline options
 
 If you prefer to setup a database by hand first or are only going to edit the profile run the following command::
 
-    verdi setup <profile> # synonym to verdi -p <profile> setup
+   verdi setup <profile> # synonym to verdi -p <profile> setup
 
  to add or edit a profile in AiiDA. The command will guide you through a process to configure
  the database, the repository location, and it will finally (automatically) run
@@ -565,22 +517,22 @@ Then, the following prompts will help you configure the database. Typical settin
 	Insert the new password:
 	Insert the new password (again):
 
-
-.. note:: When the "Database engine" is asked, use 'sqlite3' **only if** you want
-  to try out AiiDA without setting up a database.
-
-  **However, keep in mind that for serious use, SQLite has serious
-  limitations!!** For instance, when many calculations are managed at the same
-  time, the database file is locked by SQLite to avoid corruption, but this
-  can lead to timeouts that do not allow to AiiDA to properly store the
-  calculations in the DB.
-
-  **Therefore, for production use of AiiDA, we strongly suggest to setup a
-  "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
-  field, type either 'postgres' or 'mysql' according to the database you
-  chose to use. See :doc:`here<database/index>` for the documentation
-  to setup such databases (including info on how to proceed with ``verdi install``
-  in this case).
+.. TODO: confirm remove
+.. .. note:: When the "Database engine" is asked, use 'sqlite3' **only if** you want
+..   to try out AiiDA without setting up a database.
+.. 
+..   **However, keep in mind that for serious use, SQLite has serious
+..   limitations!!** For instance, when many calculations are managed at the same
+..   time, the database file is locked by SQLite to avoid corruption, but this
+..   can lead to timeouts that do not allow to AiiDA to properly store the
+..   calculations in the DB.
+.. 
+..   **Therefore, for production use of AiiDA, we strongly suggest to setup a
+..   "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
+..   field, type either 'postgres' or 'mysql' according to the database you
+..   chose to use. See :doc:`here<database/index>` for the documentation
+..   to setup such databases (including info on how to proceed with ``verdi install``
+..   in this case).
 
 At the end, AiiDA will also ask to configure your user, if you set up a user
 different from ``aiida@localhost``.
@@ -658,12 +610,12 @@ a fundamental component of AiiDA, and it is in charge of submitting new
 calculations, checking their status on the cluster, retrieving and parsing
 the results of finished calculations, and managing the workflow steps.
 
-**Congratulations, your setup is complete!**
-
-Before going on, however, you will need to setup *at least one computer* (i.e.,
-on computational resource as a cluster or a supercomputer, on which you want
-to run your calculations) *and one code*. The documentation for these steps can
-be found :doc:`here<setup/computerandcodes>`.
+The next step will be to add computational resources (computers, codes) to work with 
+The documentation for these steps can be found :doc:`here<setup/computerandcodes>`.
+.. TODO: should be replaced by concepts section
+.. (i.e.,
+.. on computational resource as a cluster or a supercomputer, on which you want
+.. to run your calculations) *and one code*. 
 
 
 Optional dependencies
@@ -711,7 +663,57 @@ For the setting up of cod-tools please refer to
 .. _pyspglib: http://spglib.sourceforge.net/pyspglibForASE/
 
 Further comments and troubleshooting
-++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++
+
+* if the ``pip install`` command gives you an error that
+  resembles the one
+  shown below, you might need to downgrade to an older version of pip::
+
+	Cannot fetch index base URL https://pypi.python.org/simple/
+
+  To downgrade pip, use the following command::
+
+	sudo easy_install pip==1.2.1
+
+* Several users reported the need to install also ``libqp-dev``::
+
+    apt-get install libqp-dev
+
+  But under Ubuntu 12.04 this is not needed.
+ 
+* If the installation fails while installing the packages related
+  to the database, you may have not installed or set up the database
+  libraries as described in the section :ref:`other_core_dependencies`.
+
+  In particular, on Mac OS X, if you installed the binary package of
+  PostgreSQL, it is possible that the PATH environment variable is not
+  set correctly, and you get a "Error: pg_config executable not found." error.
+  In this case, discover where the binary is located, then add a line to
+  your ``~/.bashrc`` file similar to the following::
+
+    export PATH=/the/path/to/the/pg_config/file:${PATH}
+
+  and then open a new bash shell.
+  Some possible paths can be found at this
+  `Stackoverflow link`_ and a non-exhaustive list of possible
+  paths is the following (version number may change):
+
+  * ``/Applications/Postgres93.app/Contents/MacOS/bin``
+  * ``/Applications/Postgres.app/Contents/Versions/9.3/bin``
+  * ``/Library/PostgreSQL/9.3/bin/pg_config``
+
+  Similarly, if the package installs but then errors occur during the first
+  of AiiDA (with ``Symbol not found`` errors or similar), you may need to
+  point to the path where the dynamical libraries are. A way to do it is to
+  add a line similar to the following to the ``~/.bashrc`` and then open
+  a new shell::
+
+    export DYLD_FALLBACK_LIBRARY_PATH=/Library/PostgreSQL/9.3/lib:$DYLD_FALLBACK_LIBRARY_PATH
+
+  (you should of course adapt the path to the PostgreSQL libraries).
+
+.. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
+ 
 
 * For some reasons, on some machines (notably often on Mac OS X) there is no
   default locale defined, and when you run ``verdi install`` for the first

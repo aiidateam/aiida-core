@@ -3,3 +3,4 @@ recursive-include aiida/backends/tests/pwtestjobs *
 recursive-include aiida/backends/tests/export_import_test_filespwtestjobs *
 recursive-include aiida/backends/tests/parser_tests/ *
 recursive-include aiida/backends/djsite/parser_tests/ *
+include aiida/restapi/common/schema_custom.json

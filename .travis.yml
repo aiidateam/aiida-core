@@ -1,0 +1,56 @@
+# Next two to activate the beta Ubuntu Trusty machine without sudo
+# But apparently, SSH does not work, to check
+#dist: trusty
+#sudo: false
+
+language: python
+
+python:
+    - "2.7"
+
+services:
+    - postgresql
+
+addons:
+  postgresql: "9.4"
+#  postgresql: "9.5" # Available in Trusty only
+
+#  apt:
+#    packages:
+#        - python-vtk
+
+## Build matrix to test both backends
+env:
+   - TEST_AIIDA_BACKEND=django
+   - TEST_AIIDA_BACKEND=sqlalchemy
+
+install:
+    # This is required for some recent features of setup.py
+    - pip install -U pip wheel setuptools
+
+    # Install AiiDA with some optional dependencies
+    - pip install -U .[verdi_shell,ssh,REST] --process-dependency-links
+
+    # This should go away, put requirements (also optional) in setup.py
+    # But for the time being, we keep it (needed to avoid skipping tests
+    # for missing dependencies)
+    - pip install -r optional_requirements.txt
+
+before_script:
+    # This is needed for the SSH tests (being able to ssh to localhost)
+    - ssh-keygen -t rsa -N "" -f "${HOME}/.ssh/id_rsa"
+    - cp "${HOME}/.ssh/id_rsa.pub" "${HOME}/.ssh/authorized_keys"
+    - if [ ! -d "${HOME}/.ssh/" ] ; then mkdir "${HOME}/.ssh/" ; fi
+    - ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
+
+    # Here I create the test DB
+    - psql -c "CREATE DATABASE test_$TEST_AIIDA_BACKEND;" -U postgres
+
+    # Here I setup the test AiiDA profile, non-interactively
+    - verdi -p test_$TEST_AIIDA_BACKEND setup --non-interactive --backend=$TEST_AIIDA_BACKEND --email="aiida@localhost" --db_host="localhost" --db_port=5432 --db_name="test_$TEST_AIIDA_BACKEND" --db_user=postgres --db_pass='' --repo="/tmp/test_repository_test_${TEST_AIIDA_BACKEND}/" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --no-password
+
+script:
+    - verdi -p test_$TEST_AIIDA_BACKEND devel tests
+
+git:
+  depth: 3

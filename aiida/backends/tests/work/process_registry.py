@@ -5,11 +5,7 @@ __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
-from test.util import DbTestCase
+from aiida.backends.testbase import AiidaTestCase
 
-
-class TestProcessRegistry(DbTestCase):
+class TestProcessRegistry(AiidaTestCase):
     pass
-
-
-

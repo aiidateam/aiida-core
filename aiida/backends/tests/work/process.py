@@ -11,7 +11,7 @@ import shutil
 import tempfile
 import threading
 
-from test.util import DbTestCase
+from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import load_node
 from aiida.orm.data.base import Int
 from aiida.work.persistence import Persistence
@@ -41,11 +41,13 @@ class ProcessStackTest(Process):
         assert self._thread_id is threading.current_thread().ident
 
 
-class TestProcess(DbTestCase):
+class TestProcess(AiidaTestCase):
     def setUp(self):
+        super(TestProcess, self).setUp()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
     def tearDown(self):
+        super(TestProcess, self).tearDown()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
     def test_process_stack(self):
@@ -116,7 +118,7 @@ class TestProcess(DbTestCase):
             DummyProcess.new_instance(inputs={'_label': 5})
 
 
-class TestFunctionProcess(DbTestCase):
+class TestFunctionProcess(AiidaTestCase):
     def test_fixed_inputs(self):
         def wf(a, b, c):
             return {'a': a, 'b': b, 'c': c}

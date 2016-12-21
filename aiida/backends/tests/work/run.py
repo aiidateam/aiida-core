@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from test.util import DbTestCase
+from aiida.backends.testbase import AiidaTestCase
 import shutil
 import tempfile
 
@@ -15,12 +15,14 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
-class TestRun(DbTestCase):
+class TestRun(AiidaTestCase):
     def setUp(self):
+        super(TestRun, self).setUp()
         self.storedir = tempfile.mkdtemp()
         self.storage = Persistence.create_from_basedir(self.storedir)
 
     def tearDown(self):
+        super(TestRun, self).tearDown()
         shutil.rmtree(self.storedir)
 
     def test_queue_up(self):

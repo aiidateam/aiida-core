@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from test.util import DbTestCase
+from aiida.backends.testbase import AiidaTestCase
 from concurrent.futures import ThreadPoolExecutor
 from plum.engine.ticking import TickingEngine
 from aiida.orm.data.base import TRUE, Int
@@ -24,13 +24,15 @@ class DummyProcess(Process):
         self.out("ran", TRUE)
 
 
-class TestTickingEngine(DbTestCase):
+class TestTickingEngine(AiidaTestCase):
     def setUp(self):
+        super(TestTickingEngine, self).setUp()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.ticking_engine = TickingEngine()
         self.executor = ThreadPoolExecutor(max_workers=1)
 
     def tearDown(self):
+        super(TestTickingEngine, self).tearDown()
         self.ticking_engine.shutdown()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 

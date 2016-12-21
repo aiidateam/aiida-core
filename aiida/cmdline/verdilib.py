@@ -366,7 +366,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--first-name', type=str)
 @click.option('--last-name', type=str)
 @click.option('--institution', type=str)
-@click.option('--no-password', is_fla=True)
+@click.option('--no-password', is_flag=True)
 @click.option('--repo', type=str)
 def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass, first_name, last_name, institution, no_password, repo):
     '''verdi setup command, forward cmdline arguments to the setup function.'''

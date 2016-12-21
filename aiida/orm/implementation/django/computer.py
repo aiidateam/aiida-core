@@ -73,6 +73,15 @@ class Computer(AbstractComputer):
                                  "callable!".format(k))
             method(v)
 
+
+    @staticmethod
+    def get_db_columns():
+        from aiida.backends.djsite.db.models import DbComputer
+        #I import get_db_columns here to avoid circular imports.
+        #Indeed, aiida.orm.implementation.django.utils imports Computer
+        from aiida.orm.implementation.django.utils import get_db_columns
+        return get_db_columns(DbComputer)
+
     @classmethod
     def list_names(cls):
         from aiida.backends.djsite.db.models import DbComputer

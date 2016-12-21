@@ -272,10 +272,10 @@ def import_data(in_path,ignore_unknown_nodes=False,
     from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
     if BACKEND == BACKEND_SQLA:
-        import_data_sqla(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
+        return import_data_sqla(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
                          silent=silent)
     elif BACKEND == BACKEND_DJANGO:
-        import_data_dj(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
+        return import_data_dj(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
                        silent=silent)
     else:
         raise Exception("Unknown settings.BACKEND: {}".format(

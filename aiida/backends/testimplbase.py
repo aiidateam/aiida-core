@@ -30,6 +30,10 @@ class AiidaTestImplementation(object):
         pass
 
     @abstractmethod
+    def setUp_method(self):
+        pass
+
+    @abstractmethod
     def tearDownClass_method(self):
         """
         This class implements the tear down methods (e.g. cleans up the DB).
@@ -39,10 +43,16 @@ class AiidaTestImplementation(object):
     @abstractmethod
     def clean_db(self):
         """
-        This class implements the logic to fully clean the DB.
+        This method implements the logic to fully clean the DB.
         """
         pass
 
+    @abstractmethod
+    def insert_data(self):
+        """
+        This method inserts default data into the database.
+        """
+        pass
 
     def get_computer(self):
         """

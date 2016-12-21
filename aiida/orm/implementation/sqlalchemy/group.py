@@ -17,6 +17,8 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
 
 from aiida.orm.implementation.general.group import AbstractGroup
 
+from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
@@ -28,20 +30,21 @@ class Group(AbstractGroup):
         given_dbgroup = kwargs.pop('dbgroup', None)
 
         if given_dbgroup is not None:
+
+            # Check that there is no other parameter passed besides dbgroup
+            if kwargs:
+                raise ValueError("If you pass a dbgroups, you cannot pass any "
+                                 "further parameter")
+
             if isinstance(given_dbgroup, (int, long)):
                 dbgroup_res = DbGroup.query.filter_by(id=given_dbgroup).first()
                 if not dbgroup_res:
                     raise NotExistent("Group with pk={} does not exist".format(
                         given_dbgroup))
                 self._dbgroup = dbgroup_res
-                return
-
             elif isinstance(given_dbgroup, DbGroup):
                 self._dbgroup = given_dbgroup
-                return
 
-            raise ValueError("If you pass a dbgroups, you cannot pass any "
-                             "further parameter")
 
         else:
             name = kwargs.pop('name', None)
@@ -59,6 +62,10 @@ class Group(AbstractGroup):
 
             self._dbgroup = DbGroup(name=name, description=description,
                                     user=user, type=group_type)
+
+    @staticmethod
+    def get_db_columns():
+        return get_db_columns(DbGroup)
 
     @property
     def name(self):
@@ -147,6 +154,7 @@ class Group(AbstractGroup):
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(
                     str(type(node))))
+
             if node.id is None:
                 raise ValueError("At least one of the provided nodes is "
                                  "unstored, stopping...")

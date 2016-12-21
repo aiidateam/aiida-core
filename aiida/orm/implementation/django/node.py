@@ -36,6 +36,11 @@ class Node(AbstractNode):
                 uuid, cls.__name__))
         return node
 
+    @staticmethod
+    def get_db_columns():
+        from aiida.backends.djsite.db.models import DbNode
+        return get_db_columns(DbNode)
+
     @classmethod
     def get_subclass_from_pk(cls, pk):
         from aiida.backends.djsite.db.models import DbNode
@@ -363,6 +368,10 @@ class Node(AbstractNode):
         DbExtra.set_value_for_node(self.dbnode, key, value,
                                    stop_if_existing=True)
         self._increment_version_number_db()
+
+    def reset_extras(self, new_extras):
+        raise NotImplementedError("Reset of extras has not been implemented"
+                                  "for Django backend.")
 
     def get_extra(self, key, *args):
         from aiida.backends.djsite.db.models import DbExtra

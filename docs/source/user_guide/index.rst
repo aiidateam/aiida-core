@@ -30,3 +30,4 @@ User's guide
    ../dbimporters/index
    ../dbexporters/index
    ../cmdline/scripting_and_shell.rst
+   ../restapi/index

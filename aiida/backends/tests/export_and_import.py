@@ -30,6 +30,9 @@ class TestSpecificImport(AiidaTestCase):
         # Clean the database
         self.clean_db()
 
+        # Insert the default data to the database
+        self.insert_data()
+
         # Import the needed data
         import_data(test_file_path, silent=True)
 

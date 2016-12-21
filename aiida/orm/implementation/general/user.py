@@ -169,3 +169,12 @@ class Util(object):
         :param pk: The user pk.
         """
         pass
+
+    @staticmethod
+    def get_db_columns():
+        """
+        This method returns a list with the column names and types of the table
+        corresponding to this class.
+        :return: a list with the names of the columns
+        """
+        pass

@@ -20,6 +20,7 @@ db_test_list = {
         'generic': ['aiida.backends.sqlalchemy.tests.generic'],
         'nodes': ['aiida.backends.sqlalchemy.tests.nodes'],
         'query': ['aiida.backends.sqlalchemy.tests.query'],
+        'session': ['aiida.backends.sqlalchemy.tests.session'],
     },
     # Must be always defined (in the worst case, an empty dict)
     'common': {
@@ -40,6 +41,7 @@ db_test_list = {
         'calculation_node': ['aiida.backends.tests.calculation_node'],
         'backup_script': ['aiida.backends.tests.backup_script'],
         'backup_setup_script': ['aiida.backends.tests.backup_setup_script'],
+        'restapi': ['aiida.backends.tests.restapi'],
         'computer': ['aiida.backends.tests.computer'],
     }
 }

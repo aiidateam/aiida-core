@@ -82,6 +82,13 @@ class AiidaTestCase(unittest.TestCase):
 
         cls._class_was_setup = True
 
+    def setUp(self):
+        self.__backend_instance.setUp_method()
+
+    @classmethod
+    def insert_data(cls):
+        cls.__backend_instance.insert_data()
+
     @classmethod
     def clean_db(cls):
 

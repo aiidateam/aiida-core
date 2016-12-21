@@ -12,7 +12,6 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
 
-
 class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
     """
     Test the creation of the transitive closure table
@@ -118,7 +117,6 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
             1)
 
 
-
 class TestNodeBasicSQLA(AiidaTestCase):
     """
     These tests check the basic features of nodes
@@ -205,4 +203,59 @@ class TestNodeBasicSQLA(AiidaTestCase):
         finally:
             aiida.backends.sqlalchemy.session.rollback()
 
+    def test_multiple_node_creation(self):
+        """
+        This test checks that a node is not added automatically to the session
+        (and subsequently committed) when a user is in the session.
+        It tests the fix for the issue #234
+        """
+        from aiida.backends.sqlalchemy.models.node import DbNode
+        from aiida.common.utils import get_new_uuid
+        from aiida.backends.utils import get_automatic_user
 
+        import aiida.backends.sqlalchemy
+
+        # Get the automatic user
+        user = get_automatic_user()
+        # Create a new node but don't add it to the session
+        node_uuid = get_new_uuid()
+        DbNode(user=user, uuid=node_uuid, type=None)
+
+        # Query the session before commit
+        res = aiida.backends.sqlalchemy.session.query(DbNode.uuid).filter(
+            DbNode.uuid == node_uuid).all()
+        self.assertEqual(len(res), 0, "There should not be any nodes with this"
+                                      "UUID in the session/DB.")
+
+        # Commit the transaction
+        aiida.backends.sqlalchemy.session.commit()
+
+        # Check again that the node is not in the DB
+        res = aiida.backends.sqlalchemy.session.query(DbNode.uuid).filter(
+            DbNode.uuid == node_uuid).all()
+        self.assertEqual(len(res), 0, "There should not be any nodes with this"
+                                      "UUID in the session/DB.")
+
+        # Get the automatic user
+        user = get_automatic_user()
+        # Create a new node but now add it to the session
+        node_uuid = get_new_uuid()
+        node = DbNode(user=user, uuid=node_uuid, type=None)
+        aiida.backends.sqlalchemy.session.add(node)
+
+        # Query the session before commit
+        res = aiida.backends.sqlalchemy.session.query(DbNode.uuid).filter(
+            DbNode.uuid == node_uuid).all()
+        self.assertEqual(len(res), 1,
+                         "There should be a node in the session/DB with the "
+                         "UUID {}".format(node_uuid))
+
+        # Commit the transaction
+        aiida.backends.sqlalchemy.session.commit()
+
+        # Check again that the node is in the db
+        res = aiida.backends.sqlalchemy.session.query(DbNode.uuid).filter(
+            DbNode.uuid == node_uuid).all()
+        self.assertEqual(len(res), 1,
+                         "There should be a node in the session/DB with the "
+                         "UUID {}".format(node_uuid))

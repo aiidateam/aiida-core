@@ -25,7 +25,7 @@ except ConfigurationError:
     raise ConfigurationError("Please run the AiiDA Installation, no config found")
 
 if settings.AIIDADB_PROFILE is None:
-    raise ConfigurationError("AIIDADB_PROFILE not defined, did you load django"
+    raise ConfigurationError("AIIDADB_PROFILE not defined, did you load django "
                              "through the AiiDA load_dbenv()?")
 
 profile_conf = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)

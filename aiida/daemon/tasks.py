@@ -99,8 +99,8 @@ def retriever():
                            DAEMON_INTERVALS_TICK_WORKFLOWS)
     )
 )
-def tick_workflows2():
-    from aiida.workflows2.daemon import tick_workflow_engine
+def tick_work():
+    from aiida.work.daemon import tick_workflow_engine
     print "aiida.daemon.tasks.tick_workflows:  Ticking workflows"
     tick_workflow_engine()
 
@@ -134,7 +134,7 @@ def workflow_stepper(): # daemon for legacy workflow
 
 def manual_tick_all():
     from aiida.daemon.execmanager import submit_jobs, update_jobs, retrieve_jobs
-    from aiida.workflows2.daemon import tick_workflow_engine
+    from aiida.work.daemon import tick_workflow_engine
     from aiida.daemon.workflowmanager import execute_steps
     submit_jobs()
     update_jobs()

@@ -12,7 +12,8 @@ from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
-from aiida.orm.implementation.general.computer import AbstractComputer
+from aiida.orm.implementation.general.computer import AbstractComputer, Util as ComputerUtil
+from aiida.common.lang import override
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -35,8 +36,9 @@ class Computer(AbstractComputer):
         return self._dbcomputer.id
 
     def __init__(self, **kwargs):
-        uuid = kwargs.pop('uuid', None)
+        super(Computer, self).__init__()
 
+        uuid = kwargs.pop('uuid', None)
         if uuid is not None:
             if kwargs:
                 raise ValueError("If you pass a uuid, you cannot pass any "
@@ -92,7 +94,6 @@ class Computer(AbstractComputer):
         from aiida.backends.sqlalchemy import session
         return session.query(DbComputer.name).all()
 
-
     @property
     def full_text_info(self):
         ret_lines = []
@@ -141,7 +142,10 @@ class Computer(AbstractComputer):
     def get(cls, computer):
         return cls(dbcomputer=DbComputer.get_dbcomputer(computer))
 
+    @override
     def copy(self):
+        from aiida.backends.sqlalchemy import session
+
         if self.to_be_stored:
             raise InvalidOperation("You can copy a computer only after having stored it")
 
@@ -305,3 +309,19 @@ class Computer(AbstractComputer):
         self.dbcomputer.transport_type = val
         if not self.to_be_stored:
             self.dbcomputer.save()
+
+
+class Util(ComputerUtil):
+    @override
+    def delete_computer(self, pk):
+        """
+        Delete the computer with the given pk.
+        :param pk: The computer pk.
+        """
+        import aiida.backends.sqlalchemy
+        try:
+            aiida.backends.sqlalchemy.session.query(DbComputer).get(pk).delete()
+            aiida.backends.sqlalchemy.session.commit()
+        except SQLAlchemyError:
+            raise InvalidOperation("Unable to delete the requested computer: there"
+                                   "is at least one node using this computer")

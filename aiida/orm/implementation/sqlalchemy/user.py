@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.implementation.general.user import AbstractUser
 from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.common.lang import override
+from aiida.orm.implementation.general.user import AbstractUser, Util as UserUtil
 from aiida.utils.email import normalize_email
-from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
-
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -14,6 +13,8 @@ __authors__ = "The AiiDA team."
 class User(AbstractUser):
 
     def __init__(self, **kwargs):
+        super(User, self).__init__()
+
         # If no arguments are passed, then create a new DbUser
         if not kwargs:
             raise ValueError("User can not be instantiated without arguments")
@@ -48,6 +49,7 @@ class User(AbstractUser):
 
     @staticmethod
     def get_db_columns():
+        from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
         return get_db_columns(DbUser)
 
     @property
@@ -182,3 +184,13 @@ class User(AbstractUser):
         for dbuser in dbusers:
             users.append(cls(dbuser=dbuser))
         return users
+
+
+class Util(UserUtil):
+    @override
+    def delete_user(self, pk):
+        """
+        Delete the user with the given pk.
+        :param pk: The user pk.
+        """
+        DbUser.query.filter_by(id=pk).delete()

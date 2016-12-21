@@ -93,9 +93,7 @@ PostgreSQL
   depending on your operating system and distribution).
   To install PostgreSQL under Ubuntu, you can do::
 
-    sudo apt-get install postgresql
-    sudo apt-get install postgresql-server-dev-all
-    sudo apt-get install postgresql-client
+    sudo apt-get install postgresql postgresql-server-dev-all postgresql-client
 
   On Mac OS X, you can download binary packages to install PostgreSQL
   from the official website.

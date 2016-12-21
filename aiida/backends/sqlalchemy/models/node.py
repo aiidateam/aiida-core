@@ -110,33 +110,6 @@ class DbNode(Base):
         passive_deletes=True,
     )
 
-    # Appender-query, so one can query the results:
-    # ~ dbcomputer_q = relationship(
-    # ~ 'DbComputer',
-    # ~ backref=backref('dbnodes_q', passive_deletes=True, lazy='dynamic'),
-    # ~ lazy='dynamic'
-    # ~ )
-    outputs_q = relationship(
-        "DbNode", secondary="db_dblink",
-        primaryjoin="DbNode.id == DbLink.input_id",
-        secondaryjoin="DbNode.id == DbLink.output_id",
-        backref=backref(
-            "inputs_q",
-            passive_deletes=True,
-            lazy='dynamic'
-        ),
-        passive_deletes=True,
-        lazy='dynamic'
-    )
-    children_q = relationship(
-        "DbNode", secondary="db_dbpath",
-        primaryjoin="DbNode.id == DbPath.parent_id",
-        secondaryjoin="DbNode.id == DbPath.child_id",
-        backref=backref("parents_q", lazy='dynamic', passive_deletes=True),
-        lazy='dynamic',
-        passive_deletes=True
-    )
-
     def __init__(self, *args, **kwargs):
         super(DbNode, self).__init__(*args, **kwargs)
 

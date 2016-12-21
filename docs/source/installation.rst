@@ -14,19 +14,16 @@ If you use another debian derivate, chances are this still works for you.
 If your distribution uses a different package manager, simply replace the commandline in the first step (the package names might be slightly different). The links in :ref:`install_dependencies` contain additional information on how to get the required programs for your system.
 
 1. Install dependencies::
+
       $ sudo apt-get install git python-pip python2.7-dev postgresql postgresql-server-dev-all postgresql-client
 
 2. Install AiiDA::
+
       $ pip install -U setuptools pip
-
       $ pip install virtualenv
-
-      $ virtualenv ~/aiidapy 
-
+      $ virtualenv ~/aiidapy # or equivalent
       $ source ~/aiidapy/bin/activate
-
       (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
-
       (aiidapy) $ verdi quicksetup
 
 You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
@@ -38,22 +35,20 @@ Quickstart - OS X (Homebrew)
 If you use another package manager just replace the first step accordingly.
 
 1. Install dependencies::
+
       $ brew install git python postgresql
 
 2. Start Postgres Server::
+
       $ pg_ctl -D /usr/local/var/postgres start
 
 2. Install AiiDA::
+
       $ pip install -U setuptools pip
-
       $ pip install virtualenv
-
-      $ virtualenv ~/aiidapy 
-
+      $ virtualenv ~/aiidapy # or equivalent
       $ source ~/aiidapy/bin/activate
-
       (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
-
       (aiidapy) $ verdi quicksetup
 
 You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
@@ -83,6 +78,8 @@ Four types of installations are described in the following:
   * :ref:`Server setup`
   * :ref:`Developer`
 
+All further instructions assume you have installed the `:ref:dependencies<install_dependencies>`.
+
 Installation Requirements
 +++++++++++++++++++++++++
 Read on for more information about the kind of operating system AiiDA can run on and what software needs to be installed before AiiDA can work.
@@ -92,7 +89,7 @@ Supported architecture
 AiiDA is tested to run on:
 
 * Mac OS X (tested)
-* Ubuntu 14.04
+* Ubuntu 14.04 & 16.04
 
 AiiDA should run on:
 
@@ -115,16 +112,18 @@ Required Software
 -----------------
 The following are required to be installed on your computer:
 
+* `git`_ (To download the aiida package)
 * `python 2.7.x`_ (The programming language used for AiiDA)
 * `python-pip`_ (To install python packages)
 * `python-virtualenv`_ (Or equivalent, to install AiiDA safely)
 * `PostgreSQL`_ (For the database)
 * PostgreSQL development files (required by some of the python packages AiiDA relies on)
 
-.. _python 2.7.x: https://www.python.org/
+.. _git: https://git-scm.com/downloads
+.. _python 2.7.x: https://www.python.org/downloads
 .. _python-pip`: https://packaging.python.org/installing/#requirements-for-installing-packages
 .. _python-virtualenv: https://virtualenv.pypa.io/en/stable/
-.. _PostgreSQL: https://www.postgresql.org/
+.. _PostgreSQL: https://www.postgresql.org/downloads
 
 .. TODO: is this really necessary?
 .. Installing Required Dependencies
@@ -168,23 +167,15 @@ The following are required to be installed on your computer:
 Quicksetup
 ++++++++++
 
-Installing Dependencies
------------------------
-
-Before continuing, you still need to install some things. Read on for instructions how to proceed with installing them. More details on what is needed and why in :ref:`install_dependencies`
 
 .. TODO: confirm removal
 .. Some of them are mandatory, while others are optional (but often strongly suggested), also depending for instance on the :doc:`type of database <database/index>` that you plan to use.
-
-Linux
-^^^^^
 
 .. TODO: confirm has been replaced by below
 .. Here is a list of packages/programs that you need to install (for each of them,
 .. there may be a specific/easier way to install them in your distribution, as
 .. for instance ``apt-get`` in Debian/Ubuntu -see below for the specific names
 .. of packages to install- or ``yum`` in RedHat/Fedora).
-Use your favourite package manager to install the packages listed in :ref:`Required Software`, for instance ``apt-get`` in Debian/Ubuntu or ``yum`` in RedHat/Fedora.
 
 .. TODO: confirm has been replaced by above
 .. * `git`_ (required to download the code)
@@ -211,13 +202,6 @@ Use your favourite package manager to install the packages listed in :ref:`Requi
 .. .. _SQLite3 development files: http://www.sqlite.org/
 .. .. _PostgreSQL development files: http://www.postgresql.org/
 
-
-For Ubuntu, you can install the above packages using (tested on Ubuntu 12.04,
-names may change in different releases)::
-
-      $ sudo apt-get install git python-pip python2.7-dev postgresql postgresql-server-dev-all postgresql-client
-      $ pip install virtualenv
-
 .. Todo: confirm outdated due to dropping support for other dbs
 .. .. note:: For the latter line, please use the same version (in the
 ..   example above is 9.1) of the
@@ -226,18 +210,6 @@ names may change in different releases)::
 .. 
 ..   If you want to use postgreSQL, use a version greater than 9.1
 ..   (the greatest that your distribution supports).
-
-Mac OS X
-^^^^^^^^
-For Mac OS X, you may either already have some of the dependencies above
-(e.g., git), or you can download binary packages to install (e.g., for
-PostgreSQL you can download and install the binary package from the
-official website).
-
-If you use homebrew you can make sure all packages are installed by running::
-
-      $ brew install git python postgresql
-      $ pip install virtualenv
 
 Installing AiiDA
 ++++++++++++++++

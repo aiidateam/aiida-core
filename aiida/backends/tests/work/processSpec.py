@@ -6,17 +6,19 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
 from collections import Mapping
-from test.util import DbTestCase
+from aiida.backends.testbase import AiidaTestCase
 from aiida.work.process import Process, ProcessSpec
 import aiida.work.util as util
 
 
-class TestProcessSpec(DbTestCase):
+class TestProcessSpec(AiidaTestCase):
     def setUp(self):
+        super(TestProcessSpec, self).setUp()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.spec = Process.spec()
 
     def tearDown(self):
+        super(TestProcessSpec, self).tearDown()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
     def test_get_inputs_template(self):

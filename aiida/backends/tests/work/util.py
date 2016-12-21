@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from test.util import DbTestCase
+from aiida.backends.testbase import AiidaTestCase
 
 from aiida.work.process import Process
 from aiida.work.workfunction import workfunction
@@ -44,15 +44,17 @@ def nested_tester():
             'node_pk': Int(ProcessStack.get_active_process_calc_node().pk)}
 
 
-class TestProcessRegistry(DbTestCase):
+class TestProcessRegistry(AiidaTestCase):
     """
     These these check that the registry is giving out the right pid which when
     using storage is equal to the node pk.
     """
     def setUp(self):
+        super(TestProcessRegistry, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def tearDown(self):
+        super(TestProcessRegistry, self).tearDown()
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_process_pid_and_calc(self):

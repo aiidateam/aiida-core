@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import inspect
 
-from test.util import DbTestCase
+from aiida.backends.testbase import AiidaTestCase
 from plum.engine.ticking import TickingEngine
+import plum.process_monitor
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work.workchain import WorkChain,\
     ToContext, _Block, _If, _While, if_, while_
@@ -94,7 +96,7 @@ class Wf(WorkChain):
         self.finished_steps[function_name] = True
 
 
-class TestContext(DbTestCase):
+class TestContext(AiidaTestCase):
     def test_attributes(self):
         c = WorkChain.Context()
         c.new_attr = 5
@@ -114,12 +116,16 @@ class TestContext(DbTestCase):
             c['new_attr']
 
 
-class TestWorkchain(DbTestCase):
+class TestWorkchain(AiidaTestCase):
     def setUp(self):
+        super(TestWorkchain, self).setUp()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def tearDown(self):
+        super(TestWorkchain, self).tearDown()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_run(self):
         A = Str('A')

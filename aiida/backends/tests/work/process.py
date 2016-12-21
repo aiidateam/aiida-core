@@ -11,7 +11,8 @@ import shutil
 import tempfile
 import threading
 
-from test.util import DbTestCase
+import plum.process_monitor
+from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import load_node
 from aiida.orm.data.base import Int
 from aiida.work.persistence import Persistence
@@ -41,12 +42,16 @@ class ProcessStackTest(Process):
         assert self._thread_id is threading.current_thread().ident
 
 
-class TestProcess(DbTestCase):
+class TestProcess(AiidaTestCase):
     def setUp(self):
+        super(TestProcess, self).setUp()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def tearDown(self):
+        super(TestProcess, self).tearDown()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_process_stack(self):
         ProcessStackTest.run()
@@ -104,6 +109,7 @@ class TestProcess(DbTestCase):
     def test_description(self):
         dp = DummyProcess.new_instance(inputs={'_description': 'My description'})
         self.assertEquals(dp.calc.description, 'My description')
+        dp.run_until_complete()
 
         with self.assertRaises(ValueError):
             DummyProcess.new_instance(inputs={'_description': 5})
@@ -111,12 +117,13 @@ class TestProcess(DbTestCase):
     def test_label(self):
         dp = DummyProcess.new_instance(inputs={'_label': 'My label'})
         self.assertEquals(dp.calc.label, 'My label')
+        dp.run_until_complete()
 
         with self.assertRaises(ValueError):
             DummyProcess.new_instance(inputs={'_label': 5})
 
 
-class TestFunctionProcess(DbTestCase):
+class TestFunctionProcess(AiidaTestCase):
     def test_fixed_inputs(self):
         def wf(a, b, c):
             return {'a': a, 'b': b, 'c': c}

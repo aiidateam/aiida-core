@@ -207,12 +207,13 @@ class Node(AbstractNode):
         #
         # I am linking src->self; a loop would be created if a DbPath exists
         # already in the TC table from self to src
-        c = session.query(literal(True)).filter(DbPath.query
+        if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
+            c = session.query(literal(True)).filter(DbPath.query
                                                 .filter_by(parent_id=self.dbnode.id, child_id=src.dbnode.id)
                                                 .exists()).scalar()
-        if c:
-            raise ValueError(
-                "The link you are attempting to create would generate a loop")
+            if c:
+                raise ValueError(
+                    "The link you are attempting to create would generate a loop")
 
         if label is None:
             autolabel_idx = 1

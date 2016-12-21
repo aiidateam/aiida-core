@@ -1,7 +1,12 @@
-
+# -*- coding: utf-8 -*-
 
 from aiida.work.process import Process
 
+
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file."
+__authors__ = "The AiiDA team."
+__version__ = "0.7.1"
 
 class DummyProcess(Process):
     """
@@ -13,7 +18,7 @@ class DummyProcess(Process):
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def _run(self, **kwargs):
+    def _run(self):
         pass
 
 
@@ -29,8 +34,3 @@ class BadOutput(Process):
 
     def _run(self):
         self.out("bad_output", 5)
-
-
-class ExceptionProcess(Process):
-    def _run(self):
-        raise RuntimeError("CRASH")

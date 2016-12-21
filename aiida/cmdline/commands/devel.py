@@ -81,6 +81,7 @@ class Devel(VerdiCommandWithSubcommands):
         'aiida.scheduler',
         'aiida.transport',
         'aiida.common',
+        'aiida.tests.work',
     ]
 
     _dbrawprefix = "db"

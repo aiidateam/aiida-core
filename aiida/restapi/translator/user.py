@@ -51,7 +51,12 @@ class UserTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    _default_projections = custom_schema['columns'][__label__]
+    # Extract the default projections from custom_schema if they are defined
+    if 'columns' in custom_schema:
+        _default_projections = custom_schema['columns'][__label__]
+    else:
+        _default_projections = ['*']
+
 
     def __init__(self):
         """

@@ -355,19 +355,19 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command('setup', context_settings=CONTEXT_SETTINGS)
 @click.argument('profile', default='default', type=str)
 @click.option('--only-config', is_flag=True)
-@click.option('--non-interactive', is_flag=True)
-@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']))
-@click.option('--email', type=str)
-@click.option('--db_host', type=str)
-@click.option('--db_port', type=int)
-@click.option('--db_name', type=str)
-@click.option('--db_user', type=str)
-@click.option('--db_pass', type=str)
-@click.option('--first-name', type=str)
-@click.option('--last-name', type=str)
-@click.option('--institution', type=str)
-@click.option('--no-password', is_flag=True)
-@click.option('--repo', type=str)
+@click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
+@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']), help='ignored unless --non-interactive is given')
+@click.option('--email', type=str, help='ignored unless --non-interactive is given')
+@click.option('--db_host', type=str, help='ignored unless --non-interactive is given')
+@click.option('--db_port', type=int, help='ignored unless --non-interactive is given')
+@click.option('--db_name', type=str, help='ignored unless --non-interactive is given')
+@click.option('--db_user', type=str, help='ignored unless --non-interactive is given')
+@click.option('--db_pass', type=str, help='ignored unless --non-interactive is given')
+@click.option('--first-name', type=str, help='ignored unless --non-interactive is given')
+@click.option('--last-name', type=str, help='ignored unless --non-interactive is given')
+@click.option('--institution', type=str, help='ignored unless --non-interactive is given')
+@click.option('--no-password', is_flag=True, help='ignored unless --non-interactive is given')
+@click.option('--repo', type=str, help='ignored unless --non-interactive is given')
 def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass, first_name, last_name, institution, no_password, repo):
     '''verdi setup command, forward cmdline arguments to the setup function.'''
     setup(profile=profile,
@@ -428,6 +428,8 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
     # gprofile = 'default' if profile is None else profile
     # ~ gprofile = profile if settings_profile.AIIDADB_PROFILE is None \
         # ~ else settings_profile.AIIDADB_PROFILE
+    if settings_profile.AIIDADB_PROFILE and profile:
+        sys.exit('the profile argument cannot be used if verdi is called with -p option')
     gprofile = settings_profile.AIIDADB_PROFILE or profile
     if gprofile == profile:
         settings_profile.AIIDADB_PROFILE = profile

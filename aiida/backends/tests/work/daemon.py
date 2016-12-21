@@ -1,5 +1,5 @@
 
-import unittest
+from aiida.backends.testbase import AiidaTestCase
 import tempfile
 from shutil import rmtree
 
@@ -97,7 +97,7 @@ class FailCreateFromSavedStateProcess(DummyProcess):
             raise RuntimeError()
 
 
-class TestDaemon(unittest.TestCase):
+class TestDaemon(AiidaTestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 

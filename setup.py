@@ -23,6 +23,7 @@ setup(
     license='MIT License',
     author=__authors__,
     author_email='developers@aiida.net',
+    include_package_data=True, # puts non code files into the distribution, reads list from MANIFEST.in
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',

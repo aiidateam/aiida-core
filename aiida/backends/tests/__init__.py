@@ -124,7 +124,4 @@ def get_db_test_list():
                 parentkey = ".".join(parts[:last_idx])
                 final_retdict[parentkey].extend(v)
 
-
     return dict(final_retdict)
-
-

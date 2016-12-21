@@ -289,6 +289,26 @@ class List(Data, collections.MutableSequence):
         """
         return self._to_be_stored
 
+def get_true_node():
+    """
+    Return a Bool Data node, with value True
 
-TRUE = Bool(typevalue=(bool, True))
-FALSE = Bool(typevalue=(bool, False))
+    Cannot be done as a singleton in the module, because it would be generated
+    at import time, with the risk that (e.g. in the tests, or at the very first use
+    of AiiDA) a user is not yet defined in the DB (but a user is mandatory in the
+    DB before you can create new Nodes in AiiDA).
+    """
+    TRUE = Bool(typevalue=(bool, True))
+    return TRUE
+
+def get_false_node():
+    """
+    Return a Bool Data node, with value False
+
+    Cannot be done as a singleton in the module, because it would be generated
+    at import time, with the risk that (e.g. in the tests, or at the very first use
+    of AiiDA) a user is not yet defined in the DB (but a user is mandatory in the
+    DB before you can create new Nodes in AiiDA).
+    """
+    FALSE = Bool(typevalue=(bool, False))
+    return FALSE

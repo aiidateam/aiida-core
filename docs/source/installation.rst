@@ -5,7 +5,7 @@ Installation and Deployment of AiiDA
 Quickstart
 ++++++++++
 
-Get started immediately with just a few commands! 
+Get started immediately with just a few commands! Look at `:ref:quicksetup` for more details
 
 Quickstart - Linux (Ubuntu)
 ---------------------------
@@ -26,6 +26,11 @@ If your distribution uses a different package manager, simply replace the comman
       (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
       (aiidapy) $ verdi quicksetup
 
+3. Add the verdi command to your PATH::
+
+      $ # for bash:
+      $ echo "export PATH="${PATH}:~/aiidapy/bin/verdi" >> ~/.bashrc
+
 You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
 
 Quickstart - OS X (Homebrew)
@@ -42,7 +47,7 @@ If you use another package manager just replace the first step accordingly.
 
       $ pg_ctl -D /usr/local/var/postgres start
 
-2. Install AiiDA::
+3. Install AiiDA::
 
       $ pip install -U setuptools pip
       $ pip install virtualenv
@@ -50,6 +55,11 @@ If you use another package manager just replace the first step accordingly.
       $ source ~/aiidapy/bin/activate
       (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
       (aiidapy) $ verdi quicksetup
+
+4. Add the verdi command to your PATH::
+
+      $ # for bash:
+      $ echo "export PATH="${PATH}:~/aiidapy/bin/verdi" >> ~/.bashrc
 
 You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
 
@@ -60,25 +70,30 @@ If you prefer not to use a package manager, follow the links in :ref:`install_de
 Other Systems and Custom Setups
 +++++++++++++++++++++++++++++++
  
-For new and inexperienced users we strongly recommend to start with the Quickstart procedure. It is possible to customize your configuration afterwards if necessary.
+For new and inexperienced users we strongly recommend to start with the Quickstart procedure detailed above. It is possible to customize your configuration afterwards if necessary.
 
 If you are updating from a previous version and you don't want to
 reinstall everything from scratch, read the instructions
 :ref:`here<updating_aiida>`.
 
-Four types of installations are described in the following:
+If you are trying to install AiiDA on another system than Ubunto or OS X, please take a look at `:ref:install_dependencies` before proceeding with one of the following.
 
-* For new users:
+* Install AiiDA on another system `:ref:installing_aiida`
+* Setup AiiDA using quicksetup `:ref:quicksetup`
+* Using setup for more options or to customize your user profile `:ref:setup`
+* Using setup to programatically install AiiDA `:ref:setup-noninteractive`
 
-  * :ref:`quicksetup`
-
-* For experienced users:
-
-  * :ref:`Custom user configuration`
-  * :ref:`Server setup`
-  * :ref:`Developer`
-
-All further instructions assume you have installed the `:ref:dependencies<install_dependencies>`.
+.. Four types of installations are described in the following:
+.. 
+.. * For new users:
+.. 
+..   * :ref:`quicksetup`
+.. 
+.. * For experienced users:
+.. 
+..   * :ref:`Custom user configuration`
+..   * :ref:`Server setup`
+..   * :ref:`Developer`
 
 Installation Requirements
 +++++++++++++++++++++++++
@@ -162,12 +177,6 @@ The following are required to be installed on your computer:
 .. 
 .. .. _other_core_dependencies:
 
-.. _quicksetup:
-
-Quicksetup
-++++++++++
-
-
 .. TODO: confirm removal
 .. Some of them are mandatory, while others are optional (but often strongly suggested), also depending for instance on the :doc:`type of database <database/index>` that you plan to use.
 
@@ -211,10 +220,12 @@ Quicksetup
 ..   If you want to use postgreSQL, use a version greater than 9.1
 ..   (the greatest that your distribution supports).
 
-Installing AiiDA
-++++++++++++++++
+.. _installing_aiida:
 
-1. Create a virtual python environment::
+Installing AiiDA (Other Systems)
+++++++++++++++++++++++++++++++++
+
+1. Create a virtual python environment, this is done so installing aiida can not accidentally up- or downgrade any of your system's python packages.::
 
       $ virtualenv ~/aiidapy 
       $ # or conda create -n aiidapy python2.7 # if you use conda to manage python environments
@@ -231,9 +242,53 @@ Installing AiiDA
       
       (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
 
-4. Setup and configure aiida::
+This installs the verdi command into your python environment. You can either activate the environment every time before using aiida (that way you could have multiple aiida versions installed in parallel), or you can add the verdi command to your path
+
+4. (optional) add verdi to your path:
+   Add this to your .bashrc or .bash_profile or equivalent, assuming you installed with virtualenv::
+
+   export PATH="${PATH}:~/aiidapy/bin/verdi
+
+If you use conda, verdi will be installed to (envs directory)/aiidapy/bin/verdi, where envs directory depends on which version of Anaconda or Miniconda you use, for miniconda2 the default is ~/miniconda2/envs/. If you enter
+
+::
+   
+   conda info
+
+among the listed information you will find an "envs directories"
+
+If you use virtualenvwrapper, you can find out in it's online documentation where environments install their binaries.
+
+If everything went smoothly, congratulations! Now the code is installed!
+
+Next steps:
+
+* :ref:`set up AiiDA using quicksetup<quicksetup>`
+.. * :ref:`Try out AiiDA for the first time`
+.. * :ref:`Custom configuration` for more advanced configurations.
+
+.. _quicksetup:
+
+Quicksetup
+++++++++++
+
+Make sure your postgresql daemon is running and you are either a postgres super user or have sudo rights to your system to switch to a postgres super user.
+
+Setup and configure aiida using::
       
-      (aiidapy) $ verdi quickinstall
+   $ verdi quickinstall
+
+This will prompt you for an email address, first and last name and institution.
+Remember that it is important for this information to be accurate if you wish to share your results with other aiida users.
+
+Optionally you cann pass the same information as commandline options::
+
+   $ verdi quickinstall --email=<email> --first-name=<First> --last-name=<Last> --institution=<Inst>
+
+More commandline options are available in case you custom configured your postgresql installation, or if you would like to store your setup under a different profile name than "quicksetup". For an overview use::
+
+   $ verdi quickinstall -h
+
 
 .. TODO: confirm replaced by above Installing AiiDA
 .. Downloading the code
@@ -296,14 +351,6 @@ Installing AiiDA
 .. 
 ..     sudo pip install -U -r requirements.txt
 
-If everything went smoothly, congratulations! Now the code is installed!
-
-Next steps:
-
-* :ref:`How to work with AiiDA in a virtualenv`
-* :ref:`Try out AiiDA for the first time`
-* :ref:`Custom configuration` for more advanced configurations.
-
 .. note:: if the ``pip install`` command gives you an error that
   resembles the one
   shown below, you might need to downgrade to an older version of pip::
@@ -353,55 +400,56 @@ Next steps:
 
 .. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
 
-AiiDA configuration
-+++++++++++++++++++
+Additional bash configuration for AiiDA
++++++++++++++++++++++++++++++++++++++++
 
-Path configuration
-------------------
-
-The main interface to AiiDA is through its command-line tool, called ``verdi``.
-For it to work, it must be on the system path, and moreover the AiiDA python
-code must be found on the python path.
-
-To do this, add the following to your ``~/.bashrc`` file (create it if not already present)::
-
-      export PYTHONPATH=~/git/aiida:${PYTHONPATH}
-      export PATH=~/git/aiida/bin:${PATH}
-
-and then source the .bashrc file with the command ``source ~/.bashrc``, or login
-in a new window.
-
-.. note:: replace ``~/git/aiida`` with the path where you installed AiiDA. Note
-  also that in the ``PYTHONPATH`` you simply have to specify the AiiDA path, while
-  in ``PATH`` you also have to append the ``/bin`` subfolder!
-
-.. note:: if you installed the modules with the ``--user`` parameter during the
-  ``pip install`` step, you will need to add one more directory to your ``PATH``
-  variable in the ``~/.bashrc`` file.
-  For Linux systems, the path to add is usually ``~/.local/bin``::
-
-  	export PATH=~/git/aiida/bin:~/.local/bin:${PATH}
-
-  For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
-
-  	export PATH=~/git/aiida/bin:~/Library/Python/2.7/bin:${PATH}
-
-  To verify if this is the correct path to add, navigate to this location and
-  you should find the executable ``supervisord`` in the directory.
-
-To verify if the path setup is OK:
-
-* type ``verdi`` on your terminal, and check if the program starts (it should
-  provide a list of valid commands). If it doesn't, check if you correctly set
-  up the ``PATH`` environmente variable above.
-* go in your home folder or in another folder different from the AiiDA folder,
-  run ``python`` or ``ipython`` and try to import a module, e.g. typing::
-
-    import aiida
-
-  If the setup is ok, you shouldn't get any error. If you do get an
-  ``ImportError`` instead, check if you correctly set up the ``PYTHONPATH``
-  environment variable in the steps above.
+.. TODO: should be obsolete due to pip install and virtualenv
+.. Path configuration
+.. ------------------
+.. 
+.. The main interface to AiiDA is through its command-line tool, called ``verdi``.
+.. For it to work, it must be on the system path, and moreover the AiiDA python
+.. code must be found on the python path.
+.. 
+.. To do this, add the following to your ``~/.bashrc`` file (create it if not already present)::
+.. 
+..       export PYTHONPATH=~/git/aiida:${PYTHONPATH}
+..       export PATH=~/git/aiida/bin:${PATH}
+.. 
+.. and then source the .bashrc file with the command ``source ~/.bashrc``, or login
+.. in a new window.
+.. 
+.. .. note:: replace ``~/git/aiida`` with the path where you installed AiiDA. Note
+..   also that in the ``PYTHONPATH`` you simply have to specify the AiiDA path, while
+..   in ``PATH`` you also have to append the ``/bin`` subfolder!
+.. 
+.. .. note:: if you installed the modules with the ``--user`` parameter during the
+..   ``pip install`` step, you will need to add one more directory to your ``PATH``
+..   variable in the ``~/.bashrc`` file.
+..   For Linux systems, the path to add is usually ``~/.local/bin``::
+.. 
+..   	export PATH=~/git/aiida/bin:~/.local/bin:${PATH}
+.. 
+..   For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
+.. 
+..   	export PATH=~/git/aiida/bin:~/Library/Python/2.7/bin:${PATH}
+.. 
+..   To verify if this is the correct path to add, navigate to this location and
+..   you should find the executable ``supervisord`` in the directory.
+.. 
+.. To verify if the path setup is OK:
+.. 
+.. * type ``verdi`` on your terminal, and check if the program starts (it should
+..   provide a list of valid commands). If it doesn't, check if you correctly set
+..   up the ``PATH`` environmente variable above.
+.. * go in your home folder or in another folder different from the AiiDA folder,
+..   run ``python`` or ``ipython`` and try to import a module, e.g. typing::
+.. 
+..     import aiida
+.. 
+..   If the setup is ok, you shouldn't get any error. If you do get an
+..   ``ImportError`` instead, check if you correctly set up the ``PYTHONPATH``
+..   environment variable in the steps above.
 
 
 Bash completion
@@ -434,28 +482,33 @@ or to open a new shell window.
         . ~/.bashrc
     fi
 
+If you chose to work with multiple aiida versions or just prefer explicitly working inside the virtual invironment in which you installed aiida, it might be a good idea to put the completion command into a postactivation hook of your python environment manager (look up in the documentation of your manager how to do this).
 
 
-AiiDA first setup
------------------
+Adding and Editing Profiles
++++++++++++++++++++++++++++
 
-Run the following command::
+If you wish aiida to try to automatically create a database for your new profile you can add a profile using::
 
-    verdi install
+   verdi quicksetup --profile=<profile>
 
-to configure AiiDA. The command will guide you through a process to configure
-the database, the repository location, and it will finally (automatically) run
-a django ``migrate`` command, if needed, that creates the required tables
-in the database and installs the database triggers.
+If you prefer to setup a database by hand first or are only going to edit the profile run the following command::
 
-The first thing that will be asked to you is the timezone, extremely important
-to get correct dates and times for your calculations.
+    verdi setup <profile> # synonym to verdi -p <profile> setup
 
-AiiDA will do its best to try and understand the local timezone (if properly
-configured on your machine), and will suggest a set of sensible values.
-Choose the timezone that fits best to you (that is, the nearest city in your
-timezone - for Lausanne, for instance, we choose ``Europe/Zurich``) and type
-it at the prompt.
+ to add or edit a profile in AiiDA. The command will guide you through a process to configure
+ the database, the repository location, and it will finally (automatically) run
+ a django ``migrate`` command, if needed, that creates the required tables
+ in the database and installs the database triggers.
+
+ The first thing that will be asked to you is the timezone, extremely important
+ to get correct dates and times for your calculations.
+
+ AiiDA will do its best to try and understand the local timezone (if properly
+ configured on your machine), and will suggest a set of sensible values.
+ Choose the timezone that fits best to you (that is, the nearest city in your
+ timezone - for Lausanne, for instance, we choose ``Europe/Zurich``) and type
+ it at the prompt.
 
 If the automatic zone detection did not work for you,  type instead another
 valid string.
@@ -543,6 +596,23 @@ the database. Double-check your settings before reporting an error.
   Check out our :ref:`tips<repo_troubleshooting>` in the
   troubeshooting section in case this happens.
 
+.. _setup-noninteractive:
+
+Programmatically setup AiiDA profiles:
+++++++++++++++++++++++++++++++++++++++
+
+::
+   
+   $ verdi setup <profile> --non-interactive --email=<..> ...
+
+Can be used to create profiles from scripts. If not all values are given on the commandline, setup will fail. Type::
+
+   $ verdi setup -h
+
+For a list of options that have to be passed.
+
+Using AiiDA
++++++++++++
 
 Start the daemon
 -----------------

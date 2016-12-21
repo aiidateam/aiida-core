@@ -658,7 +658,7 @@ class Quicksetup(VerdiCommand):
     def _prompt_db_info(self):
         '''prompt interactively for postgres database connecting details.'''
         access = False
-        while access:
+        while not access:
             dbinfo = {}
             dbinfo['host'] = click.prompt('postgres host', default='localhost', type=str)
             dbinfo['port'] = click.prompt('postgres port', default=5432, type=int)

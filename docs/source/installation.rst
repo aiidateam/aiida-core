@@ -2,7 +2,66 @@
 Installation and Deployment of AiiDA
 ====================================
 
-For new and inexperienced users we strongly recommend to start with the quick install procedure. It is possible to customize your configuration afterwards if necessary.
+Quickstart
+++++++++++
+
+Get started immediately with just a few commands! 
+
+Quickstart - Linux (Ubuntu)
+---------------------------
+
+If you use another debian derivate, chances are this still works for you.
+If your distribution uses a different package manager, simply replace the commandline in the first step (the package names might be slightly different). The links in :ref:`install_dependencies` contain additional information on how to get the required programs for your system.
+
+1. Install dependencies::
+      $ sudo apt-get install git python-pip python2.7-dev postgresql postgresql-server-dev-all postgresql-client
+
+2. Install AiiDA::
+      $ pip install virtualenv
+
+      $ virtualenv ~/aiidapy 
+
+      $ source ~/aiidapy/bin/activate
+
+      (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
+
+      (aiidapy) $ verdi quicksetup
+
+You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
+
+Quickstart - OS X (Homebrew)
+----------------------------
+
+`Homebrew`_ is an actively maintained package manager for OS X.
+If you use another package manager just replace the first step accordingly.
+
+1. Install dependencies::
+      $ brew install git python postgresql
+
+2. Start Postgres Server::
+      $ pg_ctl -D /usr/local/var/postgres start
+
+2. Install AiiDA::
+      $ pip install virtualenv
+
+      $ virtualenv ~/aiidapy 
+
+      $ source ~/aiidapy/bin/activate
+
+      (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
+
+      (aiidapy) $ verdi quicksetup
+
+You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
+
+If you prefer not to use a package manager, follow the links in :ref:`install_dependencies` for instructions on how to install the required programs and start the postgres server before continuing with the third step.
+
+.. _Homebrew: http://brew.sh/index_de.html
+
+Other Systems and Custom Setups
++++++++++++++++++++++++++++++++
+ 
+For new and inexperienced users we strongly recommend to start with the Quickstart procedure. It is possible to customize your configuration afterwards if necessary.
 
 If you are updating from a previous version and you don't want to
 reinstall everything from scratch, read the instructions
@@ -12,7 +71,7 @@ Four types of installations are described in the following:
 
 * For new users:
 
-  * :ref:`quickinstall`
+  * :ref:`quicksetup`
 
 * For experienced users:
 
@@ -20,90 +79,10 @@ Four types of installations are described in the following:
   * :ref:`Server setup`
   * :ref:`Developer`
 
-Installation Requirements
-+++++++++++++++++++++++++
-Read on for more information about the kind of operating system AiiDA can run on and what software needs to be installed before AiiDA can work.
+.. _quicksetup:
 
-Supported architecture
-----------------------
-AiiDA is tested to run on:
-
-* Mac OS X (tested)
-* Ubuntu 14.04
-
-AiiDA should run on:
-
-* Older / newer Ubuntu versions
-* Other Linux distributions
-
-.. TODO: remove / replace with above?
-.. AiiDA has a few strict requirements, in its current version:
-.. first, it will run only on Unix-like systems - it
-.. is tested (and developed) in Mac OS X and Linux (Ubuntu), but other Unix
-.. flavours *should* work as well.
-
-.. TODO: move to Add computing resources
-.. Moreover, on the clusters (computational resources) side, it expects to find
-.. a Unix system, and the default shell is **required** to be ``bash``.
-
-.. _install_dependencies:
-
-Required Software
------------------
-The following are required to be installed on your computer:
-
-* `python 2.7.x`_ (The programming language used for AiiDA)
-* `python-pip`_ (To install python packages)
-* `python-virtualenv`_ (Or equivalent, to install AiiDA safely)
-* `PostgreSQL`_ (For the database)
-* PostgreSQL development files (required by some of the python packages AiiDA relies on)
-
-.. _python 2.7.x: https://www.python.org/
-.. _python-pip`: https://packaging.python.org/installing/#requirements-for-installing-packages
-.. _python-virtualenv: https://virtualenv.pypa.io/en/stable/
-.. _PostgreSQL: https://www.postgresql.org/
-
-.. TODO: is this really necessary?
-.. Installing Required Dependencies
-.. ++++++++++++++++++++++++++++++++
-.. 
-.. Installing python
-.. -----------------
-.. 
-.. AiiDA requires python 2.7.x (only CPython has been tested).
-.. It is probable that you already have a version of
-.. python installed on your computer. To check, open a terminal and type::
-.. 
-..     python -V
-.. 
-.. that will print something like this::
-.. 
-..     Python 2.7.3
-.. 
-.. If you don't have python installed, or your version is outdated, please install
-.. a suitable version of python (either refer to the manual of your Linux
-.. distribution, or for instance you can download the ActiveState Python from
-.. ActiveState_. Choose the appropriate distribution corresponding to your
-.. architecture, and with version 2.7.x.x).
-.. 
-.. .. _ActiveState: http://www.activestate.com/activepython/downloads
-
-.. Installation of the core dependencies
-.. +++++++++++++++++++++++++++++++++++++
-
-.. TODO: definitely unnecessary now?
-.. Database
-.. --------
-.. 
-.. As a first thing, :doc:`choose and setup the database that you want to
-.. use<database/index>`.
-.. 
-.. .. _other_core_dependencies:
-
-.. _quickinstall:
-
-Quickinstall
-++++++++++++
+Quicksetup
+++++++++++
 
 Installing Dependencies
 -----------------------
@@ -153,6 +132,7 @@ For Ubuntu, you can install the above packages using (tested on Ubuntu 12.04,
 names may change in different releases)::
 
       $ sudo apt-get install git python-pip python2.7-dev postgresql postgresql-server-dev-all postgresql-client
+      $ pip install virtualenv
 
 .. Todo: confirm outdated due to dropping support for other dbs
 .. .. note:: For the latter line, please use the same version (in the

@@ -17,6 +17,8 @@ If your distribution uses a different package manager, simply replace the comman
       $ sudo apt-get install git python-pip python2.7-dev postgresql postgresql-server-dev-all postgresql-client
 
 2. Install AiiDA::
+      $ pip install -U setuptools pip
+
       $ pip install virtualenv
 
       $ virtualenv ~/aiidapy 
@@ -42,6 +44,8 @@ If you use another package manager just replace the first step accordingly.
       $ pg_ctl -D /usr/local/var/postgres start
 
 2. Install AiiDA::
+      $ pip install -U setuptools pip
+
       $ pip install virtualenv
 
       $ virtualenv ~/aiidapy 
@@ -78,6 +82,86 @@ Four types of installations are described in the following:
   * :ref:`Custom user configuration`
   * :ref:`Server setup`
   * :ref:`Developer`
+
+Installation Requirements
++++++++++++++++++++++++++
+Read on for more information about the kind of operating system AiiDA can run on and what software needs to be installed before AiiDA can work.
+
+Supported architecture
+----------------------
+AiiDA is tested to run on:
+
+* Mac OS X (tested)
+* Ubuntu 14.04
+
+AiiDA should run on:
+
+* Older / newer Ubuntu versions
+* Other Linux distributions
+
+.. TODO: remove / replace with above?
+.. AiiDA has a few strict requirements, in its current version:
+.. first, it will run only on Unix-like systems - it
+.. is tested (and developed) in Mac OS X and Linux (Ubuntu), but other Unix
+.. flavours *should* work as well.
+
+.. TODO: move to Add computing resources
+.. Moreover, on the clusters (computational resources) side, it expects to find
+.. a Unix system, and the default shell is **required** to be ``bash``.
+
+.. _install_dependencies:
+
+Required Software
+-----------------
+The following are required to be installed on your computer:
+
+* `python 2.7.x`_ (The programming language used for AiiDA)
+* `python-pip`_ (To install python packages)
+* `python-virtualenv`_ (Or equivalent, to install AiiDA safely)
+* `PostgreSQL`_ (For the database)
+* PostgreSQL development files (required by some of the python packages AiiDA relies on)
+
+.. _python 2.7.x: https://www.python.org/
+.. _python-pip`: https://packaging.python.org/installing/#requirements-for-installing-packages
+.. _python-virtualenv: https://virtualenv.pypa.io/en/stable/
+.. _PostgreSQL: https://www.postgresql.org/
+
+.. TODO: is this really necessary?
+.. Installing Required Dependencies
+.. ++++++++++++++++++++++++++++++++
+.. 
+.. Installing python
+.. -----------------
+.. 
+.. AiiDA requires python 2.7.x (only CPython has been tested).
+.. It is probable that you already have a version of
+.. python installed on your computer. To check, open a terminal and type::
+.. 
+..     python -V
+.. 
+.. that will print something like this::
+.. 
+..     Python 2.7.3
+.. 
+.. If you don't have python installed, or your version is outdated, please install
+.. a suitable version of python (either refer to the manual of your Linux
+.. distribution, or for instance you can download the ActiveState Python from
+.. ActiveState_. Choose the appropriate distribution corresponding to your
+.. architecture, and with version 2.7.x.x).
+.. 
+.. .. _ActiveState: http://www.activestate.com/activepython/downloads
+
+.. Installation of the core dependencies
+.. +++++++++++++++++++++++++++++++++++++
+
+.. TODO: definitely unnecessary now?
+.. Database
+.. --------
+.. 
+.. As a first thing, :doc:`choose and setup the database that you want to
+.. use<database/index>`.
+.. 
+.. .. _other_core_dependencies:
 
 .. _quicksetup:
 

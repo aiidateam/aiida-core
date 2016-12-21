@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from abc import abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 import logging
 import os
@@ -801,3 +801,11 @@ class AbstractComputer(object):
         else:
             return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname,
                                                        self.pk)
+
+
+class Util(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def delete_computer(self, pk):
+        pass

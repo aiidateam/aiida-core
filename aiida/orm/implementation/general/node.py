@@ -626,6 +626,7 @@ class AbstractNode(object):
                 If True, return a list of tuples, where each tuple has the
                 following format: ('label', Node), with 'label' the link label,
                 and Node a Node instance or subclass
+        :param link_type: Only return outputs connected by links of this type.
         """
         pass
 

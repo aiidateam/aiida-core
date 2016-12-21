@@ -1,46 +1,14 @@
 # -*- coding: utf-8 -*-
+from sqlalchemy import inspect
+from sqlalchemy.orm.mapper import Mapper
+from sqlalchemy.types import Integer, Boolean
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
-__all__ = ['delete_computer', 'django_filter', 'get_attr']
-
-from sqlalchemy import inspect
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm.mapper import Mapper
-from sqlalchemy.types import Integer, Boolean
-
-from aiida.backends import sqlalchemy as sa
-from aiida.common.exceptions import InvalidOperation
-from aiida.orm.implementation.sqlalchemy.computer import Computer
-import aiida
-
-def delete_computer(computer):
-    """
-    Delete a computer from the DB.
-    It assumes that the DB backend does the proper checks and avoids
-    to delete computers that have nodes attached to them.
-
-    Implemented as a function on purpose, otherwise complicated logic would be
-    needed to set the internal state of the object after calling
-    computer.delete().
-    """
-    if not isinstance(computer, Computer):
-        raise TypeError("computer must be an instance of "
-                        "aiida.orm.computer.Computer")
-
-    if computer.to_be_stored:
-        raise InvalidOperation("You are attempting to delete a computer "
-                               "object that has not been stored yet")
-
-    try:
-        aiida.backends.sqlalchemy.session.delete(computer.dbcomputer)
-        aiida.backends.sqlalchemy.session.commit()
-    except SQLAlchemyError:
-        raise InvalidOperation("Unable to delete the requested computer: there "
-                               "is at least one node using this computer")
+__all__ = ['django_filter', 'get_attr']
 
 
 def iter_dict(attrs):

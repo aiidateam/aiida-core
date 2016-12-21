@@ -5,43 +5,18 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-
+import datetime
 from datetime import datetime
 from json import loads as json_loads
 
-from querybuilder_base import (
-    AbstractQueryBuilder,
-    datetime,
-    InputValidationError
-)
-
-from aiida.backends.querybuild.dummy_model import (
-    # Tables:
-    DbNode      as DummyNode,
-    DbLink      as DummyLink,
-    DbCalcState as DummyState,
-    DbPath      as DummyPath,
-    DbPathBeta  as DummyPathBeta,
-    DbUser      as DummyUser,
-    DbComputer  as DummyComputer,
-    DbGroup     as DummyGroup,
-    DbExtra     as DummyExtra,
-    DbAttribute as DummyAttribute,
-    descendants_beta as DummyDescendants_beta,
-    table_groups_nodes  as Dummy_table_groups_nodes,
-    # session,                             # session with DB
-)
-
-import dummy_model
-
+import aiida.backends.querybuild.dummy_model as dummy_model
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
-
-
 from aiida.backends.querybuild.sa_init import (
     and_, or_, aliased,      # Queryfuncs
-    cast, Float, Integer, Boolean, DateTime,
-    case, exists, join, select, exists
+    cast, Float, case, select, exists
 )
+from aiida.common.exceptions import InputValidationError
+from querybuilder_base import AbstractQueryBuilder
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -56,23 +31,22 @@ class QueryBuilder(AbstractQueryBuilder):
         from aiida.orm.implementation.django.computer import Computer as AiidaComputer
         from aiida.orm.implementation.django.user import User as AiidaUser
 
-        self.Link               = DummyLink
-        self.Path               = DummyPath
-        self.PathBeta           = DummyPathBeta
-        self.Node               = DummyNode
-        self.Computer           = DummyComputer
-        self.User               = DummyUser
-        self.Group              = DummyGroup
-        self.table_groups_nodes = Dummy_table_groups_nodes
-        self.descendants_beta   = DummyDescendants_beta
+        self.Link               = dummy_model.DbLink
+        self.Node               = dummy_model.DbNode
+        self.Computer           = dummy_model.DbComputer
+        self.User               = dummy_model.DbUser
+        self.Group              = dummy_model.DbGroup
+        self.table_groups_nodes = dummy_model.table_groups_nodes
         self.AiidaNode          = AiidaNode
         self.AiidaGroup         = AiidaGroup
         self.AiidaComputer      = AiidaComputer
         self.AiidaUser          = AiidaUser
 
-
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
+    def _prepare_with_dbpath(self):
+        from aiida.backends.querybuild.dummy_model import DbPath as DummyPath
+        self.Path = DummyPath
 
     def _get_aiida_res(self, key, res):
         """
@@ -153,7 +127,7 @@ class QueryBuilder(AbstractQueryBuilder):
 
             return mapped_entity
         if column:
-            mapped_class = db_column.prop.mapper.class_
+            mapped_class = column.prop.mapper.class_
         else:
             column = getattr(alias, column_name)
             mapped_class = column.prop.mapper.class_
@@ -201,9 +175,9 @@ class QueryBuilder(AbstractQueryBuilder):
 
 
         elif operator=='has_key':
-            if issubclass(mapped_class, DummyAttribute):
+            if issubclass(mapped_class, dummy_model.DbAttribute):
                 expr = alias.attributes.any(mapped_class.key == '.'.join(attr_key+[value]))
-            elif issubclass(mapped_class, DummyExtra):
+            elif issubclass(mapped_class, dummy_model.DbExtra):
                 expr = alias.extras.any(mapped_class.key == '.'.join(attr_key+[value]))
             else:
                 raise Exception("I was given {} as an attribute base class".format(mapped_class))
@@ -317,9 +291,7 @@ class QueryBuilder(AbstractQueryBuilder):
 
         :returns: a generator
         """
-        from django.db import transaction
-        with transaction.atomic():
-            return self.get_query().yield_per(batch_size)
+        return self.get_query().yield_per(batch_size)
 
 
     def _all(self):
@@ -336,3 +308,95 @@ class QueryBuilder(AbstractQueryBuilder):
         from django.db import transaction
         with transaction.atomic():
             return self.get_query().first()
+
+
+    def iterall(self, batch_size=100):
+        """
+        Same as :func:`QueryBuilderBase.all`, but returns a generator.
+        Be aware that this is only safe if no commit will take place during this
+        transaction. You might also want to read the SQLAlchemy documentation on
+        http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
+
+        With respect to SQLA implementation of the QueryBuilder, this is wrapped into one atomic transaction
+        """
+
+        from django.db import transaction
+        with transaction.atomic():
+            if batch_size is not None:
+                results = self._yield_per(batch_size)
+            else:
+                results = self._all()
+            try:
+                for resultrow in results:
+                    yield [
+                        self._get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
+                        for colindex, rowitem
+                        in enumerate(resultrow)
+                    ]
+            except TypeError:
+                # resultrow not an iterable:
+                # Checked, result that raises exception is included
+                if len(self._attrkeys_as_in_sql_result) > 1:
+                    raise Exception(
+                        "I have not received an iterable\n"
+                        "but the number of projections is > 1"
+                    )
+                for rowitem in results:
+                    yield [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], rowitem)]
+
+
+    def iterdict(self, batch_size=100):
+        """
+        Same as :func:`QueryBuilderBase.dict`, but returns a generator.
+        Be aware that this is only safe if no commit will take place during this
+        transaction. You might also want to read the SQLAlchemy documentation on
+        http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
+
+
+        :param int batch_size:
+            The size of the batches to ask the backend to batch results in subcollections.
+            You can optimize the speed of the query by tuning this parameter.
+
+        :returns: a generator of dictionaries
+
+        In the implementation using Django in the backend, the query is context in an atomic transaction
+        """
+
+        from django.db import transaction
+        with transaction.atomic():
+
+            if batch_size is not None:
+                results = self._yield_per(batch_size=batch_size)
+            else:
+                results = self._all()
+
+            try:
+                for this_result in results:
+                    yield {
+                        tag:{
+                            attrkey:self._get_aiida_res(
+                                    attrkey, this_result[index_in_sql_result]
+                                )
+                            for attrkey, index_in_sql_result
+                            in projected_entities_dict.items()
+                        }
+                        for tag, projected_entities_dict
+                        in self.tag_to_projected_entity_dict.items()
+                    }
+            except TypeError:
+                # resultrow not an iterable:
+                # Checked, result that raises exception is included
+                if len(self._attrkeys_as_in_sql_result) > 1:
+                    raise Exception(
+                        "I have not received an iterable\n"
+                        "but the number of projections is > 1"
+                    )
+                for this_result in results:
+                    yield {
+                        tag:{
+                            attrkey : self._get_aiida_res(attrkey, this_result)
+                            for attrkey, position in projected_entities_dict.items()
+                        }
+                        for tag, projected_entities_dict in self.tag_to_projected_entity_dict.items()
+                    }
+

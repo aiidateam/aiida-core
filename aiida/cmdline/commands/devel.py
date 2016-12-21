@@ -552,6 +552,11 @@ class Devel(VerdiCommandWithSubcommands):
                 print >> sys.stderr, e.message
                 sys.exit(1)
 
+            # project_dir = os.path.join(os.path.dirname(aiida.__file__), '..')
+            # testsuite = unittest.defaultTestLoader.discover('test', top_level_dir=project_dir)
+            # test_runner = unittest.TextTestRunner()
+            # test_runner.run(testsuite)
+
             print "v" * 75
             print (">>> Tests for {} db application".format(settings.BACKEND))
             print "^" * 75

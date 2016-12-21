@@ -1462,6 +1462,73 @@ _chemical_formula_sum                   'Ba2 Ti'
 """))
 
 
+    def test_xyz_parser(self):
+        from aiida.orm.data.structure import StructureData
+        import numpy as np
+        xyz_string1 = """
+3
+
+Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
+Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
+Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
+"""
+        xyz_string2 = """
+2
+Silver dimer;
+Ag 0 0 0
+Ag 0 0 2.5335
+"""
+
+        xyz_string3 = """
+2
+Shifted Silver dimer;
+Ag 0 0 -.5
+Ag 0 0 2.0335
+"""
+        
+        for xyz_string in (xyz_string1, xyz_string2, xyz_string3):
+            s = StructureData()
+            # Parsing the string:
+            s._parse_xyz(xyz_string)
+            # Making sure that the periodic boundary condition are not True
+            # because I cannot parse a cell!
+            self.assertTrue(not(any(s.pbc)))
+            # Making sure that the structure has sites, kinds and a cell
+            self.assertTrue(s.sites)
+            self.assertTrue(s.kinds)
+            self.assertTrue(s.cell)
+            # The default cell is given in these cases:
+            self.assertEqual(s.cell, np.diag([1,1,1]).tolist())
+
+        # Testing a case where 1
+        xyz_string4 =  """
+1
+
+Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
+Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
+Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
+"""
+        xyz_string5 =  """
+10
+
+Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
+Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
+Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
+"""
+        xyz_string6 = """
+2
+Shifted Silver dimer;
+Ag 0 0 -.5
+Ag 0 0
+"""
+
+        # The above cases have to fail because the number of atoms is wrong
+        for xyz_string in (xyz_string4, xyz_string5, xyz_string6):
+            with self.assertRaises(TypeError):
+                StructureData()._parse_xyz(xyz_string)
+
+
+
 class TestStructureDataLock(AiidaTestCase):
     """
     Tests that the structure is locked after storage

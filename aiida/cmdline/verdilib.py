@@ -39,7 +39,7 @@ from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.profile import Profile
 from aiida.cmdline.commands.workflow import Workflow
-from aiida.cmdline.commands.workflow2 import Workflow2
+from aiida.cmdline.commands.work import Work
 from aiida.cmdline.commands.comment import Comment
 from aiida.cmdline.commands.shell import Shell
 from aiida.cmdline import execname
@@ -391,14 +391,15 @@ class Install(VerdiCommand):
 
             elif backend_choice == BACKEND_SQLA:
                 print("...for SQLAlchemy backend")
-                from aiida.backends.sqlalchemy.models.base import Base
-                from aiida.backends.sqlalchemy.utils import (get_engine,
-                                                             install_tc)
-                from aiida.common.setup import get_profile_config
                 from aiida import is_dbenv_loaded, load_dbenv
 
                 if not is_dbenv_loaded():
                     load_dbenv()
+
+                from aiida.backends.sqlalchemy.models.base import Base
+                from aiida.backends.sqlalchemy.utils import (get_engine,
+                                                             install_tc)
+                from aiida.common.setup import get_profile_config
 
                 # This check should be done more properly
                 # try:

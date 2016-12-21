@@ -920,6 +920,7 @@ class StructureData(Data):
             raise TypeError("The data does not contain any XYZ data")
 
         self.clear_kinds()
+        self.pbc = (False, False, False)
 
         for sym, position in atoms:
             self.append_atom(symbols=sym, position=position)

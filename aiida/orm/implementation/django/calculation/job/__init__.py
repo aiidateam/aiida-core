@@ -123,7 +123,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
 
         .. todo:: does not support the query for the IMPORTED state (since it
           checks the state in the Attributes, not in the DbCalcState table).
-          Decide which is the correct logi and implement the correct query.
+          Decide which is the correct logic and implement the correct query.
 
         :param states: a list of string with states. If set, print only the
             calculations in the states "states", otherwise shows all.

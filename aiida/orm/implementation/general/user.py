@@ -150,6 +150,24 @@ class AbstractUser(object):
     @classmethod
     @abstractmethod
     def search_for_users(cls, **kwargs):
+        """
+        Search for a user the passed keys.
+
+        :param kwargs: The keys to search for the user with.
+        :return: A list of users matching the search criteria.
+        """
+        pass
+
+
+class Util(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def delete_user(self, pk):
+        """
+        Delete the user with the given pk.
+        :param pk: The user pk.
+        """
         pass
 
     @staticmethod

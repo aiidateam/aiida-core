@@ -317,7 +317,7 @@ class Install(VerdiCommand):
 
     def run(self, *args):
         click.echo('\nwarning: verdi install is deprecated, use verdi setup.\n')
-        ctx = _setup_cmd.make_context('setup', sys.argv[2:])
+        ctx = _setup_cmd.make_context('setup', list(args))
         with ctx:
             _setup_cmd.invoke(ctx)
 
@@ -338,7 +338,7 @@ class Setup(VerdiCommand):
     a migrate command to create/setup the database.
     """
     def run(self, *args):
-        ctx = _setup_cmd.make_context('setup', sys.argv[2:])
+        ctx = _setup_cmd.make_context('setup', list(args))
         with ctx:
             _setup_cmd.invoke(ctx)
 
@@ -444,7 +444,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 db_port=kwargs['db_port'],
                 db_name=kwargs['db_name'],
                 db_user=kwargs['db_user'],
-                db_pass=kwargs['db_pass'],
+                db_pass=kwargs.get('db_pass', ''),
                 repo=kwargs['repo'],
                 force_overwrite=kwargs.get('force_overwrite', False)
             )

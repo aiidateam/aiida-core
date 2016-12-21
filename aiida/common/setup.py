@@ -617,7 +617,7 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     new_profile['AIIDADB_PORT'] = kwargs.pop('db_port')
     new_profile['AIIDADB_NAME'] = kwargs.pop('db_name')
     new_profile['AIIDADB_USER'] = kwargs.pop('db_user')
-    new_profile['AIIDADB_PASS'] = kwargs.pop('db_pass')
+    new_profile['AIIDADB_PASS'] = kwargs.pop('db_pass', '')
 
     # setting repo
     repo_v = kwargs.pop('repo')

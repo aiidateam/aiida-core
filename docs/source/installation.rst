@@ -216,15 +216,20 @@ Installing AiiDA
 
 1. Create a virtual python environment::
 
-      $ virtualenv ~/aiidapy
+      $ virtualenv ~/aiidapy 
+      $ # or conda create -n aiidapy python2.7 # if you use conda to manage python environments
+      $ # or mkvirtualenv aiidapy # if you use virtualenvwrapper
+
       
 2. Activate the environment::
 
       $ source ~/aiidapy/bin/activate
+      $ or source activate aiidapy # (conda)
+      $ or workon aiidapy # (virtualenvwrapper)
 
 3. Install aiida into the environment::
       
-      (aiidapy) $ pip install aiida
+      (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
 
 4. Setup and configure aiida::
       

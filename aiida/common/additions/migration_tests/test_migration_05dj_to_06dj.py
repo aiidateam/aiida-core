@@ -7,7 +7,8 @@ from shutil import copyfile, rmtree
 
 import aiida
 import aiida.common.setup as setup
-from aiida.common.additions.migration import Migration
+from aiida.common.additions.old_migrations.migration_05dj_to_06dj import (
+    Migration)
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."

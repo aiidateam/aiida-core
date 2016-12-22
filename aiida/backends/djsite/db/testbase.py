@@ -34,6 +34,9 @@ class DjangoTests(AiidaTestImplementation):
     def setUp_method(self):
         pass
 
+    def tearDown_method(self):
+        pass
+
     def insert_data(self):
         """
         Insert default data into the DB.

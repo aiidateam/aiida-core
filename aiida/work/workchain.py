@@ -6,7 +6,6 @@ from aiida.work.process import Process, ProcessSpec
 from aiida.common.lang import override
 from aiida.common.utils import get_class_string, get_object_string,\
     get_object_from_string
-from aiida.orm import load_node
 from plum.wait_ons import Checkpoint, WaitOnAll, WaitOnProcess
 from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
@@ -293,10 +292,12 @@ class ToContext(Interstep):
 
 
 def _get_calc(pid):
+    from aiida.orm import load_node
     return load_node(pid)
 
 
 def _get_outputs(pid):
+    from aiida.orm import load_node
     return load_node(pid).get_outputs_dict()
 
 

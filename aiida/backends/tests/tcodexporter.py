@@ -129,8 +129,9 @@ class TestTcodDbExporter(AiidaTestCase):
               'sha1': sha1, 'type': 'file'},
              {'name': 'save/2/', 'type': 'folder'}])
 
-    @unittest.skipIf(not has_ase() or not has_pyspglib() or not has_pycifrw(),
-                     "Unable to import ase or pyspglib")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
@@ -463,8 +464,9 @@ class TestTcodDbExporter(AiidaTestCase):
             '_dft_atom_type_valence_configuration': ['2s', '3s2p'],
         })
 
-    @unittest.skipIf(not has_ase() or not has_pycifrw() or not has_pyspglib(),
-                     "Unable to import ase, pycifrw or pyspglib")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_inline_export(self):
         from aiida.orm.data.cif import CifData
         from aiida.tools.dbexporters.tcod import export_values
@@ -496,8 +498,9 @@ class TestTcodDbExporter(AiidaTestCase):
         function = '_get_aiida_structure_ase_inline'
         self.assertNotEqual(script.find(function), script.rfind(function))
 
-    @unittest.skipIf(not has_ase() or not has_pyspglib() or not has_pycifrw(),
-                     "Unable to import ase or pyspglib")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_symmetry_reduction(self):
         from aiida.orm.data.structure import StructureData
         from aiida.tools.dbexporters.tcod import export_values
@@ -549,8 +552,9 @@ class TestTcodDbExporter(AiidaTestCase):
 
         self.assertEqual(options, {})
 
-    @unittest.skipIf(not has_ase() or not has_pycifrw() or not has_pyspglib(),
-                     "Unable to import ase, pycifrw or pyspglib")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_export_trajectory(self):
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.array.trajectory import TrajectoryData

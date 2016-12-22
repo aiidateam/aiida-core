@@ -23,12 +23,6 @@ app = Flask(__name__)
 api = Api(app, prefix=conf.PREFIX)
 cors = CORS(app, resources={r"/api/v2/*": {"origins": "*"}})
 
-# database
-from aiida.restapi.database.initdb import mcloud_db_session
-from aiida.restapi.database.resources import (McloudUserResource,
-    McloudUsersResource, McloudTokenResource )
-
-
 ## Error handling for error raised for invalid urls (not for non existing
 # resources!)
 @app.errorhandler(Exception)
@@ -158,28 +152,6 @@ api.add_resource(Group,
                  '/groups/page/<int:page>/',
                  '/groups/<int:pk>/',
                  strict_slashes=False)
-
-#mcloud user resource mapping
-api.add_resource(McloudUsersResource,
-                 '/mcloud/users/',
-                 strict_slashes=False)
-
-api.add_resource(McloudUserResource,
-                 '/mcloud/user/',
-                 '/mcloud/user/<int:pk>/',
-                 strict_slashes=False)
-
-api.add_resource(McloudTokenResource,
-                 '/mcloud/token/',
-                 strict_slashes=False)
-
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    mcloud_db_session.remove()
-
-from aiida.restapi.database.initdb import setup_database
-setup_database()
-
 
 
 # Standard boilerplate to run the app

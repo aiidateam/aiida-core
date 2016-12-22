@@ -11,6 +11,7 @@ from aiida.common.lang import override
 from aiida.orm.implementation.general.computer import AbstractComputer, Util as ComputerUtil
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
+from aiida.orm.implementation.django.utils import get_db_columns
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -77,9 +78,6 @@ class Computer(AbstractComputer):
     @staticmethod
     def get_db_columns():
         from aiida.backends.djsite.db.models import DbComputer
-        #I import get_db_columns here to avoid circular imports.
-        #Indeed, aiida.orm.implementation.django.utils imports Computer
-        from aiida.orm.implementation.django.utils import get_db_columns
         return get_db_columns(DbComputer)
 
     @classmethod

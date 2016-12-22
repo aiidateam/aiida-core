@@ -5,7 +5,6 @@ import os.path
 
 import plum.persistence.pickle_persistence
 from plum.process import Process
-from aiida.orm import load_node
 from aiida.common.lang import override
 from aiida.work.defaults import class_loader
 
@@ -62,6 +61,8 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         :return: A dictionary with the loaded nodes.
         :rtype: dict
         """
+        from aiida.orm import load_node
+
         nodes = {}
         for label, pk in pks_mapping.iteritems():
             if isinstance(pk, collections.Mapping):

@@ -4,7 +4,8 @@ import unittest
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import load_node
-from aiida.orm.data.base import NumericType, Float, Str, Bool, Int, TRUE, FALSE
+from aiida.orm.data.base import (
+    NumericType, Float, Str, Bool, Int, get_true_node, get_false_node)
 import aiida.orm.data.base as base
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -84,8 +85,9 @@ class TestList(AiidaTestCase):
             l.reverse()
 
 
-class TestFloat(unittest.TestCase):
+class TestFloat(AiidaTestCase):
     def setUp(self):
+        super(TestFloat, self).setUp()
         self.value = Float()
         self.all_types = [Int, Float, Bool, Str]
 
@@ -108,10 +110,10 @@ class TestFloat(unittest.TestCase):
         self.assertEqual(b.value, False)
         b = Bool(False)
         self.assertEqual(b.value, False)
-        self.assertEqual(b.value, FALSE)
+        self.assertEqual(b.value, get_false_node())
         b = Bool(True)
         self.assertEqual(b.value, True)
-        self.assertEqual(b.value, TRUE)
+        self.assertEqual(b.value, get_true_node())
 
         s = Str()
         self.assertEqual(s.value, "")

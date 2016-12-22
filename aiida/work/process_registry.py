@@ -6,9 +6,6 @@ import plum.process_monitor
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override
 from aiida.work.util import ProcessStack
-from aiida.orm import load_node
-from aiida.orm.calculation.job import JobCalculation
-from aiida.orm.calculation.work import WorkCalculation
 
 
 class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
@@ -26,6 +23,9 @@ class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
 
     @override
     def has_finished(self, pid):
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.calculation.work import WorkCalculation
+
         import aiida.orm
 
         try:
@@ -44,6 +44,8 @@ class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
 
     @override
     def get_inputs(self, pid):
+        from aiida.orm import load_node
+
         try:
             return load_node(pid).get_inputs_dict()
         except exceptions.NotExistent:
@@ -52,6 +54,8 @@ class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
 
     @override
     def get_outputs(self, pid):
+        from aiida.orm import load_node
+
         try:
             return load_node(pid).get_outputs_dict()
         except exceptions.NotExistent:

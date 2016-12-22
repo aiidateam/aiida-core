@@ -4,9 +4,7 @@ import tempfile
 from shutil import rmtree
 
 from plum.wait_ons import checkpoint
-
 from aiida.work.persistence import Persistence
-from aiida.orm.data.base import TRUE
 import aiida.work.daemon as daemon
 from aiida.work.process import Process
 from aiida.work.process_registry import ProcessRegistry
@@ -16,6 +14,14 @@ from aiida.orm import load_node
 import aiida.work.util as util
 from aiida.work.test_utils import DummyProcess, ExceptionProcess
 
+def get_true_node():
+    """
+    Return a TRUE node.
+
+    Done in this way to achieve lazy loading of aiida.orm
+    """
+    from aiida.orm.data.base import get_true_node
+    return get_true_node()
 
 class ProcessEventsTester(Process):
     EVENTS = ["create", "run", "continue_", "finish", "emitted", "stop",
@@ -36,12 +42,12 @@ class ProcessEventsTester(Process):
     def on_create(self, pid, inputs, saved_instance_state):
         super(ProcessEventsTester, self).on_create(
             pid, inputs, saved_instance_state)
-        self.out("create", TRUE)
+        self.out("create", get_true_node())
 
     @override
     def on_run(self):
         super(ProcessEventsTester, self).on_run()
-        self.out("run", TRUE)
+        self.out("run", get_true_node())
 
     @override
     def _on_output_emitted(self, output_port, value, dynamic):
@@ -49,32 +55,32 @@ class ProcessEventsTester(Process):
             output_port, value, dynamic)
         if not self._emitted:
             self._emitted = True
-            self.out("emitted", TRUE)
+            self.out("emitted", get_true_node())
 
     @override
     def on_wait(self, wait_on):
         super(ProcessEventsTester, self).on_wait(wait_on)
-        self.out("wait", TRUE)
+        self.out("wait", get_true_node())
 
     @override
     def on_continue(self, wait_on):
         super(ProcessEventsTester, self).on_continue(wait_on)
-        self.out("continue_", TRUE)
+        self.out("continue_", get_true_node())
 
     @override
     def on_finish(self):
         super(ProcessEventsTester, self).on_finish()
-        self.out("finish", TRUE)
+        self.out("finish", get_true_node())
 
     @override
     def on_stop(self):
         super(ProcessEventsTester, self).on_stop()
-        self.out("stop", TRUE)
+        self.out("stop", get_true_node())
 
     @override
     def on_destroy(self):
         super(ProcessEventsTester, self).on_destroy()
-        self.out("destroy", TRUE)
+        self.out("destroy", get_true_node())
 
     @override
     def _run(self):

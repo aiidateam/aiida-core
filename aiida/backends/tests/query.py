@@ -84,7 +84,6 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(query_type_string, Data._query_type_string)
 
 
-    #~ @unittest.skipIf(not (is_django()), "Tests only works with Django backend")
     def test_simple_query_1(self):
         """
         Testing a simple query

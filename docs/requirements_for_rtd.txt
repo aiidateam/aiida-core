@@ -19,6 +19,7 @@ django==1.7.4
 django_extensions==1.5
 
 ## For timezone support
+tzlocal
 pytz==2014.10
 
 ## For the daemon
@@ -43,9 +44,7 @@ pycrypto==2.6.1
 ## used also for arrays in other parts of the code
 numpy
 
-## Tastypie, for the REST API interface
-django-tastypie==0.12.1
-python-dateutil==2.4.0
+python-dateutil~=2.4.0
 python-mimeparse==0.1.4
 
 # SQLAlchemy support
@@ -92,3 +91,5 @@ python-memcached==1.58
 
 # For treating the repository location using URIs
 uritools==1.0.2
+
+

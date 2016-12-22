@@ -906,3 +906,19 @@ def are_dir_trees_equal(dir1, dir2):
 
 def indent(txt, spaces=4):
     return "\n".join(" " * spaces + ln for ln in txt.splitlines())
+
+
+def issingular(singularForm):
+    """
+    Checks whether a noun is singular
+    :param pluralForm: a string defining an English noun
+    :return: the t-ple (singular, pluralform).
+    singular: True/Flalse if noun is singular/plural
+    pluralfrom: (a string with the noun in the plural form))
+    """
+
+    from pattern.en import pluralize
+
+    pluralForm = pluralize(singularForm)
+    singular = True if singularForm is not pluralForm else False
+    return singular, pluralForm

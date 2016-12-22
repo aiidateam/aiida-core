@@ -5,23 +5,18 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-
+import datetime
 from datetime import datetime
 from json import loads as json_loads
-import datetime
 
-from aiida.common.exceptions import InputValidationError
-from querybuilder_base import AbstractQueryBuilder
 import aiida.backends.querybuild.dummy_model as dummy_model
-
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
-
-
 from aiida.backends.querybuild.sa_init import (
     and_, or_, aliased,      # Queryfuncs
-    cast, Float, Integer, Boolean, DateTime,
-    case, exists, join, select, exists
+    cast, Float, case, select, exists
 )
+from aiida.common.exceptions import InputValidationError
+from querybuilder_base import AbstractQueryBuilder
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."

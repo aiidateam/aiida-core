@@ -13,7 +13,7 @@ class DummyProcess(Process):
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def _run(self):
+    def _run(self, **kwargs):
         pass
 
 

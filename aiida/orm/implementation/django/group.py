@@ -9,6 +9,8 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
 
 from aiida.orm.implementation.django.node import Node
 
+from aiida.orm.implementation.django.utils import get_db_columns
+
 from aiida.backends.djsite.utils import get_automatic_user
 
 from django.db import transaction, IntegrityError
@@ -55,6 +57,11 @@ class Group(AbstractGroup):
                 raise ValueError("Too many parameters passed to Group, the "
                                  "unknown parameters are: {}".format(
                     ", ".join(kwargs.keys())))
+
+    @staticmethod
+    def get_db_columns():
+        from aiida.backends.djsite.db.models import DbGroup
+        return get_db_columns(DbGroup)
 
     @property
     def name(self):

@@ -82,6 +82,30 @@ class AiidaTestCase(unittest.TestCase):
 
         cls._class_was_setup = True
 
+    def setUp(self):
+        self.__backend_instance.setUp_method()
+        # from plum.process_monitor import MONITOR
+        # from aiida.work.util import ProcessStack
+        # print "BEFORE:", self.id(), self._testMethodName, ProcessStack.pids()
+
+    def tearDown(self):
+        self.__backend_instance.tearDown_method()
+        # SPHUBER
+        # from plum.process_monitor import MONITOR
+        # from aiida.work.util import ProcessStack
+        # print "AFTER:", self.id(), self._testMethodName, ProcessStack.pids()
+        # print "MONITOR BEFORE:", self.id(), self._testMethodName, MONITOR.get_pids()
+        # print "STACK BEFORE:", self.id(), self._testMethodName, ProcessStack.stack()
+        # for pid in list(ProcessStack.pids()):
+        #     ProcessStack.pop(pid=pid)
+        # MONITOR._reset()
+        # print "MONITOR AFTER:", self.id(), self._testMethodName, MONITOR.get_pids()
+        # print "STACK AFTER:", self.id(), self._testMethodName, ProcessStack.stack()
+
+    @classmethod
+    def insert_data(cls):
+        cls.__backend_instance.insert_data()
+
     @classmethod
     def clean_db(cls):
 
@@ -126,6 +150,7 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
     actually_run_tests = []
     num_tests_expected = 0
     for test in set(tests_to_run):
+        from plum.process_monitor import MONITOR
         try:
             modulenames = get_db_test_list()[test]
         except KeyError:

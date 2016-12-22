@@ -1315,7 +1315,8 @@ class AbstractQueryBuilder(object):
                 isouter=isouterjoin
         ).join(
                 entity_to_join,
-                aliased_edge.output_id == entity_to_join.id,
+   
+             aliased_edge.output_id == entity_to_join.id,
                 isouter=isouterjoin
         )
 
@@ -1529,6 +1530,7 @@ class AbstractQueryBuilder(object):
                 aliased_path.parent_id == entity_to_join.id,
                 isouter=isouterjoin
         )
+
     def _join_group_members(self, joined_entity, entity_to_join, isouterjoin):
         """
         :param joined_entity:
@@ -1556,6 +1558,7 @@ class AbstractQueryBuilder(object):
                 entity_to_join.id == aliased_group_nodes.c.dbnode_id,
                 isouter=isouterjoin
         )
+
     def _join_groups(self, joined_entity, entity_to_join, isouterjoin):
         """
         :param joined_entity: The (aliased) node in the database
@@ -1580,6 +1583,7 @@ class AbstractQueryBuilder(object):
                 entity_to_join.id == aliased_group_nodes.c.dbgroup_id,
                 isouter=isouterjoin
         )
+
     def _join_creator_of(self, joined_entity, entity_to_join, isouterjoin):
         """
         :param joined_entity: the aliased node

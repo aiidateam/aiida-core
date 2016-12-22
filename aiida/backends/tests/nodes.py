@@ -240,7 +240,6 @@ class TestNodeBasic(AiidaTestCase):
             # I get a non-existing attribute
             a.get_attr('nonexisting')
 
-
     def test_get_attrs_before_storing(self):
         a = Node()
         a._set_attr('k1', self.boolval)
@@ -1123,6 +1122,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
                               for i in endnode.get_inputs(also_labels=True)]),
                          set([("N2", n2.uuid)]))
 
+    import unittest
+    # @unittest.skip("")
     def test_use_code(self):
         from aiida.orm import JobCalculation
         from aiida.orm.code import Code
@@ -1147,11 +1148,16 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertEqual(calc.get_code().uuid, code.uuid)
         self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
 
+        # import aiida.backends.sqlalchemy
+        # aiida.backends.sqlalchemy.session.refresh(computer._dbcomputer)
+
         # calc is not stored, but code is
         code.store()
 
         self.assertEqual(calc.get_code().uuid, code.uuid)
         self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
+
+        # aiida.backends.sqlalchemy.session.refresh(computer._dbcomputer)
 
         unstoredcalc.store()
 

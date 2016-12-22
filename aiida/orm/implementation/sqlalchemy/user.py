@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.implementation.general.user import AbstractUser, Util as UserUtil
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.utils.email import normalize_email
 from aiida.common.lang import override
+from aiida.orm.implementation.general.user import AbstractUser, Util as UserUtil
+from aiida.utils.email import normalize_email
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -46,6 +46,11 @@ class User(AbstractUser):
 
         else:
             raise ValueError("Only dbuser & email are accepted as arguments")
+
+    @staticmethod
+    def get_db_columns():
+        from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
+        return get_db_columns(DbUser)
 
     @property
     def pk(self):

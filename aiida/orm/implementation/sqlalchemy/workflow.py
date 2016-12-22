@@ -523,7 +523,7 @@ class Workflow(AbstractWorkflow):
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
-        import aiida.backends.sqlalchemy.session
+        import aiida.backends.sqlalchemy
         try:
             aiida.backends.sqlalchemy.session.begin_nested()
             dbworkflowinstance = DbWorkflow.query.filter_by(id=pk).first()
@@ -539,7 +539,7 @@ class Workflow(AbstractWorkflow):
 
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
-        import aiida.backends.sqlalchemy.session
+        import aiida.backends.sqlalchemy
         try:
             aiida.backends.sqlalchemy.session.begin_nested()
             dbworkflowinstance = DbWorkflow.query.filter_by(uuid=uuid).first()

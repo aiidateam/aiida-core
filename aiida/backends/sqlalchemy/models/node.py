@@ -44,6 +44,9 @@ class DbNode(Base):
     mtime = Column(DateTime(timezone=True), default=timezone.now)
     nodeversion = Column(Integer, default=1)
     public = Column(Boolean, default=False)
+    attributes = Column(JSONB)
+    extras = Column(JSONB)
+
 
     dbcomputer_id = Column(
         Integer,
@@ -67,10 +70,6 @@ class DbNode(Base):
     #     nullable=False
     # )
 
-
-    attributes = Column(JSONB, default={})
-    extras = Column(JSONB, default={})
-
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
     # won't take care of automatic deleting in the DbLink table. This still
     # isn't exactly the same behaviour than with Django. The solution to
@@ -79,18 +78,18 @@ class DbNode(Base):
 
     ######### RELATIONSSHIPS ################
 
-    # dbcomputer = relationship(
-    #     'DbComputer',
-    #     backref=backref('dbnodes')
-    #     # backref = backref('dbnodes', passive_deletes='all')
-    # )
-    #
-    # # User
-    # user = relationship(
-    #     'DbUser',
-    #     backref=backref('dbnodes'),
-    #     # backref=backref('dbnodes', passive_deletes='all')
-    # )
+    dbcomputer = relationship(
+        'DbComputer',
+        # backref=backref('dbnodes')
+        backref = backref('dbnodes', passive_deletes='all', cascade='merge')
+    )
+
+    # User
+    user = relationship(
+        'DbUser',
+        # backref=backref('dbnodes'),
+        backref=backref('dbnodes', passive_deletes='all', cascade='merge')
+    )
 
     # outputs via db_dblink table
     outputs = relationship(
@@ -111,32 +110,15 @@ class DbNode(Base):
         passive_deletes=True,
     )
 
-    # Appender-query, so one can query the results:
-    # ~ dbcomputer_q = relationship(
-    # ~ 'DbComputer',
-    # ~ backref=backref('dbnodes_q', passive_deletes=True, lazy='dynamic'),
-    # ~ lazy='dynamic'
-    # ~ )
-    outputs_q = relationship(
-        "DbNode", secondary="db_dblink",
-        primaryjoin="DbNode.id == DbLink.input_id",
-        secondaryjoin="DbNode.id == DbLink.output_id",
-        backref=backref(
-            "inputs_q",
-            passive_deletes=True,
-            lazy='dynamic'
-        ),
-        passive_deletes=True,
-        lazy='dynamic'
-    )
-    children_q = relationship(
-        "DbNode", secondary="db_dbpath",
-        primaryjoin="DbNode.id == DbPath.parent_id",
-        secondaryjoin="DbNode.id == DbPath.child_id",
-        backref=backref("parents_q", lazy='dynamic', passive_deletes=True),
-        lazy='dynamic',
-        passive_deletes=True
-    )
+    def __init__(self, *args, **kwargs):
+        super(DbNode, self).__init__(*args, **kwargs)
+
+        if self.attributes is None:
+            self.attributes = dict()
+
+        if self.extras is None:
+            self.extras = dict()
+
 
     # XXX repetition between django/sqlalchemy here.
     def get_aiida_class(self):
@@ -189,6 +171,11 @@ class DbNode(Base):
 
     def set_extra(self, key, value):
         DbNode._set_attr(self.extras, key, value)
+        flag_modified(self, "extras")
+
+    def reset_extras(self, new_extras):
+        self.extras.clear()
+        self.extras.update(new_extras)
         flag_modified(self, "extras")
 
     def del_attr(self, key):
@@ -254,10 +241,15 @@ class DbLink(Base):
     label = Column(String(255), index=True, nullable=False)
     type = Column(String(255))
 
+    # A calculation can have both a 'return' and a 'create' link to
+    # a single data output node, which would violate the unique constraint
+    # defined below, since the difference in link type is not considered.
+    # The distinction between the type of a 'create' and a 'return' link is not
+    # implemented at the moment, so the unique constraint is disabled.
     __table_args__ = (
         # I cannot add twice the same link
         # I want unique labels among all inputs of a node
-        UniqueConstraint('output_id', 'label'),
+        # UniqueConstraint('output_id', 'label'),
     )
 
     def __str__(self):

@@ -7,6 +7,7 @@ class AiidaTestImplementation(object):
 
     Each subclass must reimplement two *standard* methods (i.e., *not* classmethods), called
     respectively ``setUpClass_method`` and ``tearDownClass_method``.
+    It is also required to implement setUp_method and tearDown_method to be run for each single test
     They can set local properties (e.g. ``self.xxx = yyy``) but remember that ``xxx``
     is not visible to the upper (calling) Test class.
 
@@ -30,6 +31,14 @@ class AiidaTestImplementation(object):
         pass
 
     @abstractmethod
+    def setUp_method(self):
+        pass
+
+    @abstractmethod
+    def tearDown_method(self):
+        pass
+
+    @abstractmethod
     def tearDownClass_method(self):
         """
         This class implements the tear down methods (e.g. cleans up the DB).
@@ -39,10 +48,16 @@ class AiidaTestImplementation(object):
     @abstractmethod
     def clean_db(self):
         """
-        This class implements the logic to fully clean the DB.
+        This method implements the logic to fully clean the DB.
         """
         pass
 
+    @abstractmethod
+    def insert_data(self):
+        """
+        This method inserts default data into the database.
+        """
+        pass
 
     def get_computer(self):
         """

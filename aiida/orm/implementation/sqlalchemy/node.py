@@ -71,7 +71,7 @@ class Node(AbstractNode):
             # TODO: allow to get the user from the parameters
             user = get_automatic_user()
 
-            self._dbnode = DbNode(user_id=user.id,
+            self._dbnode = DbNode(user=user,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 
@@ -89,6 +89,11 @@ class Node(AbstractNode):
             # Automatically set all *other* attributes, if possible, otherwise
             # stop
             self._set_with_defaults(**kwargs)
+
+    @staticmethod
+    def get_db_columns():
+        return get_db_columns(DbNode)
+
 
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
@@ -202,12 +207,13 @@ class Node(AbstractNode):
         #
         # I am linking src->self; a loop would be created if a DbPath exists
         # already in the TC table from self to src
-        c = session.query(literal(True)).filter(DbPath.query
+        if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
+            c = session.query(literal(True)).filter(DbPath.query
                                                 .filter_by(parent_id=self.dbnode.id, child_id=src.dbnode.id)
                                                 .exists()).scalar()
-        if c:
-            raise ValueError(
-                "The link you are attempting to create would generate a loop")
+            if c:
+                raise ValueError(
+                    "The link you are attempting to create would generate a loop")
 
         if label is None:
             autolabel_idx = 1
@@ -361,6 +367,19 @@ class Node(AbstractNode):
         self.dbnode.set_extra(key, value)
         self._increment_version_number_db()
 
+    def reset_extras(self, new_extras):
+
+        if type(new_extras) is not dict:
+            raise ValueError("The new extras have to be a dictionary")
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The extras of a node can be set only after "
+                "storing the node")
+
+        self.dbnode.reset_extras(new_extras)
+        self._increment_version_number_db()
+
     def get_extra(self, key, default=None):
         # TODO SP: in the Django implementation, if the node is not stored,
         # we can't get an extra. In the SQLA one, because this is simply a
@@ -403,7 +422,7 @@ class Node(AbstractNode):
             yield (k, v)
 
     def get_attrs(self):
-        return self.dbnode.attributes
+        return dict(self.iterattrs())
 
     def attrs(self):
         if self._to_be_stored:
@@ -677,7 +696,9 @@ class Node(AbstractNode):
             self._repository_folder.replace_with_folder(
                 self._get_temp_folder().abspath, move=True, overwrite=True)
 
+        #    import aiida.backends.sqlalchemy
             try:
+                # aiida.backends.sqlalchemy.session.add(self._dbnode)
                 self._dbnode.save(commit=False)
                 # Save its attributes 'manually' without incrementing
                 # the version for each add.
@@ -696,9 +717,13 @@ class Node(AbstractNode):
 
                 if with_transaction:
                     try:
+                        # aiida.backends.sqlalchemy.session.commit()
                         self.dbnode.session.commit()
                     except SQLAlchemyError as e:
+                        print "Cannot store the node. Original exception: {" \
+                              "}".format(e)
                         self.dbnode.session.rollback()
+                        # aiida.backends.sqlalchemy.session.rollback()
 
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception

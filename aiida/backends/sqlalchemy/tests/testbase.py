@@ -1,37 +1,34 @@
 # -*- coding: utf-8 -*-
 
-import unittest
 import functools
-import shutil
 import os
+import shutil
 
-
-from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
-
 import aiida.backends.sqlalchemy
-# from aiida.backends.sqlalchemy import session as sa
-from aiida.common.utils import get_configured_user_email
-from aiida.backends.sqlalchemy.utils import (install_tc, loads_json,
-                                             dumps_json)
-from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.orm.computer import Computer
-
-from aiida.common.setup import get_profile_config
-
 from aiida.backends.settings import AIIDADB_PROFILE
+from aiida.backends.sqlalchemy.models.base import Base
+from aiida.backends.sqlalchemy.models.computer import DbComputer
+from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.sqlalchemy.utils import get_session, get_engine
+from aiida.backends.sqlalchemy.utils import (install_tc)
 from aiida.backends.testimplbase import AiidaTestImplementation
+from aiida.common.setup import get_profile_config
+from aiida.common.utils import get_configured_user_email
+from aiida.orm.computer import Computer
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-Session = sessionmaker(expire_on_commit=False)
-# Session = sessionmaker(expire_on_commit=True)
+# Querying for expired objects automatically doesn't seem to work.
+# That's why expire on commit=False resolves many issues of objects beeing
+# obsolete
+
+expire_on_commit = True
+Session = sessionmaker(expire_on_commit=expire_on_commit)
 
 # This contains the codebase for the setUpClass and tearDown methods used internally by the AiidaTestCase
 # This inherits only from 'object' to avoid that it is picked up by the automatic discovery of tests
@@ -40,21 +37,17 @@ Session = sessionmaker(expire_on_commit=False)
 class SqlAlchemyTests(AiidaTestImplementation):
 
     # Specify the need to drop the table at the beginning of a test case
-    drop_all = False
+    drop_all = True
 
     test_session = None
 
     def setUpClass_method(self):
 
-
         if self.test_session is None:
             config = get_profile_config(AIIDADB_PROFILE)
-            engine_url = ("postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-                          "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}").format(**config)
-            engine = create_engine(engine_url,
-                                   json_serializer=dumps_json,
-                                   json_deserializer=loads_json)
+            engine = get_engine(config)
 
+            self.test_session = get_session(engine=engine)
             self.connection = engine.connect()
 
             self.test_session = Session(bind=self.connection)
@@ -64,36 +57,43 @@ class SqlAlchemyTests(AiidaTestImplementation):
             Base.metadata.drop_all(self.connection)
             Base.metadata.create_all(self.connection)
             install_tc(self.connection)
-
-        self.clean_db()
+        else:
+            self.clean_db()
 
         self.insert_data()
 
+    def setUp_method(self):
+        pass
+
+    def tearDown_method(self):
+        pass
+
     def insert_data(self):
         """
-        Insert default data in DB.
+        Insert default data into the DB.
         """
         email = get_configured_user_email()
 
         has_user = DbUser.query.filter(DbUser.email==email).first()
         if not has_user:
-            self.user = DbUser(get_configured_user_email(), "foo", "bar", "tests")
+            self.user = DbUser(get_configured_user_email(), "foo", "bar",
+                               "tests")
             self.test_session.add(self.user)
             self.test_session.commit()
         else:
             self.user = has_user
 
-        ## Reqired by the calling class
+        # Reqired by the calling class
         self.user_email = self.user.email
 
-        ## Also self.computer is required by the calling class
-        has_computer = DbComputer.query.filter(DbComputer.hostname == 'localhost').first()
+        # Also self.computer is required by the calling class
+        has_computer = DbComputer.query.filter(DbComputer.hostname ==
+                                               'localhost').first()
         if not has_computer:
             self.computer = SqlAlchemyTests._create_computer()
             self.computer.store()
         else:
             self.computer = has_computer
-
 
     @staticmethod
     def _create_computer(**kwargs):
@@ -104,7 +104,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
                         workdir='/tmp/aiida')
         defaults.update(kwargs)
         return Computer(**defaults)
-
 
     @staticmethod
     def inject_computer(f):
@@ -147,7 +146,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
         self.test_session.query(DbNode).delete()
 
         # # Delete the users
-        # self.test_session.query(DbUser).delete()
+        self.test_session.query(DbUser).delete()
 
         # Delete the computers
         self.test_session.query(DbComputer).delete()
@@ -174,7 +173,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
         self.test_session = None
 
         self.connection.close()
-
 
         # I clean the test repository
         shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)

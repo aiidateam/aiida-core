@@ -23,7 +23,7 @@ If your distribution uses a different package manager, simply replace the comman
       $ pip install virtualenv
       $ virtualenv ~/aiidapy # or equivalent
       $ source ~/aiidapy/bin/activate
-      (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
+      (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida> 
       (aiidapy) $ verdi quicksetup
 
 3. Add the verdi command to your PATH::
@@ -53,7 +53,7 @@ If you use another package manager just replace the first step accordingly.
       $ pip install virtualenv
       $ virtualenv ~/aiidapy # or equivalent
       $ source ~/aiidapy/bin/activate
-      (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
+      (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
       (aiidapy) $ verdi quicksetup
 
 4. Add the verdi command to your PATH::
@@ -240,9 +240,10 @@ Installing AiiDA (Other Systems)
 
 3. Install aiida into the environment::
       
-      (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
+      (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
 
-This installs the verdi command into your python environment. You can either activate the environment every time before using aiida (that way you could have multiple aiida versions installed in parallel), or you can add the verdi command to your path
+This installs the verdi command into your python environment and puts the source into <folder/containing/aiida>/aiida.
+You can either activate the environment every time before using aiida (that way you could have multiple aiida versions installed in parallel), or you can add the verdi command to your path
 
 4. (optional) add verdi to your path:
    Add this to your .bashrc or .bash_profile or equivalent, assuming you installed with virtualenv::
@@ -763,6 +764,7 @@ Updating AiiDA from a previous version
   * The requirements file may have changed. Please be sure that you have
     installed all the needed requirements. This can be done by executing:
     ``pip install --user -U -r requirements.txt``.
+  * If you installed aiida using pip you should be simply able to pip install --upgrade aiida (from the python environment into which aiida is installed).
 
 
 Updating from 0.6.0 Django to 0.7.0 Django

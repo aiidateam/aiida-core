@@ -23,7 +23,7 @@ If your distribution uses a different package manager, simply replace the comman
       $ pip install virtualenv
       $ virtualenv ~/aiidapy # or equivalent
       $ source ~/aiidapy/bin/activate
-      (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
+      (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
       (aiidapy) $ verdi quicksetup
 
 3. Add the verdi command to your PATH::
@@ -53,7 +53,7 @@ If you use another package manager just replace the first step accordingly.
       $ pip install virtualenv
       $ virtualenv ~/aiidapy # or equivalent
       $ source ~/aiidapy/bin/activate
-      (aiidapy) $ pip install git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
+      (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links
       (aiidapy) $ verdi quicksetup
 
 4. Add the verdi command to your PATH::

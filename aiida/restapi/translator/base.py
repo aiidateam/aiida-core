@@ -26,7 +26,8 @@ class BaseTranslator(object):
     _qb_type = None
 
     _result_type = __label__
-    _default_projections = []
+
+    _default = _default_projections = []
     _is_qb_initialized = False
     _is_pk_query = None
     _total_count = None
@@ -67,15 +68,17 @@ class BaseTranslator(object):
         # Construct the full class string
         class_string = 'aiida.orm.' + cls._aiida_type
 
-        print class_string
-
         # Load correspondent orm class
         orm_class = get_object_from_string(class_string)
 
         # Construct the json object to return it
         basic_schema = orm_class.get_db_columns()
-        schema = dict([(k, basic_schema[k]) for k in cls._default_projections
-                              if k in basic_schema.keys()])
+
+        if cls._default_projections == ['*']:
+            schema = basic_schema # No custom schema, take the basic one
+        else:
+            schema = dict([(k, basic_schema[k]) for k in cls._default_projections
+                                  if k in basic_schema.keys()])
 
         # Convert the related_tablevalues to the RESTAPI resources
         # (orm class/db table ==> RESTapi resource)
@@ -99,8 +102,9 @@ class BaseTranslator(object):
         for k, v in schema.iteritems():
 
             # Add custom fields to the column dictionaries
-            if k in custom_schema['fields'].keys():
-                schema[k].update(custom_schema['fields'][k])
+            if 'fields' in custom_schema:
+                if k in custom_schema['fields'].keys():
+                    schema[k].update(custom_schema['fields'][k])
 
             # Convert python types values into strings
             schema[k]['type']=str(schema[k]['type'])[7:-2]

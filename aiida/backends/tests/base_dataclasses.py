@@ -85,8 +85,9 @@ class TestList(AiidaTestCase):
             l.reverse()
 
 
-class TestFloat(unittest.TestCase):
+class TestFloat(AiidaTestCase):
     def setUp(self):
+        super(TestFloat, self).setUp()
         self.value = Float()
         self.all_types = [Int, Float, Bool, Str]
 

@@ -1148,16 +1148,11 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertEqual(calc.get_code().uuid, code.uuid)
         self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
 
-        # import aiida.backends.sqlalchemy
-        # aiida.backends.sqlalchemy.session.refresh(computer._dbcomputer)
-
         # calc is not stored, but code is
         code.store()
 
         self.assertEqual(calc.get_code().uuid, code.uuid)
         self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
-
-        # aiida.backends.sqlalchemy.session.refresh(computer._dbcomputer)
 
         unstoredcalc.store()
 

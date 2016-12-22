@@ -2,7 +2,6 @@
 """
 Tests for specific subclasses of Data
 """
-from django.utils import unittest
 from aiida.orm import load_node
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 from aiida.backends.testbase import AiidaTestCase

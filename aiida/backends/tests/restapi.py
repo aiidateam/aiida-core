@@ -254,7 +254,7 @@ class RESTApiTestCase(AiidaTestCase):
         self.assertRaises(exception_type, self.app.get(url))
 
 
-class RESTApiTestSuit(RESTApiTestCase):
+class RESTApiTestSuite(RESTApiTestCase):
     """
     """
 

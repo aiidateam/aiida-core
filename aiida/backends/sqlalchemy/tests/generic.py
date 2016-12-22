@@ -35,7 +35,7 @@ class TestComputer(AiidaTestCase):
 
         _ = JobCalculation(**calc_params).store()
 
-        print "Node stored with pk:",  _.dbnode.pk
+        #print "Node stored with pk:",  _.dbnode.pk
 
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)

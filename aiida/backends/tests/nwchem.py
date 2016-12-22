@@ -17,8 +17,8 @@ __authors__ = "The AiiDA team."
 
 class TestNwchem(AiidaTestCase):
 
-    @unittest.skipIf((not has_ase()) or (not has_pymatgen()),
-                      "Unable to import ASE and pymatgen")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
     def test_1(self):
         from ase import Atoms
 

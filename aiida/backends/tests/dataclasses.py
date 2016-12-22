@@ -1993,7 +1993,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
             pmg_struct = struct.get_pymatgen_structure()
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
-    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
     @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
                      StrictVersion('4.5.3'), 
@@ -2027,7 +2026,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                            [0.3, 0.3, 0.3]])
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
-    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
     @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
                      StrictVersion('4.5.3'), 

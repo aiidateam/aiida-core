@@ -251,3 +251,4 @@ def get_db_columns(db_class):
         })
 
     return schema
+

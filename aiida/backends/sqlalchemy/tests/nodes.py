@@ -191,7 +191,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         try:
             aiida.backends.sqlalchemy.session.begin_nested()
-            with self.assertRaises(NotExistent):
+            with self.assertRaises(ValueError):
                 load_node(uuid=a.pk)
         finally:
             aiida.backends.sqlalchemy.session.rollback()

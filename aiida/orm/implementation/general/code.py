@@ -130,12 +130,14 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
             a code
         """
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        from aiida.orm.utils import load_node
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.computer import Computer
+        from aiida.orm.code import Code
 
         try:
             code_int = int(code_string)
             try:
-                return load_node(code_int, parent_class=cls)
+                return cls.get_subclass_from_pk(code_int)
             except NotExistent:
                 raise ValueError()  # Jump to the following section
                 # to check if a code with the given
@@ -147,25 +149,27 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
             # Before dying, try to see if the user passed a (unique) label.
             # split with the leftmost '@' symbol (i.e. code names cannot
             # contain '@' symbols, computer names can)
+            qb = QueryBuilder()
             codename, sep, computername = code_string.partition('@')
+            qb.append(cls, filters={'label': {'==': codename}},
+                      project=['*'], tag='code')
             if sep:
-                codes = cls.query(label=codename, dbcomputer__name=computername)
-            else:
-                codes = cls.query(label=codename)
+                qb.append(Computer, filters={'name': {'==': computername}},
+                          computer_of='code')
 
-            if len(codes) == 0:
+            if qb.count() == 0:
                 raise NotExistent("'{}' is not a valid code "
                                   "ID or label.".format(code_string))
-            elif len(codes) > 1:
-                retstr = (
-                "There are multiple codes with label '{}', having IDs: "
-                "".format(code_string))
+            elif qb.count() > 1:
+                codes = [_ for [_] in qb.all()]
+                retstr = ("There are multiple codes with label '{}', "
+                          "having IDs: ".format(code_string))
                 retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
                 retstr += ("Relabel them (using their ID), or refer to them "
                            "with their ID.")
                 raise MultipleObjectsError(retstr)
             else:
-                return codes[0]
+                return qb.first()[0]
 
     @classmethod
     @abstractmethod
@@ -179,7 +183,15 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
         :return: a list of string, with the code names if labels is True,
           otherwise a list of integers with the code PKs.
         """
-        pass
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(cls, filters={'attributes.input_plugin': {'==': plugin}})
+        valid_codes = [_ for [_] in qb.all()]
+
+        if labels:
+            return [c.label for c in valid_codes]
+        else:
+            return [c.pk for c in valid_codes]
 
     def _validate(self):
 

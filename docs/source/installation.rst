@@ -64,7 +64,6 @@ You will be asked for your user information. Be aware that this information will
       $ # for bash:
       $ echo "export PATH="${PATH}:~/aiidapy/bin/verdi" >> ~/.bashrc
 
-
 If you prefer not to use a package manager, follow the links in :ref:`install_dependencies` for instructions on how to install the required programs and start the postgres server before continuing with the third step.
 
 .. _Homebrew: http://brew.sh/index_de.html

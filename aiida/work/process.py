@@ -10,9 +10,6 @@ import plum.process
 from plum.process_monitor import MONITOR
 import plum.process_monitor
 
-import aiida.orm
-from aiida.orm.data import Data
-from aiida.orm import load_node
 import voluptuous
 from abc import ABCMeta
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
@@ -123,6 +120,7 @@ class Process(plum.process.Process):
 
     @classmethod
     def define(cls, spec):
+        import aiida.orm
         super(Process, cls).define(spec)
 
         spec.input("_store_provenance", valid_type=bool, default=True,
@@ -194,6 +192,7 @@ class Process(plum.process.Process):
     # Messages #####################################################
     @override
     def on_create(self, pid, inputs, saved_instance_state):
+        from aiida.orm import load_node
         super(Process, self).on_create(pid, inputs, saved_instance_state)
 
         if saved_instance_state is None:
@@ -238,6 +237,7 @@ class Process(plum.process.Process):
         :param dynamic: Was the output port a dynamic one (i.e. not known
         beforehand?)
         """
+        from aiida.orm import Data
         super(Process, self)._on_output_emitted(output_port, value, dynamic)
         assert isinstance(value, Data), \
             "Values outputted from process must be instances of AiiDA Data" \
@@ -258,6 +258,7 @@ class Process(plum.process.Process):
 
     @protected
     def get_parent_calc(self):
+        from aiida.orm import load_node
         # Can't get it if we don't know our parent
         if self._parent_pid is None:
             return None
@@ -468,6 +469,7 @@ class _ProcessFinaliser(plum.process_monitor.ProcessMonitorListener):
 
     @override
     def on_monitored_process_failed(self, pid):
+        from aiida.orm import load_node
         try:
             calc_node = load_node(pk=pid)
         except ValueError:

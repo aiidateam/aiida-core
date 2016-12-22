@@ -575,7 +575,9 @@ class Devel(VerdiCommandWithSubcommands):
                 print "  - {}".format(reason)
 
         print "* Tests run:     {}".format(tot_num_tests)
-        print "* Tests OK:      {}".format(tot_num_tests - len(test_errors) - len(test_failures))
+        # This count is wrong, sometimes a test can both error and fail 
+        # apparently, and you can get negative numbers...
+        #print "* Tests OK:      {}".format(tot_num_tests - len(test_errors) - len(test_failures))
         print "* Tests failed:  {}".format(len(test_failures))
         print "* Tests errored: {}".format(len(test_errors))
 

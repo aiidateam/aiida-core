@@ -353,7 +353,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 @click.command('setup', context_settings=CONTEXT_SETTINGS)
-@click.argument('profile', default='default', type=str)
+@click.argument('profile', default='', type=str)
 @click.option('--only-config', is_flag=True)
 @click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
 @click.option('--backend', type=click.Choice(['django', 'sqlalchemy']), help='ignored unless --non-interactive is given')
@@ -429,10 +429,15 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
     # ~ gprofile = profile if settings_profile.AIIDADB_PROFILE is None \
         # ~ else settings_profile.AIIDADB_PROFILE
     if settings_profile.AIIDADB_PROFILE and profile:
-        sys.exit('the profile argument cannot be used if verdi is called with -p option')
+        sys.exit('the profile argument cannot be used if verdi is called with -p option: {} and {}'.format(settings_profile.AIIDADB_PROFILE, profile))
     gprofile = settings_profile.AIIDADB_PROFILE or profile
     if gprofile == profile:
         settings_profile.AIIDADB_PROFILE = profile
+    if not settings_profile.AIIDADB_PROFILE:
+        settings_profile.AIIDADB_PROFILE = 'default'
+
+    # used internally later
+    gprofile = settings_profile.AIIDADB_PROFILE
 
     created_conf = None
     # ask and store the configuration of the DB

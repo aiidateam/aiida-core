@@ -450,19 +450,19 @@ If you prefer to setup a database by hand first or are only going to edit the pr
 
    verdi setup <profile> # synonym to verdi -p <profile> setup
 
- to add or edit a profile in AiiDA. The command will guide you through a process to configure
- the database, the repository location, and it will finally (automatically) run
- a django ``migrate`` command, if needed, that creates the required tables
- in the database and installs the database triggers.
+to add or edit a profile in AiiDA. The command will guide you through a process to configure
+the database, the repository location, and it will finally (automatically) run
+a django ``migrate`` command, if needed, that creates the required tables
+in the database and installs the database triggers.
 
- The first thing that will be asked to you is the timezone, extremely important
- to get correct dates and times for your calculations.
+The first thing that will be asked to you is the timezone, extremely important
+to get correct dates and times for your calculations.
 
- AiiDA will do its best to try and understand the local timezone (if properly
- configured on your machine), and will suggest a set of sensible values.
- Choose the timezone that fits best to you (that is, the nearest city in your
- timezone - for Lausanne, for instance, we choose ``Europe/Zurich``) and type
- it at the prompt.
+AiiDA will do its best to try and understand the local timezone (if properly
+configured on your machine), and will suggest a set of sensible values.
+Choose the timezone that fits best to you (that is, the nearest city in your
+timezone - for Lausanne, for instance, we choose ``Europe/Zurich``) and type
+it at the prompt.
 
 If the automatic zone detection did not work for you,  type instead another
 valid string.

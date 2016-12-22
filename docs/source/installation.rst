@@ -26,12 +26,13 @@ If your distribution uses a different package manager, simply replace the comman
       (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida> 
       (aiidapy) $ verdi quicksetup
 
+You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
+
 3. Add the verdi command to your PATH::
 
       $ # for bash:
       $ echo "export PATH="${PATH}:~/aiidapy/bin/verdi" >> ~/.bashrc
 
-You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
 
 Quickstart - OS X (Homebrew)
 ----------------------------
@@ -56,12 +57,13 @@ If you use another package manager just replace the first step accordingly.
       (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
       (aiidapy) $ verdi quicksetup
 
+You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
+
 4. Add the verdi command to your PATH::
 
       $ # for bash:
       $ echo "export PATH="${PATH}:~/aiidapy/bin/verdi" >> ~/.bashrc
 
-You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
 
 If you prefer not to use a package manager, follow the links in :ref:`install_dependencies` for instructions on how to install the required programs and start the postgres server before continuing with the third step.
 

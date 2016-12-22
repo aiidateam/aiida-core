@@ -28,6 +28,8 @@ install_requires=[
     'uritools==1.0.2',
     'psycopg2==2.6.1',
     'amqp==1.4.9',
+    'setuptools>=32.1.3',
+    'pip>=9.0.1',
 ]
 
 extras_require={

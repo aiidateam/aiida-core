@@ -4,9 +4,7 @@ import tempfile
 from shutil import rmtree
 
 from plum.wait_ons import checkpoint
-
 from aiida.work.persistence import Persistence
-from aiida.orm.data.base import get_true_node
 import aiida.work.daemon as daemon
 from aiida.work.process import Process
 from aiida.work.process_registry import ProcessRegistry
@@ -16,6 +14,14 @@ from aiida.orm import load_node
 import aiida.work.util as util
 from aiida.work.test_utils import DummyProcess, ExceptionProcess
 
+def get_true_node():
+    """
+    Return a TRUE node.
+
+    Done in this way to achieve lazy loading of aiida.orm
+    """
+    from aiida.orm.data.base import get_true_node
+    return get_true_node()
 
 class ProcessEventsTester(Process):
     EVENTS = ["create", "run", "continue_", "finish", "emitted", "stop",

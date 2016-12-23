@@ -2,6 +2,7 @@
 """
 Tests for nodes, attributes and links
 """
+import unittest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
@@ -1292,6 +1293,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # are calculations that use as label 'input_cell')
         n5.add_link_from(n3, label='label1')
 
+    @unittest.skip("Skipping while we solve issue #301")
     def test_links_label_autogenerator(self):
         n1 = Node().store()
         n2 = Node().store()
@@ -1318,6 +1320,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         all_labels = [_[0] for _ in n10.get_inputs(also_labels=True)]
         self.assertEquals(len(set(all_labels)), len(all_labels), "There are duplicate links, that are not expected")
 
+    @unittest.skip("Skipping while we solve issue #301")
     def test_link_replace(self):
         n1 = Node().store()
         n2 = Node().store()

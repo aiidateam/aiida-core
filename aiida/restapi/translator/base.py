@@ -74,7 +74,7 @@ class BaseTranslator(object):
         # Construct the json object to return it
         basic_schema = orm_class.get_db_columns()
 
-        if cls._default_projections == ['*']:
+        if cls._default_projections == ['**']:
             schema = basic_schema # No custom schema, take the basic one
         else:
             schema = dict([(k, basic_schema[k]) for k in cls._default_projections

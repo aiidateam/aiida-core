@@ -604,14 +604,14 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
 
 
 class Quicksetup(VerdiCommand):
-    from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
     '''
-    Quick setup for the most common usecase, one user on one machine.
+    Quick setup for the most common usecase (1 user, 1 machine).
 
     Uses click for options. Creates a database user 'aiida_qs_<username>' with random password if it doesn't exist.
     Creates a 'aiidadb_qs_<username>' database (prompts to use or change the name if already exists).
     Makes sure not to overwrite existing databases or profiles without prompting for confirmation.
     '''
+    from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
     _create_user_command = 'CREATE USER "{}" WITH PASSWORD \'{}\''
     _create_db_command = 'CREATE DATABASE "{}" OWNER "{}"'

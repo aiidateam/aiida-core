@@ -373,8 +373,10 @@ class CifData(SinglefileData):
         .. note:: the hash has to be stored in a ``_md5`` attribute,
             otherwise the CIF file will not be found.
         """
-        queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
-        return list(queryset)
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(cls, filters={'attributes.md5': {'==': md5}})
+        return [_ for [_] in qb.all()]
 
     @classmethod
     def get_or_create(cls, filename, use_first=False, store_cif=True):

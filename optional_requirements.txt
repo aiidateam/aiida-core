@@ -18,6 +18,9 @@ psycopg2==2.6.1
 ## only after sqlite 3.6.18
 pysqlite==2.6.3
 
+## ASE for crystal structure manipulation
+ase==3.12.0
+
 # Support for NWChem I/O
 pymatgen==4.5.3
 

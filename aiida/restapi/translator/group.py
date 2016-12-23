@@ -56,7 +56,7 @@ class GroupTranslator(BaseTranslator):
     if 'columns' in custom_schema:
         _default_projections = custom_schema['columns'][__label__]
     else:
-        _default_projections = ['*']
+        _default_projections = ['**']
 
 
     def __init__(self):

@@ -135,6 +135,11 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
 
     actually_run_tests = []
     num_tests_expected = 0
+    
+    # To avoid adding more than once the same test
+    # (e.g. if you type both db and db.xxx)
+    found_modulenames = set()
+
     for test in set(tests_to_run):
         try:
             modulenames = get_db_test_list()[test]
@@ -146,7 +151,9 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
         actually_run_tests.append(test)
 
         for modulename in modulenames:
-            test_suite.addTest(test_loader.loadTestsFromName(modulename))
+            if modulename not in found_modulenames:
+                test_suite.addTest(test_loader.loadTestsFromName(modulename))
+                found_modulenames.add(modulename)
 
         num_tests_expected = test_suite.countTestCases()
 

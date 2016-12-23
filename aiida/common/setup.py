@@ -111,11 +111,12 @@ def store_config(confs):
         os.umask(old_umask)
 
 
-def install_daemon_files(aiida_dir, daemon_dir, log_dir, local_user):
+def install_daemon_files(aiida_dir, daemon_dir, log_dir, local_user,
+                         daemon_conf=None):
     """
     Install the files needed to run the daemon.
     """
-    daemon_conf = """
+    local_daemon_conf = """
 [unix_http_server]
 file={daemon_dir}/supervisord.sock   ; (the path to the socket file)
 
@@ -162,6 +163,8 @@ killasgroup=true
 ; so, if rabbitmq is supervised, it will start first.
 priority=1000
 """
+    if daemon_conf is None:
+        daemon_conf = local_daemon_conf
 
     old_umask = os.umask(DEFAULT_UMASK)
     try:

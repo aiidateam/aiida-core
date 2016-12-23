@@ -1,15 +1,13 @@
 import os
 import sys
 import unittest
-
+from unittest import (
+    TestSuite, defaultTestLoader as test_loader)
 
 from aiida.backends import settings
-from aiida.common.utils import classproperty
-from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
 from aiida.backends.tests import get_db_test_list
-from unittest import (
-    TestSuite, TestResult,
-    main as unittest_main, defaultTestLoader as test_loader)
+from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
+from aiida.common.utils import classproperty
 
 
 def check_if_tests_can_run():

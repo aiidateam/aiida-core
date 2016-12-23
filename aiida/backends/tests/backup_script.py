@@ -195,7 +195,11 @@ class TestBackupScriptUnit(AiidaTestCase):
         In the parsed JSON string, the endDateOfBackup & daysToBackuplimit
         are set which should lead to an exception.
         """
+        import logging
         from aiida.common.additions.backup_script.backup_base import BackupError
+
+        # Disable the logging messages
+        logging.disable(logging.ERROR)
 
         backup_variables = json.loads(self._json_test_input_5)
         self._backup_setup_inst._ignore_backup_dir_existence_check = True
@@ -203,6 +207,9 @@ class TestBackupScriptUnit(AiidaTestCase):
         # & daysToBackuplimit have been defined in the same time.
         with self.assertRaises(BackupError):
             self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
+
+        # Enable the logging messages
+        logging.disable(logging.NOTSET)
 
     def check_full_deserialization_serialization(self, input_string, backup_inst):
         input_variables = json.loads(input_string)
@@ -237,7 +244,6 @@ class TestBackupScriptUnit(AiidaTestCase):
 
         self.check_full_deserialization_serialization(input_string, backup_inst)
 
-
     def test_full_deserialization_serialization_3(self):
         """
         This method tests the correct deserialization / serialization of the
@@ -247,7 +253,6 @@ class TestBackupScriptUnit(AiidaTestCase):
         backup_inst = self._backup_setup_inst
 
         self.check_full_deserialization_serialization(input_string, backup_inst)
-
 
     def test_full_deserialization_serialization_4(self):
         """
@@ -259,13 +264,17 @@ class TestBackupScriptUnit(AiidaTestCase):
 
         self.check_full_deserialization_serialization(input_string, backup_inst)
 
-
     def test_timezone_addition_and_dir_correction(self):
         """
         This method tests if the timezone is added correctly to timestamps
         that don't have a timezone. Moreover, it checks if the given directory
         paths are normalized as expected.
         """
+        import logging
+
+        # Disable the logging messages
+        logging.disable(logging.INFO)
+
         backup_variables = json.loads(self._json_test_input_6)
         self._backup_setup_inst._ignore_backup_dir_existence_check = True
         self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
@@ -292,6 +301,9 @@ class TestBackupScriptUnit(AiidaTestCase):
             "_backup_setup_inst destination directory is "
             "not normalized as expected.")
 
+        # Enable the logging messages
+        logging.disable(logging.NOTSET)
+
 
 class TestBackupScriptIntegration(AiidaTestCase):
 
@@ -302,17 +314,27 @@ class TestBackupScriptIntegration(AiidaTestCase):
     _bs_instance = backup_setup.BackupSetup()
 
     def test_integration(self):
+        import logging
+        from aiida.utils.capturing import Capturing
+
+        # Disable the logging messages
+        logging.disable(logging.INFO)
+
         # Fill in the repository with data
         self.fill_repo()
         try:
             # Create a temp folder where the backup files will be placed
             # and the backup will be stored
             temp_folder = tempfile.mkdtemp()
-            # Create the backup scripts
-            backup_full_path = self.create_backup_scripts(temp_folder)
+
+            # Capture the sysout of the following command
+            with Capturing():
+                # Create the backup scripts
+                backup_full_path = self.create_backup_scripts(temp_folder)
 
             # Put the backup folder in the path
             sys.path.append(backup_full_path)
+
             # Import the backup script - this action will also run it
             # It is assumed that the backup script ends with .py
             importlib.import_module(self._bs_instance._script_filename[:-3])
@@ -332,6 +354,9 @@ class TestBackupScriptIntegration(AiidaTestCase):
                             "to the original one.")
         finally:
             shutil.rmtree(temp_folder, ignore_errors=True)
+
+            # Enable the logging messages
+            logging.disable(logging.NOTSET)
 
     def fill_repo(self):
         from aiida.orm import JobCalculation, CalculationFactory, Data, DataFactory

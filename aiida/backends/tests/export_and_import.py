@@ -406,7 +406,7 @@ class TestComplex(AiidaTestCase):
             calc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc1.label = "calc1"
             calc1.store()
-            calc1._set_state('RETRIEVING')
+            calc1._set_state(u'RETRIEVING')
 
             pd1 = ParameterData()
             pd1.label = "pd1"
@@ -431,7 +431,7 @@ class TestComplex(AiidaTestCase):
             calc2.add_link_from(pd1, link_type=LinkType.INPUT)
             calc2.add_link_from(pd2, link_type=LinkType.INPUT)
             calc2.add_link_from(rd1, link_type=LinkType.INPUT)
-            calc2._set_state('SUBMITTING')
+            calc2._set_state(u'SUBMITTING')
 
             fd1 = FolderData()
             fd1.label = "fd1"

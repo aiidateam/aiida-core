@@ -65,8 +65,11 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
         replies to all the question as the user would do and in the end it
         checks that the correct files were created with the right content.
         """
+        from aiida.utils.capturing import Capturing
+
         # Create a temp folder where the backup files will be placed
         temp_folder = tempfile.mkdtemp()
+
         try:
             temp_aiida_folder = os.path.join(temp_folder, ".aiida")
             # The predefined answers for the setup script
@@ -91,8 +94,10 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
                        ""]                  # is it correct?
             utils.raw_input = lambda _: answers[ac.array_counter()]
 
-            # Run the setup script
-            backup_setup.BackupSetup().run()
+            # Run the setup script and catch the sysout
+            with Capturing():
+                backup_setup.BackupSetup().run()
+
 
             # Get the backup configuration files & dirs
             backup_conf_records = [f for f in os.listdir(temp_aiida_folder)]

@@ -90,7 +90,7 @@ def get_db_test_list():
     backend, and then it returns only the tests for this backend, and the common ones.
     """
     from aiida.backends import settings
-    from aiida.common.exceptions import ConfigurationError, InternalError
+    from aiida.common.exceptions import ConfigurationError
     from collections import defaultdict
 
     current_backend = settings.BACKEND

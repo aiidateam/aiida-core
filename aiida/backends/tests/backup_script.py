@@ -315,6 +315,7 @@ class TestBackupScriptIntegration(AiidaTestCase):
 
     def test_integration(self):
         import logging
+        from aiida.utils.capturing import Capturing
 
         # Disable the logging messages
         logging.disable(logging.INFO)
@@ -325,11 +326,15 @@ class TestBackupScriptIntegration(AiidaTestCase):
             # Create a temp folder where the backup files will be placed
             # and the backup will be stored
             temp_folder = tempfile.mkdtemp()
-            # Create the backup scripts
-            backup_full_path = self.create_backup_scripts(temp_folder)
+
+            # Capture the sysout of the following command
+            with Capturing():
+                # Create the backup scripts
+                backup_full_path = self.create_backup_scripts(temp_folder)
 
             # Put the backup folder in the path
             sys.path.append(backup_full_path)
+
             # Import the backup script - this action will also run it
             # It is assumed that the backup script ends with .py
             importlib.import_module(self._bs_instance._script_filename[:-3])

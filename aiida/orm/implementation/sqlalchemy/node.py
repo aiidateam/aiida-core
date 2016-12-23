@@ -28,6 +28,8 @@ from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
 from aiida.orm.mixins import Sealable
 
+import aiida.backends.sqlalchemy
+
 import aiida.orm.autogroup
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -94,33 +96,48 @@ class Node(AbstractNode):
     def get_db_columns():
         return get_db_columns(DbNode)
 
-
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
+        from aiida.orm.querybuilder import QueryBuilder
+        from sqlalchemy.exc import DatabaseError
         try:
-            node = cls.query(uuid=uuid).one()
-        except (NoResultFound, ProgrammingError):
-            raise NotExistent("No entry with UUID={} found".format(uuid))
-        if not isinstance(node, cls):
-            raise NotExistent("UUID={} is not an instance of {}".format(
-                uuid, cls.__name__))
-        return node
+            qb = QueryBuilder()
+            qb.append(cls, filters={'uuid': {'==': str(uuid)}})
+
+            if qb.count() == 0:
+                raise NotExistent("No entry with UUID={} found".format(uuid))
+
+            node = qb.first()[0]
+
+            if not isinstance(node, cls):
+                raise NotExistent("UUID={} is not an instance of {}".format(
+                    uuid, cls.__name__))
+            return node
+        except DatabaseError as de:
+            raise ValueError(de.message)
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
+        from aiida.orm.querybuilder import QueryBuilder
+        from sqlalchemy.exc import DatabaseError
         if not isinstance(pk, int):
             raise ValueError("Incorrect type for int")
+
         try:
-            from aiida.backends.sqlalchemy import session
-            node = cls.query(id=pk).one()
-        except NoResultFound:
-            # DataError is thrown when you pass a string instead of an int for
-            # instance
-            raise NotExistent("No entry with pk= {} found".format(pk))
-        if not isinstance(node, cls):
-            raise NotExistent("pk= {} is not an instance of {}".format(
-                pk, cls.__name__))
-        return node
+            qb = QueryBuilder()
+            qb.append(cls, filters={'id': {'==': pk}})
+
+            if qb.count() == 0:
+                raise NotExistent("No entry with pk= {} found".format(pk))
+
+            node = qb.first()[0]
+
+            if not isinstance(node, cls):
+                raise NotExistent("pk= {} is not an instance of {}".format(
+                    pk, cls.__name__))
+            return node
+        except DatabaseError as de:
+            raise ValueError(de.message)
 
     def __int__(self):
         if self._to_be_store:
@@ -130,28 +147,8 @@ class Node(AbstractNode):
 
     @classmethod
     def query(cls, *args, **kwargs):
-        q = django_filter(DbNode.aiida_query, **kwargs)
-        q = q.reset_joinpoint()
-
-        if cls._plugin_type_string:
-            if not cls._plugin_type_string.endswith('.'):
-                raise InternalError("The plugin type string does not "
-                                    "finish with a dot??")
-
-            # If it is 'calculation.Calculation.', we want to filter
-            # for things that start with 'calculation.' and so on
-            plug_type = cls._plugin_type_string
-
-            # Remove the implementation.django or sqla part.
-            if plug_type.startswith('implementation.'):
-                plug_type = '.'.join(plug_type.split('.')[2:])
-
-            pre, sep, _ = plug_type[:-1].rpartition('.')
-            superclass_string = "".join([pre, sep])
-
-            q = q.filter(DbNode.type.like("{}%".format(superclass_string)))
-
-        return q
+        raise NotImplementedError("The node query method is not supported in "
+                                  "SQLAlchemy. Please use QueryBuilder.")
 
     def _update_db_label_field(self, field_value):
         self.dbnode.label = field_value

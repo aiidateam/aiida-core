@@ -230,7 +230,6 @@ class Group(AbstractGroup):
                 list_nodes.append(node)
 
         for node in list_nodes:
-            print "deleting node ", node
             self._dbgroup.dbnodes.remove(node)
 
         sa.session.commit()

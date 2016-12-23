@@ -2,6 +2,7 @@
 """
 Tests for nodes, attributes and links
 """
+import unittest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
@@ -1292,6 +1293,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # are calculations that use as label 'input_cell')
         n5.add_link_from(n3, label='label1')
 
+    @unittest.skip("Skipping while we solve issue #301")
     def test_links_label_autogenerator(self):
         n1 = Node().store()
         n2 = Node().store()
@@ -1315,6 +1317,10 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n10.add_link_from(n8)
         n10.add_link_from(n9)
 
+        all_labels = [_[0] for _ in n10.get_inputs(also_labels=True)]
+        self.assertEquals(len(set(all_labels)), len(all_labels), "There are duplicate links, that are not expected")
+
+    @unittest.skip("Skipping while we solve issue #301")
     def test_link_replace(self):
         n1 = Node().store()
         n2 = Node().store()
@@ -1329,13 +1335,17 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # I can replace the link and check that it was replaced
         n3._replace_link_from(n2, label='the_label')
-        the_parent = dict(n3.get_inputs(also_labels=True))['the_label']
-        self.assertEquals(n2.uuid, the_parent.uuid)
+        the_parent = [_[1].uuid for _ in n3.get_inputs(also_labels=True) if _[0] == 'the_label']
+        self.assertEquals(len(the_parent), 1,
+                          "There are multiple input links with the same label (the_label)!")
+        self.assertEquals(n2.uuid, the_parent[0])
 
         # _replace_link_from should work also if there is no previous link
         n2._replace_link_from(n1, label='the_label_2')
-        the_parent = dict(n2.get_inputs(also_labels=True))['the_label_2']
-        self.assertEquals(n1.uuid, the_parent.uuid)
+        the_parent_2 = [_[1].uuid for _ in n3.get_inputs(also_labels=True) if _[0] == 'the_label_2']
+        self.assertEquals(len(the_parent_2), 1,
+                          "There are multiple input links with the same label (the_label_2)!")
+        self.assertEquals(n1.uuid, the_parent_2[0])
 
     def test_link_with_unstored(self):
         """

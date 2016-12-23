@@ -12,5 +12,4 @@ class LinkType(Enum):
     CREATE = 'createlink'
     RETURN = 'returnlink'
     INPUT = 'inputlink'
-    OUTPUT = 'outputlink'
     CALL = 'calllink'

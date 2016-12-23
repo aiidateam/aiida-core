@@ -585,8 +585,8 @@ class Devel(VerdiCommandWithSubcommands):
 
         # If there was any failure report it with the
         # right exit code
-        if test_failures:
-            sys.exit(len(test_failures))
+        if test_failures or test_errors:
+            sys.exit(len(test_failures) + len(test_errors))
 
     def complete_tests(self, subargs_idx, subargs):
         """

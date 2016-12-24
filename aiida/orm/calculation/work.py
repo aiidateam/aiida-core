@@ -6,5 +6,5 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
 from aiida.orm.implementation.general.calculation.work import \
-    WorkCalculation, LegacyWorkflowCalculation
+    WorkCalculation
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from plum.wait import WaitOn, validate_callback_func
-from aiida.orm.utils import load_node
+from aiida.orm.utils import load_node, load_workflow
 from aiida.common.lang import override
 from aiida.work.defaults import class_loader
 
@@ -37,3 +37,29 @@ class WaitOnJobCalculation(WaitOn):
 def wait_on_job_calculation(callback, pk):
     validate_callback_func(callback)
     return WaitOnJobCalculation(callback.__name__, pk)
+
+
+class WaitOnWorkflow(WaitOn):
+    PK = "pk"
+
+    def __init__(self, callback, pk):
+        super(WaitOnWorkflow, self).__init__(callback)
+        self._pk = pk
+
+    @override
+    def is_ready(self):
+        wf = load_workflow(self._pk)
+        if wf.has_finished_ok() or wf.has_failed():
+            return True
+        else:
+            return False
+
+    @override
+    def save_instance_state(self, out_state):
+        super(WaitOnWorkflow, self).save_instance_state(out_state)
+        out_state[self.PK] = self._pk
+
+
+def wait_on_workflow(callback, pk):
+    validate_callback_func(callback)
+    return WaitOnWorkflow(callback.__name__, pk)

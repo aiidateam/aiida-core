@@ -110,20 +110,20 @@ class TestDaemon(AiidaTestCase):
 
     def test_submit(self):
         # This call should create an entry in the database with a PK
-        pk = submit(DummyProcess)
-        self.assertIsNotNone(pk)
-        self.assertIsNotNone(load_node(pk=pk))
+        rinfo = submit(DummyProcess)
+        self.assertIsNotNone(rinfo)
+        self.assertIsNotNone(load_node(pk=rinfo.pid))
 
     def test_tick(self):
         registry = ProcessRegistry()
 
-        pk = submit(ProcessEventsTester, _jobs_store=self.storage)
+        rinfo = submit(ProcessEventsTester, _jobs_store=self.storage)
         # Tick the engine a number of times or until there is no more work
         i = 0
         while daemon.tick_workflow_engine(self.storage, print_exceptions=False):
             self.assertLess(i, 10, "Engine not done after 10 ticks")
             i += 1
-        self.assertTrue(registry.has_finished(pk))
+        self.assertTrue(registry.has_finished(rinfo.pid))
 
     def test_multiple_processes(self):
         submit(DummyProcess, _jobs_store=self.storage)
@@ -136,8 +136,8 @@ class TestDaemon(AiidaTestCase):
     def test_create_fail(self):
         registry = ProcessRegistry()
 
-        dp_pk = submit(DummyProcess, _jobs_store=self.storage)
-        fail_pk = submit(FailCreateFromSavedStateProcess, _jobs_store=self.storage)
+        dp_rinfo = submit(DummyProcess, _jobs_store=self.storage)
+        fail_rinfo = submit(FailCreateFromSavedStateProcess, _jobs_store=self.storage)
 
         # Tick the engine a number of times or until there is no more work
         i = 0
@@ -145,6 +145,6 @@ class TestDaemon(AiidaTestCase):
             self.assertLess(i, 10, "Engine not done after 10 ticks")
             i += 1
 
-        self.assertTrue(registry.has_finished(dp_pk))
-        self.assertFalse(registry.has_finished(fail_pk))
+        self.assertTrue(registry.has_finished(dp_rinfo.pid))
+        self.assertFalse(registry.has_finished(fail_rinfo.pid))
 

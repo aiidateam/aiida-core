@@ -23,7 +23,7 @@ class JobProcess(Process):
         from aiida.orm.data import Data
         from aiida.orm.computer import Computer
 
-        def _define(cls_, spec):
+        def define(cls_, spec):
             super(JobProcess, cls_).define(spec)
 
             # Calculation options
@@ -59,9 +59,12 @@ class JobProcess(Process):
         class_name = "{}_{}".format(
             JobProcess.__name__, plum.util.fullname(calc_class))
         return type(class_name, (JobProcess,),
-                    {Process.define.__name__: classmethod(_define),
-                     '_CALC_CLASS': calc_class})
+                    {
+                        Process.define.__name__: classmethod(define),
+                        '_CALC_CLASS': calc_class
+                    })
 
+    @override
     def _run(self, **kwargs):
         from aiida.work.legacy.wait_on import wait_on_job_calculation
 
@@ -79,7 +82,7 @@ class JobProcess(Process):
         is finished.
 
         :param wait_on: The original WaitOnJobCalculation object.
-        :type wait_on: aiida.work.legacy.wait_on.WaitOnJobCalculation
+        :type wait_on: :class:`aiida.work.legacy.wait_on.WaitOnJobCalculation`
         """
         assert not self.calc._is_running()
 

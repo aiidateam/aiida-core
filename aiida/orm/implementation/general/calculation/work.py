@@ -14,3 +14,10 @@ class WorkCalculation(Calculation):
     workflows system.
     """
     pass
+
+
+class LegacyWorkflowCalculation(Calculation):
+    """
+    Used to represent an old workflow as executed from the new workflow system.
+    """
+    pass

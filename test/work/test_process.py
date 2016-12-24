@@ -86,17 +86,17 @@ class TestProcess(DbTestCase):
         DummyProcess.new_instance(inputs=None).run_until_complete()
 
     def test_seal(self):
-        pid = run(DummyProcess, _return_pid=True)[1]
-        self.assertTrue(load_node(pk=pid).is_sealed)
+        rinfo = run(DummyProcess, _return_pid=True)[1]
+        self.assertTrue(load_node(pk=rinfo).is_sealed)
 
         storedir = tempfile.mkdtemp()
         storage = Persistence.create_from_basedir(storedir)
 
-        pid = submit(DummyProcess, _jobs_store=storage)
-        n = load_node(pk=pid)
+        rinfo = submit(DummyProcess, _jobs_store=storage)
+        n = load_node(pk=rinfo.pid)
         self.assertFalse(n.is_sealed)
 
-        dp = DummyProcess.create_from(storage.load_checkpoint(pid))
+        dp = DummyProcess.create_from(storage.load_checkpoint(rinfo.pid))
         dp.run_until_complete()
         self.assertTrue(n.is_sealed)
         shutil.rmtree(storedir)

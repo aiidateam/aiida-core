@@ -53,7 +53,8 @@ class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
     @override
     def get_outputs(self, pid):
         try:
-            return load_node(pid).get_outputs_dict()
+            return {e[0]: e[1]
+                    for e in load_node(pid).get_outputs(also_labels=True)}
         except exceptions.NotExistent:
             raise plum.knowledge_provider.NotKnown(
                 "Can't find node with pk '{}'".format(pid))

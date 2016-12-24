@@ -321,13 +321,13 @@ def Wf(running_info):
         running_info, get_object_string(load_workflow))
 
 
-def Legacy(running_info):
-    if running_info.type == RunningType.LEGACY_CALC:
-        return Calc(running_info)
-    elif running_info.type is RunningType.LEGACY_WORKFLOW:
-        return Wf(running_info)
-    else:
-        raise ValueError("Not a legacy calculation or workflow")
+def Legacy(object):
+    if object.type == RunningType.LEGACY_CALC:
+        return Calc(object)
+    elif object.type is RunningType.LEGACY_WORKFLOW:
+        return Wf(object)
+
+    raise ValueError("Could not determine object to be calculation or workflow")
 
 
 def Outputs(running_info):

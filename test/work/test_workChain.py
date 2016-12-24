@@ -10,10 +10,13 @@ from aiida.work.workchain import WorkChain,\
     ToContext, _Block, _If, _While, if_, while_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
-from aiida.work.run import async
+from aiida.work.run import async, legacy_workflow
 from aiida.orm.data.base import Int, Str
 import aiida.work.util as util
 from aiida.common.links import LinkType
+from aiida.workflows.wf_demo import WorkflowDemo
+from aiida.daemon.workflowmanager import execute_steps
+
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -261,6 +264,49 @@ class TestWorkchain(DbTestCase):
         te.shutdown()
 
         return finished_steps
+
+
+
+class TestWorkchainWithOldWorkflows(DbTestCase):
+    def test_call_old_wf(self):
+        wf = WorkflowDemo()
+        wf.start()
+        while wf.is_running():
+            execute_steps()
+
+        class _TestWf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(_TestWf, cls).define(spec)
+                spec.outline(cls.start, cls.check)
+
+            def start(self):
+                return ToContext(wf=legacy_workflow(wf.pk))
+
+            def check(self):
+                assert self.ctx.wf is not None
+
+        _TestWf.new_instance().run_until_complete()
+
+    def test_old_wf_results(self):
+        wf = WorkflowDemo()
+        wf.start()
+        while wf.is_running():
+            execute_steps()
+
+        class _TestWf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(_TestWf, cls).define(spec)
+                spec.outline(cls.start, cls.check)
+
+            def start(self):
+                return ToContext(res=Outputs(legacy_workflow(wf.pk)))
+
+            def check(self):
+                assert set(self.ctx.res) == set(wf.get_results())
+
+        _TestWf.new_instance().run_until_complete()
 
 
 class TestHelpers(DbTestCase):

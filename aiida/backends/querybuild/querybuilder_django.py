@@ -191,7 +191,7 @@ class QueryBuilder(AbstractQueryBuilder):
             elif isinstance(value_to_consider, (int, float)):
                 types_n_casts.append(('f', None))
                 types_n_casts.append(('i', 'f'))
-            elif isinstance(value_to_consider, datetime.datetime):
+            elif isinstance(value_to_consider, datetime):
                 types_n_casts.append(('d', None))
 
             expressions = []

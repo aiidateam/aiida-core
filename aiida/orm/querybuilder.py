@@ -27,15 +27,21 @@ from aiida.common.exceptions import (
 from aiida.common.utils import flatten_list
 from aiida.common.hashing import make_hash
 from aiida.backends.utils import _get_column
+
+
+
+
 class QueryBuilder(object):
     """
-    QueryBuilderBase is the base class for QueryBuilder classes,
-    which are than adapted to the individual schema and ORM used.
-    In here, general graph traversal functionalities are implemented,
-    the specific type of node and link is dealt in subclasses.
-    In order to load the correct subclass::
+    QueryBuilder: The class to query the AiiDA database. Usage::
 
         from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        # Querying nodes:
+        qb.append(Node)
+        # retrieving the results:
+        results = qb.all()
+
     """
 
 

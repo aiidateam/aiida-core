@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from aiida.parsers.parser import Parser
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -10,5 +11,11 @@ def ParserFactory(module):
     """
     Return a suitable Parser subclass.
     """
-    from aiida.common.ep_pluginloader import load_plugin
-    return load_plugin('parsers')
+    from aiida.common.pluginloader import BaseFactory
+    from aiida.common.exceptions import MissingPluginError
+    from aiida.common.ep_pluginloader import get_plugin
+
+    try:
+        return BaseFactory(module, Parser, 'aiida.parsers.plugins')
+    except MissingPluginError:
+        return get_plugin('parsers')

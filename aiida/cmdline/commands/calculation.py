@@ -177,7 +177,7 @@ class Calculation(VerdiCommandWithSubcommands):
                             type=int, default=None,
                             help='set a limit to the number of rows returned')
         parser.add_argument('-o', '--order-by',
-                            choices=['id', 'ctime'], 
+                            choices=['id', 'ctime'],
                             default='ctime',
                             help='order the results')
         parser.add_argument('--project',
@@ -361,6 +361,8 @@ class Calculation(VerdiCommandWithSubcommands):
             load_dbenv()
 
         from aiida.orm import CalculationFactory
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.common.pluginloader import existing_plugins
         from aiida.common.ep_pluginloader import plugin_list
         from aiida.common.exceptions import MissingPluginError
 
@@ -384,7 +386,8 @@ class Calculation(VerdiCommandWithSubcommands):
                 except MissingPluginError:
                     print "! {}: NOT FOUND!".format(arg)
         else:
-            plugins = sorted(plugin_list('calculations'))
+            plugins = sorted(existing_plugins(JobCalculation, 'aiida.orm.calculation.job', suffix='Calculation'))
+            plugins = sorted(plugins + [i for i in plugin_list('calculations') if i not in plugins])
             if plugins:
                 print("## Pass as a further parameter one (or more) "
                       "plugin names to get more details on a given plugin.")

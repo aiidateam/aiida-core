@@ -63,8 +63,8 @@ def compile(element, compiler, **kw):
     Get length of array defined in a JSONB column
     """
     return "jsonb_typeof(%s)" % compiler.process(element.clauses)
-    
-    
+
+
 class QueryBuilderImplSQLA(IQueryBuilder):
     """
     QueryBuilder to use with SQLAlchemy-backend and
@@ -95,7 +95,7 @@ class QueryBuilderImplSQLA(IQueryBuilder):
     def get_session(self):
         return aiida.backends.sqlalchemy.session
 
-    def _modify_expansions(self, alias, expansions):
+    def modify_expansions(self, alias, expansions):
         """
         For sqlalchemy, there are no additional expansions for now, so
         I am returning an empty list
@@ -110,7 +110,7 @@ class QueryBuilderImplSQLA(IQueryBuilder):
         return expansions
 
 
-    def _get_filter_expr(
+    def get_filter_expr(
             self, operator, value, attr_key, is_attribute,
             alias=None, column=None, column_name=None
         ):
@@ -226,7 +226,7 @@ class QueryBuilderImplSQLA(IQueryBuilder):
             for filter_operation_dict in value:
                 for newoperator, newvalue in filter_operation_dict.items():
                     expressions_for_this_path.append(
-                            self._get_filter_expr(
+                            self.get_filter_expr(
                                     newoperator, newvalue,
                                     attr_key=attr_key, is_attribute=is_attribute,
                                     alias=alias, column=column,
@@ -240,7 +240,7 @@ class QueryBuilderImplSQLA(IQueryBuilder):
 
         if expr is None:
             if is_attribute:
-                expr = self._get_filter_expr_from_attributes(
+                expr = self.get_filter_expr_from_attributes(
                         operator, value, attr_key,
                         column=column, column_name=column_name, alias=alias
                     )
@@ -448,21 +448,6 @@ class QueryBuilderImplSQLA(IQueryBuilder):
         return returnval
 
 
-    def yield_per(self, query, batch_size):
-        """
-        :param count: Number of rows to yield per step
-
-        Yields *count* rows at a time
-
-        :returns: a generator
-        """
-        try:
-            return query.yield_per(batch_size)
-        except Exception as e:
-            # exception was raised. Rollback the session
-            self._get_session().rollback()
-            raise e
-
 
 
 
@@ -569,6 +554,21 @@ class QueryBuilderImplSQLA(IQueryBuilder):
 
         return ormclass, ormclasstype, query_type_string
 
+    def yield_per(self, query, batch_size):
+        """
+        :param count: Number of rows to yield per step
+
+        Yields *count* rows at a time
+
+        :returns: a generator
+        """
+        try:
+            return query.yield_per(batch_size)
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self.get_session().rollback()
+            raise e
+
 
 
     def count(self, query):
@@ -577,7 +577,7 @@ class QueryBuilderImplSQLA(IQueryBuilder):
             return query.count()
         except Exception as e:
             # exception was raised. Rollback the session
-            self._get_session().rollback()
+            self.get_session().rollback()
             raise e
 
 
@@ -591,22 +591,51 @@ class QueryBuilderImplSQLA(IQueryBuilder):
             return query.first()
         except Exception as e:
             # exception was raised. Rollback the session
-            self._get_session().rollback()
+            self.get_session().rollback()
             raise e
 
 
+    def iterall(self, query, batch_size, tag_to_index_dict):
+        try:
+            results = query.yield_per(batch_size)
+
+            if len(tag_to_index_dict) == 1:
+                # Sqlalchemy, for some strange reason, does not return a list of lsits
+                # if you have provided an ormclass
+
+                if tag_to_index_dict.values() == ['*']:
+                    for rowitem in results:
+                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
+                else:
+                    for rowitem, in results:
+                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
+            elif len(tag_to_index_dict) > 1:
+                for resultrow in results:
+                    yield [
+                        self.get_aiida_res(tag_to_index_dict[colindex], rowitem)
+                        for colindex, rowitem
+                        in enumerate(resultrow)
+                    ]
+            else:
+                raise Exception("Got an empty dictionary")
+        except Exception as e:
+            self.get_session().rollback()
+            raise e
+
+
+
     def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
-        
+
 
         # Wrapping everything in an atomic transaction:
         try:
             results = query.yield_per(batch_size)
-            # Two cases: If one column was asked, the database returns a matrix of rows * columns:
-            if len(tag_to_projected_entity_dict) > 1:
+            nr_items = sum([len(v) for v in tag_to_projected_entity_dict.values()])
+            if nr_items > 1:
                 for this_result in results:
                     yield {
                         tag:{
-                            attrkey:self._get_aiida_res(
+                            attrkey:self.get_aiida_res(
                                     attrkey, this_result[index_in_sql_result]
                                 )
                             for attrkey, index_in_sql_result
@@ -615,43 +644,30 @@ class QueryBuilderImplSQLA(IQueryBuilder):
                         for tag, projected_entities_dict
                         in tag_to_projected_entity_dict.items()
                     }
-            elif len(tag_to_projected_entity_dict) == 1:
+            elif nr_items == 1:
                 # I this case, sql returns a  list, where each listitem is the result
                 # for one row. Here I am converting it to a list of lists (of length 1)
-                for this_result in results:
-                    yield {
-                        tag:{
-                            attrkey : self._get_aiida_res(attrkey, this_result)
-                            for attrkey, position in projected_entities_dict.items()
+                if [ v for entityd in tag_to_projected_entity_dict.values() for v in entityd.keys()] == ['*']:
+                    for this_result in results:
+                        yield {
+                            tag:{
+                                attrkey : self.get_aiida_res(attrkey, this_result)
+                                for attrkey, position in projected_entities_dict.items()
+                            }
+                            for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
                         }
-                        for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
-                    }
-
-
+                else:
+                    for this_result, in results:
+                        yield {
+                            tag:{
+                                attrkey : self.get_aiida_res(attrkey, this_result)
+                                for attrkey, position in projected_entities_dict.items()
+                            }
+                            for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
+                        }
             else:
                 raise Exception("Got an empty dictionary")
         except Exception as e:
-            self._get_session().rollback()
+            self.get_session().rollback()
             raise e
 
-
-
-    def iterall(self, query, batch_size, tag_to_index_dict):    
-        try:
-            results = query.yield_per(batch_size)
-
-            if len(tag_to_index_dict) == 1:
-                for rowitem in results:
-                    yield [self._get_aiida_res(tag_to_index_dict[0], rowitem)]
-            elif len(tag_to_index_dict) > 1:
-                for resultrow in results:
-                    yield [
-                        self._get_aiida_res(tag_to_index_dict[colindex], rowitem)
-                        for colindex, rowitem
-                        in enumerate(resultrow)
-                    ]
-            else:
-                raise Exception("Got an empty dictionary")
-        except Exception as e:
-            self._get_session().rollback()
-            raise e

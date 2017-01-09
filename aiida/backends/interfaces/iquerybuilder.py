@@ -52,6 +52,12 @@ class IQueryBuilder():
         :returns: an aiida-compatible instance
         """
         pass
+
+    @abstractmethod
+    def get_ormclass(self,  cls, ormclasstype):
+        pass
+
+
     @abstractmethod
     def yield_per(self, batch_size):
         """
@@ -61,6 +67,10 @@ class IQueryBuilder():
 
         :returns: a generator
         """
+        pass
+
+    @abstractmethod
+    def count(self):
         pass
 
     @abstractmethod
@@ -80,7 +90,4 @@ class IQueryBuilder():
     def iterdict(self, batch_size=100):
         pass
 
-    @abstractmethod
-    def get_ormclass(self,  cls, ormclasstype):
-        pass
 

@@ -323,7 +323,31 @@ class TestQueryBuilder(AiidaTestCase):
         for cls in (StructureData, ParameterData, Node, Data):
             qb = QueryBuilder().append(cls, filters={'attributes.cat':'miau'}, subclassing=False)
             self.assertEqual(qb.count(), 1)
-        
+
+
+    def test_list_behavior(self):
+        from aiida.orm import Node, Data, Calculation
+        from aiida.orm.querybuilder import QueryBuilder
+
+        for i in range(4):
+            Node().store()
+        self.assertEqual(len(QueryBuilder().append(Node).all()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project='*').all()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project=['*', 'id']).all()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project=['id']).all()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node).dict()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project='*').dict()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project=['*', 'id']).dict()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project=['id']).dict()), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node).iterall())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project='*').iterall())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project=['*', 'id']).iterall())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project=['id']).iterall())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node).iterdict())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project='*').iterdict())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project=['*', 'id']).iterdict())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project=['id']).iterdict())), 4)
+
 
 class QueryBuilderJoinsTests(AiidaTestCase):
     def test_joins1(self):
@@ -560,4 +584,4 @@ class TestConsistency(AiidaTestCase):
         self.assertTrue(len(QueryBuilder().append(Node,project=['id','label']).all(batch_size=10)) > 99)
 
 
-            
+

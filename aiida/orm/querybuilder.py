@@ -53,8 +53,8 @@ class QueryBuilder(object):
         """
         Instantiates a QueryBuilder instance
 
-        :param bool with_dbpath: 
-            Whether to use the DbPath table (if existing) 
+        :param bool with_dbpath:
+            Whether to use the DbPath table (if existing)
             to query ancestor-descendant relations
         :param list path: A list of the vertices to traverse
         :param dict filters: The filters to apply
@@ -68,7 +68,7 @@ class QueryBuilder(object):
         if BACKEND == BACKEND_SQLA:
             from aiida.backends.sqlalchemy.querybuilder_sqla import QueryBuilderImplSQLA
             self._impl = QueryBuilderImplSQLA()
-        elif BACKEND == BACKEND_DJANGO: 
+        elif BACKEND == BACKEND_DJANGO:
             from aiida.backends.djsite.querybuilder_django.querybuilder_django import QueryBuilderImplDjango
             self._impl = QueryBuilderImplDjango()
         elif BACKEND is None:
@@ -117,7 +117,7 @@ class QueryBuilder(object):
 
         self._with_dbpath = kwargs.pop('with_dbpath', True)
         if self._with_dbpath:
-            self._impl._prepare_with_dbpath()
+            self._impl.prepare_with_dbpath()
 
 
 
@@ -190,7 +190,7 @@ class QueryBuilder(object):
 
 
     def _get_ormclass(self, cls, ormclasstype):
-        return self._impl._get_ormclass(cls, ormclasstype)
+        return self._impl.get_ormclass(cls, ormclasstype)
 
     def _get_autotag(self, ormclasstype):
         basetag = self._get_tag_from_type(ormclasstype)
@@ -728,7 +728,7 @@ class QueryBuilder(object):
 
         if len(attrpath) or column_name in ('attributes', 'extras'):
 
-            entity = self._impl._get_projectable_attribute(
+            entity = self._impl.get_projectable_attribute(
                         alias, column_name, attrpath, **entityspec
                     )
         else:
@@ -797,7 +797,7 @@ class QueryBuilder(object):
             for projectable_entity_name, extraspec in projectable_spec.items():
                 if projectable_entity_name == '**':
                     # Need to expand
-                    entity_names = self._impl._modify_expansions(alias, [
+                    entity_names = self._impl.modify_expansions(alias, [
                             str(c).replace(alias.__table__.name+'.','')
                             for c
                             in alias.__table__.columns
@@ -927,7 +927,7 @@ class QueryBuilder(object):
                     filter_operation_dict = {'==':filter_operation_dict}
                 [
                     expressions.append(
-                        self._impl._get_filter_expr(
+                        self._impl.get_filter_expr(
                             operator, value, attr_key,
                             is_attribute=is_attribute,
                             column=column, column_name=column_name,
@@ -1017,7 +1017,7 @@ class QueryBuilder(object):
                 isouter=isouterjoin
         ).join(
                 entity_to_join,
-   
+
              aliased_edge.output_id == entity_to_join.id,
                 isouter=isouterjoin
         )
@@ -1532,7 +1532,7 @@ class QueryBuilder(object):
         # Every subclass needs to have _get_session and give me the
         # right session
         firstalias = self._tag_to_alias_map[self._path[0]['tag']]
-        self._query = self._impl._get_session().query(firstalias)
+        self._query = self._impl.get_session().query(firstalias)
 
         ######################### JOINS ################################
         #~ print self._query
@@ -1814,10 +1814,10 @@ class QueryBuilder(object):
             order of vertices in  path and projections for vertice
         """
         query = self.get_query()
-        resultrow = self._impl._first(query)
+        resultrow = self._impl.first(query)
         try:
             returnval = [
-                    self._impl._get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
+                    self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
                     for colindex, rowitem
                     in enumerate(resultrow)
                 ]
@@ -1831,7 +1831,7 @@ class QueryBuilder(object):
                 )
             # It still returns a list!
             else:
-                returnval = [self._impl._get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow)]
+                returnval = [self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow)]
         return returnval
 
 
@@ -1859,10 +1859,10 @@ class QueryBuilder(object):
 
         :returns: a generator of lists
         """
-        
+
 
         query = self.get_query()
-        
+
         for item in self._impl.iterall(query, batch_size, self._attrkeys_as_in_sql_result):
             yield item
         return

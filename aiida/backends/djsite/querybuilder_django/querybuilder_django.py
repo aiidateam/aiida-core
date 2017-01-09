@@ -18,6 +18,7 @@ from sqlalchemy import and_, or_, not_, exists, select, exists, case
 from sqlalchemy.types import Float
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute
+
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.elements import Cast
 from aiida.common.exceptions import InputValidationError
@@ -49,60 +50,41 @@ class QueryBuilderImplDjango(IQueryBuilder):
 
         super(QueryBuilderImplDjango, self).__init__(*args, **kwargs)
 
-    def _prepare_with_dbpath(self):
-        #~ from aiida.backends.querybuild.dummy_model import DbPath as DummyPath
-        self.Path = dummy_model.DbPath
 
-    def _get_aiida_res(self, key, res):
-        """
-        Some instance returned by ORM (django or SA) need to be converted
-        to Aiida instances (eg nodes)
 
-        :param res: the result returned by the query
-        :param key: the key that this entry would be return with
+    def get_filter_expr_from_column(self, operator, value, column):
 
-        :returns: an aiida-compatible instance
-        """
-
-        if key.startswith('attributes.'):
-            # If you want a specific attributes, that key was stored in res.
-            # So I call the getvalue method to expand into a dictionary
-            try:
-                returnval = DbAttribute.objects.get(id=res).getvalue()
-            except ObjectDoesNotExist:
-                # If the object does not exist, return None. This is consistent
-                # with SQLAlchemy inside the JSON
-                returnval = None
-        elif key.startswith('extras.'):
-            # Same as attributes
-            try:
-                returnval = DbExtra.objects.get(id=res).getvalue()
-            except ObjectDoesNotExist:
-                returnval = None
-        elif key == 'attributes':
-            # If you asked for all attributes, the QB return the ID of the node
-            # I use DbAttribute.get_all_values_for_nodepk
-            # to get the dictionary
-            return DbAttribute.get_all_values_for_nodepk(res)
-        elif key == 'extras':
-            # same as attributes
-            return DbExtra.get_all_values_for_nodepk(res)
-        elif key in ('_metadata', 'transport_params'):
-            # Metadata and transport_params are stored as json strings in the DB:
-            return json_loads(res)
-        elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
-            returnval =  res.get_aiida_class()
+        if not isinstance(column, (Cast, InstrumentedAttribute)):
+            raise TypeError(
+                'column ({}) {} is not a valid column'.format(
+                    type(column), column
+                )
+            )
+        database_entity = column
+        if operator == '==':
+            expr = database_entity == value
+        elif operator == '>':
+            expr = database_entity > value
+        elif operator == '<':
+            expr = database_entity < value
+        elif operator == '>=':
+            expr = database_entity >= value
+        elif operator == '<=':
+            expr = database_entity <= value
+        elif operator == 'like':
+            expr = database_entity.like(value)
+        elif operator == 'ilike':
+            expr = database_entity.ilike(value)
+        elif operator == 'in':
+            expr = database_entity.in_(value)
         else:
-            returnval = res
-        return returnval
+            raise InputValidationError(
+                'Unknown operator {} for filters on columns'.format(operator)
+            )
+        return expr
 
 
-    @staticmethod
-    def _get_session():
-        return dummy_model.session
-
-
-    def _get_filter_expr(
+    def get_filter_expr(
             self, operator, value, attr_key, is_attribute,
             alias=None, column=None, column_name=None
         ):
@@ -218,7 +200,7 @@ class QueryBuilderImplDjango(IQueryBuilder):
             for filter_operation_dict in value:
                 for newoperator, newvalue in filter_operation_dict.items():
                     expressions_for_this_path.append(
-                            self._get_filter_expr(
+                            self.get_filter_expr(
                                     newoperator, newvalue,
                                     attr_key=attr_key, is_attribute=is_attribute,
                                     alias=alias, column=column,
@@ -232,7 +214,7 @@ class QueryBuilderImplDjango(IQueryBuilder):
 
         if expr is None:
             if is_attribute:
-                expr = self._get_filter_expr_from_attributes(
+                expr = self.get_filter_expr_from_attributes(
                         operator, value, attr_key,
                         column=column, column_name=column_name, alias=alias
                     )
@@ -244,13 +226,43 @@ class QueryBuilderImplDjango(IQueryBuilder):
                             "the alias and the column name"
                         )
                     column = _get_column(column_name, alias)
-                expr = self._get_filter_expr_from_column(operator, value, column)
+                expr = self.get_filter_expr_from_column(operator, value, column)
         if negation:
             return not_(expr)
         return expr
 
 
-    def _get_filter_expr_from_attributes(
+
+
+    def prepare_with_dbpath(self):
+        #~ from aiida.backends.querybuild.dummy_model import DbPath as DummyPath
+        self.Path = dummy_model.DbPath
+
+
+
+    def get_session(self):
+        return dummy_model.session
+
+
+    def modify_expansions(self, alias, expansions):
+        """
+        For the Django schema, we have as additioanl expansions 'attributes'
+        and 'extras'
+        """
+
+        if issubclass(alias._sa_class_manager.class_, self.Node):
+            expansions.append("attributes")
+            expansions.append("extras")
+        elif issubclass(alias._sa_class_manager.class_, self.Computer):
+            try:
+                expansions.remove('metadata')
+                expansions.append('_metadata')
+            except KeyError:
+                pass
+
+        return expansions
+
+    def get_filter_expr_from_attributes(
             self, operator, value, attr_key,
             column=None, column_name=None,
             alias=None):
@@ -351,7 +363,7 @@ class QueryBuilderImplDjango(IQueryBuilder):
             for dtype, castas in types_n_casts:
                 try:
                     expressions.append(
-                        self._get_filter_expr(
+                        self.get_filter_expr(
                             operator, value, attr_key=[],
                             column=get_attribute_db_column(mapped_class, dtype, castas=castas),
                             is_attribute=False
@@ -368,26 +380,7 @@ class QueryBuilderImplDjango(IQueryBuilder):
             )
         return expr
 
-
-    def _modify_expansions(self, alias, expansions):
-        """
-        For the Django schema, we have as additioanl expansions 'attributes'
-        and 'extras'
-        """
-
-        if issubclass(alias._sa_class_manager.class_, self.Node):
-            expansions.append("attributes")
-            expansions.append("extras")
-        elif issubclass(alias._sa_class_manager.class_, self.Computer):
-            try:
-                expansions.remove('metadata')
-                expansions.append('_metadata')
-            except KeyError:
-                pass
-
-        return expansions
-
-    def _get_projectable_attribute(
+    def get_projectable_attribute(
             self, alias, column_name, attrpath,
             cast=None, **kwargs
         ):
@@ -398,7 +391,7 @@ class QueryBuilderImplDjango(IQueryBuilder):
         if not attrpath:
             # If the user with Django backend wants all the attributes or all
             # the extras, I will select as entity the ID of the node.
-            # in _get_aiida_res, this is transformed to the dictionary of attributes.
+            # in get_aiida_res, this is transformed to the dictionary of attributes.
             if column_name in ('attributes', 'extras'):
                 entity = alias.id
             else:
@@ -435,51 +428,50 @@ class QueryBuilderImplDjango(IQueryBuilder):
 
         return entity
 
-
-    def _yield_per(self, query, batch_size):
+    def get_aiida_res(self, key, res):
         """
-        :param count: Number of rows to yield per step
+        Some instance returned by ORM (django or SA) need to be converted
+        to Aiida instances (eg nodes)
 
-        Yields *count* rows at a time
+        :param res: the result returned by the query
+        :param key: the key that this entry would be return with
 
-        :returns: a generator
+        :returns: an aiida-compatible instance
         """
-        from django.db import transaction
-        with transaction.atomic():
-            return query.yield_per(batch_size)
-
-
-    def _get_filter_expr_from_column(self, operator, value, column):
-
-        if not isinstance(column, (Cast, InstrumentedAttribute)):
-            raise TypeError(
-                'column ({}) {} is not a valid column'.format(
-                    type(column), column
-                )
-            )
-        database_entity = column
-        if operator == '==':
-            expr = database_entity == value
-        elif operator == '>':
-            expr = database_entity > value
-        elif operator == '<':
-            expr = database_entity < value
-        elif operator == '>=':
-            expr = database_entity >= value
-        elif operator == '<=':
-            expr = database_entity <= value
-        elif operator == 'like':
-            expr = database_entity.like(value)
-        elif operator == 'ilike':
-            expr = database_entity.ilike(value)
-        elif operator == 'in':
-            expr = database_entity.in_(value)
+        if key.startswith('attributes.'):
+            # If you want a specific attributes, that key was stored in res.
+            # So I call the getvalue method to expand into a dictionary
+            try:
+                returnval = DbAttribute.objects.get(id=res).getvalue()
+            except ObjectDoesNotExist:
+                # If the object does not exist, return None. This is consistent
+                # with SQLAlchemy inside the JSON
+                returnval = None
+        elif key.startswith('extras.'):
+            # Same as attributes
+            try:
+                returnval = DbExtra.objects.get(id=res).getvalue()
+            except ObjectDoesNotExist:
+                returnval = None
+        elif key == 'attributes':
+            # If you asked for all attributes, the QB return the ID of the node
+            # I use DbAttribute.get_all_values_for_nodepk
+            # to get the dictionary
+            return DbAttribute.get_all_values_for_nodepk(res)
+        elif key == 'extras':
+            # same as attributes
+            return DbExtra.get_all_values_for_nodepk(res)
+        elif key in ('_metadata', 'transport_params'):
+            # Metadata and transport_params are stored as json strings in the DB:
+            return json_loads(res)
+        elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
+            returnval =  res.get_aiida_class()
         else:
-            raise InputValidationError(
-                'Unknown operator {} for filters on columns'.format(operator)
-            )
-        return expr
-    def _get_ormclass(self, cls, ormclasstype):
+            returnval = res
+        return returnval
+
+
+    def get_ormclass(self, cls, ormclasstype):
         """
         Return the valid ormclass for the connections
         """
@@ -583,48 +575,24 @@ class QueryBuilderImplDjango(IQueryBuilder):
         return ormclass, ormclasstype, query_type_string
 
 
-    def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
+    def yield_per(self, query, batch_size):
+        """
+        :param count: Number of rows to yield per step
+
+        Yields *count* rows at a time
+
+        :returns: a generator
+        """
         from django.db import transaction
-
-        # Wrapping everything in an atomic transaction:
         with transaction.atomic():
-            results = query.yield_per(batch_size)
-            # Two cases: If one column was asked, the database returns a matrix of rows * columns:
-            if len(tag_to_projected_entity_dict) > 1:
-                for this_result in results:
-                    yield {
-                        tag:{
-                            attrkey:self._get_aiida_res(
-                                    attrkey, this_result[index_in_sql_result]
-                                )
-                            for attrkey, index_in_sql_result
-                            in projected_entities_dict.items()
-                        }
-                        for tag, projected_entities_dict
-                        in tag_to_projected_entity_dict.items()
-                    }
-            elif len(tag_to_projected_entity_dict) == 1:
-                # I this case, sql returns a  list, where each listitem is the result
-                # for one row. Here I am converting it to a list of lists (of length 1)
-                for this_result in results:
-                    yield {
-                        tag:{
-                            attrkey : self._get_aiida_res(attrkey, this_result)
-                            for attrkey, position in projected_entities_dict.items()
-                        }
-                        for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
-                    }
+            return query.yield_per(batch_size)
 
-
-            else:
-                raise Exception("Got an empty dictionary")
 
     def count(self, query):
 
         from django.db import transaction
         with transaction.atomic():
             return query.count()
-
 
     def first(self, query):
         """
@@ -636,8 +604,6 @@ class QueryBuilderImplDjango(IQueryBuilder):
         with transaction.atomic():
             return query.first()
 
-
-
     def iterall(self, query, batch_size, tag_to_index_dict):
         from django.db import transaction
 
@@ -645,14 +611,68 @@ class QueryBuilderImplDjango(IQueryBuilder):
             results = query.yield_per(batch_size)
 
             if len(tag_to_index_dict) == 1:
-                for rowitem in results:
-                    yield [self._get_aiida_res(tag_to_index_dict[0], rowitem)]
+                # Sqlalchemy, for some strange reason, does not return a list of lsits
+                # if you have provided an ormclass
+
+                if tag_to_index_dict.values() == ['*']:
+                    for rowitem in results:
+                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
+                else:
+                    for rowitem, in results:
+                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
             elif len(tag_to_index_dict) > 1:
                 for resultrow in results:
                     yield [
-                        self._get_aiida_res(tag_to_index_dict[colindex], rowitem)
+                        self.get_aiida_res(tag_to_index_dict[colindex], rowitem)
                         for colindex, rowitem
                         in enumerate(resultrow)
                     ]
             else:
                 raise Exception("Got an empty dictionary")
+
+    def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
+        from django.db import transaction
+        # Wrapping everything in an atomic transaction:
+        with transaction.atomic():
+            results = query.yield_per(batch_size)
+            # Two cases: If one column was asked, the database returns a matrix of rows * columns:
+            nr_items = sum([len(v) for v in tag_to_projected_entity_dict.values()])
+            if nr_items > 1:
+                for this_result in results:
+                    yield {
+                        tag:{
+                            attrkey:self.get_aiida_res(
+                                    attrkey, this_result[index_in_sql_result]
+                                )
+                            for attrkey, index_in_sql_result
+                            in projected_entities_dict.items()
+                        }
+                        for tag, projected_entities_dict
+                        in tag_to_projected_entity_dict.items()
+                    }
+            elif nr_items == 1:
+                # I this case, sql returns a  list, where each listitem is the result
+                # for one row. Here I am converting it to a list of lists (of length 1)
+                if [ v for entityd in tag_to_projected_entity_dict.values() for v in entityd.keys()] == ['*']:
+                    for this_result in results:
+                        yield {
+                            tag:{
+                                attrkey : self.get_aiida_res(attrkey, this_result)
+                                for attrkey, position in projected_entities_dict.items()
+                            }
+                            for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
+                        }
+                else:
+                    for this_result, in results:
+                        yield {
+                            tag:{
+                                attrkey : self.get_aiida_res(attrkey, this_result)
+                                for attrkey, position in projected_entities_dict.items()
+                            }
+                            for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
+                        }
+            else:
+                raise Exception("Got an empty dictionary")
+
+
+

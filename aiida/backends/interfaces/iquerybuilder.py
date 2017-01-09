@@ -7,7 +7,7 @@ class IQueryBuilder():
     def __init__(self, *args, **kwargs):
         pass
     @abstractmethod
-    def _prepare_with_dbpath(self):
+    def prepare_with_dbpath(self):
         """
         A method to use the DbPath, if this is supported, or throw an
         exception if not.
@@ -19,11 +19,11 @@ class IQueryBuilder():
         """
         pass
     @abstractmethod
-    def _get_session(self):
+    def get_session(self):
         pass
 
     @abstractmethod
-    def _modify_expansions(self, alias, expansions):
+    def modify_expansions(self, alias, expansions):
         """
         Modify names of projections if ** was specified.
         This is important for the schema having attributes in a different table.
@@ -31,17 +31,17 @@ class IQueryBuilder():
         pass
 
     @abstractmethod
-    def _get_filter_expr_from_attributes(
+    def get_filter_expr_from_attributes(
             cls, operator, value, attr_key,
             column=None, column_name=None, alias=None):
         pass
     @abstractmethod
-    def _get_projectable_attribute(
+    def get_projectable_attribute(
             self, alias, column_name, attrpath,
             cast=None, **kwargs):
         pass
     @abstractmethod
-    def _get_aiida_res(self, key, res):
+    def get_aiida_res(self, key, res):
         """
         Some instance returned by ORM (django or SA) need to be converted
         to Aiida instances (eg nodes)
@@ -53,7 +53,7 @@ class IQueryBuilder():
         """
         pass
     @abstractmethod
-    def _yield_per(self, batch_size):
+    def yield_per(self, batch_size):
         """
         :param count: Number of rows to yield per step
 
@@ -62,11 +62,9 @@ class IQueryBuilder():
         :returns: a generator
         """
         pass
+
     @abstractmethod
-    def _all(self):
-        pass
-    @abstractmethod
-    def _first(self):
+    def first(self):
         """
         Executes query in the backend asking for one instance.
 
@@ -74,15 +72,15 @@ class IQueryBuilder():
         """
 
         pass
-    #~ @abstractmethod
-    #~ def iterall(self, batch_size=100):
-
-        #~ pass
-    #~ @abstractmethod
-    #~ def iterdict(self, batch_size=100):
-
-        #~ pass
     @abstractmethod
-    def _get_ormclass(self,  cls, ormclasstype):
+    def iterall(self, batch_size=100):
+        pass
+
+    @abstractmethod
+    def iterdict(self, batch_size=100):
+        pass
+
+    @abstractmethod
+    def get_ormclass(self,  cls, ormclasstype):
         pass
 

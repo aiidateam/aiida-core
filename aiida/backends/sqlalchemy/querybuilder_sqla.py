@@ -88,11 +88,11 @@ class QueryBuilderImplSQLA(IQueryBuilder):
         self.AiidaUser          = AiidaUser
         super(QueryBuilderImplSQLA, self).__init__(*args, **kwargs)
 
-    def _prepare_with_dbpath(self):
+    def prepare_with_dbpath(self):
         from aiida.backends.sqlalchemy.models.node import DbPath
         self.Path = DbPath
 
-    def _get_session(self):
+    def get_session(self):
         return aiida.backends.sqlalchemy.session
 
     def _modify_expansions(self, alias, expansions):
@@ -291,7 +291,7 @@ class QueryBuilderImplSQLA(IQueryBuilder):
 
 
 
-    def _get_filter_expr_from_attributes(
+    def get_filter_expr_from_attributes(
             self, operator, value, attr_key,
             column=None, column_name=None,
             alias=None):
@@ -396,7 +396,7 @@ class QueryBuilderImplSQLA(IQueryBuilder):
         return expr
 
 
-    def _get_projectable_attribute(
+    def get_projectable_attribute(
             self, alias, column_name, attrpath,
             cast=None, **kwargs
         ):
@@ -428,7 +428,7 @@ class QueryBuilderImplSQLA(IQueryBuilder):
 
 
 
-    def _get_aiida_res(self, key, res):
+    def get_aiida_res(self, key, res):
         """
         Some instance returned by ORM (django or SA) need to be converted
         to Aiida instances (eg nodes). Choice (sqlalchemy_utils)
@@ -448,7 +448,7 @@ class QueryBuilderImplSQLA(IQueryBuilder):
         return returnval
 
 
-    def _yield_per(self, query, batch_size):
+    def yield_per(self, query, batch_size):
         """
         :param count: Number of rows to yield per step
 
@@ -463,41 +463,10 @@ class QueryBuilderImplSQLA(IQueryBuilder):
             self._get_session().rollback()
             raise e
 
-    def count(self, query):
-
-        try:
-            return query.count()
-        except Exception as e:
-            # exception was raised. Rollback the session
-            self._get_session().rollback()
-            raise e
-
-
-    def _all(self, query):
-        try:
-            return query.all()
-        except Exception as e:
-            # exception was raised. Rollback the session
-            self._get_session().rollback()
-            raise e
-
-    def _first(self, query):
-        """
-        Executes query in the backend asking for one instance.
-
-        :returns: One row of aiida results
-        """
-        try:
-            return query.first()
-        except Exception as e:
-            # exception was raised. Rollback the session
-            self._get_session().rollback()
-            raise e
 
 
 
-
-    def _get_ormclass(self, cls, ormclasstype):
+    def get_ormclass(self, cls, ormclasstype):
         """
         Return the valid ormclass for the connections
         """
@@ -599,3 +568,90 @@ class QueryBuilderImplSQLA(IQueryBuilder):
                 query_type_string = PluginClass._query_type_string
 
         return ormclass, ormclasstype, query_type_string
+
+
+
+    def count(self, query):
+
+        try:
+            return query.count()
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
+
+    def first(self, query):
+        """
+        Executes query in the backend asking for one instance.
+
+        :returns: One row of aiida results
+        """
+        try:
+            return query.first()
+        except Exception as e:
+            # exception was raised. Rollback the session
+            self._get_session().rollback()
+            raise e
+
+
+    def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
+        
+
+        # Wrapping everything in an atomic transaction:
+        try:
+            results = query.yield_per(batch_size)
+            # Two cases: If one column was asked, the database returns a matrix of rows * columns:
+            if len(tag_to_projected_entity_dict) > 1:
+                for this_result in results:
+                    yield {
+                        tag:{
+                            attrkey:self._get_aiida_res(
+                                    attrkey, this_result[index_in_sql_result]
+                                )
+                            for attrkey, index_in_sql_result
+                            in projected_entities_dict.items()
+                        }
+                        for tag, projected_entities_dict
+                        in tag_to_projected_entity_dict.items()
+                    }
+            elif len(tag_to_projected_entity_dict) == 1:
+                # I this case, sql returns a  list, where each listitem is the result
+                # for one row. Here I am converting it to a list of lists (of length 1)
+                for this_result in results:
+                    yield {
+                        tag:{
+                            attrkey : self._get_aiida_res(attrkey, this_result)
+                            for attrkey, position in projected_entities_dict.items()
+                        }
+                        for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
+                    }
+
+
+            else:
+                raise Exception("Got an empty dictionary")
+        except Exception as e:
+            self._get_session().rollback()
+            raise e
+
+
+
+    def iterall(self, query, batch_size, tag_to_index_dict):    
+        try:
+            results = query.yield_per(batch_size)
+
+            if len(tag_to_index_dict) == 1:
+                for rowitem in results:
+                    yield [self._get_aiida_res(tag_to_index_dict[0], rowitem)]
+            elif len(tag_to_index_dict) > 1:
+                for resultrow in results:
+                    yield [
+                        self._get_aiida_res(tag_to_index_dict[colindex], rowitem)
+                        for colindex, rowitem
+                        in enumerate(resultrow)
+                    ]
+            else:
+                raise Exception("Got an empty dictionary")
+        except Exception as e:
+            self._get_session().rollback()
+            raise e

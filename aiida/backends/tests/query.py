@@ -538,3 +538,26 @@ class QueryBuilderPath(AiidaTestCase):
 
 
 
+class TestConsistency(AiidaTestCase):
+    def test_create_node_and_query(self):
+        from aiida.orm import Node
+        from aiida.orm.querybuilder import QueryBuilder
+
+
+        import random
+
+
+        for i in range(100):
+            n = Node()
+            n.store()
+
+        for idx, item in enumerate(QueryBuilder().append(Node,project=['id','label']).iterall(batch_size=10)):
+            if idx % 10 == 10:
+                print "creating new node"
+                n = Node()
+                n.store()
+        self.assertEqual(idx,99)
+        self.assertTrue(len(QueryBuilder().append(Node,project=['id','label']).all(batch_size=10)) > 99)
+
+
+            

@@ -448,28 +448,6 @@ class QueryBuilderImplDjango(IQueryBuilder):
         with transaction.atomic():
             return query.yield_per(batch_size)
 
-    def count(self, query):
-
-        try:
-            return query.count()
-        except Exception as e:
-            # exception was raised. Rollback the session
-            self._get_session().rollback()
-            raise e
-    def _all(self, query):
-        from django.db import transaction
-        with transaction.atomic():
-            return query.all()
-
-    def _first(self, query):
-        """
-        Executes query in the backend asking for one instance.
-
-        :returns: One row of aiida results
-        """
-        from django.db import transaction
-        with transaction.atomic():
-            return query.first()
 
     def _get_filter_expr_from_column(self, operator, value, column):
 
@@ -603,3 +581,78 @@ class QueryBuilderImplDjango(IQueryBuilder):
                 query_type_string = PluginClass._query_type_string
 
         return ormclass, ormclasstype, query_type_string
+
+
+    def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
+        from django.db import transaction
+
+        # Wrapping everything in an atomic transaction:
+        with transaction.atomic():
+            results = query.yield_per(batch_size)
+            # Two cases: If one column was asked, the database returns a matrix of rows * columns:
+            if len(tag_to_projected_entity_dict) > 1:
+                for this_result in results:
+                    yield {
+                        tag:{
+                            attrkey:self._get_aiida_res(
+                                    attrkey, this_result[index_in_sql_result]
+                                )
+                            for attrkey, index_in_sql_result
+                            in projected_entities_dict.items()
+                        }
+                        for tag, projected_entities_dict
+                        in tag_to_projected_entity_dict.items()
+                    }
+            elif len(tag_to_projected_entity_dict) == 1:
+                # I this case, sql returns a  list, where each listitem is the result
+                # for one row. Here I am converting it to a list of lists (of length 1)
+                for this_result in results:
+                    yield {
+                        tag:{
+                            attrkey : self._get_aiida_res(attrkey, this_result)
+                            for attrkey, position in projected_entities_dict.items()
+                        }
+                        for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
+                    }
+
+
+            else:
+                raise Exception("Got an empty dictionary")
+
+    def count(self, query):
+
+        from django.db import transaction
+        with transaction.atomic():
+            return query.count()
+
+
+    def first(self, query):
+        """
+        Executes query in the backend asking for one instance.
+
+        :returns: One row of aiida results
+        """
+        from django.db import transaction
+        with transaction.atomic():
+            return query.first()
+
+
+
+    def iterall(self, query, batch_size, tag_to_index_dict):
+        from django.db import transaction
+
+        with transaction.atomic():
+            results = query.yield_per(batch_size)
+
+            if len(tag_to_index_dict) == 1:
+                for rowitem in results:
+                    yield [self._get_aiida_res(tag_to_index_dict[0], rowitem)]
+            elif len(tag_to_index_dict) > 1:
+                for resultrow in results:
+                    yield [
+                        self._get_aiida_res(tag_to_index_dict[colindex], rowitem)
+                        for colindex, rowitem
+                        in enumerate(resultrow)
+                    ]
+            else:
+                raise Exception("Got an empty dictionary")

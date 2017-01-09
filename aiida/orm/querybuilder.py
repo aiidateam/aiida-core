@@ -1901,7 +1901,7 @@ class QueryBuilder(object):
         query = self.get_query()
 
         if batch_size is not None:
-            results = self._yield_per(query, batch_size=batch_size)
+            results = self._impl._yield_per(query, batch_size=batch_size)
         else:
             results = self._impl._all(query)
         try:

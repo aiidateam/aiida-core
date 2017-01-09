@@ -444,7 +444,9 @@ class QueryBuilderImplDjango(IQueryBuilder):
 
         :returns: a generator
         """
-        return query.yield_per(batch_size)
+        from django.db import transaction
+        with transaction.atomic():
+            return query.yield_per(batch_size)
 
     def count(self, query):
 

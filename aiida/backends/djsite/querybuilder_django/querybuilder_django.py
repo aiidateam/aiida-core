@@ -650,29 +650,33 @@ class QueryBuilderImplDjango(IQueryBuilder):
 
     def iterall(self, query, batch_size, tag_to_index_dict):
         from django.db import transaction
+        try:
+            with transaction.atomic():
+                results = query.yield_per(batch_size)
 
-        with transaction.atomic():
-            results = query.yield_per(batch_size)
+                if len(tag_to_index_dict) == 1:
+                    # Sqlalchemy, for some strange reason, does not return a list of lsits
+                    # if you have provided an ormclass
 
-            if len(tag_to_index_dict) == 1:
-                # Sqlalchemy, for some strange reason, does not return a list of lsits
-                # if you have provided an ormclass
-
-                if tag_to_index_dict.values() == ['*']:
-                    for rowitem in results:
-                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
+                    if tag_to_index_dict.values() == ['*']:
+                        for rowitem in results:
+                            yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
+                    else:
+                        for rowitem, in results:
+                            yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
+                elif len(tag_to_index_dict) > 1:
+                    for resultrow in results:
+                        yield [
+                            self.get_aiida_res(tag_to_index_dict[colindex], rowitem)
+                            for colindex, rowitem
+                            in enumerate(resultrow)
+                        ]
                 else:
-                    for rowitem, in results:
-                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
-            elif len(tag_to_index_dict) > 1:
-                for resultrow in results:
-                    yield [
-                        self.get_aiida_res(tag_to_index_dict[colindex], rowitem)
-                        for colindex, rowitem
-                        in enumerate(resultrow)
-                    ]
-            else:
-                raise Exception("Got an empty dictionary")
+                    raise Exception("Got an empty dictionary")
+        except Exception as e:
+            self.get_session().rollback()
+            raise e
+
 
     def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
         from django.db import transaction

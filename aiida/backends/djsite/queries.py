@@ -3,8 +3,6 @@ from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 class QueryManagerDjango(AbstractQueryManager):
 
-
-
     def query_jobcalculations_by_computer_user_state(
             self, state, computer=None, user=None,
             only_computer_user_pairs=False,
@@ -45,6 +43,8 @@ class QueryManagerDjango(AbstractQueryManager):
             raise InputValidationError("querying for calculation state='{}', but it "
                                 "is not a valid calculation state".format(state))
 
+
+
         kwargs = {}
         if computer is not None:
             # I convert it from various type of inputs
@@ -53,6 +53,9 @@ class QueryManagerDjango(AbstractQueryManager):
             kwargs['dbcomputer'] = Computer.get(computer).dbcomputer
         if user is not None:
             kwargs['user'] = user
+        if only_enabled:
+            kwargs['dbcomputer__enabled'] = True
+
 
         queryresults = JobCalculation.query(
             dbattributes__key='state',
@@ -62,5 +65,7 @@ class QueryManagerDjango(AbstractQueryManager):
         if only_computer_user_pairs:
             return queryresults.values_list(
                 'dbcomputer__id', 'user__id')
+        elif limit is not None:
+            return queryresults[:limit]
         else:
             return queryresults

@@ -1251,7 +1251,7 @@ class QueryBuilder(object):
                 (entity_to_join, self._impl.Node),
                 'member_of'
             )
-        aliased_group_nodes = aliased(self.table_groups_nodes)
+        aliased_group_nodes = aliased(self._impl.table_groups_nodes)
         self._query = self._query.join(
                 aliased_group_nodes,
                 aliased_group_nodes.c.dbgroup_id == joined_entity.id

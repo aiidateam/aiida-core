@@ -237,15 +237,6 @@ def update_jobs():
             only_computer_user_pairs=True,
             only_enabled=True
         )
-    #~ print computers_users_to_check
-
-    #~ computers_users_to_check = list(
-        #~ JobCalculation._get_all_with_state(
-            #~ state=calc_states.WITHSCHEDULER,
-            #~ only_computer_user_pairs=True,
-            #~ only_enabled=True
-        #~ )
-    #~ )
 
     for computer, aiidauser in computers_users_to_check:
 
@@ -283,17 +274,9 @@ def submit_jobs():
             only_computer_user_pairs=True,
             only_enabled=True
         )
-    #~ print computers_users_to_check
-    #~ computers_users_to_check = list(JobCalculation._get_all_with_state(
-            #~ state=calc_states.TOSUBMIT,
-            #~ only_computer_user_pairs=True,
-            #~ only_enabled=True
-        #~ )
-    #~ )
-    #~ print computers_users_to_check
+
     for computer, aiidauser in computers_users_to_check:
-        #~ user = User.search_for_users(id=dbuser_id)
-        #~ computer = Computer.get(dbcomputer_id)
+
         execlogger.debug("({},{}) pair to submit".format(
             aiidauser.email, computer.name))
 
@@ -362,7 +345,6 @@ def submit_jobs_with_authinfo(authinfo):
                      "and machine {}".format(
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
-    # This returns an iterator over aiida JobCalculation objects
     qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
     calcs_to_inquire = qmanager.query_jobcalculations_by_computer_user_state(
@@ -370,12 +352,6 @@ def submit_jobs_with_authinfo(authinfo):
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
 
-#~ 
-#~ 
-    #~ calcs_to_inquire = list(JobCalculation._get_all_with_state(
-        #~ state=calc_states.TOSUBMIT,
-        #~ computer=authinfo.dbcomputer,
-        #~ user=authinfo.aiidauser))
 
     # I avoid to open an ssh connection if there are
     # no calcs with state WITHSCHEDULER
@@ -696,16 +672,11 @@ def retrieve_computed_for_authinfo(authinfo):
 
     qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
-    calcs_to_inquire = qmanager.query_jobcalculations_by_computer_user_state(
+    calcs_to_retrieve = qmanager.query_jobcalculations_by_computer_user_state(
             state=calc_states.COMPUTED,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
 
-    #~ calcs_to_retrieve = list(JobCalculation._get_all_with_state(
-        #~ state=calc_states.COMPUTED,
-        #~ computer=authinfo.dbcomputer,
-        #~ user=authinfo.aiidauser)
-    #~ )
 
     retrieved = []
 

@@ -8,7 +8,7 @@ class QueryManagerDjango(AbstractQueryManager):
             only_computer_user_pairs=False,
             only_enabled=True, limit=None):
         # Here I am overriding the implementation using the QueryBuilder:
-        
+
         """
         Filter all calculations with a given state.
 
@@ -34,10 +34,11 @@ class QueryManagerDjango(AbstractQueryManager):
         """
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
-        from aiida.orm import Computer
+        from aiida.orm import Computer,User
         from aiida.common.exceptions import InputValidationError
         from aiida.orm.implementation.django.calculation.job import JobCalculation
         from aiida.common.datastructures import calc_states
+        from aiida.backends.djsite.db.models import DbUser
 
         if state not in calc_states:
             raise InputValidationError("querying for calculation state='{}', but it "
@@ -63,8 +64,13 @@ class QueryManagerDjango(AbstractQueryManager):
             **kwargs)
 
         if only_computer_user_pairs:
-            return queryresults.values_list(
+            computer_users_ids = queryresults.values_list(
                 'dbcomputer__id', 'user__id')
+            computer_users = []
+            for computer_id,  user_id in computer_users_ids: #return cls(dbcomputer=DbComputer.get_dbcomputer(computer))DbNode.objects.get(pk=pk).get_aiida_class()
+                computer_users.append((Computer.get(computer_id), DbUser.objects.get(pk=user_id).get_aiida_class()))
+            return computer_users
+
         elif limit is not None:
             return queryresults[:limit]
         else:

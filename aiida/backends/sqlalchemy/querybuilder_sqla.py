@@ -14,16 +14,13 @@ from sqlalchemy.sql.expression import cast
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import Cast
 from sqlalchemy_utils.types.choice import Choice
-from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
-from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
-from aiida.backends.sqlalchemy.models.user import DbUser
+
 from aiida.common.exceptions import (
         InputValidationError, DbContentError,
         MissingPluginError, ConfigurationError
     )
 from aiida.common.exceptions import InputValidationError
-from aiida.backends.interfaces.iquerybuilder import IQueryBuilder
+from aiida.backends.general.iquerybuilder import IQueryBuilder
 from aiida.backends.utils import _get_column
 from sqlalchemy.sql.elements import Cast
 
@@ -76,17 +73,68 @@ class QueryBuilderImplSQLA(IQueryBuilder):
         from aiida.orm.implementation.sqlalchemy.group import Group as AiidaGroup
         from aiida.orm.implementation.sqlalchemy.computer import Computer as AiidaComputer
         from aiida.orm.implementation.sqlalchemy.user import User as AiidaUser
-        self.Link               = DbLink
-        self.Node               = DbNode
-        self.Computer           = DbComputer
-        self.User               = DbUser
-        self.Group              = DbGroup
-        self.table_groups_nodes = table_groups_nodes
-        self.AiidaNode          = AiidaNode
-        self.AiidaGroup         = AiidaGroup
-        self.AiidaComputer      = AiidaComputer
-        self.AiidaUser          = AiidaUser
+        #~ self.Link               = DbLink
+        #~ self.Node               = DbNode
+        #~ self.Computer           = DbComputer
+        #~ self.User               = DbUser
+        #~ self.Group              = DbGroup
+        #~ self.table_groups_nodes = table_groups_nodes
+        #~ self.AiidaNode          = AiidaNode
+        #~ self.AiidaGroup         = AiidaGroup
+        #~ self.AiidaComputer      = AiidaComputer
+        #~ self.AiidaUser          = AiidaUser
         super(QueryBuilderImplSQLA, self).__init__(*args, **kwargs)
+
+
+    @property
+    def Node(self):
+        import aiida.backends.sqlalchemy.models.node
+        return aiida.backends.sqlalchemy.models.node.DbNode
+    @property
+    def Link(self):
+        import aiida.backends.sqlalchemy.models.node
+        return aiida.backends.sqlalchemy.models.node.DbLink
+
+    @property
+    def Computer(self):
+        import aiida.backends.sqlalchemy.models.computer
+        return aiida.backends.sqlalchemy.models.computer.DbComputer
+
+    @property
+    def User(self):
+        import aiida.backends.sqlalchemy.models.user
+        return aiida.backends.sqlalchemy.models.user.DbUser
+
+    @property
+    def Group(self):
+        import aiida.backends.sqlalchemy.models.group
+        return aiida.backends.sqlalchemy.models.group.DbGroup
+
+    @property
+    def table_groups_nodes(self):
+        import aiida.backends.sqlalchemy.models.group
+        return aiida.backends.sqlalchemy.models.group.table_groups_nodes
+
+    @property
+    def AiidaNode(self):
+        import aiida.orm.implementation.sqlalchemy.node
+        return aiida.orm.implementation.sqlalchemy.node.Node
+        
+    @property
+    def AiidaGroup(self):
+        import aiida.orm.implementation.sqlalchemy.group
+        return aiida.orm.implementation.sqlalchemy.group.Group
+        
+    @property
+    def AiidaUser(self):
+        import aiida.orm.implementation.sqlalchemy.user
+        return aiida.orm.implementation.sqlalchemy.user.User
+
+    @property
+    def AiidaComputer(self):
+        import aiida.orm.implementation.sqlalchemy.computer
+        return aiida.orm.implementation.sqlalchemy.computer.Computer
+
 
     def prepare_with_dbpath(self):
         from aiida.backends.sqlalchemy.models.node import DbPath

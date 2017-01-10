@@ -22,7 +22,7 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.elements import Cast
 from aiida.common.exceptions import InputValidationError
-from aiida.backends.interfaces.iquerybuilder import IQueryBuilder
+from aiida.backends.general.iquerybuilder import IQueryBuilder
 from aiida.backends.utils import _get_column
 from aiida.common.exceptions import (
         InputValidationError, DbContentError,
@@ -37,19 +37,63 @@ class QueryBuilderImplDjango(IQueryBuilder):
         from aiida.orm.implementation.django.computer import Computer as AiidaComputer
         from aiida.orm.implementation.django.user import User as AiidaUser
 
-        self.Link               = dummy_model.DbLink
-        self.Node               = dummy_model.DbNode
-        self.Computer           = dummy_model.DbComputer
-        self.User               = dummy_model.DbUser
-        self.Group              = dummy_model.DbGroup
-        self.table_groups_nodes = dummy_model.table_groups_nodes
-        self.AiidaNode          = AiidaNode
-        self.AiidaGroup         = AiidaGroup
-        self.AiidaComputer      = AiidaComputer
-        self.AiidaUser          = AiidaUser
+        #~ self.Link               = dummy_model.DbLink
+        #~ self.Node               = dummy_model.DbNode
+        #~ self.Computer           = dummy_model.DbComputer
+        #~ self.User               = dummy_model.DbUser
+        #~ self.Group              = dummy_model.DbGroup
+        #~ self.table_groups_nodes = dummy_model.table_groups_nodes
+        #~ self.AiidaNode          = AiidaNode
+        #~ self.AiidaGroup         = AiidaGroup
+        #~ self.AiidaComputer      = AiidaComputer
+        #~ self.AiidaUser          = AiidaUser
 
         super(QueryBuilderImplDjango, self).__init__(*args, **kwargs)
 
+
+    @property
+    def Node(self):
+        return dummy_model.DbNode
+
+    @property
+    def Link(self):
+        return dummy_model.DbLink
+
+    @property
+    def Computer(self):
+        return dummy_model.DbComputer
+
+    @property
+    def User(self):
+        return dummy_model.DbUser
+
+    @property
+    def Group(self):
+        return dummy_model.DbGroup
+
+    @property
+    def table_groups_nodes(self):
+        return dummy_model.table_groups_nodes
+
+    @property
+    def AiidaNode(self):
+        import aiida.orm.implementation.django.node
+        return aiida.orm.implementation.django.node.Node
+        
+    @property
+    def AiidaGroup(self):
+        import aiida.orm.implementation.django.group
+        return aiida.orm.implementation.django.group.Group
+        
+    @property
+    def AiidaUser(self):
+        import aiida.orm.implementation.django.user
+        return aiida.orm.implementation.django.user.User
+
+    @property
+    def AiidaComputer(self):
+        import aiida.orm.implementation.django.computer
+        return aiida.orm.implementation.django.computer.Computer
 
 
     def get_filter_expr_from_column(self, operator, value, column):

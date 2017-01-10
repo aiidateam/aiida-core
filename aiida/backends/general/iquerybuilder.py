@@ -6,6 +6,47 @@ class IQueryBuilder():
     @abstractmethod
     def __init__(self, *args, **kwargs):
         pass
+
+    @abstractmethod
+    def Node(self):
+        pass
+
+    @abstractmethod
+    def Link(self):
+        pass
+
+    @abstractmethod
+    def Computer(self):
+        pass
+
+    @abstractmethod
+    def User(self):
+        pass
+
+    @abstractmethod
+    def Group(self):
+        pass
+
+    @abstractmethod
+    def table_groups_nodes(self):
+        pass
+
+    @abstractmethod
+    def AiidaNode(self):
+        pass
+
+    @abstractmethod
+    def AiidaGroup(self):
+        pass
+
+    @abstractmethod
+    def AiidaUser(self):
+        pass
+
+    @abstractmethod
+    def AiidaComputer(self):
+        pass
+
     @abstractmethod
     def prepare_with_dbpath(self):
         """

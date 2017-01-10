@@ -65,7 +65,7 @@ class QueryManagerDjango(AbstractQueryManager):
 
         if only_computer_user_pairs:
             computer_users_ids = queryresults.values_list(
-                'dbcomputer__id', 'user__id')
+                'dbcomputer__id', 'user__id').distinct()
             computer_users = []
             for computer_id,  user_id in computer_users_ids: #return cls(dbcomputer=DbComputer.get_dbcomputer(computer))DbNode.objects.get(pk=pk).get_aiida_class()
                 computer_users.append((Computer.get(computer_id), DbUser.objects.get(pk=user_id).get_aiida_class()))

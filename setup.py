@@ -35,18 +35,68 @@ if __name__ == '__main__':
         extras_require=extras_require,
         dependency_links=dependency_links,
         packages=find_packages(),
-        entry_points={
-            'console_scripts': [
-                'verdi=aiida.cmdline.verdilib:run'
-            ],
-            # following are AiiDA plugin entry points:
-            'aiida.calculations': [],
-            'aiida.parsers': [],
-            'aiida.cmdline': [],
-            'aiida.schedulers': [],
-            'aiida.transports': [],
-            'aiida.workflows': [],
-        },
-        scripts=['bin/runaiida'],
-        long_description=open(path.join(aiida_folder, 'README.rst')).read(),
-    )
+    	entry_points={
+ 	    	'console_scripts': [
+  	    		'verdi=aiida.cmdline.verdilib:run'
+  	    	],
+        	# following are AiiDA plugin entry points:
+        	'aiida.calculations': [
+        	    'simpleplugins.templatereplacer = aiida.orm.calculation.job.simpleplugins.templatereplacer:TemplatereplacerCalculation',
+            	'quantumespresso.pw = aiida.orm.calculation.job.quantumespresso.pw:PwCalculation',
+            	'quantumespresso.cp = aiida.orm.calculation.job.quantumespresso.cp:CpCalculation',
+            	'quantumespresso.pwimmigrant = aiida.orm.calculation.job.quantumespresso.pwimmigrant:PwimmigrantCalculation',
+            	'nwchem.basic = aiida.orm.calculation.job.nwchem.basic:BasicCalculation',
+            	'nwchem.pymatgen = aiida.orm.calculation.job.nwchem.nwcpymatgen:NwcpymatgenCalculation',
+            	'codtools.ciffilter = aiida.orm.calculation.job.codtools.ciffilter:CiffilterCalculation',
+            	'codtools.cifcellcontents = aiida.orm.calculation.job.codtools.cifcellcontents:CifcellcontentsCalculation',
+            	'codtools.cifcodcheck = aiida.orm.calculation.job.codtools.cifcodcheck:CifcodcheckCalculation',
+            	'codtools.cifcoddeposit = aiida.orm.calculation.job.codtools.cifcoddeposit:CifcoddepositCalculation',
+            	'codtools.cifcodnumbers = aiida.orm.calculation.job.codtools.cifcodnumbers:CifcodnumbersCalculation',
+            	'codtools.cifsplitprimitive = aiida.orm.calculation.job.codtools.cifsplitprimitive:CifsplitprimitiveCalculation',
+        	],
+        	'aiida.data':[
+            	'array.bands = aiida.orm.data.array.bands:BandsData',
+            	'array.kpoints = aiida.orm.data.array.kpoints:KpointsData',
+            	'array.projection = aiida.orm.data.array.projection:ProjectionData',
+            	'array.trajectory = aiida.orm.data.array.trajectory:TrajectoryData',
+            	'array.xy = aiida.orm.data.array.xy:XyData',
+            	'cif = aiida.orm.data.cif:CifData',
+            	'error = aiida.orm.data.error:Error',
+            	'folder = aiida.orm.data.folder:FolderData',
+            	'parameter = aiida.orm.data.parameter:ParameterData',
+		        'remote = aiida.orm.data.remote:RemoteData',
+		        'simple = aiida.orm.data.simple:SimpleData',
+		        'singlefile = aiida.orm.data.singlefile:SinglefileData',
+		        'structure = aiida.orm.data.structure:StructureData',
+		        'upf = aiida.orm.data.upf:UpfData'
+		    ],
+		    'aiida.parsers': [
+		        'codtools.cifcellcontents = aiida.parsers.plugins.codtools.cifcellcontents:CifcellcontentsParser',
+		        'codtools.cifcodcheck = aiida.parsers.plugins.codtools.cifcodcheck:CifcodcheckParser',
+		        'codtools.cifcoddeposit = aiida.parsers.plugins.codtools.cifcoddeposit:CifcoddepositParser',
+		        'codtools.cifcodnumbers = aiida.parsers.plugins.codtools.cifcodnumbers:CifcodnumbersParser',
+		        'codtools.ciffilter = aiida.parsers.plugins.codtools.ciffilter:CiffilterParser',
+		        'codtools.cifsplitprimitive = aiida.parsers.plugins.codtools.cifsplitprimitive:CifsplitprimitiveParser',
+		        'nwchem.basic = aiida.parsers.plugins.nwchem.basic:BasicParser',
+		        'nwchem.basenwc = aiida.parsers.plugins.nwchem.__init__:BasenwcParser',
+		        'nwchem.pymatgen = aiida.parsers.plugins.nwchem.nwcpymatgen:NwcpymatgenParser',
+		        'quantumespresso.basicpw = aiida.parsers.plugins.quantumespresso.basicpw:BasicpwParser',
+		        'quantumespresso.cp = aiida.parsers.plugins.quantumespresso.cp:CpParser',
+		        'quantumespresso.pw = aiida.parsers.plugins.quantumespresso.pw:PwParser',
+		    ],
+		    'aiida.cmdline': [],
+		    'aiida.schedulers': [
+		        'direct = aiida.scheduler.plugins.direct:DirectScheduler',
+		        'slurm = aiida.scheduler.plugins.slurm:SlurmScheduler',
+		        'pbspro = aiida.scheduler.plugins.pbspro:PbsproScheduler',
+		        'torque = aiida.scheduler.plugins.torque:TorqueScheduler',
+		    ],
+		    'aiida.transports': [
+		        'SSH = aiida.transport.plugins.ssh:SshTransport',
+		        'local = aiida.transport.plugins.local:LocalTransport',
+		    ],
+		    'aiida.workflows': [],
+    	},
+		scripts=['bin/runaiida'],
+		long_description=open(path.join(aiida_folder, 'README.rst')).read(),
+	)

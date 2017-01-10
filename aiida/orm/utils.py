@@ -20,23 +20,28 @@ def CalculationFactory(module, from_abstract=False):
     from aiida.common.ep_pluginloader import get_plugin
     from aiida.common.exceptions import MissingPluginError
 
-    # ~ try:
-    if from_abstract:
-        return BaseFactory(module, Calculation, "aiida.orm.calculation")
-    else:
-        return BaseFactory(module, JobCalculation, "aiida.orm.calculation.job",
-                               suffix="Calculation")
-    # ~ except MissingPluginError:
-        # ~ return get_plugin('calculations', module)
-    #
+    try:
+        if from_abstract:
+            return BaseFactory(module, Calculation, "aiida.orm.calculation")
+        else:
+            return BaseFactory(module, JobCalculation, "aiida.orm.calculation.job",
+                                suffix="Calculation")
+    except MissingPluginError:
+        return get_plugin('calculations', module)
+
 
 def DataFactory(module):
     """
     Return a suitable Data subclass.
     """
     from aiida.orm.data import Data
+    from aiida.common.exceptions import MissingPluginError
+    from aiida.common.ep_pluginloader import get_plugin
 
-    return BaseFactory(module, Data, "aiida.orm.data")
+    try:
+        return BaseFactory(module, Data, "aiida.orm.data")
+    except MissingPluginError:
+        return get_plugin('data', module)
 
 
 def WorkflowFactory(module):

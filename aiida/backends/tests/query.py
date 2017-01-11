@@ -326,7 +326,7 @@ class TestQueryBuilder(AiidaTestCase):
 
 
     def test_list_behavior(self):
-        from aiida.orm import Node, Data, Calculation
+        from aiida.orm import Node
         from aiida.orm.querybuilder import QueryBuilder
 
         for i in range(4):
@@ -348,6 +348,72 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(len(list(QueryBuilder().append(Node, project=['*', 'id']).iterdict())), 4)
         self.assertEqual(len(list(QueryBuilder().append(Node, project=['id']).iterdict())), 4)
 
+class QueryBuilderLimitOffsetsTest(AiidaTestCase):
+
+    def test_ordering_limits_offsets_of_results_general(self):
+        from aiida.orm import Node
+        from aiida.orm.querybuilder import QueryBuilder
+        # Creating 10 nodes with an attribute that can be ordered
+        for i in range(10):
+            n = Node()
+            n._set_attr('foo', i)
+            n.store()
+
+        qb = QueryBuilder().append(
+                Node, project='attributes.foo'
+            ).order_by({Node:'ctime'})
+
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(10))
+
+        # Now applying an offset:
+        qb.offset(5)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(5,10))
+
+        # Now also applying a limit:
+        qb.limit(3)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(5,8))
+
+        # Specifying the order  explicitly the order:
+        qb = QueryBuilder().append(
+                Node, project='attributes.foo'
+            ).order_by({Node:{'ctime':{'order':'asc'}}})
+
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(10))
+
+        # Now applying an offset:
+        qb.offset(5)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(5,10))
+
+        # Now also applying a limit:
+        qb.limit(3)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(5,8))
+
+
+        # Reversing the order:
+        qb = QueryBuilder().append(
+                Node, project='attributes.foo'
+            ).order_by({Node:{'ctime':{'order':'desc'}}})
+
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(9, -1, -1))
+
+
+        # Now applying an offset:
+        qb.offset(5)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(4,-1,-1))
+
+        # Now also applying a limit:
+        qb.limit(3)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(4,1, -1))
+        
 
 class QueryBuilderJoinsTests(AiidaTestCase):
     def test_joins1(self):

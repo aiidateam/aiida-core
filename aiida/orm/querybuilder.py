@@ -8,26 +8,23 @@ Subclasses need to be written for *every* schema/backend implemented
 in backends.
 
 """
-import copy
-import datetime
+
+# Warnings are issued for deprecations:
 import warnings
-from abc import abstractmethod, ABCMeta
+# Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
-from sqlalchemy import and_, or_, not_, func as sa_func
-from sqlalchemy.types import Integer, Float, Boolean, DateTime
-from sqlalchemy.dialects.postgresql import JSONB
+
+# The SQLAlchemy functionalities:
+from sqlalchemy import and_, or_, not_, func as sa_func, select, join
+from sqlalchemy.types import Integer
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import cast
 
-from sqlalchemy.sql.base import ImmutableColumnCollection
-from aiida.common.exceptions import (
-        InputValidationError, DbContentError,
-        MissingPluginError, ConfigurationError
-    )
-from aiida.common.utils import flatten_list
-from aiida.common.hashing import make_hash
+## AIIDA modules:
+# For exception handling
+from aiida.common.exceptions import InputValidationError, ConfigurationError
+# The way I get column as a an attribute to the orm class
 from aiida.backends.utils import _get_column
-
 
 
 
@@ -41,17 +38,19 @@ class QueryBuilder(object):
         qb.append(Node)
         # retrieving the results:
         results = qb.all()
-
     """
 
-
+    # This tag defines how edges are tagged (labeled) by the QueryBuilder default
+    # namely tag of first entity + _EDGE_TAG_DELIM + tag of second entity
     _EDGE_TAG_DELIM = '--'
     _VALID_PROJECTION_KEYS = ('func', 'cast')
 
 
     def __init__(self, *args, **kwargs):
         """
-        Instantiates a QueryBuilder instance
+        Instantiates an AiiDA-QueryBuilder instance.
+
+        Which backend is used decided here based on backend-settings (taken from the user profile).
 
         :param bool with_dbpath:
             Whether to use the DbPath table (if existing)
@@ -64,7 +63,9 @@ class QueryBuilder(object):
         """
         from aiida.backends.settings import BACKEND
         from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+
         # Deciding on the implementation:
+        # For the future, one could decide on also having a user keyword.
         if BACKEND == BACKEND_SQLA:
             from aiida.backends.sqlalchemy.querybuilder_sqla import QueryBuilderImplSQLA
             self._impl = QueryBuilderImplSQLA()
@@ -77,11 +78,16 @@ class QueryBuilder(object):
         else:
             raise ConfigurationError("Unknown settings.BACKEND: {}".format(
                 BACKEND))
+
+
+        if args:
+            raise InputValidationError(
+                    "Arguments are not accepted\n"
+                    "when instantiating a QueryBuilder instance"
+                )
+
         # A list storing the path being traversed by the query
         self._path = []
-
-        # The list of unique tags
-        # self.tag_list = []# not needed any more
 
         # A list of unique aliases in same order as path
         self._aliased_path = []
@@ -99,63 +105,95 @@ class QueryBuilder(object):
         # A dictionary for classes passed to the tag given to them
         # Everything is specified with unique tags, which are strings.
         # But somebody might not care about giving tags, so to do
-        # everything with classes one needs a map
-        # qb = QueryBuilder(path = [PwCalculation])
-        # qb.append(StructureData, input_of=PwCalculation
+        # everything with classes one needs a map, that also defines classes 
+        # as tags, to allow the following example:
+
+        # qb = QueryBuilder()
+        # qb.append(PwCalculation)
+        # qb.append(StructureData, input_of=PwCalculation)
 
         # The cls_to_tag_map in this case would be:
         # {PwCalculation:'PwCalculation', StructureData:'StructureData'}
-        if args:
-            raise InputValidationError(
-                    "Arguments are not accepted\n"
-                    "when instantiating a QueryBuilder instance"
-                )
-
+        # Keep in mind that it needs to be checked (and this is done) whether the class
+        # is used twice. In that case, the user has to provide a tag!
         self._cls_to_tag_map = {}
+
+        # Hashing the the internal queryhelp allows me to avoid to build a query again, if i have used
+        # it already.
+        # Example:
+
+        ## User is building a query:
+        # qb = QueryBuilder().append(.....)
+        ## User asks for the first results:
+        # qb.first()
+        ## User asks for all results, of the same query:
+        # qb.all()
+
+        # In above example, I can reuse the query, and to track whether somethis was changed
+        # I record a hash:
         self._hash = None
+        ## The hash being None implies that the query will be build (Check the code in .get_querys
+
+        # The user can inject a query, this keyword stores whether this was done.
+        # Check QueryBuilder.inject_query
         self._injected = False
 
+        # The internal _with_dbpath attributes reports whether I need to do something with the path.
+        # I.e. check, loads, etc, implementation left to backend implementation.
         self._with_dbpath = kwargs.pop('with_dbpath', True)
         if self._with_dbpath:
             self._impl.prepare_with_dbpath()
 
-
-
+        # One can apply the path as a keyword. Allows for jsons to be given to the QueryBuilder.
         path = kwargs.pop('path', [])
         if not isinstance(path, (tuple, list)):
             raise InputValidationError(
                     "Path needs to be a tuple or a list"
                 )
+        # If the user specified a path, I use the append method to analyze, see QueryBuilder.append
         for path_spec in path:
-            try:
+            if isinstance(path_spec, dict):
                 self.append(**path_spec)
-            except TypeError as e:
-                if isinstance(path_spec, basestring):
-                    # Maybe it is just a string,
-                    # I assume user means the type
-                    self.append(type=path_spec)
-                else:
-                    # Or a class, let's try
-                    self.append(cls=path_spec)
+            #~ except TypeError as e:
+            elif isinstance(path_spec, basestring):
+                # Maybe it is just a string,
+                # I assume user means the type
+                self.append(type=path_spec)
+            else:
+                # Or a class, let's try
+                self.append(cls=path_spec)
 
-        for key, val in kwargs.pop('project', {}).items():
+        # Projections. The user provides a dictionary, but the specific checks is
+        # left to QueryBuilder.add_project.
+        projection_dict = kwargs.pop('project', {})
+        if not isinstance(projection_dict, dict):
+            raise InputValidationError("You need to provide the projections as dictionary")
+        for key, val in projection_dict.items():
             self.add_projection(key, val)
 
-        for key, val in kwargs.pop('filters', {}).items():
+        # For filters, I also expect a dictionary, and the checks are done lower.
+        filter_dict = kwargs.pop('filters', {})
+        if not isinstance(filter_dict, dict):
+            raise InputValidationError("You need to provide the filters as dictionary")
+        for key, val in filter_dict.items():
             self.add_filter(key, val)
 
+        # The limit is caps the number of results returned, and can also be set with QueryBuilder.limit
         self.limit(kwargs.pop('limit', None))
 
+        # The offset returns results after the offset
         self.offset(kwargs.pop('offset', None))
 
+        # The user can also specify the order.
         self._order_by = {}
         order_spec = kwargs.pop('order_by', None)
         if order_spec:
             self.order_by(order_spec)
 
-
+        # I've gone through all the keywords, popping each item
+        # If kwargs is not empty, there is a problem:
         if kwargs:
-            valid_keys = ('path', 'filters', 'project', 'limit', 'order_by', 'with_dbpath')
+            valid_keys = ('path', 'filters', 'project', 'limit', 'offset', 'order_by', 'with_dbpath')
             raise InputValidationError(
                     "Received additional keywords: {}"
                     "\nwhich I cannot process"
@@ -165,9 +203,13 @@ class QueryBuilder(object):
 
 
     def __str__(self):
+        """
+        When somebody hits: print(QueryBuilder) or print(str(QueryBuilder))
+        I want to print the SQL-query. Because it looks cool...
+        """
+
         from aiida.common.setup import get_profile_config
         from aiida.backends import settings
-        from aiida.common.exceptions import ConfigurationError
 
         engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
 
@@ -851,12 +893,11 @@ class QueryBuilder(object):
         """
         Set the limit (nr of rows to return)
 
-        :param int limit: integers of nr of rows to return
+        :param int limit: integers of number of rows of rows to return
         """
 
-        if limit is not None:
-            if not isinstance(limit, int):
-                raise InputValidationError("limit has to be an integer")
+        if (limit is not None) and (not isinstance(limit, int)):
+            raise InputValidationError("The limit has to be an integer, or None")
         self._limit = limit
         return self
 
@@ -870,16 +911,10 @@ class QueryBuilder(object):
 
         :param int offset: integers of nr of rows to skip
         """
-        if offset is not None:
-            if not isinstance(offset, int):
-                raise InputValidationError(
-                    "offset has to be an integer"
-                )
+        if (offset is not None) and (not isinstance(offset, int)):
+            raise InputValidationError("offset has to be an integer, or None")
         self._offset = offset
         return self
-
-
-
 
 
 
@@ -1053,11 +1088,6 @@ class QueryBuilder(object):
         :TODO: Pass an option to also show the path, if this is wanted.
         """
 
-        from sqlalchemy.orm import aliased, mapper
-        from sqlalchemy import select, func, join, and_
-        from sqlalchemy.sql.expression import cast
-        from sqlalchemy.types import Integer
-
         self._check_dbentities(
                 (joined_entity, self._impl.Node),
                 (entity_to_join, self._impl.Node),
@@ -1121,11 +1151,6 @@ class QueryBuilder(object):
         :TODO: Pass an option to also show the path, if this is wanted.
 
         """
-        from sqlalchemy.orm import aliased, mapper
-        from sqlalchemy import select, func, join, and_
-        from sqlalchemy.sql.expression import cast
-        from sqlalchemy.types import Integer
-
         self._check_dbentities(
                 (joined_entity, self._impl.Node),
                 (entity_to_join, self._impl.Node),
@@ -1735,6 +1760,8 @@ class QueryBuilder(object):
         :returns: an instance of sqlalchemy.orm.Query
 
         """
+        from aiida.common.hashing import make_hash
+
         # Need_to_build is True by default.
         # It describes whether the current query
         # which is an attribute _query of this instance is still valid
@@ -1746,7 +1773,9 @@ class QueryBuilder(object):
         # and is a string (hash) if it has) is the same as the queryhelp
         # I can use the query again:
         # If the query was injected I never build:
-        if self._injected:
+        if self._hash is None:
+            need_to_build = True
+        elif self._injected:
             need_to_build = False
         elif self._hash == queryhelp_hash:
             need_to_build = False

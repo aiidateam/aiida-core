@@ -19,6 +19,23 @@ def plugin_list(category):
             for ep in pkg_resources.iter_entry_points(group=group)]
 
 
+def all_plugins(category):
+    from aiida.common.pluginloader import existing_plugins
+    from aiida.orm.calculation.job import JobCalculation
+    from aiida.parsers import Parser
+    if category=='calculations':
+        supercls = JobCalculation
+        internal = 'aiida.orm.calculation.job'
+        suffix = 'Calculation'
+    elif category=='parsers':
+        supercls = Parser
+        internal = 'aiida.parsers.plugins'
+        suffix = 'Parser'
+    plugins = existing_plugins(supercls, internal, suffix=suffix)
+    plugins += [i for i in plugin_list(category) if i not in plugins]
+    return plugins
+
+
 def get_plugin(category, name):
     """
     Return an instance of the class registered under the given name and

@@ -105,7 +105,7 @@ class QueryBuilder(object):
         # A dictionary for classes passed to the tag given to them
         # Everything is specified with unique tags, which are strings.
         # But somebody might not care about giving tags, so to do
-        # everything with classes one needs a map, that also defines classes 
+        # everything with classes one needs a map, that also defines classes
         # as tags, to allow the following example:
 
         # qb = QueryBuilder()
@@ -232,15 +232,32 @@ class QueryBuilder(object):
 
 
     def _get_ormclass(self, cls, ormclasstype):
+        """
+        For testing purposes, I want to check whether the implementation gives the currect
+        ormclass back. Just relaying to the implementation, details for this function
+        in the interface.
+        """
         return self._impl.get_ormclass(cls, ormclasstype)
 
     def _get_autotag(self, ormclasstype):
+        """
+        Using the function :func:`QueryBuilder._get_tag_from_type`, I get a tag.
+        I increment an index that is appended to that tag until I have an unused tag.
+        This function is called in :func:`QueryBuilder.append` when autotag is set to True.
+
+        :param str ormclasstype:
+            The string that defines the type of the AiiDA ORM class.
+            For subclasses of Node, this is the Node._plugin_type_string, for other they are
+            as defined as returned by :func:`QueryBuilder._get_ormclass`.
+        :returns: A tag, as a string.
+        """
         basetag = self._get_tag_from_type(ormclasstype)
         tags_used = self._tag_to_alias_map.keys()
         for i in range(1, 100):
             tag = '{}_{}'.format(basetag, i)
             if tag not in tags_used:
                 return tag
+        raise Exception("Cannot find a tag after 100 tries")
 
 
     def _get_tag_from_type(self, ormclasstype):
@@ -253,6 +270,13 @@ class QueryBuilder(object):
         *   node.Node. -> Node
         *   Node -> Node
         *   computer -> computer
+        *   etc.
+
+        :param str ormclasstype:
+            The string that defines the type of the AiiDA ORM class.
+            For subclasses of Node, this is the Node._plugin_type_string, for other they are
+            as defined as returned by :func:`QueryBuilder._get_ormclass`.
+        :returns: A tag, as a string.
         """
         return ormclasstype.rstrip('.').split('.')[-1]
 
@@ -267,9 +291,13 @@ class QueryBuilder(object):
         needs to invoke this method to append to the path.
 
         :param cls: The Aiida-class (or backend-class) defining the appended vertice
-        :param type: The type of the class, if cls is not given
-        :param tag:
-            A unique tag. If none is given, will take the classname.
+        :param str type: The type of the class, if cls is not given
+        :param bool autotag:
+            Whether to find automatically a unique tag. If this is set to True (default False),
+
+        :param str tag:
+            A unique tag. If none is given, will use method :func:`QueryBuilder._get_autotag` if
+            autotag is set to True, else:func:`QueryBuilder._get_tag_from_type`, to get a tag.
             See keyword autotag to achieve unique tag.
         :param filters:
             Filters to apply for this vertice.
@@ -281,10 +309,11 @@ class QueryBuilder(object):
         :param bool subclassing:
             Whether to include subclasses of the given class
             (default **True**).
-            E.g. Specifying JobCalculation will include PwCalculation
+            E.g. Specifying a  Calculation as cls will include JobCalculations, InlineCalculations, etc..
         :param bool outerjoin:
             If True, (default is False), will do a left outerjoin
             instead of an inner join
+
 
         A small usage example how this can be invoked::
 

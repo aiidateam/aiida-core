@@ -362,8 +362,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         from aiida.orm import CalculationFactory
         from aiida.orm.calculation.job import JobCalculation
-        from aiida.common.pluginloader import existing_plugins
-        from aiida.common.ep_pluginloader import plugin_list
+        from aiida.common.ep_pluginloader import all_plugins
         from aiida.common.exceptions import MissingPluginError
 
         if args:
@@ -386,8 +385,7 @@ class Calculation(VerdiCommandWithSubcommands):
                 except MissingPluginError:
                     print "! {}: NOT FOUND!".format(arg)
         else:
-            plugins = sorted(existing_plugins(JobCalculation, 'aiida.orm.calculation.job', suffix='Calculation'))
-            plugins = sorted(plugins + [i for i in plugin_list('calculations') if i not in plugins])
+            plugins = sorted(all_plugins('calculations'))
             if plugins:
                 print("## Pass as a further parameter one (or more) "
                       "plugin names to get more details on a given plugin.")

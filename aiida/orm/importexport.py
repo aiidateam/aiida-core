@@ -12,6 +12,7 @@ __authors__ = "The AiiDA team."
 
 
 IMPORTGROUP_TYPE = 'aiida.import'
+COMP_DUPL_SUFFIX = ' (Imported #{})'
 
 
 def deserialize_attributes(attributes_data, conversion_data):
@@ -515,6 +516,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                 objects_to_create = []
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = {}
+                dupl_counter = 0
                 for import_entry_id, entry_data in new_entries[model_name].iteritems():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
@@ -522,6 +524,20 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                         import_unique_ids_mappings=import_unique_ids_mappings,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
                                        for k, v in entry_data.iteritems())
+
+                    if Model is models.DbComputer:
+                        # Check if there is already a computer with the same
+                        # name in the database
+                        dupl = Model.objects.filter(name=import_data['name'])
+                        orig_name = import_data['name']
+                        while dupl:
+                            # Rename the new computer
+                            import_data['name'] = (
+                                orig_name +
+                                COMP_DUPL_SUFFIX.format(dupl_counter))
+                            dupl_counter += 1
+                            dupl = Model.objects.filter(
+                                name=import_data['name'])
 
                     objects_to_create.append(Model(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
@@ -961,9 +977,31 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                         foreign_ids_reverse_mappings[model_name] = {
                             k: v.pk for k, v in relevant_db_entries.iteritems()}
+                        dupl_counter = 0
                         for k, v in data['export_data'][model_name].iteritems():
                             if model_name == "aiida.backends.djsite.db.models.DbComputer":
-                                v["name"] += " (IMPORTED)"
+                                # Check if there is already a computer with the
+                                # same name in the database
+                                qb = QueryBuilder()
+                                qb.append(Model,
+                                          filters={'name': {"==": v["name"]}},
+                                          project=["*"], tag="res")
+                                dupl = qb.count()
+
+                                orig_name = v["name"]
+                                while dupl:
+                                    # Rename the new computer
+                                    v["name"] = (
+                                        orig_name +
+                                        COMP_DUPL_SUFFIX.format(
+                                            dupl_counter))
+                                    dupl_counter += 1
+                                    qb = QueryBuilder()
+                                    qb.append(Model,
+                                              filters={
+                                                  'name': {"==": v["name"]}},
+                                              project=["*"], tag="res")
+                                    dupl = qb.count()
 
                             if v[unique_identifier] in relevant_db_entries.keys():
                                 # Already in DB

@@ -19,7 +19,7 @@ from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQu
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 
 from aiida.common import aiidalogger
-from aiida.common.pluginloader import load_plugin
+from aiida.common.ep_pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.datastructures import calc_states
 

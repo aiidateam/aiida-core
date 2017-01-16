@@ -190,7 +190,7 @@ class DbNode(m.Model):
         """
         from aiida.orm.node import Node
         from aiida.common.pluginloader import from_type_to_pluginclassname
-        from aiida.common.pluginloader import load_plugin
+        from aiida.common.ep_pluginloader import load_plugin
         from aiida.common import aiidalogger
 
         try:

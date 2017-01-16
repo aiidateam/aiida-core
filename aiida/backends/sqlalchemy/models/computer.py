@@ -94,6 +94,9 @@ class DbComputer(Base):
             raise ConfigurationError('No workdir found for DbComputer {} '.format(
                 self.name))
 
+    @property
+    def pk(self):
+        return self.id
 
     def __str__(self):
         if self.enabled:

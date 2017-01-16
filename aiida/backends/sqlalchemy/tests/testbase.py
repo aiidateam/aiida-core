@@ -100,7 +100,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
             self.computer = SqlAlchemyTests._create_computer()
             self.computer.store()
         else:
-            self.computer = has_computer
+            self.computer = Computer(dbcomputer=has_computer)
 
     @staticmethod
     def _create_computer(**kwargs):

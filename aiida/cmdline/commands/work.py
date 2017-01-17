@@ -29,7 +29,7 @@ class Work(VerdiCommandWithSubcommands):
         }
 
     def list(self, *args):
-        ctx = do_list.make_context('list', sys.argv[3:])
+        ctx = do_list.make_context('list', list(args))
         with ctx:
             do_list.invoke(ctx)
 
@@ -39,12 +39,12 @@ class Work(VerdiCommandWithSubcommands):
             do_report.invoke(ctx)
 
     def tree(self, *args):
-        ctx = do_tree.make_context('tree', sys.argv[3:])
+        ctx = do_tree.make_context('tree', list(args))
         with ctx:
             do_tree.invoke(ctx)
 
     def checkpoint(self, *args):
-        ctx = do_checkpoint.make_context('checkpoint', sys.argv[3:])
+        ctx = do_checkpoint.make_context('checkpoint', list(args))
         with ctx:
             do_checkpoint.invoke(ctx)
 
@@ -53,7 +53,8 @@ class Work(VerdiCommandWithSubcommands):
 @click.option('-p', '--past-days', type=int,
               help="add a filter to show only workflows created in the past N"
                    " days")
-@click.option('-l', '--limit', type=int, default=100,
+
+@click.option('-l', '--limit', type=int, default=None,
               help="Limit to this many results")
 def do_list(past_days, limit):
     """
@@ -70,7 +71,7 @@ def do_list(past_days, limit):
     now = timezone.now()
 
     table = []
-    for res in _build_query(limit=limit, past_days=past_days):
+    for res in _build_query(limit=limit, past_days=past_days, order_by={'ctime': 'desc'}):
         calc = res['calculation']
         creation_time = str_timedelta(
             timezone.delta(calc['ctime'], now), negative_to_zero=True,
@@ -79,11 +80,16 @@ def do_list(past_days, limit):
         table.append([
             calc['id'],
             creation_time,
-            calc['type'],
+            calc['attributes._process_label'],
             str(calc[_SEALED_ATTRIBUTE_KEY])
         ])
 
-    print(tabulate(table, headers=["PID", "Creation time", "Type", "Sealed"]))
+    # Revert table:
+    # in this way, I order by 'desc', so I start by the most recent, but then 
+    # I print this as the las one (like 'verdi calculation list' does)
+    # This is useful when 'limit' is set to not None
+    table = table[::-1]
+    print(tabulate(table, headers=["PID", "Creation time", "ProcessLabel", "Sealed"]))
 
 
 @click.command('report', context_settings=CONTEXT_SETTINGS)
@@ -179,7 +185,7 @@ def do_checkpoint(pks):
 
 def _build_query(order_by=None, limit=None, past_days=None):
     from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm.calculation import Calculation
+    from aiida.orm.calculation.work import WorkCalculation
     import aiida.utils.timezone as timezone
     import datetime
     from aiida.orm.mixins import Sealable
@@ -187,7 +193,7 @@ def _build_query(order_by=None, limit=None, past_days=None):
 
     # The things that we want to get out
     calculation_projections = \
-        ['id', 'ctime', 'type', _SEALED_ATTRIBUTE_KEY]
+        ['id', 'ctime', 'attributes._process_label', _SEALED_ATTRIBUTE_KEY]
 
     now = timezone.now()
 
@@ -200,19 +206,20 @@ def _build_query(order_by=None, limit=None, past_days=None):
 
     qb = QueryBuilder()
 
+    # Build the quiery
+    qb.append(
+        cls=WorkCalculation,
+        filters=calculation_filters,
+        project=calculation_projections,
+        tag='calculation'
+    )
+
     # ORDER
     if order_by is not None:
-        qb.order_by({'calculation': [order_by]})
+        qb.order_by({'calculation': order_by})
 
     # LIMIT
     if limit is not None:
         qb.limit(limit)
 
-    # Build the quiery
-    qb.append(
-        cls=Calculation,
-        filters=calculation_filters,
-        project=calculation_projections,
-        tag='calculation'
-    )
     return qb.iterdict()

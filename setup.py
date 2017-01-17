@@ -96,6 +96,17 @@ if __name__ == '__main__':
               'local = aiida.transport.plugins.local:LocalTransport',
           ],
           'aiida.workflows': [],
+          'aiida.tools.dbexporters.tcod_plugins': [
+              'cp = aiida.tools.dbexporters.tcod_plugins.cp:CpTcodtranslator',
+              'nwcpymatgen = aiida.tools.dbexporters.tcod_plugins.nwcpymatgen:NwcpymatgenTcodtranslator',
+              'pw = aiida.tools.dbexporters.tcod_plugins.pw.PwTcodtranslator'
+          ],
+          'aiida.tools.dbexporters': [
+              'tcod = aiida.tools.dbexporters.tcod'
+          ],
+          'aiida.tools.dbimporters': [
+              'cod'
+          ]
        },
       scripts=['bin/runaiida'],
       long_description=open(path.join(aiida_folder, 'README.rst')).read(),

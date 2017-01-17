@@ -43,7 +43,7 @@ def get_query_type_string(plugin_type_string):
     # First case, an empty string for Node:
     if plugin_type_string == '':
         query_type_string = ''
-    # Anything else should have baseclass.Class., so at least 2 dots 
+    # Anything else should have baseclass.Class., so at least 2 dots
     # and end with a dot:
     elif not(plugin_type_string.endswith('.')) or plugin_type_string.count('.') == 1:
         raise DbContentError(

@@ -760,7 +760,7 @@ def _collect_tags(node, calc,parameters=None,
 
     # Collecting code-specific data
 
-    from aiida.common.pluginloader import BaseFactory, existing_plugins
+    from aiida.common.ep_pluginloader import BaseFactory, existing_plugins
     from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
 
     plugin_path = "aiida.tools.dbexporters.tcod_plugins"

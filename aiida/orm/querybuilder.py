@@ -56,7 +56,7 @@ class QueryBuilder(object):
 
         Which backend is used decided here based on backend-settings (taken from the user profile).
         This cannot be overriden so far by the user.
-        
+
 
         :param bool with_dbpath:
             Whether to use the DbPath table (if existing) to query ancestor-descendant relations.
@@ -80,11 +80,11 @@ class QueryBuilder(object):
             The filters to apply. You can specify the filters here, when appending to the query
             using :func:`QueryBuilder.append` or even later using :func:`QueryBuilder.add_filter`.
             Check latter gives API-details.
-        :param project: 
+        :param project:
             The projections to apply. You can specify the projections here, when appending to the query
             using :func:`QueryBuilder.append` or even later using :func:`QueryBuilder.add_projection`.
             Latter gives you API-details.
-        :param int limit: 
+        :param int limit:
             Limit the number of rows to this number. Check :func:`QueryBuilder.limit`
             for more information.
         :param int offset:
@@ -113,10 +113,10 @@ class QueryBuilder(object):
                 BACKEND))
 
 
-        if args:
-            raise InputValidationError(
-                    "Arguments are not accepted\n"
-                    "when instantiating a QueryBuilder instance"
+        :param project: The projections to apply (a dictionary)
+        :param limit: Limit the number of rows (an integer)
+        :param order_by: How to order the results (a dictionary)
+        """
                 )
 
         # A list storing the path being traversed by the query
@@ -171,7 +171,7 @@ class QueryBuilder(object):
 
         # Setting debug levels:
         self.set_debug(kwargs.pop('debug',False))
-        
+
         # The internal _with_dbpath attributes reports whether I need to do something with the path.
         # I.e. check, loads, etc, implementation left to backend implementation.
         self.set_with_dbpath(kwargs.pop('with_dbpath', True))
@@ -269,45 +269,110 @@ class QueryBuilder(object):
     def _get_ormclass(self, cls, ormclasstype):
         """
         For testing purposes, I want to check whether the implementation gives the currect
-        ormclass back. Just relaying to the implementation, details for this function
-        in the interface.
-        """
-        return self._impl.get_ormclass(cls, ormclasstype)
-
-    def _get_unique_tag(self, ormclasstype):
-        """
-        Using the function get_tag_from_type, I get a tag.
-        I increment an index that is appended to that tag until I have an unused tag.
-        This function is called in :func:`QueryBuilder.append` when autotag is set to True.
-
-        :param str ormclasstype:
-            The string that defines the type of the AiiDA ORM class.
-            For subclasses of Node, this is the Node._plugin_type_string, for other they are
-            as defined as returned by :func:`QueryBuilder._get_ormclass`.
-
-        :returns: A tag, as a string.
-        """
-        def get_tag_from_type(ormclasstype):
-            """
-            Assign a tag to the given
-            vertice of a path, based mainly on the type
-            *   data.structure.StructureData -> StructureData
-            *   data.structure.StructureData. -> StructureData
-            *   calculation.job.quantumespresso.pw.PwCalculation. -. PwCalculation
-            *   node.Node. -> Node
-            *   Node -> Node
-            *   computer -> computer
-            *   etc.
-
-            :param str ormclasstype:
-                The string that defines the type of the AiiDA ORM class.
-                For subclasses of Node, this is the Node._plugin_type_string, for other they are
-                as defined as returned by :func:`QueryBuilder._get_ormclass`.
-            :returns: A tag, as a string.
-            """
-            return ormclasstype.rstrip('.').split('.')[-1] or "node"
 
         basetag = get_tag_from_type(ormclasstype)
+        tags_used = self._tag_to_alias_map.keys()
+        for i in range(1, 100):
+            tag = '{}_{}'.format(basetag, i)
+            if tag not in tags_used:
+                return tag
+        raise Exception("Cannot find a tag after 100 tries")
+
+
+
+
+
+    def append(self, cls=None, type=None, tag=None,
+                filters=None, project=None, subclassing=True,
+                edge_tag=None, edge_filters=None, edge_project=None,
+                outerjoin=False, **kwargs
+        ):
+        """
+        Any iterative procedure to build the path for a graph query
+        needs to invoke this method to append to the path.
+
+        :param cls: The Aiida-class (or backend-class) defining the appended vertice
+        :param str type: The type of the class, if cls is not given
+        :param bool autotag:
+            Whether to find automatically a unique tag. If this is set to True (default False),
+
+        :param str tag:
+            A unique tag. If none is given, I will create a unique tag myself.
+        :param filters:
+            Filters to apply for this vertice.
+            See :meth:`.add_filter`, the method invoked in the background, or usage examples for details.
+        :param project:
+            Projections to apply. See usage examples for details.
+            More information also in :meth:`.add_projection`.
+        :param bool subclassing:
+            Whether to include subclasses of the given class
+            (default **True**).
+            E.g. Specifying a  Calculation as cls will include JobCalculations, InlineCalculations, etc..
+        :param bool outerjoin:
+            If True, (default is False), will do a left outerjoin
+            instead of an inner join
+        :param str edge_tag:
+            The tag that the edge will get. If nothing is specified
+            (and there is a meaningful edge) the default is tag1--tag2 with tag1 being the entity joining
+            from and tag2 being the entity joining to (this entity).
+        :param str edge_filters:
+            The filters to apply on the edge. Also here, details in :meth:`.add_filter`.
+        :param str edge_project:
+            The project from the edges. API-details in :meth:`.add_projection`.
+
+        A small usage example how this can be invoked::
+
+            qb = QueryBuilder()             # Instantiating empty querybuilder instance
+            qb.append(cls=StructureData)    # First item is StructureData node
+            # The
+            # next node in the path is a PwCalculation, with
+            # the structure joined as an input
+            qb.append(
+                cls=PwCalculation,
+                output_of=StructureData
+            )
+
+        :returns: self
+        """
+        ######################## INPUT CHECKS ##########################
+        # This function can be called by users, so I am checking the
+        # input now.
+        # First of all, let's make sure the specified
+        # the class or the type (not both)
+        if cls and type:
+            raise InputValidationError(
+                    "\n\n\n"
+                    "You cannot specify both a \n"
+                    "class ({})\n"
+                    "and a type ({})\n\n"
+                    "".format(cls, type)
+                )
+
+        if not (cls or type):
+            raise InputValidationError(
+                    "\n\n"
+                    "You need to specify either a class or a type"
+                    "\n\n"
+                )
+
+        # Let's check if it is a valid class or type
+        if cls:
+            if not inspect_isclass(cls):
+                raise InputValidationError(
+                    "\n\n"
+                    "{} was passed with kw 'cls', but is not a class"
+                    "\n\n".format(cls)
+                )
+        elif type:
+            if not isinstance(type, basestring):
+                raise InputValidationError(
+                    "\n\n\n"
+                    "{} was passed as type, but is not a string"
+                    "\n\n\n".format(type)
+                )
+
+        if kwargs.pop('link_tag', None) is not None:
+            raise DeprecationWarning("link_tag is deprecated, use edge_tag instead")
         tags_used = self._tag_to_alias_map.keys()
         for i in range(1, 100):
             tag = '{}_{}'.format(basetag, i)
@@ -447,7 +512,7 @@ class QueryBuilder(object):
 
         # Checks complete
         # This is where I start doing changes to self!
-        # Now, several things can go wrong along the way, so I need to split into  
+        # Now, several things can go wrong along the way, so I need to split into
         # atomic blocks that I can reverse if something goes wrong.
         ################ TAG MAPPING #################################
         # TODO check with duplicate classes
@@ -473,7 +538,7 @@ class QueryBuilder(object):
 
         ######################## ALIASING ##############################
         try:
-            #~ alias = 
+            #~ alias =
             #~ self._aliased_path.append(alias)
             self._tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as e:
@@ -484,7 +549,7 @@ class QueryBuilder(object):
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag, None)
             raise e
-            
+
 
 
         ################# FILTERS ######################################
@@ -515,7 +580,7 @@ class QueryBuilder(object):
 
 
         #################### PROJECTIONS ##############################
-        
+
         try:
             self._projections[tag] = []
             if project is not None:
@@ -605,7 +670,7 @@ class QueryBuilder(object):
 
         ############################# EDGES #################################
         # See if this requires a link:
-        
+
         # This variable lets me know if there is an edge (i.e. a many to many relationship)
         edge_exists = False
         if len(self._path) > 0:
@@ -680,7 +745,7 @@ class QueryBuilder(object):
         path_extension = dict(
                 type=ormclasstype, tag=tag, joining_keyword=joining_keyword,
                 joining_value=joining_value, outerjoin=outerjoin,
-            )        
+            )
         if edge_exists:
             path_extension.update(dict(edge_tag=edge_tag))
         self._path.append(path_extension)
@@ -804,7 +869,7 @@ class QueryBuilder(object):
             The specifications for the filter, has to be a dictionary
 
         Usage::
-        
+
             qb = QueryBuilder()         # Instantiating the QueryBuilder instance
             qb.append(Node, tag='node') # Appending a Node
             #let's put some filters:
@@ -1853,7 +1918,7 @@ class QueryBuilder(object):
         In this way,the queryhelp can be stored
         in the database or a json-object, retrieved or shared and used later.
         See this usage::
-        
+
             qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
             queryhelp  = qb.get_json_compatible_queryhelp()
 
@@ -2214,7 +2279,7 @@ class QueryBuilder(object):
             # append stuff!
             qb.append(...)
             qb.append(...)
-            ... 
+            ...
             qb.distinct().all() #or
             qb.distinct().dict()
 

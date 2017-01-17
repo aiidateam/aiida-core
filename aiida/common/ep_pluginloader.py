@@ -18,8 +18,11 @@ _category_mapping = {
     'data': 'aiida.orm.data',
     'parsers': 'aiida.parsers.plugins',
     'schedulers': 'aiida.scheduler.plugins',
-    'aiida.transports': 'aiida.transport.plugins',
-    'aiida.workflosw': 'aiida.workflows'
+    'transports': 'aiida.transport.plugins',
+    'workflows': 'aiida.workflows',
+    'tools.dbexporters': 'aiida.tools.dbexporters',
+    'tools.dbimporters': 'aiida.tools.dbimporters',
+    'tools.dbexporters.tcod_plugins': 'aiida.tools.dbexporters.tcod_plugins'
 }
 
 
@@ -106,10 +109,61 @@ def load_plugin(base_class, plugins_module, plugin_type):
     from aiida.common.pluginloader import load_plugin as load_old
     try:
         plugin = load_old(base_class, plugins_module, plugin_type)
-    except MissingPluginError:
+    except MissingPluginError as e:
         full_name = plugins_module + '.' + plugin_type
-        category, path = [(v, k) for k, v in _inv_category_mapping.iteritems() if k in full_name].pop(0)
+        catlist = [(v, k) for k, v in _inv_category_mapping.iteritems() if k in full_name]
+        if not catlist:
+            raise e
+        category, path = catlist.pop(0)
         classname = full_name.replace(path, '').strip('.')
         name = '.'.join(classname.split('.')[:-1])
         plugin = get_plugin(category, name)
     return plugin
+
+
+def BaseFactory(module, base_class, base_modname, suffix=None):
+    """
+    Return a plugin class, also find external plugins
+
+
+    This is a front end to aiida.common.pluginloader.BaseFactory
+    with a fallback to aiida.common.ep_pluginloader.get_plugin
+    check their relative docs for more info.
+
+    Note not all possible notations work for new plugins. Example::
+
+        BaseFactory('quantumespresso.cp', JobCalculation,
+                    'aiida.orm.calculation.job',
+                    suffix='Calculation') # <- finds cp also if new style
+
+        BaseFactory('job.quantumespresso.cp', Calculation,
+                    'aiida.orm.calculation') <- will find cp only if old style
+    """
+    from aiida.common.pluginloader import BaseFactory as old_factory
+    try:
+        return old_factory(module, base_class, base_modname, suffix)
+    except MissingPluginError as e:
+        category = _inv_category_mapping.get(base_modname)
+        if not category:
+            raise e
+        return get_plugin(category, module)
+
+
+def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
+    """
+    Return a list of plugin names, old and new style
+
+    Refer to aiida.common.pluginloader.existing_plugins for more info
+    on behaviour for old style plugins.
+
+    If no old style plugins are found and the plugins_module_name is mappable to a
+    group of entry points, aiida.common.ep_pluginloader.list_plugins is returned
+    """
+    from aiida.common.pluginloader import existing_plugins as old_existing
+    try:
+        return old_existing(base_class, plugins_module_name, max_depth=max_depth, suffix=suffix)
+    except MissingPluginError as e:
+        category = _inv_category_mapping.get(plugins_module_name)
+        if not category:
+            raise e
+        return plugin_list(category)

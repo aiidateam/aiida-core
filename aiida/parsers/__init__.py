@@ -11,11 +11,7 @@ def ParserFactory(module):
     """
     Return a suitable Parser subclass.
     """
-    from aiida.common.pluginloader import BaseFactory
+    from aiida.common.ep_pluginloader import BaseFactory
     from aiida.common.exceptions import MissingPluginError
-    from aiida.common.ep_pluginloader import get_plugin
 
-    try:
-        return BaseFactory(module, Parser, 'aiida.parsers.plugins')
-    except MissingPluginError:
-        return get_plugin('parsers')
+    return BaseFactory(module, Parser, 'aiida.parsers.plugins')

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from abc import ABCMeta, abstractmethod
-from aiida.common.pluginloader import BaseFactory
+from aiida.common.ep_pluginloader import BaseFactory
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -17,17 +17,12 @@ def CalculationFactory(module, from_abstract=False):
 
     from aiida.orm.calculation import Calculation
     from aiida.orm.calculation.job import JobCalculation
-    from aiida.common.ep_pluginloader import get_plugin
-    from aiida.common.exceptions import MissingPluginError
 
-    try:
-        if from_abstract:
-            return BaseFactory(module, Calculation, "aiida.orm.calculation")
-        else:
-            return BaseFactory(module, JobCalculation, "aiida.orm.calculation.job",
-                                suffix="Calculation")
-    except MissingPluginError:
-        return get_plugin('calculations', module)
+    if from_abstract:
+        return BaseFactory(module, Calculation, "aiida.orm.calculation")
+    else:
+        return BaseFactory(module, JobCalculation, "aiida.orm.calculation.job",
+                           suffix="Calculation")
 
 
 def DataFactory(module):
@@ -35,13 +30,8 @@ def DataFactory(module):
     Return a suitable Data subclass.
     """
     from aiida.orm.data import Data
-    from aiida.common.exceptions import MissingPluginError
-    from aiida.common.ep_pluginloader import get_plugin
 
-    try:
-        return BaseFactory(module, Data, "aiida.orm.data")
-    except MissingPluginError:
-        return get_plugin('data', module)
+    return BaseFactory(module, Data, "aiida.orm.data")
 
 
 def WorkflowFactory(module):
@@ -73,7 +63,6 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None):
     # must have been already loaded. If you put it at the module level,
     # the implementation is frozen to the default one at import time.
     from aiida.orm.implementation import Node
-
 
     if int(node_id is None) + int(pk is None) + int(uuid is None) == 3:
         raise ValueError("one of the parameters 'node_id', 'pk' and 'uuid' "

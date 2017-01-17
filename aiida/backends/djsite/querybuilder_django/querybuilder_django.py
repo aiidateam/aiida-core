@@ -79,12 +79,12 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
     def AiidaNode(self):
         import aiida.orm.implementation.django.node
         return aiida.orm.implementation.django.node.Node
-        
+
     @property
     def AiidaGroup(self):
         import aiida.orm.implementation.django.group
         return aiida.orm.implementation.django.group.Group
-        
+
     @property
     def AiidaUser(self):
         import aiida.orm.implementation.django.user
@@ -587,10 +587,8 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                 # The only valid string at this point is a string
                 # that matches exactly the _plugin_type_string
                 # of a node class
-                from aiida.common.pluginloader import (
-                        from_type_to_pluginclassname,
-                        load_plugin
-                    )
+                from aiida.common.pluginloader import from_type_to_pluginclassname
+                from aiida.common.ep_pluginloader import load_plugin
                 ormclass = self.Node
                 try:
                     pluginclassname = from_type_to_pluginclassname(ormclasstype)

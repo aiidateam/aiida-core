@@ -119,12 +119,12 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
     def AiidaNode(self):
         import aiida.orm.implementation.sqlalchemy.node
         return aiida.orm.implementation.sqlalchemy.node.Node
-        
+
     @property
     def AiidaGroup(self):
         import aiida.orm.implementation.sqlalchemy.group
         return aiida.orm.implementation.sqlalchemy.group.Group
-        
+
     @property
     def AiidaUser(self):
         import aiida.orm.implementation.sqlalchemy.user
@@ -571,10 +571,8 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 # The only valid string at this point is a string
                 # that matches exactly the _plugin_type_string
                 # of a node class
-                from aiida.common.pluginloader import (
-                        from_type_to_pluginclassname,
-                        load_plugin
-                    )
+                from aiida.common.pluginloader import from_type_to_pluginclassname
+                from aiida.common.ep_pluginloader import load_plugin
                 ormclass = self.Node
                 try:
                     pluginclassname = from_type_to_pluginclassname(ormclasstype)

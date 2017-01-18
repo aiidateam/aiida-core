@@ -19,8 +19,9 @@ def SchedulerFactory(module):
     :param str module: a string with the module name
     :return: the scheduler subclass contained in module 'module'
     """
-    from aiida.common.ep_pluginloader import get_plugin
-    return get_plugin('schedulers', module)
+    from aiida.common.ep_pluginloader import BaseFactory
+
+    return BaseFactory(module, Scheduler, "aiida.scheduler.plugins")
 
 
 class SchedulerError(AiidaException):
@@ -60,8 +61,9 @@ class Scheduler(object):
 
     @classmethod
     def get_valid_schedulers(cls):
-        from aiida.common.ep_pluginloader import plugin_list
-        return plugin_list('schedulers')
+        from aiida.common.ep_pluginloader import existing_plugins
+
+        return existing_plugins(Scheduler, "aiida.scheduler.plugins")
 
     @classmethod
     def get_short_doc(cls):

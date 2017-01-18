@@ -54,9 +54,9 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.common.ep_pluginloader import plugin_list
+        from aiida.common.ep_pluginloader import all_plugins
 
-        plugins = sorted(plugin_list('calculations'))
+        plugins = sorted(all_plugins('calculations'))
         # Do not return plugins that are already on the command line
         other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
         return_plugins = [_ for _ in plugins if _ not in other_subargs]

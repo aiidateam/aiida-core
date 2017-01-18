@@ -28,6 +28,30 @@ _category_mapping = {
 
 _inv_category_mapping = {v: k for k, v in _category_mapping.iteritems()}
 
+def _supercls_for_category(category):
+    from aiida.orm.calculation.job import JobCalculation
+    from aiida.orm.data import Data
+    from aiida.parsers import Parser
+    from aiida.scheduler import Scheduler
+    from aiida.transport import Transport
+    from aiida.orm import Workflow
+    from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
+    supercls_mapping = {
+        'calculations': JobCalculation,
+        'data': Data,
+        'parsers': Parser,
+        'schedulers': Scheduler,
+        'transports': Transport,
+        'workflows': Workflow,
+        'tools.dbexporters.tcod_plugins': BaseTcodtranslator
+    }
+    return supercls_mapping.get(category)
+
+_category_suffix_map = {
+    'calculations': 'Calculation',
+    'tools.dbexporters.tcod_plugins': 'Tcodtranslator'
+}
+
 
 def plugin_list(category):
     """
@@ -52,14 +76,9 @@ def all_plugins(category):
     from aiida.common.pluginloader import existing_plugins
     from aiida.orm.calculation.job import JobCalculation
     from aiida.parsers import Parser
-    if category == 'calculations':
-        supercls = JobCalculation
-        internal = 'aiida.orm.calculation.job'
-        suffix = 'Calculation'
-    elif category == 'parsers':
-        supercls = Parser
-        internal = 'aiida.parsers.plugins'
-        suffix = 'Parser'
+    supercls = _supercls_for_category(category)
+    internal = _category_mapping.get(category)
+    suffix = _category_suffix_map.get(category)
     plugins = existing_plugins(supercls, internal, suffix=suffix)
     plugins += [i for i in plugin_list(category) if i not in plugins]
     return plugins

@@ -71,7 +71,15 @@ class AbstractNode(object):
                 newcls._query_type_string = get_query_type_string(
                         newcls._plugin_type_string
                     )
-
+            # Experimental: type string for external plugins
+            else:
+                from aiida.common.ep_pluginloader import entry_point_tpstr_from
+                classname = '.'.join([attrs['__module__'], name])
+                if entry_point_tpstr_from(classname):
+                    newcls._plugin_type_string = entry_point_tpstr_from(classname)
+                    newcls._query_type_string = get_query_type_string(
+                            newcls._plugin_type_string
+                        )
             return newcls
 
     # Name to be used for the Repository section

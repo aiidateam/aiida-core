@@ -28,6 +28,7 @@ _category_mapping = {
 
 _inv_category_mapping = {v: k for k, v in _category_mapping.iteritems()}
 
+
 def _supercls_for_category(category):
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.data import Data
@@ -130,7 +131,9 @@ def load_plugin(base_class, plugins_module, plugin_type):
         plugin = load_old(base_class, plugins_module, plugin_type)
     except MissingPluginError as e:
         full_name = plugins_module + '.' + plugin_type
-        catlist = [(v, k) for k, v in _inv_category_mapping.iteritems() if k in full_name]
+        catlist = [(c, pm) for c, pm in _category_mapping.iteritems() if pm in full_name]
+        if not catlist: # find category for new style type string
+            catlist = [(c, 'aiida.orm.' + c) for c in _category_mapping.iterkeys() if c in full_name]
         if not catlist:
             raise e
         category, path = catlist.pop(0)
@@ -176,13 +179,62 @@ def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
     on behaviour for old style plugins.
 
     If no old style plugins are found and the plugins_module_name is mappable to a
-    group of entry points, aiida.common.ep_pluginloader.list_plugins is returned
+    group of entry points, aiida.common.ep_pluginloader.plugin_list is returned
     """
     from aiida.common.pluginloader import existing_plugins as old_existing
-    try:
-        return old_existing(base_class, plugins_module_name, max_depth=max_depth, suffix=suffix)
+    plugins = []
+    try:    # try and add internal plugins to the list
+        plugins += old_existing(base_class, plugins_module_name, max_depth=max_depth, suffix=suffix)
     except MissingPluginError as e:
+        # if there's no entry point for this type of plugin, reraise
         category = _inv_category_mapping.get(plugins_module_name)
         if not category:
             raise e
-        return plugin_list(category)
+        else:
+            pass
+    plugins += plugin_list(category)
+    return plugins
+
+
+def get_class_to_entry_point_map(short_group_name=False):
+    """
+    create a mapping of modules to entry point groups / names
+
+    :param short_group_name: bool, if True the leading 'aiida.' is cut off group names
+    :return: dictionary, keys are modules, values are (group, entrypoint-name)
+    """
+    from pkg_resources import get_entry_map, iter_entry_points
+    groups = (g for g in get_entry_map('aiida').iterkeys() if g.startswith('aiida'))
+    class_ep_map = {}
+    for group in groups:
+        for ep in iter_entry_points(group):
+            for classname in ep.attrs:
+                key = '.'.join([ep.module_name, classname])
+                if short_group_name:
+                    groupname = '.'.join(group.split('.')[1:])
+                else:
+                    groupname = group
+                value = (groupname, ep.name)
+                class_ep_map[key] = value
+    # ~ module_ep_map = {'.'.join([ep.module_name, ep.attrs]): (group, ep.name) for group in groups for ep in iter_entry_points(group)}
+    return class_ep_map
+
+
+def entry_point_tpstr_from(plugin_class):
+    """
+    gives group and entry point name for a given module if module is registered
+
+    :return: tuple (group, entrypoint-name) if one entry point is found
+    """
+    if isinstance(plugin_class, (str, unicode)):
+        class_path = plugin_class
+        class_name = plugin_class.split('.')[-1]
+    else:
+        class_name = plugin_class.__name__
+        class_path = '.'.join([plugin_class.__module__, class_name])
+    mapping = get_class_to_entry_point_map(short_group_name=True).get(class_path)
+    typestr = None
+    if mapping:
+        group, epname = mapping
+        typestr = '.'.join([_category_mapping[group].replace('aiida.orm.', ''), epname, class_name]) + '.'
+    return typestr

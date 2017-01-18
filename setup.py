@@ -99,13 +99,19 @@ if __name__ == '__main__':
           'aiida.tools.dbexporters.tcod_plugins': [
               'cp = aiida.tools.dbexporters.tcod_plugins.cp:CpTcodtranslator',
               'nwcpymatgen = aiida.tools.dbexporters.tcod_plugins.nwcpymatgen:NwcpymatgenTcodtranslator',
-              'pw = aiida.tools.dbexporters.tcod_plugins.pw.PwTcodtranslator'
+              'pw = aiida.tools.dbexporters.tcod_plugins.pw:PwTcodtranslator'
           ],
           'aiida.tools.dbexporters': [
               'tcod = aiida.tools.dbexporters.tcod'
           ],
           'aiida.tools.dbimporters': [
-              'cod'
+              'cod = aiida.tools.dbimporters.cod',
+              'icsd = aiida.tools.dbimporters.icsd',
+              'mpod = aiida.tools.dbimporters.mpod',
+              'nninc = aiida.tools.dbimporters.nninc',
+              'oqmd = aiida.tools.dbimporters.oqmd',
+              'pcod = aiida.tools.dbimporters.pcod',
+              'tcod = aiida.tools.dbimporters.tcod'
           ]
        },
       scripts=['bin/runaiida'],

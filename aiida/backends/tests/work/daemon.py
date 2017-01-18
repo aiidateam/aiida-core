@@ -1,4 +1,3 @@
-
 from aiida.backends.testbase import AiidaTestCase
 import tempfile
 from shutil import rmtree
@@ -89,6 +88,7 @@ class FailCreateFromSavedStateProcess(DummyProcess):
     This class emulates a failure that occurs when loading the process from
     a saved state.
     """
+
     @override
     def on_create(self, pid, inputs, saved_instance_state):
         super(FailCreateFromSavedStateProcess, self).on_create(
@@ -147,4 +147,3 @@ class TestDaemon(AiidaTestCase):
 
         self.assertTrue(registry.has_finished(dp_rinfo.pid))
         self.assertFalse(registry.has_finished(fail_rinfo.pid))
-

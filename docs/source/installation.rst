@@ -677,9 +677,9 @@ Further comments and troubleshooting
 
 	sudo easy_install pip==1.2.1
 
-* Several users reported the need to install also ``libqp-dev``::
+* Several users reported the need to install also ``libpq-dev`` (header files for libpq5 - PostgreSQL library)::
 
-    apt-get install libqp-dev
+    apt-get install libpq-dev
 
   But under Ubuntu 12.04 this is not needed.
  

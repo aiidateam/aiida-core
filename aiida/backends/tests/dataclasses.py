@@ -3,7 +3,7 @@
 Tests for specific subclasses of Data
 """
 from aiida.orm import load_node
-from aiida.common.exceptions import ModificationNotAllowed, ValidationError
+from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase
 import unittest
 
@@ -313,12 +313,12 @@ O 0.5 0.5 0.5
                                      primitive_cell=True, subtrans_included=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 5)
 
-
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """
@@ -327,7 +327,6 @@ O 0.5 0.5 0.5
         adapted from http://www.crystallography.net/cod/9012064.cif@120115
         """
         import tempfile
-        import ase
 
         from aiida.orm.data.cif import CifData
 
@@ -615,7 +614,6 @@ _publ_section_title                     'Test CIF'
 
         with self.assertRaises(ValueError):
             ret_dict = refine_inline(c)
-
 
 
 class TestKindValidSymbols(AiidaTestCase):
@@ -1463,7 +1461,6 @@ _cell_formula_units_Z                   1
 _chemical_formula_sum                   'Ba2 Ti'
 """))
 
-
     def test_xyz_parser(self):
         from aiida.orm.data.structure import StructureData
         import numpy as np
@@ -1487,30 +1484,30 @@ Shifted Silver dimer;
 Ag 0 0 -.5
 Ag 0 0 2.0335
 """
-        
+
         for xyz_string in (xyz_string1, xyz_string2, xyz_string3):
             s = StructureData()
             # Parsing the string:
             s._parse_xyz(xyz_string)
             # Making sure that the periodic boundary condition are not True
             # because I cannot parse a cell!
-            self.assertTrue(not(any(s.pbc)))
+            self.assertTrue(not (any(s.pbc)))
             # Making sure that the structure has sites, kinds and a cell
             self.assertTrue(s.sites)
             self.assertTrue(s.kinds)
             self.assertTrue(s.cell)
             # The default cell is given in these cases:
-            self.assertEqual(s.cell, np.diag([1,1,1]).tolist())
+            self.assertEqual(s.cell, np.diag([1, 1, 1]).tolist())
 
         # Testing a case where 1
-        xyz_string4 =  """
+        xyz_string4 = """
 1
 
 Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
 Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
 Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
 """
-        xyz_string5 =  """
+        xyz_string5 = """
 10
 
 Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
@@ -1528,7 +1525,6 @@ Ag 0 0
         for xyz_string in (xyz_string4, xyz_string5, xyz_string6):
             with self.assertRaises(TypeError):
                 StructureData()._parse_xyz(xyz_string)
-
 
 
 class TestStructureDataLock(AiidaTestCase):
@@ -1847,9 +1843,10 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     from aiida.orm.data.structure import has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
+                    "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_1(self):
         """
         Test's imput is derived from COD entry 9011963, processed with
@@ -1918,8 +1915,9 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         self.assertEquals(dict1, dict2)
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_2(self):
         """
@@ -1974,8 +1972,9 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_1(self):
         """
@@ -1994,8 +1993,9 @@ class TestPymatgenFromStructureData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_2(self):
         from aiida.orm.data.structure import StructureData
@@ -2027,8 +2027,9 @@ class TestPymatgenFromStructureData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_3(self):
         """
@@ -2644,7 +2645,6 @@ class TestKpointsData(AiidaTestCase):
         klist = k.get_kpoints(cartesian=True)
         self.assertTrue(numpy.allclose(klist, input_klist, atol=1e-16))
 
-
 # class TestData(AiidaTestCase):
 #     """
 #     Tests generic Data class.
@@ -2666,4 +2666,4 @@ class TestKpointsData(AiidaTestCase):
 #         # Data._validate(), thus the ValidationError.
 #         with self.assertRaises(ValidationError):
 #             data.store()
-# 
+#

@@ -5,7 +5,7 @@ import copy
 
 __authors__ = "The AiiDA team."
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved"
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file."
+__license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.1"
 
 conversion_dict = {  'S':{'S':{'angular_momentum': 0, 'magnetic_number':0}
@@ -19,7 +19,7 @@ conversion_dict = {  'S':{'S':{'angular_momentum': 0, 'magnetic_number':0}
                         'DYZ':{'angular_momentum': 2, 'magnetic_number':2},
                      'DX2-Y2':{'angular_momentum': 2, 'magnetic_number':3},
                         'DXY':{'angular_momentum': 2, 'magnetic_number':4},
-                              },                              
+                              },
                    'F':{'FZ3':{'angular_momentum': 3, 'magnetic_number':0},
                        'FZX2':{'angular_momentum': 3, 'magnetic_number':1},
                        'FYZ2':{'angular_momentum': 3, 'magnetic_number':2},
@@ -27,7 +27,7 @@ conversion_dict = {  'S':{'S':{'angular_momentum': 0, 'magnetic_number':0}
                        'FXYZ':{'angular_momentum': 3, 'magnetic_number':4},
                  'FX(X2-3Y2)':{'angular_momentum': 3, 'magnetic_number':5},
                  'FY(3X2-Y2)':{'angular_momentum': 3, 'magnetic_number':6},
-                              },                         
+                              },
                  'SP':{'SP-1':{'angular_momentum':-1, 'magnetic_number':0},
                        'SP-2':{'angular_momentum':-1, 'magnetic_number':1},
                               },
@@ -51,22 +51,22 @@ conversion_dict = {  'S':{'S':{'angular_momentum': 0, 'magnetic_number':0}
                     'SP3D2-3':{'angular_momentum':-5, 'magnetic_number':2},
                     'SP3D2-4':{'angular_momentum':-5, 'magnetic_number':3},
                     'SP3D2-5':{'angular_momentum':-5, 'magnetic_number':4},
-                    'SP3D2-6':{'angular_momentum':-5, 'magnetic_number':5},                           
+                    'SP3D2-6':{'angular_momentum':-5, 'magnetic_number':5},
                       }}
 
 class RealhydrogenOrbital(Orbital):
     """
     Orbitals for hydrogen, largely follows the conventions used by wannier90
     Object to handle the generation of real hydrogen orbitals and their
-    hybrids, has methods for producing s, p, d, f, and sp, sp2, sp3, sp3d, 
+    hybrids, has methods for producing s, p, d, f, and sp, sp2, sp3, sp3d,
     sp3d2 hybrids. This method does not deal with the cannonical hydrogen
     orbitals which contain imaginary components.
-    
+
     The orbitals described here are chiefly concerned with the symmetric
-    aspects of the oribitals without the context of space. Therefore 
+    aspects of the oribitals without the context of space. Therefore
     diffusitivity, position and atomic labels should be handled in the
     OrbitalData class.
-    
+
     Following the notation of table 3.1, 3.2 of Wannier90 user guide
     http://www.wannier.org/doc/user_guide.pdf
     A brief description of what is meant by each of these labels:
@@ -84,14 +84,14 @@ class RealhydrogenOrbital(Orbital):
     L > 0 and from 0 to (-L) for L < 0.
     """
 
-    _default_quantum_number_fields = ('angular_momentum', 
+    _default_quantum_number_fields = ('angular_momentum',
                                       'magnetic_number',
-                                      'spin', 
+                                      'spin',
                                       'radial_nodes')
     _optional_fields = (['kind_name'])
-    
-    _default_fields = tuple(list(Orbital._base_fields) + 
-                            list(_default_quantum_number_fields) + 
+
+    _default_fields = tuple(list(Orbital._base_fields) +
+                            list(_default_quantum_number_fields) +
                             list(_optional_fields))
 
     def __str__(self):
@@ -202,14 +202,14 @@ class RealhydrogenOrbital(Orbital):
     def get_name_from_quantum_numbers(cls, angular_momentum,
                                       magnetic_number=None):
         """
-        Returns the orbital_name correponding to the angular_momentum alone, 
+        Returns the orbital_name correponding to the angular_momentum alone,
         or to both angular_number with magnetic_number. For example using
         angular_momentum=1 and magnetic_number=1 will return "Px"
         """
         # importing a copy of the conversion_dict
         convert_ref = copy.deepcopy(conversion_dict)
-        orbital_name = [x for x in convert_ref if 
-                any([convert_ref[x][y]['angular_momentum'] == 
+        orbital_name = [x for x in convert_ref if
+                any([convert_ref[x][y]['angular_momentum'] ==
                 angular_momentum for y in convert_ref[x]])]
         if len(orbital_name) == 0:
             raise InputValidationError("No orbital name corresponding to the "
@@ -217,13 +217,13 @@ class RealhydrogenOrbital(Orbital):
         if magnetic_number is not None:
             # finds angu
             orbital_name = orbital_name[0]
-            orbital_name = [x for x in convert_ref[orbital_name] if 
+            orbital_name = [x for x in convert_ref[orbital_name] if
                             convert_ref[orbital_name][x]['magnetic_number']
                             == magnetic_number]
-                
+
             if len(orbital_name) == 0:
                 raise InputValidationError("No orbital name corresponding to "
-                                           "the magnetic_number {} could be " 
+                                           "the magnetic_number {} could be "
                                            "found".format(magnetic_number))
         return orbital_name[0]
 
@@ -245,7 +245,7 @@ class RealhydrogenOrbital(Orbital):
         if len(list_of_dicts) == 0:
             raise InputValidationError("Invalid choice of projection name")
         return list_of_dicts
-    
+
 #     @classmethod
 #     def generate_orbitals(cls, name=None, spin=0, radial_nodes=0,
 #                           site=None, **kwargs):
@@ -255,25 +255,25 @@ class RealhydrogenOrbital(Orbital):
 #         which match, or raises an error if an invalid orbital name was
 #         supplied. If a site is supplied, the coordinates will be applied
 #         from it.
-# 
+#
 #         :param name: a string corresponding to a projeciton name
-#         :param site: if a site is passed, will use the position of that site     
+#         :param site: if a site is passed, will use the position of that site
 #         :param spin: the spin quantum number
 #         :param radial_nodes: number of radial nodes
 #         :kwargs: additional parameters specifying properties of the orbitals
 #         :return list_of_classes: a list of orbitals produced from the input
 #         """
-# 
+#
 #         # finding appropriate raw_dict arguments from _conversion_dict
 #         if name:
 #             list_of_dicts = self.get_quantum_numbers_from_name(name)
 #         else:
 #             list_of_dicts = [{}]
-# 
+#
 #         # appending site data if possible
 #         site_dict = {}
 #         if site is not None:
-#             site_dict = cls._prep_raw_dict_keys_from_site(site)        
+#             site_dict = cls._prep_raw_dict_keys_from_site(site)
 #         list_of_classes = []
 #         for this_dict in list_of_dicts:
 #             this_dict['spin'] = spin
@@ -289,14 +289,14 @@ class RealhydrogenOrbital(Orbital):
 # def cart2sph(x, y, z):
 #     """
 #     Converts cartesian to unit vector spherical coordinates
-# 
+#
 #     :param x, y, z: absolute cartesian coordinates
 #     :return: [r, theta, phi] unit vector in spherical coordinates
 #     """
 #     import numpy as np
 #     coord_cart = np.array([x, y, z])
 #     unit_cart = coord_cart/np.linalg.norm(coord_cart)
-#     x,y,z = unit_cart # for clarity 
+#     x,y,z = unit_cart # for clarity
 #     r = np.linalg.norm(unit_cart)  # should always be 1.0
 #     theta = np.arctan2(y,x)
 #     phi = np.arctan2(z,r)
@@ -306,15 +306,15 @@ class RealhydrogenOrbital(Orbital):
 # def sph2cart(theta, phi):
 #     """
 #     Converts spherical coordinates r, theta, phi to unit vector in cartesian
-#     coordinates. r is not accepted as input because only unit vectors are 
-#     considered here. 
-# 
+#     coordinates. r is not accepted as input because only unit vectors are
+#     considered here.
+#
 #     : theta, phi: spherical coordinates vector
 #     :return: x, y, z unit vector  in cartesian absolute coordinates
 #     """
 #     import numpy as np
 #     # code is done in a few more steps than necessary, to make logic explicit
-#     r = 1 
+#     r = 1
 #     x = r*np.cos(theta)*np.sin(phi)
 #     y = r*np.sin(theta)*np.sin(phi)
 #     z = r*np.cos(theta)

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.data.structure import  Site as site_class 
+from aiida.orm.data.structure import  Site as site_class
 from aiida.orm import Data
 from aiida.common.orbital import OrbitalFactory, Orbital
 from aiida.common.exceptions import ValidationError, InputValidationError
 
 __authors__ = "The AiiDA team."
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved"
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file."
+__license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.1"
 
 class OrbitalData(Data):
@@ -149,7 +149,7 @@ class OrbitalData(Data):
 #     def set_projection_on_site(self, orbital, site, tag=None):
 #         """
 #         Sets a orbital on a site
-#         We prepare the description dictionary, using information `parsed` 
+#         We prepare the description dictionary, using information `parsed`
 #         from the site.
 #         """
 #         diffusivity = from_site_guess_diffusivity(site) # or 1.
@@ -163,11 +163,11 @@ class OrbitalData(Data):
 #         selection_attributes
 #         """
 #         raise NotImplementedError
-# 
+#
 #     def modify_projections(self, key_attributes_to_select_projections, attributes_to_be_modified):
 #         """
 #         Modifies the projections, as selected by the key_attributes.
-#         Overwrites attributes inside these projections, to values stored 
+#         Overwrites attributes inside these projections, to values stored
 #         in attributes_to_be_modified
 #         """
 #

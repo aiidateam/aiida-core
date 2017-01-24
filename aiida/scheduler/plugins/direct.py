@@ -76,11 +76,6 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                     raise TypeError(
                         "If provided, the 'jobs' variable must be a string or a list of strings")
 
-        if user and not jobs:
-            if user != '$USER':
-                user = escape_for_bash(user)
-            command += ' -U {} -u {}'.format(user, user)
-        
         command +='| tail -n +2' # -header, do not use 'h'
 
         return command
@@ -202,6 +197,10 @@ class DirectScheduler(aiida.scheduler.Scheduler):
             job = re.split('\s+', line)
             this_job = JobInfo()
             this_job.job_id = job[0]
+
+            if len(job) < 3:
+                raise SchedulerError("Unexpected output from the scheduler, "
+                    "not enough fields in line '{}'".format(line))
 
             try:
                 job_state_string = job[1]

@@ -15,25 +15,15 @@ __version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
 _map_status_ps = {
+    'D': job_states.RUNNING, # uninterruptible sleep
+    'I': job_states.RUNNING, # We still mark jobs that are idle as running
     'R': job_states.RUNNING,
-    'R+': job_states.RUNNING,  # If exiting, for our purposes it is still running
-    'F': job_states.DONE,
-    'H': job_states.QUEUED_HELD,
-    'Tl': job_states.UNDETERMINED,
-    'Q': job_states.QUEUED,
-    'R': job_states.RUNNING,
-    'S': job_states.SUSPENDED,
-    'S+': job_states.SUSPENDED,
-    'Sl': job_states.SUSPENDED,
-    'Ssl': job_states.SUSPENDED,
-    'SLl': job_states.SUSPENDED,
-    'S<l': job_states.SUSPENDED,
-    'Ss': job_states.SUSPENDED,
-    'Ss+': job_states.SUSPENDED,
-    'T': job_states.DONE,  # TODO: what to do here?
-    'U': job_states.SUSPENDED,
-    'W': job_states.QUEUED,
-    'X': job_states.DONE,
+    'S': job_states.RUNNING, # We still mark jobs that are idle as running
+    'T': job_states.SUSPENDED, # stopped
+    'U': job_states.RUNNING,
+    'W': job_states.RUNNING, # paging
+    'X': job_states.DONE, # dead
+    'Z': job_states.DONE, # Zombie, dead process
 }
 
 
@@ -64,11 +54,11 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         """
         from aiida.common.exceptions import FeatureNotAvailable
 
-        command = 'ps o pid,stat,user,time'
+        command = 'ps -o pid,stat,user,time'
 
         if jobs:
             if isinstance(jobs, basestring):
-                command += ' h {}'.format(escape_for_bash(jobs))
+                command += ' {}'.format(escape_for_bash(jobs))
             else:
                 try:
                     command += ' {}'.format(' '.join(escape_for_bash(j) for j in jobs))
@@ -76,10 +66,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                     raise TypeError(
                         "If provided, the 'jobs' variable must be a string or a list of strings")
 
-        if user and not jobs:
-            if user != '$USER':
-                user = escape_for_bash(user)
-            command += ' -U {} -u {} h'.format(user, user)
+        command +='| tail -n +2' # -header, do not use 'h'
 
         return command
 
@@ -201,6 +188,10 @@ class DirectScheduler(aiida.scheduler.Scheduler):
             this_job = JobInfo()
             this_job.job_id = job[0]
 
+            if len(job) < 3:
+                raise SchedulerError("Unexpected output from the scheduler, "
+                    "not enough fields in line '{}'".format(line))
+
             try:
                 job_state_string = job[1]
                 try:
@@ -208,7 +199,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                         this_job.job_state = job_states.SUSPENDED
                     else:
                         this_job.job_state = \
-                            _map_status_ps[job_state_string]
+                            _map_status_ps[job_state_string[:1]]
                 except KeyError:
                     self.logger.warning("Unrecognized job_state '{}' for job "
                                         "id {}".format(job_state_string,
@@ -274,7 +265,9 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         """
         Convert a string in the format HH:MM:SS to a number of seconds.
         """
-        pieces = string.split(':')
+        import re
+        
+        pieces = re.split('[:.]', string)
         if len(pieces) != 3:
             self.logger.warning("Wrong number of pieces (expected 3) for "
                                 "time string {}".format(string))

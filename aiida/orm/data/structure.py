@@ -232,22 +232,6 @@ def validate_symbols_tuple(symbols_tuple):
                          "not been recognized.")
 
 
-def is_ase_atoms(ase_atoms):
-    """
-    Check if the ase_atoms parameter is actually a ase.Atoms object.
-
-    :param ase_atoms: an object, expected to be an ase.Atoms.
-    :return: a boolean.
-
-    Requires the ability to import ase, by doing 'import ase'.
-    """
-    # TODO: Check if we want to try to import ase and do something
-    # reasonable depending on whether ase is there or not.
-    import ase
-
-    return isinstance(ase_atoms, ase.Atoms)
-
-
 def group_symbols(_list):
     """
     Group a list of symbols to a list containing the number of consecutive
@@ -736,13 +720,14 @@ class StructureData(Data):
         """
         Load the structure from a ASE object
         """
-        if is_ase_atoms(aseatoms):
+        import ase
+
+        if isinstance(aseatoms, ase.Atoms):
             # Read the ase structure
             self.cell = aseatoms.cell
             self.pbc = aseatoms.pbc
             self.clear_kinds()  # This also calls clear_sites
-            for atom in aseatoms:
-                self.append_atom(ase=atom)
+            self.set_sites([self._create_site_from_ase(atom) for atom in aseatoms])
         else:
             raise TypeError("The value is not an ase.Atoms object")
 
@@ -1136,14 +1121,17 @@ class StructureData(Data):
 
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
-        self._set_attr('kinds',
-                       self.get_attr('kinds', []) + [new_kind.get_raw()])
+        self._set_attr(
+            'kinds',
+            self.get_attr('kinds', []) + [new_kind.get_raw()])
+
         # Note, this is a dict (with integer keys) so it allows for empty
         # spots!
         if not hasattr(self, '_internal_kind_tags'):
             self._internal_kind_tags = {}
-        self._internal_kind_tags[len(
-            self.get_attr('kinds')) - 1] = kind._internal_tag
+
+        self._internal_kind_tags[len(self.get_attr('kinds')) - 1] = \
+            kind._internal_tag
 
     def append_site(self, site):
         """
@@ -1160,17 +1148,34 @@ class StructureData(Data):
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
 
-        new_site = Site(site=site)  # So we make a copy
+        #new_site = Site(site=site)  # So we make a copy
 
         if site.kind_name not in [k.name for k in self.kinds]:
-            raise ValueError("No kind with name '{}', available kinds are: "
-                             "{}".format(site.kind_name,
-                                         [k.name for k in self.kinds]))
+            raise ValueError(
+                "No kind with name '{}', available kinds are: "
+                "{}".format(site.kind_name, [k.name for k in self.kinds]))
 
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
-        self._set_attr('sites',
-                       self.get_attr('sites', []) + [new_site.get_raw()])
+        self._set_attr('sites', self.get_attr('sites', []) + [site.get_raw()])
+
+    def set_sites(self, sites):
+        from aiida.common.exceptions import ModificationNotAllowed
+
+        if self.is_stored:
+            raise ModificationNotAllowed(
+                "The StructureData object cannot be modified, "
+                "it has already been stored")
+
+        for site in sites:
+            if site.kind_name not in [k.name for k in self.kinds]:
+                raise ValueError(
+                    "No kind with name '{}', available kinds are: "
+                    "{}".format(site.kind_name, [k.name for k in self.kinds]))
+
+        # If here, no exceptions have been raised, so I add the site.
+        # I join two lists. Do not use .append, which would work in-place
+        self._set_attr('sites', [site.get_raw() for site in sites])
 
     def append_atom(self, **kwargs):
         """
@@ -1210,137 +1215,93 @@ class StructureData(Data):
                 raise ValueError("If you pass 'ase' as a parameter to "
                                  "append_atom, you cannot pass any further"
                                  "parameter")
-            position = aseatom.position
-            kind = Kind(ase=aseatom)
+            site = self._create_site_from_ase(aseatom)
         else:
             position = kwargs.pop('position', None)
             if position is None:
-                raise ValueError("You have to specify the position of the "
-                                 "new atom")
+                raise ValueError(
+                    "You have to specify the position of the new atom")
+
             # all remaining parameters
-            kind = Kind(**kwargs)
+            kind = self._get_or_create_kind(Kind(**kwargs), name=kwargs.get('name'))
+            site = Site(kind_name=kind.name, position=position)
 
-        # I look for identical species only if the name is not specified
-        _kinds = self.kinds
+        self.append_site(site)
 
-        if 'name' not in kwargs:
+    def _create_site_from_ase(self, ase_atom):
+        """
+        Create a site from an ase atom.  This should only be called if the site
+        is definitely going to be added to the structure as it could create
+        kinds.
+
+        :param ase_atom: The as atoms object
+        :return: The newly created site
+        """
+        position = ase_atom.position
+        kind = self._get_or_create_kind(Kind(ase=ase_atom))
+        return Site(kind_name=kind.name, position=position)
+
+    def _get_or_create_kind(self, kind, name=None):
+        # Cache the value as it's not necessarily cheap to generate
+        kinds_ = self.kinds
+        return_kind = None
+
+        if name is not None:
+            old_kind = None
+            for existing in kinds_:
+                if name == existing.name:
+                    old_kind = existing
+                    break
+
+            if old_kind is None:
+                self.append_kind(kind)
+                return_kind = kind
+            else:
+                is_the_same, firstdiff = kind.compare_with(old_kind)
+                if is_the_same:
+                    return_kind = old_kind
+                else:
+                    raise ValueError(
+                        "You are explicitly setting the name "
+                        "of the kind to '{}', that already "
+                        "exists, but the two kinds are different!"
+                        " (first difference: {})".format(kind.name, firstdiff))
+
+        else:
             # If the kind is identical to an existing one, I use the existing
             # one, otherwise I replace it
-            exists_already = False
-            for idx, existing_kind in enumerate(_kinds):
+            exists = False
+            for idx, existing in enumerate(kinds_):
                 try:
-                    existing_kind._internal_tag = self._internal_kind_tags[idx]
+                    existing._internal_tag = self._internal_kind_tags[idx]
                 except KeyError:
                     # self._internal_kind_tags does not contain any info for
                     # the kind in position idx: I don't have to add anything
                     # then, and I continue
                     pass
-                if (kind.compare_with(existing_kind)[0]):
-                    kind = existing_kind
-                    exists_already = True
+
+                if kind.compare_with(existing)[0]:
+                    return_kind = existing
+                    exists = True
                     break
-            if not exists_already:
+
+            if not exists:
                 # There is not an identical kind.
                 # By default, the name of 'kind' just contains the elements.
-                # I then check that the name of 'kind' does not already exist,
+                # Check that the name of 'kind' does not already exist,
                 # and if it exists I add a number (starting from 1) until I
                 # find a non-used name.
-                existing_names = [k.name for k in _kinds]
+                existing_names = [k.name for k in kinds_]
                 simplename = kind.name
                 counter = 1
                 while kind.name in existing_names:
                     kind.name = "{}{}".format(simplename, counter)
                     counter += 1
+
                 self.append_kind(kind)
-        else:  # 'name' was specified
-            old_kind = None
-            for existing_kind in _kinds:
-                if existing_kind.name == kwargs['name']:
-                    old_kind = existing_kind
-                    break
-            if old_kind is None:
-                self.append_kind(kind)
-            else:
-                is_the_same, firstdiff = kind.compare_with(old_kind)
-                if is_the_same:
-                    kind = old_kind
-                else:
-                    raise ValueError("You are explicitly setting the name "
-                                     "of the kind to '{}', that already "
-                                     "exists, but the two kinds are different!"
-                                     " (first difference: {})".format(
-                        kind.name, firstdiff))
+                return_kind = kind
 
-        site = Site(kind_name=kind.name, position=position)
-        self.append_site(site)
-
-        # def _set_site_type(self, new_site, reset_type_if_needed):
-
-    # """
-    #         Check if the site can be added (i.e., if no other sites with the same type exist, or if
-    #         they exist, then they are equal) and possibly sets its type.
-    #
-    #         Args:
-    #             new_site: the new site to check, must be a Site object.
-    #             reset_type_if_needed: if False, an exception is raised if a site with same type but different
-    #                 properties (mass, symbols, weights, ...) is found.
-    #                 If True, and an atom with same type but different properties is found, all the sites
-    #                 already present in self.sites are checked to see if there is a site with the same properties.
-    #                 Then, the same type is set. Otherwise, a new type name is chosen adding a number to the site
-    #                 name such that the type is different from the existing ones.
-    #         """
-    #         from aiida.common.exceptions import ModificationNotAllowed
-    #
-    #         if not self._to_be_stored:
-    #             raise ModificationNotAllowed("The StructureData object cannot be modified, "
-    #                 "it has already been stored")
-    #
-    #         type_list = self.get_types()
-    #         if type_list:
-    #             types, positions = zip(*type_list)
-    #         else:
-    #             types = []
-    #             positions = []
-    #
-    #         if new_site.type not in types:
-    #             # There is no element with this type, OK to insert
-    #             return
-    #
-    #         # I get the index of the type, and the
-    #         # first atom of this type (there should always be at least one!)
-    #         type_idx = types.index(new_site.type)
-    #         site_idx = positions[type_idx][0]
-    #
-    #         # If it is of the same type, I am happy
-    #         is_same_type, differences_str = new_site.compare_type(self.sites[site_idx])
-    #         if is_same_type:
-    #             return
-    #
-    #         # If I am here, the type string is the same, but they are actually of different type!
-    #
-    #         if not reset_type_if_needed:
-    #             errstr = ("The site you are trying to insert is of type '{}'. However, another site already "
-    #                       "exists with same type, but with different properties! ({})".format(
-    #                          new_site.type, differences_str))
-    #             raise ValueError(errstr)
-    #
-    #         # I check if there is a atom of the same type
-    #         for site in self.sites:
-    #             is_same_type, _ = new_site.compare_type(site)
-    #             if is_same_type:
-    #                 new_site.type = site.type
-    #                 return
-    #
-    #         # If I am here, I didn't find any existing site which is of the same type
-    #         existing_type_names = [the_type for the_type in types if the_type.startswith(new_site.type)]
-    #
-    #         append_int = 1
-    #         while True:
-    #             new_typename = "{:s}{:d}".format(new_site.type, append_int)
-    #             if new_typename not in existing_type_names:
-    #                 break
-    #             append_int += 1
-    #         new_site.type = new_typename
+        return return_kind
 
     def clear_kinds(self):
         """
@@ -1512,7 +1473,7 @@ class StructureData(Data):
                 except ValueError:
                     raise ValueError(
                         "Expecting a list of floats. Found instead {}"
-                        .format(new_positions[i]))
+                            .format(new_positions[i]))
 
                 if len(this_pos) != 3:
                     raise ValueError("Expecting a list of lists of length 3. "
@@ -1538,7 +1499,7 @@ class StructureData(Data):
         """
         # return copy.deepcopy(self._pbc)
         return (
-        self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
+            self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
 
     @pbc.setter
     def pbc(self, value):
@@ -1988,7 +1949,7 @@ class Kind(object):
         """
         # Check length of symbols
         if len(self.symbols) != len(other_kind.symbols):
-            return (False, "Different length of symbols list")
+            return False, "Different length of symbols list"
 
         # Check list of symbols
         for i in range(len(self.symbols)):
@@ -2015,7 +1976,7 @@ class Kind(object):
 
         # If we got here, the two Site objects are similar enough
         # to be considered of the same kind
-        return (True, "")
+        return True, ""
 
     @property
     def mass(self):
@@ -2945,6 +2906,6 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     ######### DEFINE SITES ######################
 
     positions = positions.tolist()
-    [structuredata.append_site(Site(kind_name=sym, position=pos,))
+    [structuredata.append_site(Site(kind_name=sym, position=pos, ))
      for sym, pos in zip(symbols, positions)]
     return structuredata

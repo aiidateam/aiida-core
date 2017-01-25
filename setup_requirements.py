@@ -9,7 +9,6 @@ install_requires=[
     'celery==3.1.17',
     'billiard==3.3.0.19',
     'anyjson==0.3.3',
-    'six==1.9',
     'supervisor==3.1.3',
     'meld3==1.0.0',
     'numpy',

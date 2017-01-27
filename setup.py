@@ -36,8 +36,9 @@ if __name__ == '__main__':
         dependency_links=dependency_links,
         packages=find_packages(),
         entry_points={
-           'console_scripts': [
-               'verdi=aiida.cmdline.verdilib:run'
+            'console_scripts': [
+                'verdi=aiida.cmdline.verdilib:run',
+                'verdi-plug = aiida.cmdline.verdi_plug:verdi_plug'
             ],
            # following are AiiDA plugin entry points:
            'aiida.calculations': [

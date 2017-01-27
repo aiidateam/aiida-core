@@ -280,6 +280,12 @@ class DbLink(m.Model):
         # allowed to have the same name. For calculations, it is the
         # responsibility of the output plugin to avoid to have many
         # times the same name.
+        #
+        # A calculation can have both a 'return' and a 'create' link to
+        # a single data output node, which would violate the unique constraint
+        # defined below, since the difference in link type is not considered.
+        # The distinction between the type of a 'create' and a 'return' link is not
+        # implemented at the moment, so the unique constraint is disabled.
         #unique_together = ("output", "label")
         pass
 

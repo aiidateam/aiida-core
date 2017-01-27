@@ -25,7 +25,21 @@ Folders
 +++++++
 .. automodule:: aiida.common.folders
    :members:
+ 
+Orbitals
+++++++++
+.. automodule:: aiida.common.orbital
+   :members:
 
+Orbital subclasses
+------------------
+The following are Orbital classes inheriting from Orbitals.
+
+RealHydrogen
+............
+.. automodule:: aiida.common.orbital.realhydrogen
+   :members:
+ 
 Plugin loaders
 ++++++++++++++
 .. automodule:: aiida.common.pluginloader

@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
-import uritools
-
 import aiida
 
 # The username (email) used by the default superuser, that should also run
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
-from aiida.common.utils import query_yes_no
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -86,6 +83,16 @@ def get_config():
         raise ConfigurationError("No configuration file found")
 
 
+def get_or_create_config():
+    from aiida.common.exceptions import ConfigurationError
+    try:
+        config = get_config()
+    except ConfigurationError:
+        config = {}
+        store_config(config)
+    return config
+
+
 def store_config(confs):
     """
     Given a configuration dictionary, stores it in the configuration file.
@@ -104,11 +111,12 @@ def store_config(confs):
         os.umask(old_umask)
 
 
-def install_daemon_files(aiida_dir, daemon_dir, log_dir, local_user):
+def install_daemon_files(aiida_dir, daemon_dir, log_dir, local_user,
+                         daemon_conf=None):
     """
     Install the files needed to run the daemon.
     """
-    daemon_conf = """
+    local_daemon_conf = """
 [unix_http_server]
 file={daemon_dir}/supervisord.sock   ; (the path to the socket file)
 
@@ -155,6 +163,8 @@ killasgroup=true
 ; so, if rabbitmq is supervised, it will start first.
 priority=1000
 """
+    if daemon_conf is None:
+        daemon_conf = local_daemon_conf
 
     old_umask = os.umask(DEFAULT_UMASK)
     try:
@@ -332,14 +342,14 @@ def ask_for_timezone(existing_timezone):
     return answer
 
 
-def create_base_dirs():
+def create_base_dirs(config_dir=None):
     """
     Create dirs for AiiDA, and install default daemon files.
     """
     import getpass
 
     # For the daemon, to be hard-coded when ok
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+    aiida_dir = os.path.expanduser(config_dir or AIIDA_CONFIG_FOLDER)
     aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_SUBDIR)
     aiida_log_dir = os.path.join(aiida_dir, LOG_SUBDIR)
     local_user = getpass.getuser()
@@ -521,6 +531,120 @@ key_explanation = {
 }
 
 
+def profile_exists(profile):
+    '''return True if profile exists, else return False'''
+    config = get_or_create_config()
+    profiles = config.get('profiles', {})
+    return profile in profiles
+
+
+def update_config(settings, write=True):
+    '''
+    back up the config file, create or change config.
+
+    :param settings: dictionary with the new or changed configuration
+    :param write: if False, do not touch the config file (dryrun)
+    :return: the new / changed configuration
+    '''
+    config = get_or_create_config()
+    config.update(settings)
+    if write:
+        backup_config()
+        store_config(config)
+    return config
+
+
+def update_profile(profile, updates, write=True):
+    '''
+    back up the config file, create or changes profile
+
+    :param profile: name of the profile
+    :param updates: dictionary with the new or changed profile
+    :param write: if False, do not touch the config file (dryrun)
+    :return: the new / changed profile
+    '''
+    config = get_or_create_config()
+    config['profiles'] = config.get('profiles', {})
+    profiles = config['profiles']
+    profiles[profile] = profiles.get(profile, {})
+    profile = profiles[profile]
+    profile.update(updates)
+    update_config(config, write=write)
+    return profile
+
+
+def create_config_noninteractive(profile='default', force_overwrite=False, dry_run=False, **kwargs):
+    '''
+    Non-interactively creates a profile.
+    :raises: a ValueError if the profile exists.
+    :raises: a ValueError if one of the values not a valid input
+    :param profile: The profile to be configured
+    :param values: The configuration inputs
+    :return: The populated profile that was also stored
+    '''
+    if profile_exists(profile) and not force_overwrite:
+        raise ValueError(
+            ('profile {profile} exists! '
+             'Cannot non-interactively edit a profile.').format(profile=profile)
+        )
+
+    new_profile = {}
+
+    # setting backend
+    backend_possibilities = ['django', 'sqlalchemy']
+    backend_v = kwargs.pop('backend')
+    if backend_v in backend_possibilities:
+        new_profile['AIIDADB_BACKEND'] = backend_v
+    else:
+        raise ValueError(
+            '{} is not a valid backend choice.'.format(
+                backend_v))
+
+    # setting timezone
+    from tzlocal import get_localzone
+    new_profile['TIMEZONE'] = get_localzone().zone
+
+    # Setting email
+    from validate_email import validate_email
+    email_v = kwargs.pop('email')
+    if validate_email(email_v):
+        new_profile[DEFAULT_USER_CONFIG_FIELD] = email_v
+    else:
+        raise ValueError(
+            '{} is not a valid email address.'.format(
+                email_v))
+
+    # setting up db
+    new_profile['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
+    new_profile['AIIDADB_HOST'] = kwargs.pop('db_host')
+    new_profile['AIIDADB_PORT'] = kwargs.pop('db_port')
+    new_profile['AIIDADB_NAME'] = kwargs.pop('db_name')
+    new_profile['AIIDADB_USER'] = kwargs.pop('db_user')
+    new_profile['AIIDADB_PASS'] = kwargs.pop('db_pass', '')
+
+    # setting repo
+    repo_v = kwargs.pop('repo')
+    repo_path = os.path.expanduser(repo_v)
+    if not os.path.isabs(repo_path):
+        raise ValueError('The repository path must be an absolute path')
+    if (not os.path.isdir(repo_path)):
+        old_umask = os.umask(DEFAULT_UMASK)
+        try:
+            os.makedirs(repo_path)
+        finally:
+            os.umask(old_umask)
+    new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
+
+    # finalizing
+    write = not dry_run
+    old_profiles = get_profiles_list()
+    new_profile = update_profile(profile, new_profile, write=write)
+    if write:
+        if not old_profiles:
+            set_default_profile('verdi', profile)
+            set_default_profile('daemon', profile)
+    return new_profile
+
 def create_configuration(profile='default'):
     """
     :param profile: The profile to be configured
@@ -529,6 +653,7 @@ def create_configuration(profile='default'):
     import readline
     from aiida.common.exceptions import ConfigurationError
     from validate_email import validate_email
+    from aiida.common.utils import query_yes_no
 
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
 
@@ -1059,6 +1184,7 @@ def parse_repository_uri(repository_uri):
 
     :return: a tuple (protocol, address).
     """
+    import uritools
     parts = uritools.urisplit(repository_uri)
 
 

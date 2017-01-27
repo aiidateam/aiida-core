@@ -12,7 +12,9 @@ number of HPC machines and codes thanks to its flexible plugin
 interface, together with a powerful workflow engine for the automation 
 of simulations.
 
-The official homepage is at http://www.aiida.net.
+The official homepage is at http://www.aiida.net
+
+The code is hosted on GitHub at https://github.com/aiidateam/aiida_core
 
 How to cite AiiDA
 -----------------

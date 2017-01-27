@@ -2,14 +2,14 @@
 """
 Tests for nodes, attributes and links
 """
+import unittest
 
-from aiida.orm.utils import load_node
-from aiida.orm.node import Node
+from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
 from aiida.orm.data import Data
-
-from aiida.backends.testbase import AiidaTestCase
+from aiida.orm.node import Node
+from aiida.orm.utils import load_node
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -72,7 +72,6 @@ class TestTransitiveNoLoops(AiidaTestCase):
             n1.add_link_from(n4, link_type=LinkType.CREATE)
 
 
-
 class TestQueryWithAiidaObjects(AiidaTestCase):
     """
     Test if queries work properly also with aiida.orm.Node classes instead of
@@ -80,8 +79,9 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     """
 
     def test_with_subclasses(self):
-        from aiida.orm import JobCalculation, CalculationFactory, Data, \
-            DataFactory
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import (JobCalculation, CalculationFactory, Data,
+                               DataFactory)
 
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
         calc_params = {
@@ -114,29 +114,39 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a7.store()
 
         # Query by calculation
-        results = list(JobCalculation.query(dbextras__key=extra_name))
+        qb = QueryBuilder()
+        qb.append(JobCalculation, filters={'extras': {'has_key': extra_name}})
+        results = [_ for [_] in qb.all()]
         # a3, a4, a5 should not be found because they are not JobCalculations.
         # a6, a7 should not be found because they have not the attribute set.
         self.assertEquals(set([i.pk for i in results]),
                           set([a1.pk, a2.pk]))
 
         # Same query, but by the generic Node class
-        results = list(Node.query(dbextras__key=extra_name))
+        qb = QueryBuilder()
+        qb.append(Node, filters={'extras': {'has_key': extra_name}})
+        results = [_ for [_] in qb.all()]
         self.assertEquals(set([i.pk for i in results]),
                           set([a1.pk, a2.pk, a3.pk, a4.pk, a5.pk]))
 
         # Same query, but by the Data class
-        results = list(Data.query(dbextras__key=extra_name))
+        qb = QueryBuilder()
+        qb.append(Data, filters={'extras': {'has_key': extra_name}})
+        results = [_ for [_] in qb.all()]
         self.assertEquals(set([i.pk for i in results]),
                           set([a3.pk, a4.pk]))
 
         # Same query, but by the ParameterData subclass
-        results = list(ParameterData.query(dbextras__key=extra_name))
+        qb = QueryBuilder()
+        qb.append(ParameterData, filters={'extras': {'has_key': extra_name}})
+        results = [_ for [_] in qb.all()]
         self.assertEquals(set([i.pk for i in results]),
                           set([a4.pk]))
 
         # Same query, but by the TemplateReplacerCalc subclass
-        results = list(TemplateReplacerCalc.query(dbextras__key=extra_name))
+        qb = QueryBuilder()
+        qb.append(TemplateReplacerCalc, filters={'extras': {'has_key': extra_name}})
+        results = [_ for [_] in qb.all()]
         self.assertEquals(set([i.pk for i in results]),
                           set([a2.pk]))
 
@@ -1004,6 +1014,90 @@ class TestNodeBasic(AiidaTestCase):
                           [(self.user_email, 'text'),
                            (self.user_email, 'text2'), ])
 
+    def test_code_loading(self):
+        """
+        Checks that the method Code.get_from_string works correctly.
+        """
+        from aiida.orm.code import Code
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+
+        # Create some code nodes
+        code1 = Code()
+        code1.set_remote_computer_exec((self.computer, '/bin/true'))
+        code1.label = 'test_code1'
+        code1.store()
+
+        code2 = Code()
+        code2.set_remote_computer_exec((self.computer, '/bin/true'))
+        code2.label = 'test_code2'
+        code2.store()
+
+        # Test that the code1 can be loaded correctly with its label
+        q_code_1 = Code.get_from_string(code1.label)
+        self.assertEquals(q_code_1.id, code1.id)
+        self.assertEquals(q_code_1.label, code1.label)
+        self.assertEquals(q_code_1.get_remote_exec_path(),
+                          code1.get_remote_exec_path())
+        # Test that the code1 can be loaded correctly with its id/pk
+        q_code_1 = Code.get_from_string(code1.id)
+        self.assertEquals(q_code_1.id, code1.id)
+        self.assertEquals(q_code_1.label, code1.label)
+        self.assertEquals(q_code_1.get_remote_exec_path(),
+                          code1.get_remote_exec_path())
+
+        # Test that the code2 can be loaded correctly with its label
+        q_code_2 = Code.get_from_string(code2.label + '@' +
+                                        self.computer.get_name())
+        self.assertEquals(q_code_2.id, code2.id)
+        self.assertEquals(q_code_2.label, code2.label)
+        self.assertEquals(q_code_2.get_remote_exec_path(),
+                          code2.get_remote_exec_path())
+
+        # Test that the code2 can be loaded correctly with its id/pk
+        q_code_2 = Code.get_from_string(code2.id)
+        self.assertEquals(q_code_2.id, code2.id)
+        self.assertEquals(q_code_2.label, code2.label)
+        self.assertEquals(q_code_2.get_remote_exec_path(),
+                          code2.get_remote_exec_path())
+
+        # Test that the lookup of a nonexistent code works as expected
+        with self.assertRaises(NotExistent):
+            Code.get_from_string('nonexistent_code')
+
+        # Add another code with the label of code1
+        code3 = Code()
+        code3.set_remote_computer_exec((self.computer, '/bin/true'))
+        code3.label = 'test_code1'
+        code3.store()
+
+        # Query with the common label
+        with self.assertRaises(MultipleObjectsError):
+            Code.get_from_string(code3.label)
+
+    def test_list_for_plugin(self):
+        """
+        This test checks the Code.list_for_plugin()
+        """
+        from aiida.orm.code import Code
+
+        code1 = Code()
+        code1.set_remote_computer_exec((self.computer, '/bin/true'))
+        code1.label = 'test_code1'
+        code1.set_input_plugin_name('plugin_name')
+        code1.store()
+
+        code2 = Code()
+        code2.set_remote_computer_exec((self.computer, '/bin/true'))
+        code2.label = 'test_code2'
+        code2.set_input_plugin_name('plugin_name')
+        code2.store()
+
+        retrieved_pks = set(Code.list_for_plugin('plugin_name', labels=False))
+        self.assertEqual(retrieved_pks, set([code1.pk, code2.pk]))
+
+        retrieved_labels = set(Code.list_for_plugin('plugin_name', labels=True))
+        self.assertEqual(retrieved_labels, set([code1.label, code2.label]))
+
 
 class TestSubNodesAndLinks(AiidaTestCase):
     def test_cachelink(self):
@@ -1122,8 +1216,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
                               for i in endnode.get_inputs(also_labels=True)]),
                          set([("N2", n2.uuid)]))
 
-    import unittest
-    # @unittest.skip("")
     def test_use_code(self):
         from aiida.orm import JobCalculation
         from aiida.orm.code import Code
@@ -1148,16 +1240,11 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertEqual(calc.get_code().uuid, code.uuid)
         self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
 
-        # import aiida.backends.sqlalchemy
-        # aiida.backends.sqlalchemy.session.refresh(computer._dbcomputer)
-
         # calc is not stored, but code is
         code.store()
 
         self.assertEqual(calc.get_code().uuid, code.uuid)
         self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
-
-        # aiida.backends.sqlalchemy.session.refresh(computer._dbcomputer)
 
         unstoredcalc.store()
 
@@ -1206,6 +1293,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # are calculations that use as label 'input_cell')
         n5.add_link_from(n3, label='label1')
 
+    @unittest.skip("Skipping while we solve issue #301")
     def test_links_label_autogenerator(self):
         n1 = Node().store()
         n2 = Node().store()
@@ -1229,6 +1317,10 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n10.add_link_from(n8)
         n10.add_link_from(n9)
 
+        all_labels = [_[0] for _ in n10.get_inputs(also_labels=True)]
+        self.assertEquals(len(set(all_labels)), len(all_labels), "There are duplicate links, that are not expected")
+
+    @unittest.skip("Skipping while we solve issue #301")
     def test_link_replace(self):
         n1 = Node().store()
         n2 = Node().store()
@@ -1243,13 +1335,17 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # I can replace the link and check that it was replaced
         n3._replace_link_from(n2, label='the_label')
-        the_parent = dict(n3.get_inputs(also_labels=True))['the_label']
-        self.assertEquals(n2.uuid, the_parent.uuid)
+        the_parent = [_[1].uuid for _ in n3.get_inputs(also_labels=True) if _[0] == 'the_label']
+        self.assertEquals(len(the_parent), 1,
+                          "There are multiple input links with the same label (the_label)!")
+        self.assertEquals(n2.uuid, the_parent[0])
 
         # _replace_link_from should work also if there is no previous link
         n2._replace_link_from(n1, label='the_label_2')
-        the_parent = dict(n2.get_inputs(also_labels=True))['the_label_2']
-        self.assertEquals(n1.uuid, the_parent.uuid)
+        the_parent_2 = [_[1].uuid for _ in n3.get_inputs(also_labels=True) if _[0] == 'the_label_2']
+        self.assertEquals(len(the_parent_2), 1,
+                          "There are multiple input links with the same label (the_label_2)!")
+        self.assertEquals(n1.uuid, the_parent_2[0])
 
     def test_link_with_unstored(self):
         """

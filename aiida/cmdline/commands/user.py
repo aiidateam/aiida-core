@@ -13,6 +13,9 @@ __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
+import click
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
 
 class User(VerdiCommandWithSubcommands):
     """
@@ -40,6 +43,19 @@ class User(VerdiCommandWithSubcommands):
         return "\n".join(emails)
 
     def user_configure(self, *args):
+        ctx = self._user_configure_cmd.make_context('configure', list(args))
+        with ctx:
+            ctx.obj = self
+            self._user_configure_cmd.invoke(ctx)
+
+    @click.command('configure', context_settings=CONTEXT_SETTINGS)
+    @click.argument('email', type=str)
+    @click.option('--first-name', prompt='First Name', type=str)
+    @click.option('--last-name', prompt='Last Name', type=str)
+    @click.option('--institution', prompt='Institution', type=str)
+    @click.option('--no-password', is_flag=True)
+    @click.pass_obj
+    def _user_configure_cmd(self, email, first_name, last_name, institution, no_password):
         from aiida.backends.utils import is_dbenv_loaded
         if not is_dbenv_loaded():
             load_dbenv()
@@ -49,13 +65,13 @@ class User(VerdiCommandWithSubcommands):
 
         from aiida.orm.implementation import User
 
-        if len(args) != 1:
-            print >> sys.stderr, ("You have to pass (only) one parameter after "
-                                  "'user configure', the email of")
-            print >> sys.stderr, "the user to be configured."
-            sys.exit(1)
+        #if len(args) != 1:
+        #    print >> sys.stderr, ("You have to pass (only) one parameter after "
+        #                          "'user configure', the email of")
+        #    print >> sys.stderr, "the user to be configured."
+        #    sys.exit(1)
 
-        email = args[0]
+        #email = args[0]
 
         user_list = User.search_for_users(email=email)
         if user_list is not None and len(user_list) >= 1:
@@ -63,20 +79,19 @@ class User(VerdiCommandWithSubcommands):
             print ""
             print ("An AiiDA user for email '{}' is already present "
                    "in the DB:".format(email))
-            print "First name:   {}".format(user.first_name)
-            print "Last name:    {}".format(user.last_name)
-            print "Institution:  {}".format(user.institution)
+            #print "First name:   {}".format(user.first_name)
+            #print "Last name:    {}".format(user.last_name)
+            #print "Institution:  {}".format(user.institution)
             configure_user = False
-            reply = raw_input("Do you want to reconfigure it? [y/N] ")
-            reply = reply.strip()
-            if not reply:
-                pass
-            elif reply.lower() == 'n':
-                pass
-            elif reply.lower() == 'y':
+            reply = click.confirm("Do you want to reconfigure it?")
+            #if not reply:
+            #    pass
+            #elif reply.lower() == 'n':
+            #    pass
+            if reply:
                 configure_user = True
-            else:
-                print "Invalid answer, assuming answer was 'NO'"
+            #else:
+            #    print "Invalid answer, assuming answer was 'NO'"
         else:
             configure_user = True
             user = User(email=email)
@@ -90,7 +105,14 @@ class User(VerdiCommandWithSubcommands):
                     verbose_name = field.capitalize()
                     readline.set_startup_hook(lambda: readline.insert_text(
                         getattr(user, field)))
-                    kwargs[field] = raw_input('{}: '.format(verbose_name))
+                    if field=='first_name' and first_name:
+                        kwargs[field] = first_name
+                    elif field=='last_name' and last_name:
+                        kwargs[field] = last_name
+                    elif field=='institution' and institution:
+                        kwargs[field] = institution
+                    else:
+                        kwargs[field] = raw_input('{}: '.format(verbose_name))
             finally:
                 readline.set_startup_hook(lambda: readline.insert_text(""))
 
@@ -98,43 +120,46 @@ class User(VerdiCommandWithSubcommands):
                 setattr(user, k, v)
 
             change_password = False
-            if user.has_usable_password():
-                reply = raw_input("Do you want to replace the user password? [y/N] ")
-                reply = reply.strip()
-                if not reply:
-                    pass
-                elif reply.lower() == 'n':
-                    pass
-                elif reply.lower() == 'y':
-                    change_password = True
-                else:
-                    print "Invalid answer, assuming answer was 'NO'"
-            else:
-                reply = raw_input("The user has no password, do you want to set one? [y/N] ")
-                reply = reply.strip()
-                if not reply:
-                    pass
-                elif reply.lower() == 'n':
-                    pass
-                elif reply.lower() == 'y':
-                    change_password = True
-                else:
-                    print "Invalid answer, assuming answer was 'NO'"
-
-            if change_password:
-                match = False
-                while not match:
-                    new_password = getpass.getpass("Insert the new password: ")
-                    new_password_check = getpass.getpass(
-                        "Insert the new password (again): ")
-                    if new_password == new_password_check:
-                        match = True
-                    else:
-                        print "ERROR, the two passwords do not match."
-                ## Set the password here
-                user.password = new_password
-            else:
+            if no_password:
                 user.password = None
+            else:
+                if user.has_usable_password():
+                    reply = raw_input("Do you want to replace the user password? [y/N] ")
+                    reply = reply.strip()
+                    if not reply:
+                        pass
+                    elif reply.lower() == 'n':
+                        pass
+                    elif reply.lower() == 'y':
+                        change_password = True
+                    else:
+                        print "Invalid answer, assuming answer was 'NO'"
+                else:
+                    reply = raw_input("The user has no password, do you want to set one? [y/N] ")
+                    reply = reply.strip()
+                    if not reply:
+                        pass
+                    elif reply.lower() == 'n':
+                        pass
+                    elif reply.lower() == 'y':
+                        change_password = True
+                    else:
+                        print "Invalid answer, assuming answer was 'NO'"
+
+                if change_password:
+                    match = False
+                    while not match:
+                        new_password = getpass.getpass("Insert the new password: ")
+                        new_password_check = getpass.getpass(
+                            "Insert the new password (again): ")
+                        if new_password == new_password_check:
+                            match = True
+                        else:
+                            print "ERROR, the two passwords do not match."
+                    ## Set the password here
+                    user.password = new_password
+                else:
+                    user.password = None
 
             user.force_save()
             print ">> User {} {} saved. <<".format(user.first_name,

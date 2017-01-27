@@ -2,10 +2,10 @@
 """
 Tests for specific subclasses of Data
 """
-from django.utils import unittest
 from aiida.orm import load_node
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 from aiida.backends.testbase import AiidaTestCase
+import unittest
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -230,8 +230,8 @@ class TestCifData(AiidaTestCase):
 
         self.assertEquals(a.values['test']['_cell_length_a'], '11(1)')
 
-    @unittest.skipIf(not has_ase() or not has_pycifrw(),
-                     "Unable to import ase or pycifrw")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_get_aiida_structure(self):
         import tempfile
 
@@ -264,8 +264,8 @@ O 0.5 0.5 0.5
 
         self.assertEquals(c.get_kind_names(), ['C', 'O'])
 
-    @unittest.skipIf(not has_ase() or not has_pycifrw(),
-                     "Unable to import ase or pycifrw")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_ase_primitive_and_conventional_cells_ase(self):
         """
         Checking the number of atoms per primitive/conventional cell
@@ -313,11 +313,13 @@ O 0.5 0.5 0.5
                                      primitive_cell=True, subtrans_included=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 5)
 
-    @unittest.skipIf(not has_ase() or not has_pycifrw() or
-                     not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), "Unable to import the correct version of pymatgen v4.5.3"
-                                              "Unable to import ase, pycifrw or pymatgen")
+
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'), 
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """
         Checking the number of atoms per primitive/conventional cell
@@ -422,8 +424,8 @@ loop_
 _publ_section_title                     'Test CIF'
 '''))
 
-    @unittest.skipIf(not has_ase() or not has_pycifrw(),
-                     "Unable to import ase or pycifrw")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_cif_roundtrip(self):
         import tempfile
         from aiida.orm.data.cif import CifData
@@ -495,8 +497,8 @@ _publ_section_title                     'Test CIF'
         with self.assertRaises(ValueError):
             parse_formula("H0.5.2 O")
 
-    @unittest.skipIf(not has_ase() or not has_pycifrw(),
-                     "Unable to import ase or pycifrw")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_attached_hydrogens(self):
         import tempfile
         from aiida.orm.data.cif import CifData
@@ -549,9 +551,9 @@ _publ_section_title                     'Test CIF'
 
         self.assertEqual(a.has_attached_hydrogens(), True)
 
-    @unittest.skipIf(not has_ase() or not has_pycifrw() or
-                     not has_pyspglib(),
-                     "Unable to import ase, pycifrw or pyspglib")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
     def test_refine(self):
         """
         Test case for refinement (space group determination) for a
@@ -1265,8 +1267,8 @@ class TestStructureData(AiidaTestCase):
 
         self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
 
-    @unittest.skipIf(not has_ase() or not has_pyspglib(),
-                     "Unable to import ase or pyspglib")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
     def test_kind_8(self):
         """
         Test the ase_refine_cell() function
@@ -1844,9 +1846,10 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     from distutils.version import StrictVersion
     from aiida.orm.data.structure import has_pymatgen, get_pymatgen_version
 
-    @unittest.skipIf(not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), "Unable to import the correct version of pymatgen v4.5.3")
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'), 
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_1(self):
         """
         Test's imput is derived from COD entry 9011963, processed with
@@ -1914,9 +1917,10 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
 
         self.assertEquals(dict1, dict2)
 
-    @unittest.skipIf(not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), "Unable to import the correct version of pymatgen v4.5.3")
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'), 
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_2(self):
         """
         Input source: http://pymatgen.org/_static/Molecule.html
@@ -1969,9 +1973,10 @@ class TestPymatgenFromStructureData(AiidaTestCase):
     from aiida.orm.data.structure import has_ase, has_pymatgen, \
         get_pymatgen_version
 
-    @unittest.skipIf(not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), "Unable to import the correct version of pymatgen v4.5.3")
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'), 
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_1(self):
         """
         Test the check of periodic boundary conditions.
@@ -1987,11 +1992,11 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         with self.assertRaises(ValueError):
             pmg_struct = struct.get_pymatgen_structure()
 
-    @unittest.skipIf(not has_ase() or
-                     not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Unable to import ase or import the correct version of pymatgen v4.5.3")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'), 
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_2(self):
         from aiida.orm.data.structure import StructureData
         import ase
@@ -2020,11 +2025,11 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                            [0.2, 0.2, 0.2],
                            [0.3, 0.3, 0.3]])
 
-    @unittest.skipIf(not has_ase() or
-                     not has_pymatgen() or
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Unable to import ase or import the correct version of pymatgen v4.5.3")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'), 
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_3(self):
         """
         Test the conversion of StructureData to pymatgen's Molecule.
@@ -2640,25 +2645,25 @@ class TestKpointsData(AiidaTestCase):
         self.assertTrue(numpy.allclose(klist, input_klist, atol=1e-16))
 
 
-class TestData(AiidaTestCase):
-    """
-    Tests generic Data class.
-    """
-
-    @unittest.skipIf(True, "Validation for source is disabled due to "
-                           "Issue #9 (https://bitbucket.org/epfl_theos/aiida_epfl/issues/9)")
-    def test_license_validation(self):
-        """
-        Test the validation of source licenses.
-        """
-        from aiida.orm.data import Data
-
-        data = Data(source={'license': 'CC0'})
-        data.store()
-
-        data = Data(source={'license': 'CC-BY-SA'})
-        # CC-BY* type licenses must be accompanied by attribution, given
-        # in 'description' key of source dictionary. This is enforced in
-        # Data._validate(), thus the ValidationError.
-        with self.assertRaises(ValidationError):
-            data.store()
+# class TestData(AiidaTestCase):
+#     """
+#     Tests generic Data class.
+#     """
+# 
+#     "Validation for source is disabled due to Issue #9 on https://bitbucket.org/epfl_theos/aiida_epfl/issues/9"
+#     def test_license_validation(self):
+#         """
+#         Test the validation of source licenses.
+#         """
+#         from aiida.orm.data import Data
+# 
+#         data = Data(source={'license': 'CC0'})
+#         data.store()
+# 
+#         data = Data(source={'license': 'CC-BY-SA'})
+#         # CC-BY* type licenses must be accompanied by attribution, given
+#         # in 'description' key of source dictionary. This is enforced in
+#         # Data._validate(), thus the ValidationError.
+#         with self.assertRaises(ValidationError):
+#             data.store()
+# 

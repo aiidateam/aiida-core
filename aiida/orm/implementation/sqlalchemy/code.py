@@ -20,79 +20,11 @@ class Code(AbstractCode):
 
     @classmethod
     def get_from_string(cls, code_string):
-        """
-        Get a Computer object with given identifier string, that can either be
-        the numeric ID (pk), or the label (if unique); the label can either
-        be simply the label, or in the format label@machinename. See the note
-        below for details on the string detection algorithm.
-
-        .. note:: If a string that can be converted to an integer is given,
-          the numeric ID is verified first (therefore, is a code A with a
-          label equal to the ID of another code B is present, code A cannot
-          be referenced by label). Similarly, the (leftmost) '@' symbol is
-          always used to split code and computername. Therefore do not use
-          '@' in the code name if you want to use this function
-          ('@' in the computer name are instead valid).
-
-        :param code_string: the code string identifying the code to load
-
-        :raise NotExistent: if no code identified by the given string is found
-        :raise MultipleObjectsError: if the string cannot identify uniquely
-            a code
-        """
-        try:
-            code_int = int(code_string)
-            try:
-                return cls.get_subclass_from_pk(code_int)
-            except NotExistent:
-                raise ValueError()  # Jump to the following section
-                # to check if a code with the given
-                # label exists.
-            except MultipleObjectsError:
-                raise MultipleObjectsError("More than one code in the DB "
-                                           "with pk='{}'!".format(code_string))
-        except ValueError:
-            # Before dying, try to see if the user passed a (unique) label.
-            # split with the leftmost '@' symbol (i.e. code names cannot
-            # contain '@' symbols, computer names can)
-            codename, sep, computername = code_string.partition('@')
-            if sep:
-                codes = cls.query(label=codename, dbcomputer__name=computername)
-            else:
-                codes = cls.query(label=codename)
-
-            if codes.count() == 0:
-                raise NotExistent("'{}' is not a valid code "
-                                  "ID or label.".format(code_string))
-            elif codes.count() > 1:
-                retstr = ("There are multiple codes with label '{}', having IDs: "
-                          "".format(code_string))
-                retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
-                retstr += ("Relabel them (using their ID), or refer to them "
-                           "with their ID.")
-                raise MultipleObjectsError(retstr)
-            else:
-                return codes[0]
+        return super(Code, cls).get_from_string(code_string)
 
     @classmethod
     def list_for_plugin(cls, plugin, labels=True):
-        """
-        Return a list of valid code strings for a given plugin.
-
-        :param plugin: The string of the plugin.
-        :param labels: if True, return a list of code names, otherwise
-          return the code PKs (integers).
-        :return: a list of string, with the code names if labels is True,
-          otherwise a list of integers with the code PKs.
-        """
-        valid_codes = list(cls.query(
-            dbattributes__key="input_plugin",
-            dbattributes__tval=plugin))
-
-        if labels:
-            return [c.label for c in valid_codes]
-        else:
-            return [c.pk for c in valid_codes]
+        return super(Code, cls).list_for_plugin(plugin, labels)
 
     def set_remote_computer_exec(self, remote_computer_exec):
         """

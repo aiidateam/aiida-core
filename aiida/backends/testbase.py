@@ -1,15 +1,13 @@
 import os
 import sys
 import unittest
-
+from unittest import (
+    TestSuite, defaultTestLoader as test_loader)
 
 from aiida.backends import settings
-from aiida.common.utils import classproperty
-from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
 from aiida.backends.tests import get_db_test_list
-from unittest import (
-    TestSuite, TestResult,
-    main as unittest_main, defaultTestLoader as test_loader)
+from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
+from aiida.common.utils import classproperty
 
 
 def check_if_tests_can_run():
@@ -85,6 +83,9 @@ class AiidaTestCase(unittest.TestCase):
     def setUp(self):
         self.__backend_instance.setUp_method()
 
+    def tearDown(self):
+        self.__backend_instance.tearDown_method()
+
     @classmethod
     def insert_data(cls):
         cls.__backend_instance.insert_data()
@@ -132,6 +133,11 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
 
     actually_run_tests = []
     num_tests_expected = 0
+    
+    # To avoid adding more than once the same test
+    # (e.g. if you type both db and db.xxx)
+    found_modulenames = set()
+
     for test in set(tests_to_run):
         try:
             modulenames = get_db_test_list()[test]
@@ -143,7 +149,9 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
         actually_run_tests.append(test)
 
         for modulename in modulenames:
-            test_suite.addTest(test_loader.loadTestsFromName(modulename))
+            if modulename not in found_modulenames:
+                test_suite.addTest(test_loader.loadTestsFromName(modulename))
+                found_modulenames.add(modulename)
 
         num_tests_expected = test_suite.countTestCases()
 
@@ -152,7 +160,7 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
             "DB tests that will be run: {} (expecting {} tests)".format(
                 ",".join(actually_run_tests), num_tests_expected))
 
-    results = unittest.TextTestRunner().run(test_suite)
+    results = unittest.TextTestRunner(failfast=False).run(test_suite)
 
     if verbose:
         print "Run tests: {}".format(results.testsRun)

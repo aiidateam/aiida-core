@@ -156,7 +156,6 @@ class TestSpecificImport(AiidaTestCase):
 
 
 class TestSimple(AiidaTestCase):
-
     def test_1(self):
         import os
         import shutil
@@ -406,7 +405,7 @@ class TestComplex(AiidaTestCase):
             calc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc1.label = "calc1"
             calc1.store()
-            calc1._set_state('RETRIEVING')
+            calc1._set_state(u'RETRIEVING')
 
             pd1 = ParameterData()
             pd1.label = "pd1"
@@ -431,7 +430,7 @@ class TestComplex(AiidaTestCase):
             calc2.add_link_from(pd1, link_type=LinkType.INPUT)
             calc2.add_link_from(pd2, link_type=LinkType.INPUT)
             calc2.add_link_from(rd1, link_type=LinkType.INPUT)
-            calc2._set_state('SUBMITTING')
+            calc2._set_state(u'SUBMITTING')
 
             fd1 = FolderData()
             fd1.label = "fd1"
@@ -460,22 +459,368 @@ class TestComplex(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    def dis_test_graph_generation(self):
-        # Get the graph of the following - Its the blue node
-        from aiida.cmdline.commands.graph import Graph
+
+class TestComputer(AiidaTestCase):
+
+    def setUp(self):
+        self.clean_db()
+        self.insert_data()
+
+    def tearDown(self):
+        pass
+
+    def test_same_computer_import(self):
+        """
+        Test that you can import nodes in steps without any problems. In this
+        test we will import a first calculation and then a second one. The
+        import should work as expected and have in the end two job
+        calculations.
+
+        Each calculation is related to the same computer. In the end we should
+        have only one computer
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.node import Node
+        from aiida.orm.computer import Computer
+        from aiida.orm.calculation.job import JobCalculation
 
-        qb = QueryBuilder()
-        qb.append(Node, filters={
-            'uuid': {"==": "99d516d5-fafe-40d3-979f-12726e626648"}},
-                  project=["*"], tag="res")
-        #for [node] in qb.all():
-        #    print node.get_attrs()
-        #    print node.uuid
-        #    print node.id
-        #    print "=============="
+        # Creating a folder for the import/export files
+        export_file_tmp_folder = tempfile.mkdtemp()
+        unpack_tmp_folder = tempfile.mkdtemp()
 
-        g = Graph()
-        g.graph_generate((str(node.id)))
+        try:
+            # Store two job calculation related to the same computer
+            calc1_label = "calc1"
+            calc1 = JobCalculation()
+            calc1.set_computer(self.computer)
+            calc1.set_resources({"num_machines": 1,
+                                 "num_mpiprocs_per_machine": 1})
+            calc1.label = calc1_label
+            calc1.store()
+            calc1._set_state(u'RETRIEVING')
+
+            calc2_label = "calc2"
+            calc2 = JobCalculation()
+            calc2.set_computer(self.computer)
+            calc2.set_resources({"num_machines": 2,
+                                 "num_mpiprocs_per_machine": 2})
+            calc2.label = calc2_label
+            calc2.store()
+            calc2._set_state(u'RETRIEVING')
+
+            # Store locally the computer name
+            comp_name = unicode(self.computer.name)
+            comp_uuid = unicode(self.computer.uuid)
+
+            # Export the first job calculation
+            filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
+            export([calc1.dbnode], outfile=filename1, silent=True)
+
+            # Export the second job calculation
+            filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
+            export([calc2.dbnode], outfile=filename2, silent=True)
+
+            # Clean the local database
+            self.clean_db()
+
+            # Check that there are no computers
+            qb = QueryBuilder()
+            qb.append(Computer, project=['*'])
+            self.assertEqual(qb.count(), 0, "There should not be any computers"
+                                            "in the database at this point.")
+
+            # Check that there are no calculations
+            qb = QueryBuilder()
+            qb.append(JobCalculation, project=['*'])
+            self.assertEqual(qb.count(), 0, "There should not be any "
+                                            "calculations in the database at "
+                                            "this point.")
+
+            # Import the first calculation
+            import_data(filename1, silent=True)
+
+            # Check that the calculation computer is imported correctly.
+            qb = QueryBuilder()
+            qb.append(JobCalculation, project=['label'])
+            self.assertEqual(qb.count(), 1, "Only one calculation should be "
+                                            "found.")
+            self.assertEqual(unicode(qb.first()[0]), calc1_label,
+                             "The calculation label is not correct.")
+
+            # Check that the referenced computer is imported correctly.
+            qb = QueryBuilder()
+            qb.append(Computer, project=['name', 'uuid', 'id'])
+            self.assertEqual(qb.count(), 1, "Only one computer should be "
+                                            "found.")
+            self.assertEqual(unicode(qb.first()[0]), comp_name,
+                             "The computer name is not correct.")
+            self.assertEqual(unicode(qb.first()[1]), comp_uuid,
+                             "The computer uuid is not correct.")
+
+            # Store the id of the computer
+            comp_id = qb.first()[2]
+
+            # Import the second calculation
+            import_data(filename2, silent=True)
+
+            # Check that the number of computers remains the same and its data
+            # did not change.
+            qb = QueryBuilder()
+            qb.append(Computer, project=['name', 'uuid', 'id'])
+            self.assertEqual(qb.count(), 1, "Only one computer should be "
+                                            "found.")
+            self.assertEqual(unicode(qb.first()[0]), comp_name,
+                             "The computer name is not correct.")
+            self.assertEqual(unicode(qb.first()[1]), comp_uuid,
+                             "The computer uuid is not correct.")
+            self.assertEqual(qb.first()[2], comp_id,
+                             "The computer id is not correct.")
+
+            # Check that now you have two calculations attached to the same
+            # computer.
+            qb = QueryBuilder()
+            qb.append(Computer, tag='comp')
+            qb.append(JobCalculation, has_computer='comp', project=['label'])
+            self.assertEqual(qb.count(), 2, "Two calculations should be "
+                                            "found.")
+            ret_labels = set(_ for [_] in qb.all())
+            self.assertEqual(ret_labels, set([calc1_label, calc2_label]),
+                             "The labels of the calculations are not correct.")
+
+        finally:
+            # Deleting the created temporary folders
+            shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
+            shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
+
+    def test_same_computer_different_name_import(self):
+        """
+        This test checks that if the computer is re-imported with a different
+        name to the same database, then the original computer will not be
+        renamed. It also checks that the names were correctly imported (without
+        any change since there is no computer name collision)
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.computer import Computer
+        from aiida.orm.calculation.job import JobCalculation
+
+        # Creating a folder for the import/export files
+        export_file_tmp_folder = tempfile.mkdtemp()
+        unpack_tmp_folder = tempfile.mkdtemp()
+
+        try:
+            # Store a calculation
+            calc1_label = "calc1"
+            calc1 = JobCalculation()
+            calc1.set_computer(self.computer)
+            calc1.set_resources({"num_machines": 1,
+                                 "num_mpiprocs_per_machine": 1})
+            calc1.label = calc1_label
+            calc1.store()
+            calc1._set_state(u'RETRIEVING')
+
+            # Store locally the computer name
+            comp1_name = unicode(self.computer.name)
+
+            # Export the first job calculation
+            filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
+            export([calc1.dbnode], outfile=filename1, silent=True)
+
+            # Rename the computer
+            self.computer.set_name(comp1_name + "_updated")
+
+            # Store a second calculation
+            calc2_label = "calc2"
+            calc2 = JobCalculation()
+            calc2.set_computer(self.computer)
+            calc2.set_resources({"num_machines": 2,
+                                 "num_mpiprocs_per_machine": 2})
+            calc2.label = calc2_label
+            calc2.store()
+            calc2._set_state(u'RETRIEVING')
+
+            # Export the second job calculation
+            filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
+            export([calc2.dbnode], outfile=filename2, silent=True)
+
+            # Clean the local database
+            self.clean_db()
+
+            # Check that there are no computers
+            qb = QueryBuilder()
+            qb.append(Computer, project=['*'])
+            self.assertEqual(qb.count(), 0, "There should not be any computers"
+                                            "in the database at this point.")
+
+            # Check that there are no calculations
+            qb = QueryBuilder()
+            qb.append(JobCalculation, project=['*'])
+            self.assertEqual(qb.count(), 0, "There should not be any "
+                                            "calculations in the database at "
+                                            "this point.")
+
+            # Import the first calculation
+            import_data(filename1, silent=True)
+
+            # Check that the calculation computer is imported correctly.
+            qb = QueryBuilder()
+            qb.append(JobCalculation, project=['label'])
+            self.assertEqual(qb.count(), 1, "Only one calculation should be "
+                                            "found.")
+            self.assertEqual(unicode(qb.first()[0]), calc1_label,
+                             "The calculation label is not correct.")
+
+            # Check that the referenced computer is imported correctly.
+            qb = QueryBuilder()
+            qb.append(Computer, project=['name', 'uuid', 'id'])
+            self.assertEqual(qb.count(), 1, "Only one computer should be "
+                                            "found.")
+            self.assertEqual(unicode(qb.first()[0]), comp1_name,
+                             "The computer name is not correct.")
+
+            # Import the second calculation
+            import_data(filename2, silent=True)
+
+            # Check that the number of computers remains the same and its data
+            # did not change.
+            qb = QueryBuilder()
+            qb.append(Computer, project=['name'])
+            self.assertEqual(qb.count(), 1, "Only one computer should be "
+                                            "found.")
+            self.assertEqual(unicode(qb.first()[0]), comp1_name,
+                             "The computer name is not correct.")
+
+        finally:
+            # Deleting the created temporary folders
+            shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
+            shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
+
+    def test_different_computer_same_name_import(self):
+        """
+        This test checks that if there is a name collision, the imported
+        computers are renamed accordingly.
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.computer import Computer
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.importexport import COMP_DUPL_SUFFIX
+
+        # Creating a folder for the import/export files
+        export_file_tmp_folder = tempfile.mkdtemp()
+        unpack_tmp_folder = tempfile.mkdtemp()
+
+        try:
+            # Set the computer name
+            comp1_name = "localhost_1"
+            self.computer.set_name(comp1_name)
+
+            # Store a calculation
+            calc1_label = "calc1"
+            calc1 = JobCalculation()
+            calc1.set_computer(self.computer)
+            calc1.set_resources({"num_machines": 1,
+                                 "num_mpiprocs_per_machine": 1})
+            calc1.label = calc1_label
+            calc1.store()
+            calc1._set_state(u'RETRIEVING')
+
+            # Export the first job calculation
+            filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
+            export([calc1.dbnode], outfile=filename1, silent=True)
+
+            # Reset the database
+            self.clean_db()
+            self.insert_data()
+
+            # Set the computer name to the same name as before
+            self.computer.set_name(comp1_name)
+
+            # Store a second calculation
+            calc2_label = "calc2"
+            calc2 = JobCalculation()
+            calc2.set_computer(self.computer)
+            calc2.set_resources({"num_machines": 2,
+                                 "num_mpiprocs_per_machine": 2})
+            calc2.label = calc2_label
+            calc2.store()
+            calc2._set_state(u'RETRIEVING')
+
+            # Export the second job calculation
+            filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
+            export([calc2.dbnode], outfile=filename2, silent=True)
+
+            # Reset the database
+            self.clean_db()
+            self.insert_data()
+
+            # Set the computer name to the same name as before
+            self.computer.set_name(comp1_name)
+
+            # Store a third calculation
+            calc3_label = "calc3"
+            calc3 = JobCalculation()
+            calc3.set_computer(self.computer)
+            calc3.set_resources({"num_machines": 2,
+                                 "num_mpiprocs_per_machine": 2})
+            calc3.label = calc3_label
+            calc3.store()
+            calc3._set_state(u'RETRIEVING')
+
+            # Export the third job calculation
+            filename3 = os.path.join(export_file_tmp_folder, "export3.tar.gz")
+            export([calc3.dbnode], outfile=filename3, silent=True)
+
+            # Clean the local database
+            self.clean_db()
+
+            # Check that there are no computers
+            qb = QueryBuilder()
+            qb.append(Computer, project=['*'])
+            self.assertEqual(qb.count(), 0, "There should not be any computers"
+                                            "in the database at this point.")
+
+            # Check that there are no calculations
+            qb = QueryBuilder()
+            qb.append(JobCalculation, project=['*'])
+            self.assertEqual(qb.count(), 0, "There should not be any "
+                                            "calculations in the database at "
+                                            "this point.")
+
+            # Import all the calculations
+            import_data(filename1, silent=True)
+            import_data(filename2, silent=True)
+            import_data(filename3, silent=True)
+
+            # Retrieve the calculation-computer pairs
+            qb = QueryBuilder()
+            qb.append(JobCalculation, project=['label'], tag='jcalc')
+            qb.append(Computer, project=['name'],
+                      computer_of='jcalc')
+            self.assertEqual(qb.count(), 3, "Three combinations expected.")
+            res = qb.all()
+            self.assertIn([calc1_label, comp1_name], res,
+                          "Calc-Computer combination not found.")
+            self.assertIn([calc2_label,
+                           comp1_name + COMP_DUPL_SUFFIX.format(0)], res,
+                          "Calc-Computer combination not found.")
+            self.assertIn([calc3_label,
+                           comp1_name + COMP_DUPL_SUFFIX.format(1)], res,
+                          "Calc-Computer combination not found.")
+        finally:
+            # Deleting the created temporary folders
+            shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
+            shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 

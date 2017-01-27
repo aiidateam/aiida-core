@@ -82,6 +82,11 @@ Remote
 .. automodule:: aiida.orm.data.remote
    :members:
 
+OrbitalData
++++++++++++
+.. automodule:: aiida.orm.data.orbital
+   :members:
+
 ArrayData
 +++++++++
 .. automodule:: aiida.orm.data.array
@@ -94,6 +99,11 @@ The following are Data classes inheriting from ArrayData.
 KpointsData
 ...........
 .. automodule:: aiida.orm.data.array.kpoints
+   :members:
+
+ProjectionData
+..............
+.. automodule:: aiida.orm.data.array.projection
    :members:
 
 TrajectoryData

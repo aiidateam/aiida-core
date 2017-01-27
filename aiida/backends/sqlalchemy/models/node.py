@@ -241,10 +241,15 @@ class DbLink(Base):
     label = Column(String(255), index=True, nullable=False)
     type = Column(String(255))
 
+    # A calculation can have both a 'return' and a 'create' link to
+    # a single data output node, which would violate the unique constraint
+    # defined below, since the difference in link type is not considered.
+    # The distinction between the type of a 'create' and a 'return' link is not
+    # implemented at the moment, so the unique constraint is disabled.
     __table_args__ = (
         # I cannot add twice the same link
         # I want unique labels among all inputs of a node
-        UniqueConstraint('output_id', 'label'),
+        # UniqueConstraint('output_id', 'label'),
     )
 
     def __str__(self):

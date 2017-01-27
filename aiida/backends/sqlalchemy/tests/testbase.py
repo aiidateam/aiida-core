@@ -37,18 +37,25 @@ Session = sessionmaker(expire_on_commit=expire_on_commit)
 class SqlAlchemyTests(AiidaTestImplementation):
 
     # Specify the need to drop the table at the beginning of a test case
-    drop_all = True
+    # If True, completely drops the tables and recreates the schema, 
+    # but this is usually unnecessary and pretty slow
+    # Also, if the tests are interrupted, there is the risk that the
+    # DB remains dropped, so you have to do 'verdi -p test_xxx setup' again to
+    # install the schema again
+    drop_all = False
 
     test_session = None
+    connection = None
 
     def setUpClass_method(self):
 
         if self.test_session is None:
-            config = get_profile_config(AIIDADB_PROFILE)
-            engine = get_engine(config)
-
-            self.test_session = get_session(engine=engine)
-            self.connection = engine.connect()
+            if self.connection is None:
+                config = get_profile_config(AIIDADB_PROFILE)
+                engine = get_engine(config)
+                
+                self.test_session = get_session(engine=engine)
+                self.connection = engine.connect()
 
             self.test_session = Session(bind=self.connection)
             aiida.backends.sqlalchemy.session = self.test_session
@@ -63,6 +70,9 @@ class SqlAlchemyTests(AiidaTestImplementation):
         self.insert_data()
 
     def setUp_method(self):
+        pass
+
+    def tearDown_method(self):
         pass
 
     def insert_data(self):
@@ -90,7 +100,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
             self.computer = SqlAlchemyTests._create_computer()
             self.computer.store()
         else:
-            self.computer = has_computer
+            self.computer = Computer(dbcomputer=has_computer)
 
     @staticmethod
     def _create_computer(**kwargs):
@@ -169,7 +179,8 @@ class SqlAlchemyTests(AiidaTestImplementation):
         self.test_session.close()
         self.test_session = None
 
-        self.connection.close()
+        # Don't close it each time, no need
+        #self.connection.close()
 
         # I clean the test repository
         shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)

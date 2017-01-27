@@ -81,6 +81,7 @@ class Devel(VerdiCommandWithSubcommands):
         'aiida.scheduler',
         'aiida.transport',
         'aiida.common',
+        'aiida.tests.work',
     ]
 
     _dbrawprefix = "db"
@@ -574,7 +575,9 @@ class Devel(VerdiCommandWithSubcommands):
                 print "  - {}".format(reason)
 
         print "* Tests run:     {}".format(tot_num_tests)
-        print "* Tests OK:      {}".format(tot_num_tests - len(test_errors) - len(test_failures))
+        # This count is wrong, sometimes a test can both error and fail 
+        # apparently, and you can get negative numbers...
+        #print "* Tests OK:      {}".format(tot_num_tests - len(test_errors) - len(test_failures))
         print "* Tests failed:  {}".format(len(test_failures))
         print "* Tests errored: {}".format(len(test_errors))
 
@@ -582,8 +585,8 @@ class Devel(VerdiCommandWithSubcommands):
 
         # If there was any failure report it with the
         # right exit code
-        if test_failures:
-            sys.exit(len(test_failures))
+        if test_failures or test_errors:
+            sys.exit(len(test_failures) + len(test_errors))
 
     def complete_tests(self, subargs_idx, subargs):
         """

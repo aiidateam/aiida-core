@@ -64,7 +64,12 @@ You will be asked for your user information. Be aware that this information will
       $ # for bash:
       $ echo "export PATH="${PATH}:~/aiidapy/bin/verdi" >> ~/.bashrc
 
+<<<<<<< HEAD
 If you prefer not to use a package manager, follow the links in :ref:`install_dependencies` for instructions on how to install the required programs and start the postgres server before continuing with the third step.
+=======
+      cd ~/git/aiida # or the folder where you downloaded AiiDA
+      pip install --user -U .
+>>>>>>> develop
 
 .. _Homebrew: http://brew.sh/index_de.html
 
@@ -124,6 +129,7 @@ AiiDA should run on:
 
 .. _install_dependencies:
 
+<<<<<<< HEAD
 Required Software
 -----------------
 The following are required to be installed on your computer:
@@ -260,9 +266,13 @@ If you use conda, verdi will be installed to (envs directory)/aiidapy/bin/verdi,
 among the listed information you will find an "envs directories"
 
 If you use virtualenvwrapper, you can find out in it's online documentation where environments install their binaries.
+=======
+    sudo pip install -U .
+>>>>>>> develop
 
 If everything went smoothly, congratulations! Now the code is installed!
 
+<<<<<<< HEAD
 Next steps:
 
 * :ref:`set up AiiDA using quicksetup<quicksetup>`
@@ -403,6 +413,37 @@ Additional bash configuration for AiiDA
 ..   If the setup is ok, you shouldn't get any error. If you do get an
 ..   ``ImportError`` instead, check if you correctly set up the ``PYTHONPATH``
 ..   environment variable in the steps above.
+=======
+The main interface to AiiDA is through its command-line tool, called ``verdi``.
+
+.. note:: if you installed the modules with the ``--user`` parameter during the
+  ``pip install`` step, you will need to add one more directory to your ``PATH``
+  variable in the ``~/.bashrc`` file.
+  For Linux systems, the path to add is usually ``~/.local/bin``::
+
+  	export PATH=~/.local/bin:${PATH}
+
+  For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
+
+  	export PATH=~/Library/Python/2.7/bin:${PATH}
+
+  To verify if this is the correct path to add, navigate to this location and
+  you should find the executable ``supervisord``, or ``celeryd``, in the directory.
+
+To verify if the path setup is OK:
+
+* type ``verdi`` on your terminal, and check if the program starts (it should
+  provide a list of valid commands). If it doesn't, check if you correctly set
+  up the ``PATH`` environmente variable above.
+* go in your home folder or in another folder different from the AiiDA folder,
+  run ``python`` or ``ipython`` and try to import a module, e.g. typing::
+
+    import aiida
+
+  If the setup is ok, you shouldn't get any error. If you do get an
+  ``ImportError`` instead, check if you correctly set up the ``PYTHONPATH``
+  environment variable in the steps above.
+>>>>>>> develop
 
 
 Bash completion

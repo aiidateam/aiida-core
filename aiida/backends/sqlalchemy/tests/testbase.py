@@ -125,7 +125,8 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def clean_db(self):
         from aiida.backends.sqlalchemy.models.computer import DbComputer
-        from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
+        from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, table_workflowstep_calc, \
+            table_workflowstep_subworkflow, DbWorkflowStep, DbWorkflowData
         from aiida.backends.sqlalchemy.models.group import DbGroup
         from aiida.backends.sqlalchemy.models.node import DbLink
         from aiida.backends.sqlalchemy.models.node import DbNode
@@ -133,6 +134,12 @@ class SqlAlchemyTests(AiidaTestImplementation):
         from aiida.backends.sqlalchemy.models.user import DbUser
 
         # Delete the workflows
+        # Complicated way to make sure we 'unwind' all the relationships
+        # between workflows and their children.
+        self.test_session.connection().execute(table_workflowstep_calc.delete())
+        self.test_session.connection().execute(table_workflowstep_subworkflow.delete())
+        self.test_session.query(DbWorkflowData).delete()
+        self.test_session.query(DbWorkflowStep).delete()
         self.test_session.query(DbWorkflow).delete()
 
         # Empty the relationship dbgroup.dbnode

@@ -209,7 +209,7 @@ class DbWorkflowData(Base):
 
     id = Column(Integer, primary_key=True)
 
-    parent_id = Column(Integer, ForeignKey('db_dbworkflow.id', ondelete='CASCADE'))
+    parent_id = Column(Integer, ForeignKey('db_dbworkflow.id'))
 
     name = Column(String(255))  # Blank = false
     time = Column(DateTime(timezone=True), default=timezone.now)
@@ -269,8 +269,7 @@ class DbWorkflowData(Base):
 table_workflowstep_calc = Table(
     'db_dbworkflowstep_calculations', Base.metadata,
     Column('id', Integer, primary_key=True),
-    Column('dbworkflowstep_id', Integer,
-           ForeignKey('db_dbworkflowstep.id', ondelete='CASCADE')),
+    Column('dbworkflowstep_id', Integer, ForeignKey('db_dbworkflowstep.id')),
     Column('dbnode_id', Integer, ForeignKey('db_dbnode.id')),
     UniqueConstraint('dbworkflowstep_id', 'dbnode_id')
 )
@@ -279,8 +278,7 @@ table_workflowstep_subworkflow = Table(
     'db_dbworkflowstep_sub_workflows', Base.metadata,
     Column('id', Integer, primary_key=True),
     Column('dbworkflowstep_id', Integer, ForeignKey('db_dbworkflowstep.id')),
-    Column('dbworkflow_id', Integer,
-           ForeignKey('db_dbworkflow.id', ondelete='CASCADE')),
+    Column('dbworkflow_id', Integer, ForeignKey('db_dbworkflow.id')),
     UniqueConstraint('dbworkflowstep_id', 'dbworkflow_id')
 )
 
@@ -290,7 +288,7 @@ class DbWorkflowStep(Base):
 
     id = Column(Integer, primary_key=True)
 
-    parent_id = Column(Integer, ForeignKey('db_dbworkflow.id', ondelete='CASCADE'))
+    parent_id = Column(Integer, ForeignKey('db_dbworkflow.id'))
     parent = relationship("DbWorkflow", backref='steps')
 
     user_id = Column(Integer, ForeignKey('db_dbuser.id'))

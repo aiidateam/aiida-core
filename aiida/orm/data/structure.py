@@ -1148,8 +1148,6 @@ class StructureData(Data):
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
 
-        #new_site = Site(site=site)  # So we make a copy
-
         if site.kind_name not in [k.name for k in self.kinds]:
             raise ValueError(
                 "No kind with name '{}', available kinds are: "
@@ -1157,6 +1155,7 @@ class StructureData(Data):
 
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
+        # ..note: set_attr will make a deep copy so there is no need to do it here
         self._set_attr('sites', self.get_attr('sites', []) + [site.get_raw()])
 
     def set_sites(self, sites):

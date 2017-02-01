@@ -4,7 +4,7 @@ Tools for parsing QE PW input files and creating AiiDa Node objects based on
 them.
 
 TODO: Parse CONSTRAINTS, OCCUPATIONS, ATOMIC_FORCES once they are implemented
-      in AiiDa
+      in AiiDA
 """
 import re
 import os
@@ -26,7 +26,9 @@ class PwInputFile(object):
     """
     Class used for parsing Quantum Espresso pw.x input files and using the info.
 
-    :ivar namelists:
+    Members:
+    
+    * ``namelists``:
         A nested dictionary of the namelists and their key-value
         pairs. The namelists will always be upper-case keys, while the parameter
         keys will always be lower-case.
@@ -46,7 +48,7 @@ class PwInputFile(object):
                         "ntyp": 1}
             }
 
-    :ivar atomic_positions:
+    * ``atomic_positions``:
         A dictionary with
 
             * units: the units of the positions (always lower-case) or None
@@ -66,7 +68,7 @@ class PwInputFile(object):
              'fixed_coords': [[False, False, False],
                               [True, True, True]]}
 
-    :ivar cell_parameters:
+    * ``cell_parameters``:
         A dictionary (if CELL_PARAMETERS is present; else: None) with
 
             * units: the units of the lattice vectors (always lower-case) or
@@ -80,7 +82,7 @@ class PwInputFile(object):
                       [-2.6, 8.0, 0.0],
                       [-2.6, -3.5, 7.2]]}
 
-    :ivar k_points:
+    * ``k_points``:
         A dictionary containing
 
             * type: the type of kpoints (always lower-case)
@@ -114,7 +116,7 @@ class PwInputFile(object):
 
             {'type': 'gamma'}
 
-    :ivar atomic_species:
+    * ``atomic_species``:
         A dictionary with
 
             * names: list of the atom names (e.g. 'Si', 'Si0', 'Si_0') (case
@@ -321,7 +323,7 @@ class PwInputFile(object):
 
         :return: KpointsData object of the kpoints in the input file
         :rtype: aiida.orm.data.array.kpoints.KpointsData
-        :raises aiida.common.exceptions.NotImplimentedError: if the kpoints are
+        :raises NotImplementedError: if the kpoints are
             in a format not yet supported.
         """
         # Initialize the KpointsData node
@@ -803,7 +805,6 @@ def parse_atomic_species(txt):
                                    'Al.pbe-nl-rrkjus_psl.1.0.0.UPF',
                                    'Si3 28.0855 Si.pbe-nl-rrkjus_psl.1.0.0.UPF']
 
-    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """

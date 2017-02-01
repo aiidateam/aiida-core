@@ -15,7 +15,6 @@ User's guide
    ../examples/pwimmigrant_tutorial
    ../examples/ph_tutorial
    ../examples/cp_tutorial
-   ../examples/wannier90_tutorial
    ../examples/projwfc_tutorial
    ../orm/resultmanager.rst
    ../examples/pseudo_tutorial

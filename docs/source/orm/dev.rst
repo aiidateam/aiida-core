@@ -21,7 +21,14 @@ Node
 ++++
 .. automodule:: aiida.orm.implementation.general.node
    :members:
-   :special-members: __init__
+   :private-members:
+   :special-members:
+
+
+.. automodule:: aiida.orm.node
+   :members:
+
+.. autoclass:: aiida.orm.node.Node
 
 Workflow
 ++++++++
@@ -101,6 +108,11 @@ KpointsData
 .. automodule:: aiida.orm.data.array.kpoints
    :members:
 
+BandsData
+.........
+.. automodule:: aiida.orm.data.array.bands
+   :members:
+
 ProjectionData
 ..............
 .. automodule:: aiida.orm.data.array.projection
@@ -111,6 +123,10 @@ TrajectoryData
 .. automodule:: aiida.orm.data.array.trajectory
    :members:
 
+XyData
+..............
+.. automodule:: aiida.orm.data.array.xy
+   :members:
 
 
 ORM documentation: Calculations
@@ -125,6 +141,14 @@ ORM documentation: Calculations
    :special-members: __init__
 
 .. automodule:: aiida.orm.implementation.general.calculation.job
+   :members:
+   :special-members: __init__
+
+.. automodule:: aiida.orm.implementation.general.calculation.inline
+   :members:
+   :special-members: __init__
+
+.. automodule:: aiida.orm.calculation
    :members:
    :special-members: __init__
 

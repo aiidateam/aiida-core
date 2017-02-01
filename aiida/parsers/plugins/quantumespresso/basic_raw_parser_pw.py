@@ -49,7 +49,7 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
     :returns out_dict: a dictionary with parsed data
     :return successful: a boolean that is False in case of failed calculations
             
-    :raises QEOutputParsingError: for errors in the parsing,
+    :raises aiida.parsers.plugins.quantumespresso.QEOutputParsingError: for errors in the parsing,
     :raises AssertionError: if two keys in the parsed dicts are found to be qual
 
     3 different keys to check in output: parser_warnings, xml_warnings and warnings.

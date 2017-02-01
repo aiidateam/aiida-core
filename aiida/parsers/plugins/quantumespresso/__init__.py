@@ -8,6 +8,9 @@ __authors__ = "The AiiDA team."
 
 
 class QEOutputParsingError(OutputParsingError):
+    """
+    Exception raised by a parser error in a QE code
+    """
     pass
     # def __init__(self,message):
     # wrappedmessage = "Error parsing Quantum Espresso PW output: " + message

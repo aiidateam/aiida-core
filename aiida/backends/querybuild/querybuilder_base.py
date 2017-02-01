@@ -3,7 +3,7 @@
 The general functionalities that all querybuilders need to have
 are found in this module.
 
-:func:`AbstractQueryBuilder` is the abstract class for QueryBuilder classes.
+:py:class:`AbstractQueryBuilder` is the abstract class for QueryBuilder classes.
 Subclasses need to be written for *every* schema/backend implemented
 in backends.
 """
@@ -2039,7 +2039,7 @@ class AbstractQueryBuilder(object):
         """
 
         Checks if the query instance is still valid by hashing the queryhelp.
-        If not invokes :func:`QueryBuilderBase._build`.
+        If not invokes :py:meth:`~._build`.
 
         :returns: an instance of sqlalchemy.orm.Query
 
@@ -2183,7 +2183,7 @@ class AbstractQueryBuilder(object):
     @abstractmethod
     def iterall(self, batch_size=100):
         """
-        Same as :func:`QueryBuilderBase.all`, but returns a generator.
+        Same as :py:meth:`~.all`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
         http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
@@ -2274,7 +2274,7 @@ class AbstractQueryBuilder(object):
     @abstractmethod
     def iterdict(self, batch_size=100):
         """
-        Same as :func:`QueryBuilderBase.dict`, but returns a generator.
+        Same as :py:meth:`~.dict`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
         http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
@@ -2290,8 +2290,8 @@ class AbstractQueryBuilder(object):
 
     def get_results_dict(self):
         """
-        Deprecated, use :func:`QueryBuilderBase.dict` or
-        :func:`QueryBuilderBase.iterdict` instead
+        Deprecated, use :py:meth:`~.dict` or
+        :py:meth:`~.iterdict` instead
         """
         warnings.warn(
                 "get_results_dict will be deprecated in the future"

@@ -202,17 +202,17 @@ Manages database data objects.
   
   * **description**: view / set the description of a data
   
-  * **array**: handles :class:`.ArrayData` objects
+  * **array**: handles :class:`aiida.orm.data.array.ArrayData` objects
   
     * **show**: visualizes the data object
   
-  * **bands**:  handles :class:`.BandsData` objects (band structure object)
+  * **bands**:  handles :class:`aiida.orm.data.array.bands.BandsData` objects (band structure object)
   
     * **export**: export the node as a string of a specified format
   
     * **show**:   visualizes the data object
   
-    * **list**:   list currently saved nodes of :class:`.BandsData` kind
+    * **list**:   list currently saved nodes of :class:`aiida.orm.data.array.bands.BandsData` kind
 
 
 .. _devel:

@@ -409,7 +409,6 @@ def get_object_string(obj):
 
     :param obj: The object to get the string for
     :return: The string that identifies the object
-    :rtype: str
     """
     if inspect.isfunction(obj):
         return "{}.{}".format(obj.__module__, obj.__name__)

@@ -1,6 +1,6 @@
 
-Modules
-^^^^^^^
+Modules (API documentation)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 3
 
@@ -10,12 +10,12 @@ Modules
    ../cmdline/dev
    ../execmanager/dev
    ../djsite/dev
+   ../sqlalchemy/dev
    ../orm/dev
    ../parsers/dev
-   ../querying/querytool/dev
    ../querying/querybuilder/dev
    ../work/dev
    ../dbimporters/dev
    ../dbexporters/dev
    ../tools/dev
-   
+   ../testing/dev

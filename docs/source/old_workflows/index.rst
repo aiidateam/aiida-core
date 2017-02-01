@@ -769,7 +769,7 @@ Compatibility with new workflows
 ++++++++++++++++++++++++++++++++
 
 As part of the deprecation process of the old workflows to ease the transition we
-support the ability to launch old workflows from :class:`~aiida.work.workchain.Workchain` s.
+support the ability to launch old workflows from :class:`~aiida.work.workchain.WorkChain` s.
 The :class:`~aiida.work.workchain.ToContext` object can be used in conjunction
 with :class:`~aiida.work.run.legacy_workflow` which takes a legacy workflow pk
 and builds an object that tells :class:`~aiida.work.workchain.ToContext` how to wait for it to be done and
@@ -777,7 +777,8 @@ store it in the context on completion.  An example:
 
 .. code-block:: python
     :linenos:
-
+    
+    from aiida.work.run import legacy_workflow
     from aiida.work.workchain import WorkChain, ToContext, Outputs
 
     class MyWf(WorkChain):

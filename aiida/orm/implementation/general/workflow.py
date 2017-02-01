@@ -216,7 +216,7 @@ class AbstractWorkflow(object):
         """
         Get the the list of files/directory in the repository of the object.
 
-        :param str,optional subfolder: get the list of a subfolder
+        :param subfolder: get the list of a subfolder
         :return: a list of strings.
         """
         return self._get_folder_pathsubfolder.get_subfolder(subfolder).get_content_list()

@@ -1,119 +1,78 @@
 .. _my-ref-to-pseudo-tutorial:
 
-Pseudopotential families tutorial
-=================================
+Handling pseudopotentials
+=========================
 
-What is a pseudopotential family
-++++++++++++++++++++++++++++++++
+.. contents :: Contents
+    :local:
 
-As you might have seen in the previous ``PWscf`` tutorial, the procedure of 
-attaching a pseudopotential file to each atomic species could be a bit tedious.
-In many situations, you will not produce a different pseudopotential file 
-for every calculation you do. 
-More likely, when you start a project you will stick to a pseudopotential file 
-for as long as possible. 
-Moreover, in a high-throughput calculation, you will like to do calculation 
-over several elements keeping the same functional.
-That's also part of the reason why there are several projects 
-(like `PSLibrary <http://qe-forge.org/gf/project/pslibrary/frs/>`_ 
-or `GBRV <http://www.physics.rutgers.edu/gbrv/>`_ to name a few), 
-that intend to develop a set of pseudopotentials 
-that covers most of the periodic table for different functionals.
-
-That's why we introduced the *pseudopotential families*. 
-They are basically a set of pseudopotentials that are grouped together in a 
-special type of AiiDA Group of nodes, with the requirement that at most one
-pseudopotential can be present for a given chemical element.
-
-Of course, no requirements are enforced on the complete coverage of the periodic
-table (also because really complete pseudopotential sets for the whole periodic
-table do not exist). In other words, this means that you can create a
-pseudopotential family containing the pseudopotentials only for a few elements
-that you are interested in.
-
-.. note:: it is your responsibility to group together pseudopotentials of the
-  same type, or obtained using the same functionals, approximations
-  and/or levels of theory.
-
-How to create a pseudopotential family
+Introduction: Pseudopotential families
 ++++++++++++++++++++++++++++++++++++++
 
-Let's say for example that we want to create a family of LDA ultrasoft
-pseudopotentials. As the first step, 
-you need to get all the pseudopotential files in a single folder.
-For your convenience, it is useful to use a common name for your files, 
-for example with a structure like 'Element.a-short-description.UPF'.
+As you might have seen in the previous ``PWscf`` tutorial, the procedure of attaching a pseudopotential file to each atomic species could be a bit tedious. In many situations, you will not produce a different pseudopotential file for every calculation you do. More likely, when you start a project you will stick to a pseudopotential file for as long as possible. Moreover, in a high-throughput calculation, you will like to do calculation over several elements keeping the same functional. That's also part of the reason why there are several projects (like `PSLibrary <http://qe-forge.org/gf/project/pslibrary/frs/>`_ or `GBRV <http://www.physics.rutgers.edu/gbrv/>`_ to name a few), that intend to develop a set of pseudopotentials that covers most of the periodic table for different functionals.
 
-The utility to upload a family of pseudopotentials is accessed via ``verdi``::
+That's why we added the *pseudopotential families*. Each family is a set of pseudopotentials that are grouped together in a special type of `AiiDA Group of nodes`. Within each family, at most one pseudopotential can be present for a given chemical element.
 
-  verdi data upf uploadfamily path/to/folder name_of_the_family "some description for your convenience"
+Of course, a pseudopotential family does not have to completely cover the periodic table (also because such pseudopotential sets do not exist). This means that you can create a pseudopotential family containing only the pseudopotentials for a few elements that you are interested in.
 
-where ``path/to/folder`` is the path to the folder where you collected all the
-UPF files that you want to add to the AiiDA database and to the family with
-name ``name_of_the_family``, and the final parameter is a string that is
-set in the ``description`` field of the group.
+.. note ::
+    In principle, you can group different kinds of pseudopotentials into the same family. It is your responsibility to group only those with the same type, or obtained using the same functionals, approximations and / or levels of theory.
 
-.. note:: This command will first check the MD5 checksum of each file, and
-  it will not create a new UPFData node if the pseudopotential is already 
-  present in the DB. In this case, it will simply add that UpfData node
-  to the group with name ``name_of_the_family``.
+Creating a pseudopotential family
++++++++++++++++++++++++++++++++++
 
-.. note:: if you add the optional flag ``--stop-if-existing``, 
-  the code will stop (without creating any new UPFData node, nor creating a group)
-  if at least one of the files in the folder is already found in the AiiDA DB.
+.. note ::
+    The following commands are specific to the Quantum ESPRESSO interface. For interfaces to other codes, please refer to the respective plugin documentation.
+
+In the following, we will go through creating a pseudopotential family. First, you need to collect the pseudopotential files which should go into the family in a single folder -- we'll call it ``path/to/folder``. You can then add the family to the AiiDA database with ``verdi``::
+
+    verdi data upf uploadfamily path/to/folder name_of_the_family "some description for your convenience"
+
+where ``name_of_the_family`` should be a unique name for the family, and the final parameter is a string that is set in the ``description`` field of the group. 
+
+If the a pseudopotential family with the same ``name_of_the_family`` exists already, the pseudopotentials in the folder will be added to the existing group. The code will raise an error if you try to add two (different) pseudopotentials for the same element.
 
 After the upload (which may take some seconds, so please be patient) 
-the upffamily will be ready to be used.
+the upffamily will be ready to use.
 
-Note that if you pass as ``name_of_the_family`` a name that already exists,
-the pseudopotentials in the folder will be added to the existing group. The
-code will raise an error if you try to add two (different) pseudopotentials for
-the same element.
+.. hint:: 
+    If you upload pseudopotentials which are already present in your database, AiiDA will use the existing ``UPFData`` node instead of creating a duplicate one. You can use the optional flag ``--stop-if-existing`` to instead abort (without changing anything in the database) if an existing pseudopotential is found.
 
-Get the list of existing families
-+++++++++++++++++++++++++++++++++
-If you want to know what are the pseudopotential families already existing in 
-the DB, type::
+
+Getting the list of existing families
++++++++++++++++++++++++++++++++++++++
+To see wich pseudopotential families already exist in the database, type
+::
    
    verdi data upf listfamilies
 
-Add a ``-d`` (or ``--with-description``) flag if you want to read also the
-description of the family.
+Add a ``-d`` (or ``--with-description``) flag if you also want to read the description of each family.
 
-You can also filter the groups to get only a list of those containing 
-a set of given elements using the ``-e`` option. For instance, if you want
-to get only the families containing the elements ``Ba``, ``Ti`` and ``O``, use::
+You can also filter the groups to get only a list of those containing a given set of elements using the ``-e`` option. For instance, if you want to get only the families containing the elements ``Ba``, ``Ti`` and ``O``, use
+::
 
    verdi data upf listfamilies -e Ba Ti O
 
 
-For more help on the command line options, type::
+For more help on the command line options, type
+::
    
    verdi data upf listfamilies -h
 
 
-Manually loading pseudopotentials
-=================================
+Manually adding pseudopotentials
+++++++++++++++++++++++++++++++++
 
-If you do not want to use pseudopotentials from a family, it is also possible
-to load them manually (even if this is, in general, discouraged by us).
+If you do not want to use pseudopotentials from a family, it is also possible to manually add them to the database (even though we discourage this in general).
 
-A possible way of doing it is the following: we start by creating a list
-of pseudopotential filenames that we need to use::
+A possible way of doing it is the following: we start by creating a list of pseudopotential filenames that we need to use::
 
     raw_pseudos = [
        "Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF",
        "Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF",
        "O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF"]
 
-(in this simple example, we expect the pseudopotentials to be in the same
-folder of the script).
-Then, we loop over the filenames and add them to the AiiDA database. The 
-``get_or_create`` method checks if the pseudopotential is already in the
-database (by checking its MD5 checksum) and either stores it, or just returns
-the node already present in the database (the second value returned is a
-boolean and tells us if the pseudo was already present or not).
-We also store the returned nodes in a list (``pseudos_to_use``).
+In this simple example, we expect the pseudopotentials to be in the same folder of the script. Then, we loop over the filenames and add them to the AiiDA database. The ``get_or_create`` method checks if the pseudopotential is already in the database and either stores it, or just returns the node already present in the database. The second value returned is a boolean and tells us if the pseudopotential was already present or not. We also store the returned nodes in a list (``pseudos_to_use``).
 
 ::
 
@@ -131,7 +90,6 @@ and attach its pseudopotential object to the calculation::
     for pseudo in pseudos_to_use:
         calc.use_pseudo(pseudo, kind=pseudo.element)
 
-.. note:: when the pseudopotential is created, it is parsed and the elements
-  to which it refers is stored in the database and can be accessed using the 
-  ``pseudo.element`` property, as shown above.
+.. note:: 
+    When the pseudopotential is created, it is parsed and the elements to which it refers is stored in the database and can be accessed using the ``pseudo.element`` property, as shown above.
 

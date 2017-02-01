@@ -17,13 +17,12 @@ User's guide
    ../examples/cp_tutorial
    ../examples/wannier90_tutorial
    ../examples/projwfc_tutorial
-   ../parsers/resultmanager
+   ../database/dbusage
    ../examples/pseudo_tutorial
    ../verdi/verdi_user_guide
    ../scheduler/index
    ../state/calculation_state
    ../verdi/comments
-   ../database/dbusage
    ../querying/index
    ../work/index
    ../workflow/index

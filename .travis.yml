@@ -20,9 +20,12 @@ addons:
 #        - python-vtk
 
 ## Build matrix to test both backends
+## I still let it create the test backend for django also when building the docs
+## because otherwise the code would complain
 env:
-   - TEST_AIIDA_BACKEND=django
-   - TEST_AIIDA_BACKEND=sqlalchemy
+   - TEST_AIIDA_BACKEND=django COMPILE_DOCS=false
+   - TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
+   - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
 
 install:
     # This is required for some recent features of setup.py
@@ -50,7 +53,9 @@ before_script:
     - verdi -p test_$TEST_AIIDA_BACKEND setup --non-interactive --backend=$TEST_AIIDA_BACKEND --email="aiida@localhost" --db_host="localhost" --db_port=5432 --db_name="test_$TEST_AIIDA_BACKEND" --db_user=postgres --db_pass='' --repo="/tmp/test_repository_test_${TEST_AIIDA_BACKEND}/" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --no-password
 
 script:
-    - verdi -p test_$TEST_AIIDA_BACKEND devel tests || exit 1
+    # Compile the docs (HTML format); -W to convert warnings in errors, -n to warn about all missing references
+    # For the time being I only put -W before fixing all problems with missing references
+    - if [[ "$COMPILE_DOCS" == "true" ]] ; then SPHINXOPTS="-W" make -C docs html ; else verdi -p test_$TEST_AIIDA_BACKEND devel tests ; fi
 
 git:
   depth: 3

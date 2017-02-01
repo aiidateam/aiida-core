@@ -7,8 +7,7 @@ Use the plugin to support inputs of Quantum Espresso pw.x executable.
 
 Supported codes
 ---------------
-* tested from pw.x v5.0 onwards. Back compatibility is not guaranteed (although
-  versions 4.3x might work most of the times).
+* tested from pw.x v5.0 onwards.
 
 Inputs
 ------
@@ -16,7 +15,7 @@ Inputs
   One pseudopotential file per atomic species.
   
   Alternatively, pseudo for every atomic species can be set with the **use_pseudos_from_family**
-  method, if a family of pseudopotentials has been installed..
+  method, if a family of pseudopotentials has been installed.
   
 * **kpoints**, class :py:class:`KpointsData <aiida.orm.data.array.kpoints.KpointsData>`
   Reciprocal space points on which to build the wavefunctions. Can either be 
@@ -28,11 +27,12 @@ Inputs
       {"CONTROL":{"calculation":"scf"},
        "ELECTRONS":{"ecutwfc":30.,"ecutrho":100.},
       }
-  
-  See the QE documentation for the full list of variables and their meaning. 
-  Note: some keywords don't have to be specified or Calculation will enter 
-  the SUBMISSIONFAILED state, and are already taken care of by AiiDA (are related 
-  with the structure or with path to files)::
+
+  A full list of variables and their meaning is found in the `pw.x documentation`_.
+
+  .. _pw.x documentation: http://www.quantum-espresso.org/wp-content/uploads/Doc/INPUT_PW.html
+
+  Following keywords, related to the structure or to the file paths, are already taken care of by AiiDA::
     
       'CONTROL', 'pseudo_dir': pseudopotential directory
       'CONTROL', 'outdir': scratch directory
@@ -47,16 +47,16 @@ Inputs
       'SYSTEM', 'cosab': cell parameters
       'SYSTEM', 'cosac': cell parameters
       'SYSTEM', 'cosbc': cell parameters
+
+  Those keywords should not be specified, otherwise the submission will fail.
      
 * **structure**, class :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
 * **settings**, class :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` (optional)
   An optional dictionary that activates non-default operations. For a list of possible
   values to pass, see the section on the :ref:`advanced features <pw-advanced-features>`.
-    
 * **parent_folder**, class :py:class:`RemoteData <aiida.orm.data.parameter.ParameterData>` (optional)
   If specified, the scratch folder coming from a previous QE calculation is 
   copied in the scratch of the new calculation.
-
 * **vdw_table**, class :py:class:`SinglefileData <aiida.orm.data.singlefile.SinglefileData>` (optional)
   If specified, it should be a file for the van der Waals kernel table.
   The file is copied in the pseudo subfolder, without changing its name, and
@@ -70,11 +70,11 @@ Outputs
 There are several output nodes that can be created by the plugin, according to the calculation details.
 All output nodes can be accessed with the ``calculation.out`` method.
 
-* output_parameters :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` 
-  (accessed by ``calculation.res``)
+* output_parameters :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`
   Contains the scalar properties. Example: energy (in eV), 
   total_force (modulus of the sum of forces in eV/Angstrom),
-  warnings (possible error messages generated in the run).
+  warnings (possible error messages generated in the run). ``calculation.out.output_parameters`` can also be
+  accessed by the ``calculation.res`` shortcut.
 * output_array :py:class:`ArrayData <aiida.orm.data.array.ArrayData>`
   Produced in case of calculations which do not change the structure, otherwise, 
   an ``output_trajectory`` is produced.
@@ -88,7 +88,7 @@ All output nodes can be accessed with the ``calculation.out`` method.
   Quantities are parsed at every step of the ionic-relaxation / molecular-dynamics run.
 * output_band (non spin polarized calculations)) or output_band1 + output_band2 
   (spin polarized calculations) :py:class:`BandsData <aiida.orm.data.array.bands.BandsData>`
-  Present only if parsing is activated with the **`ALDO_BANDS`** setting.
+  Present only if parsing is activated with the **`ALSO_BANDS`** :ref:`setting <also-bands-setting>`.
   Contains the list of electronic energies for every kpoint.
   If calculation is a molecular dynamics or a relaxation run, bands refer only to the last ionic configuration.
 * output_structure :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
@@ -107,22 +107,24 @@ accessible with ``Calculation.res.warnings``.
 
 .. _pw-advanced-features:
 
-Additional advanced features
-----------------------------
+Additional advanced features (settings)
+---------------------------------------
 
 In this section we describe how to use some advanced functionality in the
 Quantum ESPRESSO pw.x plugin (note that most of them apply also to the 
 cp.x plugin).
 
 While the input link with name 'parameters' is used for the content of the 
-namelists, additional parameters can be specified in the 'settings' input,
-also of type ParameterData.
+Quantum Espresso namelists, additional parameters can be specified in the 'settings' input, also as ParameterData.
 
-Below we summarise some of the options that you can specify, and their effect.
-In each case, after having defined the content of ``settings_dict``, you can use
+After having defined the content of ``settings_dict``, you can use
 it as input of a calculation ``calc`` by doing::
 
   calc.use_settings(ParameterData(dict=settings_dict))
+
+The different options are described below.
+
+.. _also-bands-setting:
 
 Parsing band energies
 .....................

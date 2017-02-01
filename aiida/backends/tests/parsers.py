@@ -112,7 +112,6 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
                 f.flush()
 
 
-
 def is_valid_folder_name(name):
     """
     Return True if the string (that will be the folder name of each subtest)
@@ -142,18 +141,16 @@ class TestParsers(AiidaTestCase):
     longMessage = True
 
     def read_test(self, outfolder):
-
         import os
         import importlib
         import json
 
-        from aiida.common.exceptions import NotExistent
         from aiida.orm import JobCalculation
         from aiida.orm.utils import load_node
         from aiida.orm.importexport import import_data
 
         imported = import_data(outfolder,
-                                    ignore_unknown_nodes=True, silent=True)
+                               ignore_unknown_nodes=True, silent=True)
 
         calc = None
         for _, pk in imported['aiida.backends.djsite.db.models.DbNode']['new']:
@@ -266,13 +263,13 @@ class TestParsers(AiidaTestCase):
                                     test_number, test_node_name, attr_test,
                                     e.message)
                                 if e.args:
-                                    e.args = tuple([
-                                                       "Failed test #{} for {}->{}: {}".format(
-                                                           test_number,
-                                                           test_node_name,
-                                                           attr_test,
-                                                           e.args[0])]
-                                                   + list(e.args[1:]))
+                                    e.args = tuple(
+                                        ["Failed test #{} for {}->{}: {}".format(
+                                            test_number,
+                                            test_node_name,
+                                            attr_test,
+                                            e.args[0])]
+                                        + list(e.args[1:]))
                                 raise e
 
         return base_test

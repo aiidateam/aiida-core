@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from enum import Enum
+from collections import namedtuple
 from aiida.work import util as util
 from aiida.work.defaults import parallel_engine, serial_engine
 from aiida.work.process import Process
@@ -11,19 +13,69 @@ __version__ = "0.7.0"
 __authors__ = "The AiiDA team."
 
 
+class RunningType(Enum):
+    """
+    A type to indicate what type of object is running: a process,
+    a calculation or a workflow
+    """
+    PROCESS = 0
+    LEGACY_CALC = 1
+    LEGACY_WORKFLOW = 2
+
+
+RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
+
+
+def legacy_workflow(pk):
+    """
+    Create a :class:`.RunningInfo` object for a legacy workflow.
+
+    This can be used in conjunction with :class:`aiida.work.workchain.ToContext`
+    as follows:
+
+    >>> from aiida.work.workchain import WorkChain, ToContext, Outputs
+    >>>
+    >>> class MyWf(WorkChain):
+    >>>     @classmethod
+    >>>     def define(cls, spec):
+    >>>         super(MyWf, cls).define(spec)
+    >>>         spec.outline(cls.step1, cls.step2)
+    >>>
+    >>>     def step1(self):
+    >>>         wf = OldEquationOfState()
+    >>>         wf.start()
+    >>>         return ToContext(eos=legacy_workflow(wf.pk))
+    >>>
+    >>>     def step2(self):
+    >>>         # Now self.ctx.eos contains the terminated workflow
+    >>>         pass
+
+    :param pk: The workflow pk
+    :type pk: int
+    :return: The running info
+    :rtype: :class:`.RunningInfo`
+    """
+    return RunningInfo(RunningType.LEGACY_WORKFLOW, pk)
+
+
+def legacy_calc(pk):
+    """
+    Create a :class:`.RunningInfo` object for a legacy calculation
+
+    :param pk: The calculation pk
+    :type pk: int
+    :return: The running info
+    :rtype: :class:`.RunningInfo`
+    """
+    return RunningInfo(RunningType.LEGACY_CALC, pk)
+
+
 def async(process_class, *args, **kwargs):
     if util.is_workfunction(process_class):
         kwargs['__async'] = True
         return process_class(*args, **kwargs)
     elif issubclass(process_class, Process):
-        # No need to consider args as a Process can't deal with positional
-        # arguments anyway
-        return_pid = kwargs.pop('_result_pid', False)
-        fut = parallel_engine.submit(process_class, inputs=kwargs)
-        if return_pid:
-            return fut, fut.pid
-        else:
-            return fut
+        return parallel_engine.submit(process_class, inputs=kwargs)
 
 
 def run(process_class, *args, **inputs):
@@ -61,7 +113,8 @@ def submit(process_class, _jobs_store=None, **kwargs):
     if _jobs_store is None:
         _jobs_store = aiida.work.persistence.get_default()
 
-    return queue_up(process_class, kwargs, _jobs_store)
+    pid = queue_up(process_class, kwargs, _jobs_store)
+    return RunningInfo(RunningType.PROCESS, pid)
 
 
 def queue_up(process_class, inputs, storage):

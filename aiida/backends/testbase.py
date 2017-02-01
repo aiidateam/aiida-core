@@ -40,6 +40,7 @@ class AiidaTestCase(unittest.TestCase):
     Internally it loads the AiidaTestImplementation subclass according to the current backend
     """
     _class_was_setup = False
+    __backend_instance = None
 
     @classmethod
     def get_backend_class(cls):

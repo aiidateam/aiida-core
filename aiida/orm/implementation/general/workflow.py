@@ -15,8 +15,6 @@ from aiida.common.utils import str_timedelta
 from aiida.common import aiidalogger
 from aiida.orm.implementation.calculation import JobCalculation
 
-
-
 from aiida.backends.utils import get_automatic_user
 
 from aiida.utils import timezone
@@ -103,7 +101,6 @@ class AbstractWorkflow(object):
         else:
             return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
-
     @abstractproperty
     def dbworkflowinstance(self):
         """
@@ -172,7 +169,6 @@ class AbstractWorkflow(object):
         :return: a string
         """
         pass
-
 
     @abstractmethod
     def _increment_version_number_db(self):
@@ -548,16 +544,16 @@ class AbstractWorkflow(object):
                                      cls.get_step(wrapped_method).state == wf_states.SLEEP or \
                                      cls.get_step(wrapped_method).nextcall == wf_default_call or \
                                      cls.get_step(wrapped_method).nextcall == wrapped_method \
-                         #cls.has_step(wrapped_method) \
-                    ):
+                         # cls.has_step(wrapped_method) \
+                         ):
                 raise AiidaException(
                     "The step {0} has already been initialized, cannot change this outside the parent workflow !".format(
                         wrapped_method))
 
             # If a method is launched and the step is halted for ERROR, then clean the step and re-launch
             if cls.has_step(wrapped_method) and \
-                    ( cls.get_step(wrapped_method).state == wf_states.ERROR or \
-                                  cls.get_step(wrapped_method).state == wf_states.SLEEP ):
+                    (cls.get_step(wrapped_method).state == wf_states.ERROR or \
+                                 cls.get_step(wrapped_method).state == wf_states.SLEEP):
 
                 for w in cls.get_step(wrapped_method).get_sub_workflows(): w.kill()
                 cls.get_step(wrapped_method).remove_sub_workflows()
@@ -565,14 +561,14 @@ class AbstractWorkflow(object):
                 for c in cls.get_step(wrapped_method).get_calculations(): c.kill()
                 cls.get_step(wrapped_method).remove_calculations()
 
-                #self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
+                # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
             method_step, created = cls.dbworkflowinstance.steps.get_or_create(name=wrapped_method,
                                                                               user=get_automatic_user())
             try:
                 fun(cls)
             except:
-                #exc_type, exc_value, exc_traceback = sys.exc_info()
+                # exc_type, exc_value, exc_traceback = sys.exc_info()
                 cls.append_to_report(
                     "ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(
                         wrapped_method))
@@ -615,7 +611,7 @@ class AbstractWorkflow(object):
         # developing a workflow without rendering most of the trial run
         # unaccessible. I comment these lines for this moment.
 
-        #if md5 != md5_file(script_path):
+        # if md5 != md5_file(script_path):
         #    raise ValidationError("Unable to load the original workflow module from {}, MD5 has changed".format(script_path))
 
         # ATTENTION: Do not move this code outside or encapsulate it in a function
@@ -659,7 +655,7 @@ class AbstractWorkflow(object):
         else:
             next_method_name = wf_exit_call
 
-        #logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid))
+        # logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid))
         method_step.set_nextcall(next_method_name)
         #
         self.dbworkflowinstance.set_state(wf_states.RUNNING)
@@ -683,8 +679,8 @@ class AbstractWorkflow(object):
                 raise AiidaException("Cannot add a calculation with "
                                      "unstored inputs")
 
-            #        if calc.pk is None:
-            #            raise AiiDAException("Cannot add an unstored calculation")
+                #        if calc.pk is None:
+                #            raise AiiDAException("Cannot add an unstored calculation")
 
         curframe = inspect.currentframe()
         calframe = inspect.getouterframes(curframe, 2)
@@ -795,7 +791,7 @@ class AbstractWorkflow(object):
                     try:
                         w.kill(verbose=verbose)
                     except WorkflowKillError as e:
-                        #self.logger.error(e.message)
+                        # self.logger.error(e.message)
                         error_messages.extend(e.error_message_list)
                     except WorkflowUnkillable:
                         # A subwf cannot be killed, skip
@@ -817,7 +813,7 @@ class AbstractWorkflow(object):
             raise WorkflowUnkillable("Cannot kill a workflow in {} or {} state"
                                      "".format(wf_states.FINISHED, wf_states.ERROR))
 
-    def get_all_calcs(self, calc_class=JobCalculation,calc_state=None,depth=15):
+    def get_all_calcs(self, calc_class=JobCalculation, calc_state=None, depth=15):
         """
         Get all calculations connected with this workflow and all its subworflows up to a given depth.
         The list of calculations can be restricted to a given calculation type and state
@@ -835,10 +831,10 @@ class AbstractWorkflow(object):
 
         all_calcs = []
         for st in self.get_steps():
-            all_calcs += [ c for c in st.get_calculations(state=calc_state) if isinstance(c,calc_class)]
-            if depth>0:
+            all_calcs += [c for c in st.get_calculations(state=calc_state) if isinstance(c, calc_class)]
+            if depth > 0:
                 for subw in st.get_sub_workflows():
-                    all_calcs += subw.get_all_calcs(calc_state=calc_state,calc_class=calc_class,depth=depth-1)
+                    all_calcs += subw.get_all_calcs(calc_state=calc_state, calc_class=calc_class, depth=depth - 1)
         return all_calcs
 
     def sleep(self):
@@ -967,6 +963,7 @@ def kill_all():
 
     raise NotImplementedError
 
+
 def kill_from_pk():
     """
     Kills a workflow from its pk.
@@ -1043,21 +1040,20 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                                             'state': state,
                                             'subwf_pks': [],
                                             'calc_pks': [],
-                }
+                                            }
             if subwf_pk:
                 subwfs_of_steps[step_pk]['subwf_pks'].append(subwf_pk)
             if calc_pk:
                 subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
 
-
         # TODO SP: abstract this
         # get all subworkflows for all steps
-        wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk)  #.order_by('ctime')
+        wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk)  # .order_by('ctime')
         # dictionary mapping pks into workflows
         workflow_mapping = {_.pk: _ for _ in wflows}
 
         # get all calculations for all steps
-        calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
+        calcs = JobCalculation.query(workflow_step__in=steps_pk)  # .order_by('ctime')
         # dictionary mapping pks into calculations
         calc_mapping = {_.pk: _ for _ in calcs}
 
@@ -1116,4 +1112,3 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
             lines.append(pre_string + "|")
 
     return lines
-

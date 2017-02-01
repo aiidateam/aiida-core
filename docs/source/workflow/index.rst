@@ -13,7 +13,7 @@ all the AiiDA functions are available and calculations and launched and retrieve
 
 In this document we'll introduce the main workflow infrastructure from the user perspective, discussing and presenting some examples
 that will cover all the features implemented in the code. A more detailed description of each function can be found in the 
-developer documentation.  
+developer documentation.
 
 How it works
 ++++++++++++
@@ -40,7 +40,7 @@ to be managed from the Verdi shell (or through a script loading the necessary Ve
 initialize the daemon and analyze a simple workflow, submitting it and retrieving the results.
 
 .. note::
-  The workflow engine of AiiDA is now fully operational but will undergo major 
+The workflow engine of AiiDA is now fully operational but will undergo major
   improvements in a near future. Therefore, some of the methods or functionalities
   described in the following might change.
 
@@ -73,76 +73,76 @@ us to understand the more sophisticated examples reported later.
 
 .. code-block:: python
   :linenos:
-   
-  import aiida.common
-  from aiida.common import aiidalogger
-  from aiida.orm.workflow import Workflow
-  from aiida.orm import Code, Computer
 
-  logger = aiidalogger.getChild('WorkflowDemo')
-  
-  class WorkflowDemo(Workflow):
-    
-    def __init__(self,**kwargs):
-        
-        super(WorkflowDemo, self).__init__(**kwargs)
-    
-    def generate_calc(self):
-        
-        from aiida.orm import Code, Computer, CalculationFactory
-        from aiida.common.datastructures import calc_states
-        
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
-        
-        computer = Computer.get("localhost")
-        
-        calc = CustomCalc(computer=computer,withmpi=True)
-        calc.set_resources(num_machines=1, num_mpiprocs_per_machine=1)
-        calc._set_state(calc_states.FINISHED)
-        calc.store()
-        
-        return calc
-    
-    @Workflow.step
-    def start(self):
-        
-        from aiida.orm.node import Node
-        
-        # Testing parameters
-        p = self.get_parameters()
-        
-        # Testing calculations
-        self.attach_calculation(self.generate_calc())
-        self.attach_calculation(self.generate_calc())
-        
-        # Testing report
-        self.append_to_report("Starting workflow with params: {0}".format(p))
-        
-        # Testing attachments
-        n = Node()
-        attrs = {"a": [1,2,3], "n": n}
-        self.add_attributes(attrs)
+      import aiida.common
+      from aiida.common import aiidalogger
+      from aiida.orm.workflow import Workflow
+      from aiida.orm import Code, Computer
 
-        # Test process
-        self.next(self.second_step)
-    
-    @Workflow.step
-    def second_step(self):
-        
-        # Test retrieval
-        calcs = self.get_step_calculations(self.start)
-        self.append_to_report("Retrieved calculation 0 (uuid): {0}".format(calcs[0].uuid))
-        
-        # Testing report
-        a = self.get_attributes()
-        self.append_to_report("Execution second_step with attachments: {0}".format(a))
-        
-        # Test results
-        self.add_result("scf_converged", calcs[0])
-        
-        self.next(self.exit)
+      logger = aiidalogger.getChild('WorkflowDemo')
 
-As discussed before this is native python code, meaning that a user can load any library or script accessible from their ``PYTHONPATH``
+      class WorkflowDemo(Workflow):
+
+        def __init__(self,**kwargs):
+
+            super(WorkflowDemo, self).__init__(**kwargs)
+
+        def generate_calc(self):
+
+            from aiida.orm import Code, Computer, CalculationFactory
+            from aiida.common.datastructures import calc_states
+
+            CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+
+            computer = Computer.get("localhost")
+
+            calc = CustomCalc(computer=computer,withmpi=True)
+            calc.set_resources(num_machines=1, num_mpiprocs_per_machine=1)
+            calc._set_state(calc_states.FINISHED)
+            calc.store()
+
+            return calc
+
+        @Workflow.step
+        def start(self):
+
+            from aiida.orm.node import Node
+
+            # Testing parameters
+            p = self.get_parameters()
+
+            # Testing calculations
+            self.attach_calculation(self.generate_calc())
+            self.attach_calculation(self.generate_calc())
+
+            # Testing report
+            self.append_to_report("Starting workflow with params: {0}".format(p))
+
+            # Testing attachments
+            n = Node()
+            attrs = {"a": [1,2,3], "n": n}
+            self.add_attributes(attrs)
+
+            # Test process
+            self.next(self.second_step)
+
+        @Workflow.step
+        def second_step(self):
+
+            # Test retrieval
+            calcs = self.get_step_calculations(self.start)
+            self.append_to_report("Retrieved calculation 0 (uuid): {0}".format(calcs[0].uuid))
+
+            # Testing report
+            a = self.get_attributes()
+            self.append_to_report("Execution second_step with attachments: {0}".format(a))
+
+            # Test results
+            self.add_result("scf_converged", calcs[0])
+
+            self.next(self.exit)
+
+    As discussed before this is native python code, meaning that a user can load any library or script accessible from their ``PYTHONPATH``
 and interacting with any database or service of preference inside the workflow. We'll now go through all the details of the first workflow,
 line by line, discussing the most important methods and discovering along the way all the features available. 
 
@@ -176,7 +176,7 @@ of the basic ones:
 * **line 43** ``self.append_to_report(string)``. Once the workflow will be launched, the user interactions
   are limited to some events (stop, relaunch, list of the calculations) and most of the times is very useful to have custom messages
   during the execution. For this each workflow is equipped with a reporting facility, where the user can fill with any text and can
-  retrieve both live and at the end of the execution.  
+  retrieve both live and at the end of the execution.
   
 * **lines 45-48** ``self.add_attributes(dict)``. Since the workflow is instantiated every step from scratch, if a
   user wants to pass arguments between steps he must use the attributes facility, where a dictionary of values (accepted values are
@@ -188,7 +188,7 @@ of the basic ones:
   use the common method ``self.exit``, always present in each Workflow subclass.
 
   .. note:: make sure to ``store()`` all input nodes for the attached calculations, as unstored nodes will be lost during the transition
-    from one step to another.
+from one step to another.
   
 **lines 53-67** When the workflow will be launched through the ``start`` method, the AiiDA daemon will load the workflow, execute the step, 
 launch all the calculations and monitor their state. Once all the calculations in ``start`` will be finished the daemon will then load and 
@@ -226,7 +226,7 @@ WorkflowDemo presented before, located in the ``wf_demo.py`` file in the clean A
   >> wf.start()
 
 .. note:: If you want to write the above script in a file, remember to run it
-  with ``verdi run`` and not simply with python, or otherwise to use the other
+with ``verdi run`` and not simply with python, or otherwise to use the other
   techniques described :doc:`here <../examples/scripting>`.
   
 In these four lines we loaded the class, we created some fictitious parameter and 
@@ -311,7 +311,7 @@ A user can also kill a workflow while it's running. This can be done with
 the following verdi command::
 
 >> verdi workflow kill PK_NUMBER_1 PK_NUMBER_2 PK_NUMBER_N
-  
+
 where several ``pk`` numbers can be given. A prompt will ask for a confirmation;
 this can be avoided by using the ``-f`` option.
   
@@ -323,9 +323,9 @@ In the verdi shell type::
 or, equivalently::
 
 >> Workflow.get_subclass_from_pk(PK_NUMBER).kill()
-  
+
 .. note::
-  Sometimes the ``kill`` operation might fail because one calculation cannot be 
+Sometimes the ``kill`` operation might fail because one calculation cannot be
   killed (e.g. if it's running but not in the ``WITHSCHEDULER``, ``TOSUBMIT`` or 
   ``NEW`` state), or because one workflow step is in the ``CREATED`` state. In that case the 
   workflow is put to the ``SLEEP`` state, such that no more workflow steps will be launched
@@ -343,122 +343,122 @@ aside to the final optimal cell parameter value.
 
 .. code-block:: python
   :linenos:
-    
-    ## ===============================================
-    ##    WorkflowXTiO3_EOS
-    ## ===============================================
-            
-    class WorkflowXTiO3_EOS(Workflow):
-        
-        def __init__(self,**kwargs):
-            
-            super(WorkflowXTiO3_EOS, self).__init__(**kwargs)
-    
+
         ## ===============================================
-        ##    Object generators
+        ##    WorkflowXTiO3_EOS
         ## ===============================================
-        
-        def get_structure(self, alat = 4, x_material = 'Ba'):
-            
-            cell = [[alat, 0., 0.,],
-                    [0., alat, 0.,],
-                    [0., 0., alat,],
-                   ]
-            
-            # BaTiO3 cubic structure
-            s = StructureData(cell=cell)
-            s.append_atom(position=(0.,0.,0.),symbols=x_material)
-            s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
-            s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
-            s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
-            s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
-            s.store()
-            
-            return s
-        
-        def get_pw_parameters(self):
-            
-            parameters = ParameterData(dict={
-                        'CONTROL': {
-                            'calculation': 'scf',
-                            'restart_mode': 'from_scratch',
-                            'wf_collect': True,
-                            },
-                        'SYSTEM': {
-                            'ecutwfc': 30.,
-                            'ecutrho': 240.,
-                            },
-                        'ELECTRONS': {
-                            'conv_thr': 1.e-6,
-                            }}).store()
-                            
-            return parameters
-        
-        def get_kpoints(self):
-            
-            kpoints = KpointsData()    
-            kpoints.set_kpoints_mesh([4,4,4])
-            kpoints.store()
-            
-            return kpoints
-        
-        def get_pw_calculation(self, pw_structure, pw_parameters, pw_kpoint):
-            
-            params = self.get_parameters()
-            
-            pw_codename            = params['pw_codename']
-            num_machines           = params['num_machines']
-            num_mpiprocs_per_machine   = params['num_mpiprocs_per_machine']
-            max_wallclock_seconds  = params['max_wallclock_seconds']
-            pseudo_family          = params['pseudo_family']
-            
-            code = Code.get_from_string(pw_codename)
-            computer = code.get_remote_computer()
-            
-            QECalc = CalculationFactory('quantumespresso.pw')
-            
-            calc = QECalc(computer=computer)
-            calc.set_max_wallclock_seconds(max_wallclock_seconds)
-            calc.set_resources({"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
-            calc.store()
-            
-            calc.use_code(code)
-            
-            calc.use_structure(pw_structure)
-            calc.use_pseudos_from_family(pseudo_family)
-            calc.use_parameters(pw_parameters)
-            calc.use_kpoints(pw_kpoint)
-            
-            return calc
-            
-            
-        ## ===============================================
-        ##    Workflow steps
-        ## ===============================================
-        
-        @Workflow.step
-        def start(self):
-            
-            params = self.get_parameters()
-            x_material             = params['x_material']
-            
-            self.append_to_report(x_material+"Ti03 EOS started")
-            self.next(self.eos)
-        
-        @Workflow.step
-        def eos(self):
-            
-            from aiida.orm import Code, Computer, CalculationFactory
-            import numpy as np
-            
-            params = self.get_parameters()
-            
-            x_material             = params['x_material']
-            starting_alat          = params['starting_alat']
-            alat_steps             = params['alat_steps']
-            
-            
-            a_sweep = np.linspace(starting_alat*0.85,starting_alat*1.15,alat_steps).tolist()
+
+        class WorkflowXTiO3_EOS(Workflow):
+
+            def __init__(self,**kwargs):
+
+                super(WorkflowXTiO3_EOS, self).__init__(**kwargs)
+
+            ## ===============================================
+            ##    Object generators
+            ## ===============================================
+
+            def get_structure(self, alat = 4, x_material = 'Ba'):
+
+                cell = [[alat, 0., 0.,],
+                        [0., alat, 0.,],
+                        [0., 0., alat,],
+                       ]
+
+                # BaTiO3 cubic structure
+                s = StructureData(cell=cell)
+                s.append_atom(position=(0.,0.,0.),symbols=x_material)
+                s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
+                s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
+                s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
+                s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
+                s.store()
+
+                return s
+
+            def get_pw_parameters(self):
+
+                parameters = ParameterData(dict={
+                            'CONTROL': {
+                                'calculation': 'scf',
+                                'restart_mode': 'from_scratch',
+                                'wf_collect': True,
+                                },
+                            'SYSTEM': {
+                                'ecutwfc': 30.,
+                                'ecutrho': 240.,
+                                },
+                            'ELECTRONS': {
+                                'conv_thr': 1.e-6,
+                                }}).store()
+
+                return parameters
+
+            def get_kpoints(self):
+
+                kpoints = KpointsData()
+                kpoints.set_kpoints_mesh([4,4,4])
+                kpoints.store()
+
+                return kpoints
+
+            def get_pw_calculation(self, pw_structure, pw_parameters, pw_kpoint):
+
+                params = self.get_parameters()
+
+                pw_codename            = params['pw_codename']
+                num_machines           = params['num_machines']
+                num_mpiprocs_per_machine   = params['num_mpiprocs_per_machine']
+                max_wallclock_seconds  = params['max_wallclock_seconds']
+                pseudo_family          = params['pseudo_family']
+
+                code = Code.get_from_string(pw_codename)
+                computer = code.get_remote_computer()
+
+                QECalc = CalculationFactory('quantumespresso.pw')
+
+                calc = QECalc(computer=computer)
+                calc.set_max_wallclock_seconds(max_wallclock_seconds)
+                calc.set_resources({"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
+                calc.store()
+
+                calc.use_code(code)
+
+                calc.use_structure(pw_structure)
+                calc.use_pseudos_from_family(pseudo_family)
+                calc.use_parameters(pw_parameters)
+                calc.use_kpoints(pw_kpoint)
+
+                return calc
+
+
+            ## ===============================================
+            ##    Workflow steps
+            ## ===============================================
+
+            @Workflow.step
+            def start(self):
+
+                params = self.get_parameters()
+                x_material             = params['x_material']
+
+                self.append_to_report(x_material+"Ti03 EOS started")
+                self.next(self.eos)
+
+            @Workflow.step
+            def eos(self):
+
+                from aiida.orm import Code, Computer, CalculationFactory
+                import numpy as np
+
+                params = self.get_parameters()
+
+                x_material             = params['x_material']
+                starting_alat          = params['starting_alat']
+                alat_steps             = params['alat_steps']
+
+
+                a_sweep = np.linspace(starting_alat*0.85,starting_alat*1.15,alat_steps).tolist()
             
             aiidalogger.info("Storing a_sweep as "+str(a_sweep))
             self.add_attribute('a_sweep',a_sweep)
@@ -476,7 +476,7 @@ aside to the final optimal cell parameter value.
                 
             self.next(self.optimize)
             
-        @Workflow.step  
+        @Workflow.step
         def optimize(self):
             
             from aiida.orm.data.parameter import ParameterData
@@ -523,7 +523,7 @@ aside to the final optimal cell parameter value.
             
             self.next(self.final_step)
          
-        @Workflow.step   
+        @Workflow.step
         def final_step(self):
             
             from aiida.orm.data.parameter import ParameterData
@@ -574,7 +574,7 @@ this case the support functions are reported first, under the ``Object generator
 
 * **final_step** In this step the main result is collected and stored. Parameters and attributes are retrieved, a new entry in the report is stored
   pointing to the optimal alat and to the final energy of the structure. Finally the calculation is added to the workflow results and the ``exit``
-  step is chained for execution.  
+  step is chained for execution.
 
 * **get_pw_calculation (get_kpoints, get_pw_parameters, get_structure)** As you noticed to let the code clean all the functions needed to generate
   AiiDA Calculation objects have been factored in the utility functions. These functions are highly specific for the task needed, and unrelated
@@ -615,7 +615,7 @@ structures. This covers almost all the workflow engine's features implemented in
 
 Thanks to their modular structure a user can write task-specific workflows very easly. An example is the EOS before, or an energy
 convergence procedure to find optimal cutoffs, or any other necessity the user can code. These self contained workflows can easily become
-a library of result-oriented scripts that a user would be happy to reuse in several ways. This is exactly where sub-workflows come in handy.    
+a library of result-oriented scripts that a user would be happy to reuse in several ways. This is exactly where sub-workflows come in handy.
 
 Workflows, in an abstract sense, are in fact calculations, that accept as input some parameters and that produce results as output. 
 The way this calculations are handled is competely transparent for the user and the engine, and if a workflow could launch other 
@@ -627,127 +627,127 @@ entire workflow tree will be halted, exactly as when a calculation fails).
 To introduce this function we analyze our last example, where the WorkflowXTiO3_EOS is used as a sub workflow. The general idea of this
 new workflow is simple: if we're now able to compute the EOS of any XTiO3 structure we can build a workflow to loop among several X 
 materials, obtain the relaxed structure for each material and run some more sophisticated calculation. In this case we'll compute
-phonon vibrational frequncies for some XTiO3 materials, namely Ba, Sr and Pb.  
+phonon vibrational frequncies for some XTiO3 materials, namely Ba, Sr and Pb.
 
 .. code-block:: python
   :linenos:
 
-    ## ===============================================
-    ##    WorkflowXTiO3
-    ## ===============================================
-    
-    class WorkflowXTiO3(Workflow):
-        
-        def __init__(self,**kwargs):
-            
-            super(WorkflowXTiO3, self).__init__(**kwargs)
-
         ## ===============================================
-        ##    Calculations generators
+        ##    WorkflowXTiO3
         ## ===============================================
-        
-        def get_ph_parameters(self):
-            
-            parameters = ParameterData(dict={
-                'INPUTPH': {
-                    'tr2_ph' : 1.0e-8,
-                    'epsil' : True,
-                    'ldisp' : True,
-                    'nq1' : 1,
-                    'nq2' : 1,
-                    'nq3' : 1,
-                    }}).store()
-                    
-            return parameters
-                
-        def get_ph_calculation(self, pw_calc, ph_parameters):
-            
-            params = self.get_parameters()
-            
-            ph_codename            = params['ph_codename']
-            num_machines           = params['num_machines']
-            num_mpiprocs_per_machine   = params['num_mpiprocs_per_machine']
-            max_wallclock_seconds  = params['max_wallclock_seconds']
-            
-            code = Code.get_from_string(ph_codename)
-            computer = code.get_remote_computer()
-            
-            QEPhCalc = CalculationFactory('quantumespresso.ph')
-            calc = QEPhCalc(computer=computer)
-            
-            calc.set_max_wallclock_seconds(max_wallclock_seconds) # 30 min
-            calc.set_resources({"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
-            calc.store()
-            
-            calc.use_parameters(ph_parameters)
-            calc.use_code(code)
-            calc.use_parent_calculation(pw_calc)
-            
-            return calc
-        
-        ## ===============================================
-        ##    Workflow steps
-        ## ===============================================
-        
-        @Workflow.step
-        def start(self):
-            
-            params = self.get_parameters()
-            elements_alat = [('Ba',4.0),('Sr', 3.89), ('Pb', 3.9)]
-            
-            for x in elements_alat:
-                
-                params.update({'x_material':x[0]})
-                params.update({'starting_alat':x[1]})
-                
-                aiidalogger.info("Launching workflow WorkflowXTiO3_EOS for {0} with alat {1}".format(x[0],x[1]))
-                
-                w = WorkflowXTiO3_EOS(params=params)
-                w.start()
-                self.attach_workflow(w)
-            
-            self.next(self.run_ph)
-            
-        @Workflow.step
-        def run_ph(self):
-            
-            # Get calculations
-            sub_wfs = self.get_step(self.start).get_sub_workflows()
-            
-            for sub_wf in sub_wfs:
-                
-                # Retrieve the pw optimized calculation
-                pw_calc = sub_wf.get_step("optimize").get_calculations()[0]
-                
-                aiidalogger.info("Launching PH for PW {0}".format(pw_calc.get_job_id()))
-                ph_calc = self.get_ph_calculation(pw_calc, self.get_ph_parameters())
-                self.attach_calculation(ph_calc)
-                
-            self.next(self.final_step)
-        
-        @Workflow.step
-        def final_step(self):
-            
-            #self.append_to_report(x_material+"Ti03 EOS started")
-            from aiida.orm.data.parameter import ParameterData
-            import aiida.tools.physics as ps
-            
-            params = self.get_parameters()
-            
-            # Get calculations
-            run_ph_calcs = self.get_step_calculations(self.run_ph) #.get_calculations()
-            
-            for c in run_ph_calcs:
-                dm = c.get_outputs(type=ParameterData)[0].get_dict()['dynamical_matrix_1']
-                self.append_to_report("Point q: {0} Frequencies: {1}".format(dm['q_point'],dm['frequencies']))
-            
-            self.next(self.exit)
+
+        class WorkflowXTiO3(Workflow):
+
+            def __init__(self,**kwargs):
+
+                super(WorkflowXTiO3, self).__init__(**kwargs)
+
+            ## ===============================================
+            ##    Calculations generators
+            ## ===============================================
+
+            def get_ph_parameters(self):
+
+                parameters = ParameterData(dict={
+                    'INPUTPH': {
+                        'tr2_ph' : 1.0e-8,
+                        'epsil' : True,
+                        'ldisp' : True,
+                        'nq1' : 1,
+                        'nq2' : 1,
+                        'nq3' : 1,
+                        }}).store()
+
+                return parameters
+
+            def get_ph_calculation(self, pw_calc, ph_parameters):
+
+                params = self.get_parameters()
+
+                ph_codename            = params['ph_codename']
+                num_machines           = params['num_machines']
+                num_mpiprocs_per_machine   = params['num_mpiprocs_per_machine']
+                max_wallclock_seconds  = params['max_wallclock_seconds']
+
+                code = Code.get_from_string(ph_codename)
+                computer = code.get_remote_computer()
+
+                QEPhCalc = CalculationFactory('quantumespresso.ph')
+                calc = QEPhCalc(computer=computer)
+
+                calc.set_max_wallclock_seconds(max_wallclock_seconds) # 30 min
+                calc.set_resources({"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
+                calc.store()
+
+                calc.use_parameters(ph_parameters)
+                calc.use_code(code)
+                calc.use_parent_calculation(pw_calc)
+
+                return calc
+
+            ## ===============================================
+            ##    Workflow steps
+            ## ===============================================
+
+            @Workflow.step
+            def start(self):
+
+                params = self.get_parameters()
+                elements_alat = [('Ba',4.0),('Sr', 3.89), ('Pb', 3.9)]
+
+                for x in elements_alat:
+
+                    params.update({'x_material':x[0]})
+                    params.update({'starting_alat':x[1]})
+
+                    aiidalogger.info("Launching workflow WorkflowXTiO3_EOS for {0} with alat {1}".format(x[0],x[1]))
+
+                    w = WorkflowXTiO3_EOS(params=params)
+                    w.start()
+                    self.attach_workflow(w)
+
+                self.next(self.run_ph)
+
+            @Workflow.step
+            def run_ph(self):
+
+                # Get calculations
+                sub_wfs = self.get_step(self.start).get_sub_workflows()
+
+                for sub_wf in sub_wfs:
+
+                    # Retrieve the pw optimized calculation
+                    pw_calc = sub_wf.get_step("optimize").get_calculations()[0]
+
+                    aiidalogger.info("Launching PH for PW {0}".format(pw_calc.get_job_id()))
+                    ph_calc = self.get_ph_calculation(pw_calc, self.get_ph_parameters())
+                    self.attach_calculation(ph_calc)
+
+                self.next(self.final_step)
+
+            @Workflow.step
+            def final_step(self):
+
+                #self.append_to_report(x_material+"Ti03 EOS started")
+                from aiida.orm.data.parameter import ParameterData
+                import aiida.tools.physics as ps
+
+                params = self.get_parameters()
+
+                # Get calculations
+                run_ph_calcs = self.get_step_calculations(self.run_ph) #.get_calculations()
+
+                for c in run_ph_calcs:
+                    dm = c.get_outputs(type=ParameterData)[0].get_dict()['dynamical_matrix_1']
+                    self.append_to_report("Point q: {0} Frequencies: {1}".format(dm['q_point'],dm['frequencies']))
+
+                self.next(self.exit)
 
 
-Most of the code is now simple adaptation of previous examples, so we're going to comment only the most relevant differences where
-workflow chaining plays an important role.
+    Most of the code is now simple adaptation of previous examples, so we're going to comment only the most relevant differences where
+    workflow chaining plays an important role.
 
-* **start** This workflow accepts the same input as the WorkflowXTiO3_EOS, but right at the beginning the workflow a list of X materials
+    * **start** This workflow accepts the same input as the WorkflowXTiO3_EOS, but right at the beginning the workflow a list of X materials
   is defined, with their respective initial alat. This list is iterated and for each material a new Workflow is both generated, started and
   attached to the step. At the end ``run_ph`` is chained as the following step.
 
@@ -765,3 +765,38 @@ To launch this new workflow we have only to add a simple entry in the previous p
   
  
 
+Compatibility with new workflows
+++++++++++++++++++++++++++++++++
+
+As part of the deprecation process of the old workflows to ease the transition we
+support the ability to launch old workflows from :class:`~aiida.work.workchain.Workchain` s.
+The :class:`~aiida.work.workchain.ToContext` object can be used in conjunction
+with :class:`~aiida.work.run.legacy_workflow` which takes a legacy workflow pk
+and builds an object that tells :class:`~aiida.work.workchain.ToContext` how to wait for it to be done and
+store it in the context on completion.  An example:
+
+.. code-block:: python
+    :linenos:
+
+    from aiida.work.workchain import WorkChain, ToContext, Outputs
+
+    class MyWf(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super(MyWf, cls).define(spec)
+            spec.outline(cls.step1, cls.step2)
+
+        def step1(self):
+            wf = OldEquationOfState()
+            wf.start()
+            return ToContext(eos=legacy_workflow(wf.pk))
+
+        def step2(self):
+            # Now self.ctx.eos contains the terminated workflow
+            pass
+
+
+similarly if you just want the outputs of an old workflow rather than the
+workflow object itself replace line 12 with::
+
+    return ToContext(eos=Outputs(legacy_workflow(wf.pk)))

@@ -28,7 +28,27 @@ RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
 
 def legacy_workflow(pk):
     """
-    Create a :class:`.RunningInfo` object for a legacy workflow
+    Create a :class:`.RunningInfo` object for a legacy workflow.
+
+    This can be used in conjunction with :class:`aiida.work.workchain.ToContext`
+    as follows:
+
+    >>> from aiida.work.workchain import WorkChain, ToContext, Outputs
+    >>>
+    >>> class MyWf(WorkChain):
+    >>>     @classmethod
+    >>>     def define(cls, spec):
+    >>>         super(MyWf, cls).define(spec)
+    >>>         spec.outline(cls.step1, cls.step2)
+    >>>
+    >>>     def step1(self):
+    >>>         wf = OldEquationOfState()
+    >>>         wf.start()
+    >>>         return ToContext(eos=legacy_workflow(wf.pk))
+    >>>
+    >>>     def step2(self):
+    >>>         # Now self.ctx.eos contains the terminated workflow
+    >>>         pass
 
     :param pk: The workflow pk
     :type pk: int

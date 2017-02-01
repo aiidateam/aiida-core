@@ -31,7 +31,7 @@ class PwInputFile(object):
         pairs. The namelists will always be upper-case keys, while the parameter
         keys will always be lower-case.
 
-        For example: ::
+        For example::
 
             {"CONTROL": {"calculation": "bands",
                          "prefix": "al",
@@ -57,7 +57,7 @@ class PwInputFile(object):
               (**Note:** True <--> Fixed, as defined in the
               ``BasePwCpInputGenerator._if_pos`` method)
 
-        For example: ::
+        For example::
 
             {'units': 'bohr',
              'names': ['C', 'O'],
@@ -73,7 +73,7 @@ class PwInputFile(object):
               None
             * cell: 3x3 list with lattice vectors as rows
 
-        For example: ::
+        For example::
 
             {'units': 'angstrom',
              'cell': [[16.9, 0.0, 0.0],
@@ -100,7 +100,7 @@ class PwInputFile(object):
               to the current AiiDa convention.
             
 
-        Examples: ::
+        Examples::
 
             {'type': 'crystal',
              'points': [[0.125,  0.125,  0.0],
@@ -123,7 +123,7 @@ class PwInputFile(object):
             * pseudo_file_names: list of the pseudopotential file names for the
               atoms in 'names' (case as-is)
 
-        Example: ::
+        Example::
 
             {'names': ['Li', 'O', 'Al', 'Si'],
              'masses': [6.941,  15.9994, 26.98154, 28.0855],
@@ -418,7 +418,7 @@ def parse_namelists(txt):
         namelists will always be upper-case keys, while the parameter keys will
         always be lower-case.
 
-        For example: ::
+        For example::
 
             {"CONTROL": {"calculation": "bands",
                          "prefix": "al",
@@ -433,7 +433,6 @@ def parse_namelists(txt):
                         "ntyp": 1}
             }
 
-    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -494,7 +493,7 @@ def parse_atomic_positions(txt):
               (**Note:** True <--> Fixed, as defined in the
               ``BasePwCpInputGenerator._if_pos`` method)
 
-        For example: ::
+        For example::
 
             {'units': 'bohr',
              'names': ['C', 'O'],
@@ -504,7 +503,6 @@ def parse_atomic_positions(txt):
                               [True, True, True]]}
 
 
-    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -618,7 +616,6 @@ def parse_cell_parameters(txt):
            or 'a' is set in &SYSTEM.
 
     :param txt: A single string containing the QE input text to be parsed.
-    :type txt: str
 
     :returns:
         A dictionary (if CELL_PARAMETERS is present; else: None) with
@@ -627,14 +624,13 @@ def parse_cell_parameters(txt):
               None
             * cell: 3x3 list with lattice vectors as rows
 
-        For example: ::
+        For example::
 
             {'units': 'angstrom',
              'cell': [[16.9, 0.0, 0.0],
                       [-2.6, 8.0, 0.0],
                       [-2.6, -3.5, 7.2]]}
 
-    :rtype: dict or None
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -686,7 +682,6 @@ def parse_k_points(txt):
            QE default.
 
     :param txt: A single string containing the QE input text to be parsed.
-    :type txt: str
 
     :returns:
         A dictionary containing
@@ -708,7 +703,7 @@ def parse_k_points(txt):
               to the current AiiDa convention.
 
 
-        Examples: ::
+        Examples::
 
             {'type': 'crystal',
              'points': [[0.125,  0.125,  0.0],
@@ -722,7 +717,6 @@ def parse_k_points(txt):
 
             {'type': 'gamma'}
 
-    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -800,7 +794,7 @@ def parse_atomic_species(txt):
             * pseudo_file_names: list of the pseudopotential file names for the
               atoms in 'names' (case as-is)
 
-        Example: ::
+        Example::
 
             {'names': ['Li', 'O', 'Al', 'Si'],
              'masses': [6.941,  15.9994, 26.98154, 28.0855],

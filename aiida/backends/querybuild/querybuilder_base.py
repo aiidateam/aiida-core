@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
+"""
+The general functionalities that all querybuilders need to have
+are found in this module.
+
+:func:`AbstractQueryBuilder` is the abstract class for QueryBuilder classes.
+Subclasses need to be written for *every* schema/backend implemented
+in backends.
+"""
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
-
-"""
-The general functionalities that all querybuilders need to have
-are found in this module.
-:func:`AbstractQueryBuilder` is the abstract class for QueryBuilder classes.
-Subclasses need to be written for *every* schema/backend implemented
-in backends.
-
-"""
 
 import copy
 import datetime
@@ -30,12 +29,6 @@ from aiida.common.exceptions import (
 from aiida.common.utils import flatten_list
 from aiida.common.hashing import make_hash
 
-
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 class AbstractQueryBuilder(object):
     """
@@ -59,14 +52,14 @@ class AbstractQueryBuilder(object):
         """
         Instantiates a QueryBuilder instance
 
-        :param bool with_dbpath: 
-            Whether to use the DbPath table (if existing) 
+        :param with_dbpath: 
+            Boolean, whether to use the DbPath table (if existing) 
             to query ancestor-descendant relations
-        :param list path: A list of the vertices to traverse
-        :param dict filters: The filters to apply
-        :param dict project: The projections to apply
-        :param int limit: Limit the number of rows
-        :param dict order_by: How to order the results
+        :param path: A list of the vertices to traverse
+        :param filters: The filters to apply (a dictionary)
+        :param project: The projections to apply (a dictionary)
+        :param limit: Limit the number of rows (an integer)
+        :param order_by: How to order the results (a dictionary)
         """
 
         # A list storing the path being traversed by the query
@@ -337,15 +330,15 @@ class AbstractQueryBuilder(object):
         :param filters:
             Filters to apply for this vertice.
             See usage examples for details.
-        :param bool autotag:
+        :param autotag:
             Whether to search for a unique tag,
             (default **False**). If **True**, will find a unique tag.
             Cannot be set to **True** if tag is specified.
-        :param bool subclassing:
+        :param subclassing:
             Whether to include subclasses of the given class
             (default **True**).
             E.g. Specifying JobCalculation will include PwCalculation
-        :param bool outerjoin:
+        :param outerjoin:
             If True, (default is False), will do a left outerjoin
             instead of an inner join
 
@@ -964,7 +957,7 @@ class AbstractQueryBuilder(object):
         """
         Set the limit (nr of rows to return)
 
-        :param int limit: integers of nr of rows to return
+        :param limit: integers of nr of rows to return
         """
 
         if limit is not None:
@@ -981,7 +974,7 @@ class AbstractQueryBuilder(object):
         then *offset* rows are skipped before starting to count the *limit* rows
         that are returned.
 
-        :param int offset: integers of nr of rows to skip
+        :param offset: integers of nr of rows to skip
         """
         if offset is not None:
             if not isinstance(offset, int):
@@ -1242,13 +1235,13 @@ class AbstractQueryBuilder(object):
     @staticmethod
     def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship):
         """
-        :param list entities_cls_joined:
+        :param entities_cls_joined:
             A list (tuple) of the aliased class passed as joined_entity and
             the ormclass that was expected
-        :param list entities_cls_joined:
+        :param entities_cls_joined:
             A list (tuple) of the aliased class passed as entity_to_join and
             the ormclass that was expected
-        :param str relationship:
+        :param relationship:
             The relationship between the two entities to make the Exception
             comprehensible
         """
@@ -2196,7 +2189,7 @@ class AbstractQueryBuilder(object):
         http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
 
 
-        :param int batch_size:
+        :param batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
 
@@ -2211,7 +2204,7 @@ class AbstractQueryBuilder(object):
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
 
-        :param int batch_size:
+        :param batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
             Leave the default (*None*) if speed is not critical or if you don't know
@@ -2229,7 +2222,7 @@ class AbstractQueryBuilder(object):
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
 
-        :param int batch_size:
+        :param batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
             Leave the default (*None*) if speed is not critical or if you don't know
@@ -2287,7 +2280,7 @@ class AbstractQueryBuilder(object):
         http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
 
 
-        :param int batch_size:
+        :param batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
 

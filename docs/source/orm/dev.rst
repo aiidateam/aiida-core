@@ -139,17 +139,18 @@ Quantum Espresso - pw.x
 .. automodule:: aiida.orm.calculation.job.quantumespresso.helpers
    :members:
 
-Quantum Espresso - Dos
-----------------------
-.. automodule:: aiida.orm.calculation.job.quantumespresso.dos
-   :members:
-   :special-members: __init__
+.. NOTE: NEXT TWO PACKAGES NOT YET MERGED
+.. Quantum Espresso - Dos
+.. ----------------------
+.. .. automodule:: aiida.orm.calculation.job.quantumespresso.dos
+..    :members:
+..    :special-members: __init__
 
-Quantum Espresso - Projwfc
---------------------------
-.. automodule:: aiida.orm.calculation.job.quantumespresso.projwfc
-   :members:
-   :special-members: __init__
+.. Quantum Espresso - Projwfc
+.. --------------------------
+.. .. automodule:: aiida.orm.calculation.job.quantumespresso.projwfc
+..    :members:
+..    :special-members: __init__
 
 Quantum Espresso - PW immigrant
 -------------------------------
@@ -157,11 +158,12 @@ Quantum Espresso - PW immigrant
    :members:
    :special-members: __init__
 
-Wannier90  - Wannier90
-++++++++++++++++++++++
-.. automodule:: aiida.orm.calculation.job.wannier90
-   :members:
-   :special-members: __init__
+.. NOTE: Wannier90 plugin not yet merged
+.. Wannier90  - Wannier90
+.. ++++++++++++++++++++++
+.. .. automodule:: aiida.orm.calculation.job.wannier90
+..    :members:
+..    :special-members: __init__
 
 TemplateReplacer
 ++++++++++++++++

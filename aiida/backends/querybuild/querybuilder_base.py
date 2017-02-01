@@ -5,7 +5,6 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
-
 """
 The general functionalities that all querybuilders need to have
 are found in this module.
@@ -21,21 +20,20 @@ import warnings
 from abc import abstractmethod, ABCMeta
 from inspect import isclass as inspect_isclass
 from sa_init import (
-        aliased, and_, or_, not_, func as sa_func,
-        InstrumentedAttribute, Cast, ImmutableColumnCollection
-    )
+    aliased, and_, or_, not_, func as sa_func,
+    InstrumentedAttribute, Cast, ImmutableColumnCollection
+)
 from aiida.common.exceptions import (
-        InputValidationError, DbContentError, MissingPluginError
-    )
+    InputValidationError, DbContentError, MissingPluginError
+)
 from aiida.common.utils import flatten_list
 from aiida.common.hashing import make_hash
-
-
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
+
 
 class AbstractQueryBuilder(object):
     """
@@ -50,10 +48,8 @@ class AbstractQueryBuilder(object):
 
     __metaclass__ = ABCMeta
 
-
     _EDGE_TAG_DELIM = '--'
     _VALID_PROJECTION_KEYS = ('func', 'cast')
-
 
     def __init__(self, *args, **kwargs):
         """
@@ -99,9 +95,9 @@ class AbstractQueryBuilder(object):
         # {PwCalculation:'PwCalculation', StructureData:'StructureData'}
         if args:
             raise InputValidationError(
-                    "Arguments are not accepted\n"
-                    "when instantiating a QueryBuilder instance"
-                )
+                "Arguments are not accepted\n"
+                "when instantiating a QueryBuilder instance"
+            )
 
         self._cls_to_tag_map = {}
         self._hash = None
@@ -111,13 +107,11 @@ class AbstractQueryBuilder(object):
         if self._with_dbpath:
             self._prepare_with_dbpath()
 
-
-
         path = kwargs.pop('path', [])
         if not isinstance(path, (tuple, list)):
             raise InputValidationError(
-                    "Path needs to be a tuple or a list"
-                )
+                "Path needs to be a tuple or a list"
+            )
         for path_spec in path:
             try:
                 self.append(**path_spec)
@@ -145,16 +139,14 @@ class AbstractQueryBuilder(object):
         if order_spec:
             self.order_by(order_spec)
 
-
         if kwargs:
             valid_keys = ('path', 'filters', 'project', 'limit', 'order_by', 'with_dbpath')
             raise InputValidationError(
-                    "Received additional keywords: {}"
-                    "\nwhich I cannot process"
-                    "\nValid keywords are: {}"
-                    "".format(kwargs.keys(), valid_keys)
+                "Received additional keywords: {}"
+                "\nwhich I cannot process"
+                "\nValid keywords are: {}"
+                "".format(kwargs.keys(), valid_keys)
             )
-
 
     def __str__(self):
         from aiida.common.setup import get_profile_config
@@ -171,13 +163,13 @@ class AbstractQueryBuilder(object):
             from sqlalchemy.dialects import postgresql as mydialect
         else:
             raise ConfigurationError("Unknown DB engine: {}".format(
-                    engine))
+                engine))
 
         que = self.get_query()
         return str(que.statement.compile(
-                compile_kwargs={"literal_binds": True},
-                dialect=mydialect.dialect()
-            )
+            compile_kwargs={"literal_binds": True},
+            dialect=mydialect.dialect()
+        )
         )
 
     @abstractmethod
@@ -192,7 +184,6 @@ class AbstractQueryBuilder(object):
 
         """
         pass
-
 
     def _get_ormclass(self, cls, ormclasstype):
         """
@@ -243,10 +234,10 @@ class AbstractQueryBuilder(object):
                 ormclass = self.User
             else:
                 raise InputValidationError(
-                        "\n\n\n"
-                        "I do not know what to do with {}"
-                        "\n\n\n".format(cls)
-                    )
+                    "\n\n\n"
+                    "I do not know what to do with {}"
+                    "\n\n\n".format(cls)
+                )
         # If it is not a class
         else:
             if ormclasstype.lower() == 'group':
@@ -267,9 +258,9 @@ class AbstractQueryBuilder(object):
                 # that matches exactly the _plugin_type_string
                 # of a node class
                 from aiida.common.pluginloader import (
-                        from_type_to_pluginclassname,
-                        load_plugin
-                    )
+                    from_type_to_pluginclassname,
+                    load_plugin
+                )
                 ormclass = self.Node
                 try:
                     pluginclassname = from_type_to_pluginclassname(ormclasstype)
@@ -291,7 +282,6 @@ class AbstractQueryBuilder(object):
                         "{}".format(ormclasstype, e)
                     )
 
-
                 ormclasstype = PluginClass._plugin_type_string
                 query_type_string = PluginClass._query_type_string
 
@@ -304,7 +294,6 @@ class AbstractQueryBuilder(object):
             tag = '{}_{}'.format(basetag, i)
             if tag not in tags_used:
                 return tag
-
 
     def _get_tag_from_type(self, ormclasstype):
         """
@@ -319,12 +308,11 @@ class AbstractQueryBuilder(object):
         """
         return ormclasstype.rstrip('.').split('.')[-1]
 
-
     def append(self, cls=None, type=None, tag=None,
-                autotag=False, filters=None, project=None, subclassing=True,
-                edge_tag=None, edge_filters=None, edge_project=None,
-                outerjoin=False, **kwargs
-        ):
+               autotag=False, filters=None, project=None, subclassing=True,
+               edge_tag=None, edge_filters=None, edge_project=None,
+               outerjoin=False, **kwargs
+               ):
         """
         Any iterative procedure to build the path for a graph query
         needs to invoke this method to append to the path.
@@ -370,19 +358,19 @@ class AbstractQueryBuilder(object):
         # the class or the type (not both)
         if cls and type:
             raise InputValidationError(
-                    "\n\n\n"
-                    "You cannot specify both a \n"
-                    "class ({})\n"
-                    "and a type ({})\n\n"
-                    "".format(cls, type)
-                )
+                "\n\n\n"
+                "You cannot specify both a \n"
+                "class ({})\n"
+                "and a type ({})\n\n"
+                "".format(cls, type)
+            )
 
         if not (cls or type):
             raise InputValidationError(
-                    "\n\n"
-                    "You need to specify either a class or a type"
-                    "\n\n"
-                )
+                "\n\n"
+                "You need to specify either a class or a type"
+                "\n\n"
+            )
 
         # Let's check if it is a valid class or type
         if cls:
@@ -465,15 +453,12 @@ class AbstractQueryBuilder(object):
 
             else:
                 self._cls_to_tag_map[cls] = tag
-            # TODO check with duplicate classes
-
+                # TODO check with duplicate classes
 
         ######################## ALIASING ##############################
         alias = aliased(ormclass)
         self._aliased_path.append(alias)
         self._tag_to_alias_map[tag] = alias
-
-
 
         ################# FILTERS ######################################
 
@@ -488,10 +473,9 @@ class AbstractQueryBuilder(object):
         # The order has to be first _add_type_filter and then add_filter.
         # If the user adds a query on the type column, it overwrites what I did
 
-        #if the user specified a filter, add it:
+        # if the user specified a filter, add it:
         if filters is not None:
             self.add_filter(tag, filters)
-
 
         ##################### PROJECTIONS ##############################
         self._projections[tag] = []
@@ -499,47 +483,43 @@ class AbstractQueryBuilder(object):
         if project is not None:
             self.add_projection(tag, project)
 
-
-
-
         ################## JOINING #####################################
 
         # Get the functions that are implemented:
         spec_to_function_map = self._get_function_map().keys()
 
-
         joining_keyword = kwargs.pop('joining_keyword', None)
         joining_value = kwargs.pop('joining_value', None)
-        #~ reverse_linklabel = kwargs.pop('reverse_linklabel', None)
+        # ~ reverse_linklabel = kwargs.pop('reverse_linklabel', None)
 
 
         for key, val in kwargs.items():
             if key not in spec_to_function_map:
                 raise InputValidationError(
-                        "\n\n\n"
-                        "{} is not a valid keyword "
-                        "for joining specification\n"
-                        "Valid keywords are:\n"
-                        "{}\n\n\n".format(
-                                key,
-                                spec_to_function_map+[
-                                    'cls', 'type', 'tag',
-                                    'autotag', 'filters', 'project'
-                                ]
-                            )
+                    "\n\n\n"
+                    "{} is not a valid keyword "
+                    "for joining specification\n"
+                    "Valid keywords are:\n"
+                    "{}\n\n\n".format(
+                        key,
+                        spec_to_function_map + [
+                            'cls', 'type', 'tag',
+                            'autotag', 'filters', 'project'
+                        ]
                     )
+                )
             elif joining_keyword:
                 raise InputValidationError(
-                        "\n\n\n"
-                        "You already specified joining specification {}\n"
-                        "But you now also want to specify {}"
-                        "\n\n\n".format(joining_keyword, key)
-                    )
+                    "\n\n\n"
+                    "You already specified joining specification {}\n"
+                    "But you now also want to specify {}"
+                    "\n\n\n".format(joining_keyword, key)
+                )
             else:
                 joining_keyword = key
                 joining_value = self._get_tag_from_specification(val)
         # the default is that this vertice is 'output_of' the previous one
-        if joining_keyword is None and len(self._path)>0:
+        if joining_keyword is None and len(self._path) > 0:
             joining_keyword = 'output_of'
             joining_value = self._path[-1]['tag']
 
@@ -579,10 +559,7 @@ class AbstractQueryBuilder(object):
                     # ._join_ancestor... _join_descendant
                     pass
 
-
-
             if aliased_edge is not None:
-
 
                 # Ok, so here we are joining through a m2m relationship,
                 # e.g. input or output.
@@ -609,18 +586,17 @@ class AbstractQueryBuilder(object):
                 if edge_project is not None:
                     self.add_projection(edge_tag, edge_project)
 
-
         ################### EXTENDING THE PATH #################################
 
 
         path_extension = dict(
-                type=ormclasstype, tag=tag, joining_keyword=joining_keyword,
-                joining_value=joining_value, outerjoin=outerjoin,
-            )
+            type=ormclasstype, tag=tag, joining_keyword=joining_keyword,
+            joining_value=joining_value, outerjoin=outerjoin,
+        )
         if aliased_edge is not None:
             path_extension.update(dict(edge_tag=edge_tag))
-            #~ if reverse_linktag is not None:
-                #~ path_extension.update(dict(reverse_linktag=reverse_linktag))
+            # ~ if reverse_linktag is not None:
+            # ~ path_extension.update(dict(reverse_linktag=reverse_linktag))
 
         self._path.append(path_extension)
         return self
@@ -671,21 +647,21 @@ class AbstractQueryBuilder(object):
 
         for order_spec in order_by:
             if not isinstance(order_spec, dict):
-                    raise InputValidationError(
-                        "Invalid input for order_by statement: {}\n"
-                        "I am expecting a dictionary ORMClass,"
-                        "[columns to sort]"
-                        "".format(order_spec)
-                    )
+                raise InputValidationError(
+                    "Invalid input for order_by statement: {}\n"
+                    "I am expecting a dictionary ORMClass,"
+                    "[columns to sort]"
+                    "".format(order_spec)
+                )
             _order_spec = {}
-            for tagspec,items_to_order_by in order_spec.items():
+            for tagspec, items_to_order_by in order_spec.items():
                 if not isinstance(items_to_order_by, (tuple, list)):
                     items_to_order_by = [items_to_order_by]
                 tag = self._get_tag_from_specification(tagspec)
                 _order_spec[tag] = []
                 for item_to_order_by in items_to_order_by:
                     if isinstance(item_to_order_by, basestring):
-                        item_to_order_by = {item_to_order_by:{}}
+                        item_to_order_by = {item_to_order_by: {}}
                     elif isinstance(item_to_order_by, dict):
                         pass
                     else:
@@ -699,7 +675,7 @@ class AbstractQueryBuilder(object):
                         # tranform to {'node':{'id':{'order':'asc'}}}
 
                         if isinstance(orderspec, basestring):
-                            this_order_spec = {'order':orderspec}
+                            this_order_spec = {'order': orderspec}
                         elif isinstance(orderspec, dict):
                             this_order_spec = orderspec
                         else:
@@ -742,11 +718,10 @@ class AbstractQueryBuilder(object):
             The specifications for the filter, has to be a dictionary
         """
 
-
         if not isinstance(filter_spec, dict):
             raise InputValidationError(
-                    "Filters have to be passed as dictionaries"
-                )
+                "Filters have to be passed as dictionaries"
+            )
 
         tag = self._get_tag_from_specification(tagspec)
         self._filters[tag].update(filter_spec)
@@ -760,11 +735,11 @@ class AbstractQueryBuilder(object):
         tag = self._get_tag_from_specification(tagspec)
 
         if subclassing:
-            node_type_flt = {'like':'{}%'.format(query_type_string)}
+            node_type_flt = {'like': '{}%'.format(query_type_string)}
         else:
-            node_type_flt = {'==':plugin_type_string}
+            node_type_flt = {'==': plugin_type_string}
 
-        self.add_filter(tagspec, {'type':node_type_flt})
+        self.add_filter(tagspec, {'type': node_type_flt})
 
     def add_projection(self, tag_spec, projection_spec):
         """
@@ -800,13 +775,13 @@ class AbstractQueryBuilder(object):
             if isinstance(projection, dict):
                 _thisprojection = projection
             elif isinstance(projection, basestring):
-                _thisprojection = {projection:{}}
+                _thisprojection = {projection: {}}
             else:
                 raise InputValidationError(
                     "Cannot deal with projection specification {}\n"
                     "".format(projection)
                 )
-            for p,spec in _thisprojection.items():
+            for p, spec in _thisprojection.items():
                 if not isinstance(spec, dict):
                     raise InputValidationError(
                         "\nThe value of a key-value pair in a projection\n"
@@ -828,14 +803,13 @@ class AbstractQueryBuilder(object):
             _projections.append(_thisprojection)
         self._projections[tag] = _projections
 
-
     def _get_projectable_entity(self, alias, column_name, attrpath, **entityspec):
 
         if len(attrpath) or column_name in ('attributes', 'extras'):
 
             entity = self._get_projectable_attribute(
-                        alias, column_name, attrpath, **entityspec
-                    )
+                alias, column_name, attrpath, **entityspec
+            )
         else:
             entity = self._get_column(column_name, alias)
         return entity
@@ -853,21 +827,20 @@ class AbstractQueryBuilder(object):
         column_name = projectable_entity_name.split('.')[0]
         attr_key = projectable_entity_name.split('.')[1:]
 
-
         if column_name == '*':
             if func is not None:
                 raise InputValidationError(
-                        "Very sorry, but functions on the aliased class\n"
-                        "(You specified '*')\n"
-                        "will not work!\n"
-                        "I suggest you apply functions on a column, e.g. ('id')\n"
-                    )
+                    "Very sorry, but functions on the aliased class\n"
+                    "(You specified '*')\n"
+                    "will not work!\n"
+                    "I suggest you apply functions on a column, e.g. ('id')\n"
+                )
             self._query = self._query.add_entity(alias)
         else:
             entity_to_project = self._get_projectable_entity(
-                    alias, column_name, attr_key,
-                    cast=cast
-                )
+                alias, column_name, attr_key,
+                cast=cast
+            )
             if func is None:
                 pass
             elif func == 'max':
@@ -878,11 +851,9 @@ class AbstractQueryBuilder(object):
                 entity_to_project = sa_func.count(entity_to_project)
             else:
                 raise InputValidationError(
-                        "\nInvalid function specification {}".format(func)
-                    )
-            self._query =  self._query.add_columns(entity_to_project)
-
-
+                    "\nInvalid function specification {}".format(func)
+                )
+            self._query = self._query.add_columns(entity_to_project)
 
     @abstractmethod
     def _modify_expansions(self, alias, expansions):
@@ -911,27 +882,26 @@ class AbstractQueryBuilder(object):
                 if projectable_entity_name == '**':
                     # Need to expand
                     entity_names = self._modify_expansions(alias, [
-                            str(c).replace(alias.__table__.name+'.','')
-                            for c
-                            in alias.__table__.columns
+                        str(c).replace(alias.__table__.name + '.', '')
+                        for c
+                        in alias.__table__.columns
                         ])
-                    #~ for s in ('attributes', 'extras'):
-                        #~ try:
-                            #~ entity_names.remove(s)
-                        #~ except ValueError:
-                            #~ pass
+                    # ~ for s in ('attributes', 'extras'):
+                    # ~ try:
+                    # ~ entity_names.remove(s)
+                    # ~ except ValueError:
+                    # ~ pass
                 else:
                     entity_names = [projectable_entity_name]
                 for entity_name in entity_names:
                     self._add_to_projections(
-                            alias, entity_name, **extraspec
-                        )
+                        alias, entity_name, **extraspec
+                    )
 
                     self.tag_to_projected_entity_dict[tag][
-                            entity_name
-                        ] = self.nr_of_projections
+                        entity_name
+                    ] = self.nr_of_projections
                     self.nr_of_projections += 1
-
 
     def _get_tag_from_specification(self, specification):
         if isinstance(specification, basestring):
@@ -939,12 +909,12 @@ class AbstractQueryBuilder(object):
                 tag = specification
             else:
                 raise InputValidationError(
-                        "tag {} is not among my known tags\n"
-                        "   My tags are: {}"
-                        "\n\n".format(
-                                specification, self._tag_to_alias_map.keys()
-                            )
+                    "tag {} is not among my known tags\n"
+                    "   My tags are: {}"
+                    "\n\n".format(
+                        specification, self._tag_to_alias_map.keys()
                     )
+                )
         else:
             if specification in self._cls_to_tag_map.keys():
                 tag = self._cls_to_tag_map[specification]
@@ -991,7 +961,6 @@ class AbstractQueryBuilder(object):
         self._offset = offset
         return self
 
-
     @staticmethod
     @abstractmethod
     def _get_session():
@@ -1029,12 +998,11 @@ class AbstractQueryBuilder(object):
             )
         return expr
 
-
     @classmethod
     def _get_filter_expr(
             cls, operator, value, attr_key, is_attribute,
             alias=None, column=None, column_name=None
-        ):
+    ):
         """
         Applies a filter on the alias given.
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -1110,7 +1078,6 @@ class AbstractQueryBuilder(object):
             } # id is not 2
         """
 
-
         expr = None
         if operator.startswith('~'):
             negation = True
@@ -1136,35 +1103,33 @@ class AbstractQueryBuilder(object):
             value_type_set = set([type(i) for i in value])
             if len(value_type_set) > 1:
                 raise InputValidationError(
-                        '{}  contains more than one type'.format(value)
-                    )
+                    "'{}' contains more than one type".format(value)
+                )
             elif len(value_type_set) == 0:
-                raise InputValidationError(
-                        '{}  contains is an empty list'.format(value)
-                    )
+                raise InputValidationError("empty list specified")
         elif operator in ('and', 'or'):
             expressions_for_this_path = []
             for filter_operation_dict in value:
                 for newoperator, newvalue in filter_operation_dict.items():
                     expressions_for_this_path.append(
-                            cls._get_filter_expr(
-                                    newoperator, newvalue,
-                                    attr_key=attr_key, is_attribute=is_attribute,
-                                    alias=alias, column=column,
-                                    column_name=column_name
-                                )
+                        cls._get_filter_expr(
+                            newoperator, newvalue,
+                            attr_key=attr_key, is_attribute=is_attribute,
+                            alias=alias, column=column,
+                            column_name=column_name
                         )
+                    )
             if operator == 'and':
                 expr = and_(*expressions_for_this_path)
             elif operator == 'or':
-                 expr = or_(*expressions_for_this_path)
+                expr = or_(*expressions_for_this_path)
 
         if expr is None:
             if is_attribute:
                 expr = cls._get_filter_expr_from_attributes(
-                        operator, value, attr_key,
-                        column=column, column_name=column_name, alias=alias
-                    )
+                    operator, value, attr_key,
+                    column=column, column_name=column_name, alias=alias
+                )
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
@@ -1178,8 +1143,6 @@ class AbstractQueryBuilder(object):
             return not_(expr)
         return expr
 
-
-
     def _build_filters(self, alias, filter_spec):
         """
         Recurse through the filter specification and apply filter operations.
@@ -1191,11 +1154,11 @@ class AbstractQueryBuilder(object):
         """
         expressions = []
         for path_spec, filter_operation_dict in filter_spec.items():
-            if path_spec in  ('and', 'or', '~or', '~and', '!and', '!or'):
+            if path_spec in ('and', 'or', '~or', '~and', '!and', '!or'):
                 subexpressions = [
                     self._build_filters(alias, sub_filter_spec)
                     for sub_filter_spec in filter_operation_dict
-                ]
+                    ]
                 if path_spec == 'and':
                     expressions.append(and_(*subexpressions))
                 elif path_spec == 'or':
@@ -1219,26 +1182,31 @@ class AbstractQueryBuilder(object):
                         column = None
                     else:
                         raise e
-                #~ is_attribute = bool(attr_key)
+                # ~ is_attribute = bool(attr_key)
                 if not isinstance(filter_operation_dict, dict):
-                    filter_operation_dict = {'==':filter_operation_dict}
-                [
-                    expressions.append(
-                        self._get_filter_expr(
-                            operator, value, attr_key,
-                            is_attribute=is_attribute,
-                            column=column, column_name=column_name,
-                            alias=alias
+                    filter_operation_dict = {'==': filter_operation_dict}
+
+                for operator, value in filter_operation_dict.iteritems():
+                    try:
+                        expressions.append(
+                            self._get_filter_expr(
+                                operator, value, attr_key,
+                                is_attribute=is_attribute,
+                                column=column, column_name=column_name,
+                                alias=alias
+                            )
                         )
-                    )
-                    for operator, value
-                    in filter_operation_dict.items()
-                ]
+                    except InputValidationError as e:
+                        raise InputValidationError(
+                            "filter '{}': {}".format(column_name, e.message)
+                        )
+
         return and_(*expressions)
 
-    #~ @abstractmethod
-    #~ def _build_filters(self, alias, filter_spec):
-        #~ pass
+        # ~ @abstractmethod
+        # ~ def _build_filters(self, alias, filter_spec):
+        # ~ pass
+
     @staticmethod
     def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship):
         """
@@ -1271,28 +1239,27 @@ class AbstractQueryBuilder(object):
                     )
                 )
 
-
     def _join_slaves(self, joined_entity, entity_to_join):
         raise NotImplementedError(
-                "Master - slave relationships are not implemented"
-            )
-        #~ call = aliased(Call)
-        #~ self._query = self._query.join(call,  call.caller_id == joined_entity.id)
-        #~ self._query = self._query.join(
-                #~ entity_to_join,
-                #~ call.called_id == entity_to_join.id
-            #~ )
+            "Master - slave relationships are not implemented"
+        )
+        # ~ call = aliased(Call)
+        # ~ self._query = self._query.join(call,  call.caller_id == joined_entity.id)
+        # ~ self._query = self._query.join(
+        # ~ entity_to_join,
+        # ~ call.called_id == entity_to_join.id
+        # ~ )
 
     def _join_masters(self, joined_entity, entity_to_join):
         raise NotImplementedError(
-                "Master - slave relationships are not implemented"
-            )
-        #~ call = aliased(Call)
-        #~ self._query = self._query.join(call,  call.called_id == joined_entity.id)
-        #~ self._query = self._query.join(
-                #~ entity_to_join,
-                #~ call.caller_id == entity_to_join.id
-            #~ )
+            "Master - slave relationships are not implemented"
+        )
+        # ~ call = aliased(Call)
+        # ~ self._query = self._query.join(call,  call.called_id == joined_entity.id)
+        # ~ self._query = self._query.join(
+        # ~ entity_to_join,
+        # ~ call.caller_id == entity_to_join.id
+        # ~ )
 
     def _join_outputs(self, joined_entity, entity_to_join, aliased_edge, isouterjoin):
         """
@@ -1304,23 +1271,23 @@ class AbstractQueryBuilder(object):
         (**enitity_to_join** is an *output_of* **joined_entity**)
         """
         self._check_dbentities(
-                (joined_entity, self.Node),
-                (entity_to_join, self.Node),
-                'output_of'
-            )
-
-        self._query = self._query.join(
-                aliased_edge,
-                aliased_edge.input_id == joined_entity.id,
-                isouter=isouterjoin
-        ).join(
-                entity_to_join,
-   
-             aliased_edge.output_id == entity_to_join.id,
-                isouter=isouterjoin
+            (joined_entity, self.Node),
+            (entity_to_join, self.Node),
+            'output_of'
         )
 
-    def _join_inputs(self, joined_entity, entity_to_join, aliased_edge,isouterjoin):
+        self._query = self._query.join(
+            aliased_edge,
+            aliased_edge.input_id == joined_entity.id,
+            isouter=isouterjoin
+        ).join(
+            entity_to_join,
+
+            aliased_edge.output_id == entity_to_join.id,
+            isouter=isouterjoin
+        )
+
+    def _join_inputs(self, joined_entity, entity_to_join, aliased_edge, isouterjoin):
         """
         :param joined_entity: The (aliased) ORMclass that is an output
         :param entity_to_join: The (aliased) ORMClass that is an input.
@@ -1331,17 +1298,17 @@ class AbstractQueryBuilder(object):
         """
 
         self._check_dbentities(
-                (joined_entity, self.Node),
-                (entity_to_join, self.Node),
-                'input_of'
-            )
+            (joined_entity, self.Node),
+            (entity_to_join, self.Node),
+            'input_of'
+        )
         self._query = self._query.join(
-                aliased_edge,
-                aliased_edge.output_id == joined_entity.id,
-            ).join(
-                entity_to_join,
-                aliased_edge.input_id == entity_to_join.id,
-                isouter=isouterjoin
+            aliased_edge,
+            aliased_edge.output_id == joined_entity.id,
+        ).join(
+            entity_to_join,
+            aliased_edge.input_id == entity_to_join.id,
+            isouter=isouterjoin
         )
 
     def _join_descendants_recursive(self, joined_entity, entity_to_join, isouterjoin, filter_dict, edge_tag):
@@ -1357,10 +1324,10 @@ class AbstractQueryBuilder(object):
         from sqlalchemy.types import Integer
 
         self._check_dbentities(
-                (joined_entity, self.Node),
-                (entity_to_join, self.Node),
-                'descendant_of_beta'
-            )
+            (joined_entity, self.Node),
+            (entity_to_join, self.Node),
+            'descendant_of_beta'
+        )
 
         link1 = aliased(self.Link)
         link2 = aliased(self.Link)
@@ -1368,49 +1335,47 @@ class AbstractQueryBuilder(object):
         in_recursive_filters = self._build_filters(node1, filter_dict)
 
         walk = select([
-                link1.input_id.label('ancestor_id'),
-                link1.output_id.label('descendant_id'),
-                cast(0, Integer).label('depth'),
-                # Un-commenting the next line will allow to store the path as
-                # an array:
-                #~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
-            ]).select_from(
-                join(
-                    node1, link1, link1.input_id==node1.id
-                )
-            ).where(in_recursive_filters).cte(recursive=True)
+            link1.input_id.label('ancestor_id'),
+            link1.output_id.label('descendant_id'),
+            cast(0, Integer).label('depth'),
+            # Un-commenting the next line will allow to store the path as
+            # an array:
+            # ~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
+        ]).select_from(
+            join(
+                node1, link1, link1.input_id == node1.id
+            )
+        ).where(in_recursive_filters).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
-
         descendants_beta = aliased(aliased_walk.union_all(
             select([
-                    aliased_walk.c.ancestor_id.label('ancestor_id'),
-                    link2.output_id.label('descendant_id'),
-                    (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
-                    #~ (walk.c.path+array([node_aliased.id])).label('path')
-                    #, As above, but if arrays are supported
-                    # This is the way to reconstruct the path (the sequence of nodes traversed)
-                ]).select_from(
-                    join(
-                        aliased_walk,
-                        link2,
-                        link2.input_id == aliased_walk.c.descendant_id,
-                    )
+                aliased_walk.c.ancestor_id.label('ancestor_id'),
+                link2.output_id.label('descendant_id'),
+                (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
+                # ~ (walk.c.path+array([node_aliased.id])).label('path')
+                # , As above, but if arrays are supported
+                # This is the way to reconstruct the path (the sequence of nodes traversed)
+            ]).select_from(
+                join(
+                    aliased_walk,
+                    link2,
+                    link2.input_id == aliased_walk.c.descendant_id,
                 )
-            )) #.alias()
+            )
+        ))  # .alias()
 
         self._tag_to_alias_map[edge_tag] = descendants_beta.c
 
         self._query = self._query.join(
-                descendants_beta,
-                descendants_beta.c.ancestor_id == joined_entity.id
-            ).join(
-                entity_to_join,
-                descendants_beta.c.descendant_id == entity_to_join.id,
-                isouter=isouterjoin
-            )
-
+            descendants_beta,
+            descendants_beta.c.ancestor_id == joined_entity.id
+        ).join(
+            entity_to_join,
+            descendants_beta.c.descendant_id == entity_to_join.id,
+            isouter=isouterjoin
+        )
 
     def _join_ancestors_recursive(self, joined_entity, entity_to_join, isouterjoin, filter_dict, edge_tag):
         """
@@ -1425,10 +1390,10 @@ class AbstractQueryBuilder(object):
         from sqlalchemy.types import Integer
 
         self._check_dbentities(
-                (joined_entity, self.Node),
-                (entity_to_join, self.Node),
-                'descendant_of_beta'
-            )
+            (joined_entity, self.Node),
+            (entity_to_join, self.Node),
+            'descendant_of_beta'
+        )
 
         link1 = aliased(self.Link)
         link2 = aliased(self.Link)
@@ -1436,48 +1401,47 @@ class AbstractQueryBuilder(object):
         in_recursive_filters = self._build_filters(node1, filter_dict)
 
         walk = select([
-                link1.input_id.label('ancestor_id'),
-                link1.output_id.label('descendant_id'),
-                cast(0, Integer).label('depth'),
-                # Un-commenting the next line will allow to store the path as
-                # an array:
-                #~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
-            ]).select_from(
-                join(
-                    node1, link1, link1.output_id==node1.id
-                )
-            ).where(in_recursive_filters).cte(recursive=True)
+            link1.input_id.label('ancestor_id'),
+            link1.output_id.label('descendant_id'),
+            cast(0, Integer).label('depth'),
+            # Un-commenting the next line will allow to store the path as
+            # an array:
+            # ~ array([DbNode.id]).label('path')   #Arrays can only be used with postgres
+        ]).select_from(
+            join(
+                node1, link1, link1.output_id == node1.id
+            )
+        ).where(in_recursive_filters).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
-
         ancestors_recursive = aliased(aliased_walk.union_all(
             select([
-                    link2.input_id.label('ancestor_id'),
-                    aliased_walk.c.descendant_id.label('descendant_id'),
-                    (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
-                    #~ (walk.c.path+array([node_aliased.id])).label('path')
-                    #, As above, but if arrays are supported
-                    # This is the way to reconstruct the path (the sequence of nodes traversed)
-                ]).select_from(
-                    join(
-                        aliased_walk,
-                        link2,
-                        link2.output_id == aliased_walk.c.ancestor_id,
-                    )
+                link2.input_id.label('ancestor_id'),
+                aliased_walk.c.descendant_id.label('descendant_id'),
+                (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
+                # ~ (walk.c.path+array([node_aliased.id])).label('path')
+                # , As above, but if arrays are supported
+                # This is the way to reconstruct the path (the sequence of nodes traversed)
+            ]).select_from(
+                join(
+                    aliased_walk,
+                    link2,
+                    link2.output_id == aliased_walk.c.ancestor_id,
                 )
-            ))
+            )
+        ))
 
         self._tag_to_alias_map[edge_tag] = ancestors_recursive.c
 
         self._query = self._query.join(
-                ancestors_recursive,
-                ancestors_recursive.c.descendant_id == joined_entity.id
-            ).join(
-                entity_to_join,
-                ancestors_recursive.c.ancestor_id == entity_to_join.id,
-                isouter=isouterjoin
-            )
+            ancestors_recursive,
+            ancestors_recursive.c.descendant_id == joined_entity.id
+        ).join(
+            entity_to_join,
+            ancestors_recursive.c.ancestor_id == entity_to_join.id,
+            isouter=isouterjoin
+        )
 
     def _join_descendants_u_dbpath(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
         """
@@ -1491,18 +1455,18 @@ class AbstractQueryBuilder(object):
         (**enitity_to_join** is a *descendant_of* **joined_entity**)
         """
         self._check_dbentities(
-                (joined_entity, self.Node),
-                (entity_to_join, self.Node),
-                'descendant_of'
-            )
+            (joined_entity, self.Node),
+            (entity_to_join, self.Node),
+            'descendant_of'
+        )
 
         self._query = self._query.join(
-                aliased_path,
-                aliased_path.parent_id == joined_entity.id
-            ).join(
-                entity_to_join,
-                aliased_path.child_id == entity_to_join.id,
-                isouter=isouterjoin
+            aliased_path,
+            aliased_path.parent_id == joined_entity.id
+        ).join(
+            entity_to_join,
+            aliased_path.child_id == entity_to_join.id,
+            isouter=isouterjoin
         )
 
     def _join_ancestors_u_dbpath(self, joined_entity, entity_to_join, aliased_path, isouterjoin):
@@ -1517,18 +1481,18 @@ class AbstractQueryBuilder(object):
         (**enitity_to_join** is an *ancestor_of* **joined_entity**)
         """
         self._check_dbentities(
-                (joined_entity, self.Node),
-                (entity_to_join, self.Node),
-                'ancestor_of'
-            )
-        #~ aliased_path = aliased(self.Path)
+            (joined_entity, self.Node),
+            (entity_to_join, self.Node),
+            'ancestor_of'
+        )
+        # ~ aliased_path = aliased(self.Path)
         self._query = self._query.join(
-                aliased_path,
-                aliased_path.child_id == joined_entity.id
-            ).join(
-                entity_to_join,
-                aliased_path.parent_id == entity_to_join.id,
-                isouter=isouterjoin
+            aliased_path,
+            aliased_path.child_id == joined_entity.id
+        ).join(
+            entity_to_join,
+            aliased_path.parent_id == entity_to_join.id,
+            isouter=isouterjoin
         )
 
     def _join_group_members(self, joined_entity, entity_to_join, isouterjoin):
@@ -1545,18 +1509,18 @@ class AbstractQueryBuilder(object):
         (**enitity_to_join** is an *member_of* **joined_entity**)
         """
         self._check_dbentities(
-                (joined_entity, self.Group),
-                (entity_to_join, self.Node),
-                'member_of'
-            )
+            (joined_entity, self.Group),
+            (entity_to_join, self.Node),
+            'member_of'
+        )
         aliased_group_nodes = aliased(self.table_groups_nodes)
         self._query = self._query.join(
-                aliased_group_nodes,
-                aliased_group_nodes.c.dbgroup_id == joined_entity.id
-            ).join(
-                entity_to_join,
-                entity_to_join.id == aliased_group_nodes.c.dbnode_id,
-                isouter=isouterjoin
+            aliased_group_nodes,
+            aliased_group_nodes.c.dbgroup_id == joined_entity.id
+        ).join(
+            entity_to_join,
+            entity_to_join.id == aliased_group_nodes.c.dbnode_id,
+            isouter=isouterjoin
         )
 
     def _join_groups(self, joined_entity, entity_to_join, isouterjoin):
@@ -1570,18 +1534,18 @@ class AbstractQueryBuilder(object):
         (**enitity_to_join** is an *group_of* **joined_entity**)
         """
         self._check_dbentities(
-                (joined_entity, self.Node),
-                (entity_to_join, self.Group),
-                'group_of'
-            )
+            (joined_entity, self.Node),
+            (entity_to_join, self.Group),
+            'group_of'
+        )
         aliased_group_nodes = aliased(self.table_groups_nodes)
         self._query = self._query.join(
-                aliased_group_nodes,
-                aliased_group_nodes.c.dbnode_id == joined_entity.id
-            ).join(
-                entity_to_join,
-                entity_to_join.id == aliased_group_nodes.c.dbgroup_id,
-                isouter=isouterjoin
+            aliased_group_nodes,
+            aliased_group_nodes.c.dbnode_id == joined_entity.id
+        ).join(
+            entity_to_join,
+            entity_to_join.id == aliased_group_nodes.c.dbgroup_id,
+            isouter=isouterjoin
         )
 
     def _join_creator_of(self, joined_entity, entity_to_join, isouterjoin):
@@ -1590,30 +1554,31 @@ class AbstractQueryBuilder(object):
         :param entity_to_join: the aliased user to join to that node
         """
         self._check_dbentities(
-                (joined_entity, self.Node),
-                (entity_to_join, self.User),
-                'creator_of'
-            )
+            (joined_entity, self.Node),
+            (entity_to_join, self.User),
+            'creator_of'
+        )
         self._query = self._query.join(
-                entity_to_join,
-                entity_to_join.id == joined_entity.user_id,
-                isouter=isouterjoin
-            )
+            entity_to_join,
+            entity_to_join.id == joined_entity.user_id,
+            isouter=isouterjoin
+        )
+
     def _join_created_by(self, joined_entity, entity_to_join, isouterjoin):
         """
         :param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
         """
         self._check_dbentities(
-                (joined_entity, self.User),
-                (entity_to_join, self.Node),
-                'created_by'
-            )
+            (joined_entity, self.User),
+            (entity_to_join, self.Node),
+            'created_by'
+        )
         self._query = self._query.join(
-                entity_to_join,
-                entity_to_join.user_id == joined_entity.id,
-                isouter=isouterjoin
-            )
+            entity_to_join,
+            entity_to_join.user_id == joined_entity.id,
+            isouter=isouterjoin
+        )
 
     def _join_to_computer_used(self, joined_entity, entity_to_join, isouterjoin):
         """
@@ -1622,14 +1587,14 @@ class AbstractQueryBuilder(object):
 
         """
         self._check_dbentities(
-                (joined_entity, self.Computer),
-                (entity_to_join, self.Node),
-                'has_computer'
-            )
+            (joined_entity, self.Computer),
+            (entity_to_join, self.Node),
+            'has_computer'
+        )
         self._query = self._query.join(
-                entity_to_join,
-                entity_to_join.dbcomputer_id == joined_entity.id,
-                isouter=isouterjoin
+            entity_to_join,
+            entity_to_join.dbcomputer_id == joined_entity.id,
+            isouter=isouterjoin
         )
 
     def _join_computer(self, joined_entity, entity_to_join, isouterjoin):
@@ -1640,29 +1605,29 @@ class AbstractQueryBuilder(object):
 
         """
         self._check_dbentities(
-                (joined_entity, self.Node),
-                (entity_to_join, self.Computer),
-                'computer_of'
-            )
+            (joined_entity, self.Node),
+            (entity_to_join, self.Computer),
+            'computer_of'
+        )
         self._query = self._query.join(
-                entity_to_join,
-                joined_entity.dbcomputer_id == entity_to_join.id,
-                isouter=isouterjoin
+            entity_to_join,
+            joined_entity.dbcomputer_id == entity_to_join.id,
+            isouter=isouterjoin
         )
 
     def _get_function_map(self):
         d = {
-                'input_of'  : self._join_inputs,
-                'output_of' : self._join_outputs,
-                'slave_of'  : self._join_slaves, # not implemented
-                'master_of' : self._join_masters,# not implemented
-                'direction' : None,
-                'group_of'  : self._join_groups,
-                'member_of' : self._join_group_members,
-                'has_computer':self._join_to_computer_used,
-                'computer_of':self._join_computer,
-                'created_by' : self._join_created_by,
-                'creator_of' : self._join_creator_of,
+            'input_of': self._join_inputs,
+            'output_of': self._join_outputs,
+            'slave_of': self._join_slaves,  # not implemented
+            'master_of': self._join_masters,  # not implemented
+            'direction': None,
+            'group_of': self._join_groups,
+            'member_of': self._join_group_members,
+            'has_computer': self._join_to_computer_used,
+            'computer_of': self._join_computer,
+            'created_by': self._join_created_by,
+            'creator_of': self._join_creator_of,
         }
         if self._with_dbpath:
             d['ancestor_of'] = self._join_ancestors_u_dbpath
@@ -1672,11 +1637,10 @@ class AbstractQueryBuilder(object):
             d['descendant_of'] = self._join_descendants_recursive
         return d
 
-
     def _get_connecting_node(
             self, index,
             joining_keyword=None, joining_value=None, **kwargs
-        ):
+    ):
         """
         :param querydict:
             A dictionary specifying how the current node
@@ -1705,9 +1669,9 @@ class AbstractQueryBuilder(object):
 
         if joining_keyword == 'direction':
             if joining_value > 0:
-                returnval = self._aliased_path[index-joining_value], self._join_outputs
+                returnval = self._aliased_path[index - joining_value], self._join_outputs
             elif joining_value < 0:
-                returnval = self._aliased_path[index+joining_value], self._join_inputs
+                returnval = self._aliased_path[index + joining_value], self._join_inputs
             else:
                 raise Exception("Direction 0 is not valid")
         else:
@@ -1718,8 +1682,8 @@ class AbstractQueryBuilder(object):
             elif isinstance(joining_value, str):
                 try:
                     returnval = self._tag_to_alias_map[
-                            self._get_tag_from_specification(joining_value)
-                        ], func
+                                    self._get_tag_from_specification(joining_value)
+                                ], func
                 except KeyError:
                     raise InputValidationError(
                         'Key {} is unknown to the types I know about:\n'
@@ -1738,15 +1702,15 @@ class AbstractQueryBuilder(object):
         if isinstance(inp, dict):
             for key, val in inp.items():
                 inp[
-                        self._get_json_compatible(key)
+                    self._get_json_compatible(key)
                 ] = self._get_json_compatible(inp.pop(key))
         elif isinstance(inp, (list, tuple)):
             inp = [self._get_json_compatible(val) for val in inp]
         elif inspect_isclass(inp):
             if issubclass(inp, self.AiidaNode):
                 return '.'.join(
-                        inp._plugin_type_string.strip('.').split('.')[:-1]
-                    )
+                    inp._plugin_type_string.strip('.').split('.')[:-1]
+                )
             elif issubclass(inp, self.AiidaGroup):
                 return 'group'
             else:
@@ -1759,7 +1723,6 @@ class AbstractQueryBuilder(object):
                 Exception thrown: {}\n
                 while replacing {}""".format(e, inp))
         return inp
-
 
     def get_json_compatible_queryhelp(self):
         """
@@ -1776,23 +1739,21 @@ class AbstractQueryBuilder(object):
         from copy import deepcopy
 
         return deepcopy({
-            'path'      :   self._path,
-            'filters'   :   self._filters,
-            'project'   :   self._projections,
-            'order_by'  :   self._order_by,
-            'limit'     :   self._limit,
-            'offset'    :   self._offset,
+            'path': self._path,
+            'filters': self._filters,
+            'project': self._projections,
+            'order_by': self._order_by,
+            'limit': self._limit,
+            'offset': self._offset,
         })
 
-        #~ self._get_json_compatible()
+        # ~ self._get_json_compatible()
 
     @staticmethod
     def _get_column(colname, alias):
         """
         Return the column for the projection, if the column name is specified.
         """
-
-
 
         try:
             return getattr(alias, colname)
@@ -1801,11 +1762,11 @@ class AbstractQueryBuilder(object):
                 "\n{} is not a column of {}\n"
                 "Valid columns are:\n"
                 "{}".format(
-                        colname, alias,
-                        '\n'.join(alias._sa_class_manager.mapper.c.keys())
-                    )
+                    colname, alias,
+                    '\n'.join(alias._sa_class_manager.mapper.c.keys())
+                )
             )
-        #~ return
+            # ~ return
 
     def _build_order(self, alias, entitytag, entityspec):
 
@@ -1820,13 +1781,11 @@ class AbstractQueryBuilder(object):
                 "".format(entitytag)
             )
 
-
         entity = self._get_projectable_entity(alias, column_name, attrpath, **entityspec)
         order = entityspec.get('order', 'asc')
         if order == 'desc':
             entity = entity.desc()
         self._query = self._query.order_by(entity)
-
 
     def _build(self):
         """
@@ -1839,44 +1798,45 @@ class AbstractQueryBuilder(object):
         # of nodes traversed
         # and the tag used for that node
         self.tags_location_dict = {
-                path['tag']:index
-                for index, path
-                in enumerate(self._path)
+            path['tag']: index
+            for index, path
+            in enumerate(self._path)
             }
 
-        #Starting the query by receiving a session
+        # Starting the query by receiving a session
         # Every subclass needs to have _get_session and give me the
         # right session
         firstalias = self._tag_to_alias_map[self._path[0]['tag']]
         self._query = self._get_session().query(firstalias)
 
         ######################### JOINS ################################
-        #~ print self._query
-        #~ print '\n\n\n'
-        #~ raw_input()
+        # ~ print self._query
+        # ~ print '\n\n\n'
+        # ~ raw_input()
 
-        for index, verticespec in  enumerate(self._path[1:], start=1):
+        for index, verticespec in enumerate(self._path[1:], start=1):
             alias = self._tag_to_alias_map[verticespec['tag']]
-            #looping through the queryhelp
-            #~ if index:
-                #There is nothing to join if that is the first table
+            # looping through the queryhelp
+            # ~ if index:
+            # There is nothing to join if that is the first table
             toconnectwith, connection_func = self._get_connecting_node(
-                    index, **verticespec
-                )
+                index, **verticespec
+            )
             edge_tag = verticespec.get('edge_tag', None)
             isouterjoin = verticespec.get('outerjoin')
 
-            if ( verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of') ) and not(self._with_dbpath):
+            if (verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of')) and not (self._with_dbpath):
                 filter_dict = self._filters.get(verticespec['joining_value'], {})
-                connection_func(toconnectwith, alias, isouterjoin=isouterjoin, filter_dict=filter_dict, edge_tag=edge_tag)
+                connection_func(toconnectwith, alias, isouterjoin=isouterjoin, filter_dict=filter_dict,
+                                edge_tag=edge_tag)
             elif edge_tag is None:
                 connection_func(toconnectwith, alias, isouterjoin=isouterjoin)
             else:
                 aliased_edge = self._tag_to_alias_map[edge_tag]
                 connection_func(toconnectwith, alias, aliased_edge, isouterjoin=isouterjoin)
-            #~ print self._query
-            #~ print '\n\n\n'
-            #~ raw_input()
+                # ~ print self._query
+                # ~ print '\n\n\n'
+                # ~ raw_input()
         ######################### FILTERS ##############################
 
         for tag, filter_specs in self._filters.items():
@@ -1890,8 +1850,8 @@ class AbstractQueryBuilder(object):
                     ''.format(tag, self._tag_to_alias_map.keys())
                 )
             self._query = self._query.filter(
-                    self._build_filters(alias, filter_specs)
-                )
+                self._build_filters(alias, filter_specs)
+            )
 
         ######################### PROJECTIONS ##########################
         # first clear the entities in the case the first item in the
@@ -1903,7 +1863,6 @@ class AbstractQueryBuilder(object):
         # Mapping between enitites and the tag used/ given by user:
         self.tag_to_projected_entity_dict = {}
 
-
         self.nr_of_projections = 0
 
         if not any(self._projections.values()):
@@ -1911,11 +1870,10 @@ class AbstractQueryBuilder(object):
             # I will simply project the last item specified!
             # Don't change, path traversal querying
             # relies on this behavior!
-            self._build_projections(self._path[-1]['tag'], items_to_project=[{'*':{}}])
+            self._build_projections(self._path[-1]['tag'], items_to_project=[{'*': {}}])
         else:
             for vertice in self._path:
                 self._build_projections(vertice['tag'])
-
 
         ##################### LINK-PROJECTIONS #########################
 
@@ -1924,9 +1882,9 @@ class AbstractQueryBuilder(object):
             if edge_tag is not None:
                 self._build_projections(edge_tag)
 
-            #~ linktag = vertice.get('reverse_linktag', None)
-            #~ if linktag is not None:
-                #~ self._build_projections(linktag)
+                # ~ linktag = vertice.get('reverse_linktag', None)
+                # ~ if linktag is not None:
+                # ~ self._build_projections(linktag)
 
         ######################### ORDER ################################
         for order_spec in self._order_by:
@@ -1945,23 +1903,23 @@ class AbstractQueryBuilder(object):
             self._query = self._query.offset(self._offset)
 
         ################ LAST BUT NOT LEAST ############################
-        #pop the entity that I added to start the query
+        # pop the entity that I added to start the query
         self._query._entities.pop(0)
 
         # Make a list that helps the projection postprocessing
         self._attrkeys_as_in_sql_result = {
-            index_in_sql_result:attrkey
+            index_in_sql_result: attrkey
             for tag, projected_entities_dict
             in self.tag_to_projected_entity_dict.items()
             for attrkey, index_in_sql_result
             in projected_entities_dict.items()
-        }
+            }
 
         if self.nr_of_projections > len(self._attrkeys_as_in_sql_result):
             raise InputValidationError(
-                    "\nYou are projecting the same key\n"
-                    "multiple times within the same node"
-                )
+                "\nYou are projecting the same key\n"
+                "multiple times within the same node"
+            )
         ######################### DONE #################################
 
         return self._query
@@ -1975,6 +1933,7 @@ class AbstractQueryBuilder(object):
 
         :returns: self
         """
+
         def build_counterquery(calc_class):
             if issubclass(calc_class, self.Node):
                 orm_calc_class = calc_class
@@ -1994,20 +1953,18 @@ class AbstractQueryBuilder(object):
             for node in self._path:
                 tag = node['tag']
                 requested_cols = [
-                        key
+                    key
 
-                        for item in self._projections[tag]
-                        for key in item.keys()
+                    for item in self._projections[tag]
+                    for key in item.keys()
                     ]
                 if '*' in requested_cols:
                     input_alias_list.append(aliased(self._tag_to_alias_map[tag]))
-
 
             counterquery = self._get_session().query(orm_calc_class)
             if type_spec:
                 counterquery = counterquery.filter(orm_calc_class.type == type_spec)
             for alias in input_alias_list:
-
                 link = aliased(self.Link)
                 counterquery = counterquery.join(
                     link,
@@ -2018,10 +1975,10 @@ class AbstractQueryBuilder(object):
                 counterquery = counterquery.add_entity(alias)
             counterquery._entities.pop(0)
             return counterquery
+
         self._query = self.get_query()
         self._query = self._query.except_(build_counterquery(calc_class))
         return self
-
 
     def get_aliases(self):
         """
@@ -2039,8 +1996,6 @@ class AbstractQueryBuilder(object):
         """
         tag = self._get_tag_from_specification(tag)
         return self._tag_to_alias_map[tag]
-
-
 
     def get_query(self):
         """
@@ -2084,7 +2039,6 @@ class AbstractQueryBuilder(object):
                 self._hash = queryhelp_hash
         return query
 
-
     def inject_query(self, query):
         """
         Manipulate the query an inject it back.
@@ -2116,7 +2070,6 @@ class AbstractQueryBuilder(object):
         self._query = self.get_query().distinct()
         return self
 
-
     @abstractmethod
     def _yield_per(self, batch_size):
         """
@@ -2127,8 +2080,6 @@ class AbstractQueryBuilder(object):
         :returns: a generator
         """
         pass
-
-
 
     @abstractmethod
     def _all(self):
@@ -2142,7 +2093,6 @@ class AbstractQueryBuilder(object):
         :returns: One row of aiida results
         """
         pass
-
 
     def first(self):
         """
@@ -2159,9 +2109,9 @@ class AbstractQueryBuilder(object):
         resultrow = self._first()
         try:
             returnval = [
-                    self._get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
-                    for colindex, rowitem
-                    in enumerate(resultrow)
+                self._get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
+                for colindex, rowitem
+                in enumerate(resultrow)
                 ]
         except TypeError:
             if resultrow is None:
@@ -2175,8 +2125,6 @@ class AbstractQueryBuilder(object):
             else:
                 returnval = [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow)]
         return returnval
-
-
 
     def count(self):
         """
@@ -2204,7 +2152,6 @@ class AbstractQueryBuilder(object):
         """
         pass
 
-
     def all(self, batch_size=None):
         """
         Executes the full query with the order of the rows as returned by the backend.
@@ -2221,7 +2168,6 @@ class AbstractQueryBuilder(object):
         """
 
         return list(self.iterall(batch_size=batch_size))
-
 
     def dict(self, batch_size=None):
         """
@@ -2277,7 +2223,6 @@ class AbstractQueryBuilder(object):
         """
         return list(self.iterdict(batch_size=batch_size))
 
-
     @abstractmethod
     def iterdict(self, batch_size=100):
         """
@@ -2301,10 +2246,10 @@ class AbstractQueryBuilder(object):
         :func:`QueryBuilderBase.iterdict` instead
         """
         warnings.warn(
-                "get_results_dict will be deprecated in the future"
-                "User iterdict for generator or dict for list",
-                DeprecationWarning
-            )
+            "get_results_dict will be deprecated in the future"
+            "User iterdict for generator or dict for list",
+            DeprecationWarning
+        )
 
         return self.dict()
 
@@ -2364,5 +2309,3 @@ class AbstractQueryBuilder(object):
         cls = kwargs.pop('cls', self.AiidaNode)
         self.append(cls=cls, ancestor_of=join_to, autotag=True, **kwargs)
         return self
-
-

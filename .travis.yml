@@ -55,7 +55,7 @@ before_script:
 script:
     # Compile the docs (HTML format); -W to convert warnings in errors, -n to warn about all missing references
     # For the time being I only put -W before fixing all problems with missing references
-    - if [[ "$COMPILE_DOCS" == "true" ]] ; then SPHINXOPTS="-W" make -C docs html ; else verdi -p test_$TEST_AIIDA_BACKEND devel tests ; fi
+    - if [[ "$COMPILE_DOCS" == "true" ]] ; then verdi profile setdefault verdi test_${TEST_AIIDA_BACKEND} && SPHINXOPTS="-W" make -C docs html ; else verdi -p test_$TEST_AIIDA_BACKEND devel tests ; fi
 
 git:
   depth: 3

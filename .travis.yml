@@ -20,18 +20,18 @@ addons:
 ## because otherwise the code would complain. Also, I need latex.
 matrix:
   include:
-    - env: TEST_AIIDA_BACKEND=django COMPILE_DOCS=false
-    - env: TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
-    - env: TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
-      apt:
-        packages:
-          - texlive-base
-          - texlive-generic-recommended
-          - texlive-fonts-recommended
-          - texlive-latex-base
-          - texlive-latex-recommended
-          - dvipng
-          - dvidvi
+  - env: TEST_AIIDA_BACKEND=django COMPILE_DOCS=false
+  - env: TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
+  - env: TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
+    apt:
+      packages:
+      - texlive-base
+      - texlive-generic-recommended
+      - texlive-fonts-recommended
+      - texlive-latex-base
+      - texlive-latex-recommended
+      - dvipng
+      - dvidvi
 
 install:
     # This is required for some recent features of setup.py

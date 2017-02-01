@@ -15,17 +15,23 @@ addons:
   postgresql: "9.4"
 #  postgresql: "9.5" # Available in Trusty only
 
-#  apt:
-#    packages:
-#        - python-vtk
-
-## Build matrix to test both backends
+## Build matrix to test both backends, and the docs
 ## I still let it create the test backend for django also when building the docs
-## because otherwise the code would complain
-env:
-   - TEST_AIIDA_BACKEND=django COMPILE_DOCS=false
-   - TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
-   - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
+## because otherwise the code would complain. Also, I need latex.
+matrix:
+  include:
+    - env: TEST_AIIDA_BACKEND=django COMPILE_DOCS=false
+    - env: TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
+    - env: TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
+      apt:
+        packages:
+          - texlive-base
+          - texlive-generic-recommended
+          - texlive-fonts-recommended
+          - texlive-latex-base
+          - texlive-latex-recommended
+          - dvipng
+          - dvidvi
 
 install:
     # This is required for some recent features of setup.py

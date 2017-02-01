@@ -702,12 +702,12 @@ def if_(condition):
     """
     A conditional that can be used in a workchain outline.
 
-    Use as:
+    Use as::
 
-    if_(cls.conditional)(
-      cls.step1,
-      cls.step2
-    )
+      if_(cls.conditional)(
+        cls.step1,
+        cls.step2
+      )
 
     Each step can, of course, also be any valid workchain step e.g. conditional.
 
@@ -720,12 +720,12 @@ def while_(condition):
     """
     A while loop that can be used in a workchain outline.
 
-    Use as:
+    Use as::
 
-    while_(cls.conditional)(
-      cls.step1,
-      cls.step2
-    )
+      while_(cls.conditional)(
+        cls.step1,
+        cls.step2
+      )
 
     Each step can, of course, also be any valid workchain step e.g. conditional.
 

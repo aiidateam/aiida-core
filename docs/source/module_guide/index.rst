@@ -14,6 +14,8 @@ Modules
    ../parsers/dev
    ../querying/querytool/dev
    ../querying/querybuilder/dev
+   ../work/dev
    ../dbimporters/dev
    ../dbexporters/dev
    ../tools/dev
+   

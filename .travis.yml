@@ -34,8 +34,8 @@ env:
     - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
 
 install:
-    # Upgrade pip
-    - pip install pip wheel setuptools
+    # Upgrade pip setuptools and wheel to be able to run the next command
+    - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
     - pip install .[verdi_shell,ssh,REST,docs,atomic_tools] --process-dependency-links
 

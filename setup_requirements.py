@@ -1,6 +1,4 @@
 install_requires = [
-    # When you change version of setuptools, pip and, if present, wheels
-    # update also the travis.yml file
     'pip==9.0.1'
     'setuptools==34.1.0',
     'wheel==0.29.0'

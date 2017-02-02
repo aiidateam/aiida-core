@@ -13,17 +13,22 @@ required_packages = list(setup_requirements.install_requires) + list(setup_requi
 # Required version
 req_for_rtd_lines = ['Sphinx>=1.5']
 
+# plum prefix
+plum_prefix = 'plum=='
+
 for package in required_packages:
     # To avoid that it requires also the postgres libraries
     if package.startswith('psycopg2'): 
         continue
     # Would need to install with process-dependency-links
-    if package.startswith('plum'): 
-        continue    
+    if package.startswith(plum_prefix):
+        plum_version = package[len(plum_prefix):]
+        req_for_rtd_lines.append('https://bitbucket.org/aiida_team/plum/get/v{}.zip#egg=plum'.format(plum_version))
+        continue
+
     req_for_rtd_lines.append(package)
 
-for dependency in setup_requirements.dependency_links:
-    req_for_rtd_lines.append(dependency)
+
 
 req_for_rtd = "\n".join(sorted(req_for_rtd_lines))
 

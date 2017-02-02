@@ -288,7 +288,7 @@ class NodeTranslator(BaseTranslator):
                         descendant_of_beta='main', edge_filters={'depth':{'<=':maxDepth}})
 
             if (qb.count() > 0):
-                qbResults = qb.get_results_dict()
+                qbResults = qb.dict()
 
                 for resultDict in qbResults:
                     if resultDict[edgeType]["id"] not in addedNodes:

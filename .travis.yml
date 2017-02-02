@@ -34,7 +34,6 @@ env:
     - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
 
 install:
-
     # Install AiiDA with some optional dependencies
     - pip install -U .[verdi_shell,ssh,REST,docs,atomic_tools] --process-dependency-links
 

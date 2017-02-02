@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.split(os.path.abspath(__file__))[0],os.pard
 
 import setup_requirements
 
-required_packages = sorted(setup_requirements.install_requires)
+required_packages = list(setup_requirements.install_requires) + list(setup_requirements.extras_require['ssh'])
 
 # Required version
 req_for_rtd_lines = ['Sphinx>=1.5']

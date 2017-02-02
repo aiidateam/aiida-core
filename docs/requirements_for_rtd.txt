@@ -10,13 +10,16 @@ click==6.6
 django-celery==3.1.16
 django==1.7.4
 django_extensions==1.5
+ecdsa==0.13
 enum34==1.1.2
 ete3==3.0.0b35
 https://bitbucket.org/aiida_team/plum/get/v0.7.5.zip#egg=plum
 meld3==1.0.0
 numpy
+paramiko==1.15.2
 passlib
 pip>=9.0.1
+pycrypto==2.6.1
 python-dateutil~=2.4.0
 python-mimeparse==0.1.4
 pytz==2014.10

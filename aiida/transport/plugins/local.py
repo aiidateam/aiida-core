@@ -95,7 +95,7 @@ class LocalTransport(aiida.transport.Transport):
     def chdir(self, path):
         """
         Changes directory to path, emulated internally.
-        :param (str) path: path to cd into
+        :param path: path to cd into
         :raise OSError: if the directory does not have read attributes.
         """
         new_path = os.path.join(self.curdir, path)
@@ -107,7 +107,7 @@ class LocalTransport(aiida.transport.Transport):
     def normalize(self, path):
         """
         Normalizes path, eliminating double slashes, etc..
-        :param (str) path: path to normalize
+        :param path: path to normalize
         """
         return os.path.realpath(os.path.join(self.curdir, path))
 
@@ -141,8 +141,8 @@ class LocalTransport(aiida.transport.Transport):
         Works like mkdir, except that any intermediate path segment (not
         just the rightmost) will be created if it does not exist.
 
-        :param (str) path: directory to create
-        :param (bool) ignore_existing: if set to true, it doesn't give any error
+        :param path: directory to create
+        :param ignore_existing: if set to true, it doesn't give any error
                      if the leaf directory does already exist
 
         :raise OSError: If the directory already exists and is not ignore_existing
@@ -166,8 +166,8 @@ class LocalTransport(aiida.transport.Transport):
         """
         Create a folder (directory) named path.
 
-        :param (str) path: name of the folder to create
-        :param (bool) ignore_existing: if True, does not give any error if the 
+        :param path: name of the folder to create
+        :param ignore_existing: if True, does not give any error if the 
                 directory already exists
 
         :raise OSError: If the directory already exists.
@@ -180,7 +180,7 @@ class LocalTransport(aiida.transport.Transport):
     def rmdir(self, path):
         """
         Removes a folder at location path.
-        :param (str) path: path to remove
+        :param path: path to remove
         """
         os.rmdir(os.path.join(self.curdir, path))
 
@@ -197,8 +197,8 @@ class LocalTransport(aiida.transport.Transport):
     def chmod(self, path, mode):
         """
         Changes permission bits of object at path
-        :param (str) path: path to modify
-        :param (int) mode: permission bits
+        :param path: path to modify
+        :param mode: permission bits
 
         :raise IOError: if path does not exist.
         """
@@ -216,11 +216,11 @@ class LocalTransport(aiida.transport.Transport):
         Copies a file or a folder from source to destination.
         Automatically redirects to putfile or puttree.
 
-        :param (str) source: absolute path to local file
-        :param (str) destination: path to remote file
-        :param (bool) dereference: if True follows symbolic links.
+        :param source: absolute path to local file
+        :param destination: path to remote file
+        :param dereference: if True follows symbolic links.
                                  Default = True
-        :param (bool) overwrite: if True overwrites destination.
+        :param overwrite: if True overwrites destination.
                                  Default = False
 
         :raise IOError: if destination is not valid
@@ -290,9 +290,9 @@ class LocalTransport(aiida.transport.Transport):
         Copies a file from source to destination.
         Automatically redirects to putfile or puttree.
 
-        :param (str) source: absolute path to local file
-        :param (str) destination: path to remote file
-        :param (bool) overwrite: if True overwrites destination
+        :param source: absolute path to local file
+        :param destination: path to remote file
+        :param overwrite: if True overwrites destination
                                  Default = False
 
         :raise IOError: if destination is not valid
@@ -323,11 +323,11 @@ class LocalTransport(aiida.transport.Transport):
         Copies a folder recursively from source to destination.
         Automatically redirects to putfile or puttree.
 
-        :param (str) source: absolute path to local file
-        :param (str) destination: path to remote file
-        :param (bool) dereference: follow symbolic links.
+        :param source: absolute path to local file
+        :param destination: path to remote file
+        :param dereference: follow symbolic links.
                                  Default = True
-        :param (bool) overwrite: if True overwrites destination.
+        :param overwrite: if True overwrites destination.
                                Default = False
 
         :raise IOError: if destination is not valid
@@ -363,7 +363,7 @@ class LocalTransport(aiida.transport.Transport):
         """
         Remove tree as rm -r would do
         
-        :param (str) path: a string to path
+        :param path: a string to path
         """
         the_path = os.path.join(self.curdir, path)
         try:
@@ -381,11 +381,11 @@ class LocalTransport(aiida.transport.Transport):
         'local' destination.
         Automatically redirects to getfile or gettree.
 
-        :param (str) source: path to local file
-        :param (str) destination: absolute path to remote file
-        :param (bool) dereference: follow symbolic links
+        :param source: path to local file
+        :param destination: absolute path to remote file
+        :param dereference: follow symbolic links
                                  default = True
-        :param (bool) overwrite: if True overwrites destination
+        :param overwrite: if True overwrites destination
                                default = False
 
         :raise IOError: if 'remote' source is not valid
@@ -450,9 +450,9 @@ class LocalTransport(aiida.transport.Transport):
         Copies a file recursively from 'remote' source to
         'local' destination.
 
-        :param (str) source: path to local file
-        :param (str) destination: absolute path to remote file
-        :param (bool) overwrite: if True overwrites destination.
+        :param source: path to local file
+        :param destination: absolute path to remote file
+        :param overwrite: if True overwrites destination.
                                Default = False
 
         :raise IOError if 'remote' source is not valid or not found
@@ -480,10 +480,10 @@ class LocalTransport(aiida.transport.Transport):
         Copies a folder recursively from 'remote' source to
         'local' destination.
 
-        :param (str) source: path to local file
-        :param (str) destination: absolute path to remote file
-        :param (bool) dereference: follow symbolic links. Default = True
-        :param (bool) overwrite: if True overwrites destination. Default = False
+        :param source: path to local file
+        :param destination: absolute path to remote file
+        :param dereference: follow symbolic links. Default = True
+        :param overwrite: if True overwrites destination. Default = False
 
         :raise IOError: if 'remote' source is not valid
         :raise ValueError: if 'local' destination is not valid
@@ -516,9 +516,9 @@ class LocalTransport(aiida.transport.Transport):
         Copies a file or a folder from 'remote' source to 'remote' destination.
         Automatically redirects to copyfile or copytree.
 
-        :param (str) source: path to local file
-        :param (str) destination: path to remote file
-        :param (bool) dereference: follow symbolic links. Default = False
+        :param source: path to local file
+        :param destination: path to remote file
+        :param dereference: follow symbolic links. Default = False
 
         :raise ValueError: if 'remote' source or destination is not valid
         :raise OSError: if source does not exist
@@ -579,8 +579,8 @@ class LocalTransport(aiida.transport.Transport):
         Copies a file from 'remote' source to
         'remote' destination.
 
-        :param (str) source: path to local file
-        :param (str) destination: path to remote file
+        :param source: path to local file
+        :param destination: path to remote file
         :raise ValueError: if 'remote' source or destination is not valid
         :raise OSError: if source does not exist
 
@@ -603,9 +603,9 @@ class LocalTransport(aiida.transport.Transport):
         Copies a folder from 'remote' source to
         'remote' destination.
 
-        :param (str) source: path to local file
-        :param (str) destination: path to remote file
-        :param (bool) dereference: follow symbolic links. Default = False
+        :param source: path to local file
+        :param destination: path to remote file
+        :param dereference: follow symbolic links. Default = False
         
         :raise ValueError: if 'remote' source or destination is not valid
         :raise OSError: if source does not exist
@@ -662,8 +662,8 @@ class LocalTransport(aiida.transport.Transport):
     def listdir(self, path='.', pattern=None):
         """
         :return: a list containing the names of the entries in the directory.
-        :param (str) path: default ='.'
-        :param (str) filter: if set, returns the list of files matching pattern.
+        :param path: default ='.'
+        :param filter: if set, returns the list of files matching pattern.
                      Unix only. (Use to emulate ls * for example)
         """
         the_path = os.path.join(self.curdir, path).strip()
@@ -703,7 +703,7 @@ class LocalTransport(aiida.transport.Transport):
         job to finish, use exec_command_wait.
         Otherwise, to end the process, use the proc.wait() method.
 
-        :param (str) command: the command to execute
+        :param command: the command to execute
         
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
@@ -794,8 +794,8 @@ class LocalTransport(aiida.transport.Transport):
         Create a symbolic link between the remote source and the remote 
         destination
         
-        :param (str) remotesource: remote source. Can contain a pattern.
-        :param (str) remotedestination: remote destination
+        :param remotesource: remote source. Can contain a pattern.
+        :param remotedestination: remote destination
         """
         remotesource = os.path.normpath(remotesource)
         remotedestination = os.path.normpath(remotedestination)

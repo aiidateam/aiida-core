@@ -80,7 +80,7 @@ When asking a scheduler to allocate some nodes/machines for a given job, we have
 
 Unfortunately, the way of specifying this information is different on different clusters. In AiiDA, this is implemented in different subclasses of the :py:class:`aiida.scheduler.datastructures.JobResource` class. The subclass that should be used is given by the scheduler, as described in the previous section. 
 
-The interfaces of these subclasses are not all exactly the same. Instead, specifying the resources is similar to writing a scheduler script.  All classes define at least one method, :meth:`get_tot_num_mpiprocs <<aiida.scheduler.datastructures.JobResource.get_tot_num_mpiprocs>`, that returns the total number of MPI processes requested. 
+The interfaces of these subclasses are not all exactly the same. Instead, specifying the resources is similar to writing a scheduler script.  All classes define at least one method, :meth:`get_tot_num_mpiprocs <aiida.scheduler.datastructures.JobResource.get_tot_num_mpiprocs>`, that returns the total number of MPI processes requested. 
 
 In the following, the different :class:`JobResource <aiida.scheduler.datastructures.JobResource>` subclasses are described:
 
@@ -93,7 +93,7 @@ In the following, the different :class:`JobResource <aiida.scheduler.datastructu
 
         from aiida.scheduler.datastructures import NodeNumberJobResource
     
-    However, in general, you will pass the fields to set directly to the :meth:`set_resources <aiida.orm.calculation.job.JobCalculation.set_resources>` method of a :class:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` object. For instance::
+    However, in general, you will pass the fields to set directly to the :meth:`set_resources <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation.set_resources>` method of a :class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` object. For instance::
   
         calc = JobCalculation(computer=...) # select here a given computer configured
                                             # in AiiDA
@@ -129,7 +129,7 @@ The same can be achieved passing the fields directly to the constructor::
 
     res = NodeNumberJobResource(num_machines=4, num_mpiprocs_per_machine=16)
 
-or, even better, directly calling the :meth:`set_resources <aiida.orm.calculation.job.JobCalculation.set_resources>` method of the :class:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` class (assuming here that ``calc`` is your calculation object)::
+or, even better, directly calling the :meth:`set_resources <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation.set_resources>` method of the :class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` class (assuming here that ``calc`` is your calculation object)::
 
     calc.set_resources({"num_machines": 4, "num_mpiprocs_per_machine": 16})
 
@@ -185,6 +185,6 @@ Some examples:
 
     res = ParEnvJobResource(parallel_env='mpi', tot_num_mpiprocs=64)
 
-* even better, directly calling the :meth:`set_resources <aiida.orm.calculation.job.JobCalculation.set_resources>` method of the :meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` class (assuming here that ``calc`` is your calculation object)::
+* even better, directly calling the :meth:`set_resources <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation.set_resources>` method of the :meth:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` class (assuming here that ``calc`` is your calculation object)::
 
     calc.set_resources({"parallel_env": 'mpi', "tot_num_mpiprocs": 64})

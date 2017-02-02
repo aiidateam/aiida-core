@@ -10,7 +10,7 @@ In this section, we describe how to get the results of a calculation after it ha
 Calculation results
 ===================
 
-When a calculation is done on the remote computer, AiiDA will retrieve the results and try to parse the results with the default parser, if one is available for the given calculation. These results are stored in new nodes, and connected as output of the calculation. Of course, it is possible to :ref:`directly check the output nodes <db_input_output>` for a given calculation and get their content. However, AiiDA provides a way to directly access the results, using the :py:class:`aiida.orm.calculation.job.CalculationResultManager<.CalculationResultManager>` class, described in the next section.
+When a calculation is done on the remote computer, AiiDA will retrieve the results and try to parse the results with the default parser, if one is available for the given calculation. These results are stored in new nodes, and connected as output of the calculation. Of course, it is possible to :ref:`directly check the output nodes <db_input_output>` for a given calculation and get their content. However, AiiDA provides a way to directly access the results, using the :py:class:`CalculationResultManager<aiida.orm.implementation.general.calculation.job.CalculationResultManager>` class, described in the next section.
 
 The CalculationResultManager
 +++++++++++++++++++++++++++++
@@ -18,7 +18,7 @@ The CalculationResultManager
 Prerequisites
 -------------
 
-Before getting the calculation results, we need a correctly finished and parsed :class:`.JobCalculation`. For example this can be a Quantum ESPRESSO ``pw.x`` calculation. You can load such a calculation -- we'll call it ``calc`` -- with the command
+Before getting the calculation results, we need a correctly finished and parsed :class:`JobCalculation<aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`. For example this can be a Quantum ESPRESSO ``pw.x`` calculation. You can load such a calculation -- we'll call it ``calc`` -- with the command
 
 .. code :: python
     
@@ -27,10 +27,10 @@ Before getting the calculation results, we need a correctly finished and parsed 
 
 either in ``verdi shell``, or in a python script (as described :doc:`here <../examples/scripting>`). ``YOURPK`` should be substituted by a valid calculation PK in your database.
 
-Using the :class:`.CalculationResultManager` instance
------------------------------------------------------
+Using the CalculationResultManager instance
+-------------------------------------------
 
-Each :class:`.JobCalculation` has a ``res`` attribute that is a 
+Each :class:`JobCalculation<aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` has a ``res`` attribute that is a 
 :class:`.CalculationResultManager` instance and
 gives direct access to parsed data. You can access it as
 ::
@@ -65,7 +65,7 @@ Similarly, you can get any other parsed value, for any code that
 provides a parser.
 
 .. hint:: 
-    The :class:`.CalculationResultManager` is also integrated with the iPython/verdi shell completion mechanism: if ``calc`` is a valid :class:`.JobCalculation`, you can type
+    The :class:`.CalculationResultManager` is also integrated with the iPython/verdi shell completion mechanism: if ``calc`` is a valid :class:`JobCalculation<aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`, you can type
     ::
 
         calc.res.

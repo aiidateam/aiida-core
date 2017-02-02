@@ -40,7 +40,7 @@ to be managed from the Verdi shell (or through a script loading the necessary Ve
 initialize the daemon and analyze a simple workflow, submitting it and retrieving the results.
 
 .. note::
-The workflow engine of AiiDA is now fully operational but will undergo major
+  The workflow engine of AiiDA is now fully operational but will undergo major
   improvements in a near future. Therefore, some of the methods or functionalities
   described in the following might change.
 
@@ -142,7 +142,7 @@ us to understand the more sophisticated examples reported later.
 
             self.next(self.exit)
 
-    As discussed before this is native python code, meaning that a user can load any library or script accessible from their ``PYTHONPATH``
+As discussed before this is native python code, meaning that a user can load any library or script accessible from their ``PYTHONPATH``
 and interacting with any database or service of preference inside the workflow. We'll now go through all the details of the first workflow,
 line by line, discussing the most important methods and discovering along the way all the features available. 
 
@@ -188,7 +188,7 @@ of the basic ones:
   use the common method ``self.exit``, always present in each Workflow subclass.
 
   .. note:: make sure to ``store()`` all input nodes for the attached calculations, as unstored nodes will be lost during the transition
-from one step to another.
+     from one step to another.
   
 **lines 53-67** When the workflow will be launched through the ``start`` method, the AiiDA daemon will load the workflow, execute the step, 
 launch all the calculations and monitor their state. Once all the calculations in ``start`` will be finished the daemon will then load and 
@@ -226,7 +226,7 @@ WorkflowDemo presented before, located in the ``wf_demo.py`` file in the clean A
   >> wf.start()
 
 .. note:: If you want to write the above script in a file, remember to run it
-with ``verdi run`` and not simply with python, or otherwise to use the other
+  with ``verdi run`` and not simply with python, or otherwise to use the other
   techniques described :doc:`here <../examples/scripting>`.
   
 In these four lines we loaded the class, we created some fictitious parameter and 
@@ -325,7 +325,7 @@ or, equivalently::
 >> Workflow.get_subclass_from_pk(PK_NUMBER).kill()
 
 .. note::
-Sometimes the ``kill`` operation might fail because one calculation cannot be
+  Sometimes the ``kill`` operation might fail because one calculation cannot be
   killed (e.g. if it's running but not in the ``WITHSCHEDULER``, ``TOSUBMIT`` or 
   ``NEW`` state), or because one workflow step is in the ``CREATED`` state. In that case the 
   workflow is put to the ``SLEEP`` state, such that no more workflow steps will be launched
@@ -769,7 +769,7 @@ Compatibility with new workflows
 ++++++++++++++++++++++++++++++++
 
 As part of the deprecation process of the old workflows to ease the transition we
-support the ability to launch old workflows from :class:`~aiida.work.workchain.Workchain` s.
+support the ability to launch old workflows from :class:`~aiida.work.workchain.WorkChain` s.
 The :class:`~aiida.work.workchain.ToContext` object can be used in conjunction
 with :class:`~aiida.work.run.legacy_workflow` which takes a legacy workflow pk
 and builds an object that tells :class:`~aiida.work.workchain.ToContext` how to wait for it to be done and
@@ -777,7 +777,8 @@ store it in the context on completion.  An example:
 
 .. code-block:: python
     :linenos:
-
+    
+    from aiida.work.run import legacy_workflow
     from aiida.work.workchain import WorkChain, ToContext, Outputs
 
     class MyWf(WorkChain):

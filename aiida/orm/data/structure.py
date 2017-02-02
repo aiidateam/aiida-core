@@ -1180,9 +1180,9 @@ class StructureData(Data):
         :param ase: the ase Atom object from which we want to create a new atom
                 (if present, this must be the only parameter)
         :param position: the position of the atom (three numbers in angstrom)
-        :param ... symbols, weights, name: any further parameter is passed
-                to the constructor of the Kind object. For the 'name' parameter,
-                see the note below.
+        :param symbols: passed to the constructor of the Kind object.
+        :param weights: passed to the constructor of the Kind object.
+        :param name: passed to the constructor of the Kind object. See also the note below.
 
         .. note :: Note on the 'name' parameter (that is, the name of the kind):
 

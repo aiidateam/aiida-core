@@ -11,6 +11,11 @@ Calculation datastructures
 .. automodule:: aiida.common.datastructures
    :members:
 
+Constants
++++++++++
+.. automodule:: aiida.common.constants
+   :members:
+
 Exceptions
 ++++++++++
 .. automodule:: aiida.common.exceptions
@@ -25,7 +30,13 @@ Folders
 +++++++
 .. automodule:: aiida.common.folders
    :members:
- 
+   :special-members: __init__,  __enter__, __exit__
+
+Links
++++++
+ .. automodule:: aiida.common.links
+   :members:
+
 Orbitals
 ++++++++
 .. automodule:: aiida.common.orbital

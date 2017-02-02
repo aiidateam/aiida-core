@@ -23,7 +23,7 @@ If your distribution uses a different package manager, simply replace the comman
       $ pip install virtualenv
       $ virtualenv ~/aiidapy # or equivalent
       $ source ~/aiidapy/bin/activate
-      (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida> 
+      (aiidapy) $ pip install -e git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida> 
       (aiidapy) $ verdi quicksetup
 
 You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
@@ -242,7 +242,7 @@ Installing AiiDA (Other Systems)
 
 3. Install aiida into the environment::
       
-      (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
+      (aiidapy) $ pip install -e git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
 
 This installs the verdi command into your python environment and puts the source into <folder/containing/aiida>/aiida.
 You can either activate the environment every time before using aiida (that way you could have multiple aiida versions installed in parallel), or you can add the verdi command to your path
@@ -300,11 +300,11 @@ More commandline options are available in case you custom configured your postgr
 .. this tutorial), using the
 .. following command::
 .. 
-..     git clone https://USERNAME@bitbucket.org/aiida_team/aiida_core.git
+..     git clone https://USERNAME@github.com/aiidateam/aiida_core.git
 .. 
-.. (or use ``git@bitbucket.org:aiida_team/aiida_core.git`` if you are downloading
+.. (or use ``git@github.com:aiidateam/aiida_core.git`` if you are downloading
 .. through SSH; note that this requires your ssh key to be added on the
-.. Bitbucket account.)
+.. GitHub account.)
 .. 
 .. Python dependencies
 .. +++++++++++++++++++

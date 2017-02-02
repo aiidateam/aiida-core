@@ -9,7 +9,7 @@ Creating new workflows
 
 New user specific workflows should be put in ``aiida/workflows/user``. If the
 workflow is general enough to be of interest for the community, the best is to
-create a git repository (e.g. on `Bitbucket <http://bitbucket.org>`_) and clone
+create a git repository (e.g. on `GitHub <https://github.com>`_) and clone
 the content of the repository in a subfolder of ``aiida/workflows/user``, e.g.
 in ``aiida/workflows/user/epfl_theos`` for workflows from the group THEOS at EPFL.
 

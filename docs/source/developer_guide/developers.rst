@@ -113,7 +113,7 @@ In particular:
   from develop (e.g. a long bugfix, or a new feature)
 * while working on the branch, often merge the develop branch back
   into it (if you also have a remote branch and there are no conflicts,
-  that can be done with one click from the BitBucket web interface,
+  that can be done with one click from the GitHub web interface,
   and then you just do a local 'git pull')
 * remember to fix generic bugs in the ``develop`` (or in a branch to be
   then merged in the develop), *not in your local branch*
@@ -122,7 +122,7 @@ In particular:
   better to have a branch because it allows to
   backport the fix also in old releases, if we want to support multiple versions
 * only when a feature is ready, merge it back into ``develop``. If it is
-  a big change, better to instead do a `pull request` on BitBucket instead
+  a big change, better to instead do a `pull request` on GitHub instead
   of directly merging and wait for another (or a few other)
   developers to accept it beforehand, to be sure it does not break anything.
 

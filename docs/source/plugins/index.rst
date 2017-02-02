@@ -16,5 +16,4 @@ Available plugins
    quantumespresso/index
    codtools/index
    ase/index
-   wannier90/index
    nwchem/index

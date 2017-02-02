@@ -50,6 +50,9 @@ class _WorkChainSpec(ProcessSpec):
 
 
 class WorkChain(Process):
+    """
+    A WorkChain, the base class for AiiDA workflows.
+    """
     _spec_type = _WorkChainSpec
     _CONTEXT = 'context'
     _STEPPER_STATE = 'stepper_state'
@@ -147,8 +150,7 @@ class WorkChain(Process):
         Insert a barrier that will cause the workchain to wait until the wait
         on is finished before continuing to the next step.
 
-        :param wait_on: The thing to wait on
-        :type wait_on: :class:`plum.wait.wait_on`
+        :param wait_on: The thing to wait on (of type plum.wait.wait_on)
         """
         self._barriers.append(wait_on)
 
@@ -158,8 +160,7 @@ class WorkChain(Process):
 
         Precondition: must be a barrier that was previously inserted
 
-        :param wait_on:  The wait on to remove
-        :type wait_on: :class:`plum.wait.wait_on`
+        :param wait_on:  The wait on to remove (of type plum.wait.wait_on)
         """
         del self._barriers[wait_on]
 
@@ -258,12 +259,15 @@ class Interstep(object):
         by the factory.
 
         :param out_state: The bundle that should be used to save the state
-        :type out_state: :class:`plum.persistence.bundle.Bundle`
+          (of type plum.persistence.bundle.Bundle).
         """
         pass
 
 
 class ToContext(Interstep):
+    """
+    Class to wrap future objects and return them in a WorkChain step.
+    """
     TO_ASSIGN = 'to_assign'
     WAITING_ON = 'waiting_on'
 
@@ -702,12 +706,12 @@ def if_(condition):
     """
     A conditional that can be used in a workchain outline.
 
-    Use as:
+    Use as::
 
-    if_(cls.conditional)(
-      cls.step1,
-      cls.step2
-    )
+      if_(cls.conditional)(
+        cls.step1,
+        cls.step2
+      )
 
     Each step can, of course, also be any valid workchain step e.g. conditional.
 
@@ -720,12 +724,12 @@ def while_(condition):
     """
     A while loop that can be used in a workchain outline.
 
-    Use as:
+    Use as::
 
-    while_(cls.conditional)(
-      cls.step1,
-      cls.step2
-    )
+      while_(cls.conditional)(
+        cls.step1,
+        cls.step2
+      )
 
     Each step can, of course, also be any valid workchain step e.g. conditional.
 

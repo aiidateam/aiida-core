@@ -54,7 +54,7 @@ If you use another package manager just replace the first step accordingly.
       $ pip install virtualenv
       $ virtualenv ~/aiidapy # or equivalent
       $ source ~/aiidapy/bin/activate
-      (aiidapy) $ pip install -e git+https://bitbucket.org/aiida_team/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
+      (aiidapy) $ pip install -e git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
       (aiidapy) $ verdi quicksetup
 
 You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
@@ -62,14 +62,10 @@ You will be asked for your user information. Be aware that this information will
 4. Add the verdi command to your PATH::
 
       $ # for bash:
-      $ echo "export PATH="${PATH}:~/aiidapy/bin/verdi" >> ~/.bashrc
+      $ echo "export PATH="${PATH}:~/aiidapy/bin/" >> ~/.bashrc
 
-<<<<<<< HEAD
+
 If you prefer not to use a package manager, follow the links in :ref:`install_dependencies` for instructions on how to install the required programs and start the postgres server before continuing with the third step.
-=======
-      cd ~/git/aiida # or the folder where you downloaded AiiDA
-      pip install --user -U .
->>>>>>> develop
 
 .. _Homebrew: http://brew.sh/index_de.html
 
@@ -129,7 +125,6 @@ AiiDA should run on:
 
 .. _install_dependencies:
 
-<<<<<<< HEAD
 Required Software
 -----------------
 The following are required to be installed on your computer:
@@ -143,7 +138,7 @@ The following are required to be installed on your computer:
 
 .. _git: https://git-scm.com/downloads
 .. _python 2.7.x: https://www.python.org/downloads
-.. _python-pip`: https://packaging.python.org/installing/#requirements-for-installing-packages
+.. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
 .. _python-virtualenv: https://virtualenv.pypa.io/en/stable/
 .. _PostgreSQL: https://www.postgresql.org/downloads
 
@@ -255,27 +250,22 @@ You can either activate the environment every time before using aiida (that way 
 4. (optional) add verdi to your path:
    Add this to your .bashrc or .bash_profile or equivalent, assuming you installed with virtualenv::
 
-   export PATH="${PATH}:~/aiidapy/bin/verdi
+     export PATH="${PATH}:~/aiidapy/bin/verdi
 
-If you use conda, verdi will be installed to (envs directory)/aiidapy/bin/verdi, where envs directory depends on which version of Anaconda or Miniconda you use, for miniconda2 the default is ~/miniconda2/envs/. If you enter
-
-::
+If you use conda, verdi will be installed to (envs directory)/aiidapy/bin/verdi, where envs directory depends on which version of Anaconda or Miniconda you use, for miniconda2 the default is ~/miniconda2/envs/. If you enter::
    
    conda info
 
-among the listed information you will find an "envs directories"
+among the listed information you will find an "envs directories".
 
-If you use virtualenvwrapper, you can find out in it's online documentation where environments install their binaries.
-=======
-    sudo pip install -U .
->>>>>>> develop
+If you use virtualenvwrapper, you can find out in its online documentation where environments install their binaries.
 
 If everything went smoothly, congratulations! Now the code is installed!
 
-<<<<<<< HEAD
 Next steps:
 
 * :ref:`set up AiiDA using quicksetup<quicksetup>`
+
 .. * :ref:`Try out AiiDA for the first time`
 .. * :ref:`Custom configuration` for more advanced configurations.
 
@@ -413,7 +403,7 @@ Additional bash configuration for AiiDA
 ..   If the setup is ok, you shouldn't get any error. If you do get an
 ..   ``ImportError`` instead, check if you correctly set up the ``PYTHONPATH``
 ..   environment variable in the steps above.
-=======
+
 The main interface to AiiDA is through its command-line tool, called ``verdi``.
 
 .. note:: if you installed the modules with the ``--user`` parameter during the
@@ -443,11 +433,10 @@ To verify if the path setup is OK:
   If the setup is ok, you shouldn't get any error. If you do get an
   ``ImportError`` instead, check if you correctly set up the ``PYTHONPATH``
   environment variable in the steps above.
->>>>>>> develop
 
 
 Bash completion
-^^^^^^^^^^^^^^^
+---------------
 
 ``verdi`` fully supports bash completion (i.e., the possibility to press the
 ``TAB`` of your keyboard to get a list of sensible commands to type.
@@ -696,7 +685,7 @@ ASE has to be installed from source::
     export PYTHONPATH=$(pwd):$PYTHONPATH
 
 For the setting up of cod-tools please refer to
-:ref:`installation of cod-tools<codtools_installation>`.
+`the software homepage<https://github.com/sauliusg/cod-tools>`.
 
 .. _Crystallographic Information Framework (CIF) files: http://www.iucr.org/resources/cif
 .. _pymatgen: http://pymatgen.org
@@ -706,7 +695,7 @@ For the setting up of cod-tools please refer to
 .. _pyspglib: http://spglib.sourceforge.net/pyspglibForASE/
 
 Further comments and troubleshooting
-++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++
 
 * if the ``pip install`` command gives you an error that
   resembles the one
@@ -726,7 +715,7 @@ Further comments and troubleshooting
  
 * If the installation fails while installing the packages related
   to the database, you may have not installed or set up the database
-  libraries as described in the section :ref:`other_core_dependencies`.
+  libraries.
 
   In particular, on Mac OS X, if you installed the binary package of
   PostgreSQL, it is possible that the PATH environment variable is not

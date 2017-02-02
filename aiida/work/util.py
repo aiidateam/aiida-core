@@ -34,7 +34,7 @@ class ProcessStack(object):
         Get the calculation node of the process at the top of the stack
 
         :return: The calculation node
-        :rtype: :class:`aiida.orm.calculation.job.JobCalculation`
+        :rtype: :class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`
         """
         return cls.top().calc
 

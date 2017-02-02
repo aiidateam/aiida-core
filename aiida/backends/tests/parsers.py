@@ -115,7 +115,7 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
 def is_valid_folder_name(name):
     """
     Return True if the string (that will be the folder name of each subtest)
-    is a valid name for a test function: it should start with test_, and
+    is a valid name for a test function: it should start with ``test_``, and
     contain only letters, digits or underscores.
     """
     import string

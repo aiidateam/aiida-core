@@ -130,7 +130,7 @@ def pw_input_helper(input_params, structure,
         in the same folder as this python module. If the version is not
         recognised, the Exception message will also suggest a close-by version.
 
-    :raise QeInputValidationError: (subclass of InputValidationError) if
+    :raise ~QEInputValidationError: (subclass of InputValidationError) if
         the input is not considered valid.
     """ 
     errors_list = []

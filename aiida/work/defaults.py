@@ -16,9 +16,9 @@ __authors__ = "The AiiDA team."
 
 
 _kb = plum.knowledge_base.KnowledgeBase()
-_kb.add_provider(
-    plum.in_memory_database.InMemoryDatabase(
-        retain_inputs=False, retain_outputs=False))
+#_kb.add_provider(
+#    plum.in_memory_database.InMemoryDatabase(
+#        retain_inputs=False, retain_outputs=False))
 _kb.add_provider(ProcessRegistry())
 plum.knowledge_provider.set_global_provider(_kb)
 

@@ -2,14 +2,19 @@
 
 from abc import ABCMeta, abstractmethod
 import inspect
+from aiida.work.defaults import registry
+from aiida.work.run import RunningType, RunningInfo
 from aiida.work.process import Process, ProcessSpec
+from aiida.work.legacy.wait_on import WaitOnWorkflow
 from aiida.common.lang import override
 from aiida.common.utils import get_class_string, get_object_string,\
     get_object_from_string
+from aiida.orm import load_node, load_workflow
 from plum.wait_ons import Checkpoint, WaitOnAll, WaitOnProcess
 from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
 from collections import namedtuple
+from plum.engine.execution_engine import Future
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -45,6 +50,9 @@ class _WorkChainSpec(ProcessSpec):
 
 
 class WorkChain(Process):
+    """
+    A WorkChain, the base class for AiiDA workflows.
+    """
     _spec_type = _WorkChainSpec
     _CONTEXT = 'context'
     _STEPPER_STATE = 'stepper_state'
@@ -142,8 +150,7 @@ class WorkChain(Process):
         Insert a barrier that will cause the workchain to wait until the wait
         on is finished before continuing to the next step.
 
-        :param wait_on: The thing to wait on
-        :type wait_on: :class:`plum.wait.wait_on`
+        :param wait_on: The thing to wait on (of type plum.wait.wait_on)
         """
         self._barriers.append(wait_on)
 
@@ -153,8 +160,7 @@ class WorkChain(Process):
 
         Precondition: must be a barrier that was previously inserted
 
-        :param wait_on:  The wait on to remove
-        :type wait_on: :class:`plum.wait.wait_on`
+        :param wait_on:  The wait on to remove (of type plum.wait.wait_on)
         """
         del self._barriers[wait_on]
 
@@ -253,16 +259,19 @@ class Interstep(object):
         by the factory.
 
         :param out_state: The bundle that should be used to save the state
-        :type out_state: :class:`plum.persistence.bundle.Bundle`
+          (of type plum.persistence.bundle.Bundle).
         """
         pass
 
 
 class ToContext(Interstep):
+    """
+    Class to wrap future objects and return them in a WorkChain step.
+    """
     TO_ASSIGN = 'to_assign'
     WAITING_ON = 'waiting_on'
 
-    Action = namedtuple("Action", "pid fn")
+    Action = namedtuple("Action", "running_info fn")
 
     def __init__(self, **kwargs):
         self._to_assign = {}
@@ -270,43 +279,72 @@ class ToContext(Interstep):
             if isinstance(val, self.Action):
                 self._to_assign[key] = val
             else:
-                # Assume it's a pid
-                assert isinstance(val, int)
-                self._to_assign[key] = Calc(val)
+                # Assume it's a pk
+                self._to_assign[key] = Legacy(val)
 
     @override
     def on_last_step_finished(self, workchain):
         for action in self._to_assign.itervalues():
-            workchain.insert_barrier(WaitOnProcess(None, action.pid))
+            workchain.insert_barrier(self._create_wait_on(action))
 
     @override
     def on_next_step_starting(self, workchain):
-        for key, val in self._to_assign.iteritems():
-            fn = get_object_from_string(val.fn)
-            workchain.ctx[key] = fn(val.pid)
+        for key, action in self._to_assign.iteritems():
+            fn = get_object_from_string(action.fn)
+            workchain.ctx[key] = fn(action.running_info.pid)
 
     @override
     def save_instance_state(self, out_state):
         out_state['class'] = get_class_string(ToContext)
         out_state[self.TO_ASSIGN] = self._to_assign
 
-
-def _get_calc(pid):
-    from aiida.orm import load_node
-    return load_node(pid)
-
-
-def _get_outputs(pid):
-    from aiida.orm import load_node
-    return load_node(pid).get_outputs_dict()
+    def _create_wait_on(self, action):
+        rinfo = action.running_info
+        if rinfo.type is RunningType.LEGACY_CALC \
+                or rinfo.type is RunningType.PROCESS:
+            return WaitOnProcess(None, rinfo.pid)
+        elif rinfo.type is RunningType.LEGACY_WORKFLOW:
+            return WaitOnWorkflow(None, rinfo.pid)
 
 
-def Calc(pid):
-    return ToContext.Action(pid, get_object_string(_get_calc))
+def _get_proc_outputs_from_registry(pid):
+    return registry.get_outputs(pid)
 
 
-def Outputs(pid):
-    return ToContext.Action(pid, get_object_string(_get_outputs))
+def _get_wf_outputs(pk):
+    return load_workflow(pk=pk).get_results()
+
+
+def Calc(running_info):
+    return ToContext.Action(running_info, get_object_string(load_node))
+
+
+def Wf(running_info):
+    return ToContext.Action(
+        running_info, get_object_string(load_workflow))
+
+
+def Legacy(object):
+    if object.type == RunningType.LEGACY_CALC:
+        return Calc(object)
+    elif object.type is RunningType.LEGACY_WORKFLOW:
+        return Wf(object)
+
+    raise ValueError("Could not determine object to be calculation or workflow")
+
+
+def Outputs(running_info):
+    if isinstance(running_info, Future):
+        # Create the correct information from the future
+        rinfo = RunningInfo(RunningType.PROCESS, running_info.pid)
+        return ToContext.Action(
+            rinfo, get_object_string(_get_proc_outputs_from_registry))
+    elif running_info.type == RunningType.LEGACY_CALC:
+        return ToContext.Action(
+            running_info, get_object_string(_get_proc_outputs_from_registry))
+    elif running_info.type is RunningType.LEGACY_WORKFLOW:
+        return ToContext.Action(
+            running_info, get_object_string(_get_wf_outputs))
 
 
 class _InterstepFactory(object):
@@ -398,8 +436,8 @@ class _Block(_Instruction):
             self._pos = 0
 
         def step(self):
-            assert (self._pos != len(self._commands),
-                    "Can't call step after the block is finished")
+            assert self._pos != len(self._commands), \
+                   "Can't call step after the block is finished"
 
             command = self._commands[self._pos]
 
@@ -608,8 +646,8 @@ class _While(_Conditional, _Instruction):
             self._finished = False
 
         def step(self):
-            assert (not self._finished,
-                    "Can't call step after the loop has finished")
+            assert not self._finished, \
+                   "Can't call step after the loop has finished"
 
             # Do we need to check the condition?
             if self._check_condition is True:
@@ -668,12 +706,12 @@ def if_(condition):
     """
     A conditional that can be used in a workchain outline.
 
-    Use as:
+    Use as::
 
-    if_(cls.conditional)(
-      cls.step1,
-      cls.step2
-    )
+      if_(cls.conditional)(
+        cls.step1,
+        cls.step2
+      )
 
     Each step can, of course, also be any valid workchain step e.g. conditional.
 
@@ -686,12 +724,12 @@ def while_(condition):
     """
     A while loop that can be used in a workchain outline.
 
-    Use as:
+    Use as::
 
-    while_(cls.conditional)(
-      cls.step1,
-      cls.step2
-    )
+      while_(cls.conditional)(
+        cls.step1,
+        cls.step2
+      )
 
     Each step can, of course, also be any valid workchain step e.g. conditional.
 

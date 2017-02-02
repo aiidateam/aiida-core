@@ -637,7 +637,12 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
 
     # finalizing
     write = not dry_run
+    old_profiles = get_profiles_list()
     new_profile = update_profile(profile, new_profile, write=write)
+    if write:
+        if not old_profiles:
+            set_default_profile('verdi', profile)
+            set_default_profile('daemon', profile)
     return new_profile
 
 def create_configuration(profile='default'):

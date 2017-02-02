@@ -45,7 +45,7 @@ class Listable(object):
     Provides shell completion for listable data nodes.
 
     .. note:: classes, inheriting Listable, MUST define value for property
-        :py:class:`dataclass` (preferably in :py:class:`__init__`), which
+        ``dataclass`` (preferably in ``__init__``), which
         has to point to correct \*Data class.
     """
 
@@ -198,7 +198,7 @@ class Listable(object):
         Return the list with column names.
 
         .. note:: neither the number nor correspondence of column names and
-            actual columns in the output from the :py:class:`query` are checked.
+            actual columns in the output from the :py:meth:`query` are checked.
         """
         return ["ID"]
 
@@ -212,8 +212,8 @@ class Visualizable(object):
         visualization.
 
     In order to specify a default visualization format, one has to override
-    :py:class:`_default_show_format` property (preferably in
-    :py:class:`__init__`), setting it to the name of default visualization tool.
+    ``_default_show_format`` property (preferably in
+    ``__init__``), setting it to the name of default visualization tool.
     """
     show_prefix = '_show_'
     show_parameters_postfix = '_parameters'

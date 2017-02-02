@@ -33,7 +33,7 @@ There are several output nodes that can be created by the plugin.
 All output nodes can be accessed with the ``calculation.out`` method.
 
 * output_parameters :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`
-  (accessed by ``calculation.res``) Contains the wall time of the run, as well as any warnings that may occurred.
+  Contains the wall time of the run, as well as any warnings that may occurred.
 * projections :py:class:`ProjectionData <aiida.orm.data.array.projection.ProjectionData>`
   Contains the projections which store the orbitals, pdos arrays, and projection arrays.
 

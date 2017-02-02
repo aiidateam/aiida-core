@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import importlib
+from collections import Mapping
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
@@ -107,7 +108,7 @@ class Workflow(AbstractWorkflow):
             params = kwargs.pop('params', None)
 
             if params is not None:
-                if type(params) is dict:
+                if isinstance(params, Mapping):
                     self.set_params(params)
 
             # This stores the MD5 as well, to test in case the workflow has

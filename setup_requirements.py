@@ -56,5 +56,5 @@ extras_require={
 }
 
 dependency_links=[
-    'https://bitbucket.org/aiida_team/plum/get/v0.7.5.zip#egg=plum-0.7.5',
+    'https://bitbucket.org/aiida_team/plum/get/v0.7.5.zip#egg=plum',
 ]

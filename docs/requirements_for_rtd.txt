@@ -12,6 +12,7 @@ django==1.7.4
 django_extensions==1.5
 enum34==1.1.2
 ete3==3.0.0b35
+git+https://bitbucket.org/aiida_team/plum/get/v0.7.5.zip#egg=plum-0.7.5
 meld3==1.0.0
 numpy
 passlib

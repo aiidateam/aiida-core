@@ -22,6 +22,12 @@ for package in required_packages:
         continue    
     req_for_rtd_lines.append(package)
 
+for dependency in setup_requirements.dependency_links:
+    if dependency.startswith('http'):
+        req_for_rtd_lines.append('git+{}'.format(dependency))
+    else:
+        req_for_rtd_lines.append(dependency)
+
 req_for_rtd = "\n".join(sorted(req_for_rtd_lines))
 
 basename = 'requirements_for_rtd.txt'

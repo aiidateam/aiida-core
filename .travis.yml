@@ -34,8 +34,10 @@ env:
     - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
 
 install:
+    # Upgrade pip
+    - pip install -U pip
     # Install AiiDA with some optional dependencies
-    - pip install -U .[verdi_shell,ssh,REST,docs,atomic_tools] --process-dependency-links
+    - pip install .[verdi_shell,ssh,REST,docs,atomic_tools] --process-dependency-links
 
 before_script:
     # This is needed for the SSH tests (being able to ssh to localhost)

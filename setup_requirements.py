@@ -1,4 +1,8 @@
 install_requires = [
+    # When you change version of setuptools, pip and, if present, wheels
+    # update also the travis.yml file
+    'setuptools==34.1.0',
+    'wheel==0.29.0'
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',
     'django==1.7.4',
@@ -27,11 +31,6 @@ install_requires = [
     'uritools==1.0.2',
     'psycopg2==2.6.1',
     'amqp==1.4.9',
-    # When you change version of setuptools, pip and, if present, wheels
-    # update also the travis.yml file
-    'setuptools==34.1.0',
-    'pip==9.0.1',
-    'wheel==0.29.0'
 ]
 
 extras_require = {

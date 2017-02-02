@@ -35,9 +35,9 @@ env:
 
 install:
     # Upgrade pip
-    - pip install -U pip wheel setuptools
+    - pip install pip==9.0.1
     # Install AiiDA with some optional dependencies
-    - pip install -U .[verdi_shell,ssh,REST,docs,atomic_tools] --process-dependency-links
+    - pip install .[verdi_shell,ssh,REST,docs,atomic_tools] --process-dependency-links
 
 before_script:
     # This is needed for the SSH tests (being able to ssh to localhost)

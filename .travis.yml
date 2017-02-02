@@ -35,7 +35,7 @@ env:
 
 install:
     # Upgrade pip
-    - pip install pip==9.0.1
+    - pip install pip wheel setuptools
     # Install AiiDA with some optional dependencies
     - pip install .[verdi_shell,ssh,REST,docs,atomic_tools] --process-dependency-links
 

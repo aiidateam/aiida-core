@@ -4,7 +4,7 @@ Tools for parsing QE PW input files and creating AiiDa Node objects based on
 them.
 
 TODO: Parse CONSTRAINTS, OCCUPATIONS, ATOMIC_FORCES once they are implemented
-      in AiiDa
+      in AiiDA
 """
 import re
 import os
@@ -26,12 +26,14 @@ class PwInputFile(object):
     """
     Class used for parsing Quantum Espresso pw.x input files and using the info.
 
-    :ivar namelists:
+    Members:
+    
+    * ``namelists``:
         A nested dictionary of the namelists and their key-value
         pairs. The namelists will always be upper-case keys, while the parameter
         keys will always be lower-case.
 
-        For example: ::
+        For example::
 
             {"CONTROL": {"calculation": "bands",
                          "prefix": "al",
@@ -46,7 +48,7 @@ class PwInputFile(object):
                         "ntyp": 1}
             }
 
-    :ivar atomic_positions:
+    * ``atomic_positions``:
         A dictionary with
 
             * units: the units of the positions (always lower-case) or None
@@ -57,7 +59,7 @@ class PwInputFile(object):
               (**Note:** True <--> Fixed, as defined in the
               ``BasePwCpInputGenerator._if_pos`` method)
 
-        For example: ::
+        For example::
 
             {'units': 'bohr',
              'names': ['C', 'O'],
@@ -66,21 +68,21 @@ class PwInputFile(object):
              'fixed_coords': [[False, False, False],
                               [True, True, True]]}
 
-    :ivar cell_parameters:
+    * ``cell_parameters``:
         A dictionary (if CELL_PARAMETERS is present; else: None) with
 
             * units: the units of the lattice vectors (always lower-case) or
               None
             * cell: 3x3 list with lattice vectors as rows
 
-        For example: ::
+        For example::
 
             {'units': 'angstrom',
              'cell': [[16.9, 0.0, 0.0],
                       [-2.6, 8.0, 0.0],
                       [-2.6, -3.5, 7.2]]}
 
-    :ivar k_points:
+    * ``k_points``:
         A dictionary containing
 
             * type: the type of kpoints (always lower-case)
@@ -100,7 +102,7 @@ class PwInputFile(object):
               to the current AiiDa convention.
             
 
-        Examples: ::
+        Examples::
 
             {'type': 'crystal',
              'points': [[0.125,  0.125,  0.0],
@@ -114,7 +116,7 @@ class PwInputFile(object):
 
             {'type': 'gamma'}
 
-    :ivar atomic_species:
+    * ``atomic_species``:
         A dictionary with
 
             * names: list of the atom names (e.g. 'Si', 'Si0', 'Si_0') (case
@@ -123,7 +125,7 @@ class PwInputFile(object):
             * pseudo_file_names: list of the pseudopotential file names for the
               atoms in 'names' (case as-is)
 
-        Example: ::
+        Example::
 
             {'names': ['Li', 'O', 'Al', 'Si'],
              'masses': [6.941,  15.9994, 26.98154, 28.0855],
@@ -321,7 +323,7 @@ class PwInputFile(object):
 
         :return: KpointsData object of the kpoints in the input file
         :rtype: aiida.orm.data.array.kpoints.KpointsData
-        :raises aiida.common.exceptions.NotImplimentedError: if the kpoints are
+        :raises NotImplementedError: if the kpoints are
             in a format not yet supported.
         """
         # Initialize the KpointsData node
@@ -418,7 +420,7 @@ def parse_namelists(txt):
         namelists will always be upper-case keys, while the parameter keys will
         always be lower-case.
 
-        For example: ::
+        For example::
 
             {"CONTROL": {"calculation": "bands",
                          "prefix": "al",
@@ -433,7 +435,6 @@ def parse_namelists(txt):
                         "ntyp": 1}
             }
 
-    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -494,7 +495,7 @@ def parse_atomic_positions(txt):
               (**Note:** True <--> Fixed, as defined in the
               ``BasePwCpInputGenerator._if_pos`` method)
 
-        For example: ::
+        For example::
 
             {'units': 'bohr',
              'names': ['C', 'O'],
@@ -504,7 +505,6 @@ def parse_atomic_positions(txt):
                               [True, True, True]]}
 
 
-    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -618,7 +618,6 @@ def parse_cell_parameters(txt):
            or 'a' is set in &SYSTEM.
 
     :param txt: A single string containing the QE input text to be parsed.
-    :type txt: str
 
     :returns:
         A dictionary (if CELL_PARAMETERS is present; else: None) with
@@ -627,14 +626,13 @@ def parse_cell_parameters(txt):
               None
             * cell: 3x3 list with lattice vectors as rows
 
-        For example: ::
+        For example::
 
             {'units': 'angstrom',
              'cell': [[16.9, 0.0, 0.0],
                       [-2.6, 8.0, 0.0],
                       [-2.6, -3.5, 7.2]]}
 
-    :rtype: dict or None
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -686,7 +684,6 @@ def parse_k_points(txt):
            QE default.
 
     :param txt: A single string containing the QE input text to be parsed.
-    :type txt: str
 
     :returns:
         A dictionary containing
@@ -708,7 +705,7 @@ def parse_k_points(txt):
               to the current AiiDa convention.
 
 
-        Examples: ::
+        Examples::
 
             {'type': 'crystal',
              'points': [[0.125,  0.125,  0.0],
@@ -722,7 +719,6 @@ def parse_k_points(txt):
 
             {'type': 'gamma'}
 
-    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
@@ -800,7 +796,7 @@ def parse_atomic_species(txt):
             * pseudo_file_names: list of the pseudopotential file names for the
               atoms in 'names' (case as-is)
 
-        Example: ::
+        Example::
 
             {'names': ['Li', 'O', 'Al', 'Si'],
              'masses': [6.941,  15.9994, 26.98154, 28.0855],
@@ -809,7 +805,6 @@ def parse_atomic_species(txt):
                                    'Al.pbe-nl-rrkjus_psl.1.0.0.UPF',
                                    'Si3 28.0855 Si.pbe-nl-rrkjus_psl.1.0.0.UPF']
 
-    :rtype: dictionary
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """

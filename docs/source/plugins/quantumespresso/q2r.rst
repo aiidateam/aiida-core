@@ -9,8 +9,7 @@ Use the plugin to support inputs of Quantum Espresso q2r.x executable.
 
 Supported codes
 ---------------
-* tested from q2r.x v5.0 onwards. Back compatibility is not guaranteed (although
-  versions 4.3x might work most of the times).
+* tested from q2r.x v5.0 onwards.
 
 Inputs
 ------
@@ -21,10 +20,7 @@ Inputs
       {"INPUT":{"zasr":"simple"},
       }
   
-  See the QE documentation for the full list of variables and their meaning. 
-  Note: some keywords don't have to be specified or Calculation will enter 
-  the SUBMISSIONFAILED state, and are already taken care of by AiiDA (are related 
-  with the structure or with path to files)::
+  Following keywords are already taken care of by AiiDA::
     
       'INPUT', 'fildyn': name of input dynamical matrices
       'INPUT', 'flfrc': name of output force constants
@@ -38,5 +34,4 @@ Outputs
 * force_constants :py:class:`SinglefileData <aiida.orm.data.singlefile.SinglefileData>` 
   A file containing the force constants in real space.
 
-Errors
-------
+

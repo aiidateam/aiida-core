@@ -2,11 +2,7 @@
 The ``verdi`` commands
 ######################
 
-For some the most common operations on the AiiDA software, you can work directly
-on the command line using the set of ``verdi`` commands.
-You already used the ``verdi install`` when installing the software.
-There are quite some more functionalities attached to this command, here's a
-list:
+For some of the most common operations in AiiDA, you can work directly from the command line using the a set of ``verdi`` commands. You already used ``verdi install`` when installing the software. There are quite some more functionalities attached to this command; here's a list:
 
 * :ref:`calculation<calculation>`:				query and interact with calculations
 * :ref:`code<code>`:                			setup and manage codes to be used
@@ -17,6 +13,7 @@ list:
 * :ref:`data<data>`:                			setup and manage data specific types
 * :ref:`devel<devel>`:               			AiiDA commands for developers
 * :ref:`export<export>`:              			export nodes and group of nodes
+* :ref:`graph<graph>`:                    create a graph from a given root node
 * :ref:`group<group>`:               			setup and manage groups
 * :ref:`import<import>`:              			export nodes and group of nodes
 * :ref:`install<install>`:             			install/setup aiida for the current user/create a new profile
@@ -41,7 +38,7 @@ accessed simultaneously by AiiDA. To install a new profile, use the
 
 .. note:: This profile selection has no effect on the ``verdi daemon`` commands.
 
-Following below, a list with the subcommands available.
+Below is a list with all the available subcommands.
 
 .. _calculation:
 
@@ -62,6 +59,8 @@ Following below, a list with the subcommands available.
   * **gotocomputer**: open a shell to the calc folder on the cluster
   * **label**: view / set the label of a calculation
   * **description**: view / set the description of a calculation
+  * **res**: shows the calculation results (from calc.res).
+  * **cleanworkdir**: cleans the work directory (remote folder) of AiiDA calculations 
   
 .. note:: When using gotocomputer, be careful not to change any file
   that AiiDA created,
@@ -116,20 +115,15 @@ autocompletion of the verdi commands.
 ++++++++++++++++++
 
   *  **setup**: creates a new computer object
-  *  **configure**: set up some extra info that can be used in the connection
-     with that computer.
-  *  **enable**: to enable a computer. If the computer is disabled, the daemon 
-     will not try to connect to the computer, so it will not retrieve or launch 
-     calculations. Useful if a computer is under mantainance. 
-  *  **rename**: changes the name of a computer.
-  *  **disable**: disable a computer (see enable for a larger description)
+  *  **configure**: set up some extra info that can be used in the connection with that computer.
+  *  **test**: tests if the current user (or a given user) can connect to the computer and if basic operations perform as expected (file copy, getting the list of jobs in the scheduler queue, ...)
   *  **show**: shows the details of an installed computer
   *  **list**: list all installed computers
-  *  **delete**: deletes a computer node. Works only if the computer node is 
-     a disconnected node in the database (has not been used yet)
-  *  **test**: tests if the current user (or a given user) can connect to the
-     computer and if basic operations perform as expected (file copy, getting
-     the list of jobs in the scheduler queue, ...)
+  *  **enable**: to enable a computer. If the computer is disabled, the daemon will not try to connect to the computer, so it will not retrieve or launch calculations. Useful if a computer is under mantainance. 
+  *  **disable**: disable a computer (see enable for a larger description)
+  *  **rename**: changes the name of a computer.
+  * **update**: change configuration of a computer. Works only if the computer node is a disconnected node in the database (has not been used yet).
+  *  **delete**: deletes a computer node. Works only if the computer node is a disconnected node in the database (has not been used yet)
 
 
 .. _daemon:
@@ -139,20 +133,17 @@ autocompletion of the verdi commands.
 Manages the daemon, i.e. the process that runs in background and that manages 
 submission/retrieval of calculations.
 
-  *  **status**: see the status of the daemon. Typically, it will either show
-     ``Daemon not running`` or you will see two
-     processes with state ``RUNNING``.
+  *  **status**: see the status of the daemon. Typically, it will either show ``Daemon not running`` or you will see two processes with state ``RUNNING``.
+     
+  *  **start**: starts the daemon.
     
   *  **stop**: stops the daemon
   
-  *  **configureuser**: sets the user which is running the daemon. See the 
-     installation guide for more details.
-     
-  *  **start**: starts the daemon.
+  *  **restart**: restarts the daemon.
+  
+  *  **configureuser**: sets the user which is running the daemon. See the installation guide for more details.
   
   *  **logshow**: show the last lines of the daemon log (use for debugging)
-  
-  *  **restart**: restarts the daemon.
   
   
 .. _data:
@@ -164,58 +155,64 @@ Manages database data objects.
   * **upf**: handles the Pseudopotential Datas
   
     * **listfamilies**: list presently stored families of pseudopotentials
-    
+  
     * **uploadfamily**: install a new family (group) of pseudopotentials
-
-    * **import**: create or return (if already present) a database node,
-      having the contents of a supplied file
-
+  
+    * **import**: create or return (if already present) a database node, having the contents of a supplied file
+  
     * **exportfamily**: export a family of pseudopotential files into a folder
   
   * **structure**: handles the StructureData
   
     * **list**: list currently saved nodes of StructureData kind
-    
-    * **show**: use a third-party visualizer (like vmd or xcrysden) 
-      to graphically show the StructureData
-
+  
+    * **show**: use a third-party visualizer (like vmd or xcrysden) to graphically show the StructureData
+  
     * **export**: export the node as a string of a specified format
-
+  
     * **deposit**: deposit the node to a remote database
-
+  
   * **parameter**: handles the ParameterData objects
-
-    * **show**: output the content of the python dictionary in different
-      formats. 
-
+  
+    * **show**: output the content of the python dictionary in different formats. 
+  
   * **cif**: handles the CifData objects
-
+  
     * **list**: list currently saved nodes of CifData kind
-
-    * **show**: use third-party visualizer (like jmol) to graphically show
-      the CifData
-
-    * **import**: create or return (if already present) a database node,
-      having the contents of a supplied file
-
+  
+    * **show**: use third-party visualizer (like jmol) to graphically show the CifData
+  
+    * **import**: create or return (if already present) a database node, having the contents of a supplied file
+  
     * **export**: export the node as a string of a specified format
-
+  
     * **deposit**: deposit the node to a remote database
-
+  
   * **trajectory**: handles the TrajectoryData objects
-
+  
     * **list**: list currently saved nodes of TrajectoryData kind
-
-    * **show**: use third-party visualizer (like jmol) to graphically show
-      the TrajectoryData
-
+  
+    * **show**: use third-party visualizer (like jmol) to graphically show the TrajectoryData
+  
     * **export**: export the node as a string of a specified format
-
+  
     * **deposit**: deposit the node to a remote database
-
+  
   * **label**: view / set the label of a data
-
+  
   * **description**: view / set the description of a data
+  
+  * **array**: handles :class:`aiida.orm.data.array.ArrayData` objects
+  
+    * **show**: visualizes the data object
+  
+  * **bands**:  handles :class:`aiida.orm.data.array.bands.BandsData` objects (band structure object)
+  
+    * **export**: export the node as a string of a specified format
+  
+    * **show**:   visualizes the data object
+  
+    * **list**:   list currently saved nodes of :class:`aiida.orm.data.array.bands.BandsData` kind
 
 
 .. _devel:
@@ -223,14 +220,9 @@ Manages database data objects.
 ``verdi devel``
 +++++++++++++++
 
-Here there are some functions that are in the development stage, and that might 
-eventually find their way outside of this placeholder.
-As such, they are buggy, possibly difficult to use, not necessarily documented,
-and they might be subject to non back-compatible changes.
+Here there are some functions that are in the development stage, and that might eventually find their way outside of this placeholder. As such, they are buggy, possibly difficult to use, not necessarily documented, and they might be subject to non back-compatible changes.
 
-  * **delproperty**, **describeproperties**, **getproperty**, **listproperties**, 
-    **setproperty**: handle the properties, see :doc:`here<properties>` for more information.
-
+  * **delproperty**, **describeproperties**, **getproperty**, **listproperties**,  **setproperty**: handle the properties, see :doc:`here<properties>` for more information.
 
 .. _export:
 
@@ -240,6 +232,13 @@ and they might be subject to non back-compatible changes.
 Export data from the AiiDA database to a file. 
 See also ``verdi import`` to import this data on another database.
 
+
+.. _graph:
+
+``verdi graph``
++++++++++++++++
+
+  * **generate**: generates a graph from a given root node, in ``.dot`` format. This can be rendered for example with the graphviz ``dot`` utility.
 
 .. _group:
 
@@ -285,10 +284,12 @@ to the new schema.
 ``verdi node``
 +++++++++++++++
 
-  * **repo**: Show files and their contents in the local repository
+  * **repo**: shows files and their contents in the local repository
 
-  * **show**: Show basic node information (PK, UUID, class, inputs and
+  * **show**: shows basic node information (PK, UUID, class, inputs and
     outputs)
+    
+  * **tree**: shows a tree of the nodes
 
 
 .. _profile:
@@ -349,6 +350,6 @@ Manages the workflow. Valid subcommands:
 
   * **report**: display the information on how the workflow is evolving.
   * **kill**: kills a workflow.
-  * **list**: lists the workflows present in the database. 
-    By default, shows only the running ones. 
+  * **list**: lists the workflows present in the database. By default, shows only the running ones. 
+  * **logshow**: shows the log messages for the workflow.
 

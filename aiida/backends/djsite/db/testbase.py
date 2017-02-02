@@ -70,8 +70,14 @@ class DjangoTests(AiidaTestImplementation):
         from aiida.backends.djsite.db.models import DbComputer
 
         # I first delete the workflows
-        from aiida.backends.djsite.db.models import DbWorkflow
+        from aiida.backends.djsite.db.models import DbWorkflow, DbWorkflowStep, DbWorkflowData
 
+        # Complicated way to make sure we 'unwind' all the relationships
+        # between workflows and their children.
+        DbWorkflowStep.calculations.through.objects.all().delete()
+        DbWorkflowStep.sub_workflows.through.objects.all().delete()
+        DbWorkflowData.objects.all().delete()
+        DbWorkflowStep.objects.all().delete()
         DbWorkflow.objects.all().delete()
 
         # Delete groups

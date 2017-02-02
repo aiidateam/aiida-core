@@ -1,5 +1,6 @@
 ## This snippet has been writtten by Armin Ronacher, who explicitely defined
 # it to be of public domain and freely usable as the user likes.
+
 import optparse
 
 def flaskrun(app, default_host="127.0.0.1",

@@ -48,7 +48,7 @@ class Data(Node):
         * **license**: a string with a type of license.
 
         .. note:: some limitations for setting the data source exist, see
-            :py:meth:`._validate`.
+            ``_validate`` method.
 
         :return: dictionary describing the source of Data object.
         """

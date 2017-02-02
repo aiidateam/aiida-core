@@ -9,11 +9,10 @@ install_requires=[
     'celery==3.1.17',
     'billiard==3.3.0.19',
     'anyjson==0.3.3',
-    'six==1.9',
     'supervisor==3.1.3',
     'meld3==1.0.0',
     'numpy',
-    'plum==0.7.4',
+    'plum==0.7.5',
     'SQLAlchemy==1.0.12',
     'SQLAlchemy-Utils==0.31.2',
     'ujson==1.35',
@@ -57,5 +56,5 @@ extras_require={
 }
 
 dependency_links=[
-    'https://bitbucket.org/aiida_team/plum/get/v0.7.4.zip#egg=plum-0.7.4',
+    'https://bitbucket.org/aiida_team/plum/get/v0.7.5.zip#egg=plum-0.7.5',
 ]

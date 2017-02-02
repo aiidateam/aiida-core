@@ -17,8 +17,7 @@ KpointsData = DataFactory('array.kpoints')
 class RESTApiTestCase(AiidaTestCase):
     """
     Setup of the tests for the AiiDA RESTful-api
-	"""
-
+    """
     _url_prefix = "/api/v2"
     _dummy_data = {}
 
@@ -95,7 +94,6 @@ class RESTApiTestCase(AiidaTestCase):
 
         # Prepare typical REST responses
         cls.process_dummy_data()
-
 
     def get_dummy_data(self):
         return self._dummy_data

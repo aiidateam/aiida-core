@@ -14,11 +14,11 @@ Overview
 
 The workflow system allows the user to define one or more Processes that (optionally) take some inputs and (optionally)
 produce some outputs.  By now, this concept should be familiar and, in fact, each time you execute a Process it
-generates a :class:`~aiida.orm.calculation.Calculation` node along with the corresponding inputs and ouputs to keep
+generates a :class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` node along with the corresponding inputs and ouputs to keep
 the provenance of what happened.
 
 At the moment there are two ways that you can define a Process: :class:`~aiida.work.workfunction` s or
-:class:`~aiida.work.WorkChain` s.  Let's start with the former as it's the easier of the two.
+:class:`~aiida.work.workchain.WorkChain` s.  Let's start with the former as it's the easier of the two.
 
 Workfunctions
 +++++++++++++
@@ -297,7 +297,7 @@ Here, on line 22 we use a so called *interstep* command.  These are objects you 
 actions at the end fo the step and just before the beginning of the next.  In this case we use
 :class:`~aiida.work.workchain.ToContext`, the constructor takes keyword arguments of `[name]=[pid]`, it will then take
 insert barriers into the workchain to make sure it does not continue until all of the specified processes have finished.
-Then, before the next step, it will place the corresponding :class:`~aiida.orm.calculation.Calculation` nodes in the
+Then, before the next step, it will place the corresponding :class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` nodes in the
 specified `[name]` variables in the context.
 
 On line 25 we iterate the context looking for those entries that start with `s_` and emit the results from these

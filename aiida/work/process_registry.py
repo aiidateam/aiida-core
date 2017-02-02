@@ -57,7 +57,8 @@ class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
         from aiida.orm import load_node
 
         try:
-            return load_node(pid).get_outputs_dict()
+            return {e[0]: e[1]
+                    for e in load_node(pid).get_outputs(also_labels=True)}
         except exceptions.NotExistent:
             raise plum.knowledge_provider.NotKnown(
                 "Can't find node with pk '{}'".format(pid))

@@ -33,10 +33,9 @@ def get_query_type_string(plugin_type_string):
     to return a string that in a query returns all instances of a class and
     all instances of subclasses.
 
-    :param str plugin_type_string: The plugin_type_string
+    :param plugin_type_string: The plugin_type_string
 
     :returns: the query_type_string
-
     """
     from aiida.common.exceptions import DbContentError, InputValidationError
     if not isinstance(plugin_type_string, basestring):

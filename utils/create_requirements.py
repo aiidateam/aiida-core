@@ -6,7 +6,7 @@ from setup_requirements import install_requires, dependency_links, extras_requir
 
 parent_directory = os.path.join(os.path.split(os.path.abspath(__file__))[0],os.pardir)
 requirement_file = os.path.join(parent_directory, 'requirements.txt')
-optional_requirement_file = os.path.join(parent_directory, 'optional_requirements.txt')
+optional_requirement_prefix = os.path.join(parent_directory, 'optional_requirements_')
 
 # generate basic requirements and dependency links,
 with open(requirement_file, 'w') as fout:
@@ -20,9 +20,8 @@ with open(requirement_file, 'w') as fout:
         fout.write(dep + '\n')
 
 # generate optional requirements
-with open(optional_requirement_file, 'w') as fout:
-    for k, v in extras_require.iteritems():
-        fout.write('##' + k + '\n')
-        fout.write('\n'.join(v) + '\n\n')
+for requirement_class, reqs in extras_require.iteritems():
+    with open(optional_requirement_prefix + requirement_class + '.txt', 'w') as fout:
+        fout.write('\n'.join(reqs) + '\n\n')
 
 

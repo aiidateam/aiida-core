@@ -7,7 +7,6 @@ on them.
 
 from aiida.orm.data.array import ArrayData
 import numpy as np
-import matplotlib.pyplot as plt
 from aiida.common.exceptions import InputValidationError, NotExistent
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."

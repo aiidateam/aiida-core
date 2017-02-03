@@ -315,7 +315,7 @@ class KpointsData(ArrayData):
 
         :param mesh: a list of three integers, representing the size of the
             kpoint mesh along b1,b2,b3.
-        :param (optional) offset: a list of three floats between 0 and 1.
+        :param offset: (optional) a list of three floats between 0 and 1.
             [0.,0.,0.] is Gamma centered mesh
             [0.5,0.5,0.5] is half shifted
             [1.,1.,1.] by periodicity should be equivalent to [0.,0.,0.]
@@ -383,11 +383,11 @@ class KpointsData(ArrayData):
             kpoints, i.e. the number of kpoints along each reciprocal
             axis i is :math:`|b_i|/distance`
             where :math:`|b_i|` is the norm of the reciprocal cell vector.
-        :param (optional) offset: a list of three floats between 0 and 1.
+        :param offset: (optional) a list of three floats between 0 and 1.
             [0.,0.,0.] is Gamma centered mesh
             [0.5,0.5,0.5] is half shifted
             Default = [0.,0.,0.].
-        :param (optional) force_parity: if True, force each integer in the mesh
+        :param force_parity: (optional) if True, force each integer in the mesh
             to be even (except for the non-periodic directions). 
 
         :note: a cell should be defined first.

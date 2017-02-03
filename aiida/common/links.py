@@ -8,6 +8,9 @@ __version__ = "0.7.1"
 
 
 class LinkType(Enum):
+    """
+    A simple enum of allowed link types.
+    """
     UNSPECIFIED = 'unspecified'
     CREATE = 'createlink'
     RETURN = 'returnlink'

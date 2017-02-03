@@ -5,107 +5,107 @@ AiiDA internals
 Node
 ++++
 
-The :py:class:`~aiida.orm.node.Node` class is the basic class that represents all the possible objects at the AiiDA world. More precisely it is inherited by many classes including (among others) the :py:class:`~aiida.orm.calculation.Calculation` class, representing computations that convert data into a different form, the :py:class:`~aiida.orm.code.Code` class representing executables and file collections that are used by calculations and the :py:class:`~aiida.orm.data.Data` class which represents data that can be input or output of calculations.
+The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class is the basic class that represents all the possible objects at the AiiDA world. More precisely it is inherited by many classes including (among others) the :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` class, representing computations that convert data into a different form, the :py:class:`~aiida.orm.implementation.general.code.AbstractCode` class representing executables and file collections that are used by calculations and the :py:class:`~aiida.orm.data.Data` class which represents data that can be input or output of calculations.
 
 
 Methods & properties
 ********************
-In the sequel the most important methods and properties of the :py:class:`~aiida.orm.node.Node` class will be described.
+In the sequel the most important methods and properties of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class will be described.
 
 Node subclasses organization
 ============================
-The :py:class:`~aiida.orm.node.Node` class has two important variables:
+The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class has two important variables:
 
-* :py:attr:`~aiida.orm.node.Node._plugin_type_string` characterizes the class of the object.
-* :py:attr:`~aiida.orm.node.Node._query_type_string` characterizes the class and all its subclasses (by pointing to the package or Python file that contain the class).
+* ``~aiida.orm.implementation.general.node.AbstractNode._plugin_type_string`` characterizes the class of the object.
+* ``~aiida.orm.implementation.general.node.AbstractNode._query_type_string`` characterizes the class and all its subclasses (by pointing to the package or Python file that contain the class).
 
-The convention for all the :py:class:`~aiida.orm.node.Node` subclasses is that if a ``class B`` is inherited by a ``class A`` then there should be a package ``A`` under ``aiida/orm`` that has a file ``__init__.py`` and a ``B.py`` in that directory (or a ``B`` package with the corresponding ``__init__.py``)
+The convention for all the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` subclasses is that if a ``class B`` is inherited by a ``class A`` then there should be a package ``A`` under ``aiida/orm`` that has a file ``__init__.py`` and a ``B.py`` in that directory (or a ``B`` package with the corresponding ``__init__.py``)
 
 An example of this is the :py:class:`~aiida.orm.data.array.ArrayData` and the :py:class:`~aiida.orm.data.array.kpoints.KpointsData`. :py:class:`~aiida.orm.data.array.ArrayData` is placed in ``aiida/orm/data/array/__init__.py`` and :py:class:`~aiida.orm.data.array.kpoints.KpointsData` which inherits from :py:class:`~aiida.orm.data.array.ArrayData` is placed in ``aiida/orm/data/array/kpoints.py``
 
-This is an implicit & quick way to check the inheritance of the :py:class:`~aiida.orm.node.Node` subclasses.
+This is an implicit & quick way to check the inheritance of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` subclasses.
 
 General purpose methods
 =======================
-- :py:meth:`~aiida.orm.node.Node.__init__`: The initialization of the Node class can be done by not providing any attributes or by providing a DbNode as initialization. E.g.::
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.__init__`: The initialization of the Node class can be done by not providing any attributes or by providing a DbNode as initialization. E.g.::
 
     dbn = a_dbnode_object
     n = Node(dbnode=dbn.dbnode)
 
-- :py:meth:`~aiida.orm.node.Node.ctime` and :py:meth:`~aiida.orm.node.Node.mtime` provide the creation and the modification time of the node.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.ctime` and :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.mtime` provide the creation and the modification time of the node.
 
-- :py:meth:`~aiida.orm.node.Node.is_stored` informs whether a node is already stored to the database.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.is_stored` informs whether a node is already stored to the database.
 
-- :py:meth:`~aiida.orm.node.Node.query` queries the database by filtering for the results for similar nodes (if the used object is a subclass of :py:class:`~aiida.orm.node.Node`) or with no filtering if it is a :py:class:`~aiida.orm.node.Node` class. Note that for this check ``_plugin_type_string`` should be properly set.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.query` queries the database by filtering for the results for similar nodes (if the used object is a subclass of :py:class:`~aiida.orm.implementation.general.node.AbstractNode`) or with no filtering if it is a :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class. Note that for this check ``_plugin_type_string`` should be properly set.
 
-- :py:meth:`~aiida.orm.node.Node.computer` returns the computer associated to this node.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_computer` returns the computer associated to this node.
 
-- :py:meth:`~aiida.orm.node.Node._validate` does a validation check for the node. This is important for :py:class:`~aiida.orm.node.Node` subclasses where various attributes should be checked for consistency before storing.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._validate` does a validation check for the node. This is important for :py:class:`~aiida.orm.implementation.general.node.AbstractNode` subclasses where various attributes should be checked for consistency before storing.
 
-- :py:meth:`~aiida.orm.node.Node.get_user` returns the user that created the node.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_user` returns the user that created the node.
 
-- :py:meth:`~aiida.orm.node.Node._increment_version_number_db`: increment the version number of the node on the DB. This happens when adding an ``attribute`` or an ``extra`` to the node. This method should not be called by the users.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._increment_version_number_db`: increment the version number of the node on the DB. This happens when adding an ``attribute`` or an ``extra`` to the node. This method should not be called by the users.
 
-- :py:meth:`~aiida.orm.node.Node.copy` returns a not stored copy of the node with new UUID that can be edited directly.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.copy` returns a not stored copy of the node with new UUID that can be edited directly.
 
-- :py:meth:`~aiida.orm.node.Node.uuid` returns the universally unique identifier (UUID) of the node.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.uuid` returns the universally unique identifier (UUID) of the node.
 
-- :py:meth:`~aiida.orm.node.Node.pk` returns the principal key (ID) of the node.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.pk` returns the principal key (ID) of the node.
 
-- :py:meth:`~aiida.orm.node.Node.dbnode` returns the corresponding Django object.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.dbnode` returns the corresponding Django object.
 
-- :py:meth:`~aiida.orm.node.Node.get_computer` & :py:meth:`~aiida.orm.node.Node.set_computer` get and set the computer to be used & is associated to the node.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_computer` & :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.set_computer` get and set the computer to be used & is associated to the node.
 
 
 Annotation methods
 ==================
-The :py:class:`~aiida.orm.node.Node` can be annotated with labels, description and comments. The following methods can be used for the management of these properties.
+The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` can be annotated with labels, description and comments. The following methods can be used for the management of these properties.
 
 *Label management:*
 
-- :py:meth:`~aiida.orm.node.Node.label` returns the label of the node. The setter method can be used for the update of the label.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.label` returns the label of the node. The setter method can be used for the update of the label.
 
-- :py:meth:`~aiida.orm.node.Node._update_db_label_field` updates the label in the database. This is used by the setter method of the label.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._update_db_label_field` updates the label in the database. This is used by the setter method of the label.
 
 *Description management:*
 
-- :py:meth:`~aiida.orm.node.Node.description`: the description of the node (more detailed than the label). There is also a setter method.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.description`: the description of the node (more detailed than the label). There is also a setter method.
 
-- :py:meth:`~aiida.orm.node.Node._update_db_description_field`: update the node description in the database.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._update_db_description_field`: update the node description in the database.
 
 *Comment management:*
 
-- :py:meth:`~aiida.orm.node.Node.add_comment` adds a comment.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.add_comment` adds a comment.
 
-- :py:meth:`~aiida.orm.node.Node.get_comments` returns a sorted list of the comments.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_comments` returns a sorted list of the comments.
 
-- :py:meth:`~aiida.orm.node.Node._get_dbcomments` is similar to :py:meth:`~aiida.orm.node.Node.get_comments`, just the sorting changes.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._get_dbcomments` is similar to :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_comments`, just the sorting changes.
 
-- :py:meth:`~aiida.orm.node.Node._update_comment` updates the node comment. It can be done by ``verdi comment update``.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._update_comment` updates the node comment. It can be done by ``verdi comment update``.
 
-- :py:meth:`~aiida.orm.node.Node._remove_comment` removes the node comment. It can be done by ``verdi comment remove``.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._remove_comment` removes the node comment. It can be done by ``verdi comment remove``.
 
 
 
 Link management methods
 =======================
-:py:class:`~aiida.orm.node.Node` objects and objects of its subclasses can have ancestors and descendants. These are connected with links. The following methods exist for the processing & management of these links.
+:py:class:`~aiida.orm.implementation.general.node.AbstractNode` objects and objects of its subclasses can have ancestors and descendants. These are connected with links. The following methods exist for the processing & management of these links.
 
-- :py:meth:`~aiida.orm.node.Node._has_cached_links` shows if there are cached links to other nodes.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._has_cached_links` shows if there are cached links to other nodes.
 
-- :py:meth:`~aiida.orm.node.Node.add_link_from` adds a link to the current node from the 'src' node with the given label. Depending on whether the nodes are stored or node, the linked are written to the database or to the cache.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.add_link_from` adds a link to the current node from the 'src' node with the given label. Depending on whether the nodes are stored or node, the linked are written to the database or to the cache.
 
-- :py:meth:`~aiida.orm.node.Node._add_cachelink_from` adds a link to the cache.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._add_cachelink_from` adds a link to the cache.
 
-- :py:meth:`~aiida.orm.node.Node._replace_link_from` replaces or creates an input link.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._replace_link_from` replaces or creates an input link.
 
-- :py:meth:`~aiida.orm.node.Node._remove_link_from` removes an input link that is stored in the database.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._remove_link_from` removes an input link that is stored in the database.
 
-- :py:meth:`~aiida.orm.node.Node._replace_dblink_from` is similar to :py:meth:`~aiida.orm.node.Node._replace_link_from` but works directly on the database.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._replace_dblink_from` is similar to :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._replace_link_from` but works directly on the database.
 
-- :py:meth:`~aiida.orm.node.Node._remove_dblink_from` is similar to :py:meth:`~aiida.orm.node.Node._remove_link_from` but works directly on the database.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._remove_dblink_from` is similar to :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._remove_link_from` but works directly on the database.
 
-- :py:meth:`~aiida.orm.node.Node._add_dblink_from` adds a link to the current node from the given 'src' node. It acts directly on the database.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._add_dblink_from` adds a link to the current node from the given 'src' node. It acts directly on the database.
 
 *Listing links example*
 
@@ -149,27 +149,27 @@ The input/output links of the node can be accessed by the following methods.
 
 *Methods to get the input data*
 
-- :py:meth:`~aiida.orm.node.Node.get_inputs_dict` returns a dictionary where the key is the label of the input link.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_inputs_dict` returns a dictionary where the key is the label of the input link.
 
-- :py:meth:`~aiida.orm.node.Node.get_inputs` returns the list of input nodes
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_inputs` returns the list of input nodes
 
-- :py:meth:`~aiida.orm.node.Node.inp` returns a :py:meth:`~aiida.orm.node.NodeInputManager` object that can be used to access the node's parents.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.inp` returns a :py:meth:`~aiida.orm.implementation.general.node.NodeInputManager` object that can be used to access the node's parents.
 
-- :py:meth:`~aiida.orm.node.Node.has_parents` returns true or false whether the node has parents
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.has_parents` returns true or false whether the node has parents
 
 *Methods to get the output data*
 
-- :py:meth:`~aiida.orm.node.Node.get_outputs_dict` returns a dictionary where the key is the label of the output link, and the value is the output node.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_outputs_dict` returns a dictionary where the key is the label of the output link, and the value is the output node.
 
-- :py:meth:`~aiida.orm.node.Node.get_outputs` returns a list of output nodes.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_outputs` returns a list of output nodes.
 
-- :py:meth:`~aiida.orm.node.Node.out` returns a :py:meth:`~aiida.orm.node.NodeOutputManager` object that can be used to access the node's children.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.out` returns a :py:meth:`~aiida.orm.implementation.general.node.NodeOutputManager` object that can be used to access the node's children.
 
-- :py:meth:`~aiida.orm.node.Node.has_children` returns true or false whether the node has children.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.has_children` returns true or false whether the node has children.
 
 *Navigating in the ``node`` graph*
 
-The user can easily use the :py:meth:`~aiida.orm.node.NodeInputManager` and the :py:meth:`~aiida.orm.node.NodeOutputManager` objects of a ``node`` (provided by the :py:meth:`~aiida.orm.node.Node.inp` and :py:meth:`~aiida.orm.node.Node.out` respectively) to traverse the ``node`` graph and access other connected ``nodes``. :py:meth:`~aiida.orm.node.Node.inp` will give us access to the input ``nodes`` and :py:meth:`~aiida.orm.node.Node.out` to the output ``nodes``. For example::
+The user can easily use the :py:meth:`~aiida.orm.implementation.general.node.NodeInputManager` and the :py:meth:`~aiida.orm.implementation.general.node.NodeOutputManager` objects of a ``node`` (provided by the :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.inp` and :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.out` respectively) to traverse the ``node`` graph and access other connected ``nodes``. :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.inp` will give us access to the input ``nodes`` and :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.out` to the output ``nodes``. For example::
 
 	In [1]: # Let's load a node with a specific pk
 
@@ -232,70 +232,70 @@ The user can easily use the :py:meth:`~aiida.orm.node.NodeInputManager` and the 
 
 Attributes related methods
 ==========================
-Each :py:meth:`~aiida.orm.node.Node` object can have attributes which are properties that characterize the node. Such properties can be the energy, the atom symbols or the lattice vectors. The following methods can be used for the management of the attributes.
+Each :py:meth:`~aiida.orm.implementation.general.node.AbstractNode` object can have attributes which are properties that characterize the node. Such properties can be the energy, the atom symbols or the lattice vectors. The following methods can be used for the management of the attributes.
 
-- :py:meth:`~aiida.orm.node.Node._set_attr` adds a new attribute to the node. The key of the attribute is the property name (e.g. ``energy``, ``lattice_vectors`` etc) and the value of the attribute is the value of that property.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._set_attr` adds a new attribute to the node. The key of the attribute is the property name (e.g. ``energy``, ``lattice_vectors`` etc) and the value of the attribute is the value of that property.
 
-- :py:meth:`~aiida.orm.node.Node._del_attr` & :py:meth:`~aiida.orm.node.Node._del_all_attrs` delete a specific or all attributes.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._del_attr` & :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._del_all_attrs` delete a specific or all attributes.
 
-- :py:meth:`~aiida.orm.node.Node.get_attr` returns a specific attribute.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_attr` returns a specific attribute.
 
-- :py:meth:`~aiida.orm.node.Node.iterattrs` returns an iterator over the attributes. The iterators returns tuples of key/value pairs.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.iterattrs` returns an iterator over the attributes. The iterators returns tuples of key/value pairs.
 
-- :py:meth:`~aiida.orm.node.Node.attrs` returns the keys of the attributes.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.attrs` returns the keys of the attributes.
 
 
 Extras related methods
 ======================
 ``Extras`` are additional information that are added to the calculations. In contrast to ``files`` and ``attributes``, ``extras`` are information added by the user (user specific).
 
-- :py:meth:`~aiida.orm.node.Node.set_extra` adds an ``extra`` to the database. To add a more ``extras`` at once, :py:meth:`~aiida.orm.node.Node.set_extras` can be used.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.set_extra` adds an ``extra`` to the database. To add a more ``extras`` at once, :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.set_extras` can be used.
 
-- :py:meth:`~aiida.orm.node.Node.get_extra` and :py:meth:`~aiida.orm.node.Node.get_extras` return a specific ``extra`` or all the available ``extras`` respectively. :py:meth:`~aiida.orm.node.Node.extras` returns the keys of the ``extras``. :py:meth:`~aiida.orm.node.Node.iterextras` returns an iterator (returning key/value tuples) of the ``extras``.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_extra` and :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_extras` return a specific ``extra`` or all the available ``extras`` respectively. :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.extras` returns the keys of the ``extras``. :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.iterextras` returns an iterator (returning key/value tuples) of the ``extras``.
 
-- :py:meth:`~aiida.orm.node.Node.del_extra` deletes an ``extra``.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.del_extra` deletes an ``extra``.
 
 
 Folder management
 =================
 ``Folder`` objects represent directories on the disk (virtual or not) where extra information for the node are stored. These folders can be temporary or permanent.
 
-- :py:meth:`~aiida.orm.node.Node.folder` returns the folder associated to the ``node``.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.folder` returns the folder associated to the ``node``.
 
-- :py:meth:`~aiida.orm.node.Node.get_folder_list` returns the list of files that are in the ``path`` sub-folder of the repository folder.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_folder_list` returns the list of files that are in the ``path`` sub-folder of the repository folder.
 
-- :py:meth:`~aiida.orm.node.Node._repository_folder` returns the permanent repository folder.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._repository_folder` returns the permanent repository folder.
 
-- :py:meth:`~aiida.orm.node.Node._get_folder_pathsubfolder` returns the ``path`` sub-folder in the repository.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._get_folder_pathsubfolder` returns the ``path`` sub-folder in the repository.
 
-- :py:meth:`~aiida.orm.node.Node._get_temp_folder` returns the ``node`` folder in the temporary repository.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._get_temp_folder` returns the ``node`` folder in the temporary repository.
 
-- :py:meth:`~aiida.orm.node.Node.remove_path` removes a file/directory from the repository.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.remove_path` removes a file/directory from the repository.
 
-- :py:meth:`~aiida.orm.node.Node.add_path` adds a file or directory to the repository folder.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.add_path` adds a file or directory to the repository folder.
 
-- :py:meth:`~aiida.orm.node.Node.get_abs_path` returns the absolute path of the repository folder.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_abs_path` returns the absolute path of the repository folder.
 
 
 Store & deletion
 ================
-- :py:meth:`~aiida.orm.node.Node.store_all` stores all the input ``nodes``, then it stores the current ``node`` and in the end, it stores the cached input links.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.store_all` stores all the input ``nodes``, then it stores the current ``node`` and in the end, it stores the cached input links.
 
-- :py:meth:`~aiida.orm.node.Node._store_input_nodes` stores the input ``nodes``.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._store_input_nodes` stores the input ``nodes``.
 
-- :py:meth:`~aiida.orm.node.Node._check_are_parents_stored` checks that the parents are stored.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._check_are_parents_stored` checks that the parents are stored.
 
-- :py:meth:`~aiida.orm.node.Node._store_cached_input_links` stores the input links that are in memory.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._store_cached_input_links` stores the input links that are in memory.
 
-- :py:meth:`~aiida.orm.node.Node.store` method checks that the ``node`` data is valid, then check if ``node``'s parents are stored, then moves the contents of the temporary folder to the repository folder and in the end, it stores in the database the information that are in the cache. The latter happens with a database transaction. In case this transaction fails, then the data transfered to the repository folder are moved back to the temporary folder.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.store` method checks that the ``node`` data is valid, then check if ``node``'s parents are stored, then moves the contents of the temporary folder to the repository folder and in the end, it stores in the database the information that are in the cache. The latter happens with a database transaction. In case this transaction fails, then the data transfered to the repository folder are moved back to the temporary folder.
 
-- :py:meth:`~aiida.orm.node.Node.__del__` deletes temporary folder and it should be called when an in-memory object is deleted.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.__del__` deletes temporary folder and it should be called when an in-memory object is deleted.
 
 
 DbNode
 ++++++
 
-The :py:class:`~aiida.backends.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.node.Node` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.node.Node` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.calculation.Calculation` and :py:class:`~aiida.orm.code.Code` use the :py:class:`~aiida.backends.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
+The :py:class:`~aiida.backends.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` and :py:class:`~aiida.orm.implementation.general.code.AbstractCode` use the :py:class:`~aiida.backends.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
 
 - :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_aiida_class` which returns the corresponding AiiDA class instance.
 

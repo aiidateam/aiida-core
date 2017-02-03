@@ -2,225 +2,407 @@
 Installation and Deployment of AiiDA
 ====================================
 
+Quickstart
+++++++++++
+
+Get started immediately with just a few commands! Look at `:ref:quicksetup` for more details
+
+Quickstart - Linux (Ubuntu)
+---------------------------
+
+If you use another debian derivate, chances are this still works for you.
+If your distribution uses a different package manager, simply replace the commandline in the first step (the package names might be slightly different). The links in :ref:`install_dependencies` contain additional information on how to get the required programs for your system.
+
+1. Install dependencies::
+
+      $ sudo apt-get install git python-pip python2.7-dev postgresql postgresql-server-dev-all postgresql-client
+
+2. Install AiiDA::
+
+      $ pip install -U setuptools pip
+      $ pip install virtualenv
+      $ virtualenv ~/aiidapy # or equivalent
+      $ source ~/aiidapy/bin/activate
+      (aiidapy) $ pip install -e git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida> 
+      (aiidapy) $ verdi quicksetup
+
+You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
+
+3. Add the verdi command to your PATH::
+
+      $ # for bash:
+      $ echo "export PATH="${PATH}:~/aiidapy/bin/verdi" >> ~/.bashrc
+
+
+Quickstart - OS X (Homebrew)
+----------------------------
+
+`Homebrew`_ is an actively maintained package manager for OS X.
+If you use another package manager just replace the first step accordingly.
+
+1. Install dependencies::
+
+      $ brew install git python postgresql
+
+2. Start Postgres Server::
+
+      $ pg_ctl -D /usr/local/var/postgres start
+
+3. Install AiiDA::
+
+      $ pip install -U setuptools pip
+      $ pip install virtualenv
+      $ virtualenv ~/aiidapy # or equivalent
+      $ source ~/aiidapy/bin/activate
+      (aiidapy) $ pip install -e git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
+      (aiidapy) $ verdi quicksetup
+
+You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
+
+4. Add the verdi command to your PATH::
+
+      $ # for bash:
+      $ echo "export PATH="${PATH}:~/aiidapy/bin/" >> ~/.bashrc
+
+
+If you prefer not to use a package manager, follow the links in :ref:`install_dependencies` for instructions on how to install the required programs and start the postgres server before continuing with the third step.
+
+.. _Homebrew: http://brew.sh/index_de.html
+
+Other Systems and Custom Setups
++++++++++++++++++++++++++++++++
+ 
+For new and inexperienced users we strongly recommend to start with the Quickstart procedure detailed above. It is possible to customize your configuration afterwards if necessary.
+
 If you are updating from a previous version and you don't want to
 reinstall everything from scratch, read the instructions
 :ref:`here<updating_aiida>`.
 
+If you are trying to install AiiDA on another system than Ubunto or OS X, please take a look at `:ref:install_dependencies` before proceeding with one of the following.
+
+* Install AiiDA on another system `:ref:installing_aiida`
+* Setup AiiDA using quicksetup `:ref:quicksetup`
+* Using setup for more options or to customize your user profile `:ref:setup`
+* Using setup to programatically install AiiDA `:ref:setup-noninteractive`
+
+.. Four types of installations are described in the following:
+.. 
+.. * For new users:
+.. 
+..   * :ref:`quicksetup`
+.. 
+.. * For experienced users:
+.. 
+..   * :ref:`Custom user configuration`
+..   * :ref:`Server setup`
+..   * :ref:`Developer`
+
+Installation Requirements
++++++++++++++++++++++++++
+Read on for more information about the kind of operating system AiiDA can run on and what software needs to be installed before AiiDA can work.
+
 Supported architecture
-++++++++++++++++++++++
-AiiDA has a few strict requirements, in its current version:
-first, it will run only on Unix-like systems - it
-is tested (and developed) in Mac OS X and Linux (Ubuntu), but other Unix
-flavours *should* work as well.
+----------------------
+AiiDA is tested to run on:
 
-Moreover, on the clusters (computational resources) side, it expects to find
-a Unix system, and the default shell is **required** to be ``bash``.
+* Mac OS X (tested)
+* Ubuntu 14.04 & 16.04
 
-Installing python
-+++++++++++++++++
+AiiDA should run on:
 
-AiiDA requires python 2.7.x (only CPython has been tested).
-It is probable that you already have a version of
-python installed on your computer. To check, open a terminal and type::
+* Older / newer Ubuntu versions
+* Other Linux distributions
 
-    python -V
+.. TODO: remove / replace with above?
+.. AiiDA has a few strict requirements, in its current version:
+.. first, it will run only on Unix-like systems - it
+.. is tested (and developed) in Mac OS X and Linux (Ubuntu), but other Unix
+.. flavours *should* work as well.
 
-that will print something like this::
+.. TODO: move to Add computing resources
+.. Moreover, on the clusters (computational resources) side, it expects to find
+.. a Unix system, and the default shell is **required** to be ``bash``.
 
-    Python 2.7.3
+.. _install_dependencies:
 
-If you don't have python installed, or your version is outdated, please install
-a suitable version of python (either refer to the manual of your Linux
-distribution, or for instance you can download the ActiveState Python from
-ActiveState_. Choose the appropriate distribution corresponding to your
-architecture, and with version 2.7.x.x).
+Required Software
+-----------------
+The following are required to be installed on your computer:
 
-.. _ActiveState: http://www.activestate.com/activepython/downloads
+* `git`_ (To download the aiida package)
+* `python 2.7.x`_ (The programming language used for AiiDA)
+* `python-pip`_ (To install python packages)
+* `python-virtualenv`_ (Or equivalent, to install AiiDA safely)
+* `PostgreSQL`_ (For the database)
+* PostgreSQL development files (required by some of the python packages AiiDA relies on)
 
-Installation of the core dependencies
-+++++++++++++++++++++++++++++++++++++
+.. _git: https://git-scm.com/downloads
+.. _python 2.7.x: https://www.python.org/downloads
+.. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
+.. _python-virtualenv: https://virtualenv.pypa.io/en/stable/
+.. _PostgreSQL: https://www.postgresql.org/downloads
 
-Database
---------
+.. TODO: is this really necessary?
+.. Installing Required Dependencies
+.. ++++++++++++++++++++++++++++++++
+.. 
+.. Installing python
+.. -----------------
+.. 
+.. AiiDA requires python 2.7.x (only CPython has been tested).
+.. It is probable that you already have a version of
+.. python installed on your computer. To check, open a terminal and type::
+.. 
+..     python -V
+.. 
+.. that will print something like this::
+.. 
+..     Python 2.7.3
+.. 
+.. If you don't have python installed, or your version is outdated, please install
+.. a suitable version of python (either refer to the manual of your Linux
+.. distribution, or for instance you can download the ActiveState Python from
+.. ActiveState_. Choose the appropriate distribution corresponding to your
+.. architecture, and with version 2.7.x.x).
+.. 
+.. .. _ActiveState: http://www.activestate.com/activepython/downloads
 
-As a first thing, :doc:`choose and setup the database that you want to
-use<database/index>`.
+.. Installation of the core dependencies
+.. +++++++++++++++++++++++++++++++++++++
 
-.. _other_core_dependencies:
+.. TODO: definitely unnecessary now?
+.. Database
+.. --------
+.. 
+.. As a first thing, :doc:`choose and setup the database that you want to
+.. use<database/index>`.
+.. 
+.. .. _other_core_dependencies:
 
-Other core dependencies
------------------------
+.. TODO: confirm removal
+.. Some of them are mandatory, while others are optional (but often strongly suggested), also depending for instance on the :doc:`type of database <database/index>` that you plan to use.
 
-Before continuing, you still need to install a few more programs. Some of them
-are mandatory, while others are optional (but often strongly suggested), also
-depending for instance on the :doc:`type of database <database/index>`
-that you plan to use.
+.. TODO: confirm has been replaced by below
+.. Here is a list of packages/programs that you need to install (for each of them,
+.. there may be a specific/easier way to install them in your distribution, as
+.. for instance ``apt-get`` in Debian/Ubuntu -see below for the specific names
+.. of packages to install- or ``yum`` in RedHat/Fedora).
 
-Here is a list of packages/programs that you need to install (for each of them,
-there may be a specific/easier way to install them in your distribution, as
-for instance ``apt-get`` in Debian/Ubuntu -see below for the specific names
-of packages to install- or ``yum`` in RedHat/Fedora).
+.. TODO: confirm has been replaced by above
+.. * `git`_ (required to download the code)
+.. * `python-pip`_ (required to automatically download and install further
+..   python packages required by AiiDA)
+.. * `ipython`_ (optional, but strongly recommended for interactive usage)
+.. * python 2.7 development files (these may be needed; refer to your distribution
+..   to know how to locate and install them)
+.. * To support  SQLite:
+.. 
+..   * `SQLite3 development files`_ (required later to compile the library,
+..     when configuring the python sqlite module; see below for the Ubuntu
+..     module required to install these files)
+.. 
+.. * To support  PostgreSQL:
+.. 
+..   * `PostgreSQL development files`_ (required later to compile the library,
+..     when configuring the python psycopg2 module; see below for the Ubuntu
+..     module required to install these files)
+.. 
+.. .. _git: http://git-scm.com/
+.. .. _python-pip: https://pypi.python.org/pypi/pip
+.. .. _ipython: http://ipython.org/
+.. .. _SQLite3 development files: http://www.sqlite.org/
+.. .. _PostgreSQL development files: http://www.postgresql.org/
 
-* `git`_ (required to download the code)
-* `python-pip`_ (required to automatically download and install further
-  python packages required by AiiDA)
-* `ipython`_ (optional, but strongly recommended for interactive usage)
-* python 2.7 development files (these may be needed; refer to your distribution
-  to know how to locate and install them)
-* To support  SQLite:
+.. Todo: confirm outdated due to dropping support for other dbs
+.. .. note:: For the latter line, please use the same version (in the
+..   example above is 9.1) of the
+..   postgresql server that you installed (in this case, to install the server of
+..   the same version, use the ``sudo apt-get install postgresql-9.1`` command).
+.. 
+..   If you want to use postgreSQL, use a version greater than 9.1
+..   (the greatest that your distribution supports).
 
-  * `SQLite3 development files`_ (required later to compile the library,
-    when configuring the python sqlite module; see below for the Ubuntu
-    module required to install these files)
+.. _installing_aiida:
 
-* To support  PostgreSQL:
+Installing AiiDA (Other Systems)
+++++++++++++++++++++++++++++++++
 
-  * `PostgreSQL development files`_ (required later to compile the library,
-    when configuring the python psycopg2 module; see below for the Ubuntu
-    module required to install these files)
+1. Create a virtual python environment, this is done so installing aiida can not accidentally up- or downgrade any of your system's python packages.::
 
-.. _git: http://git-scm.com/
-.. _python-pip: https://pypi.python.org/pypi/pip
-.. _ipython: http://ipython.org/
-.. _SQLite3 development files: http://www.sqlite.org/
-.. _PostgreSQL development files: http://www.postgresql.org/
+      $ virtualenv ~/aiidapy 
+      $ # or conda create -n aiidapy python2.7 # if you use conda to manage python environments
+      $ # or mkvirtualenv aiidapy # if you use virtualenvwrapper
 
+      
+2. Activate the environment::
 
-For Ubuntu, you can install the above packages using (tested on Ubuntu 12.04,
-names may change in different releases)::
+      $ source ~/aiidapy/bin/activate
+      $ or source activate aiidapy # (conda)
+      $ or workon aiidapy # (virtualenvwrapper)
 
-      sudo apt-get install git python-pip ipython python2.7-dev
+3. Install aiida into the environment::
+      
+      (aiidapy) $ pip install -e git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
 
-.. note:: For the latter line, please use the same version (in the
-  example above is 9.1) of the
-  postgresql server that you installed (in this case, to install the server of
-  the same version, use the ``sudo apt-get install postgresql-9.1`` command).
+This installs the verdi command into your python environment and puts the source into <folder/containing/aiida>/aiida.
+You can either activate the environment every time before using aiida (that way you could have multiple aiida versions installed in parallel), or you can add the verdi command to your path
 
-  If you want to use postgreSQL, use a version greater than 9.1
-  (the greatest that your distribution supports).
+4. (optional) add verdi to your path:
+   Add this to your .bashrc or .bash_profile or equivalent, assuming you installed with virtualenv::
 
-For Mac OS X, you may either already have some of the dependencies above
-(e.g., git), or you can download binary packages to install (e.g., for
-PostgreSQL you can download and install the binary package from the
-official website).
+     export PATH="${PATH}:~/aiidapy/bin/verdi
 
-Downloading the code
-++++++++++++++++++++
+If you use conda, verdi will be installed to (envs directory)/aiidapy/bin/verdi, where envs directory depends on which version of Anaconda or Miniconda you use, for miniconda2 the default is ~/miniconda2/envs/. If you enter::
+   
+   conda info
 
-Download the code using git in a directory of your choice (``~/git/aiida`` in
-this tutorial), using the
-following command::
+among the listed information you will find an "envs directories".
 
-    git clone https://USERNAME@bitbucket.org/aiida_team/aiida_core.git
-
-(or use ``git@bitbucket.org:aiida_team/aiida_core.git`` if you are downloading
-through SSH; note that this requires your ssh key to be added on the
-Bitbucket account.)
-
-Python dependencies
-+++++++++++++++++++
-Python dependencies are managed using ``pip``, that you have installed in the
-previous steps.
-
-As a first step, check that ``pip`` is at its most recent version.
-
-One possible way of doing this is to update ``pip`` with itself, with
-a command similar to the following::
-
-  sudo pip install -U pip
-
-Then, install the python dependencies is as simple as this::
-
-      cd ~/git/aiida # or the folder where you downloaded AiiDA
-      pip install --user -U .
-
-(this will download and install requirements that are listed in the
-``requirements.txt`` file; the ``--user`` option allows to install
-the packages as a normal user, without the need of using ``sudo`` or
-becoming root). Check that every package is installed correctly.
-
-There are some additional dependencies need to be installed if you are
-using PostgreSQL or MySql as backend database. No additional dependency
-is required for SQLite.
-
-For PostgreSQL::
-
-  pip install --user psycopg2==2.6
-
-For MySQL::
-
-  pip install --user MySQL-python==1.2.5
-
-
-.. note:: This step should work seamlessly, but there are a number of reasons
-  for which problems may occur. Often googling for the error message helps in
-  finding a solution. Some common pitfalls are described in the notes below.
-
-.. note:: if the ``pip install`` command gives you this kind of error message::
-
-    OSError: [Errno 13] Permission denied: '/usr/local/bin/easy_install'
-
-  then try again as root::
-
-    sudo pip install -U .
+If you use virtualenvwrapper, you can find out in its online documentation where environments install their binaries.
 
 If everything went smoothly, congratulations! Now the code is installed!
-However, we need still a few steps to properly configure AiiDA for your user.
 
-.. note:: if the ``pip install`` command gives you an error that
-  resembles the one
-  shown below, you might need to downgrade to an older version of pip::
+Next steps:
 
-	Cannot fetch index base URL https://pypi.python.org/simple/
+* :ref:`set up AiiDA using quicksetup<quicksetup>`
 
-  To downgrade pip, use the following command::
+.. * :ref:`Try out AiiDA for the first time`
+.. * :ref:`Custom configuration` for more advanced configurations.
 
-	sudo easy_install pip==1.2.1
+.. _quicksetup:
 
-.. note:: Several users reported the need to install also ``libqp-dev``::
+Quicksetup
+++++++++++
 
-    apt-get install libqp-dev
+Make sure your postgresql daemon is running and you are either a postgres super user or have sudo rights to your system to switch to a postgres super user.
 
-  But under Ubuntu 12.04 this is not needed.
+Setup and configure aiida using::
+      
+   $ verdi quickinstall
 
-.. note:: If the installation fails while installing the packages related
-  to the database, you may have not installed or set up the database
-  libraries as described in the section :ref:`other_core_dependencies`.
+This will prompt you for an email address, first and last name and institution.
+Remember that it is important for this information to be accurate if you wish to share your results with other aiida users.
 
-  In particular, on Mac OS X, if you installed the binary package of
-  PostgreSQL, it is possible that the PATH environment variable is not
-  set correctly, and you get a "Error: pg_config executable not found." error.
-  In this case, discover where the binary is located, then add a line to
-  your ``~/.bashrc`` file similar to the following::
+Optionally you cann pass the same information as commandline options::
 
-    export PATH=/the/path/to/the/pg_config/file:${PATH}
+   $ verdi quickinstall --email=<email> --first-name=<First> --last-name=<Last> --institution=<Inst>
 
-  and then open a new bash shell.
-  Some possible paths can be found at this
-  `Stackoverflow link`_ and a non-exhaustive list of possible
-  paths is the following (version number may change):
+More commandline options are available in case you custom configured your postgresql installation, or if you would like to store your setup under a different profile name than "quicksetup". For an overview use::
 
-  * ``/Applications/Postgres93.app/Contents/MacOS/bin``
-  * ``/Applications/Postgres.app/Contents/Versions/9.3/bin``
-  * ``/Library/PostgreSQL/9.3/bin/pg_config``
+   $ verdi quickinstall -h
 
-  Similarly, if the package installs but then errors occur during the first
-  of AiiDA (with ``Symbol not found`` errors or similar), you may need to
-  point to the path where the dynamical libraries are. A way to do it is to
-  add a line similar to the following to the ``~/.bashrc`` and then open
-  a new shell::
 
-    export DYLD_FALLBACK_LIBRARY_PATH=/Library/PostgreSQL/9.3/lib:$DYLD_FALLBACK_LIBRARY_PATH
+.. TODO: confirm replaced by above Installing AiiDA
+.. Downloading the code
+.. ++++++++++++++++++++
+.. 
+.. Download the code using git in a directory of your choice (``~/git/aiida`` in
+.. this tutorial), using the
+.. following command::
+.. 
+..     git clone https://USERNAME@github.com/aiidateam/aiida_core.git
+.. 
+.. (or use ``git@github.com:aiidateam/aiida_core.git`` if you are downloading
+.. through SSH; note that this requires your ssh key to be added on the
+.. GitHub account.)
+.. 
+.. Python dependencies
+.. +++++++++++++++++++
+.. Python dependencies are managed using ``pip``, that you have installed in the
+.. previous steps.
+.. 
+.. As a first step, check that ``pip`` is at its most recent version.
+.. 
+.. One possible way of doing this is to update ``pip`` with itself, with
+.. a command similar to the following::
+.. 
+..   sudo pip install -U pip
+.. 
+.. Then, install the python dependencies is as simple as this::
+.. 
+..       cd ~/git/aiida # or the folder where you downloaded AiiDA
+..       pip install --user -U -r requirements.txt
+.. 
+.. (this will download and install requirements that are listed in the
+.. ``requirements.txt`` file; the ``--user`` option allows to install
+.. the packages as a normal user, without the need of using ``sudo`` or
+.. becoming root). Check that every package is installed correctly.
+.. 
+.. There are some additional dependencies need to be installed if you are
+.. using PostgreSQL or MySql as backend database. No additional dependency
+.. is required for SQLite.
+.. 
+.. For PostgreSQL::
+.. 
+..   pip install --user psycopg2==2.6
+.. 
+.. For MySQL::
+.. 
+..   pip install --user MySQL-python==1.2.5
+.. 
+.. 
+.. .. note:: This step should work seamlessly, but there are a number of reasons
+..   for which problems may occur. Often googling for the error message helps in
+..   finding a solution. Some common pitfalls are described in the notes below.
+.. 
+.. .. note:: if the ``pip install`` command gives you this kind of error message::
+.. 
+..     OSError: [Errno 13] Permission denied: '/usr/local/bin/easy_install'
+.. 
+..   then try again as root::
+.. 
+..     sudo pip install -U -r requirements.txt
 
-  (you should of course adapt the path to the PostgreSQL libraries).
+Additional bash configuration for AiiDA
++++++++++++++++++++++++++++++++++++++++
 
-.. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
-
-AiiDA configuration
-+++++++++++++++++++
-
-Path configuration
-------------------
+.. TODO: should be obsolete due to pip install and virtualenv
+.. Path configuration
+.. ------------------
+.. 
+.. The main interface to AiiDA is through its command-line tool, called ``verdi``.
+.. For it to work, it must be on the system path, and moreover the AiiDA python
+.. code must be found on the python path.
+.. 
+.. To do this, add the following to your ``~/.bashrc`` file (create it if not already present)::
+.. 
+..       export PYTHONPATH=~/git/aiida:${PYTHONPATH}
+..       export PATH=~/git/aiida/bin:${PATH}
+.. 
+.. and then source the .bashrc file with the command ``source ~/.bashrc``, or login
+.. in a new window.
+.. 
+.. .. note:: replace ``~/git/aiida`` with the path where you installed AiiDA. Note
+..   also that in the ``PYTHONPATH`` you simply have to specify the AiiDA path, while
+..   in ``PATH`` you also have to append the ``/bin`` subfolder!
+.. 
+.. .. note:: if you installed the modules with the ``--user`` parameter during the
+..   ``pip install`` step, you will need to add one more directory to your ``PATH``
+..   variable in the ``~/.bashrc`` file.
+..   For Linux systems, the path to add is usually ``~/.local/bin``::
+.. 
+..   	export PATH=~/git/aiida/bin:~/.local/bin:${PATH}
+.. 
+..   For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
+.. 
+..   	export PATH=~/git/aiida/bin:~/Library/Python/2.7/bin:${PATH}
+.. 
+..   To verify if this is the correct path to add, navigate to this location and
+..   you should find the executable ``supervisord`` in the directory.
+.. 
+.. To verify if the path setup is OK:
+.. 
+.. * type ``verdi`` on your terminal, and check if the program starts (it should
+..   provide a list of valid commands). If it doesn't, check if you correctly set
+..   up the ``PATH`` environmente variable above.
+.. * go in your home folder or in another folder different from the AiiDA folder,
+..   run ``python`` or ``ipython`` and try to import a module, e.g. typing::
+.. 
+..     import aiida
+.. 
+..   If the setup is ok, you shouldn't get any error. If you do get an
+..   ``ImportError`` instead, check if you correctly set up the ``PYTHONPATH``
+..   environment variable in the steps above.
 
 The main interface to AiiDA is through its command-line tool, called ``verdi``.
 
@@ -254,7 +436,7 @@ To verify if the path setup is OK:
 
 
 Bash completion
-^^^^^^^^^^^^^^^
+---------------
 
 ``verdi`` fully supports bash completion (i.e., the possibility to press the
 ``TAB`` of your keyboard to get a list of sensible commands to type.
@@ -283,16 +465,22 @@ or to open a new shell window.
         . ~/.bashrc
     fi
 
+If you chose to work with multiple aiida versions or just prefer explicitly working inside the virtual invironment in which you installed aiida, it might be a good idea to put the completion command into a postactivation hook of your python environment manager (look up in the documentation of your manager how to do this).
 
 
-AiiDA first setup
------------------
+Adding and Editing Profiles
++++++++++++++++++++++++++++
 
-Run the following command::
+If you wish aiida to try to automatically create a database for your new profile and to guess sensible defaults for all the values you leave out you can add a profile using::
 
-    verdi install
+   verdi quicksetup --profile=<profile>
+   # verdi quicksetup -h for possible commandline options
 
-to configure AiiDA. The command will guide you through a process to configure
+If you prefer to setup a database by hand first or are only going to edit the profile run the following command::
+
+   verdi setup <profile> # synonym to verdi -p <profile> setup
+
+to add or edit a profile in AiiDA. The command will guide you through a process to configure
 the database, the repository location, and it will finally (automatically) run
 a django ``migrate`` command, if needed, that creates the required tables
 in the database and installs the database triggers.
@@ -361,22 +549,22 @@ Then, the following prompts will help you configure the database. Typical settin
 	Insert the new password:
 	Insert the new password (again):
 
-
-.. note:: When the "Database engine" is asked, use 'sqlite3' **only if** you want
-  to try out AiiDA without setting up a database.
-
-  **However, keep in mind that for serious use, SQLite has serious
-  limitations!!** For instance, when many calculations are managed at the same
-  time, the database file is locked by SQLite to avoid corruption, but this
-  can lead to timeouts that do not allow to AiiDA to properly store the
-  calculations in the DB.
-
-  **Therefore, for production use of AiiDA, we strongly suggest to setup a
-  "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
-  field, type either 'postgres' or 'mysql' according to the database you
-  chose to use. See :doc:`here<database/index>` for the documentation
-  to setup such databases (including info on how to proceed with ``verdi install``
-  in this case).
+.. TODO: confirm remove
+.. .. note:: When the "Database engine" is asked, use 'sqlite3' **only if** you want
+..   to try out AiiDA without setting up a database.
+.. 
+..   **However, keep in mind that for serious use, SQLite has serious
+..   limitations!!** For instance, when many calculations are managed at the same
+..   time, the database file is locked by SQLite to avoid corruption, but this
+..   can lead to timeouts that do not allow to AiiDA to properly store the
+..   calculations in the DB.
+.. 
+..   **Therefore, for production use of AiiDA, we strongly suggest to setup a
+..   "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
+..   field, type either 'postgres' or 'mysql' according to the database you
+..   chose to use. See :doc:`here<database/index>` for the documentation
+..   to setup such databases (including info on how to proceed with ``verdi install``
+..   in this case).
 
 At the end, AiiDA will also ask to configure your user, if you set up a user
 different from ``aiida@localhost``.
@@ -392,6 +580,23 @@ the database. Double-check your settings before reporting an error.
   Check out our :ref:`tips<repo_troubleshooting>` in the
   troubeshooting section in case this happens.
 
+.. _setup-noninteractive:
+
+Programmatically setup AiiDA profiles:
+++++++++++++++++++++++++++++++++++++++
+
+::
+   
+   $ verdi setup <profile> --non-interactive --email=<..> ...
+
+Can be used to create profiles from scripts. If not all values are given on the commandline, setup will fail. Type::
+
+   $ verdi setup -h
+
+For a list of options that have to be passed.
+
+Using AiiDA
++++++++++++
 
 Start the daemon
 -----------------
@@ -437,12 +642,12 @@ a fundamental component of AiiDA, and it is in charge of submitting new
 calculations, checking their status on the cluster, retrieving and parsing
 the results of finished calculations, and managing the workflow steps.
 
-**Congratulations, your setup is complete!**
-
-Before going on, however, you will need to setup *at least one computer* (i.e.,
-on computational resource as a cluster or a supercomputer, on which you want
-to run your calculations) *and one code*. The documentation for these steps can
-be found :doc:`here<setup/computerandcodes>`.
+The next step will be to add computational resources (computers, codes) to work with 
+The documentation for these steps can be found :doc:`here<setup/computerandcodes>`.
+.. TODO: should be replaced by concepts section
+.. (i.e.,
+.. on computational resource as a cluster or a supercomputer, on which you want
+.. to run your calculations) *and one code*. 
 
 
 Optional dependencies
@@ -480,7 +685,7 @@ ASE has to be installed from source::
     export PYTHONPATH=$(pwd):$PYTHONPATH
 
 For the setting up of cod-tools please refer to
-:ref:`installation of cod-tools<codtools_installation>`.
+`the software homepage<https://github.com/sauliusg/cod-tools>`.
 
 .. _Crystallographic Information Framework (CIF) files: http://www.iucr.org/resources/cif
 .. _pymatgen: http://pymatgen.org
@@ -491,6 +696,56 @@ For the setting up of cod-tools please refer to
 
 Further comments and troubleshooting
 ++++++++++++++++++++++++++++++++++++
+
+* if the ``pip install`` command gives you an error that
+  resembles the one
+  shown below, you might need to downgrade to an older version of pip::
+
+	Cannot fetch index base URL https://pypi.python.org/simple/
+
+  To downgrade pip, use the following command::
+
+	sudo easy_install pip==1.2.1
+
+* Several users reported the need to install also ``libpq-dev`` (header files for libpq5 - PostgreSQL library)::
+
+    apt-get install libpq-dev
+
+  But under Ubuntu 12.04 this is not needed.
+ 
+* If the installation fails while installing the packages related
+  to the database, you may have not installed or set up the database
+  libraries.
+
+  In particular, on Mac OS X, if you installed the binary package of
+  PostgreSQL, it is possible that the PATH environment variable is not
+  set correctly, and you get a "Error: pg_config executable not found." error.
+  In this case, discover where the binary is located, then add a line to
+  your ``~/.bashrc`` file similar to the following::
+
+    export PATH=/the/path/to/the/pg_config/file:${PATH}
+
+  and then open a new bash shell.
+  Some possible paths can be found at this
+  `Stackoverflow link`_ and a non-exhaustive list of possible
+  paths is the following (version number may change):
+
+  * ``/Applications/Postgres93.app/Contents/MacOS/bin``
+  * ``/Applications/Postgres.app/Contents/Versions/9.3/bin``
+  * ``/Library/PostgreSQL/9.3/bin/pg_config``
+
+  Similarly, if the package installs but then errors occur during the first
+  of AiiDA (with ``Symbol not found`` errors or similar), you may need to
+  point to the path where the dynamical libraries are. A way to do it is to
+  add a line similar to the following to the ``~/.bashrc`` and then open
+  a new shell::
+
+    export DYLD_FALLBACK_LIBRARY_PATH=/Library/PostgreSQL/9.3/lib:$DYLD_FALLBACK_LIBRARY_PATH
+
+  (you should of course adapt the path to the PostgreSQL libraries).
+
+.. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
+ 
 
 * For some reasons, on some machines (notably often on Mac OS X) there is no
   default locale defined, and when you run ``verdi install`` for the first
@@ -540,6 +795,7 @@ Updating AiiDA from a previous version
   * The requirements file may have changed. Please be sure that you have
     installed all the needed requirements. This can be done by executing:
     ``pip install --user -U -r requirements.txt``.
+  * If you installed aiida using pip you should be simply able to pip install --upgrade aiida (from the python environment into which aiida is installed).
 
 
 Updating from 0.6.0 Django to 0.7.0 Django

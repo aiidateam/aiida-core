@@ -5,5 +5,6 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
-from aiida.orm.implementation.general.calculation.work import WorkCalculation
+from aiida.orm.implementation.general.calculation.work import \
+    WorkCalculation
 

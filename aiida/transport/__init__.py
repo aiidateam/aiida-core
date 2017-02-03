@@ -193,7 +193,7 @@ class Transport(object):
 
         :param str path: path to change working directory into.
         :raises: IOError, if the requested path does not exist
-        :rtype: string
+        :rtype: str
         """
         # #TODO: understand if we want this behavior: this is emulated
         # by paramiko, and we should emulate it also for the local

@@ -87,7 +87,7 @@ def get_db_test_list():
     merged with the 'common' tests.
 
     :note: This function should be called only after setting the
-    backend, and then it returns only the tests for this backend, and the common ones.
+      backend, and then it returns only the tests for this backend, and the common ones.
     """
     from aiida.backends import settings
     from aiida.common.exceptions import ConfigurationError

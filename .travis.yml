@@ -12,29 +12,32 @@ services:
     - postgresql
 
 addons:
-  postgresql: "9.4"
+    postgresql: "9.4"
 #  postgresql: "9.5" # Available in Trusty only
+    apt:
+       packages:
+           - texlive-base
+           - texlive-generic-recommended
+           - texlive-fonts-recommended
+           - texlive-latex-base
+           - texlive-latex-recommended
+           - texlive-latex-extra
+           - dvipng
+           - dvidvi
 
-#  apt:
-#    packages:
-#        - python-vtk
-
-## Build matrix to test both backends
-env:
-   - TEST_AIIDA_BACKEND=django
-   - TEST_AIIDA_BACKEND=sqlalchemy
+## Build matrix to test both backends, and the docs
+## I still let it create the test backend for django also when building the docs
+## because otherwise the code would complain. Also, I need latex.
+env: 
+    - TEST_AIIDA_BACKEND=django COMPILE_DOCS=false
+    - TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
+    - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
 
 install:
-    # This is required for some recent features of setup.py
+    # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
-
     # Install AiiDA with some optional dependencies
-    - pip install -U .[verdi_shell,ssh,REST] --process-dependency-links
-
-    # This should go away, put requirements (also optional) in setup.py
-    # But for the time being, we keep it (needed to avoid skipping tests
-    # for missing dependencies)
-    - pip install -r optional_requirements.txt
+    - pip install .[verdi_shell,ssh,REST,docs,atomic_tools] --process-dependency-links
 
 before_script:
     # This is needed for the SSH tests (being able to ssh to localhost)
@@ -50,7 +53,8 @@ before_script:
     - verdi -p test_$TEST_AIIDA_BACKEND setup --non-interactive --backend=$TEST_AIIDA_BACKEND --email="aiida@localhost" --db_host="localhost" --db_port=5432 --db_name="test_$TEST_AIIDA_BACKEND" --db_user=postgres --db_pass='' --repo="/tmp/test_repository_test_${TEST_AIIDA_BACKEND}/" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --no-password
 
 script:
-    - verdi -p test_$TEST_AIIDA_BACKEND devel tests
+    # Compile the docs (HTML format); -W to convert warnings in errors, -n to warn about all missing references
+    - if [[ "$COMPILE_DOCS" == "true" ]] ; then verdi profile setdefault verdi test_${TEST_AIIDA_BACKEND} && SPHINXOPTS="-nW" make -C docs html ; else verdi -p test_$TEST_AIIDA_BACKEND devel tests ; fi
 
 git:
   depth: 3

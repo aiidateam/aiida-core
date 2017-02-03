@@ -19,15 +19,3 @@ class TestJobProcess(AiidaTestCase):
     def test_class_loader(self):
         cl = ClassLoader()
         PwProcess = JobProcess.build(PwCalculation)
-
-    # def test_fail(self):
-    #     from aiida.orm.computer import Computer
-    #
-    #     PwProcess = PwCalculation.process()
-    #     PwProcess.run(inputs={
-    #         '_options': {
-    #             'computer': self.computer,
-    #             'resources': {
-    #                 'num_machines': 1,
-    #                 'num_mpiprocs_per_machine': 1}}
-    #     })

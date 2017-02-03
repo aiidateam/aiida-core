@@ -33,7 +33,8 @@ def update_running_calcs_status(authinfo):
     from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
     from aiida.utils.logger import get_dblogger_extra
-
+    from aiida.backends.utils import QueryFactory
+    
     if not authinfo.enabled:
         return
 
@@ -41,12 +42,18 @@ def update_running_calcs_status(authinfo):
                      "and machine {}".format(
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
-    # This returns an iterator over aiida JobCalculation objects
-    calcs_to_inquire = list(JobCalculation._get_all_with_state(
+    qmanager = QueryFactory()()
+    calcs_to_inquire = qmanager.query_jobcalculations_by_computer_user_state(
         state=calc_states.WITHSCHEDULER,
         computer=authinfo.dbcomputer,
-        user=authinfo.aiidauser)
+        user=authinfo.aiidauser
     )
+
+    #~ calcs_to_inquire = list(JobCalculation._get_all_with_state(
+        #~ state=calc_states.WITHSCHEDULER,
+        #~ computer=authinfo.dbcomputer,
+        #~ user=authinfo.aiidauser)
+    #~ )
 
     # NOTE: no further check is done that machine and
     # aiidauser are correct for each calc in calcs
@@ -179,15 +186,23 @@ def update_running_calcs_status(authinfo):
 
 def retrieve_jobs():
     from aiida.orm import JobCalculation, Computer
-    from aiida.backends.utils import get_authinfo
+    from aiida.backends.utils import get_authinfo, QueryFactory
 
+    qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
-    computers_users_to_check = list(
-        JobCalculation._get_all_with_state(
+    computers_users_to_check = qmanager.query_jobcalculations_by_computer_user_state(
             state=calc_states.COMPUTED,
             only_computer_user_pairs=True,
-            only_enabled=True)
-    )
+            only_enabled=True
+        )
+
+    # I create a unique set of pairs (computer, aiidauser)
+    #~ computers_users_to_check = list(
+        #~ JobCalculation._get_all_with_state(
+            #~ state=calc_states.COMPUTED,
+            #~ only_computer_user_pairs=True,
+            #~ only_enabled=True)
+    #~ )
 
     for computer, aiidauser in computers_users_to_check:
         execlogger.debug("({},{}) pair to check".format(
@@ -213,17 +228,15 @@ def update_jobs():
     calls an update for each set of pairs (machine, aiidauser)
     """
     from aiida.orm import JobCalculation, Computer, User
-    from aiida.backends.utils import get_authinfo
+    from aiida.backends.utils import get_authinfo, QueryFactory
 
-
+    qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
-    computers_users_to_check = list(
-        JobCalculation._get_all_with_state(
+    computers_users_to_check = qmanager.query_jobcalculations_by_computer_user_state(
             state=calc_states.WITHSCHEDULER,
             only_computer_user_pairs=True,
             only_enabled=True
         )
-    )
 
     for computer, aiidauser in computers_users_to_check:
 
@@ -251,18 +264,19 @@ def submit_jobs():
     """
     from aiida.orm import JobCalculation, Computer, User
     from aiida.utils.logger import get_dblogger_extra
-    from aiida.backends.utils import get_authinfo
+    from aiida.backends.utils import get_authinfo, QueryFactory
 
-    computers_users_to_check = list(JobCalculation._get_all_with_state(
+
+    qmanager = QueryFactory()()
+    # I create a unique set of pairs (computer, aiidauser)
+    computers_users_to_check = qmanager.query_jobcalculations_by_computer_user_state(
             state=calc_states.TOSUBMIT,
             only_computer_user_pairs=True,
             only_enabled=True
         )
-    )
 
     for computer, aiidauser in computers_users_to_check:
-        #~ user = User.search_for_users(id=dbuser_id)
-        #~ computer = Computer.get(dbcomputer_id)
+
         execlogger.debug("({},{}) pair to submit".format(
             aiidauser.email, computer.name))
 
@@ -273,9 +287,13 @@ def submit_jobs():
                 # TODO!!
                 # Put each calculation in the SUBMISSIONFAILED state because
                 # I do not have AuthInfo to submit them
-                calcs_to_inquire = JobCalculation._get_all_with_state(
-                    state=calc_states.TOSUBMIT,
-                    computer=computer, user=aiidauser)
+                calcs_to_inquire = qmanager.query_jobcalculations_by_computer_user_state(
+                        state=calc_states.TOSUBMIT,
+                        computer=computer, user=aiidauser
+                    )
+                #~ calcs_to_inquire = JobCalculation._get_all_with_state(
+                    #~ state=calc_states.TOSUBMIT,
+                    #~ computer=computer, user=aiidauser)
                 for calc in calcs_to_inquire:
                     try:
                         calc._set_state(calc_states.SUBMISSIONFAILED)
@@ -316,6 +334,10 @@ def submit_jobs_with_authinfo(authinfo):
     from aiida.orm import JobCalculation
     from aiida.utils.logger import get_dblogger_extra
 
+    from aiida.backends.utils import QueryFactory
+
+
+
     if not authinfo.enabled:
         return
 
@@ -323,11 +345,13 @@ def submit_jobs_with_authinfo(authinfo):
                      "and machine {}".format(
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
-    # This returns an iterator over aiida JobCalculation objects
-    calcs_to_inquire = list(JobCalculation._get_all_with_state(
-        state=calc_states.TOSUBMIT,
+    qmanager = QueryFactory()()
+    # I create a unique set of pairs (computer, aiidauser)
+    calcs_to_inquire = qmanager.query_jobcalculations_by_computer_user_state(
+            state=calc_states.TOSUBMIT,
         computer=authinfo.dbcomputer,
-        user=authinfo.aiidauser))
+        user=authinfo.aiidauser)
+
 
     # I avoid to open an ssh connection if there are
     # no calcs with state WITHSCHEDULER
@@ -639,16 +663,21 @@ def retrieve_computed_for_authinfo(authinfo):
     from aiida.utils.logger import get_dblogger_extra
     from aiida.orm import DataFactory
 
+    from aiida.backends.utils import QueryFactory
+
     import os
 
     if not authinfo.enabled:
         return
 
-    calcs_to_retrieve = list(JobCalculation._get_all_with_state(
-        state=calc_states.COMPUTED,
+    qmanager = QueryFactory()()
+    # I create a unique set of pairs (computer, aiidauser)
+    calcs_to_retrieve = qmanager.query_jobcalculations_by_computer_user_state(
+            state=calc_states.COMPUTED,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
-    )
+
+
     retrieved = []
 
     # I avoid to open an ssh connection if there are no

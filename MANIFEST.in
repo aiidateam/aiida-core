@@ -4,3 +4,4 @@ include aiida/backends/tests/export_import_test_files/*.aiida
 recursive-include aiida/backends/tests/parser_tests/ *
 include aiida/common/additions/backup_script/backup_info.json.tmpl
 include examples/testdata/qepseudos/*
+include aiida/orm/calculation/job/quantumespresso/helpers/*.xml

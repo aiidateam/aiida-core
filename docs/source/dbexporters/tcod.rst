@@ -13,8 +13,8 @@ Setup
 
 To be able to export data to TCOD, one has to
 :ref:`install dependencies for CIF manipulation <CIF_manipulation_dependencies>`
-as well as :ref:`cod-tools package <codtools_installation>`, and set up an
-AiiDA :py:class:`Code <aiida.orm.code.Code>` for ``cif_cod_deposit`` script
+as well as the :ref:`cod-tools package and plugin <codtools_plugin>`, and set up an
+AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>` for ``cif_cod_deposit`` script
 from **cod-tools**.
 
 How to deposit a structure
@@ -50,10 +50,10 @@ Where:
 * ``TITLE`` -- the title of the publication, where the exported data
   is/will be published; in case of personal communication, the title
   should be chosen so as to reflect the exported dataset the best;
-* ``CODE_LABEL`` -- label of AiiDA :py:class:`Code <aiida.orm.code.Code>`,
+* ``CODE_LABEL`` -- label of AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>`,
   associated with *cif_cod_deposit*;
 * ``COMPUTER_NAME`` -- name of AiiDA
-  :py:class:`Computer <aiida.orm.computer.Computer>`, where
+  :py:class:`Computer <aiida.orm.implementation.general.computer.AbstractComputer>`, where
   *cif_cod_deposit* script is to be launched;
 * ``REPLACE`` -- `TCOD ID`_ of the replaced entry in the event of
   redeposition;
@@ -110,7 +110,7 @@ Return values
 +++++++++++++
 
 The deposition process, which is of
-:py:class:`JobCalculation <aiida.orm.calculation.job.JobCalculation>`
+:py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`
 type, returns the output of ``cif_cod_deposit``, wrapped in
 :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`.
 

@@ -8,6 +8,7 @@ __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
+
 def kill_from_pk(pk, verbose=False):
     """
     Kills a workflow without loading the class, useful when there was a problem

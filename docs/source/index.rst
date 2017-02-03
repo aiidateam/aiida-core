@@ -55,22 +55,14 @@ Developer's guide
 
     developer_guide/index   
 
-Modules provided with aiida
-+++++++++++++++++++++++++++
+Modules provided with aiida (API reference)
++++++++++++++++++++++++++++++++++++++++++++
 
 .. toctree::
    :maxdepth: 4
 
    module_guide/index
 
-
-API reference
-+++++++++++++
-
-.. toctree::
-    :maxdepth: 3
-
-    apidoc/aiida
 
 Indices and tables
 ==================

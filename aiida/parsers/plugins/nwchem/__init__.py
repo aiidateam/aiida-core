@@ -6,9 +6,9 @@ __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
-class BasenwcParser(Parser):
 
-    def parse_with_retrieved(self,retrieved):
+class BasenwcParser(Parser):
+    def parse_with_retrieved(self, retrieved):
         """
         Receives in input a dictionary of retrieved nodes.
         Does all the logic here.
@@ -17,7 +17,7 @@ class BasenwcParser(Parser):
         import os
 
         output_path = None
-        error_path  = None
+        error_path = None
         try:
             output_path, error_path = self._fetch_output_files(retrieved)
         except InvalidOperation:
@@ -45,10 +45,10 @@ class BasenwcParser(Parser):
         import os
 
         # check in order not to overwrite anything
-#         state = self._calc.get_state()
-#         if state != calc_states.PARSING:
-#             raise InvalidOperation("Calculation not in {} state"
-#                                    .format(calc_states.PARSING) )
+        #         state = self._calc.get_state()
+        #         if state != calc_states.PARSING:
+        #             raise InvalidOperation("Calculation not in {} state"
+        #                                    .format(calc_states.PARSING) )
 
         # Check that the retrieved folder is there
         try:
@@ -59,13 +59,13 @@ class BasenwcParser(Parser):
         list_of_files = out_folder.get_folder_list()
 
         output_path = None
-        error_path  = None
+        error_path = None
 
         if self._calc._DEFAULT_OUTPUT_FILE in list_of_files:
-            output_path = os.path.join( out_folder.get_abs_path('.'),
-                                        self._calc._DEFAULT_OUTPUT_FILE )
+            output_path = os.path.join(out_folder.get_abs_path('.'),
+                                       self._calc._DEFAULT_OUTPUT_FILE)
         if self._calc._DEFAULT_ERROR_FILE in list_of_files:
-            error_path  = os.path.join( out_folder.get_abs_path('.'),
-                                        self._calc._DEFAULT_ERROR_FILE )
+            error_path = os.path.join(out_folder.get_abs_path('.'),
+                                      self._calc._DEFAULT_ERROR_FILE)
 
         return output_path, error_path

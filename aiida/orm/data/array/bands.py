@@ -29,8 +29,8 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
     intersection between valence and conduction band if present.
     Use this function with care!
 
-    :param (float) number_electrons: (optional) number of electrons in the unit cell
-    :param (float) fermi_energy: (optional) value of the fermi energy.
+    :param number_electrons: (optional, float) number of electrons in the unit cell
+    :param fermi_energy: (optional, float) value of the fermi energy.
 
     :note: By default, the algorithm uses the occupations array
       to guess the number of electrons and the occupied bands. This is to be
@@ -510,17 +510,18 @@ class BandsData(KpointsData):
                cartesian=True, **kwargs):
         """
         Export the bands to a file.
+
         :param path: absolute path of the file to be created
         :param fileformat: format of the file created. If None, tries to use
-        the extension of path to understand the correct one.
+          the extension of path to understand the correct one.
         :param overwrite: if set to True, overwrites file found at path. Default=False
         :param comments: if True, append some extra informations at the
-        beginning of the file.
+          beginning of the file.
         :param cartesian: if True, distances (for the x-axis) are computed in
-        cartesian coordinates, otherwise they are computed in reciprocal
-        coordinates. cartesian=True will fail if no cell has been set.
-        :param **kwargs: additional parameters to be passed to the
-        _prepare_[fileformat] method
+          cartesian coordinates, otherwise they are computed in reciprocal
+          coordinates. cartesian=True will fail if no cell has been set.
+        :param kwargs: additional parameters to be passed to the
+          _prepare_[fileformat] method
 
         :note: this function will NOT produce nice plots if:
               - there is no path of kpoints, but a set of isolated points

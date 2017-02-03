@@ -1,19 +1,23 @@
 # -*- coding: utf-8 -*-
 
-import sys
 import inspect
 
 from aiida.backends.testbase import AiidaTestCase
 from plum.engine.ticking import TickingEngine
 import plum.process_monitor
+from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work.workchain import WorkChain,\
     ToContext, _Block, _If, _While, if_, while_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
-from aiida.work.run import async
+from aiida.work.run import async, legacy_workflow
 from aiida.orm.data.base import Int, Str
 import aiida.work.util as util
+from aiida.common.links import LinkType
+from aiida.workflows.wf_demo import WorkflowDemo
+from aiida.daemon.workflowmanager import execute_steps
+
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -187,16 +191,14 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.s1, cls.s2, cls.s3)
 
             def s1(self):
-                fa = async(a)
-                fb = async(b)
-                return ToContext(r1=Outputs(fa.pid), r2=Outputs(fb.pid))
+                return ToContext(r1=Outputs(async(a)), r2=Outputs(async(b)))
 
             def s2(self):
                 assert self.ctx.r1['_return'] == A
                 assert self.ctx.r2['_return'] == B
-                fb = async(b)
+
                 # Try overwriting r1
-                return ToContext(r1=Outputs(fb.pid))
+                return ToContext(r1=Outputs(async(b)))
 
             def s3(self):
                 assert self.ctx.r1['_return'] == B
@@ -267,3 +269,68 @@ class TestWorkchain(AiidaTestCase):
         te.shutdown()
 
         return finished_steps
+
+
+
+class TestWorkchainWithOldWorkflows(AiidaTestCase):
+    def test_call_old_wf(self):
+        wf = WorkflowDemo()
+        wf.start()
+        while wf.is_running():
+            execute_steps()
+
+        class _TestWf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(_TestWf, cls).define(spec)
+                spec.outline(cls.start, cls.check)
+
+            def start(self):
+                return ToContext(wf=legacy_workflow(wf.pk))
+
+            def check(self):
+                assert self.ctx.wf is not None
+
+        _TestWf.new_instance().run_until_complete()
+
+    def test_old_wf_results(self):
+        wf = WorkflowDemo()
+        wf.start()
+        while wf.is_running():
+            execute_steps()
+
+        class _TestWf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(_TestWf, cls).define(spec)
+                spec.outline(cls.start, cls.check)
+
+            def start(self):
+                return ToContext(res=Outputs(legacy_workflow(wf.pk)))
+
+            def check(self):
+                assert set(self.ctx.res) == set(wf.get_results())
+
+        _TestWf.new_instance().run_until_complete()
+
+
+class TestHelpers(AiidaTestCase):
+    """
+    Test the helper functions/classes used by workchains
+    """
+    def test_get_proc_outputs(self):
+        c = WorkCalculation()
+        a = Int(5)
+        b = Int(10)
+        a.add_link_from(c, u'a', link_type=LinkType.CREATE)
+        b.add_link_from(c, u'b', link_type=LinkType.CREATE)
+        c.store()
+        for n in [a, b, c]:
+            n.store()
+
+        from aiida.work.workchain import _get_proc_outputs_from_registry
+        outputs = _get_proc_outputs_from_registry(c.pk)
+        self.assertListEqual(outputs.keys(), [u'a', u'b'])
+        self.assertEquals(outputs['a'], a)
+        self.assertEquals(outputs['b'], b)
+

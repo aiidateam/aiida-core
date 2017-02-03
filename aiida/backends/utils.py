@@ -16,6 +16,18 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
 
+
+def QueryFactory():
+    if settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.queries import QueryManagerSQLA as QueryManager
+    elif settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.queries import QueryManagerDjango as QueryManager
+    else:
+        raise ConfigurationError("Invalid settings.BACKEND: {}".format(
+            settings.BACKEND))
+    return QueryManager
+
+
 def is_dbenv_loaded():
     """
     Return True of the dbenv was already loaded (with a call to load_dbenv),

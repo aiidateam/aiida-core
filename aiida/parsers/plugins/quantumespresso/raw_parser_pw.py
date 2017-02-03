@@ -169,7 +169,7 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
 
 def cell_volume(a1,a2,a3):
     """
-    returns the volume of the primitive cell: |a1.(a2xa3)|
+    returns the volume of the primitive cell: ``|a1.(a2xa3)|``
     """
     a_mid_0 = a2[1]*a3[2] - a2[2]*a3[1]
     a_mid_1 = a2[2]*a3[0] - a2[0]*a3[2]
@@ -1708,10 +1708,10 @@ def parse_pw_text_output(data, xml_data={}, structure_data={}, input_dict={}):
 def parse_QE_errors(lines,count,warnings):
     """
     Parse QE errors messages (those appearing between some lines with
-    ``'%%%%%%%%'``)
+    ``%%%%%%%%``)
     :param lines: list of strings, the output text file as read by readlines()
-    or as obtained by data.split('\n') when data is the text file read by read()
-    :param count: the line at which we identified some ``'%%%%%%%%'``
+    or as obtained by data.split('\\n') when data is the text file read by read()
+    :param count: the line at which we identified some ``%%%%%%%%``
     :param warnings: the warnings already parsed in the file
     :return messages: a list of QE error messages
     """

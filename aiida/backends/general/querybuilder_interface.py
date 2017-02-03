@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABCMeta
 
 
-class IQueryBuilder():
+class QueryBuilderInterface():
     __metaclass__ = ABCMeta
     @abstractmethod
     def __init__(self, *args, **kwargs):

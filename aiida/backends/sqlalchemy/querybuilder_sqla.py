@@ -20,7 +20,7 @@ from aiida.common.exceptions import (
         MissingPluginError, ConfigurationError
     )
 from aiida.common.exceptions import InputValidationError
-from aiida.backends.general.iquerybuilder import IQueryBuilder
+from aiida.backends.general.querybuilder_interface import QueryBuilderInterface
 from aiida.backends.utils import _get_column
 from sqlalchemy.sql.elements import Cast
 
@@ -62,7 +62,7 @@ def compile(element, compiler, **kw):
     return "jsonb_typeof(%s)" % compiler.process(element.clauses)
 
 
-class QueryBuilderImplSQLA(IQueryBuilder):
+class QueryBuilderImplSQLA(QueryBuilderInterface):
     """
     QueryBuilder to use with SQLAlchemy-backend and
     schema defined in backends.sqlalchemy.models

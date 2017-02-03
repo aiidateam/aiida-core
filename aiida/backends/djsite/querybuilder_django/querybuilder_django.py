@@ -22,14 +22,14 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.elements import Cast
 from aiida.common.exceptions import InputValidationError
-from aiida.backends.general.iquerybuilder import IQueryBuilder
+from aiida.backends.general.querybuilder_interface import QueryBuilderInterface
 from aiida.backends.utils import _get_column
 from aiida.common.exceptions import (
         InputValidationError, DbContentError,
         MissingPluginError, ConfigurationError
     )
 
-class QueryBuilderImplDjango(IQueryBuilder):
+class QueryBuilderImplDjango(QueryBuilderInterface):
 
     def __init__(self, *args, **kwargs):
         from aiida.orm.implementation.django.node import Node as AiidaNode

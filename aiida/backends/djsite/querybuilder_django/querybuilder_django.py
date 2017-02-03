@@ -672,7 +672,7 @@ class QueryBuilderImplDjango(IQueryBuilder):
                         in enumerate(resultrow)
                     ]
             else:
-                raise Exception("Got an empty dictionary")
+                raise Exception("Got an empty dictionary: {}".format(tag_to_index_dict))
 
 
     def iterdict(self, query, batch_size, tag_to_projected_entity_dict):

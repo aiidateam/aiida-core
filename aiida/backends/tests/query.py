@@ -16,7 +16,6 @@ class TestQueryBuilder(AiidaTestCase):
         """
         This tests the classifications of the QueryBuilder
         """
-
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.utils import (DataFactory, CalculationFactory)
         from aiida.orm.data.structure import StructureData
@@ -581,7 +580,20 @@ class QueryBuilderPath(AiidaTestCase):
                     ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
                     ).count(), 2)
 
+        qb = QueryBuilder(with_dbpath=False,expand_path=True).append(
+                Node, filters={'id':n8.pk}, tag='desc',
+            ).append(Node, ancestor_of='desc', edge_project='path', filters={'id':n1.pk})
+        queried_path_set = set([frozenset(p) for p, in qb.all()])
+        paths_there_should_be = set([frozenset([n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),frozenset([n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])])
+        self.assertTrue(queried_path_set == paths_there_should_be)
 
+
+        qb = QueryBuilder(with_dbpath=False,expand_path=True).append(
+                Node, filters={'id':n1.pk}, tag='anc'
+            ).append(
+                Node, descendant_of='anc',  filters={'id':n8.pk}, edge_project='path'
+            )
+        self.assertTrue(set([frozenset(p) for p, in qb.all()]) == set([frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk]),frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk])]))
 
         n7.add_link_from(n9)
         # Still two links...

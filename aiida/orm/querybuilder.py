@@ -60,6 +60,7 @@ class QueryBuilder(object):
         :param dict project: The projections to apply
         :param int limit: Limit the number of rows
         :param dict order_by: How to order the results
+        :param bool debug: Run in debug mode
         """
         from aiida.backends.settings import BACKEND
         from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
@@ -140,9 +141,16 @@ class QueryBuilder(object):
 
         # The internal _with_dbpath attributes reports whether I need to do something with the path.
         # I.e. check, loads, etc, implementation left to backend implementation.
+        self._debug = kwargs.pop('debug',False)
+
         self._with_dbpath = kwargs.pop('with_dbpath', True)
         if self._with_dbpath:
             self._impl.prepare_with_dbpath()
+        self._expand_path = kwargs.pop('expand_path',False)
+
+        if self._expand_path and self._with_dbpath:
+            raise NotImplementedError("It is not implemented to expand the path when using the DbPath table.\n"
+                "Set with=dbpath to False to use that functionality")
 
         # One can apply the path as a keyword. Allows for jsons to be given to the QueryBuilder.
         path = kwargs.pop('path', [])
@@ -278,7 +286,7 @@ class QueryBuilder(object):
             as defined as returned by :func:`QueryBuilder._get_ormclass`.
         :returns: A tag, as a string.
         """
-        return ormclasstype.rstrip('.').split('.')[-1]
+        return ormclasstype.rstrip('.').split('.')[-1] or "node"
 
 
     def append(self, cls=None, type=None, tag=None,
@@ -530,13 +538,18 @@ class QueryBuilder(object):
         ############################# EDGES #################################
         # See if this requires a link:
         aliased_edge = None
+        edge_exists = False
+
         if len(self._path) > 0:
             if joining_keyword in ('input_of', 'output_of'):
                 aliased_edge = aliased(self._impl.Link)
+                edge_exists = True
             elif joining_keyword in ('ancestor_of', 'descendant_of'):
+                edge_exists = True
                 if self._with_dbpath:
                     aliased_edge = aliased(self._impl.Path)
                 else:
+
                     # An aliased_edge is created on the fly if I'm not using
                     # the DbPath with a recursive query.
                     # I don't have a way (yet) to add filters here,
@@ -547,13 +560,12 @@ class QueryBuilder(object):
 
 
 
-            if aliased_edge is not None:
-
-
+            if edge_exists:
                 # Ok, so here we are joining through a m2m relationship,
                 # e.g. input or output.
-                # This means that the user might want to query by that edge!
-
+                # This means that the user might want to query by that edge or project something
+                if self._debug:
+                    print "DEBUG: Choosing an edge_tag"
                 if edge_tag is None:
                     edge_destination_tag = self._get_tag_from_specification(joining_value)
                     edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
@@ -562,6 +574,8 @@ class QueryBuilder(object):
                         raise InputValidationError(
                             "The tag {} is already in use".format(edge_tag)
                         )
+                if self._debug:
+                    print "   I have chosen", edge_tag
 
                 self._tag_to_alias_map[edge_tag] = aliased_edge
 
@@ -583,7 +597,7 @@ class QueryBuilder(object):
                 type=ormclasstype, tag=tag, joining_keyword=joining_keyword,
                 joining_value=joining_value, outerjoin=outerjoin,
             )
-        if aliased_edge is not None:
+        if edge_exists:
             path_extension.update(dict(edge_tag=edge_tag))
             #~ if reverse_linktag is not None:
                 #~ path_extension.update(dict(reverse_linktag=reverse_linktag))
@@ -760,6 +774,9 @@ class QueryBuilder(object):
         """
         tag = self._get_tag_from_specification(tag_spec)
         _projections = []
+        if self._debug:
+            print "DEBUG: Adding projection of", tag_spec
+            print "   projection", projection_spec
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]
         for projection in projection_spec:
@@ -792,6 +809,8 @@ class QueryBuilder(object):
                                 "{} has to be a string".format(val)
                             )
             _projections.append(_thisprojection)
+        if self._debug:
+            print "   projections have become:", _projections
         self._projections[tag] = _projections
 
 
@@ -857,6 +876,9 @@ class QueryBuilder(object):
 
         # Return here if there is nothing to project,
         # reduces number of key in return dictionary
+
+        if self._debug:
+            print tag,items_to_project
         if not items_to_project:
             return
 
@@ -1171,6 +1193,67 @@ class QueryBuilder(object):
                 descendants_beta.c.descendant_id == entity_to_join.id,
                 isouter=isouterjoin
             )
+    def _join_descendants_recursive_project_path(self, joined_entity, entity_to_join, isouterjoin, filter_dict, edge_tag):
+        """
+        joining descendants using the recursive functionality, and project the dbpath.
+        Use with care, since this slows the query down substantially.
+        :TODO: Move the filters to be done inside the recursive query (for example on depth)
+        :TODO: Pass an option to also show the path, if this is wanted.
+        """
+        from sqlalchemy.dialects.postgresql import array
+
+        self._check_dbentities(
+                (joined_entity, self._impl.Node),
+                (entity_to_join, self._impl.Node),
+                'descendant_of_beta'
+            )
+
+        link1 = aliased(self._impl.Link)
+        link2 = aliased(self._impl.Link)
+        node1 = aliased(self._impl.Node)
+        in_recursive_filters = self._build_filters(node1, filter_dict)
+
+        walk = select([
+                link1.input_id.label('ancestor_id'),
+                link1.output_id.label('descendant_id'),
+                cast(0, Integer).label('depth'),
+                array([link1.input_id]).label('path')   #Arrays can only be used with postgres
+            ]).select_from(
+                join(
+                    node1, link1, link1.input_id==node1.id
+                )
+            ).where(in_recursive_filters).cte(recursive=True)
+
+        aliased_walk = aliased(walk)
+
+
+        descendants_beta = aliased(aliased_walk.union_all(
+            select([
+                    aliased_walk.c.ancestor_id.label('ancestor_id'),
+                    link2.output_id.label('descendant_id'),
+                    (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
+                    (aliased_walk.c.path+array([link2.input_id])).label('path')
+                    #, As above, but if arrays are supported
+                    # This is the way to reconstruct the path (the sequence of nodes traversed)
+                ]).select_from(
+                    join(
+                        aliased_walk,
+                        link2,
+                        link2.input_id == aliased_walk.c.descendant_id,
+                    )
+                )
+            )) #.alias()
+
+        self._tag_to_alias_map[edge_tag] = descendants_beta.c
+
+        self._query = self._query.join(
+                descendants_beta,
+                descendants_beta.c.ancestor_id == joined_entity.id
+            ).join(
+                entity_to_join,
+                descendants_beta.c.descendant_id == entity_to_join.id,
+                isouter=isouterjoin
+            )
 
 
     def _join_ancestors_recursive(self, joined_entity, entity_to_join, isouterjoin, filter_dict, edge_tag):
@@ -1215,6 +1298,67 @@ class QueryBuilder(object):
                     #~ (walk.c.path+array([node_aliased.id])).label('path')
                     #, As above, but if arrays are supported
                     # This is the way to reconstruct the path (the sequence of nodes traversed)
+                ]).select_from(
+                    join(
+                        aliased_walk,
+                        link2,
+                        link2.output_id == aliased_walk.c.ancestor_id,
+                    )
+                )
+            ))
+
+        self._tag_to_alias_map[edge_tag] = ancestors_recursive.c
+
+        self._query = self._query.join(
+                ancestors_recursive,
+                ancestors_recursive.c.descendant_id == joined_entity.id
+            ).join(
+                entity_to_join,
+                ancestors_recursive.c.ancestor_id == entity_to_join.id,
+                isouter=isouterjoin
+            )
+
+
+    def _join_ancestors_recursive_projecting_path(self, joined_entity, entity_to_join, isouterjoin, filter_dict, edge_tag):
+        """
+        joining ancestors using the recursive functionality, this will also show the path that is being traversed.
+        Use with caution, this is very slow!
+        :TODO: Move the filters to be done inside the recursive query (for example on depth)
+        """
+        from sqlalchemy.dialects.postgresql import array
+
+
+        self._check_dbentities(
+                (joined_entity, self._impl.Node),
+                (entity_to_join, self._impl.Node),
+                'descendant_of_beta'
+            )
+
+        link1 = aliased(self._impl.Link)
+        link2 = aliased(self._impl.Link)
+        node1 = aliased(self._impl.Node)
+        in_recursive_filters = self._build_filters(node1, filter_dict)
+
+        walk = select([
+                link1.input_id.label('ancestor_id'),
+                link1.output_id.label('descendant_id'),
+                cast(0, Integer).label('depth'),
+                array([link1.output_id]).label('path')   #Arrays can only be used with postgres
+            ]).select_from(
+                join(
+                    node1, link1, link1.output_id==node1.id
+                )
+            ).where(in_recursive_filters).cte(recursive=True)
+
+        aliased_walk = aliased(walk)
+
+
+        ancestors_recursive = aliased(aliased_walk.union_all(
+            select([
+                    link2.input_id.label('ancestor_id'),
+                    aliased_walk.c.descendant_id.label('descendant_id'),
+                    (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
+                    (aliased_walk.c.path+array([link2.output_id])).label('path')
                 ]).select_from(
                     join(
                         aliased_walk,
@@ -1424,8 +1568,12 @@ class QueryBuilder(object):
             d['ancestor_of'] = self._join_ancestors_u_dbpath
             d['descendant_of'] = self._join_descendants_u_dbpath
         else:
-            d['ancestor_of'] = self._join_ancestors_recursive
-            d['descendant_of'] = self._join_descendants_recursive
+            if self._expand_path:
+                d['ancestor_of'] = self._join_ancestors_recursive_projecting_path
+                d['descendant_of'] = self._join_descendants_recursive_project_path
+            else:
+                d['ancestor_of'] = self._join_ancestors_recursive
+                d['descendant_of'] = self._join_descendants_recursive
         return d
 
 
@@ -1604,7 +1752,7 @@ class QueryBuilder(object):
             edge_tag = verticespec.get('edge_tag', None)
             isouterjoin = verticespec.get('outerjoin')
 
-            if ( verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of') ) and not(self._with_dbpath):
+            if ( verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of')) and not(self._with_dbpath):
                 filter_dict = self._filters.get(verticespec['joining_value'], {})
                 connection_func(toconnectwith, alias, isouterjoin=isouterjoin, filter_dict=filter_dict, edge_tag=edge_tag)
             elif edge_tag is None:
@@ -1643,6 +1791,11 @@ class QueryBuilder(object):
 
 
         self.nr_of_projections = 0
+        if self._debug:
+            print "DEBUG:"
+            print "   Printing the content of self._projections"
+            print "  ", self._projections
+            print
 
         if not any(self._projections.values()):
             # If user has not set projection,
@@ -1655,16 +1808,15 @@ class QueryBuilder(object):
                 self._build_projections(vertice['tag'])
 
 
-        ##################### LINK-PROJECTIONS #########################
+            ##################### LINK-PROJECTIONS #########################
 
-        for vertice in self._path:
-            edge_tag = vertice.get('edge_tag', None)
-            if edge_tag is not None:
-                self._build_projections(edge_tag)
-
-            #~ linktag = vertice.get('reverse_linktag', None)
-            #~ if linktag is not None:
-                #~ self._build_projections(linktag)
+            for vertice in self._path[1:]:
+                edge_tag = vertice.get('edge_tag', None)
+                if self._debug:
+                    print "DEBUG: Checking projections for edges:"
+                    print "   This is edge", edge_tag, "from",vertice.get('tag'), ",",vertice.get('joining_keyword'), 'of', vertice.get('joining_value')
+                if edge_tag is not None:
+                    self._build_projections(edge_tag)
 
         ######################### ORDER ################################
         for order_spec in self._order_by:

@@ -35,7 +35,7 @@ install_requires = [
 
 extras_require = {
     # Requirements for verdi shell (version of ipython non enforced, because
-    # there are people preferring version 4 reather than the latest)
+    # there are people who still prefer version 4 reather than the latest)
     'verdi_shell': ['ipython'],
     # Requirements for ssh transport
     'ssh': [
@@ -45,8 +45,8 @@ extras_require = {
     ],
     # Requirements for ssh transport with authentification through Kerberos
     # token
-    # N. B.: you need to install first libffi (sudo apt-get install
-    # libffi-dev under Ubuntu)
+    # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.
+    # E.g. for Ubuntu 14.04: sudo apt-get install libffi-dev libkrb5-dev
     'ssh_kerberos': [
         'pyasn1==0.1.9',
         'python-gssapi==0.6.4',

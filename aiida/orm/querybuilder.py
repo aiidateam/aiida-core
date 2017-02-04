@@ -969,6 +969,8 @@ class QueryBuilder(object):
             return InputValidationError("I expect a boolean")
         self._debug = debug
 
+        return self
+
     def set_with_dbpath(self, l_with_dbpath):
         """
         Sets whether I will use a DbPath table when querying ancestor-dependant relationships.
@@ -977,6 +979,9 @@ class QueryBuilder(object):
         for details.
         This option allows to run AiiDA without a DbPath table, saving memory, especially for
         heavy usage. Of course, if left to True, there needs to be a table with the triggers set.
+        Note that this feature behaves the same for the whole query.
+        You cannot query on ancestor-descendant relationship using the DbPath and another using
+        the recursive functionality within the same query.
 
         :param bool l_with_dbpath: True to use DbPath, False to use recursive queries.
         """
@@ -986,6 +991,7 @@ class QueryBuilder(object):
         self._with_dbpath = l_with_dbpath
         if self._with_dbpath:
             self._impl.prepare_with_dbpath()
+        return self
 
     def set_expand_path(self, l_expand_path):
         """
@@ -1010,11 +1016,6 @@ class QueryBuilder(object):
         ..note:
             There is no way project the path when using the DbPath table,
             since it is not stored explicitly.
-
-        ..note:: 
-            Note that so far, the last value of the path is *not* printed.
-            This is not a bug, bu
-        
         """
         if not isinstance(l_expand_path, bool):
             raise InputValidationError("I expect a boolean")
@@ -1024,6 +1025,7 @@ class QueryBuilder(object):
         if self._expand_path and self._with_dbpath:
             raise NotImplementedError("It is not implemented to expand the path when using the DbPath table.\n"
                 "Set with_dbpath to False to use that functionality")
+        return self
 
     def limit(self, limit):
         """
@@ -1753,14 +1755,22 @@ class QueryBuilder(object):
     def get_json_compatible_queryhelp(self):
         """
         Makes the queryhelp a json - compatible  dictionary.
-        In this way,the queryhelp can be stored in a node
-        in the database and retrieved or shared.
+        In this way,the queryhelp can be stored
+        in the database or a json-object, retrieved or shared and used later.
+        See this usage::
+        
+            qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
+            queryhelp  = qb.get_json_compatible_queryhelp()
+
+            # Now I could save this dictionary somewhere and use it later:
+
+            qb2=QueryBuilder(**queryhelp)
+
+            # This is True if no change has been made to the database.
+            # Note that such a comparison can only be True if the order of results is enforced
+            qb.all()==qb2.all()
 
         :returns: the json-compatible queryhelp
-
-        All classes defined in the input are
-        converted to strings specifying the type,
-        for example:
         """
         from copy import deepcopy
 
@@ -2082,13 +2092,19 @@ class QueryBuilder(object):
 
     def distinct(self):
         """
-        Asks for distinct rows.
+        Asks for distinct rows, which is the same as asking the backend to remove
+        duplicates.
         Does not execute the query!
+
         If you want a distinct query::
 
-            qb = QueryBuilder(**queryhelp)
-            qb.distinct().all() # or
-            qb.distinct().get_results_dict()
+            qb = QueryBuilder()
+            # append stuff!
+            qb.append(...)
+            qb.append(...)
+            ... 
+            qb.distinct().all() #or
+            qb.distinct().dict()
 
         :returns: self
         """
@@ -2105,8 +2121,7 @@ class QueryBuilder(object):
             qb.first()
 
         :returns:
-            One row of results as a list, order as given by
-            order of vertices in  path and projections for vertice
+            One row of results as a list
         """
         query = self.get_query()
         resultrow = self._impl.first(query)

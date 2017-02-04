@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-The general functionalities that all querybuilders need to have
-are found in this module.
-:func:`AbstractQueryBuilder` is the abstract class for QueryBuilder classes.
-Subclasses need to be written for *every* schema/backend implemented
-in backends.
-
+The QueryBuilder: A class that allows you to query the AiiDA database, independent from backend.
 """
 
 # Warnings are issued for deprecations:
@@ -48,19 +43,47 @@ class QueryBuilder(object):
 
     def __init__(self, *args, **kwargs):
         """
-        Instantiates an AiiDA-QueryBuilder instance.
+        Instantiates an QueryBuilder instance.
 
         Which backend is used decided here based on backend-settings (taken from the user profile).
+        This cannot be overriden so far by the user.
+        
 
         :param bool with_dbpath:
-            Whether to use the DbPath table (if existing)
-            to query ancestor-descendant relations
-        :param list path: A list of the vertices to traverse
-        :param dict filters: The filters to apply
-        :param dict project: The projections to apply
-        :param int limit: Limit the number of rows
-        :param dict order_by: How to order the results
-        :param bool debug: Run in debug mode
+            Whether to use the DbPath table (if existing) to query ancestor-descendant relations.
+            The default now is True. Set to False if you want to use the recursive functionality.
+            This gives you the ability to project the path which constructed on the fly.
+            It also allows to have the AiiDA instance without the DbPath, which can consume
+            a lot of memory for heavy usage of AiiDA.
+            Check :func:`QueryBuilder.set_with_dbpath` for details.
+        :param bool expand_path:
+            If set to True (default is False) allows to project the path when querying
+            ancestor-descendant relationships. This can cause the query to be much slower,
+            which is why it's optional.
+            Check :func:`QueryBuilder.set_expand_path` for details
+        :param bool debug:
+            Turn on debug mode. This feature prints information on the screen about the stages
+            of the QueryBuilder. Does not affect results.
+        :param list path:
+            A list of the vertices to traverse. Leave empty if you plan on using the method
+            :func:`QueryBuilder.append`.
+        :param filters:
+            The filters to apply. You can specify the filters here, when appending to the query
+            using :func:`QueryBuilder.append` or even later using :func:`QueryBuilder.add_filter`.
+            Check latter gives API-details.
+        :param project: 
+            The projections to apply. You can specify the projections here, when appending to the query
+            using :func:`QueryBuilder.append` or even later using :func:`QueryBuilder.add_projection`.
+            Latter gives you API-details.
+        :param int limit: 
+            Limit the number of rows to this number. Check :func:`QueryBuilder.limit`
+            for more information.
+        :param int offset:
+            Set an offset for the results returned. Details in :func:`QueryBuilder.offset`.
+        :param order_by:
+            How to order the results. As the 2 above, can be set also at later stage,
+            check :func:`QueryBuilder.order_by` for more information.
+
         """
         from aiida.backends.settings import BACKEND
         from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
@@ -129,12 +152,10 @@ class QueryBuilder(object):
         # qb.first()
         ## User asks for all results, of the same query:
         # qb.all()
-
         # In above example, I can reuse the query, and to track whether somethis was changed
         # I record a hash:
         self._hash = None
-        ## The hash being None implies that the query will be build (Check the code in .get_querys
-
+        ## The hash being None implies that the query will be build (Check the code in .get_query
         # The user can inject a query, this keyword stores whether this was done.
         # Check QueryBuilder.inject_query
         self._injected = False

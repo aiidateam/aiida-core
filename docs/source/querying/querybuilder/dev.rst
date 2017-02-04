@@ -2,6 +2,6 @@
 QueryBuilder documentation
 ==========================
 
-.. automodule:: aiida.backends.querybuild.querybuilder_base
+.. automodule:: aiida.orm.querybuilder
    :members:
    :private-members: 

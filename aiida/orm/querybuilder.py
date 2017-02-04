@@ -160,18 +160,15 @@ class QueryBuilder(object):
         # Check QueryBuilder.inject_query
         self._injected = False
 
+        # Setting debug levels:
+        self.set_debug(kwargs.pop('debug',False))
+        
         # The internal _with_dbpath attributes reports whether I need to do something with the path.
         # I.e. check, loads, etc, implementation left to backend implementation.
-        self._debug = kwargs.pop('debug',False)
+        self.set_with_dbpath(kwargs.pop('with_dbpath', True))
+        # Whether expanding the path when using recursive functionality
+        self.set_expand_path(kwargs.pop('expand_path',False))
 
-        self._with_dbpath = kwargs.pop('with_dbpath', True)
-        if self._with_dbpath:
-            self._impl.prepare_with_dbpath()
-        self._expand_path = kwargs.pop('expand_path',False)
-
-        if self._expand_path and self._with_dbpath:
-            raise NotImplementedError("It is not implemented to expand the path when using the DbPath table.\n"
-                "Set with=dbpath to False to use that functionality")
 
         # One can apply the path as a keyword. Allows for jsons to be given to the QueryBuilder.
         path = kwargs.pop('path', [])
@@ -961,6 +958,73 @@ class QueryBuilder(object):
                 )
         return tag
 
+    def set_debug(self, debug):
+        """
+        Run in debug mode. This does not affect functionality, but prints intermediate stages
+        when creating a query on screen.
+
+        :param bool debug: Turn debug on or off
+        """
+        if not isinstance(debug, bool):
+            return InputValidationError("I expect a boolean")
+        self._debug = debug
+
+    def set_with_dbpath(self, l_with_dbpath):
+        """
+        Sets whether I will use a DbPath table when querying ancestor-dependant relationships.
+        If set to False (default behavior now is True) I will use recursive queries.
+        You can check the source code of _join_ancestors_recursive and _join_descendants_recursive
+        for details.
+        This option allows to run AiiDA without a DbPath table, saving memory, especially for
+        heavy usage. Of course, if left to True, there needs to be a table with the triggers set.
+
+        :param bool l_with_dbpath: True to use DbPath, False to use recursive queries.
+        """
+
+        if not isinstance(l_with_dbpath, bool):
+            raise InputValidationError("I expect a boolean")
+        self._with_dbpath = l_with_dbpath
+        if self._with_dbpath:
+            self._impl.prepare_with_dbpath()
+
+    def set_expand_path(self, l_expand_path):
+        """
+        Turn this feature on if you want to project the path when querying ancestor-descenendant
+        relationships.
+        This implies the use of the recursive feature, that you *have to* turn on, as an exception
+        will be raise otherwise (see :func:`QueryBuilder.set_with_dbpath`
+        Note that you set the use of recursive feature by setting off the use of the path::
+
+            from aiida.orm.querybuilder import QueryBuilder
+            from aiida.orm.data.structure import StructureData
+            qb = QueryBuilder()
+            qb.set_with_dbpath(False) # Setting of the use of DbPath, and enabling recursive queries.
+            qb.set_expand_path(True)  # enabling the projection on a path
+            # Now I create a query that search for all descendant of  structure pk=23:
+            qb.append(StructureData, tag='ancestor', filters={'id':23})
+            qb.append(Calculation, tag='desc', edge_project='path', descendant_of='ancestor')
+            # will return the paths:
+            qb.all()
+
+
+        ..note:
+            There is no way project the path when using the DbPath table,
+            since it is not stored explicitly.
+
+        ..note:: 
+            Note that so far, the last value of the path is *not* printed.
+            This is not a bug, bu
+        
+        """
+        if not isinstance(l_expand_path, bool):
+            raise InputValidationError("I expect a boolean")
+
+        self._expand_path = l_expand_path
+
+        if self._expand_path and self._with_dbpath:
+            raise NotImplementedError("It is not implemented to expand the path when using the DbPath table.\n"
+                "Set with_dbpath to False to use that functionality")
+
     def limit(self, limit):
         """
         Set the limit (nr of rows to return)
@@ -1238,7 +1302,7 @@ class QueryBuilder(object):
                 link1.input_id.label('ancestor_id'),
                 link1.output_id.label('descendant_id'),
                 cast(0, Integer).label('depth'),
-                array([link1.input_id]).label('path')   #Arrays can only be used with postgres
+                array([link1.input_id, link1.output_id]).label('path')   #Arrays can only be used with postgres
             ]).select_from(
                 join(
                     node1, link1, link1.input_id==node1.id
@@ -1253,7 +1317,7 @@ class QueryBuilder(object):
                     aliased_walk.c.ancestor_id.label('ancestor_id'),
                     link2.output_id.label('descendant_id'),
                     (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
-                    (aliased_walk.c.path+array([link2.input_id])).label('path')
+                    (aliased_walk.c.path+array([link2.output_id])).label('path')
                     #, As above, but if arrays are supported
                     # This is the way to reconstruct the path (the sequence of nodes traversed)
                 ]).select_from(
@@ -1364,7 +1428,7 @@ class QueryBuilder(object):
                 link1.input_id.label('ancestor_id'),
                 link1.output_id.label('descendant_id'),
                 cast(0, Integer).label('depth'),
-                array([link1.output_id]).label('path')   #Arrays can only be used with postgres
+                array([link1.output_id, link1.input_id]).label('path')   #Arrays can only be used with postgres
             ]).select_from(
                 join(
                     node1, link1, link1.output_id==node1.id
@@ -1379,7 +1443,7 @@ class QueryBuilder(object):
                     link2.input_id.label('ancestor_id'),
                     aliased_walk.c.descendant_id.label('descendant_id'),
                     (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
-                    (aliased_walk.c.path+array([link2.output_id])).label('path')
+                    (aliased_walk.c.path+array([link2.input_id])).label('path')
                 ]).select_from(
                     join(
                         aliased_walk,

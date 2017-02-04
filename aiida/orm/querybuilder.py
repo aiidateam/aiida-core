@@ -454,11 +454,18 @@ class QueryBuilder(object):
                     "please specify a tag or set autotag to true"
                     "".format(tag)
                 )
-
+        # Checks complete
+        # This is where I start doing changes to self!
+        # Now, several things can go wrong along the way, so I need to split into  
+        # atomic blocks that I can reverse if something goes wrong.
         ################ TAG MAPPING #################################
+        # TODO check with duplicate classes
+
         # Let's fill the cls_to_tag_map so that one can specify
         # this vertice in a joining specification later
         # First this only makes sense if a class was specified:
+
+        l_class_added_to_map = False
         if cls:
             if cls in self._cls_to_tag_map.keys():
                 # In this case, this class already stands for another
@@ -470,170 +477,223 @@ class QueryBuilder(object):
 
             else:
                 self._cls_to_tag_map[cls] = tag
-            # TODO check with duplicate classes
+                l_class_added_to_map = True
 
 
         ######################## ALIASING ##############################
-        alias = aliased(ormclass)
-        self._aliased_path.append(alias)
-        self._tag_to_alias_map[tag] = alias
-
+        try:
+            #~ alias = 
+            #~ self._aliased_path.append(alias)
+            self._tag_to_alias_map[tag] = aliased(ormclass)
+        except Exception as e:
+            if self._debug:
+                print "DEBUG: Exception caught in append1, cleaning up"
+                print "  ", e
+            if l_class_added_to_map:
+                self._cls_to_tag_map.pop(cls)
+            self._tag_to_alias_map.pop(tag, None)
+            raise e
+            
 
 
         ################# FILTERS ######################################
 
-        self._filters[tag] = {}
+        try:
+            self._filters[tag] = {}
+            # I have to add a filter on column type.
+            # This so far only is necessary for AiidaNodes
+            # GROUPS?
+            if query_type_string is not None:
+                plugin_type_string = ormclasstype
+                self._add_type_filter(tag, query_type_string, plugin_type_string, subclassing)
+            # The order has to be first _add_type_filter and then add_filter.
+            # If the user adds a query on the type column, it overwrites what I did
 
-        # I have to add a filter on column type.
-        # This so far only is necessary for AiidaNodes
-        # GROUPS?
-        if query_type_string is not None:
-            plugin_type_string = ormclasstype
-            self._add_type_filter(tag, query_type_string, plugin_type_string, subclassing)
-        # The order has to be first _add_type_filter and then add_filter.
-        # If the user adds a query on the type column, it overwrites what I did
-
-        #if the user specified a filter, add it:
-        if filters is not None:
-            self.add_filter(tag, filters)
-
-
-        ##################### PROJECTIONS ##############################
-        self._projections[tag] = []
-
-        if project is not None:
-            self.add_projection(tag, project)
+            #if the user specified a filter, add it:
+            if filters is not None:
+                self.add_filter(tag, filters)
+        except Exception as e:
+            if self._debug:
+                print "DEBUG: Exception caught in append (part filters), cleaning up"
+                print "  ", e
+            if l_class_added_to_map:
+                self._cls_to_tag_map.pop(cls)
+            self._tag_to_alias_map.pop(tag)
+            self._filters.pop(tag)
+            raise e
 
 
+        #################### PROJECTIONS ##############################
+        
+        try:
+            self._projections[tag] = []
+            if project is not None:
+                self.add_projection(tag, project)
+        except Exception as e:
+            if self._debug:
+                print "DEBUG: Exception caught in append (part projections), cleaning up"
+                print "  ", e
+            if l_class_added_to_map:
+                self._cls_to_tag_map.pop(cls)
+            self._tag_to_alias_map.pop(tag, None)
+            self._filters.pop(tag)
+            self._projections.pop(tag)
+            raise e
 
 
         ################## JOINING #####################################
 
-        # Get the functions that are implemented:
-        spec_to_function_map = self._get_function_map().keys()
 
+        try:
+            # Get the functions that are implemented:
+            spec_to_function_map = self._get_function_map().keys()
+            joining_keyword = kwargs.pop('joining_keyword', None)
+            joining_value = kwargs.pop('joining_value', None)
 
-        joining_keyword = kwargs.pop('joining_keyword', None)
-        joining_value = kwargs.pop('joining_value', None)
-        #~ reverse_linklabel = kwargs.pop('reverse_linklabel', None)
-
-
-        for key, val in kwargs.items():
-            if key not in spec_to_function_map:
-                raise InputValidationError(
-                        "\n\n\n"
-                        "{} is not a valid keyword "
-                        "for joining specification\n"
-                        "Valid keywords are:\n"
-                        "{}\n\n\n".format(
-                                key,
-                                spec_to_function_map+[
-                                    'cls', 'type', 'tag',
-                                    'autotag', 'filters', 'project'
-                                ]
-                            )
-                    )
-            elif joining_keyword:
-                raise InputValidationError(
-                        "\n\n\n"
-                        "You already specified joining specification {}\n"
-                        "But you now also want to specify {}"
-                        "\n\n\n".format(joining_keyword, key)
-                    )
-            else:
-                joining_keyword = key
-                joining_value = self._get_tag_from_specification(val)
-        # the default is that this vertice is 'output_of' the previous one
-        if joining_keyword is None and len(self._path)>0:
-            joining_keyword = 'output_of'
-            joining_value = self._path[-1]['tag']
-
-        if joining_keyword == 'direction':
-            if not isinstance(joining_value, int):
-                raise InputValidationError("direction=n expects n to be an integer")
-            try:
-                if joining_value < 0:
-                    joining_keyword = 'input_of'
-                elif joining_value > 0:
-                    joining_keyword = 'output_of'
+            for key, val in kwargs.items():
+                if key not in spec_to_function_map:
+                    raise InputValidationError(
+                            "\n\n\n"
+                            "{} is not a valid keyword "
+                            "for joining specification\n"
+                            "Valid keywords are:\n"
+                            "{}\n\n\n".format(
+                                    key,
+                                    spec_to_function_map+[
+                                        'cls', 'type', 'tag',
+                                        'autotag', 'filters', 'project'
+                                    ]
+                                )
+                        )
+                elif joining_keyword:
+                    raise InputValidationError(
+                            "\n\n\n"
+                            "You already specified joining specification {}\n"
+                            "But you now also want to specify {}"
+                            "\n\n\n".format(joining_keyword, key)
+                        )
                 else:
-                    raise InputValidationError("direction=0 is not valid")
-                joining_value = self._path[-abs(joining_value)]['tag']
-            except IndexError as e:
-                raise InputValidationError(
-                    "You have specified a non-existent entity with\n"
-                    "direction={}\n"
-                    "{}\n".format(joining_value, e.message)
-                )
+                    joining_keyword = key
+                    joining_value = self._get_tag_from_specification(val)
+            # the default is that this vertice is 'output_of' the previous one
+            if joining_keyword is None and len(self._path)>0:
+                joining_keyword = 'output_of'
+                joining_value = self._path[-1]['tag']
+
+            if joining_keyword == 'direction':
+                if not isinstance(joining_value, int):
+                    raise InputValidationError("direction=n expects n to be an integer")
+                try:
+                    if joining_value < 0:
+                        joining_keyword = 'input_of'
+                    elif joining_value > 0:
+                        joining_keyword = 'output_of'
+                    else:
+                        raise InputValidationError("direction=0 is not valid")
+                    joining_value = self._path[-abs(joining_value)]['tag']
+                except IndexError as e:
+                    raise InputValidationError(
+                        "You have specified a non-existent entity with\n"
+                        "direction={}\n"
+                        "{}\n".format(joining_value, e.message)
+                    )
+
+
+        except Exception as e:
+            if self._debug:
+                print "DEBUG: Exception caught in append (part joining), cleaning up"
+                print "  ", e
+            if l_class_added_to_map:
+                self._cls_to_tag_map.pop(cls)
+            self._tag_to_alias_map.pop(tag, None)
+            self._filters.pop(tag)
+            self._projections.pop(tag)
+            # There's not more to clean up here!
+            raise e
+
 
         ############################# EDGES #################################
         # See if this requires a link:
-        aliased_edge = None
+        
+        # This variable lets me know if there is an edge (i.e. a many to many relationship)
         edge_exists = False
-
         if len(self._path) > 0:
-            if joining_keyword in ('input_of', 'output_of'):
-                aliased_edge = aliased(self._impl.Link)
-                edge_exists = True
-            elif joining_keyword in ('ancestor_of', 'descendant_of'):
-                edge_exists = True
-                if self._with_dbpath:
-                    aliased_edge = aliased(self._impl.Path)
-                else:
+            try:
+                if joining_keyword in ('input_of', 'output_of'):
+                    aliased_edge = aliased(self._impl.Link)
+                    edge_exists = True
+                elif joining_keyword in ('ancestor_of', 'descendant_of'):
+                    edge_exists = True
+                    if self._with_dbpath:
+                        aliased_edge = aliased(self._impl.Path)
+                    else:
 
-                    # An aliased_edge is created on the fly if I'm not using
-                    # the DbPath with a recursive query.
-                    # I don't have a way (yet) to add filters here,
-                    # since aliased_edge is None.
-                    # Every filter on the path should be dealt inside the function
-                    # ._join_ancestor... _join_descendant
-                    pass
+                        # An aliased_edge is created on the fly if I'm not using
+                        # the DbPath with a recursive query.
+                        # I don't have a way (yet) to add filters here,
+                        # since aliased_edge is None.
+                        # Every filter on the path should be dealt inside the function
+                        # ._join_ancestor... _join_descendant
+                        aliased_edge = None
 
 
 
-            if edge_exists:
-                # Ok, so here we are joining through a m2m relationship,
-                # e.g. input or output.
-                # This means that the user might want to query by that edge or project something
+                if edge_exists:
+                    # Ok, so here we are joining through a m2m relationship,
+                    # e.g. input or output.
+                    # This means that the user might want to query by that edge or project something
+                    if self._debug:
+                        print "DEBUG: Choosing an edge_tag"
+                    if edge_tag is None:
+                        edge_destination_tag = self._get_tag_from_specification(joining_value)
+                        edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
+                    else:
+                        if edge_tag in self._tag_to_alias_map.keys():
+                            raise InputValidationError(
+                                "The tag {} is already in use".format(edge_tag)
+                            )
+                    if self._debug:
+                        print "   I have chosen", edge_tag
+
+                    self._tag_to_alias_map[edge_tag] = aliased_edge
+
+                    # Filters on links:
+                    self._filters[edge_tag] = {}
+                    if edge_filters is not None:
+                        self.add_filter(edge_tag, edge_filters)
+
+                    # Projections on links
+                    self._projections[edge_tag] = {}
+                    if edge_project is not None:
+                        self.add_projection(edge_tag, edge_project)
+            except Exception as e:
                 if self._debug:
-                    print "DEBUG: Choosing an edge_tag"
-                if edge_tag is None:
-                    edge_destination_tag = self._get_tag_from_specification(joining_value)
-                    edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
-                else:
-                    if edge_tag in self._tag_to_alias_map.keys():
-                        raise InputValidationError(
-                            "The tag {} is already in use".format(edge_tag)
-                        )
-                if self._debug:
-                    print "   I have chosen", edge_tag
-
-                self._tag_to_alias_map[edge_tag] = aliased_edge
-
-                # Filters on links:
-                self._filters[edge_tag] = {}
-                if edge_filters is not None:
-                    self.add_filter(edge_tag, edge_filters)
-
-                # Projections on links
-                self._projections[edge_tag] = {}
-                if edge_project is not None:
-                    self.add_projection(edge_tag, edge_project)
+                    print "DEBUG: Exception caught in append (part joining), cleaning up"
+                    print "  ", e
+                if l_class_added_to_map:
+                    self._cls_to_tag_map.pop(cls)
+                self._tag_to_alias_map.pop(tag, None)
+                self._filters.pop(tag)
+                self._projections.pop(tag)
+                if edge_exists:
+                    self._tag_to_alias_map.pop(edge_tag)
+                    self._filters.pop(edge_tag)
+                    self._projections.pop(edge_tag)
+                # There's not more to clean up here!
+                raise e
 
 
-        ################### EXTENDING THE PATH #################################
+            ################### EXTENDING THE PATH #################################
 
 
         path_extension = dict(
                 type=ormclasstype, tag=tag, joining_keyword=joining_keyword,
                 joining_value=joining_value, outerjoin=outerjoin,
-            )
+            )        
         if edge_exists:
             path_extension.update(dict(edge_tag=edge_tag))
-            #~ if reverse_linktag is not None:
-                #~ path_extension.update(dict(reverse_linktag=reverse_linktag))
-
         self._path.append(path_extension)
+
         return self
 
     def order_by(self, order_by):

@@ -347,6 +347,54 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(len(list(QueryBuilder().append(Node, project=['*', 'id']).iterdict())), 4)
         self.assertEqual(len(list(QueryBuilder().append(Node, project=['id']).iterdict())), 4)
 
+    def test_append_validation(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.data.structure import StructureData
+        from aiida.common.exceptions import InputValidationError
+        from aiida.orm import Calculation
+
+
+        # So here I am giving two times the same cls without specifing a new tag
+        with self.assertRaises(InputValidationError):
+            QueryBuilder().append(StructureData).append(StructureData)
+        # here I am giving a wrong filter specifications
+        with self.assertRaises(InputValidationError):
+            QueryBuilder().append(StructureData, filters=['jajjsd'])
+        # here I am giving a nonsensical projection:
+        with self.assertRaises(InputValidationError):
+            QueryBuilder().append(StructureData, project=True)
+        
+        # here I am giving a nonsensical projection for the edge:
+        with self.assertRaises(InputValidationError):
+            QueryBuilder().append(Calculation).append(StructureData, edge_tag='t').add_projection('t', True)
+        # Giving a nonsensical limit
+        with self.assertRaises(InputValidationError):
+            QueryBuilder().append(Calculation).limit(2.3)
+        # Giving a nonsensical offset
+        with self.assertRaises(InputValidationError):
+            QueryBuilder(offset=2.3)
+
+
+
+        # So, I mess up one append, I want the QueryBuilder to clean it!
+        with self.assertRaises(InputValidationError):
+            qb = QueryBuilder()
+            # This also checks if we correctly raise for wrong keywords
+            qb.append(StructureData, tag='s', randomkeyword={})
+
+        # Now I'm checking whether this keyword appears anywhere in the internal dictionaries:
+        self.assertTrue('s' not in qb._projections)
+        self.assertTrue('s' not in qb._filters)
+        self.assertTrue('s' not in qb._tag_to_alias_map)
+        self.assertTrue(len(qb._path)==0)
+        self.assertTrue(StructureData not in qb._cls_to_tag_map)
+        # So this should work now:
+        qb.append(StructureData, tag='s').limit(2).dict()
+        
+
+
+
+
 class QueryBuilderLimitOffsetsTest(AiidaTestCase):
 
     def test_ordering_limits_offsets_of_results_general(self):

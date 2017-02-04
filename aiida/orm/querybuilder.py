@@ -2,12 +2,25 @@
 
 """
 The QueryBuilder: A class that allows you to query the AiiDA database, independent from backend.
+Note that the backend implementation is enforced and handled with a composition model!
+:func:`QueryBuilder` is the frontend class that the user can use. It inherits from *object* and contains
+backend-specific functionality.
+
+Backend specific functionality is provided by the implementation classes:
+*   :func:`QueryBuilderImplSQLA` for the SQLAlchemy backend
+*   :func:`QueryBuilderImplDjango` for the Django backend
+
+The latter two inherit from :func:`QueryBuilderInterface`, an interface classes which enforces
+the implementation of its defined methods.
+An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
+when instantiated by the user.
 """
 
 # Warnings are issued for deprecations:
 import warnings
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
+from aiida.orm.node import Node
 
 # The SQLAlchemy functionalities:
 from sqlalchemy import and_, or_, not_, func as sa_func, select, join
@@ -43,7 +56,7 @@ class QueryBuilder(object):
 
     def __init__(self, *args, **kwargs):
         """
-        Instantiates an QueryBuilder instance.
+        Instantiates a QueryBuilder instance.
 
         Which backend is used decided here based on backend-settings (taken from the user profile).
         This cannot be overriden so far by the user.
@@ -323,7 +336,7 @@ class QueryBuilder(object):
 
         :param str tag:
             A unique tag. If none is given, will use method :func:`QueryBuilder._get_autotag` if
-            autotag is set to True, else:func:`QueryBuilder._get_tag_from_type`, to get a tag.
+            autotag is set to True, else :func:`QueryBuilder._get_tag_from_type`, to get a tag.
             See keyword autotag to achieve unique tag.
         :param filters:
             Filters to apply for this vertice.
@@ -738,6 +751,17 @@ class QueryBuilder(object):
             in self._filters
         :param filter_spec:
             The specifications for the filter, has to be a dictionary
+
+        Usage::
+        
+            qb = QueryBuilder()         # Instantiating the QueryBuilder instance
+            qb.append(Node, tag='node') # Appending a Node
+            #let's put some filters:
+            qb.add_filter('node',{'id':{'>':12}})
+            # 2 filters together:
+            qb.add_filter('node',{'label':'foo', 'uuid':{'like':'ab%'}})
+            # Now I am overriding the first filter I set:
+            qb.add_filter('node',{'id':13})
         """
 
 
@@ -2292,7 +2316,7 @@ class QueryBuilder(object):
         :returns: self
         """
         join_to = self._path[-1]['tag']
-        cls = kwargs.pop('cls', self.AiidaNode)
+        cls = kwargs.pop('cls', Node)
         self.append(cls=cls, input_of=join_to, autotag=True, **kwargs)
         return self
 
@@ -2303,7 +2327,7 @@ class QueryBuilder(object):
         :returns: self
         """
         join_to = self._path[-1]['tag']
-        cls = kwargs.pop('cls', self.AiidaNode)
+        cls = kwargs.pop('cls', Node)
         self.append(cls=cls, output_of=join_to, autotag=True, **kwargs)
         return self
 
@@ -2314,7 +2338,7 @@ class QueryBuilder(object):
         :returns: self
         """
         join_to = self._path[-1]['tag']
-        cls = kwargs.pop('cls', self.AiidaNode)
+        cls = kwargs.pop('cls', Node)
         self.append(cls=cls, descendant_of=join_to, autotag=True, **kwargs)
         return self
 
@@ -2325,7 +2349,7 @@ class QueryBuilder(object):
         :returns: self
         """
         join_to = self._path[-1]['tag']
-        cls = kwargs.pop('cls', self.AiidaNode)
+        cls = kwargs.pop('cls', Node)
         self.append(cls=cls, ancestor_of=join_to, autotag=True, **kwargs)
         return self
 

@@ -10,7 +10,7 @@ Backend specific functionality is provided by the implementation classes:
 *   QueryBuilderImplSQLA for the SQLAlchemy backend
 *   QueryBuilderImplDjango for the Django backend
 
-The latter two inherit from :func:`QueryBuilderInterface`, an interface classes which enforces
+The latter two inherit from QueryBuilderInterface, an interface classes which enforces
 the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.

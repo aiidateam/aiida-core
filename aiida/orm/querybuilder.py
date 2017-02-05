@@ -7,8 +7,8 @@ Note that the backend implementation is enforced and handled with a composition 
 backend-specific functionality.
 
 Backend specific functionality is provided by the implementation classes:
-*   :func:`QueryBuilderImplSQLA` for the SQLAlchemy backend
-*   :func:`QueryBuilderImplDjango` for the Django backend
+*   QueryBuilderImplSQLA for the SQLAlchemy backend
+*   QueryBuilderImplDjango for the Django backend
 
 The latter two inherit from :func:`QueryBuilderInterface`, an interface classes which enforces
 the implementation of its defined methods.

@@ -153,9 +153,8 @@ api.add_resource(Group,
                  '/groups/<int:pk>/',
                  strict_slashes=False)
 
-
-# Standard boilerplate to run the app
-if __name__ == '__main__':
+#TODO transfer all this logic to flaskrun (and change this name, call it hookup)
+def hookup(app):
 
     #Config the app
     app.config.update(**conf.APP_CONFIG)
@@ -170,3 +169,8 @@ if __name__ == '__main__':
     # Default address is 127.0.01:5000
     #Warm up the engine - brum brum - and staaarrrt!!
     flaskrun(app)
+
+# Standard boilerplate to run the app
+if __name__ == '__main__':
+    hookup(app)
+

@@ -36,9 +36,6 @@ if settings.AIIDADB_PROFILE is None:
 
 profile_conf = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)
 
-print settings.AIIDADB_PROFILE
-print profile_conf
-
 # put all database specific portions of settings here
 DBENGINE = profile_conf.get('AIIDADB_ENGINE', '')
 DBNAME = profile_conf.get('AIIDADB_NAME', '')

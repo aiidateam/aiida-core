@@ -34,16 +34,10 @@ env:
     - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
 
 install:
-    # This is required for some recent features of setup.py
+    # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
-
     # Install AiiDA with some optional dependencies
-    - pip install -U .[verdi_shell,ssh,REST] --process-dependency-links
-
-    # This should go away, put requirements (also optional) in setup.py
-    # But for the time being, we keep it (needed to avoid skipping tests
-    # for missing dependencies)
-    - pip install -r optional_requirements.txt
+    - pip install .[verdi_shell,ssh,REST,docs,atomic_tools] --process-dependency-links
 
 before_script:
     # This is needed for the SSH tests (being able to ssh to localhost)

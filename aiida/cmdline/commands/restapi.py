@@ -7,6 +7,7 @@ profiles can be selected at hook-up (-p flag).
 """
 
 import os
+
 import aiida
 from aiida.cmdline.baseclass import VerdiCommand
 from aiida.restapi.api import app
@@ -28,6 +29,7 @@ class Restapi(VerdiCommand):
     default_port = "5000"
     default_config_dir = os.path.join(os.path.split(os.path.abspath(
         aiida.restapi.__file__))[0], 'common')
+    parse_aiida_profile = False
 
     def run(self, *args):
         """
@@ -40,11 +42,11 @@ class Restapi(VerdiCommand):
             prog_name=self.get_full_command_name(),
             default_host=self.default_host,
             default_port=self.default_port,
-            default_config=self.default_config_dir)
+            default_config=self.default_config_dir,
+            parse_aiida_profile=self.parse_aiida_profile)
 
         # Invoke the runner
         flaskrun(app, *args, **kwargs)
-
 
     def complete(self, subargs_idx, subargs):
         """

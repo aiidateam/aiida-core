@@ -23,7 +23,8 @@ def flaskrun(app, *args, **kwargs):
     default_port: self-explainatory
     default_config_dir = directory containing the config.py file used to
     configure the RESTapi
-
+    parse_aiida_profile= if True, parses an option to specify the AiiDA
+    profile
     All other passed parameters are ignored.
 
     """
@@ -41,6 +42,9 @@ def flaskrun(app, *args, **kwargs):
         'default_config_dir' in kwargs\
         else  os.path.join(os.path.split(os.path.abspath(
         aiida.restapi.__file__))[0], 'common')
+
+    parse_aiida_profile = kwargs['parse_aiida_profile'] if \
+        'parse_aiida_profile' in kwargs else False
 
     # Set up the command-line options
     parser = argparse.ArgumentParser(prog=prog_name,
@@ -63,20 +67,27 @@ def flaskrun(app, *args, **kwargs):
                         dest='config_dir',
                         default=default_config_dir)
 
+    # This one is included only if necessary
+    if parse_aiida_profile:
+        parser.add_argument("-p", "--aiida-profile",
+                        help="AiiDA profile to expose through the RESTful API [default: the default AiiDA profile]",
+                        dest="aiida_profile",
+                        default="default")
+
     # Two options useful for debugging purposes, but
     # a bit dangerous so not exposed in the help message.
     parser.add_argument("-d", "--debug",
                         action="store_true", dest="debug",
                         help=argparse.SUPPRESS)
     parser.add_argument("-w", "--wsgi-profile",
-                        action="store_true", dest="profile",
+                        action="store_true", dest="wsgi_profile",
                         help=argparse.SUPPRESS)
 
     parsed_args = parser.parse_args(args)
 
     # If the user selects the profiling option, then we need
     # to do a little extra setup
-    if parsed_args.profile:
+    if parsed_args.wsgi_profile:
         from werkzeug.contrib.profiler import ProfilerMiddleware
 
         app.config['PROFILE'] = True
@@ -88,6 +99,15 @@ def flaskrun(app, *args, **kwargs):
                             os.path.join(parsed_args.config_dir,
                                          'config.py')
                             )
+
+    import aiida.backends.settings as settings
+
+    # set ptofile
+    if parse_aiida_profile and parsed_args.aiida_profile is not "default":
+        settings.AIIDADB_PROFILE = parsed_args.aiida_profile
+    else:
+        # Keep the default profile
+        pass
 
     # Set the AiiDA environment, if not already done
     if not is_dbenv_loaded():

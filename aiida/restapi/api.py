@@ -160,7 +160,9 @@ if __name__ == '__main__':
     # Default address is 127.0.01:5000, default config directory is
     # <aiida_path>/aiida/restapi/common
 
-    #Start the app by sliding the argvs to flaskrun
+    #Start the app by sliding the argvs to flaskrun, choose to take as an
+    # argument also whether to parse the aiida profile or not (in verdi
+    # restapi this would not be the case)
     import sys
-    flaskrun(app, *sys.argv[1:])
+    flaskrun(app, *sys.argv[1:], parse_aiida_profile=True)
 

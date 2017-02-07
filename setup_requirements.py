@@ -35,7 +35,7 @@ install_requires = [
 
 extras_require = {
     # Requirements for verdi shell (version of ipython non enforced, because
-    # there are people who still prefer version 4 reather than the latest)
+    # there are people who still prefer version 4 rather than the latest)
     'verdi_shell': ['ipython'],
     # Requirements for ssh transport
     'ssh': [

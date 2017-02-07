@@ -8,15 +8,13 @@ Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 
 from flask import Flask, jsonify
 from flask_restful import Api
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 from aiida.restapi.common.exceptions import RestInputValidationError,\
     RestValidationError
 from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
     Node, User
 import aiida.restapi.common.config as conf
 from aiida.restapi.common.flaskrun import flaskrun
-from flask.ext.sqlalchemy import SQLAlchemy
-
 
 ## Initiate an app with its api
 app = Flask(__name__)
@@ -153,24 +151,16 @@ api.add_resource(Group,
                  '/groups/<int:pk>/',
                  strict_slashes=False)
 
-#TODO transfer all this logic to flaskrun (and change this name, call it hookup)
-def hookup(app):
-
-    #Config the app
-    app.config.update(**conf.APP_CONFIG)
-
-    #Config the serializer used by the app
-    if conf.SERIALIZER_CONFIG:
-        from aiida.restapi.common.utils import CustomJSONEncoder
-        app.json_encoder = CustomJSONEncoder
-
-    #I run the app via a wrapper that accepts arguments such as host and port
-    #e.g. python api.py --host=127.0.0.2 --port=6000
-    # Default address is 127.0.01:5000
-    #Warm up the engine - brum brum - and staaarrrt!!
-    flaskrun(app)
 
 # Standard boilerplate to run the app
 if __name__ == '__main__':
-    hookup(app)
+
+    #I run the app via a wrapper that accepts arguments such as host and port
+    #e.g. python api.py --host=127.0.0.2 --port=6000 --config-dir=~/.restapi
+    # Default address is 127.0.01:5000, default config directory is
+    # <aiida_path>/aiida/restapi/common
+
+    #Start the app by sliding the argvs to flaskrun
+    import sys
+    flaskrun(app, *sys.argv[1:])
 

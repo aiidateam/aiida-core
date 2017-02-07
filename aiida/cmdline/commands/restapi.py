@@ -1,21 +1,50 @@
 # -*- coding: utf-8 -*-
 """
 This allows to hook-up the AiIDA built-in RESTful API.
-Main advantage of doing this by means of a verdi command is that different profiles can be selected at hook-up (-p flag).
+Main advantage of doing this by means of a verdi command is that different
+profiles can be selected at hook-up (-p flag).
 
 """
 
-from aiida.restapi.api import app, hookup
+import os
+import aiida
 from aiida.cmdline.baseclass import VerdiCommand
+from aiida.restapi.api import app
+from aiida.restapi.common.flaskrun import flaskrun
+
 
 class Restapi(VerdiCommand):
     """
-    Hook up the default RESTful API of AiiDA.
-    No special logic required
+    verdi command used to hook up the AiIDA REST API.
+    Example Usage:
+
+    verdi -p <profile_name> restapi --host 127.0.0.5 --port 6789
+    --config-dir <location of the onfig.py file>
+
     """
 
+    # Defaults defined at class level
+    default_host = "127.0.0.1"
+    default_port = "5000"
+    default_config_dir = os.path.join(os.path.split(os.path.abspath(
+        aiida.restapi.__file__))[0], 'common')
+
     def run(self, *args):
-        hookup(app)
+        """
+        Hook up the default RESTful API of AiiDA.
+        args include port, host, config_file
+        """
+
+        # Construct dparameter dictionary
+        kwargs = dict(
+            prog_name=self.get_full_command_name(),
+            default_host=self.default_host,
+            default_port=self.default_port,
+            default_config=self.default_config_dir)
+
+        # Invoke the runner
+        flaskrun(app, *args, **kwargs)
+
 
     def complete(self, subargs_idx, subargs):
         """

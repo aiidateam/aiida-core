@@ -28,6 +28,11 @@ class Graph(VerdiCommandWithSubcommands):
         """
         A dictionary with valid subcommands as keys and corresponding functions as values
         """
+
+        # Usual boilerplate to set the environment
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         self.valid_subcommands = {
             'generate': (self.graph_generate, self.complete_none)
             # TODO: add a command to find connections between two points
@@ -39,9 +44,6 @@ class Graph(VerdiCommandWithSubcommands):
         :param args: root_pk
         :return: Generate a .dot file that can be rendered by graphviz utility dot
         """
-        # Usual boilerplate to load certain classes and functions
-        if not is_dbenv_loaded():
-            load_dbenv()
         from aiida.orm import load_node
         from aiida.orm.calculation import Calculation
         from aiida.orm.calculation.job import JobCalculation

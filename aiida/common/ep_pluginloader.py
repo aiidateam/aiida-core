@@ -192,7 +192,7 @@ def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
             raise e
         else:
             pass
-    plugins += plugin_list(category)
+        plugins += plugin_list(category)
     return plugins
 
 

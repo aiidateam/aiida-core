@@ -1265,7 +1265,7 @@ def parse_pw_text_output(data, xml_data={}, structure_data={}, input_dict={}):
                 parsed_data[bstring_seconds] = convert_qe_time_to_sec(time)
             except ValueError:
                 error_string = 'Unable to convert ' + times_strings[bindex] + ' seconds'
-                raise QEOutputParsingError(error_string)
+                parsed_data['warnings'].append(error_string)                
  
 
         

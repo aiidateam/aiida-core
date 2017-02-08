@@ -26,8 +26,13 @@ class Graph(VerdiCommandWithSubcommands):
 
     def __init__(self):
         """
-        A dictionary with valid subcommandsa as keys and corresponding functions as values
+        A dictionary with valid subcommands as keys and corresponding functions as values
         """
+
+        # Usual boilerplate to set the environment
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         self.valid_subcommands = {
             'generate': (self.graph_generate, self.complete_none)
             # TODO: add a command to find connections between two points
@@ -39,9 +44,6 @@ class Graph(VerdiCommandWithSubcommands):
         :param args: root_pk
         :return: Generate a .dot file that can be rendered by graphviz utility dot
         """
-        # Usual boilerplate to load certain classes and functions
-        if not is_dbenv_loaded():
-            load_dbenv()
         from aiida.orm import load_node
         from aiida.orm.calculation import Calculation
         from aiida.orm.calculation.job import JobCalculation
@@ -70,10 +72,9 @@ class Graph(VerdiCommandWithSubcommands):
             print >> sys.stderr, e.message
             sys.exit(1)
 
-        # From this point on I inherit Giovanni's script grap-generator.py.
-        # This script starts from the root_pk and goes both input-ward and output-ward via a breadth-first algorithm
+        # The algorithm starts from the root_pk and goes both input-ward and output-ward via a breadth-first algorithm
         # until the connected part of the graph that contains the root_pk is fully explored.
-        # TODO this command deserves to be radically improved, with options and further subcommands
+        # TODO this command deserves to be improved, with options and further subcommands
 
 
         def kpoints_desc(node):

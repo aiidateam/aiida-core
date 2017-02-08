@@ -71,7 +71,7 @@ class BaseTranslator(object):
         # Load correspondent orm class
         orm_class = get_object_from_string(class_string)
 
-        # Construct the json object to return it
+        # Construct the json object to be returned
         basic_schema = orm_class.get_db_columns()
 
         if cls._default_projections == ['**']:
@@ -84,7 +84,7 @@ class BaseTranslator(object):
         # (orm class/db table ==> RESTapi resource)
         def table2resource(table_name):
             # TODO Consider ways to make this function backend independent (one
-            # idea would be to gro from table name to aiida class name which is
+            # idea would be to go from table name to aiida class name which is
             # univoque)
             if BACKEND == BACKEND_DJANGO:
                 (spam, resource_name) = issingular(table_name[2:].lower())

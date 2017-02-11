@@ -354,9 +354,9 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm import Calculation
 
 
-        # So here I am giving two times the same cls without specifing a new tag
+        # So here I am giving two times the same tag
         with self.assertRaises(InputValidationError):
-            QueryBuilder().append(StructureData).append(StructureData)
+            QueryBuilder().append(StructureData, tag='n').append(StructureData, tag='n')
         # here I am giving a wrong filter specifications
         with self.assertRaises(InputValidationError):
             QueryBuilder().append(StructureData, filters=['jajjsd'])
@@ -394,6 +394,9 @@ class TestQueryBuilder(AiidaTestCase):
     def test_tags(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
+        from aiida.orm.calculation import Calculation
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.data.parameter import ParameterData
         from aiida.orm.computer import Computer
         qb = QueryBuilder()
         qb.append(Node, tag='n1')
@@ -401,6 +404,27 @@ class TestQueryBuilder(AiidaTestCase):
         qb.append(Node, tag='n3', edge_tag='e2', output_of='n2')
         qb.append(Computer, computer_of='n3', tag='c1')
         self.assertEqual(qb.get_used_tags(), ['n1', 'n2','e1', 'n3', 'e2', 'c1'])
+
+
+        # Now I am testing the default tags,
+        qb = QueryBuilder().append(StructureData).append(Calculation).append(
+            StructureData).append(
+            ParameterData, input_of=Calculation)
+        self.assertEqual(qb.get_used_tags(), [
+                'StructureData_1', 'Calculation_1',
+                'StructureData_1--Calculation_1', 'StructureData_2',
+                'Calculation_1--StructureData_2', 'ParameterData_1',
+                'Calculation_1--ParameterData_1'
+            ])
+        self.assertEqual(qb.get_used_tags(edges=False), [
+                'StructureData_1', 'Calculation_1',
+                'StructureData_2', 'ParameterData_1',
+            ])
+        self.assertEqual(qb.get_used_tags(vertices=False), [
+                'StructureData_1--Calculation_1',
+                'Calculation_1--StructureData_2',
+                'Calculation_1--ParameterData_1'
+            ])
         
 
 

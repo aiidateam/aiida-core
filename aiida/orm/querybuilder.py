@@ -274,9 +274,9 @@ class QueryBuilder(object):
         """
         return self._impl.get_ormclass(cls, ormclasstype)
 
-    def _get_autotag(self, ormclasstype):
+    def _get_unique_tag(self, ormclasstype):
         """
-        Using the function :func:`QueryBuilder._get_tag_from_type`, I get a tag.
+        Using the function get_tag_from_type, I get a tag.
         I increment an index that is appended to that tag until I have an unused tag.
         This function is called in :func:`QueryBuilder.append` when autotag is set to True.
 
@@ -284,9 +284,30 @@ class QueryBuilder(object):
             The string that defines the type of the AiiDA ORM class.
             For subclasses of Node, this is the Node._plugin_type_string, for other they are
             as defined as returned by :func:`QueryBuilder._get_ormclass`.
+
         :returns: A tag, as a string.
         """
-        basetag = self._get_tag_from_type(ormclasstype)
+        def get_tag_from_type(ormclasstype):
+            """
+            Assign a tag to the given
+            vertice of a path, based mainly on the type
+            *   data.structure.StructureData -> StructureData
+            *   data.structure.StructureData. -> StructureData
+            *   calculation.job.quantumespresso.pw.PwCalculation. -. PwCalculation
+            *   node.Node. -> Node
+            *   Node -> Node
+            *   computer -> computer
+            *   etc.
+
+            :param str ormclasstype:
+                The string that defines the type of the AiiDA ORM class.
+                For subclasses of Node, this is the Node._plugin_type_string, for other they are
+                as defined as returned by :func:`QueryBuilder._get_ormclass`.
+            :returns: A tag, as a string.
+            """
+            return ormclasstype.rstrip('.').split('.')[-1] or "node"
+
+        basetag = get_tag_from_type(ormclasstype)
         tags_used = self._tag_to_alias_map.keys()
         for i in range(1, 100):
             tag = '{}_{}'.format(basetag, i)
@@ -295,25 +316,7 @@ class QueryBuilder(object):
         raise Exception("Cannot find a tag after 100 tries")
 
 
-    def _get_tag_from_type(self, ormclasstype):
-        """
-        Assign a tag to the given
-        vertice of a path, based mainly on the type
-        *   data.structure.StructureData -> StructureData
-        *   data.structure.StructureData. -> StructureData
-        *   calculation.job.quantumespresso.pw.PwCalculation. -. PwCalculation
-        *   node.Node. -> Node
-        *   Node -> Node
-        *   computer -> computer
-        *   etc.
 
-        :param str ormclasstype:
-            The string that defines the type of the AiiDA ORM class.
-            For subclasses of Node, this is the Node._plugin_type_string, for other they are
-            as defined as returned by :func:`QueryBuilder._get_ormclass`.
-        :returns: A tag, as a string.
-        """
-        return ormclasstype.rstrip('.').split('.')[-1] or "node"
 
 
     def append(self, cls=None, type=None, tag=None,
@@ -331,15 +334,10 @@ class QueryBuilder(object):
             Whether to find automatically a unique tag. If this is set to True (default False),
 
         :param str tag:
-            A unique tag. If none is given, I will create one myself.
-            See keyword autotag to achieve unique tag.
+            A unique tag. If none is given, I will create a unique tag myself.
         :param filters:
             Filters to apply for this vertice.
             See usage examples for details.
-        :param bool autotag:
-            Whether to search for a unique tag,
-            (default **False**). If **True**, will find a unique tag.
-            Cannot be set to **True** if tag is specified.
         :param bool subclassing:
             Whether to include subclasses of the given class
             (default **True**).
@@ -347,7 +345,6 @@ class QueryBuilder(object):
         :param bool outerjoin:
             If True, (default is False), will do a left outerjoin
             instead of an inner join
-
 
         A small usage example how this can be invoked::
 
@@ -400,13 +397,14 @@ class QueryBuilder(object):
                     "\n\n\n".format(type)
                 )
 
-        if 'link_tag' in kwargs:
+        if kwargs.pop('link_tag', None) is not None:
             raise DeprecationWarning("link_tag is deprecated, use edge_tag instead")
+        if kwargs.pop('autotag', None) is not None:
+            raise DeprecationWarning("autotag=True is now the default behavior, this keyword is deprecated")
 
         ormclass, ormclasstype, query_type_string = self._get_ormclass(cls, type)
         ############################### TAG #################################
         # Let's get a tag
-        user_defined_tag = False
         label = kwargs.pop('label', None)
         if label is not None:
             if tag is None:
@@ -427,28 +425,15 @@ class QueryBuilder(object):
                     "".format(self._EDGE_TAG_DELIM)
                 )
             tag = tag
-            user_defined_tag = True
-        elif autotag:
-            tag = self._get_autotag(ormclasstype)
+            if tag in self._tag_to_alias_map.keys():
+                raise InputValidationError(
+                        "\n"
+                        "This tag ({}) is already in use\n"
+                        "\n".format(tag)
+                    )
         else:
-            tag = self._get_tag_from_type(ormclasstype)
-        # Check if the tag is not yet used:
-        if tag in self._tag_to_alias_map.keys():
-            if user_defined_tag:
-                raise InputValidationError(
-                    "\n"
-                    "This tag ({}) is already in use\n"
-                    "\n".format(tag)
-                )
-            else:
-                raise InputValidationError(
-                    "\n"
-                    "You did not specify a tag, so I am making one myself\n"
-                    "based on the class/type you gave me\n"
-                    "The tag that I made ({}) is already in use\n"
-                    "please specify a tag or set autotag to true"
-                    "".format(tag)
-                )
+            tag = self._get_unique_tag(ormclasstype)
+
         # Checks complete
         # This is where I start doing changes to self!
         # Now, several things can go wrong along the way, so I need to split into  
@@ -2104,15 +2089,21 @@ class QueryBuilder(object):
         return self._tag_to_alias_map[tag]
 
 
-    def get_used_tags(self):
+    def get_used_tags(self, vertices=True, edges=True):
         """
+        Returns a list of all the vertices that are being used.
+        Some parameter allow to select only subsets.
+        :param bool vertices: Defaults to True. If True, adds the tags of vertices to the returned list
+        :param bool edges: Defaults to True. If True,  adds the tags of edges to the returnend list.
+
         :returns: A list of all tags, including (if there is) also the tag give for the edges
         """
 
         given_tags = []
         for path in self._path:
-            given_tags.append(path['tag'])
-            if 'edge_tag' in path:
+            if vertices:
+                given_tags.append(path['tag'])
+            if edges and 'edge_tag' in path:
                 given_tags.append(path['edge_tag'])
         return given_tags
 

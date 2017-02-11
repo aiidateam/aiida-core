@@ -335,8 +335,7 @@ class QueryBuilder(object):
             Whether to find automatically a unique tag. If this is set to True (default False),
 
         :param str tag:
-            A unique tag. If none is given, will use method :func:`QueryBuilder._get_autotag` if
-            autotag is set to True, else :func:`QueryBuilder._get_tag_from_type`, to get a tag.
+            A unique tag. If none is given, I will create one myself.
             See keyword autotag to achieve unique tag.
         :param filters:
             Filters to apply for this vertice.
@@ -2113,11 +2112,11 @@ class QueryBuilder(object):
 
     def get_query(self):
         """
+        Instantiates and manipulates a sqlalchemy.orm.Query instance if this is needed.
+        First,  I check if the query instance is still valid by hashing the queryhelp.
+        In this way, if a user asks for the same query twice, I am not recreating an instance.
 
-        Checks if the query instance is still valid by hashing the queryhelp.
-        If not invokes :func:`QueryBuilderBase._build`.
-
-        :returns: an instance of sqlalchemy.orm.Query
+        :returns: an instance of sqlalchemy.orm.Query that is specific to the backend used.
 
         """
         from aiida.common.hashing import make_hash
@@ -2241,7 +2240,7 @@ class QueryBuilder(object):
 
     def iterall(self, batch_size=100):
         """
-        Same as :func:`QueryBuilderBase.all`, but returns a generator.
+        Same as :meth:`.all`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
         http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
@@ -2263,7 +2262,7 @@ class QueryBuilder(object):
 
     def iterdict(self, batch_size=100):
         """
-        Same as :func:`QueryBuilderBase.dict`, but returns a generator.
+        Same as :meth:`.dict`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
         http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
@@ -2358,8 +2357,7 @@ class QueryBuilder(object):
 
     def get_results_dict(self):
         """
-        Deprecated, use :func:`QueryBuilderBase.dict` or
-        :func:`QueryBuilderBase.iterdict` instead
+        Deprecated, use :meth:`.dict` instead
         """
         warnings.warn(
                 "get_results_dict will be deprecated in the future"

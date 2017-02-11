@@ -4,14 +4,10 @@
 The QueryBuilder: A class that allows you to query the AiiDA database, independent from backend.
 Note that the backend implementation is enforced and handled with a composition model!
 :func:`QueryBuilder` is the frontend class that the user can use. It inherits from *object* and contains
-backend-specific functionality.
+backend-specific functionality. Backend specific functionality is provided by the implementation classes.
 
-Backend specific functionality is provided by the implementation classes:
-*   QueryBuilderImplSQLA for the SQLAlchemy backend
-*   QueryBuilderImplDjango for the Django backend
-
-The latter two inherit from QueryBuilderInterface, an interface classes which enforces
-the implementation of its defined methods.
+These inherit from :func:`aiida.backends.general.querybuilder_interface.QueryBuilderInterface`,
+an interface classes which enforces the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.
 """

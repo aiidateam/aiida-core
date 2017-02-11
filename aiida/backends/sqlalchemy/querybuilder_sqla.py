@@ -69,10 +69,10 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
     """
 
     def __init__(self, *args, **kwargs):
-        from aiida.orm.implementation.sqlalchemy.node import Node as AiidaNode
-        from aiida.orm.implementation.sqlalchemy.group import Group as AiidaGroup
-        from aiida.orm.implementation.sqlalchemy.computer import Computer as AiidaComputer
-        from aiida.orm.implementation.sqlalchemy.user import User as AiidaUser
+        #~ from aiida.orm.implementation.sqlalchemy.node import Node as AiidaNode
+        #~ from aiida.orm.implementation.sqlalchemy.group import Group as AiidaGroup
+        #~ from aiida.orm.implementation.sqlalchemy.computer import Computer as AiidaComputer
+        #~ from aiida.orm.implementation.sqlalchemy.user import User as AiidaUser
         #~ self.Link               = DbLink
         #~ self.Node               = DbNode
         #~ self.Computer           = DbComputer

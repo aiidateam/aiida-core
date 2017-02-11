@@ -154,7 +154,7 @@ class QueryBuilderInterface():
     @abstractmethod
     def yield_per(self, batch_size):
         """
-        :param count: Number of rows to yield per step
+        :param int batch_size: Number of rows to yield per step
 
         Yields *count* rows at a time
 
@@ -164,6 +164,9 @@ class QueryBuilderInterface():
 
     @abstractmethod
     def count(self):
+        """
+        :returns: the number of results
+        """
         pass
 
     @abstractmethod
@@ -177,10 +180,16 @@ class QueryBuilderInterface():
         pass
     @abstractmethod
     def iterall(self, batch_size=100):
+        """
+        :returns: An iterator over all the results of a list of lists.
+        """
         pass
 
     @abstractmethod
     def iterdict(self, batch_size=100):
+        """
+        :returns: An iterator over all the results of a list of dictionaries.
+        """
         pass
 
 

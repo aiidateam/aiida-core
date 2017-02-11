@@ -853,6 +853,27 @@ class QueryBuilder(object):
 
             # Will project the uuid and the kinds
             qb.add_projection('struc', ['uuid', 'attributes.kinds'])
+
+        The above example will project the uuid and the kinds-attribute of all matching structures.
+        There are 2 (so far) special keys.
+
+        The single star *\** will project the *ORM-instance*::
+
+            qb = QueryBuilder()
+            qb.append(StructureData, tag='struc')
+            # Will project the ORM instance
+            qb.add_projection('struc', '*')
+            print type(qb.first()[0])
+            # >>> aiida.orm.data.structure.StructureData
+
+        The double start *\*\** projects all possible projections of this entity:
+
+            QueryBuilder().append(StructureData,tag='s', project='**').limit(1).dict()[0]['s'].keys()
+
+            # >>> u'user_id, description, ctime, label, extras, mtime, id, attributes, dbcomputer_id, nodeversion, type, public, uuid'
+
+        Be aware that the result of *\*\** depends on the backend implementation.
+
         """
         tag = self._get_tag_from_specification(tag_spec)
         _projections = []

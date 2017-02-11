@@ -320,7 +320,7 @@ class QueryBuilder(object):
 
 
     def append(self, cls=None, type=None, tag=None,
-                autotag=False, filters=None, project=None, subclassing=True,
+                filters=None, project=None, subclassing=True,
                 edge_tag=None, edge_filters=None, edge_project=None,
                 outerjoin=False, **kwargs
         ):
@@ -337,7 +337,10 @@ class QueryBuilder(object):
             A unique tag. If none is given, I will create a unique tag myself.
         :param filters:
             Filters to apply for this vertice.
-            See usage examples for details.
+            See :meth:`.add_filter`, the method invoked in the background, or usage examples for details.
+        :param project:
+            Projections to apply. See usage examples for details.
+            More information also in :meth:`.add_projection`.
         :param bool subclassing:
             Whether to include subclasses of the given class
             (default **True**).
@@ -345,6 +348,14 @@ class QueryBuilder(object):
         :param bool outerjoin:
             If True, (default is False), will do a left outerjoin
             instead of an inner join
+        :param str edge_tag:
+            The tag that the edge will get. If nothing is specified
+            (and there is a meaningful edge) the default is tag1--tag2 with tag1 being the entity joining
+            from and tag2 being the entity joining to (this entity).
+        :param str edge_filters:
+            The filters to apply on the edge. Also here, details in :meth:`.add_filter`.
+        :param str edge_project:
+            The project from the edges. API-details in :meth:`.add_projection`.
 
         A small usage example how this can be invoked::
 

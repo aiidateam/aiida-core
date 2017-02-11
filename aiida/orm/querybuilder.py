@@ -1134,7 +1134,6 @@ class QueryBuilder(object):
         return self
 
 
-
     def _build_filters(self, alias, filter_spec):
         """
         Recurse through the filter specification and apply filter operations.
@@ -2105,6 +2104,17 @@ class QueryBuilder(object):
         return self._tag_to_alias_map[tag]
 
 
+    def get_used_tags(self):
+        """
+        :returns: A list of all tags, including (if there is) also the tag give for the edges
+        """
+
+        given_tags = []
+        for path in self._path:
+            given_tags.append(path['tag'])
+            if 'edge_tag' in path:
+                given_tags.append(path['edge_tag'])
+        return given_tags
 
     def get_query(self):
         """

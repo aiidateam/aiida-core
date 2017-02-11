@@ -390,7 +390,19 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertTrue(StructureData not in qb._cls_to_tag_map)
         # So this should work now:
         qb.append(StructureData, tag='s').limit(2).dict()
+
+    def test_tags(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.node import Node
+        from aiida.orm.computer import Computer
+        qb = QueryBuilder()
+        qb.append(Node, tag='n1')
+        qb.append(Node, tag='n2', edge_tag='e1', output_of='n1')
+        qb.append(Node, tag='n3', edge_tag='e2', output_of='n2')
+        qb.append(Computer, computer_of='n3', tag='c1')
+        self.assertEqual(qb.get_used_tags(), ['n1', 'n2','e1', 'n3', 'e2', 'c1'])
         
+
 
 
 

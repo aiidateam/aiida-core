@@ -34,7 +34,8 @@ pwd_context = CryptContext(
     default="pbkdf2_sha256",
 
     # vary rounds parameter randomly when creating new hashes...
-    all__vary_rounds=0.1,
+    # deprecated as of 1.7
+    # all__vary_rounds=0.1,
 
     # We set the number of rounds that should be used...
     pbkdf2_sha256__default_rounds=8000,

@@ -238,3 +238,15 @@ def entry_point_tpstr_from(plugin_class):
         group, epname = mapping
         typestr = '.'.join([_category_mapping[group].replace('aiida.orm.', ''), epname, class_name]) + '.'
     return typestr
+
+
+def entry_point_from_tpstr(typestring):
+    if typestring.startswith('calculation.job.'):
+        typestring = typestring.split('.', 2)[-1]
+    elif typestring.startswith('calculation.'):
+        typestring = typestring.split('.', 1)[-1]
+    elif typestring.startswith('data.'):
+        typestring = typestring.split('.', 1)[-1]
+    else:
+        raise ValueError('weird typestring')
+    return typestring.split('.', 1)[0]

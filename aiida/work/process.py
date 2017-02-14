@@ -21,6 +21,7 @@ from aiida.work.defaults import class_loader
 import aiida.work.util
 from aiida.work.util import PROCESS_LABEL_ATTR, get_or_create_output_group
 from aiida.orm.calculation import Calculation
+from aiida.orm.data.parameter import ParameterData
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -36,12 +37,15 @@ class DictSchema(object):
         """
         Call this to validate the value against the schema.
 
+        :param value: a regular dictionary or a ParameterData instance 
         :return: tuple (success, msg).  success is True if the value is valid
             and False otherwise, in which case msg will contain information about
             the validation failure.
         :rtype: tuple
         """
         try:
+            if isinstance(value, ParameterData):
+                value = value.get_dict()
             self._schema(value)
             return True, None
         except voluptuous.Invalid as e:

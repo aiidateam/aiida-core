@@ -128,12 +128,8 @@ class Node(Resource):
             results = self.trans.get_statistics(self.tclass, usr)
 
         elif query_type == "tree":
-            if len(filters) > 0 :
-                depth = filters["depth"]["=="]
-            else:
-                depth = None
-            results = self.trans.get_io_tree(pk, depth)
             headers = build_headers(url=request.url, total_count=0)
+            results = self.trans.get_io_tree(pk)
 
         else:
             ## Instantiate a translator and initialize it

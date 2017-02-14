@@ -378,7 +378,8 @@ class BaseTranslator(object):
 
         results = []
         if self._total_count > 0:
-            results = self.qb.all()
+            for res in self.qb.dict():
+                results.append(res[self._result_type])
 
         # TODO think how to make it less hardcoded
         if self._result_type == 'input_of':

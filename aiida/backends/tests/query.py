@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from aiida.backends.testbase import AiidaTestCase
-
+import unittest
+import aiida.backends.settings as settings
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -427,6 +428,27 @@ class TestQueryBuilder(AiidaTestCase):
             ])
         
 
+
+
+class QueryBuilderDateTimeAttribute(AiidaTestCase):
+    @unittest.skipIf(settings.BACKEND == u'sqlalchemy',
+              "SQLA doesn't have full datetime support in attributes")
+    def test_date(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.utils import timezone
+        from datetime import timedelta
+        from aiida.orm.node import Node
+        n = Node()
+        now = timezone.now()
+        n._set_attr('now', now)
+        n.store()
+
+        qb = QueryBuilder().append(Node, 
+            filters={'attributes.now': {"and":[
+                {">":now-timedelta(seconds=1)},
+                {"<":now+timedelta(seconds=1)},
+            ]}})
+        self.assertEqual(qb.count(), 1)
 
 
 

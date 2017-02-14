@@ -6,41 +6,35 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
 import datetime
-from datetime import datetime
 from json import loads as json_loads
 
 import aiida.backends.querybuild.dummy_model as dummy_model
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
 from aiida.backends.querybuild.sa_init import (
-    and_, or_, aliased,      # Queryfuncs
+    and_, or_, aliased,  # Queryfuncs
     cast, Float, case, select, exists
 )
 from aiida.common.exceptions import InputValidationError
 from querybuilder_base import AbstractQueryBuilder
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 class QueryBuilder(AbstractQueryBuilder):
-
     def __init__(self, *args, **kwargs):
         from aiida.orm.implementation.django.node import Node as AiidaNode
         from aiida.orm.implementation.django.group import Group as AiidaGroup
         from aiida.orm.implementation.django.computer import Computer as AiidaComputer
         from aiida.orm.implementation.django.user import User as AiidaUser
 
-        self.Link               = dummy_model.DbLink
-        self.Node               = dummy_model.DbNode
-        self.Computer           = dummy_model.DbComputer
-        self.User               = dummy_model.DbUser
-        self.Group              = dummy_model.DbGroup
+        self.Link = dummy_model.DbLink
+        self.Node = dummy_model.DbNode
+        self.Computer = dummy_model.DbComputer
+        self.User = dummy_model.DbUser
+        self.Group = dummy_model.DbGroup
         self.table_groups_nodes = dummy_model.table_groups_nodes
-        self.AiidaNode          = AiidaNode
-        self.AiidaGroup         = AiidaGroup
-        self.AiidaComputer      = AiidaComputer
-        self.AiidaUser          = AiidaUser
+        self.AiidaNode = AiidaNode
+        self.AiidaGroup = AiidaGroup
+        self.AiidaComputer = AiidaComputer
+        self.AiidaUser = AiidaUser
 
         super(QueryBuilder, self).__init__(*args, **kwargs)
 
@@ -86,11 +80,10 @@ class QueryBuilder(AbstractQueryBuilder):
             # Metadata and transport_params are stored as json strings in the DB:
             return json_loads(res)
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
-            returnval =  res.get_aiida_class()
+            returnval = res.get_aiida_class()
         else:
             returnval = res
         return returnval
-
 
     @staticmethod
     def _get_session():
@@ -107,13 +100,13 @@ class QueryBuilder(AbstractQueryBuilder):
                 mapped_entity = mapped_class.tval
             elif dtype == 'b':
                 mapped_entity = mapped_class.bval
-                #~ mapped_entity = cast(mapped_class.value_str, Boolean)
+                # ~ mapped_entity = cast(mapped_class.value_str, Boolean)
             elif dtype == 'f':
                 mapped_entity = mapped_class.fval
-                #~ mapped_entity = cast(mapped_class.value_str, Float)
+                # ~ mapped_entity = cast(mapped_class.value_str, Float)
             elif dtype == 'i':
                 mapped_entity = mapped_class.ival
-                #~ mapped_entity = cast(mapped_class.value_str, Integer)
+                # ~ mapped_entity = cast(mapped_class.value_str, Integer)
             elif dtype == 'd':
                 mapped_entity = mapped_class.dval
             else:
@@ -126,6 +119,7 @@ class QueryBuilder(AbstractQueryBuilder):
                 mapped_entity = cast(mapped_entity, Float)
 
             return mapped_entity
+
         if column:
             mapped_class = column.prop.mapper.class_
         else:
@@ -144,17 +138,16 @@ class QueryBuilder(AbstractQueryBuilder):
         #   (which db_column in the dbattribtues)
         # If the user specified in what to cast, he wants an operation to
         #   be performed to cast the value to a different type
-        if  isinstance(value, (list, tuple)):
+        if isinstance(value, (list, tuple)):
             value_type_set = set([type(i) for i in value])
             if len(value_type_set) > 1:
-                raise InputValidationError( '{}  contains more than one type'.format(value))
+                raise InputValidationError('{}  contains more than one type'.format(value))
             elif len(value_type_set) == 0:
                 raise InputValidationError('Given list is empty, cannot determine type')
             else:
                 value_to_consider = value[0]
         else:
             value_to_consider = value
-
 
         # First cases, I maybe need not do anything but just count the
         # number of entries
@@ -163,7 +156,7 @@ class QueryBuilder(AbstractQueryBuilder):
                 "Filtering by lengths of arrays or lists is not implemented\n"
                 "in the Django-Backend"
             )
-        elif operator  == 'of_type':
+        elif operator == 'of_type':
             raise NotImplementedError(
                 "Filtering by type is not implemented\n"
                 "in the Django-Backend"
@@ -174,11 +167,11 @@ class QueryBuilder(AbstractQueryBuilder):
             )
 
 
-        elif operator=='has_key':
+        elif operator == 'has_key':
             if issubclass(mapped_class, dummy_model.DbAttribute):
-                expr = alias.attributes.any(mapped_class.key == '.'.join(attr_key+[value]))
+                expr = alias.attributes.any(mapped_class.key == '.'.join(attr_key + [value]))
             elif issubclass(mapped_class, dummy_model.DbExtra):
-                expr = alias.extras.any(mapped_class.key == '.'.join(attr_key+[value]))
+                expr = alias.extras.any(mapped_class.key == '.'.join(attr_key + [value]))
             else:
                 raise Exception("I was given {} as an attribute base class".format(mapped_class))
 
@@ -209,12 +202,11 @@ class QueryBuilder(AbstractQueryBuilder):
 
             actual_attr_key = '.'.join(attr_key)
             expr = column.any(and_(
-                    mapped_class.key == actual_attr_key,
-                    or_(*expressions)
-                )
+                mapped_class.key == actual_attr_key,
+                or_(*expressions)
+            )
             )
         return expr
-
 
     def _modify_expansions(self, alias, expansions):
         """
@@ -237,7 +229,7 @@ class QueryBuilder(AbstractQueryBuilder):
     def _get_projectable_attribute(
             self, alias, column_name, attrpath,
             cast=None, **kwargs
-        ):
+    ):
         if cast is not None:
             raise NotImplementedError(
                 "Casting is not implemented in the Django backend"
@@ -250,14 +242,14 @@ class QueryBuilder(AbstractQueryBuilder):
                 entity = alias.id
             else:
                 raise NotImplementedError(
-                        "Whatever you asked for "
-                        "({}) is not implemented"
-                        "".format(column_name)
-                    )
+                    "Whatever you asked for "
+                    "({}) is not implemented"
+                    "".format(column_name)
+                )
         else:
             aliased_attributes = aliased(getattr(alias, column_name).prop.mapper.class_)
 
-            if not issubclass(alias._aliased_insp.class_,self.Node):
+            if not issubclass(alias._aliased_insp.class_, self.Node):
                 NotImplementedError(
                     "Other classes than Nodes are not implemented yet"
                 )
@@ -265,23 +257,22 @@ class QueryBuilder(AbstractQueryBuilder):
             attrkey = '.'.join(attrpath)
 
             exists_stmt = exists(select([1], correlate=True).select_from(
-                    aliased_attributes
-                ).where(and_(
-                    aliased_attributes.key==attrkey,
-                    aliased_attributes.dbnode_id==alias.id
-                )))
+                aliased_attributes
+            ).where(and_(
+                aliased_attributes.key == attrkey,
+                aliased_attributes.dbnode_id == alias.id
+            )))
 
             select_stmt = select(
-                    [aliased_attributes.id], correlate=True
-                ).select_from(aliased_attributes).where(and_(
-                    aliased_attributes.key==attrkey,
-                    aliased_attributes.dbnode_id==alias.id
-                )).label('miao')
+                [aliased_attributes.id], correlate=True
+            ).select_from(aliased_attributes).where(and_(
+                aliased_attributes.key == attrkey,
+                aliased_attributes.dbnode_id == alias.id
+            )).label('miao')
 
             entity = case([(exists_stmt, select_stmt), ], else_=None)
 
         return entity
-
 
     def _yield_per(self, batch_size):
         """
@@ -292,7 +283,6 @@ class QueryBuilder(AbstractQueryBuilder):
         :returns: a generator
         """
         return self.get_query().yield_per(batch_size)
-
 
     def _all(self):
         from django.db import transaction
@@ -308,7 +298,6 @@ class QueryBuilder(AbstractQueryBuilder):
         from django.db import transaction
         with transaction.atomic():
             return self.get_query().first()
-
 
     def iterall(self, batch_size=100):
         """
@@ -332,7 +321,7 @@ class QueryBuilder(AbstractQueryBuilder):
                         self._get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
                         for colindex, rowitem
                         in enumerate(resultrow)
-                    ]
+                        ]
             except TypeError:
                 # resultrow not an iterable:
                 # Checked, result that raises exception is included
@@ -343,7 +332,6 @@ class QueryBuilder(AbstractQueryBuilder):
                     )
                 for rowitem in results:
                     yield [self._get_aiida_res(self._attrkeys_as_in_sql_result[0], rowitem)]
-
 
     def iterdict(self, batch_size=100):
         """
@@ -373,16 +361,16 @@ class QueryBuilder(AbstractQueryBuilder):
             try:
                 for this_result in results:
                     yield {
-                        tag:{
-                            attrkey:self._get_aiida_res(
-                                    attrkey, this_result[index_in_sql_result]
-                                )
+                        tag: {
+                            attrkey: self._get_aiida_res(
+                                attrkey, this_result[index_in_sql_result]
+                            )
                             for attrkey, index_in_sql_result
                             in projected_entities_dict.items()
-                        }
+                            }
                         for tag, projected_entities_dict
                         in self.tag_to_projected_entity_dict.items()
-                    }
+                        }
             except TypeError:
                 # resultrow not an iterable:
                 # Checked, result that raises exception is included
@@ -393,10 +381,9 @@ class QueryBuilder(AbstractQueryBuilder):
                     )
                 for this_result in results:
                     yield {
-                        tag:{
-                            attrkey : self._get_aiida_res(attrkey, this_result)
+                        tag: {
+                            attrkey: self._get_aiida_res(attrkey, this_result)
                             for attrkey, position in projected_entities_dict.items()
-                        }
+                            }
                         for tag, projected_entities_dict in self.tag_to_projected_entity_dict.items()
-                    }
-
+                        }

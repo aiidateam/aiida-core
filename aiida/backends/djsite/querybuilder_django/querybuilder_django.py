@@ -15,7 +15,7 @@ from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotE
 
 
 from sqlalchemy import and_, or_, not_, exists, select, exists, case
-from sqlalchemy.types import Float
+from sqlalchemy.types import Float,  String
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 

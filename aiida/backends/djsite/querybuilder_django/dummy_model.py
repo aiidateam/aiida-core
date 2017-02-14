@@ -5,22 +5,32 @@ using SQLAlchemy.
 This is done to query the database with more performant ORM of SA.
 """
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
-
 from sqlalchemy.ext.declarative import declarative_base
-from sa_init import (
-    Column, Table, ForeignKey,
-    Integer, String, DateTime, Float, Boolean, Text,  # basic column types
-    UUID, JSONB, array,                               # Fancy column types
-    UniqueConstraint,aliased,
-    select, func, join, and_, or_, not_, except_,     # join and filter ops
-    relationship, backref, column_property,           # Table to table relationsships
-    sessionmaker, create_engine,                      # connection
-    foreign, mapper, case, cast
+
+from sqlalchemy import (
+    Column, Table, ForeignKey, UniqueConstraint,create_engine,
+    select, func, join, and_, or_, not_, except_, case, exists,
+    text
 )
+
+from sqlalchemy.types import (
+    Integer, String, DateTime, Float, Boolean, Text,
+)
+from sqlalchemy.orm import (
+    relationship,
+    backref,
+    column_property,
+    sessionmaker,
+    foreign, mapper, aliased
+)
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.sql.elements import Cast
+from sqlalchemy.dialects.postgresql import UUID, JSONB, INTEGER, array
+# TO COMPILE MY OWN FUNCTIONALITIES:
+from sqlalchemy.sql.expression import FunctionElement, cast
+from sqlalchemy.sql.base import ImmutableColumnCollection
+from sqlalchemy.ext.compiler import compiles
+
 
 # Aiida Django classes:
 #from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
@@ -430,27 +440,5 @@ def get_aldjemy_session():
 
 
 session = get_aldjemy_session()
-
-#~ if profile['AIIDADB_NAME'] == ':memory:':
-    #~ session = get_aldjemy_session()
-#~ else:
-    #~ engine = profile["AIIDADB_ENGINE"]
-    #~ if engine == "sqlite3":
-        #~ engine_url = (
-            #~ "sqlite:///{AIIDADB_NAME}"
-            #~ ).format(**get_profile_config(settings.AIIDADB_PROFILE))
-    #~ elif engine.startswith("mysql"):
-        #~ engine_url = (
-            #~ "mysql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-            #~ "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-            #~ ).format(**get_profile_config(settings.AIIDADB_PROFILE))
-    #~ elif engine.startswith("postgre"):
-        #~ engine_url = (
-            #~ "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-            #~ "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-            #~ ).format(**get_profile_config(settings.AIIDADB_PROFILE))
-    #~ else:
-        #~ raise ConfigurationError("Unknown DB engine: {}".format(engine))
-    #~ session = sessionmaker(bind=create_engine(engine_url))()
 
 

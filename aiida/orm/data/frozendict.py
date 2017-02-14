@@ -10,16 +10,22 @@ class FrozenDict(Data, Mapping):
     .. note::
         All values must be stored before being passed to constructor.
     """
-    def __init__(self, dict, **kwargs):
+
+    def __init__(self, **kwargs):
+        self._cache = {}
+        self._initialised = False
         super(FrozenDict, self).__init__(**kwargs)
+        self._initialised = True
+
+    def set_dict(self, dict):
+        assert not self._initialised
+
         for value in dict.itervalues():
             assert isinstance(value, Data)
             assert value.is_stored
 
         for k, v in dict.iteritems():
             self._set_attr(k, v.pk)
-
-        self._cache = {}
 
     def __getitem__(self, key):
         return self._get(key)

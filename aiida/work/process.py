@@ -19,7 +19,8 @@ from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from aiida.work.defaults import class_loader
 import aiida.work.util
-from aiida.work.util import PROCESS_LABEL_ATTR
+from aiida.work.util import PROCESS_LABEL_ATTR, get_or_create_output_group
+from aiida.orm.calculation import Calculation
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -128,7 +129,7 @@ class Process(plum.process.Process):
         spec.input("_description", valid_type=basestring, required=False)
         spec.input("_label", valid_type=basestring, required=False)
 
-        spec.dynamic_input(valid_type=aiida.orm.Data)
+        spec.dynamic_input(valid_type=(aiida.orm.Data, aiida.orm.Calculation))
         spec.dynamic_output(valid_type=aiida.orm.Data)
 
     @classmethod
@@ -329,6 +330,10 @@ class Process(plum.process.Process):
                 to_link[name] = input
 
         for name, input in to_link.iteritems():
+
+            if isinstance(input, Calculation):
+                input = get_or_create_output_group(input)
+
             if not input.is_stored:
                 # If the input isn't stored then assume our parent created it
                 if parent_calc:

@@ -43,6 +43,7 @@ from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.work import Work
 from aiida.cmdline.commands.comment import Comment
 from aiida.cmdline.commands.shell import Shell
+from aiida.cmdline.commands.restapi import Restapi
 from aiida.cmdline import execname
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."

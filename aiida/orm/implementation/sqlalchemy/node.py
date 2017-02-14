@@ -25,7 +25,8 @@ from aiida.common.lang import override
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
-from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
+from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
+    get_attr, get_db_columns
 from aiida.orm.mixins import Sealable
 
 import aiida.backends.sqlalchemy

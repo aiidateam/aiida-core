@@ -283,3 +283,20 @@ def get_current_profile():
         return None
 
 
+def _get_column(colname, alias):
+    """
+    Return the column for a given projection. Needed by the QueryBuilder
+    """
+
+    try:
+        return getattr(alias, colname)
+    except:
+        raise InputValidationError(
+            "\n{} is not a column of {}\n"
+            "Valid columns are:\n"
+            "{}".format(
+                    colname, alias,
+                    '\n'.join(alias._sa_class_manager.mapper.c.keys())
+                )
+        )
+

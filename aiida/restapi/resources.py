@@ -5,16 +5,13 @@ from urllib import unquote
 from flask import request
 from flask_restful import Resource
 
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-if not is_dbenv_loaded():
-    load_dbenv()
-
 ## TODO add the caching support. I cache total count, results, and possibly
 # set_query
 class BaseResource(Resource):
     ## Each derived class will instantiate a different type of translator.
     # This is the only difference in the classes.
     def __init__(self):
+
         self.trans = None
 
     def get(self, **kwargs):

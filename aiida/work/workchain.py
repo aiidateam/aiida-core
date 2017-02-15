@@ -329,7 +329,8 @@ def Wf(running_info):
 
 
 def Legacy(object):
-    if object.type == RunningType.LEGACY_CALC:
+    if object.type == RunningType.LEGACY_CALC or \
+     object.type == RunningType.PROCESS:
         return Calc(object)
     elif object.type is RunningType.LEGACY_WORKFLOW:
         return Wf(object)

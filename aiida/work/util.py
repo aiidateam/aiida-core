@@ -131,5 +131,8 @@ def get_or_create_output_group(calculation):
     if not isinstance(calculation, Calculation):
         raise TypeError("Can only create output groups for type Calculation")
 
-    return FrozenDict(dict=calculation.get_outputs_dict(link_type=LinkType.RETURN))
+    d = calculation.get_outputs_dict(link_type=(LinkType.CREATE))
+    d.update(calculation.get_outputs_dict(link_type=(LinkType.RETURN)))
+
+    return FrozenDict(dict=d)
 

@@ -122,13 +122,19 @@ class JobProcess(Process):
                 continue
 
             # Call the 'use' methods to set up the data-calc links
-            if isinstance(self.spec().get_input(name), port.InputGroupPort):
+            if self.spec().has_input(name) and \
+                isinstance(self.spec().get_input(name), port.InputGroupPort):
                 additional =\
                     self._CALC_CLASS._use_methods[name]['additional_parameter']
 
                 for k, v in input.iteritems():
-                    getattr(self._calc,
+                    try:
+                        getattr(self._calc,
                             'use_{}'.format(name))(v, **{additional: k})
+                    except AttributeError as exception:
+                        raise AttributeError("You have provided for an input the key '{}' but"
+                            "the JobCalculation has no such use_{} method".format(name, name))
+
 
             else:
                 getattr(self._calc, 'use_{}'.format(name))(input)

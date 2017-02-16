@@ -77,6 +77,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
     You will typically use one of its subclasses, often a JobCalculation for
     calculations run via a scheduler.
     """
+
     # A tuple with attributes that can be updated even after
     # the call of the store() method
 
@@ -126,8 +127,8 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         import logging
         from aiida.utils.logger import get_dblogger_extra
 
-        return logging.LoggerAdapter(logger=self._logger,
-                                     extra=get_dblogger_extra(self))
+        return logging.LoggerAdapter(
+            logger=self._logger, extra=get_dblogger_extra(self))
 
     def __dir__(self):
         """

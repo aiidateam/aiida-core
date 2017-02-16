@@ -93,17 +93,13 @@ class RegistryEntry(object):
     def test_installed(self):
         """return wether the plugin is installed"""
         from importlib import import_module
-        '''TODO: catch also old_school install case'''
-        '''TODO: Test with aiida-core aiida-qe'''
+        # TODO: catch also old_school install case
+        # TODO: Test with aiida-core aiida-qe
         try:
             import_module(self.package_name)
         except:
-            return False
-        from aiida.common.ep_pluginloader import get_plugin
-        for cat, ep in self.entry_points.iteritems():
-            try:
-                get_plugin(cat, ep)
-            except:
-                return False
+            from aiida.common.ep_pluginloader import all_plugins
+            for cat, ep in self.entry_points.iteritems():
+                if not set(ep).issubset(set(all_plugins(cat))):
+                    return False
         return True
-

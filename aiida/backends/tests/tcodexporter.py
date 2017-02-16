@@ -235,15 +235,18 @@ class TestTcodDbExporter(AiidaTestCase):
     def test_pw_translation(self):
         from aiida.tools.dbexporters.tcod \
             import translate_calculation_specific_values
-        from aiida.tools.dbexporters.tcod_plugins.pw \
-            import PwTcodtranslator as PWT
-        from aiida.tools.dbexporters.tcod_plugins.cp \
-            import CpTcodtranslator as CPT
+        # from aiida.tools.dbexporters.tcod_plugins.pw \
+        #     import PwTcodtranslator as PWT
+        # from aiida.tools.dbexporters.tcod_plugins.cp \
+        #     import CpTcodtranslator as CPT
         from aiida.orm.code import Code
         from aiida.orm.data.array import ArrayData
         from aiida.orm.data.array.kpoints import KpointsData
         from aiida.orm.data.parameter import ParameterData
         import numpy
+        from aiida.common.ep_pluginloader import get_plugin
+        PWT = get_plugin('tools.dbexporters.tcod_plugins', 'quantumespresso.pw')
+        CPT = get_plugin('tools.dbexporters.tcod_plugins', 'quantumespresso.cp')
 
         code = Code()
         code._set_attr('remote_exec_path', '/test')

@@ -5,7 +5,6 @@ from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
 from aiida.restapi.common.utils import pk_dbsynonym
-from aiida.restapi.common.config import LIMIT_DEFAULT, custom_schema
 from aiida.common.utils import get_object_from_string, issingular
 from aiida.backends.settings import BACKEND
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
@@ -33,7 +32,7 @@ class BaseTranslator(object):
     _total_count = None
 
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
@@ -51,6 +50,13 @@ class BaseTranslator(object):
         # query_builder object (No initialization)
         self.qb = QueryBuilder()
 
+        self.LIMIT_DEFAULT = kwargs['LIMIT_DEFAULT']
+
+        if 'custom_schema' in kwargs:
+            self.custom_schema = kwargs['custom_schema']
+        else:
+            self.custom_schema = None
+
     def __repr__(self):
         """
         This function is required for the caching system to be able to compare
@@ -62,11 +68,10 @@ class BaseTranslator(object):
         """
         return ""
 
-    @classmethod
-    def get_schema(cls):
+    def get_schema(self):
 
         # Construct the full class string
-        class_string = 'aiida.orm.' + cls._aiida_type
+        class_string = 'aiida.orm.' + self._aiida_type
 
         # Load correspondent orm class
         orm_class = get_object_from_string(class_string)
@@ -74,10 +79,11 @@ class BaseTranslator(object):
         # Construct the json object to be returned
         basic_schema = orm_class.get_db_columns()
 
-        if cls._default_projections == ['**']:
+        if self._default_projections == ['**']:
             schema = basic_schema # No custom schema, take the basic one
         else:
-            schema = dict([(k, basic_schema[k]) for k in cls._default_projections
+            schema = dict([(k, basic_schema[k]) for k in
+                           self._default_projections
                                   if k in basic_schema.keys()])
 
         # Convert the related_tablevalues to the RESTAPI resources
@@ -102,9 +108,9 @@ class BaseTranslator(object):
         for k, v in schema.iteritems():
 
             # Add custom fields to the column dictionaries
-            if 'fields' in custom_schema:
-                if k in custom_schema['fields'].keys():
-                    schema[k].update(custom_schema['fields'][k])
+            if 'fields' in self.custom_schema:
+                if k in self.custom_schema['fields'].keys():
+                    schema[k].update(self.custom_schema['fields'][k])
 
             # Convert python types values into strings
             schema[k]['type']=str(schema[k]['type'])[7:-2]
@@ -338,11 +344,11 @@ class BaseTranslator(object):
                 limit = int(limit)
             except ValueError:
                 raise InputValidationError("Limit value must be an integer")
-            if limit > LIMIT_DEFAULT:
+            if limit > self.LIMIT_DEFAULT:
                 raise RestValidationError("Limit and perpage cannot be bigger "
-                                          "than {}".format(LIMIT_DEFAULT))
+                                          "than {}".format(self.LIMIT_DEFAULT))
         else:
-            limit = LIMIT_DEFAULT
+            limit = self.LIMIT_DEFAULT
 
         if offset is not None:
             try:

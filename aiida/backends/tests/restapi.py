@@ -7,7 +7,7 @@ from aiida.orm.calculation import Calculation
 from aiida.orm.computer import Computer
 from aiida.orm.data import Data
 from aiida.orm.querybuilder import QueryBuilder
-from aiida.restapi.api import app
+from aiida.restapi.api import app, AiidaApi
 
 StructureData = DataFactory('structure')
 ParameterData = DataFactory('parameter')
@@ -20,6 +20,8 @@ class RESTApiTestCase(AiidaTestCase):
     """
     _url_prefix = "/api/v2"
     _dummy_data = {}
+    _PERPAGE_DEFAULT = 20
+    _LIMIT_DEFAULT = 400
 
     @classmethod
     def setUpClass(cls):
@@ -30,6 +32,15 @@ class RESTApiTestCase(AiidaTestCase):
 
         # call parent setUpClass method
         super(RESTApiTestCase, cls).setUpClass()
+
+        # connect the app and the api
+        # Init the api by connecting it the the app (N.B. respect the following
+        # order, api.__init__)
+        kwargs = dict(PREFIX=cls._url_prefix,
+                      PERPAGE_DEFAULT=cls._PERPAGE_DEFAULT,
+                      LIMIT_DEFAULT=cls._LIMIT_DEFAULT)
+
+        api = AiidaApi(app, **kwargs)
 
         # create test inputs
         cell = ((2., 0., 0.), (0., 2., 0.), (0., 0., 2.))

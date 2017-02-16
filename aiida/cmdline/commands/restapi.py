@@ -10,8 +10,8 @@ import os
 
 import aiida
 from aiida.cmdline.baseclass import VerdiCommand
-from aiida.restapi.api import app
-from aiida.restapi.common.flaskrun import flaskrun
+from aiida.restapi.api import app, AiidaApi
+from aiida.restapi.run_api import run_api
 
 
 class Restapi(VerdiCommand):
@@ -46,7 +46,7 @@ class Restapi(VerdiCommand):
             parse_aiida_profile=self.parse_aiida_profile)
 
         # Invoke the runner
-        flaskrun(app, *args, **kwargs)
+        run_api(app, AiidaApi, *args, **kwargs)
 
     def complete(self, subargs_idx, subargs):
         """

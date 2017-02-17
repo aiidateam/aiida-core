@@ -9,8 +9,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.exceptions import ValidationError
-from aiida.orm.log import LogEntry
-from aiida.common.lang import override
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -18,7 +16,7 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
 
-class DbLog(Base, LogEntry):
+class DbLog(Base):
     __tablename__ = "db_dblog"
 
     id = Column(Integer, primary_key=True)
@@ -76,19 +74,5 @@ class DbLog(Base, LogEntry):
         )
 
     @property
-    def obj_id(self):
-        return self.objpk
-
-    @property
     def metadata(self):
         return self._metadata
-
-    def obj_name(self):
-        return self.objname
-
-    @override
-    def save(self):
-        from aiida.backends.sqlalchemy import session
-        session.add(self)
-        session.commit()
-

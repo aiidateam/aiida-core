@@ -11,17 +11,17 @@ class Log(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def create_entry(self, time, loggername, levelname, obj_name,
+    def create_entry(self, time, logger_name, log_level, obj_name,
                      message="", obj_id=None, metadata=None):
         """
         Create a log entry.
 
         :param time: The time of creation for the entry
         :type time: :class:`datetime.datetime`
-        :param loggername: The name of the logger that generated the entry
-        :type loggername: :class:`basestring`
-        :param levelname: The log level
-        :type levelname: :class:`basestring`
+        :param logger_name: The name of the logger that generated the entry
+        :type logger_name: :class:`basestring`
+        :param log_level: The log level
+        :type log_level: :class:`basestring`
         :param obj_name: The object name (if any) that emitted the entry
         :param message: The message to log
         :type message: :class:`basestring`
@@ -68,7 +68,7 @@ class LogEntry(object):
         pass
 
     @abstractproperty
-    def loggername(self):
+    def logger_name(self):
         """
         The name of the logger that created this entry
 
@@ -77,8 +77,18 @@ class LogEntry(object):
         """
         pass
 
+    @abstractproperty
+    def log_level(self):
+        """
+        The name of the log level
+
+        :return: The entry log_level
+        :rtype: basestring
+        """
+        pass
+
         # TODO: Do the rest of these @sphuber
 
     @abstractmethod
-    def save(self):
+    def store(self):
         pass

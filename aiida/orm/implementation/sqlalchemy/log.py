@@ -1,19 +1,19 @@
-from aiida.orm.log import Log
+from aiida.orm.log import Log, LogEntry
 from aiida.backends.sqlalchemy.models import DbLog
 
 
 class SqlaLog(Log):
-    def create_entry(self, time, loggername, levelname, obj_name,
+    def create_entry(self, time, logger_name, log_level, obj_name,
                      message="", obj_id=None, metadata=None):
         """
         Create a log entry.
 
         :param time: The time of creation for the entry
         :type time: :class:`datetime.datetime`
-        :param loggername: The name of the logger that generated the entry
-        :type loggername: :class:`basestring`
-        :param levelname: The log level
-        :type levelname: :class:`basestring`
+        :param logger_name: The name of the logger that generated the entry
+        :type logger_name: :class:`basestring`
+        :param log_level: The log level
+        :type log_level: :class:`basestring`
         :param obj_name: The object name (if any) that emitted the entry
         :param message: The message to log
         :type message: :class:`basestring`
@@ -24,7 +24,7 @@ class SqlaLog(Log):
         :rtype: :class:`aiida.orm.log.LogEntry`
         """
         return DbLog(
-            loggername=loggername, levelname=levelname, objname=obj_name,
+            loggername=logger_name, levelname=log_level, objname=obj_name,
             objpk=obj_id, message=message, metadata=metadata)
 
     def find(self, filter_by=None, order_by=None, limit=None):
@@ -41,3 +41,44 @@ class SqlaLog(Log):
         :return: An iterable of the matching entries
         """
         raise NotImplementedError()
+
+
+class SqlaLogEntry(LogEntry):
+    def __init__(self, model):
+        """
+        :param model: :class:`aiida.backends.sqlalchemy.models.log.DbLog`
+        """
+        self._model = model
+
+    @property
+    def id(self):
+        return self._model.pk
+
+    @property
+    def time(self):
+        return self._model.time
+
+    @property
+    def metadata(self):
+        return self._model.metadata
+
+    @property
+    def obj_id(self):
+        return self._model.objpk
+
+    @property
+    def obj_name(self):
+        return self._model.objname
+
+    @property
+    def logger_name(self):
+        return self._model.loggername
+
+    @property
+    def log_level(self):
+        return self._model.levelname
+
+    def store(self):
+        from aiida.backends.sqlalchemy import session
+        session.add(self)
+        session.commit()

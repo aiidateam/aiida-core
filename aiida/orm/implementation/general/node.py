@@ -78,6 +78,9 @@ class AbstractNode(object):
 
             return newcls
 
+    # This will be set by the metaclass call
+    _logger = None
+
     # Name to be used for the Repository section
     _section_name = 'node'
 

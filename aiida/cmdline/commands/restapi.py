@@ -10,9 +10,6 @@ import os
 
 import aiida
 from aiida.cmdline.baseclass import VerdiCommand
-from aiida.restapi.api import app
-from aiida.restapi.common.flaskrun import flaskrun
-
 
 class Restapi(VerdiCommand):
     """
@@ -36,6 +33,8 @@ class Restapi(VerdiCommand):
         Hook up the default RESTful API of AiiDA.
         args include port, host, config_file
         """
+        from aiida.restapi.api import app
+        from aiida.restapi.common.flaskrun import flaskrun
 
         # Construct dparameter dictionary
         kwargs = dict(

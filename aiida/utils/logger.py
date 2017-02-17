@@ -1,9 +1,22 @@
 # -*- coding: utf-8 -*-
 
+import logging
+from aiida import LOG_LEVEL_REPORT
+
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
+
+LOG_LEVELS = {
+    logging.getLevelName(logging.DEBUG): logging.DEBUG,
+    logging.getLevelName(logging.INFO): logging.INFO,
+    logging.getLevelName(LOG_LEVEL_REPORT): LOG_LEVEL_REPORT,
+    logging.getLevelName(logging.WARNING): logging.WARNING,
+    logging.getLevelName(logging.ERROR): logging.ERROR,
+    logging.getLevelName(logging.CRITICAL): logging.CRITICAL,
+}
+
 
 def get_dblogger_extra(obj):
     """

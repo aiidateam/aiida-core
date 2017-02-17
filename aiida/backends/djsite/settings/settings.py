@@ -266,7 +266,7 @@ LOGGING = {
             'formatter': 'halfverbose',
         },
         'dblogger': {
-            # get_property takes the property from the config json file
+               # get_property takes the property from the config json file
             # The key used in the json, and the default value, are
             # specified in the _property_table inside aiida.common.setup
             # NOTE: To modify properties, use the 'verdi devel setproperty'

@@ -103,5 +103,6 @@ extras_require = {
 
 # Dependency for workflow engine
 dependency_links = [
-    'https://bitbucket.org/aiida_team/plum/get/v0.7.5.zip#egg=plum-0.7.5',
+    "git+ssh://git@bitbucket.org/aiida_team/plum.git@e059407e7a21ff39be4dea07e6936c6ee91deba2#egg=plum-0.7.5"
+#    'https://bitbucket.org/aiida_team/plum.git@e059407e7a21ff39be4dea07e6936c6ee91deba2#egg=plum-0.7.5'
 ]

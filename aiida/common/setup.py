@@ -2,8 +2,7 @@
 import os
 import aiida
 import logging
-
-from aiida import LOG_LEVEL_REPORT
+import json
 
 # The username (email) used by the default superuser, that should also run
 # as the daemon
@@ -379,7 +378,7 @@ def create_base_dirs(config_dir=None):
     create_htaccess_file()
 
 
-def set_default_profile(process, profile, force_rewrite = False):
+def set_default_profile(process, profile, force_rewrite=False):
     """
     Set a default db profile to be used by a process (default for verdi,
     default for daemon, ...)
@@ -409,7 +408,7 @@ def set_default_profile(process, profile, force_rewrite = False):
         confs['default_profiles'][process] = profile
     else:
         confs['default_profiles'][process] = confs['default_profiles'].get(
-                                                                process,profile)
+            process, profile)
     backup_config()
     store_config(confs)
 
@@ -648,6 +647,7 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
             set_default_profile('daemon', profile)
     return new_profile
 
+
 def create_configuration(profile='default'):
     """
     :param profile: The profile to be configured
@@ -766,7 +766,7 @@ def create_configuration(profile='default'):
             while not valid_db_engine:
                 db_engine_ans = raw_input(
                     'Database engine (available: {} - mysql is deprecated): '
-                    .format(', '.join(db_possibilities)))
+                        .format(', '.join(db_possibilities)))
                 if db_engine_ans in db_possibilities:
                     valid_db_engine = True
                 else:
@@ -878,7 +878,7 @@ def create_configuration(profile='default'):
         # it should change in the future to add the possibility of having a
         # remote repository. Atm, I act as only a local repo is possible
         existing_repo = this_existing_confs.get('AIIDADB_REPOSITORY_URI',
-            os.path.join(aiida_dir, "repository-{}/".format(profile)))
+                                                os.path.join(aiida_dir, "repository-{}/".format(profile)))
         default_protocol = 'file://'
         if existing_repo.startswith(default_protocol):
             existing_repo = existing_repo[len(default_protocol):]
@@ -943,6 +943,7 @@ def create_configuration(profile='default'):
 class _NoDefaultValue(object):
     pass
 
+
 # Only properties listed here can be changed/set with the command line.
 # These properties are stored in the aiida config file.
 # Each entry key is the name of the property used on the command line;
@@ -971,33 +972,33 @@ _property_table = {
         None),
     "logging.aiida_loglevel": (
         "logging_aiida_log_level",
-        "int",
+        "string",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
         "and to the DbLog table for the 'aiida' logger; for the DbLog, see "
         "also the logging.db_loglevel variable to further filter messages going "
         "to the database",
-        LOG_LEVEL_REPORT,
-        [logging.CRITICAL, logging.ERROR, logging.WARNING, LOG_LEVEL_REPORT, logging.INFO, logging.DEBUG]),
+        "REPORT",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.paramiko_loglevel": (
         "logging_paramiko_log_level",
-        "int",
+        "string",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
         "for the 'paramiko' logger",
-        logging.WARNING,
-        [logging.CRITICAL, logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG]),
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.celery_loglevel": (
         "logging_celery_log_level",
-        "int",
+        "string",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
         "for the 'celery' logger",
-        logging.WARNING,
-        [logging.CRITICAL, logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG]),
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.db_loglevel": (
         "logging_db_log_level",
-        "int",
+        "string",
         "Minimum level to log to the DbLog table",
-        LOG_LEVEL_REPORT,
-        [logging.CRITICAL, logging.ERROR, logging.WARNING, LOG_LEVEL_REPORT, logging.INFO, logging.DEBUG]),
+        "REPORT",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "tcod.depositor_username": (
         "tcod_depositor_username",
         "string",
@@ -1028,7 +1029,7 @@ _property_table = {
         "E-mail address for TCOD depositions",
         None,
         None),
-    "warnings.showdeprecations":(
+    "warnings.showdeprecations": (
         "show_deprecations",
         "bool",
         "Boolean whether to print deprecation warnings",
@@ -1078,26 +1079,36 @@ def get_property(name, default=_NoDefaultValue()):
       no default value is given or provided in _property_table.
     """
     from aiida.common.exceptions import ConfigurationError
+    import aiida.utils.logger as logger
 
     try:
         key, _, _, table_defval, _ = _property_table[name]
     except KeyError:
         raise ValueError("{} is not a recognized property".format(name))
 
+    value = None
     try:
-        try:
-            config = get_config()
-            return config[key]
-        except ConfigurationError:
-            raise KeyError("No configuration file found")
-    except KeyError:
+        config = get_config()
+        value = config[key]
+    except (KeyError, ConfigurationError):
         if isinstance(default, _NoDefaultValue):
             if isinstance(table_defval, _NoDefaultValue):
                 raise
             else:
-                return table_defval
+                value = table_defval
         else:
-            return default
+            value = default
+
+    # This translation is necessary because the logging module can only
+    # accept numerical log levels (except for the predefined ones).
+    # A side-effect of this is that:
+    # verdi devel getproperty logging.[x]_loglevel
+    # will return the corresponding integer, even though a string is stored in
+    # the config.
+    if name.startswith('logging.') and name.endswith('loglevel'):
+        value = logger.LOG_LEVELS[value]
+
+    return value
 
 
 def del_property(name):
@@ -1191,7 +1202,6 @@ def parse_repository_uri(repository_uri):
     """
     import uritools
     parts = uritools.urisplit(repository_uri)
-
 
     if parts.scheme != u'file':
         raise ConfigurationError("The current AiiDA version supports only a "

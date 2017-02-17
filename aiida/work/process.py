@@ -220,7 +220,7 @@ class Process(plum.process.Process):
                 self._parent_pid = saved_instance_state[
                     self.SaveKeys.PARENT_CALC_PID.value]
 
-        if self.logger is None:
+        if self._logger is None:
             self.set_logger(self.calc.logger)
 
     @override

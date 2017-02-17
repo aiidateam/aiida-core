@@ -56,29 +56,39 @@ def registry_file_url():
     return 'https://raw.github.com/DropD/aiida-registry/master/plugins.json'
 
 
-def load_online():
+def load_online(errorhandler=None):
     """
     loads the registry file and returns the list of plugins
     """
     from aiida.plugins.utils import load_json_from_url
     import requests
     url = registry_file_url()
-    return load_json_from_url(url)
+    return load_json_from_url(url, errorhandler=errorhandler)
 
 
-def update(with_info=True):
+def update(with_info=True, registry_err_handler=None, info_err_handler=None):
     """
     Load the registry from its online location and pickle it.
 
     Creates the cache file if necessary.
+    By default updates the entry details cache for each entry as well.
+
+    :param with_info: default: True, update info cache for each entry as well
+    :param registry_err_handler: callable(exception) -> dict. Must either raise
+        or return a registry dict
+    :param info_err_handler: callable(exception, plugin, data) -> None. Can
+        raise or just print an error / warning.
+
+    If none of the error handlers are given, the function will stop execution if
+    any broken links are encountered.
     """
     from aiida.plugins.utils import pickle_to_registry_cache_folder
     cache_fname = registry_cache_file_name()
-    pluginlist = load_online()
+    pluginlist = load_online(errorhandler=registry_err_handler)
     pickle_to_registry_cache_folder(pluginlist, cache_fname)
     if with_info:
         cleanup_info(pluginlist)
-        update_info(pluginlist)
+        update_info(pluginlist, errorhandler=info_err_handler)
 
 
 def load_cached():
@@ -94,10 +104,9 @@ def load_cached():
     return unpickle_from_registry_cache_folder(cache_fname)
 
 
-def update_info(registry=None):
+def update_info(registry=None, errorhandler=None):
     """
     iterate through plugins, download setup info and return as dict
-    TODO: change to storing RegistryEntry instances instead
     """
     from aiida.plugins.utils import pickle_to_registry_cache_folder
     from aiida.plugins.entry import RegistryEntry as Entry
@@ -106,8 +115,14 @@ def update_info(registry=None):
         registry = load_cached()
 
     for plugin, data in registry.iteritems():
-        entry = Entry(**data)
-        pickle_to_registry_cache_folder(entry, plugin)
+        try:
+            entry = Entry(**data)
+            pickle_to_registry_cache_folder(entry, plugin)
+        except Exception as e:
+            if errorhandler:
+                errorhandler(e, plugin, data)
+            else:
+                raise e
 
 
 def cleanup_info(registry=None):

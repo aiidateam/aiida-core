@@ -70,10 +70,18 @@ def unpickle_from_registry_cache_folder(fname):
         return pload(cache)
 
 
-def load_json_from_url(url):
+def load_json_from_url(url, errorhandler=None):
     """
     downloads a json file and returns the corresponding python dict
     """
     import requests
     reply = requests.get(url)
-    return reply.json()
+    res = None
+    try:
+        res = reply.json()
+    except Exception as e:
+        if errorhandler:
+            res = errorhandler(e)
+        else:
+            raise e
+    return res

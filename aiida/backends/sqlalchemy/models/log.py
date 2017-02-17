@@ -9,6 +9,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.exceptions import ValidationError
+from aiida.orm.log import LogEntry
+from aiida.common.lang import override
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -16,7 +18,7 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
 
-class DbLog(Base):
+class DbLog(Base, LogEntry):
     __tablename__ = "db_dblog"
 
     id = Column(Integer, primary_key=True)
@@ -30,27 +32,6 @@ class DbLog(Base):
 
     message = Column(Text(), nullable=True)
     _metadata = Column('metadata', JSONB)
-
-    def __init__(self, loggername="", levelname="", objname="", objpk=None,
-                 message=None, metadata=None):
-
-        if not loggername or not levelname:
-            raise ValidationError(
-                "The loggername and levelname can't be empty")
-
-        self.loggername = loggername
-        self.levelname = levelname
-        self.objname = objname
-        self.objpk = objpk
-        self.message = message
-        self._metadata = metadata or {}
-
-
-    def __str__(self):
-        return "DbComment for [{} {}] on {}".format(
-            self.dbnode.get_simple_name(),
-            self.dbnode.id, timezone.localtime(self.ctime).strftime("%Y-%m-%d")
-        )
 
     @classmethod
     def add_from_logrecord(cls, record):
@@ -73,3 +54,37 @@ class DbLog(Base):
                         message=record.getMessage(),
                         metadata=record.__dict__)
         new_entry.save()
+
+    def __init__(self, loggername="", levelname="", objname="", objpk=None,
+                 message=None, metadata=None):
+
+        if not loggername or not levelname:
+            raise ValidationError(
+                "The loggername and levelname can't be empty")
+
+        self.loggername = loggername
+        self.levelname = levelname
+        self.objname = objname
+        self.objpk = objpk
+        self.message = message
+        self._metadata = metadata or {}
+
+    def __str__(self):
+        return "DbComment for [{} {}] on {}".format(
+            self.dbnode.get_simple_name(),
+            self.dbnode.id, timezone.localtime(self.ctime).strftime("%Y-%m-%d")
+        )
+
+    @property
+    def obj_id(self):
+        return self.objpk
+
+    def obj_name(self):
+        return self.objname
+
+    @override
+    def save(self):
+        from aiida.backends.sqlalchemy import session
+        session.add(self)
+        session.commit()
+

@@ -22,6 +22,7 @@ import aiida.work.util
 from aiida.work.util import PROCESS_LABEL_ATTR, get_or_create_output_group
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
+from aiida import LOG_LEVEL_REPORT
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -282,6 +283,12 @@ class Process(plum.process.Process):
 
         # Out of options
         return None
+
+    @protected
+    def report(self, msg, *args, **kwargs):
+        """
+        """
+        self.logger.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
 
     # @override
     # def create_input_args(self, inputs):

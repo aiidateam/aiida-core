@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
 import aiida
+import logging
+
+from aiida import LOG_LEVEL_REPORT
 
 # The username (email) used by the default superuser, that should also run
 # as the daemon
@@ -968,33 +971,33 @@ _property_table = {
         None),
     "logging.aiida_loglevel": (
         "logging_aiida_log_level",
-        "string",
+        "int",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
         "and to the DbLog table for the 'aiida' logger; for the DbLog, see "
         "also the logging.db_loglevel variable to further filter messages going "
         "to the database",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+        LOG_LEVEL_REPORT,
+        [logging.CRITICAL, logging.ERROR, logging.WARNING, LOG_LEVEL_REPORT, logging.INFO, logging.DEBUG]),
     "logging.paramiko_loglevel": (
         "logging_paramiko_log_level",
-        "string",
+        "int",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
         "for the 'paramiko' logger",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+        logging.WARNING,
+        [logging.CRITICAL, logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG]),
     "logging.celery_loglevel": (
         "logging_celery_log_level",
-        "string",
+        "int",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
         "for the 'celery' logger",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+        logging.WARNING,
+        [logging.CRITICAL, logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG]),
     "logging.db_loglevel": (
         "logging_db_log_level",
-        "string",
+        "int",
         "Minimum level to log to the DbLog table",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+        LOG_LEVEL_REPORT,
+        [logging.CRITICAL, logging.ERROR, logging.WARNING, LOG_LEVEL_REPORT, logging.INFO, logging.DEBUG]),
     "tcod.depositor_username": (
         "tcod_depositor_username",
         "string",
@@ -1155,6 +1158,8 @@ def set_property(name, value):
             actual_value = bool(value)
     elif type_string == "string":
         actual_value = unicode(value)
+    elif type_string == "int":
+        actual_value = int(value)
     else:
         # Implement here other data types
         raise NotImplementedError("Type string '{}' not implemented yet".format(
@@ -1163,7 +1168,7 @@ def set_property(name, value):
     if valid_values is not None:
         if actual_value not in valid_values:
             raise ValueError("'{}' is not among the list of accepted values "
-                             "for proprety {}".format(actual_value, name))
+                             "for property {}".format(actual_value, name))
 
     try:
         config = get_config()

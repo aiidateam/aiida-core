@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
+import logging
 import warnings
+
+# Custom logging level, intended specifically for informative log messages
+# reported during WorkChains and Workflows.
+LOG_LEVEL_REPORT=25
+logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
+
 from aiida.common.setup import get_property
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -8,6 +15,9 @@ __version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 __paper__ = """G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky, "AiiDA: automated interactive infrastructure and database for computational science", Comp. Mat. Sci 111, 218-230 (2016); http://dx.doi.org/10.1016/j.commatsci.2015.09.013 - http://www.aiida.net."""
 __paper_short__ = """G. Pizzi et al., Comp. Mat. Sci 111, 218 (2016)."""
+
+
+
 
 
 if get_property("warnings.showdeprecations"):

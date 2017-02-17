@@ -1,4 +1,5 @@
 from aiida.orm.log import Log
+from aiida.backends.sqlalchemy.models import DbLog
 
 
 class SqlaLog(Log):
@@ -18,11 +19,13 @@ class SqlaLog(Log):
         :type message: :class:`basestring`
         :param obj_id: The object id that emitted the entry
         :param metadata: Any (optional) metadata, should be JSON
-        :type metadata: :class:`basestring`
+        :type metadata: :class:`dict`
         :return: An object implementing the log entry interface
         :rtype: :class:`aiida.orm.log.LogEntry`
         """
-        raise NotImplementedError()
+        return DbLog(
+            loggername=loggername, levelname=levelname, objname=obj_name,
+            objpk=obj_id, message=message, metadata=metadata)
 
     def find(self, filter_by=None, order_by=None, limit=None):
         """

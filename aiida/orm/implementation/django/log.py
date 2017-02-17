@@ -17,10 +17,10 @@ class DjangoLog(Log):
         :type levelname: :class:`basestring`
         :param obj_name: The object name (if any) that emitted the entry
         :param message: The message to log
-        :type message: :class:`basesUnkonown tring`
+        :type message: :class:`basestring`
         :param obj_id: The object id that emitted the entry
-        :param metadata: Any (optional) metadata, should be JSON
-        :type metadata: :class:`basestring`
+        :param metadata: Any (optional) metadata, should be a dict
+        :type metadata: :class:`dict`
         :return: An object implementing the log entry interface
         :rtype: :class:`aiida.orm.log.LogEntry`
         """

@@ -79,6 +79,10 @@ class DbLog(Base, LogEntry):
     def obj_id(self):
         return self.objpk
 
+    @property
+    def metadata(self):
+        return self._metadata
+
     def obj_name(self):
         return self.objname
 

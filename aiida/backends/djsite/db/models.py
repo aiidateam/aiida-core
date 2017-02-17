@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import (
@@ -111,6 +112,7 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     def get_aiida_class(self):
         from aiida.orm.user import User
         return User(dbuser=self)
+
 
 @python_2_unicode_compatible
 class DbNode(m.Model):
@@ -287,7 +289,7 @@ class DbLink(m.Model):
         # defined below, since the difference in link type is not considered.
         # The distinction between the type of a 'create' and a 'return' link is not
         # implemented at the moment, so the unique constraint is disabled.
-        #unique_together = ("output", "label")
+        # unique_together = ("output", "label")
         pass
 
     def __str__(self):
@@ -1472,7 +1474,8 @@ class DbComputer(m.Model):
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer.dbcomputer
         else:
-            raise TypeError("Pass either a computer name, a DbComputer django instance, a Computer pk or a Computer object")
+            raise TypeError(
+                "Pass either a computer name, a DbComputer django instance, a Computer pk or a Computer object")
         return dbcomputer
 
     def get_aiida_class(self):
@@ -1618,15 +1621,7 @@ class DbLog(LogEntry, m.Model):
     # because it may be in different
     # tables
     message = m.TextField(blank=True)
-    metadata = m.TextField(default="{}")  # Will store a json
-
-    @property
-    def obj_id(self):
-        return self.objpk
-
-    def __str__(self):
-        return "[Log: {} for {} {}] {}".format(self.levelname,
-                                               self.objname, self.objpk, self.message)
+    _metadata = m.TextField(default="{}", db_column='metadata')  # Will store a json
 
     @classmethod
     def add_from_logrecord(cls, record):
@@ -1650,6 +1645,18 @@ class DbLog(LogEntry, m.Model):
                         message=record.getMessage(),
                         metadata=json.dumps(record.__dict__))
         new_entry.save()
+
+    def __str__(self):
+        return "[Log: {} for {} {}] {}".format(self.levelname,
+                                               self.objname, self.objpk, self.message)
+
+    @property
+    def obj_id(self):
+        return self.objpk
+
+    @property
+    def metadata(self):
+        return json.loads(self._metadata)
 
 
 class DbLock(m.Model):

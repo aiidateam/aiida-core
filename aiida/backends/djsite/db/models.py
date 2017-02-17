@@ -14,6 +14,7 @@ from aiida.common.exceptions import (
 from aiida.backends.settings import AIIDANODES_UUID_VERSION
 from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
 import aiida.backends.djsite.db.migrations as migrations
+from aiida.orm.log import LogEntry
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -1605,7 +1606,7 @@ class DbComment(m.Model):
 
 
 @python_2_unicode_compatible
-class DbLog(m.Model):
+class DbLog(LogEntry, m.Model):
     # Creation time
     time = m.DateTimeField(default=timezone.now, editable=False)
     loggername = m.CharField(max_length=255, db_index=True)
@@ -1618,6 +1619,10 @@ class DbLog(m.Model):
     # tables
     message = m.TextField(blank=True)
     metadata = m.TextField(default="{}")  # Will store a json
+
+    @property
+    def obj_id(self):
+        return self.objpk
 
     def __str__(self):
         return "[Log: {} for {} {}] {}".format(self.levelname,

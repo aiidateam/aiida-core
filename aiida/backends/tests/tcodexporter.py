@@ -400,10 +400,12 @@ class TestTcodDbExporter(AiidaTestCase):
     def test_nwcpymatgen_translation(self):
         from aiida.tools.dbexporters.tcod \
             import translate_calculation_specific_values
-        from aiida.tools.dbexporters.tcod_plugins.nwcpymatgen \
-            import NwcpymatgenTcodtranslator as NPT
+        # from aiida.tools.dbexporters.tcod_plugins.nwcpymatgen \
+        #     import NwcpymatgenTcodtranslator as NPT
         from aiida.orm.data.parameter import ParameterData
         from tcodexporter import FakeObject
+        from aiida.common.ep_pluginloader import get_plugin
+        NPT = get_plugin('tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
 
         calc = FakeObject({
             "out": {"output":

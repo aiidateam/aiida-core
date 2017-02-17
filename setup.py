@@ -99,7 +99,7 @@ if __name__ == '__main__':
           'aiida.workflows': [],
           'aiida.tools.dbexporters.tcod_plugins': [
               'quantumespresso.cp = aiida.tools.dbexporters.tcod_plugins.cp:CpTcodtranslator',
-              'nwcpymatgen = aiida.tools.dbexporters.tcod_plugins.nwcpymatgen:NwcpymatgenTcodtranslator',
+              'nwchem.nwcpymatgen = aiida.tools.dbexporters.tcod_plugins.nwcpymatgen:NwcpymatgenTcodtranslator',
               'quantumespresso.pw = aiida.tools.dbexporters.tcod_plugins.pw:PwTcodtranslator'
           ],
           'aiida.tools.dbexporters': [

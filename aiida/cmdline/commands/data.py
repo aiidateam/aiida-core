@@ -1333,7 +1333,7 @@ class _Structure(VerdiCommandWithSubcommands,
         Imports a structure from a quantumespresso input file.
         """
         from os.path import abspath
-        from aiida.orm.data.structure import get_structuredata_from_qeinput
+        from aiida.tools.codespecific.quantumespresso.qeinputparser import get_structuredata_from_qeinput
         dont_store = kwargs.pop('dont_store')
         view_in_ase = kwargs.pop('view')
 

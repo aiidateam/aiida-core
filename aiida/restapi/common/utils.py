@@ -1,5 +1,3 @@
-import imp
-import os
 from datetime import datetime, timedelta
 
 from flask import jsonify
@@ -11,6 +9,7 @@ from aiida.restapi.common.exceptions import RestValidationError, \
 
 # Important to match querybuilder keys
 pk_dbsynonym = 'id'
+
 
 ########################## Classes #####################
 class CustomJSONEncoder(JSONEncoder):
@@ -100,7 +99,6 @@ class Utils(object):
         self.PREFIX = kwargs['PREFIX']
         self.PERPAGE_DEFAULT = kwargs['PERPAGE_DEFAULT']
         self.LIMIT_DEFAULT = kwargs['LIMIT_DEFAULT']
-
 
     def strip_prefix(self, path):
         """
@@ -601,7 +599,7 @@ class Utils(object):
                               datetime_precision) and operator == '=':
                     filter_value = self.build_datetime_filter(field_value)
                 else:
-                    filter_value = {op_conv_map[field[1]]: field_value}
+                    filter_value = {self.op_conv_map[field[1]]: field_value}
 
                 # Here I treat the AND clause
                 if field_counts[field_key] > 1:

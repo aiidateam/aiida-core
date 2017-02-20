@@ -89,4 +89,6 @@ class DataTranslator(NodeTranslator):
         Create the basic query_help
         """
         # basic query_help object
-        super(DataTranslator, self).__init__(**kwargs)
+        print "From data", self.__class__
+
+        super(DataTranslator, self).__init__(Class=self.__class__, **kwargs)

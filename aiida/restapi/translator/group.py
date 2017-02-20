@@ -64,5 +64,5 @@ class GroupTranslator(BaseTranslator):
         Initialise the parameters.
         Create the basic query_help
         """
-        super(GroupTranslator, self).__init__(**kwargs)
+        super(GroupTranslator, self).__init__(Class=self.__class__, **kwargs)
 

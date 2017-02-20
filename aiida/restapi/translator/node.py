@@ -27,13 +27,20 @@ class NodeTranslator(BaseTranslator):
     _elist = None
     _nelist = None
 
-    def __init__(self, **kwargs):
+    def __init__(self, Class=None, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
         """
-        # basic query_help object
-        super(NodeTranslator, self).__init__(**kwargs)
+
+        # Assume default class is this class (cannot be done in the
+        # definition as it requires self)
+        if Class is None:
+            Class = self.__class__
+
+        # basic initialization
+        super(NodeTranslator, self).__init__(Class=Class, **kwargs)
+
         # Extract the default projections from custom_schema if they are defined
         if self.custom_schema is not None and 'columns' in self.custom_schema:
             self._default_projections = self.custom_schema['columns'][

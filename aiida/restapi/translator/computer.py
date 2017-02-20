@@ -62,4 +62,5 @@ class ComputerTranslator(BaseTranslator):
         Initialise the parameters.
         Create the basic query_help
         """
-        super(ComputerTranslator, self).__init__(**kwargs)
+        super(ComputerTranslator, self).__init__(Class=self.__class__,
+                                                 **kwargs)

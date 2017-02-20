@@ -7,8 +7,7 @@ import os
 import aiida  # Mainly needed to locate the correct aiida path
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-
-def run_api(app, Api, *args, **kwargs):
+def run_api(App, Api, *args, **kwargs):
     """
     Takes a flask.Flask instance and runs it. Parses
     command-line flags to configure the app.
@@ -89,15 +88,6 @@ def run_api(app, Api, *args, **kwargs):
 
     parsed_args = parser.parse_args(args)
 
-    # If the user selects the profiling option, then we need
-    # to do a little extra setup
-    if parsed_args.wsgi_profile:
-        from werkzeug.contrib.profiler import ProfilerMiddleware
-
-        app.config['PROFILE'] = True
-        app.wsgi_app = ProfilerMiddleware(app.wsgi_app,
-                                          restrictions=[30])
-
     # Import the right configuration file
     confs = imp.load_source(os.path.join(parsed_args.config_dir, 'config'),
                             os.path.join(parsed_args.config_dir,
@@ -141,6 +131,9 @@ def run_api(app, Api, *args, **kwargs):
     if not is_dbenv_loaded():
         load_dbenv()
 
+    # Instantiate an app
+    app = App(__name__)
+
     # Config the app
     app.config.update(**confs.APP_CONFIG)
 
@@ -148,6 +141,15 @@ def run_api(app, Api, *args, **kwargs):
     if confs.SERIALIZER_CONFIG:
         from aiida.restapi.common.utils import CustomJSONEncoder
         app.json_encoder = CustomJSONEncoder
+
+    # If the user selects the profiling option, then we need
+    # to do a little extra setup
+    if parsed_args.wsgi_profile:
+        from werkzeug.contrib.profiler import ProfilerMiddleware
+
+        app.config['PROFILE'] = True
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app,
+                                          restrictions=[30])
 
     # Instantiate an Api associating its app
     kwargs = dict(PREFIX=confs.PREFIX,
@@ -179,11 +181,10 @@ if __name__ == '__main__':
 
     """
     import sys
-    from aiida.restapi.api import app
-    from aiida.restapi.api import AiidaApi
+    from aiida.restapi.api import AiidaApi, App
     """
     Or, equivalently, (useful starting point for derived apps)
     import the app object and the Api class that you want to combine.
     """
 
-    run_api(app, AiidaApi, *sys.argv[1:], parse_aiida_profile=True)
+    run_api(App, AiidaApi, *sys.argv[1:], parse_aiida_profile=True)

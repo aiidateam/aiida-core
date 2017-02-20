@@ -63,5 +63,5 @@ class UserTranslator(BaseTranslator):
         Initialise the parameters.
         Create the basic query_help
         """
-        super(UserTranslator, self).__init__(**kwargs)
+        super(UserTranslator, self).__init__(Class=self.__class__, **kwargs)
 

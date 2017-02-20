@@ -47,12 +47,13 @@ def _load_dbenv_noschemacheck(process, profile):
 
 class DBLogHandler(logging.Handler):
     def emit(self, record):
+        from aiida.backend import construct_backend
         from django.core.exceptions import ImproperlyConfigured
 
         try:
-            from aiida.backends.djsite.db.models import DbLog
-
-            DbLog.add_from_logrecord(record)
+            backend   = construct_backend()
+            log_entry = backend.log.create_entry_from_record(record)
+            log_entry.persist()
 
         except ImproperlyConfigured:
             # Probably, the logger was called without the

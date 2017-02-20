@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import json
-
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, DateTime, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -30,28 +28,6 @@ class DbLog(Base):
 
     message = Column(Text(), nullable=True)
     _metadata = Column('metadata', JSONB)
-
-    @classmethod
-    def add_from_logrecord(cls, record):
-        """
-        Add a new entry from a LogRecord (from the standard python
-        logging facility). No exceptions are managed here.
-        """
-
-        objpk = record.__dict__.get('objpk', None)
-        objname = record.__dict__.get('objname', None)
-
-        # Filter: Do not store in DB if no objpk and objname is given
-        if objpk is None or objname is None:
-            return
-
-        new_entry = cls(loggername=record.name,
-                        levelname=record.levelname,
-                        objname=objname,
-                        objpk=objpk,
-                        message=record.getMessage(),
-                        metadata=record.__dict__)
-        new_entry.save()
 
     def __init__(self, loggername="", levelname="", objname="", objpk=None,
                  message=None, metadata=None):

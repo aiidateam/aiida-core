@@ -1621,29 +1621,6 @@ class DbLog(m.Model):
     message = m.TextField(blank=True)
     metadata = m.TextField(default="{}")  # Will store a json
 
-    @classmethod
-    def add_from_logrecord(cls, record):
-        """
-        Add a new entry from a LogRecord (from the standard python
-        logging facility). No exceptions are managed here.
-        """
-        import json
-
-        objpk = record.__dict__.get('objpk', None)
-        objname = record.__dict__.get('objname', None)
-
-        # Filter: Do not store in DB if no objpk and objname is given
-        if objpk is None or objname is None:
-            return
-
-        new_entry = cls(loggername=record.name,
-                        levelname=record.levelname,
-                        objname=objname,
-                        objpk=objpk,
-                        message=record.getMessage(),
-                        metadata=json.dumps(record.__dict__))
-        new_entry.save()
-
     def __str__(self):
         return "[Log: {} for {} {}] {}".format(self.levelname,
                                                self.objname, self.objpk, self.message)

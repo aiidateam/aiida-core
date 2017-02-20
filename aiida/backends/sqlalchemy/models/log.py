@@ -72,7 +72,3 @@ class DbLog(Base):
             self.dbnode.get_simple_name(),
             self.dbnode.id, timezone.localtime(self.ctime).strftime("%Y-%m-%d")
         )
-
-    @property
-    def metadata(self):
-        return self._metadata

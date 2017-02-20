@@ -67,7 +67,7 @@ class SqlaLogEntry(LogEntry):
 
     @property
     def metadata(self):
-        return self._model.metadata
+        return self._model._metadata
 
     @property
     def obj_id(self):

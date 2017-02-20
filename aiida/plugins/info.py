@@ -50,3 +50,37 @@ def find_for_typestring(typestring):
     plugins = load_cached()
     entry_point = entry_point_from_tpstr(typestring)
     return plugins.get(entry_point, None)
+
+
+def find_by_pattern(pattern, ranking=False):
+    """
+    returns a list of RegistryEntry objects for all matches
+    """
+    allplugs = plugin_ep_iterator()
+    matching = []
+    for plug in allplugs:
+        append = 0
+        entry = find_by_name(plug)
+
+        if not ranking:
+            if pattern.search(plug):
+                append += 1
+            elif pattern.search(entry.name):
+                append += 1
+            elif pattern.search(entry.package_name):
+                append += 1
+            elif pattern.search(entry.description):
+                append += 1
+            elif pattern.search(entry.author):
+                append += 1
+        else:
+            append += bool(pattern.search(plug)) and 1 or 0
+            append += bool(pattern.search(entry.name)) and 1 or 0
+            append += bool(pattern.search(entry.package_name)) and 1 or 0
+            append += bool(pattern.search(entry.description)) and 0.5 or 0
+            append += bool(pattern.search(entry.author)) and 1 or 0
+
+        if append:
+            matching.append((append, entry))
+    matching.sort()
+    return [i[1] for i in matching]

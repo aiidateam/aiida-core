@@ -85,7 +85,8 @@ class RegistryEntry(object):
 
     def install(self, **opts):
         """Call on pip to install the package if not yet installed"""
-        if self.test_installed():
+        installed, new_style, ivers = self.test_installed()
+        if installed:
             return True
         if not self.pip_url:
             raise Exception('The plugin author did not provide an automatic install link')
@@ -93,10 +94,10 @@ class RegistryEntry(object):
         ic = InstallCommand()
         opts, args = ic.parser.parse_args()
         args.append(self.pip_url)
-        for k, v in opts.iteritems():
+        for k, v in opts.__dict__.iteritems():
             setattr(opts, k, v)
-        req_set = ci.run(opts, args)
-        req_set.install()
+        req_set = ic.run(opts, args)
+        req_set.install(opts)
         return self.test_installed()
 
     def test_installed(self):
@@ -131,7 +132,7 @@ class RegistryEntry(object):
             new_style = False
 
         from aiida.common.ep_pluginloader import all_plugins
-        if iversion == self.version:
+        if iversion == self.version or not new_style:
             for cat, ep in self.entry_points.iteritems():
                 if not set(ep).issubset(set(all_plugins(cat))):
                     installed = False

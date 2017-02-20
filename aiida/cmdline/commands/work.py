@@ -106,10 +106,10 @@ def do_report(pk, log_level, order_by):
     if not is_dbenv_loaded():
         load_dbenv()
 
-    from aiida.backend.factory import BackendFactory
+    from aiida.backend import construct_backend
     from aiida.backend.log import OrderSpecifier, ASCENDING, DESCENDING
 
-    backend  = BackendFactory().construct()
+    backend  = construct_backend()
     order_by = [OrderSpecifier(order_by, ASCENDING)]
     filters  = {
         'obj_id' : pk,

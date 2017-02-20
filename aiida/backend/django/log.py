@@ -43,13 +43,19 @@ class DjangoLog(Log):
             )
         )
 
-    def get(self, filter_by={}, order_by=[], limit=None):
+    def get(self, filter_by=None, order_by=None, limit=None):
         """
         Find all entries in the Log collection that confirm to the filter and
         optionally sort and/or apply a limit.
         """
         order   = []
         filters = {}
+
+        if not filter_by:
+            filter_by = {}
+
+        if not order_by:
+            order_by = []
 
         # Map the LogEntry property names to DbLog field names
         for key, value in filter_by.iteritems():

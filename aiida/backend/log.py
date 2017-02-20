@@ -34,7 +34,7 @@ class Log(object):
         pass
 
     @abstractmethod
-    def find(self, filter_by=None, order_by=None, limit=None):
+    def get(self, filter_by=None, order_by=None, limit=None):
         """
         Find all entries in the Log collection that confirm to the filter and
         optionally sort and/or apply a limit.
@@ -55,6 +55,12 @@ class LogEntry(object):
 
     @abstractproperty
     def id(self):
+        """
+        Get the primary key of the entry
+
+        :return: The entry primary key
+        :rtype: int
+        """
         pass
 
     @abstractproperty
@@ -87,8 +93,52 @@ class LogEntry(object):
         """
         pass
 
-        # TODO: Do the rest of these @sphuber
+    @abstractproperty
+    def obj_id(self):
+        """
+        Get the id of the object that created the log entry
+
+        :return: The entry timestamp
+        :rtype: :class:`datetime.datetime`
+        """
+        pass
+
+    @abstractproperty
+    def obj_name(self):
+        """
+        Get the name of the object that created the log entry
+
+        :return: The entry object name
+        :rtype: basestring
+        """
+        pass
+
+    @abstractproperty
+    def message(self):
+        """
+        Get the message corresponding to the entry
+
+        :return: The entry message
+        :rtype: basestring
+        """
+        pass
+
+    @abstractproperty
+    def metadata(self):
+        """
+        Get the metadata corresponding to the entry
+
+        :return: The entry metadata
+        :rtype: json
+        """
+        pass
 
     @abstractmethod
-    def store(self):
+    def persist(self):
+        """
+        Persist the log entry to the database
+
+        :return: reference of self
+        :rtype: :class: LogEntry
+        """
         pass

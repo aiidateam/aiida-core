@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
+import click
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-import click
-import sys
 from tabulate import tabulate
 from aiida.utils.ascii_vis import build_tree
 
@@ -24,6 +23,7 @@ class Work(VerdiCommandWithSubcommands):
     def __init__(self):
         self.valid_subcommands = {
             self.list.__name__: (self.list, self.complete_none),
+            self.report.__name__: (self.report, self.complete_none),
             self.tree.__name__: (self.tree, self.complete_none),
             self.checkpoint.__name__: (self.checkpoint, self.complete_none),
         }
@@ -32,6 +32,11 @@ class Work(VerdiCommandWithSubcommands):
         ctx = do_list.make_context('list', sys.argv[3:])
         with ctx:
             do_list.invoke(ctx)
+
+    def report(self, *args):
+        ctx = do_report.make_context('report', sys.argv[3:])
+        with ctx:
+            do_report.invoke(ctx)
 
     def tree(self, *args):
         ctx = do_tree.make_context('tree', sys.argv[3:])
@@ -79,6 +84,55 @@ def do_list(past_days, limit):
         ])
 
     print(tabulate(table, headers=["PID", "Creation time", "Type", "Sealed"]))
+
+
+@click.command('report', context_settings=CONTEXT_SETTINGS)
+@click.argument('pk', nargs=1, type=int)
+@click.option('-l', '--log-level',
+    type=click.Choice(['DEBUG', 'INFO', 'REPORT', 'WARNING', 'ERROR', 'CRITICAL']),
+    default=None,
+    help='Filter the results by log level'
+)
+@click.option('-o', '--order-by',
+    type=click.Choice(['id', 'time', 'log_level']),
+    default='time',
+    help='Order the results by column'
+)
+def do_report(pk, log_level, order_by):
+    """
+    Return a list of recorded log messages for the WorkChain with pk=PK
+    """
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
+
+    from aiida.backend.factory import BackendFactory
+    from aiida.backend.log import OrderSpecifier, ASCENDING, DESCENDING
+
+    backend  = BackendFactory().construct()
+    order_by = [OrderSpecifier(order_by, ASCENDING)]
+    filters  = {
+        'obj_id' : pk,
+    }
+
+    if log_level:
+        filters['log_level'] = log_level
+
+    entries    = backend.log.get(filter_by=filters, order_by=order_by)
+    object_ids = [entry.id for entry in entries]
+    log_levels = [len(entry.log_level) for entry in entries]
+    width_id   = len(str(max(object_ids)))
+    width_log_level = max(log_levels)
+
+    for entry in entries:
+        print '{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {log_level:>{width_log_level}}]: {message}'.format(
+            id=entry.id,
+            log_level=entry.log_level,
+            message=entry.message,
+            time=entry.time,
+            width_id=width_id,
+            width_log_level=width_log_level
+        )
 
 
 @click.command('tree', context_settings=CONTEXT_SETTINGS)

@@ -1,9 +1,8 @@
-from aiida.orm.log import Log, LogEntry
-from aiida.backends.djsite.db.models import DbLog
-import json
+from aiida.backend.log import Log, LogEntry
+from aiida.backends.sqlalchemy.models import DbLog
 
 
-class DjangoLog(Log):
+class SqlaLog(Log):
     def create_entry(self, time, logger_name, log_level, obj_name,
                      message="", obj_id=None, metadata=None):
         """
@@ -19,17 +18,21 @@ class DjangoLog(Log):
         :param message: The message to log
         :type message: :class:`basestring`
         :param obj_id: The object id that emitted the entry
-        :param metadata: Any (optional) metadata, should be a dict
+        :param metadata: Any (optional) metadata, should be JSON
         :type metadata: :class:`dict`
         :return: An object implementing the log entry interface
         :rtype: :class:`aiida.orm.log.LogEntry`
         """
-        return DjangoLogEntry(DbLog(loggername=logger_name,
-                                    levelname=log_level,
-                                    objname=obj_name,
-                                    objpk=obj_id,
-                                    message=message,
-                                    metadata=json.dumps(metadata)))
+        return SqlaLogEntry(
+            DbLog(
+                loggername=logger_name,
+                levelname=log_level,
+                objname=obj_name,
+                objpk=obj_id,
+                message=message,
+                metadata=metadata
+            )
+        )
 
     def find(self, filter_by=None, order_by=None, limit=None):
         """
@@ -47,10 +50,10 @@ class DjangoLog(Log):
         raise NotImplementedError()
 
 
-class DjangoLogEntry(LogEntry):
+class SqlaLogEntry(LogEntry):
     def __init__(self, model):
         """
-        :param model: :class:`aiida.backends.djsite.db.models.DbLog`
+        :param model: :class:`aiida.backends.sqlalchemy.models.log.DbLog`
         """
         self._model = model
 
@@ -64,7 +67,7 @@ class DjangoLogEntry(LogEntry):
 
     @property
     def metadata(self):
-        return json.loads(self._model.metadata)
+        return self._model.metadata
 
     @property
     def obj_id(self):
@@ -83,4 +86,6 @@ class DjangoLogEntry(LogEntry):
         return self._model.levelname
 
     def store(self):
-        self._model.store()
+        from aiida.backends.sqlalchemy import session
+        session.add(self)
+        session.commit()

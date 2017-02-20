@@ -1,0 +1,144 @@
+
+     Program NEB v.5.2.0 (svn rev. 11612) starts on 27Jul2015 at 16:27: 6 
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     6 processors
+     R & G space division:  proc/nbgrp/npool/nimage =       6
+     Reading input from pw_1.in
+     Reading input from pw_2.in
+
+     initial path length           =  1.2762 bohr
+     initial inter-image distance  =  0.2127 bohr
+ 
+     string_method                 =    neb
+     restart_mode                  =    from_scratch
+     opt_scheme                    =    broyden
+     num_of_images                 =    7
+     nstep_path                    =    20
+     CI_scheme                     =    no-CI
+     first_last_opt                =    F
+     use_freezing                  =    F
+     ds                            =    2.0000 a.u.
+     k_max                         =    0.3000 a.u.
+     k_min                         =    0.2000 a.u.
+     suggested k_max               =    0.1542 a.u.
+     suggested k_min               =    0.1028 a.u.
+     path_thr                      =    0.2000 eV / A
+
+     ------------------------------ iteration   1 ------------------------------
+
+     tcpu =      0.2    self-consistency for image   1
+     tcpu =      4.1    self-consistency for image   2
+     tcpu =      8.7    self-consistency for image   3
+     tcpu =     12.8    self-consistency for image   4
+     tcpu =     17.1    self-consistency for image   5
+     tcpu =     21.6    self-consistency for image   6
+     tcpu =     25.8    self-consistency for image   7
+
+     activation energy (->) =   0.397961 eV
+     activation energy (<-) =   0.397961 eV
+
+     image        energy (eV)        error (eV/A)        frozen
+
+         1      -3894.4770104            0.018968            T
+         2      -3894.3805774            1.435133            F
+         3      -3894.1879765            1.567149            F
+         4      -3894.0790490            0.000000            F
+         5      -3894.1879766            1.566910            F
+         6      -3894.3805773            1.435389            F
+         7      -3894.4770105            0.019278            T
+
+     path length          =  1.276 bohr
+     inter-image distance =  0.213 bohr
+
+     ------------------------------ iteration   2 ------------------------------
+
+     tcpu =     30.0    self-consistency for image   2
+     tcpu =     35.0    self-consistency for image   3
+     tcpu =     39.8    self-consistency for image   4
+     tcpu =     41.2    self-consistency for image   5
+     tcpu =     46.0    self-consistency for image   6
+
+     activation energy (->) =   0.397961 eV
+     activation energy (<-) =   0.397961 eV
+
+     image        energy (eV)        error (eV/A)        frozen
+
+         1      -3894.4770104            0.018968            T
+         2      -3894.4477683            0.587638            F
+         3      -3894.3040596            0.491243            F
+         4      -3894.0790490            0.000052            F
+         5      -3894.3040406            0.491045            F
+         6      -3894.4477726            0.587212            F
+         7      -3894.4770105            0.019278            T
+
+     path length          =  1.438 bohr
+     inter-image distance =  0.240 bohr
+
+     ------------------------------ iteration   3 ------------------------------
+
+     tcpu =     51.2    self-consistency for image   2
+     tcpu =     55.7    self-consistency for image   3
+     tcpu =     59.7    self-consistency for image   4
+     tcpu =     61.4    self-consistency for image   5
+     tcpu =     65.5    self-consistency for image   6
+
+     activation energy (->) =   0.397961 eV
+     activation energy (<-) =   0.397961 eV
+
+     image        energy (eV)        error (eV/A)        frozen
+
+         1      -3894.4770104            0.018968            T
+         2      -3894.4592425            0.374346            F
+         3      -3894.2583261            0.211604            F
+         4      -3894.0790490            0.000045            F
+         5      -3894.2583197            0.211324            F
+         6      -3894.4592454            0.374346            F
+         7      -3894.4770105            0.019278            T
+
+     path length          =  1.515 bohr
+     inter-image distance =  0.253 bohr
+
+     ------------------------------ iteration   4 ------------------------------
+
+     tcpu =     70.4    self-consistency for image   2
+     tcpu =     74.7    self-consistency for image   3
+     tcpu =     78.9    self-consistency for image   4
+     tcpu =     80.8    self-consistency for image   5
+     tcpu =     84.9    self-consistency for image   6
+
+     activation energy (->) =   0.397961 eV
+     activation energy (<-) =   0.397961 eV
+
+     image        energy (eV)        error (eV/A)        frozen
+
+         1      -3894.4770104            0.018968            T
+         2      -3894.4583058            0.183845            F
+         3      -3894.2755503            0.042069            F
+         4      -3894.0790490            0.000012            F
+         5      -3894.2755381            0.042179            F
+         6      -3894.4583027            0.183954            F
+         7      -3894.4770105            0.019278            T
+
+     path length          =  1.501 bohr
+     inter-image distance =  0.250 bohr
+
+     ---------------------------------------------------------------------------
+
+
+     neb: convergence achieved in   4 iterations
+ 
+     NEB          :  1m27.36s CPU     1m29.20s WALL
+
+ 
+   This run was terminated on:  16:28:35  27Jul2015            
+
+=------------------------------------------------------------------------------=
+   JOB DONE.
+=------------------------------------------------------------------------------=

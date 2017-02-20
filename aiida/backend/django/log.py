@@ -5,45 +5,42 @@ from aiida.backends.djsite.db.models import DbLog
 
 class DjangoLog(Log):
 
-    def __init__(self):
-        self._property_map = {
-            'id'          : 'pk',
-            'time'        : 'time',
-            'logger_name' : 'loggername',
-            'log_level'   : 'levelname',
-            'obj_id'      : 'objpk',
-            'obj_name'    : 'objname',
-            'message'     : 'message',
-            'metadata'    : 'metadata',
-        }
-
-    def map_property_name(self, property_name):
-        """
-        LogEntry property names do not necessarily match the field names
-        used in the database model and have to be mapped internally
-        """
-        try:
-            return self._property_map[property_name]
-        except KeyError:
-            raise KeyError
-
-    def create_entry(self, time, logger_name, log_level, obj_name,
-                     message="", obj_id=None, metadata=None):
+    def create_entry(self, time, loggername, levelname, objname,
+                     objpk=None, message="", metadata=None):
         """
         Create a log entry.
         """
         return DjangoLogEntry(
             DbLog(
-                loggername=logger_name,
-                levelname=log_level,
-                objname=obj_name,
-                objpk=obj_id,
+                time=time,
+                loggername=loggername,
+                levelname=levelname,
+                objname=objname,
+                objpk=objpk,
                 message=message,
                 metadata=json.dumps(metadata)
             )
         )
 
-    def get(self, filter_by=None, order_by=None, limit=None):
+    def create_entry_from_record(self, record):
+        """
+        Create a log entry from a record created by the python logging
+        """
+        from datetime import datetime
+
+        return DjangoLogEntry(
+            DbLog(
+                time=datetime.fromtimestamp(record.created),
+                loggername=record.name,
+                levelname=record.levelname,
+                objname=record.objname,
+                objpk=record.objpk,
+                message=record.message,
+                metadata=json.dumps(record.__dict__)
+            )
+        )
+
+    def find(self, filter_by=None, order_by=None, limit=None):
         """
         Find all entries in the Log collection that confirm to the filter and
         optionally sort and/or apply a limit.
@@ -59,10 +56,10 @@ class DjangoLog(Log):
 
         # Map the LogEntry property names to DbLog field names
         for key, value in filter_by.iteritems():
-            filters[self.map_property_name(key)] = value
+            filters[key] = value
 
         for column in order_by:
-            order.append(self.map_property_name(column.field))
+            order.append(column.field)
 
         if filters:
             entries = DbLog.objects.filter(**filters).order_by(*order)[:limit]
@@ -94,28 +91,28 @@ class DjangoLogEntry(LogEntry):
         return self._model.time
 
     @property
-    def logger_name(self):
+    def loggername(self):
         """
         The name of the logger that created this entry
         """
         return self._model.loggername
 
     @property
-    def log_level(self):
+    def levelname(self):
         """
         The name of the log level
         """
         return self._model.levelname
 
     @property
-    def obj_id(self):
+    def objpk(self):
         """
         Get the id of the object that created the log entry
         """
         return self._model.objpk
 
     @property
-    def obj_name(self):
+    def objname(self):
         """
         Get the name of the object that created the log entry
         """

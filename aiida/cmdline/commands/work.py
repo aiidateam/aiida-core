@@ -53,7 +53,7 @@ class Work(VerdiCommandWithSubcommands):
 @click.option('-p', '--past-days', type=int,
               help="add a filter to show only workflows created in the past N"
                    " days")
-@click.option('--limit', type=int, default=100,
+@click.option('-l', '--limit', type=int, default=100,
               help="Limit to this many results")
 def do_list(past_days, limit):
     """
@@ -88,17 +88,17 @@ def do_list(past_days, limit):
 
 @click.command('report', context_settings=CONTEXT_SETTINGS)
 @click.argument('pk', nargs=1, type=int)
-@click.option('-l', '--log-level',
+@click.option('-l', '--levelname',
     type=click.Choice(['DEBUG', 'INFO', 'REPORT', 'WARNING', 'ERROR', 'CRITICAL']),
     default=None,
-    help='Filter the results by log level'
+    help='Filter the results by name of the log level'
 )
 @click.option('-o', '--order-by',
-    type=click.Choice(['id', 'time', 'log_level']),
+    type=click.Choice(['id', 'time', 'levelname']),
     default='time',
     help='Order the results by column'
 )
-def do_report(pk, log_level, order_by):
+def do_report(pk, levelname, order_by):
     """
     Return a list of recorded log messages for the WorkChain with pk=PK
     """
@@ -112,26 +112,26 @@ def do_report(pk, log_level, order_by):
     backend  = construct_backend()
     order_by = [OrderSpecifier(order_by, ASCENDING)]
     filters  = {
-        'obj_id' : pk,
+        'objpk' : pk,
     }
 
-    if log_level:
-        filters['log_level'] = log_level
+    if levelname:
+        filters['levelname'] = levelname
 
-    entries    = backend.log.get(filter_by=filters, order_by=order_by)
+    entries    = backend.log.find(filter_by=filters, order_by=order_by)
     object_ids = [entry.id for entry in entries]
-    log_levels = [len(entry.log_level) for entry in entries]
+    levelnames = [len(entry.levelname) for entry in entries]
     width_id   = len(str(max(object_ids)))
-    width_log_level = max(log_levels)
+    width_levelname = max(levelnames)
 
     for entry in entries:
-        print '{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {log_level:>{width_log_level}}]: {message}'.format(
+        print '{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]: {message}'.format(
             id=entry.id,
-            log_level=entry.log_level,
+            levelname=entry.levelname,
             message=entry.message,
             time=entry.time,
             width_id=width_id,
-            width_log_level=width_log_level
+            width_levelname=width_levelname
         )
 
 

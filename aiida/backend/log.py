@@ -11,30 +11,44 @@ class Log(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def create_entry(self, time, logger_name, log_level, obj_name,
-                     message="", obj_id=None, metadata=None):
+    def create_entry(self, time, loggername, levelname, objname,
+                     objpk=None, message="", metadata=None):
         """
         Create a log entry.
 
         :param time: The time of creation for the entry
         :type time: :class:`datetime.datetime`
-        :param logger_name: The name of the logger that generated the entry
-        :type logger_name: :class:`basestring`
-        :param log_level: The log level
-        :type log_level: :class:`basestring`
-        :param obj_name: The object name (if any) that emitted the entry
+        :param loggername: The name of the logger that generated the entry
+        :type loggername: basestring
+        :param levelname: The log level
+        :type levelname: basestring
+        :param objname: The object name (if any) that emitted the entry
+        :type objname: basestring
+        :param objpk: The object id that emitted the entry
+        :type objpk: int
         :param message: The message to log
-        :type message: :class:`basestring`
-        :param obj_id: The object id that emitted the entry
-        :param metadata: Any (optional) metadata, should be JSON
-        :type metadata: :class:`basestring`
+        :type message: basestring
+        :param metadata: Any (optional) metadata, should be JSON serializable dictionary
+        :type metadata: :class:`dict`
         :return: An object implementing the log entry interface
         :rtype: :class:`aiida.orm.log.LogEntry`
         """
         pass
 
     @abstractmethod
-    def get(self, filter_by=None, order_by=None, limit=None):
+    def create_entry_from_record(self, record):
+        """
+        Create a log entry from a record created by the python logging
+
+        :param record: The record created by the logging module
+        :type record: :class:`logging.record`
+        :return: An object implementing the log entry interface
+        :rtype: :class:`aiida.orm.log.LogEntry`
+        """
+        pass
+
+    @abstractmethod
+    def find(self, filter_by=None, order_by=None, limit=None):
         """
         Find all entries in the Log collection that confirm to the filter and
         optionally sort and/or apply a limit.
@@ -74,7 +88,7 @@ class LogEntry(object):
         pass
 
     @abstractproperty
-    def logger_name(self):
+    def loggername(self):
         """
         The name of the logger that created this entry
 
@@ -84,27 +98,27 @@ class LogEntry(object):
         pass
 
     @abstractproperty
-    def log_level(self):
+    def levelname(self):
         """
         The name of the log level
 
-        :return: The entry log_level
+        :return: The entry log level name
         :rtype: basestring
         """
         pass
 
     @abstractproperty
-    def obj_id(self):
+    def objpk(self):
         """
         Get the id of the object that created the log entry
 
         :return: The entry timestamp
-        :rtype: :class:`datetime.datetime`
+        :rtype: int
         """
         pass
 
     @abstractproperty
-    def obj_name(self):
+    def objname(self):
         """
         Get the name of the object that created the log entry
 

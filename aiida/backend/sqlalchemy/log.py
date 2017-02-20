@@ -3,34 +3,38 @@ from aiida.backends.sqlalchemy.models import DbLog
 
 
 class SqlaLog(Log):
-    def create_entry(self, time, logger_name, log_level, obj_name,
-                     message="", obj_id=None, metadata=None):
+    def create_entry(self, time, loggername, levelname, objname,
+                     objpk=None, message="", metadata=None):
         """
         Create a log entry.
-
-        :param time: The time of creation for the entry
-        :type time: :class:`datetime.datetime`
-        :param logger_name: The name of the logger that generated the entry
-        :type logger_name: :class:`basestring`
-        :param log_level: The log level
-        :type log_level: :class:`basestring`
-        :param obj_name: The object name (if any) that emitted the entry
-        :param message: The message to log
-        :type message: :class:`basestring`
-        :param obj_id: The object id that emitted the entry
-        :param metadata: Any (optional) metadata, should be JSON
-        :type metadata: :class:`dict`
-        :return: An object implementing the log entry interface
-        :rtype: :class:`aiida.orm.log.LogEntry`
         """
         return SqlaLogEntry(
             DbLog(
-                loggername=logger_name,
-                levelname=log_level,
-                objname=obj_name,
-                objpk=obj_id,
+                time=time,
+                loggername=loggername,
+                levelname=levelname,
+                objname=objname,
+                objpk=objpk,
                 message=message,
                 metadata=metadata
+            )
+        )
+
+    def create_entry_from_record(self, record):
+        """
+        Create a log entry from a record created by the python logging
+        """
+        from datetime import datetime
+
+        return SqlaLogEntry(
+            DbLog(
+                time=datetime.fromtimestamp(record.created),
+                loggername=record.name,
+                levelname=record.levelname,
+                objname=record.objname,
+                objpk=record.objpk,
+                message=record.message,
+                metadata=record.__dict__
             )
         )
 
@@ -38,14 +42,6 @@ class SqlaLog(Log):
         """
         Find all entries in the Log collection that confirm to the filter and
         optionally sort and/or apply a limit.
-
-        :param filter_by: A dictionary of key value pairs where the entries have
-            to match all the criteria (i.e. an AND operation)
-        :type filter_by: :class:`dict`
-        :param order_by: A list of tuples of type :class:`OrderSpecifier`
-        :type order_by: list
-        :param limit: The number of entries to retrieve
-        :return: An iterable of the matching entries
         """
         raise NotImplementedError()
 
@@ -59,33 +55,64 @@ class SqlaLogEntry(LogEntry):
 
     @property
     def id(self):
+        """
+        Get the primary key of the entry
+        """
         return self._model.pk
 
     @property
     def time(self):
+        """
+        Get the time corresponding to the entry
+        """
         return self._model.time
 
     @property
-    def metadata(self):
-        return self._model._metadata
-
-    @property
-    def obj_id(self):
-        return self._model.objpk
-
-    @property
-    def obj_name(self):
-        return self._model.objname
-
-    @property
-    def logger_name(self):
+    def loggername(self):
+        """
+        The name of the logger that created this entry
+        """
         return self._model.loggername
 
     @property
-    def log_level(self):
+    def levelname(self):
+        """
+        The name of the log level
+        """
         return self._model.levelname
 
-    def store(self):
+    @property
+    def objpk(self):
+        """
+        Get the id of the object that created the log entry
+        """
+        return self._model.objpk
+
+    @property
+    def objname(self):
+        """
+        Get the name of the object that created the log entry
+        """
+        return self._model.objname
+
+    @property
+    def message(self):
+        """
+        Get the message corresponding to the entry
+        """
+        return self._model.message
+
+    @property
+    def metadata(self):
+        """
+        Get the metadata corresponding to the entry
+        """
+        return self._model._metadata
+
+    def persist(self):
+        """
+        Persist the log entry to the database
+        """
         from aiida.backends.sqlalchemy import session
         session.add(self)
         session.commit()

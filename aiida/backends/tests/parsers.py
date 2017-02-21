@@ -194,6 +194,7 @@ class TestParsers(AiidaTestCase):
                 calc, retrieved_nodes, tests = self.read_test(folder)
             except SkipTestException:
                 return None
+            print calc.get_attr('parser')
             Parser = calc.get_parserclass()
             if Parser is None:
                 raise NotImplementedError

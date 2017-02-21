@@ -53,7 +53,7 @@ Developer's guide
 .. toctree::
     :maxdepth: 3
 
-    developer_guide/index   
+    developer_guide/index
 
 Modules provided with aiida (API reference)
 +++++++++++++++++++++++++++++++++++++++++++

@@ -59,9 +59,6 @@ class BaseTranslator(object):
         self._is_pk_query = Class._is_pk_query
         self._total_count = Class._total_count
 
-        print "Label", self.__label__
-        print "Class", Class
-
         # basic query_help object
         self._query_help = {
             "path": [{

@@ -53,7 +53,7 @@ class AiidaApi(Api):
     AiiDA customized version of the flask_restful Api class
     """
 
-    def __init__(self, app, **kwargs):
+    def __init__(self, app=None, **kwargs):
         """
         The need to have a special constructor is to include directly the
         addition of resources with the parameters required to initialize the

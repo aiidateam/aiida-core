@@ -12,7 +12,7 @@ def run_api(App, Api, *args, **kwargs):
     Takes a flask.Flask instance and runs it. Parses
     command-line flags to configure the app.
 
-    app: app to be run
+    App: Class inheriting from Flask app class
     Api = flask_restful API class to be used to wrap the app
 
     *args: required by argparse

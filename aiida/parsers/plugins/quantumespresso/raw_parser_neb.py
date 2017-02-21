@@ -12,9 +12,6 @@ import string
 from aiida.parsers.plugins.quantumespresso.constants import ry_to_ev,hartree_to_ev,bohr_to_ang,ry_si,bohr_si
 from aiida.parsers.plugins.quantumespresso.raw_parser_pw import convert_qe_time_to_sec
 from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
-from __builtin__ import False
-from aida_manual.output_plugins.espresso import timeau_to_sec
-
 
 def parse_raw_output_neb(out_file, input_dict,parser_opts=None):
     """

@@ -130,20 +130,6 @@ def is_valid_folder_name(name):
 
     return True
 
-
-class TestNEB(AiidaTestCase):
-    """
-    Temporary test to see why neb does not work...
-    """
-    def test_1(self):
-        from aiida.parsers import ParserFactory
-        print ParserFactory('quantumespresso.neb')
-
-    def test_2(self):
-        from aiida.parsers.plugins.quantumespresso import neb
-
-        print neb.NebParser
-
 class TestParsers(AiidaTestCase):
     """
     This class dynamically finds all tests in a given subfolder, and loads

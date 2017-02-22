@@ -1,7 +1,6 @@
 .. note:: intended for aiida >= 0.9
 
-
-   This iformation applies to `github.com/DropD/aiida_core/tree/ricoh-plugins`
+   This information applies to `github.com/DropD/aiida_core/tree/ricoh-plugins`
 
 New Plugin System
 =================

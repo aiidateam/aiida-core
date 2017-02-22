@@ -83,10 +83,10 @@ class DataTranslator(NodeTranslator):
 
     _result_type = __label__
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
         """
-        # basic query_help object
-        super(DataTranslator, self).__init__()
+
+        super(DataTranslator, self).__init__(Class=self.__class__, **kwargs)

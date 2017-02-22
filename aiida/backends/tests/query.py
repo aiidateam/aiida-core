@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from aiida.backends.testbase import AiidaTestCase
-
+import unittest
+import aiida.backends.settings as settings
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -16,7 +17,6 @@ class TestQueryBuilder(AiidaTestCase):
         """
         This tests the classifications of the QueryBuilder
         """
-
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.utils import (DataFactory, CalculationFactory)
         from aiida.orm.data.structure import StructureData
@@ -323,6 +323,201 @@ class TestQueryBuilder(AiidaTestCase):
         for cls in (StructureData, ParameterData, Node, Data):
             qb = QueryBuilder().append(cls, filters={'attributes.cat':'miau'}, subclassing=False)
             self.assertEqual(qb.count(), 1)
+
+
+    def test_list_behavior(self):
+        from aiida.orm import Node
+        from aiida.orm.querybuilder import QueryBuilder
+
+        for i in range(4):
+            Node().store()
+        self.assertEqual(len(QueryBuilder().append(Node).all()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project='*').all()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project=['*', 'id']).all()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project=['id']).all()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node).dict()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project='*').dict()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project=['*', 'id']).dict()), 4)
+        self.assertEqual(len(QueryBuilder().append(Node, project=['id']).dict()), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node).iterall())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project='*').iterall())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project=['*', 'id']).iterall())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project=['id']).iterall())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node).iterdict())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project='*').iterdict())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project=['*', 'id']).iterdict())), 4)
+        self.assertEqual(len(list(QueryBuilder().append(Node, project=['id']).iterdict())), 4)
+
+    def test_append_validation(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.data.structure import StructureData
+        from aiida.common.exceptions import InputValidationError
+        from aiida.orm import Calculation
+
+
+        # So here I am giving two times the same tag
+        with self.assertRaises(InputValidationError):
+            QueryBuilder().append(StructureData, tag='n').append(StructureData, tag='n')
+        # here I am giving a wrong filter specifications
+        with self.assertRaises(InputValidationError):
+            QueryBuilder().append(StructureData, filters=['jajjsd'])
+        # here I am giving a nonsensical projection:
+        with self.assertRaises(InputValidationError):
+            QueryBuilder().append(StructureData, project=True)
+        
+        # here I am giving a nonsensical projection for the edge:
+        with self.assertRaises(InputValidationError):
+            QueryBuilder().append(Calculation).append(StructureData, edge_tag='t').add_projection('t', True)
+        # Giving a nonsensical limit
+        with self.assertRaises(InputValidationError):
+            QueryBuilder().append(Calculation).limit(2.3)
+        # Giving a nonsensical offset
+        with self.assertRaises(InputValidationError):
+            QueryBuilder(offset=2.3)
+
+
+
+        # So, I mess up one append, I want the QueryBuilder to clean it!
+        with self.assertRaises(InputValidationError):
+            qb = QueryBuilder()
+            # This also checks if we correctly raise for wrong keywords
+            qb.append(StructureData, tag='s', randomkeyword={})
+
+        # Now I'm checking whether this keyword appears anywhere in the internal dictionaries:
+        self.assertTrue('s' not in qb._projections)
+        self.assertTrue('s' not in qb._filters)
+        self.assertTrue('s' not in qb._tag_to_alias_map)
+        self.assertTrue(len(qb._path)==0)
+        self.assertTrue(StructureData not in qb._cls_to_tag_map)
+        # So this should work now:
+        qb.append(StructureData, tag='s').limit(2).dict()
+
+    def test_tags(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.node import Node
+        from aiida.orm.calculation import Calculation
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.computer import Computer
+        qb = QueryBuilder()
+        qb.append(Node, tag='n1')
+        qb.append(Node, tag='n2', edge_tag='e1', output_of='n1')
+        qb.append(Node, tag='n3', edge_tag='e2', output_of='n2')
+        qb.append(Computer, computer_of='n3', tag='c1')
+        self.assertEqual(qb.get_used_tags(), ['n1', 'n2','e1', 'n3', 'e2', 'c1'])
+
+
+        # Now I am testing the default tags,
+        qb = QueryBuilder().append(StructureData).append(Calculation).append(
+            StructureData).append(
+            ParameterData, input_of=Calculation)
+        self.assertEqual(qb.get_used_tags(), [
+                'StructureData_1', 'Calculation_1',
+                'StructureData_1--Calculation_1', 'StructureData_2',
+                'Calculation_1--StructureData_2', 'ParameterData_1',
+                'Calculation_1--ParameterData_1'
+            ])
+        self.assertEqual(qb.get_used_tags(edges=False), [
+                'StructureData_1', 'Calculation_1',
+                'StructureData_2', 'ParameterData_1',
+            ])
+        self.assertEqual(qb.get_used_tags(vertices=False), [
+                'StructureData_1--Calculation_1',
+                'Calculation_1--StructureData_2',
+                'Calculation_1--ParameterData_1'
+            ])
+        
+
+
+
+class QueryBuilderDateTimeAttribute(AiidaTestCase):
+    @unittest.skipIf(settings.BACKEND == u'sqlalchemy',
+              "SQLA doesn't have full datetime support in attributes")
+    def test_date(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.utils import timezone
+        from datetime import timedelta
+        from aiida.orm.node import Node
+        n = Node()
+        now = timezone.now()
+        n._set_attr('now', now)
+        n.store()
+
+        qb = QueryBuilder().append(Node, 
+            filters={'attributes.now': {"and":[
+                {">":now-timedelta(seconds=1)},
+                {"<":now+timedelta(seconds=1)},
+            ]}})
+        self.assertEqual(qb.count(), 1)
+
+
+
+
+class QueryBuilderLimitOffsetsTest(AiidaTestCase):
+
+    def test_ordering_limits_offsets_of_results_general(self):
+        from aiida.orm import Node
+        from aiida.orm.querybuilder import QueryBuilder
+        # Creating 10 nodes with an attribute that can be ordered
+        for i in range(10):
+            n = Node()
+            n._set_attr('foo', i)
+            n.store()
+
+        qb = QueryBuilder().append(
+                Node, project='attributes.foo'
+            ).order_by({Node:'ctime'})
+
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(10))
+
+        # Now applying an offset:
+        qb.offset(5)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(5,10))
+
+        # Now also applying a limit:
+        qb.limit(3)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(5,8))
+
+        # Specifying the order  explicitly the order:
+        qb = QueryBuilder().append(
+                Node, project='attributes.foo'
+            ).order_by({Node:{'ctime':{'order':'asc'}}})
+
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(10))
+
+        # Now applying an offset:
+        qb.offset(5)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(5,10))
+
+        # Now also applying a limit:
+        qb.limit(3)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(5,8))
+
+
+        # Reversing the order:
+        qb = QueryBuilder().append(
+                Node, project='attributes.foo'
+            ).order_by({Node:{'ctime':{'order':'desc'}}})
+
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(9, -1, -1))
+
+
+        # Now applying an offset:
+        qb.offset(5)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(4,-1,-1))
+
+        # Now also applying a limit:
+        qb.limit(3)
+        res = list(zip(*qb.all())[0])
+        self.assertEqual(res, range(4,1, -1))
         
 
 class QueryBuilderJoinsTests(AiidaTestCase):
@@ -491,7 +686,30 @@ class QueryBuilderPath(AiidaTestCase):
                     ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
                     ).count(), 2)
 
+        qb = QueryBuilder(with_dbpath=False,expand_path=True).append(
+                Node, filters={'id':n8.pk}, tag='desc',
+            ).append(Node, ancestor_of='desc', edge_project='path', filters={'id':n1.pk})
+        queried_path_set = set([frozenset(p) for p, in qb.all()])
 
+        paths_there_should_be = set([
+                frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),
+                frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])
+            ])
+
+        self.assertTrue(queried_path_set == paths_there_should_be)
+
+        qb = QueryBuilder(with_dbpath=False, expand_path=True).append(
+                Node, filters={'id':n1.pk}, tag='anc'
+            ).append(
+                Node, descendant_of='anc',  filters={'id':n8.pk}, edge_project='path'
+            )
+
+        self.assertTrue(set(
+                [frozenset(p) for p, in qb.all()]
+            ) == set(
+                [frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),
+                frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])]
+            ))
 
         n7.add_link_from(n9)
         # Still two links...
@@ -535,6 +753,29 @@ class QueryBuilderPath(AiidaTestCase):
             self.assertTrue(set(zip(*qb.all())[0]), set([5,6]))
             qb.add_filter('edge', {'depth':6})
             self.assertTrue(set(zip(*qb.all())[0]), set([6]))
+
+
+
+class TestConsistency(AiidaTestCase):
+    def test_create_node_and_query(self):
+        from aiida.orm import Node
+        from aiida.orm.querybuilder import QueryBuilder
+
+
+        import random
+
+
+        for i in range(100):
+            n = Node()
+            n.store()
+
+        for idx, item in enumerate(QueryBuilder().append(Node,project=['id','label']).iterall(batch_size=10)):
+            if idx % 10 == 10:
+                print "creating new node"
+                n = Node()
+                n.store()
+        self.assertEqual(idx,99)
+        self.assertTrue(len(QueryBuilder().append(Node,project=['id','label']).all(batch_size=10)) > 99)
 
 
 

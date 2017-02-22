@@ -1,22 +1,24 @@
-## This snippet has been originally writtten by Armin Ronacher, who explicitely
-# defined it to be of public domain and freely usable as the user likes.
+#!/usr/bin/env python
 
 import argparse
 import imp
 import os
+
 import aiida  # Mainly needed to locate the correct aiida path
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-def flaskrun(app, *args, **kwargs):
-
+def run_api(App, Api, *args, **kwargs):
     """
     Takes a flask.Flask instance and runs it. Parses
     command-line flags to configure the app.
 
-    app: app to be run
+    App: Class inheriting from Flask app class
+    Api = flask_restful API class to be used to wrap the app
+
     *args: required by argparse
 
-    List of valid parameters
+    *kwargs:
+    List of valid parameters:
     prog_name: name of the command before arguments are parsed. Useful when
     api is embedded in a command, such as verdi restapi
     default_host: self-explainatory
@@ -38,9 +40,9 @@ def flaskrun(app, *args, **kwargs):
     default_port = kwargs['default_port'] if 'default_port' in kwargs else \
         "5000"
 
-    default_config_dir = kwargs['default_config_dir'] if\
-        'default_config_dir' in kwargs\
-        else  os.path.join(os.path.split(os.path.abspath(
+    default_config_dir = kwargs['default_config_dir'] if \
+        'default_config_dir' in kwargs \
+        else os.path.join(os.path.split(os.path.abspath(
         aiida.restapi.__file__))[0], 'common')
 
     parse_aiida_profile = kwargs['parse_aiida_profile'] if \
@@ -70,9 +72,10 @@ def flaskrun(app, *args, **kwargs):
     # This one is included only if necessary
     if parse_aiida_profile:
         parser.add_argument("-p", "--aiida-profile",
-                        help="AiiDA profile to expose through the RESTful API [default: the default AiiDA profile]",
-                        dest="aiida_profile",
-                        default="default")
+                            help="AiiDA profile to expose through the RESTful "
+                                 "API [default: the default AiiDA profile]",
+                            dest="aiida_profile",
+                            default=None)
 
     # Two options useful for debugging purposes, but
     # a bit dangerous so not exposed in the help message.
@@ -85,15 +88,6 @@ def flaskrun(app, *args, **kwargs):
 
     parsed_args = parser.parse_args(args)
 
-    # If the user selects the profiling option, then we need
-    # to do a little extra setup
-    if parsed_args.wsgi_profile:
-        from werkzeug.contrib.profiler import ProfilerMiddleware
-
-        app.config['PROFILE'] = True
-        app.wsgi_app = ProfilerMiddleware(app.wsgi_app,
-                                          restrictions=[30])
-
     # Import the right configuration file
     confs = imp.load_source(os.path.join(parsed_args.config_dir, 'config'),
                             os.path.join(parsed_args.config_dir,
@@ -102,16 +96,43 @@ def flaskrun(app, *args, **kwargs):
 
     import aiida.backends.settings as settings
 
-    # set ptofile
-    if parse_aiida_profile and parsed_args.aiida_profile is not "default":
-        settings.AIIDADB_PROFILE = parsed_args.aiida_profile
+    """
+    Set aiida profile
+
+    General logic:
+
+    if aiida_profile is parsed the following cases exist:
+
+    aiida_profile:
+        "default"    --> default profile set in .aiida/config.json
+        <profile>    --> corresponding profile in .aiida/config.json
+        None         --> default restapi profile set in <config_dir>/config,py
+
+    if aiida_profile is not parsed we assume
+
+    default restapi profile set in <config_dir>/config.py
+
+    """
+    if parse_aiida_profile and parsed_args.aiida_profile is not None:
+        aiida_profile = parsed_args.aiida_profile
+
+    elif confs.default_aiida_profile is not None:
+        aiida_profile = confs.default_aiida_profile
+
     else:
-        # Keep the default profile
-        pass
+        aiida_profile = "default"
+
+    if aiida_profile != "default":
+        settings.AIIDADB_PROFILE = aiida_profile
+    else:
+        pass  # This way the default of .aiida/config.json will be used
 
     # Set the AiiDA environment, if not already done
     if not is_dbenv_loaded():
         load_dbenv()
+
+    # Instantiate an app
+    app = App(__name__)
 
     # Config the app
     app.config.update(**confs.APP_CONFIG)
@@ -121,9 +142,49 @@ def flaskrun(app, *args, **kwargs):
         from aiida.restapi.common.utils import CustomJSONEncoder
         app.json_encoder = CustomJSONEncoder
 
+    # If the user selects the profiling option, then we need
+    # to do a little extra setup
+    if parsed_args.wsgi_profile:
+        from werkzeug.contrib.profiler import ProfilerMiddleware
+
+        app.config['PROFILE'] = True
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app,
+                                          restrictions=[30])
+
+    # Instantiate an Api associating its app
+    kwargs = dict(PREFIX=confs.PREFIX,
+                  PERPAGE_DEFAULT=confs.PERPAGE_DEFAULT,
+                  LIMIT_DEFAULT=confs.LIMIT_DEFAULT,
+                  custom_schema=confs.custom_schema)
+
+    api = Api(app, **kwargs)
+
     # Hook up the app
-    app.run(
+    api.app.run(
         debug=parsed_args.debug,
         host=parsed_args.host,
         port=int(parsed_args.port)
     )
+
+
+# Standard boilerplate to run the api
+if __name__ == '__main__':
+    """
+    I run the app via a wrapper that accepts arguments such as host and port
+    e.g. python api.py --host=127.0.0.2 --port=6000 --config-dir=~/.restapi
+    Default address is 127.0.01:5000, default config directory is
+    <aiida_path>/aiida/restapi/common
+
+    Start the app by sliding the argvs to flaskrun, choose to take as an
+    argument also whether to parse the aiida profile or not (in verdi
+    restapi this would not be the case)
+
+    """
+    import sys
+    from aiida.restapi.api import AiidaApi, App
+    """
+    Or, equivalently, (useful starting point for derived apps)
+    import the app object and the Api class that you want to combine.
+    """
+
+    run_api(App, AiidaApi, *sys.argv[1:], parse_aiida_profile=True)

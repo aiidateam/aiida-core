@@ -10,8 +10,7 @@ Introduction
    :maxdepth: 2
 
 This section describes the use of the QueryBuilder, which is meant to help you
-querying the database with a Python interface and regardless of backend and
-schema employed in the background.
+query your AiiDA database independent of the employed backend.
 Before jumping into the specifics, let's discuss what you should be clear about
 before writing a query:
 
@@ -39,18 +38,23 @@ What you will use depends on the specific use case.
 The functionalities are the same, so it's up to you what to use.
 
 
-
 The appender method
 ===================
 
+Introduction
+++++++++++++
 
 Let's first discuss the appender-method using some concrete examples.
-We will start from simple examples and get to more complex ones later.
 The first thing to know is how to chose entities that you want to query::
 
     from aiida.orm.querybuilder import QueryBuilder
-    qb = QueryBuilder() # Instantiating instance
+    qb = QueryBuilder()       # Instantiating instance. One instance -> one query
     qb.append(JobCalculation) # Setting first vertice of path
+
+
+
+Retrieving results
+++++++++++++++++++
 
 So, let's suppose that's what we want to query for (all job calculations in the
 database). The question is how to get the results from the query::
@@ -62,20 +66,31 @@ database). The question is how to get the results from the query::
     first_row = qb.first()              # Returns a list (!)
                                         # of the results of the first row
 
-    all_results = qb.dict()             # Returns all results as
+    all_results_d = qb.dict()           # Returns all results as
                                         # a list of dictionaries
 
-    all_r_generator = qb.iterdict()     # Return a generator of dictionaries
+    all_results_l = qb.all()            # Returns a list of lists
+
+
+    # Also you can use generators:
+    all_res_d_gen = qb.iterdict()       # Return a generator of dictionaries
                                         # of all results
-
-    # Some more (for completeness)
-    all_rows = qb.all()                 # Returns a list of lists
-
-    all_rows_generator = qb.iterall()   # Returns a generator of lists
+    all_res_l_gen = qb.iterall()        # Returns a generator of lists
 
 
-Since we now know how to set an entity, we can start to filter by properties
-of that entity.
+.. note ::
+    Generators are useful if you have to retrieve a very large (>10000) number of results.
+    This will retrieve the data in batches, and you can start working with the data before the
+    query has completely finished.
+    Be aware that if using generators, you should never commit (store) anything while
+    iterating. The query is still going on, and might be compromised by new data in the database.
+
+
+Filtering
++++++++++
+
+
+Since we now know how to set an entity, we can start to filter by properties of that entity.
 Suppose we do not want to all JobCalculations, but only the ones in state
 'FINISHED'::
 
@@ -104,7 +119,7 @@ state 'FINISHED' and were created in the last *n* days::
             'ctime':{'>':time_n_days_ago}     # created in the last n days
         },
     )
-    resultgen = qb.dict()               # Give me all results
+    result = qb.dict()                  # all results as a list of dictionaries
 
 
 Let's go through the above example.
@@ -126,9 +141,9 @@ What if we want calculations that have finished **or** were created in the last
             ]
         },
     )
-    res =qb.dict()
+    res =vqb.dict()
 
-If we'd have written *and* instead of *or*, we would have created the exact same
+If we had written *and* instead of *or*, we would have created the exact same
 query as in the first query, because *and* is the default behavior if
 you attach several filters.
 What if you want calculation in state 'FINISHED' or 'RETRIEVING'?
@@ -156,10 +171,57 @@ So, to ask for all calculations that are not in 'FINISHED' or 'RETRIEVING'::
     )
     res = qb.all()
 
+.. note ::
+    The above rule applies strictly! You check a non-equality with !==, since this is
+    the equality operator (==) with a negation prepended.
 
-This showed you how to 'filter' by properties of a node (and implicitly by type)
+This is a list of all implemented operators:
+
++------------+------------+-------------------------------------+----------------------------------+
+|**Operator**|**Datatype**|  **Example**                        | Explanation                      |
++============+============+=====================================+==================================+
+|   ==       |      All   | 'id':{'==':123}                     | Checks equality                  |
++------------+------------+-------------------------------------+----------------------------------+
+|   in       |      All   | 'name':{'in':['foo', 'bar']}        | equal to any element             |
++------------+------------+-------------------------------------+----------------------------------+
+| >,<,<=,>=  | floats,    | 'ctime':{'<':datetime(2016, 03, 03)}| lower/greater (equal)            |
+|            | integers,  |                                     |                                  |
+|            | dates      |                                     |                                  |
++------------+------------+-------------------------------------+----------------------------------+
+| like       | Strings    | 'name':{'like':'lovely_calc%'}      | substring (% is wildcard)        |
++------------+------------+-------------------------------------+----------------------------------+
+| ilike      | Strings    | 'name':{'like':'loVely_Calc%'}      | case insensitive 'like'          |
++------------+------------+-------------------------------------+----------------------------------+
+| or         | list of    | 'id':{'or':[{'<':12}, {'==':199}]}  |                                  |
+|            | expressions|                                     |                                  |
++------------+------------+-------------------------------------+----------------------------------+
+| and        | list of    | 'id':{'and':[{'<':12}, {'>':1 }]}   |                                  |
+|            | expressions|                                     |                                  |
++------------+------------+-------------------------------------+----------------------------------+
+
+
+This showed you how to 'filter' by properties of a node.
 So far we can do that for a single a single node in the database.
+
+
+Joining entities
+++++++++++++++++
+
 But we sometimes need to query relationships in graph-like database.
+Let's join a node to its output, e.g. StructureData and JobCalculation (as output)::
+
+    qb = QueryBuilder()
+    qb.append(StructureData, tag='structure')
+    qb.append(JobCalculation, output_of='structure')
+
+In above example we are querying structures and calculations, with the predicate that the
+calculation is an output of the structure (the same as saying that the structure is an input to the calculation)
+In the above example, we have first appended StructureData to the path.
+So that we can refer to that vertice later, we *tag* it with a unique keyword
+of our choice, which can be used only once.
+When we append another vertice to the path, we specify the relationship
+to a previous entity by using one of the keywords in the above table
+and as a value the tag of the vertice that it has a relationship with.
 There are several relationships that entities in Aiida can have:
 
 +------------------+---------------+------------------+-------------------------------------------------+
@@ -187,18 +249,6 @@ There are several relationships that entities in Aiida can have:
 +------------------+---------------+------------------+-------------------------------------------------+
 
 
-Let's join a node to its output, e.g. StructureData and JobCalculation (as output)::
-
-    qb = QueryBuilder()
-    qb.append(StructureData, tag='structure')
-    qb.append(JobCalculation, output_of='structure')
-
-In the above example, we have first appended StructureData to the path.
-So that we can refer to that vertice later, we *tag* it with a unique keyword
-of our choice, which can be used only once.
-When we append another vertice to the path, we specify the relationship
-to a previous entity by using one of the keywords in the above table
-and as a value the tag of the vertice that it has a relationship with.
 Some more examples::
 
     # StructureData as an input of a job calculation
@@ -224,8 +274,16 @@ Some more examples::
 
 The above QueryBuilder will join a structure to all its descendants via the
 transitive closure table.
-But what will the query return exactly. We do not want everything returned
-because it might lead to a big overhead.
+
+
+
+Defining the projections
+++++++++++++++++++++++++
+
+But what will the query return exactly?
+If you try any of the examples, you will find that the instances of the last appended
+vertice appear! That is the default behavior if nothing else was specified.
+We usually do not want everything returned because it might lead to a big overhead.
 You need to specify what you want to return using the keyword *project*.
 
 Let's stick to the previous example::
@@ -387,7 +445,8 @@ Output::
 
 
 
-
+Attributes and extras
++++++++++++++++++++++
 
 You should know by now that you can define additional properties of nodes
 in the *attributes* and the *extras* of a node.
@@ -444,6 +503,11 @@ You need to tell the QueryBuilder that::
     )
 
 
+
+Cheats
+++++++
+
+
 A few cheats to save some typing:
 
 *   The default edge specification, if no keyword is provided, is always
@@ -470,10 +534,8 @@ A shorter version of the previous example::
     )
 
 
-
-
-
-
+Advanced usage
+++++++++++++++
 
 Let's proceed to some more advanced stuff. If you've understood everything so far
 you're in good shape to query the database, so you can skip the rest if you want.
@@ -577,6 +639,10 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~          )
 
 
+
+Working with edges
+++++++++++++++++++
+
 Another feature that had to be added are projections, filters and labels on
 the edges of the graphs, that is to say links or paths between nodes.
 It works the same way, just that the keyword is preceeded by '*link*'.
@@ -596,6 +662,12 @@ project the label and label::
             edge_project='label'
          )
 
+
+
+Ordering results
+++++++++++++++++
+
+
 You can also order by properties of the node, although ordering by attributes
 or extras is not implemented yet.
 Assuming you want to order the above example by the time of the calculations::
@@ -612,6 +684,10 @@ Assuming you want to order the above example by the time of the calculations::
          )
 
     qb.order_by({JobCalculation:{'ctime':'asc'}}) # 'asc' or 'desc' (ascending/descending)
+
+
+Limiting the number of results
+++++++++++++++++++++++++++++++
 
 You can also limit the number of rows returned with the method *limit*::
 

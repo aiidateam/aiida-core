@@ -1201,6 +1201,10 @@ def parse_pw_text_output(data, xml_data={}, structure_data={}, input_dict={}):
     # useful for queries (maybe), and structure_data will not be stored as a ParameterData
     parsed_data['number_of_atoms'] = nat
     parsed_data['number_of_species'] = ntyp
+    times_strings = ['h_psi','s_psi','cdiaghg']
+    times_strings += ['fft','fft_scatter', 'init_run']
+    times_strings += ['wfcinit','c_bands']
+
     parsed_data['volume'] = volume
     
     c_bands_error = False
@@ -1208,6 +1212,7 @@ def parse_pw_text_output(data, xml_data={}, structure_data={}, input_dict={}):
     # now grep quantities that can be considered isolated informations.
     for count,line in enumerate(data_lines):
         
+        bool_time = [any(re.findall('\\b{}\\b'.format(i), line)) for i in times_strings]
         # to be used for later
         if 'Carrying out vdW-DF run using the following parameters:' in line:
             vdw_correction=True
@@ -1245,6 +1250,24 @@ def parse_pw_text_output(data, xml_data={}, structure_data={}, input_dict={}):
                 parsed_data['wall_time_seconds'] = convert_qe_time_to_sec(time)
             except ValueError:
                 raise QEOutputParsingError("Unable to convert wall_time in seconds.")
+
+        elif any(bool_time) and 'WALL' in line:
+            bindex = bool_time.index(True)
+            bstring = times_strings[bindex] + '_time'
+            bstring_seconds= times_strings[bindex] + '_time_seconds'
+            try:
+                time = line.split('CPU')[1].split('WALL')[0]
+                parsed_data[bstring] = time
+            except Exception:
+                error_string = 'Error while parsing ' + times_strings[bindex]
+                parsed_data['warnings'].append(error_string)                
+            try:
+                parsed_data[bstring_seconds] = convert_qe_time_to_sec(time)
+            except ValueError:
+                error_string = 'Unable to convert ' + times_strings[bindex] + ' seconds'
+                parsed_data['warnings'].append(error_string)                
+ 
+
         
         elif 'SUMMARY OF PHASES' in line:
             try:

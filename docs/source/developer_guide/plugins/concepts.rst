@@ -61,6 +61,8 @@ Entry Points
 
 The ``setuptools`` package to which ``pip`` is a frontend has a feature called `entry points`_. When a distribution which registers entry points is installed, the entry point specifications are written to a file inside the distribution's ``.egg-info`` folder. ``setuptools`` provides a package ``pkg_resources`` which can find these entry points by distribution, group and / or name and load the data structure to which it points. This is the way aiida finds and loads classes provided by plugins.
 
+There is a list of entry point groups used by AiiDA in :ref:`plugins.entry_points`
+
 .. _packages: https://docs.python.org/2/tutorial/modules.html?highlight=package#packages
 .. _PyPI: https://pypi.python.org/pypi
 .. _packaging: https://packaging.python.org

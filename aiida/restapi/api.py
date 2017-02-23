@@ -26,26 +26,31 @@ class App(Flask):
         # Basic initialization
         super(App, self).__init__(*args, **kwargs)
 
-        # Error handler
-        @self.errorhandler(Exception)
-        def error_handler(error):
-            if isinstance(error, RestValidationError):
-                response = jsonify({'message': error.message})
-                response.status_code = 400
-            elif isinstance(error, RestInputValidationError):
-                response = jsonify({'message': error.message})
-                response.status_code = 400
-            # Generic server-side error (not to make the api crash if an
-            # unhandled exception is raised. Caution is never enough!!)
-            else:
-                response = jsonify({
-                    'message': 'Internal server error. The original '
-                               'message was: \"{}\"'.format(
-                        error.message)
-                })
-                response.status_code = 500
+        if 'catch_internal_server' in kwargs and kwargs['catch_internal_server']:
 
-            return response
+            # Error handler
+            @self.errorhandler(Exception)
+            def error_handler(error):
+                if isinstance(error, RestValidationError):
+                    response = jsonify({'message': error.message})
+                    response.status_code = 400
+                elif isinstance(error, RestInputValidationError):
+                    response = jsonify({'message': error.message})
+                    response.status_code = 400
+                # Generic server-side error (not to make the api crash if an
+                # unhandled exception is raised. Caution is never enough!!)
+                else:
+                    response = jsonify({
+                        'message': 'Internal server error. The original '
+                                   'message was: \"{}\"'.format(
+                            error.message)
+                    })
+                    response.status_code = 500
+
+                return response
+
+        else:
+            pass
 
 
 class AiidaApi(Api):

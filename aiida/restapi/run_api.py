@@ -167,7 +167,8 @@ def run_api(App, Api, *args, **kwargs):
         api.app.run(
             debug=parsed_args.debug,
             host=parsed_args.host,
-            port=int(parsed_args.port)
+            port=int(parsed_args.port),
+            threaded=True
         )
 
     else:
@@ -200,4 +201,5 @@ if __name__ == '__main__':
     import the app object and the Api class that you want to combine.
     """
 
-    run_api(App, AiidaApi, *sys.argv[1:], parse_aiida_profile=True, hookup=True)
+    run_api(App, AiidaApi, *sys.argv[1:], parse_aiida_profile=True,
+            hookup=True, catch_internal_server=True)

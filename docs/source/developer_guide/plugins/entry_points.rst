@@ -66,7 +66,7 @@ Exceptions to this rule are schedulers, transports and potentially data ones. Fu
 ``aiida.calculations``
 ----------------------
 
-Entry points in this group are expected to be subclasses of :py:class:`~aiida.orm.JobCalculation`. This replaces the previous method of placing a python module with the class in question inside the :py:mod:`aiida.orm.calculation.job` subpackage.
+Entry points in this group are expected to be subclasses of :py:class:`~aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`. This replaces the previous method of placing a python module with the class in question inside the ``aiida/orm/calculation/job`` subpackage.
 
 Example entry point specification::
    
@@ -90,7 +90,7 @@ Will lead to usage::
 ``aiida.parsers``
 -----------------
 
-Aiida expects a subclass of :py:class:`~aiida.parsers.Parser`. Replaces placing a parser module in :py:mod:`aiida.parsers.plugins`
+Aiida expects a subclass of ``Parser``. Replaces placing a parser module under ``aiida/parsers/plugins``
 
 Example spec::
 
@@ -114,7 +114,7 @@ Usage::
 ``aiida.data``
 --------------
 
-Group for :py:class:`~aiida.orm.Data` subclasses. Previously located in a subpackage of :py:mod:`aiida.orm.data`.
+Group for :py:class:`~aiida.orm.data.Data` subclasses. Previously located in a subpackage of ``aiida/orm/data``.
 
 Spec::
 
@@ -138,7 +138,7 @@ Usage::
 ``aiida.workflows``
 -------------------
 
-For AiiDA workflows. Instead of putting a workflow somewhere under the :py:mod:`aiida.workflows` package, it can now be packaged as a plugin and exposed to aiida as follows:
+For AiiDA workflows. Instead of putting a workflow somewhere under the ``aiida.workflows`` package, it can now be packaged as a plugin and exposed to aiida as follows:
 
 Spec::
 
@@ -162,7 +162,7 @@ Usage::
 ``aiida.cmdline``
 -----------------
 
-For subcommands to verdi commands like ``verdi data mydata``. This was previously not possible to achieve without editing aiida source code directly. AiiDA expects each entry point to be either a :py:class:`click.Command` or :py:class:`click.CommandGroup`.
+For subcommands to verdi commands like ``verdi data mydata``. This was previously not possible to achieve without editing aiida source code directly. AiiDA expects each entry point to be either a ``click.Command`` or ``click.CommandGroup``.
 
 Plugin support for commands is possible due to using `click`_.
 

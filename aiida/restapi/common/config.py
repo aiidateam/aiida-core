@@ -5,29 +5,42 @@ PERPAGE_DEFAULT = 20
 ##Version prefix for all the URLs
 PREFIX="/api/v2"
 
-## Flask app configs.
-#DEBUG: True/False. enables debug mode N.B.
-#!!!For production run use ALWAYS False!!!
-#PROPAGATE_EXCEPTIONS: True/False serve REST exceptions to the client (and not a
-# generic 500: Internal Server Error exception)
+
+"""
+Flask app configs.
+
+DEBUG: True/False. enables debug mode N.B.
+!!!For production run use ALWAYS False!!!
+
+PROPAGATE_EXCEPTIONS: True/False serve REST exceptions to the client (and not a
+generic 500: Internal Server Error exception)
+
+"""
 APP_CONFIG = {
               'DEBUG': False,
               'PROPAGATE_EXCEPTIONS': True,
               }
 
-##JSON serialization config. Leave this dictionary empty if default Flask
-# serializer is desired.
+
+"""
+JSON serialization config. Leave this dictionary empty if default Flask
+serializer is desired.
+
+Here is a list a all supported fields. If a field is not present in the
+dictionary its value is assumed to be 'default'.
+
+DATETIME_FORMAT: allowed values are 'asinput' and 'default'.
+
+"""
 SERIALIZER_CONFIG = {'datetime_format': 'default'}
-# Here is a list a all supported fields. If a field is not present in the
-# dictionary its value is assumed to be 'default'.
-# DATETIME_FORMAT: allowed values are 'asinput' and 'default'.
 
-## Caching
-#memcached: backend caching system
+"""
+Caching configuration
+
+memcached: backend caching system
+"""
 cache_config={'CACHE_TYPE': 'memcached'}
-
-#Caching TIMEOUTS (in seconds)
-CACHING_TIMEOUTS = {
+CACHING_TIMEOUTS = { #Caching TIMEOUTS (in seconds)
     'nodes': 10,
     'users': 10,
     'calculations': 10,
@@ -37,7 +50,9 @@ CACHING_TIMEOUTS = {
     'codes': 10,
 }
 
-#Schema customization (if file schema_custom.json is present in this folder)
+"""
+Schema customization (if file schema_custom.json is present in this same folder)
+"""
 #TODO add more verbose description
 import os
 import ujson as uj
@@ -51,3 +66,14 @@ except IOError:
 
 # IO tree
 MAX_TREE_DEPTH = 5
+
+"""
+Aiida profile used by the REST api when no profile is specified (ex. by
+--aiida-profile flag).
+This has to be one of the profiles registered in .aiida/config.json
+
+In case you want to use the default stored in
+.aiida/config.json, set this varibale to "default"
+
+"""
+default_aiida_profile = None

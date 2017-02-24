@@ -20,7 +20,6 @@ if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.code import Code, delete_code
     from aiida.orm.implementation.sqlalchemy.comment import Comment
     from aiida.orm.implementation.sqlalchemy.user import User
-    from aiida.backends.querybuild.querybuilder_sa import QueryBuilder
     from aiida.backends.sqlalchemy import models
 elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.node import Node
@@ -32,7 +31,6 @@ elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.code import Code, delete_code
     from aiida.orm.implementation.django.comment import Comment
     from aiida.orm.implementation.django.user import User
-    from aiida.backends.querybuild.querybuilder_django import QueryBuilder
     from aiida.backends.djsite.db import models
 elif BACKEND is None:
     raise ConfigurationError("settings.BACKEND has not been set.\n"

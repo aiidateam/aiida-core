@@ -10,6 +10,8 @@ Get started immediately with just a few commands! Look at `:ref:quicksetup` for 
 Quickstart - Linux (Ubuntu)
 ---------------------------
 
+.. highlight:: bash
+
 If you use another debian derivate, chances are this still works for you.
 If your distribution uses a different package manager, simply replace the commandline in the first step (the package names might be slightly different). The links in :ref:`install_dependencies` contain additional information on how to get the required programs for your system.
 

@@ -2,10 +2,12 @@
 Installation and Deployment of AiiDA
 ====================================
 
-Quickstart
-++++++++++
+Quickstart (New Users)
+++++++++++++++++++++++
 
-Get started immediately with just a few commands! Look at `:ref:quicksetup` for more details
+Get started immediately with just a few commands! Look at :ref:`quicksetup` for more details
+
+.. _quickstart-ubuntu:
 
 Quickstart - Linux (Ubuntu)
 ---------------------------
@@ -21,20 +23,32 @@ If your distribution uses a different package manager, simply replace the comman
 
 2. Install AiiDA::
 
-      $ pip install -U setuptools pip
-      $ pip install virtualenv
+      $ pip install -U setuptools pip wheel virtualenv
       $ virtualenv ~/aiidapy # or equivalent
       $ source ~/aiidapy/bin/activate
       (aiidapy) $ pip install -e git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida> 
+
+For the next step to work, postgres must be running on port 5432. This should automatically be the case once it is installed (on Ubuntu).
+If you have changed the default configuration of postgres, you will be asked for the details. Refer to the `PostgresQL`_ documentation for details on how to ensure your postgres is running. Read ``(aiidapy) $ verdi quicksetup --help`` to see how to supply information about your postgres configuration beforehand.
+
+3. Setup AiiDA::
+
       (aiidapy) $ verdi quicksetup
 
 You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
+Alternatively you can give your information as commandline options (use the ``--help`` option for a list of options).
 
-3. Add the verdi command to your PATH::
+4. (optional) Add the verdi command to your PATH::
 
       $ # for bash:
       $ echo "export PATH="${PATH}:~/aiidapy/bin/verdi" >> ~/.bashrc
 
+   Instead you might create a shell alias or explicitly activate (``source ~/aiidapy/bin/activate``) the virtualenvironment before working with aiida.
+   If you are using a virtualenv manager like `virtualenvwrapper`_, or `conda`_, it is possible to set up the environment so that activating it launches the aiida daemon and possibly initializes other things for you. How this is done is described in your virtualenv manager's documentation.
+
+
+.. _virtualenvwrapper: https://virtualenvwrapper.readthedocs.io/en/latest/index.html
+.. _conda: https://conda.io/docs/
 
 Quickstart - OS X (Homebrew)
 ----------------------------
@@ -50,22 +64,7 @@ If you use another package manager just replace the first step accordingly.
 
       $ pg_ctl -D /usr/local/var/postgres start
 
-3. Install AiiDA::
-
-      $ pip install -U setuptools pip
-      $ pip install virtualenv
-      $ virtualenv ~/aiidapy # or equivalent
-      $ source ~/aiidapy/bin/activate
-      (aiidapy) $ pip install -e git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
-      (aiidapy) $ verdi quicksetup
-
-You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
-
-4. Add the verdi command to your PATH::
-
-      $ # for bash:
-      $ echo "export PATH="${PATH}:~/aiidapy/bin/" >> ~/.bashrc
-
+3. Follow steps 2-4 of :ref:`quickstart-ubuntu`
 
 If you prefer not to use a package manager, follow the links in :ref:`install_dependencies` for instructions on how to install the required programs and start the postgres server before continuing with the third step.
 
@@ -77,15 +76,15 @@ Other Systems and Custom Setups
 For new and inexperienced users we strongly recommend to start with the Quickstart procedure detailed above. It is possible to customize your configuration afterwards if necessary.
 
 If you are updating from a previous version and you don't want to
-reinstall everything from scratch, read the instructions
-:ref:`here<updating_aiida>`.
+reinstall everything from scratch, read the instructions in
+:ref:`updating_aiida`.
 
-If you are trying to install AiiDA on another system than Ubunto or OS X, please take a look at `:ref:install_dependencies` before proceeding with one of the following.
+If you are trying to install AiiDA on another system than Ubunto or OS X, please take a look at :ref:`install_dependencies` before proceeding with one of the following.
 
-* Install AiiDA on another system `:ref:installing_aiida`
-* Setup AiiDA using quicksetup `:ref:quicksetup`
-* Using setup for more options or to customize your user profile `:ref:setup`
-* Using setup to programatically install AiiDA `:ref:setup-noninteractive`
+* Install AiiDA on another system :ref:`installing_aiida`
+* Setup AiiDA using quicksetup :ref:`quicksetup`
+* Using setup for more options or to customize your user profile :ref:`setup`
+* Using setup to programatically install AiiDA :ref:`setup-noninteractive`
 
 .. Four types of installations are described in the following:
 .. 
@@ -244,7 +243,9 @@ Installing AiiDA (Other Systems)
 
 3. Install aiida into the environment::
       
-      (aiidapy) $ pip install -e git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core --process-dependency-links --src=<folder/containing/aiida>
+		(aiidapy) $ cd <where_you_want_the_aiida_sourcecode>
+		(aiidapy) $ git clone https://github.com/aiidateam/aiida_core
+      (aiidapy) $ pip install -e aiida_core[verdi_shell,ssh,REST] --process-dependency-links
 
 This installs the verdi command into your python environment and puts the source into <folder/containing/aiida>/aiida.
 You can either activate the environment every time before using aiida (that way you could have multiple aiida versions installed in parallel), or you can add the verdi command to your path
@@ -260,7 +261,7 @@ If you use conda, verdi will be installed to (envs directory)/aiidapy/bin/verdi,
 
 among the listed information you will find an "envs directories".
 
-If you use virtualenvwrapper, you can find out in its online documentation where environments install their binaries.
+If you use `virtualenvwrapper`_, you can find out in its online documentation where environments install their binaries.
 
 If everything went smoothly, congratulations! Now the code is installed!
 
@@ -273,8 +274,14 @@ Next steps:
 
 .. _quicksetup:
 
-Quicksetup
-++++++++++
+Verdi Quicksetup
+++++++++++++++++
+
+Usage::
+
+	``verdi quicksetup --help``
+
+This command will try to create everything that is needed to start working with aiida. This includes a postgres database with user and an aiida configuration with a profile. This command can not be used to edit existing profiles.
 
 Make sure your postgresql daemon is running and you are either a postgres super user or have sudo rights to your system to switch to a postgres super user.
 
@@ -291,7 +298,12 @@ Optionally you cann pass the same information as commandline options::
 
 More commandline options are available in case you custom configured your postgresql installation, or if you would like to store your setup under a different profile name than "quicksetup". For an overview use::
 
-   $ verdi quicksetup -h
+   $ verdi quicksetup --help
+
+.. _setup:
+
+Verdi Setup
++++++++++++
 
 
 .. TODO: confirm replaced by above Installing AiiDA

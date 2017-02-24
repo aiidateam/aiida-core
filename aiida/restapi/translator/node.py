@@ -1,9 +1,7 @@
-from aiida.restapi.translator.base import BaseTranslator
-from aiida.restapi.caching import cache
 from aiida.common.exceptions import InputValidationError, ValidationError, \
     InvalidOperation
 from aiida.restapi.common.exceptions import RestValidationError
-from aiida.restapi.common.config import CACHING_TIMEOUTS, custom_schema
+from aiida.restapi.translator.base import BaseTranslator
 
 
 class NodeTranslator(BaseTranslator):
@@ -24,25 +22,31 @@ class NodeTranslator(BaseTranslator):
 
     _content_type = None
 
-    # Extract the default projections from custom_schema if they are defined
-    if 'columns' in custom_schema:
-        _default_projections = custom_schema['columns'][__label__]
-    else:
-        _default_projections = ['**']
-
     _alist = None
     _nalist = None
     _elist = None
     _nelist = None
 
-    def __init__(self):
+    def __init__(self, Class=None, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
         """
-        # basic query_help object
-        super(NodeTranslator, self).__init__()
 
+        # Assume default class is this class (cannot be done in the
+        # definition as it requires self)
+        if Class is None:
+            Class = self.__class__
+
+        # basic initialization
+        super(NodeTranslator, self).__init__(Class=Class, **kwargs)
+
+        # Extract the default projections from custom_schema if they are defined
+        if self.custom_schema is not None and 'columns' in self.custom_schema:
+            self._default_projections = self.custom_schema['columns'][
+                self.__label__]
+        else:
+            self._default_projections = ['**']
 
     def set_query_type(self, query_type, alist=None, nalist=None, elist=None,
                        nelist=None):
@@ -211,7 +215,6 @@ class NodeTranslator(BaseTranslator):
        from aiida.orm.querybuilder import QueryBuilder as QB
        from aiida.orm import User
        from collections import Counter
-       from datetime import datetime
 
        def count_statistics(dataset):
 

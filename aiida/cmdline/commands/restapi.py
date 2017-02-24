@@ -32,8 +32,8 @@ class Restapi(VerdiCommand):
         Hook up the default RESTful API of AiiDA.
         args include port, host, config_file
         """
-        from aiida.restapi.api import app
-        from aiida.restapi.common.flaskrun import flaskrun
+        from aiida.restapi.api import App, AiidaApi
+        from aiida.restapi.run_api import run_api
 
         # Construct dparameter dictionary
         kwargs = dict(
@@ -44,7 +44,7 @@ class Restapi(VerdiCommand):
             parse_aiida_profile=self.parse_aiida_profile)
 
         # Invoke the runner
-        flaskrun(app, *args, **kwargs)
+        run_api(App, AiidaApi, *args, **kwargs)
 
     def complete(self, subargs_idx, subargs):
         """

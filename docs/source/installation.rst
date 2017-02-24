@@ -278,18 +278,18 @@ Make sure your postgresql daemon is running and you are either a postgres super 
 
 Setup and configure aiida using::
       
-   $ verdi quickinstall
+   $ verdi quicksetup
 
 This will prompt you for an email address, first and last name and institution.
 Remember that it is important for this information to be accurate if you wish to share your results with other aiida users.
 
 Optionally you cann pass the same information as commandline options::
 
-   $ verdi quickinstall --email=<email> --first-name=<First> --last-name=<Last> --institution=<Inst>
+   $ verdi quicksetup --email=<email> --first-name=<First> --last-name=<Last> --institution=<Inst>
 
 More commandline options are available in case you custom configured your postgresql installation, or if you would like to store your setup under a different profile name than "quicksetup". For an overview use::
 
-   $ verdi quickinstall -h
+   $ verdi quicksetup -h
 
 
 .. TODO: confirm replaced by above Installing AiiDA

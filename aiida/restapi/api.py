@@ -8,12 +8,6 @@ Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 from flask import Flask, jsonify
 from flask_restful import Api
 
-from aiida.restapi.common.exceptions import RestInputValidationError, \
-    RestValidationError
-from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
-    Node, User
-
-
 # TODo Transform the app into aa class to be instantiated by the runner
 
 class App(Flask):
@@ -23,11 +17,22 @@ class App(Flask):
 
     def __init__(self, *args, **kwargs):
 
+        from aiida.restapi.common.exceptions import RestInputValidationError, \
+            RestValidationError
+
         # Basic initialization
         super(App, self).__init__(*args, **kwargs)
 
-        if 'catch_internal_server' in kwargs and kwargs['catch_internal_server']:
 
+        # Decide whether or not to catch the internal server exceptions (
+        # default is True)
+        catch_internal_server = True
+
+        if 'catch_internal_server' in kwargs and not kwargs[
+            'catch_internal_server']:
+            catch_internal_server = False
+
+        if catch_internal_server:
             # Error handler
             @self.errorhandler(Exception)
             def error_handler(error):
@@ -68,6 +73,10 @@ class AiidaApi(Api):
             **kwargs: parameters to be passed to the resources for
             configuration and PREFIX
         """
+
+        from aiida.restapi.resources import Calculation, Computer, Code, Data, \
+            Group, \
+            Node, User
 
         super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'])
 

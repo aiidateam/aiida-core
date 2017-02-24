@@ -406,7 +406,7 @@ class BaseTranslator(object):
 
         results = []
         if self._total_count > 0:
-            results = self.qb.all()
+            results = [res[label] for res in self.qb.dict()]
 
         # TODO think how to make it less hardcoded
         if self._result_type == 'input_of':

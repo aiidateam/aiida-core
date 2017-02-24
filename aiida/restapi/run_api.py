@@ -6,6 +6,7 @@ import os
 
 import aiida  # Mainly needed to locate the correct aiida path
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from flask_cors import CORS
 
 def run_api(App, Api, *args, **kwargs):
     """
@@ -138,6 +139,10 @@ def run_api(App, Api, *args, **kwargs):
 
     # Config the app
     app.config.update(**confs.APP_CONFIG)
+
+    # cors
+    cors_prefix = os.path.join(confs.PREFIX, "*");
+    cors = CORS(app, resources={r"" + cors_prefix : {"origins": "*"}})
 
     # Config the serializer used by the app
     if confs.SERIALIZER_CONFIG:

@@ -5,12 +5,14 @@ Installation and Deployment of AiiDA
 FAQ
 +++
 
-What Happened to ``verdi install``?
+What happened to ``verdi install``?
 -----------------------------------
 
 ``verdi install`` has been renamed to ``verdi setup``, a name we feel better reflects what the command does.
 
-What is a Virtual Environment (Virtualenv)?
+.. _install.faq.virtualenv:
+
+What is a virtual environment (virtualenv)?
 -------------------------------------------
 
 A python virtual environment is essentially a folder, containing everything needed to run python programs, including
@@ -28,7 +30,15 @@ Packages can be installed into an environment by activating it and then using th
 
 The creator of a virtualenv can install packages into it without using ``sudo``, therefore this technique can be used on machines where one has restricted access.
 
-Why Install AiiDA Into a Virtualenv?
+To create a virtual environment named aiidapy in your home folder, assuming you have a working installation of Python 2.7.x::
+   
+      $ pip install -U setuptools pip wheel virtualenv
+      $ virtualenv ~/aiidapy # or equivalent
+      $ source ~/aiidapy/bin/activate
+
+After the last line, the environment is activated, ``python`` will point to ``~/aiidapy/bin/python`` and packages will by default be installed into ``~/aiidapy/lib/python2.7/site-packages`` (or similar).
+
+Why install AiiDA into a virtualenv?
 ------------------------------------
 
 AiiDA depends on third party python packages. Because AiiDA is not compatible with all versions and specifically not always with the newest version of each of these dependencies, installing AiiDA might up- or downgrade third party packages you are already using. Similarly a package you install at a later point might request an incompatible version of one of AiiDA's dependencies.
@@ -36,7 +46,7 @@ AiiDA depends on third party python packages. Because AiiDA is not compatible wi
 In Summary, installing AiiDA might interfere with installed python packages, installing other packages might interfere with AiiDA.
 Since your scientific data is important to you and to us, we *strongly* recommend isolating AiiDA in a virtual environment.
 
-Quickstart (New Users)
+Quickstart (new users)
 ++++++++++++++++++++++
 
 Get started immediately with just a few commands! Look at :ref:`quicksetup` for more details
@@ -113,7 +123,7 @@ If you prefer not to use a package manager, follow the links in :ref:`install_de
 
 .. _Homebrew: http://brew.sh/index_de.html
 
-Other Systems and Custom Setups
+Other systems and custom setups
 +++++++++++++++++++++++++++++++
  
 For new and inexperienced users we strongly recommend to start with the Quickstart procedure detailed above. It is possible to customize your configuration afterwards if necessary.
@@ -124,7 +134,7 @@ reinstall everything from scratch, read the instructions in
 
 If you are trying to install AiiDA on another system than Ubunto or OS X, please take a look at :ref:`install_dependencies` before proceeding with one of the following.
 
-* Install AiiDA on another system :ref:`installing_aiida`
+* Install AiiDA on another system :ref:`install.other.install`
 * Setup AiiDA using quicksetup :ref:`quicksetup`
 * Using setup for more options or to customize your user profile :ref:`setup`
 * Using setup to programatically install AiiDA :ref:`setup-noninteractive`
@@ -141,7 +151,7 @@ If you are trying to install AiiDA on another system than Ubunto or OS X, please
 ..   * :ref:`Server setup`
 ..   * :ref:`Developer`
 
-Installation Requirements
+Installation requirements
 -------------------------
 Read on for more information about the kind of operating system AiiDA can run on and what software needs to be installed before AiiDA can work.
 
@@ -157,19 +167,19 @@ AiiDA should run on:
 * Older / newer Ubuntu versions
 * Other Linux distributions
 
-.. TODO: remove / replace with above?
+.. OLD:
 .. AiiDA has a few strict requirements, in its current version:
 .. first, it will run only on Unix-like systems - it
 .. is tested (and developed) in Mac OS X and Linux (Ubuntu), but other Unix
 .. flavours *should* work as well.
 
-.. TODO: move to Add computing resources
+.. OLD:
 .. Moreover, on the clusters (computational resources) side, it expects to find
 .. a Unix system, and the default shell is **required** to be ``bash``.
 
 .. _install_dependencies:
 
-Required Software
+Required software
 ^^^^^^^^^^^^^^^^^
 The following are required to be installed on your computer:
 
@@ -187,9 +197,9 @@ The following are required to be installed on your computer:
 .. _PostgreSQL: https://www.postgresql.org/downloads
 
 
-.. _installing_aiida:
+.. _install.other.install:
 
-Installing AiiDA (Other Systems)
+Installing AiiDA (other systems)
 --------------------------------
 
 1. Create a virtual python environment, this is done so installing aiida can not accidentally up- or downgrade any of your system's python packages.::
@@ -213,18 +223,21 @@ Installing AiiDA (Other Systems)
 This installs the verdi command into your python environment and puts the source into <folder/containing/aiida>/aiida.
 You can either activate the environment every time before using aiida (that way you could have multiple aiida versions installed in parallel), or you can add the verdi command to your path
 
-4. (optional) add verdi to your path: 
+4. (optional) add AiiDA's executables to your path or create aliases: 
    
    Add this to your .bashrc or .bash_profile or equivalent, assuming you installed with virtualenv::
 
-      export PATH="${PATH}:~/aiidapy/bin/verdi
+      export PATH="${PATH}:~/aiidapy/bin
+
+   or::
+
+      alias verdi=~/aiidapy/bin/verdi
+      alias runaiida=~/aiidapy/bin/runaiida
 
 If you use conda, verdi will be installed to (envs directory)/aiidapy/bin/verdi, where envs directory depends on which version of Anaconda or Miniconda you use, for miniconda2 the default is ~/miniconda2/envs/.
-If you enter::
+The following command line will print the correct path::
 
-   conda info
-
-among the listed information you will find an "envs directories".
+   conda info | grep "envs directories"
 
 If you use `virtualenvwrapper`_, you can find out in its online documentation where environments install their binaries.
 
@@ -232,11 +245,11 @@ If everything went smoothly, congratulations! Now the code is installed!
 
 Next steps:
 
-* :ref:`set up AiiDA using quicksetup<quicksetup>`
+* set up aiida using :ref:`verdi quicksetup (New Users)<quicksetup>` or :ref:`verdi setup (Experienced Users)<setup>`
 
 .. _create_db:
 
-Create A Database
+Create a database
 -----------------
 
 Run the following to create a database for use with an aiida profile. Replace
@@ -258,7 +271,7 @@ Run the following to create a database for use with an aiida profile. Replace
 .. * :ref:`Try out AiiDA for the first time`
 .. * :ref:`Custom configuration` for more advanced configurations.
 
-.. TODO: is this really necessary?
+.. OLD:
 .. Installing Required Dependencies
 .. ++++++++++++++++++++++++++++++++
 .. 
@@ -286,7 +299,7 @@ Run the following to create a database for use with an aiida profile. Replace
 .. Installation of the core dependencies
 .. +++++++++++++++++++++++++++++++++++++
 
-.. TODO: definitely unnecessary now?
+.. OLD:
 .. Database
 .. --------
 .. 
@@ -295,16 +308,16 @@ Run the following to create a database for use with an aiida profile. Replace
 .. 
 .. .. _other_core_dependencies:
 
-.. TODO: confirm removal
+.. OLD:
 .. Some of them are mandatory, while others are optional (but often strongly suggested), also depending for instance on the :doc:`type of database <database/index>` that you plan to use.
 
-.. TODO: confirm has been replaced by below
+.. OLD:
 .. Here is a list of packages/programs that you need to install (for each of them,
 .. there may be a specific/easier way to install them in your distribution, as
 .. for instance ``apt-get`` in Debian/Ubuntu -see below for the specific names
 .. of packages to install- or ``yum`` in RedHat/Fedora).
 
-.. TODO: confirm has been replaced by above
+.. OLD:
 .. * `git`_ (required to download the code)
 .. * `python-pip`_ (required to automatically download and install further
 ..   python packages required by AiiDA)
@@ -338,13 +351,13 @@ Run the following to create a database for use with an aiida profile. Replace
 ..   If you want to use postgreSQL, use a version greater than 9.1
 ..   (the greatest that your distribution supports).
 
-Additional Bash Configuration For Aiida
+Additional bash configuration for AiiDA
 ---------------------------------------
 
-PATH Settings
+PATH settings
 ^^^^^^^^^^^^^
 
-.. TODO: should be obsolete due to pip install and virtualenv
+.. OLD:
 .. Path configuration
 .. ------------------
 .. 
@@ -455,7 +468,7 @@ or to open a new shell window.
 
 If you chose to work with multiple aiida versions or just prefer explicitly working inside the virtual invironment in which you installed aiida, it might be a good idea to put the completion command into a postactivation hook of your python environment manager (look up in the documentation of your manager how to do this).
 
-Optional Dependencies
+Optional dependencies
 ---------------------
 
 .. _CIF_manipulation_dependencies:
@@ -499,10 +512,10 @@ For the setting up of cod-tools please refer to
 .. _jmol: http://jmol.sourceforge.net
 .. _pyspglib: http://spglib.sourceforge.net/pyspglibForASE/
 
-Setting Up AiiDA For Use
+Setting up AiiDA for use
 ++++++++++++++++++++++++
 
-Adding and Editing Profiles
+Adding and editing profiles
 ---------------------------
 
 If you wish aiida to try to automatically create a database for your new profile and to guess sensible defaults for all the values you leave out you can add a profile using::
@@ -583,7 +596,7 @@ Then, the following prompts will help you configure the database. Typical settin
 	Insert the new password:
 	Insert the new password (again):
 
-.. TODO: confirm remove
+.. OLD:
 .. .. note:: When the "Database engine" is asked, use 'sqlite3' **only if** you want
 ..   to try out AiiDA without setting up a database.
 .. 
@@ -629,12 +642,12 @@ Can be used to create profiles from scripts. If not all values are given on the 
 
 For a list of options that have to be passed.
 
-Command Reference
+Command reference
 +++++++++++++++++
 
 .. _quicksetup:
 
-Verdi Quicksetup
+Verdi quicksetup
 ----------------
 
 Usage::
@@ -663,7 +676,7 @@ More commandline options are available in case you custom configured your postgr
 
 .. _setup:
 
-Verdi Setup
+Verdi setup
 -----------
 
 This command was previously called ``verdi install``
@@ -680,7 +693,7 @@ Usage::
    $ verdi setup [options] profile
    $ verdi setup --non-interactive OPTIONS profile
 
-.. TODO: confirm replaced by above Installing AiiDA
+.. OLD:
 .. Downloading the code
 .. ++++++++++++++++++++
 .. 
@@ -790,7 +803,7 @@ the results of finished calculations, and managing the workflow steps.
 
 The next step will be to add computational resources (computers, codes) to work with 
 The documentation for these steps can be found :doc:`here<setup/computerandcodes>`.
-.. TODO: should be replaced by concepts section
+.. OLD:
 .. (i.e.,
 .. on computational resource as a cluster or a supercomputer, on which you want
 .. to run your calculations) *and one code*. 
@@ -898,6 +911,19 @@ Updating AiiDA from a previous version
     ``pip install --user -U -r requirements.txt``.
   * If you installed aiida using pip you should be simply able to pip install --upgrade aiida (from the python environment into which aiida is installed).
 
+Updating from 0.7.0 Django to 0.8.0 Django
+------------------------------------------
+
+1. Stop the AiiDA daemon using ``verdi daemon stop``
+
+2. Undo all PATH and PYTHONPATH changes in your ``.bashrc`` and similar files you did to add ``verdi`` and ``runaiida``. The link in step 3 documents how to set them for the new version.
+
+3. Install AiiDA into a :ref:`virtual python environment (virtualenv) <install.faq.virtualenv>`, following :ref:`install.other.install`.
+   Optionally set bash aliases for the ``verdi`` and ``runaiida`` installed into the ``bin/`` folder of the virtual environment
+
+4. Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes to your profile should be necessary. This step is necessary as it updates some internal configuration files and run a database migration.
+
+.. TODO: Add "Execute the migration script" if necessary
 
 Updating from 0.6.0 Django to 0.7.0 Django
 ------------------------------------------

@@ -53,7 +53,7 @@ Since your scientific data is important to you and to us, we *strongly* recommen
 For a single purpose machine, only meant to run AiiDA and nothing else, you may at your own risk simply leaving away the steps to setup and activate the virtual environment. You may want to install AiiDA and it's dependencies with the --user flag to avoid having to use sudo in that case.
 
 How to use verdi tab-completion with a virtualenv?
-----------------------------------------------
+--------------------------------------------------
 
 Verdi tab-completion is enabled by evaluating the output of ``verdi completioncommand`` (either with ``eval`` or by pasting it into a bash script and sourcing it).
 You can automatically run ``eval "$(verdi completioncommand)"`` when you activate the environment (especially useful when you use multiple environments for development). To achieve this, simply append the line to the end of your ``aiidapy/bin/activate`` (which is a bash script). You can use this trick to do things like automatically start the daemon, etc.

@@ -553,7 +553,7 @@ a python shell and type::
 
 as AiiDA will not accept a timezone string that is not in the above list.
 
-As a second parameter to input during the ``verdi install`` phase,
+As a second parameter to input during the ``verdi setup`` phase,
 the "Default user email" is asked.
 
 We suggest here to use your institution email, that will be used to associate
@@ -772,7 +772,7 @@ To configure the deamon, run::
     verdi daemon configureuser
 
 and (after having read and understood the warning text that appears) insert
-the email that you used above during the ``verdi install`` phase.
+the email that you used above during the ``verdi setup`` phase.
 
 
 To try AiiDA and start the daemon, run::
@@ -862,7 +862,7 @@ Further comments and troubleshooting
  
 
 * For some reasons, on some machines (notably often on Mac OS X) there is no
-  default locale defined, and when you run ``verdi install`` for the first
+  default locale defined, and when you run ``verdi setup`` for the first
   time it fails (see also `this issue`_ of django).  To solve the problem, first
   remove the sqlite database that was created.
 
@@ -872,7 +872,7 @@ Further comments and troubleshooting
      export LANG="en_US.UTF-8"
      export LC_ALL="en_US.UTF-8"
 
-  and then run ``verdi install`` again.
+  and then run ``verdi setup`` again.
 
 .. _this issue: https://code.djangoproject.com/ticket/16017
 
@@ -921,7 +921,7 @@ Updating from 0.7.0 Django to 0.8.0 Django
 3. Install AiiDA into a :ref:`virtual python environment (virtualenv) <install.faq.virtualenv>`, following :ref:`install.other.install`.
    Optionally set bash aliases for the ``verdi`` and ``runaiida`` installed into the ``bin/`` folder of the virtual environment
 
-4. Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes to your profile should be necessary. This step is necessary as it updates some internal configuration files and run a database migration.
+4. Rerun ``verdi setup`` (formerly ``verdi setup``), no manual changes to your profile should be necessary. This step is necessary as it updates some internal configuration files and run a database migration.
 
 .. TODO: Add "Execute the migration script" if necessary
 

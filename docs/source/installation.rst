@@ -87,6 +87,8 @@ If your distribution uses a different package manager, simply replace the comman
    (aiidapy) $ pip install -e aiida_core[verdi_shell,ssh,REST] --process-dependency-links
 
 
+The ``[verdi_shell,...]`` part of the last line above is to specify optional features. To install additonal optional features, simply run the line again with a changed list of optional features.
+
 For the next step to work, postgres must be running on port ``5432``. This should automatically be the case once it is installed (on Ubuntu).
 If you have changed the default configuration of postgres, you will be asked for the details. Refer to the `PostgresQL`_ documentation for details on how to ensure your postgres is running. Read ``(aiidapy) $ verdi quicksetup --help`` to see how to supply information about your postgres configuration beforehand.
 
@@ -100,7 +102,7 @@ Alternatively you can give your information as commandline options (use the ``--
 5. (optional) Add the verdi command to your PATH::
 
    $ # for bash:
-   $ echo "export PATH="${PATH}:~/aiidapy/bin/verdi" >> ~/.bashrc
+   $ echo "export PATH="${PATH}:~/aiidapy/bin" >> ~/.bashrc
 
 Instead you might create a shell alias or explicitly activate (``source ~/aiidapy/bin/activate``) the virtualenvironment before working with aiida.
 If you are using a virtualenv manager like `virtualenvwrapper`_, or `conda`_, it is possible to set up the environment so that activating it launches the AiiDA daemon and possibly initializes other things for you. How this is done is described in your virtualenv manager's documentation.
@@ -227,7 +229,9 @@ Installing AiiDA (other systems)
    (aiidapy) $ pip install -e aiida_core[verdi_shell,ssh,REST] --process-dependency-links
 
 This installs the verdi command into your python environment and puts the source into <folder/containing/aiida>/aiida.
-You can either activate the environment every time before using AiiDA (that way you could have multiple AiiDA versions installed in parallel), or you can add the verdi command to your path
+You can either activate the environment every time before using AiiDA (that way you could have multiple AiiDA versions installed in parallel), or you can add the verdi command to your path.
+
+The ``[verdi_shell,...]`` part of the last line above is to specify optional features. To install additonal optional features, simply run the line again with a changed list of optional features.
 
 4. (optional) add AiiDA's executables to your path or create aliases: 
    
@@ -927,7 +931,7 @@ Updating from 0.7.0 Django to 0.8.0 Django
 3. Install AiiDA into a :ref:`virtual python environment (virtualenv) <install.faq.virtualenv>`, following :ref:`install.other.install`.
    Optionally set bash aliases for the ``verdi`` and ``runaiida`` installed into the ``bin/`` folder of the virtual environment
 
-4. Rerun ``verdi setup`` (formerly ``verdi setup``), no manual changes to your profile should be necessary. This step is necessary as it updates some internal configuration files and run a database migration.
+4. Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes to your profile should be necessary. This step is necessary as it updates some internal configuration files and run a database migration.
 
 .. TODO: Add "Execute the migration script" if necessary
 

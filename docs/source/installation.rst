@@ -944,7 +944,8 @@ to run a migration that will update your database to the current standard.
 The migration script assumes that you are using the previous AiiDA version,
 so this means one has to migrate in steps, from the version of AiiDA you were using, 
 until the current one. For instance, if you are currently using AiiDA 0.5,
-you should first update to 0.6, then to 0.7, and finally to 0.8.
+you should first update to 0.6, then to 0.7, and finally to 0.8. Do not forget to 
+**deactivate** the current virtual environment before switching to the new version.
 
 For *each intermediate update* (e.g. when you update from 0.5 to 0.6 in the above example),
 do the following::
@@ -965,6 +966,13 @@ if you are updating to a version prior or equal to 0.7, do::
   git checkout "v<VERSION>"
   pip install -U -r requirements.txt
 
+If needed, update the ``PATH`` and ``PYTHONPATH`` environment variables 
+in your `~/.bashrc` file (replacing <AiiDA_folder> with the folder in 
+which you just installed AiiDA)::
+  
+    export PATH="${PATH}:<AiiDA_folder>/bin"
+    export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
+
 For the final update (to version 0.8) type instead::
 
   git clone git@github.com:aiidateam/aiida_core.git
@@ -975,7 +983,7 @@ you wish to install (see the :ref:`quick start instructions<quickstart-ubuntu>`)
 
 .. note::
   A few general remarks:
-  * For some early version (0.5, )you might need to install (with `pip install`)
+  * For some early version (0.5, 0.6, ) you might need to install (with `pip install`)
     some dependencies located in `optional_requirements.txt` (e.g. `psycopg2==2.6`
     for postgresql database users), as well as `ipython` to get a proper shell.
   * If you want to update the code in the same folder, but modified some files locally,
@@ -1060,48 +1068,30 @@ This migration will update your AiiDA configuration files making them
 compatible with AiiDA version 0.6.0.
 
 .. note::
-  We performed a lot of changes to introduce in one of our following
-  releases a second object-relational mapper (we will refer to it as
-  back-end) for the management of the used DBMSs and more specifically
-  of PostgreSQL.
-
-  Even if most of the needed restructuring & code addition has been finished,
-  a bit of more work is needed before we make the new back-end available.
-
-.. note::
   A few important points regarding the upgrade:
-
-  * Please try to checkout the latest version from the corresponding
-    development branch. Problems encountered are resolved and fixes are
-    pushed to the branch.
+  * In this version a lot of changes were introduced in order to allow
+    a second object-relational mapper later (we will refer to it as
+    backend) for the management of the used DBMSs and more specifically
+    of PostgreSQL.
+    Even if most of the needed restructuring & code addition was finished,
+    a bit of more work was needed to get the new backend available.
   * You can not directly import data (``verdi import``) that you have exported
     (``verdi export``) with a previous version of AiiDA. Please use
     :download:`this script <examples/convert_exportfile_version.py>`
     to convert it to the new schema. (Usage: ``python
     convert_exportfile_version.py input_file output_file``).
 
-
 To perform the update:
 
-* Stop your daemon (using ``verdi daemon stop``).
-* Backup your configuration files that are in .aiida directory.
-* Replace the AiiDA folder with the new one (e.g. by doing a ``git pull``).
-  If you use the same folder name, you will not need to update the
-  ``PATH`` and ``PYTHONPATH`` variables.
-* Execute the migration script (``python _your_aiida_folder_/aiida/common/additions/migration.py``).
-* Start again you daemon (using ``verdi daemon start``).
-
+* Follow the general update instructions above (see :ref:`here<updating_aiida>`).
+  **Note: before the `pip install` step, replace `ultrajson` with
+  `ujson` in the `requirements.txt` file.** 
+* Execute the migration script (``python <AiiDA_folder>/aiida/common/additions/migration.py``).
 
 Updating from 0.4.1 to 0.5.0
 ----------------------------
-* Follow the general update instructions above (see :ref:`here<updating_aiida>`).
-  If needed, update the ``PATH`` and ``PYTHONPATH`` environment variables 
-  in your `~/.bashrc` file (replacing <AiiDA_folder> with the folder in 
-  which you just installed AiiDA)::
-  
-    export PATH="${PATH}:<AiiDA_folder>/bin"
-    export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
-    
+
+* Follow the general update instructions above (see :ref:`here<updating_aiida>`).   
 * Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
   raise an exception, and in the exception message you will see the
   command to run to update the schema version of the DB (version 0.5

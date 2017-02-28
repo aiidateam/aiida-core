@@ -94,7 +94,7 @@ If your distribution uses a different package manager, simply replace the comman
    
    (aiidapy) $ cd <where_you_want_the_aiida_sourcecode>
    (aiidapy) $ git clone https://github.com/aiidateam/aiida_core
-   (aiidapy) $ pip install -e aiida_core[verdi_shell,ssh,REST] --process-dependency-links
+   (aiidapy) $ pip install -e aiida_core[verdi_shell,ssh,REST]
 
 
 The ``[verdi_shell,...]`` part of the last line above is to specify optional features. To install additonal optional features, simply run the line again with a changed list of optional features.
@@ -236,7 +236,7 @@ Installing AiiDA (other systems)
 
    (aiidapy) $ cd <where_you_want_the_aiida_sourcecode>
    (aiidapy) $ git clone https://github.com/aiidateam/aiida_core
-   (aiidapy) $ pip install -e aiida_core[verdi_shell,ssh,REST] --process-dependency-links
+   (aiidapy) $ pip install -e aiida_core[verdi_shell,ssh,REST]
 
 This installs the verdi command into your python environment and puts the source into <folder/containing/aiida>/aiida.
 You can either activate the environment every time before using AiiDA (that way you could have multiple AiiDA versions installed in parallel), or you can add the verdi command to your path.

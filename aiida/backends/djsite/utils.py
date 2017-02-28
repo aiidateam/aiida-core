@@ -52,7 +52,10 @@ class DBLogHandler(logging.Handler):
         try:
             from aiida.backends.djsite.db.models import DbLog
 
+            print "RECORD", record.__dict__
+            print "before", DbLog.objects.all().values()
             DbLog.add_from_logrecord(record)
+            print "after", DbLog.objects.all().values()
 
         except ImproperlyConfigured:
             # Probably, the logger was called without the

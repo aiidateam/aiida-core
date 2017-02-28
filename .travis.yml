@@ -30,8 +30,8 @@ addons:
 ## because otherwise the code would complain. Also, I need latex.
 env: 
     - TEST_AIIDA_BACKEND=django COMPILE_DOCS=false
-    - TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
-    - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
+#    - TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
+#    - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
 
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
@@ -54,7 +54,7 @@ before_script:
 
 script:
     # Compile the docs (HTML format); -W to convert warnings in errors, -n to warn about all missing references
-    - if [[ "$COMPILE_DOCS" == "true" ]] ; then verdi profile setdefault verdi test_${TEST_AIIDA_BACKEND} && SPHINXOPTS="-nW" make -C docs html ; else verdi -p test_$TEST_AIIDA_BACKEND devel tests ; fi
+    - if [[ "$COMPILE_DOCS" == "true" ]] ; then verdi profile setdefault verdi test_${TEST_AIIDA_BACKEND} && SPHINXOPTS="-nW" make -C docs html ; else verdi -p test_$TEST_AIIDA_BACKEND devel tests db.djangomigrations ; fi
 
 git:
   depth: 3

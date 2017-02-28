@@ -143,7 +143,7 @@ class DbNode(m.Model):
        modify them, but can be changed (e.g., the append_text of a code, that
        can be redefined if the code has to be recompiled).
     """
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION, db_index=True)
     # in the form data.upffile., data.structure., calculation., code.quantumespresso.pw., ...
     # Note that there is always a final dot, to allow to do queries of the
     # type (type__startswith="calculation.") and avoid problems with classes

@@ -1,0 +1,13 @@
+{ "output_parameters" : {
+         "forward_activation_energy": [{
+                    "comparison" : "AlmostEqual",
+                    "value" : 0.397961
+                    }],
+          "path_length": [{
+                    "comparison": "AlmostEqual",
+                    "value": 0.79429499009359
+                    }]
+          } ,
+  "output_mep" : {},   
+  "output_trajectory": {}                  
+}

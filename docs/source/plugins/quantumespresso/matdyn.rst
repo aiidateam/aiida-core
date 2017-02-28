@@ -1,9 +1,6 @@
 Matdyn
 ++++++
 
-.. note:: The Matdyn plugin referenced below is available in the EPFL
-        version.
-
 Description
 -----------
 Use the plugin to support inputs of Quantum Espresso matdyn.x executable.

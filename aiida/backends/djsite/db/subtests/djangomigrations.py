@@ -68,6 +68,7 @@ class CalcStateChanges(AiidaTestCase):
                 time__gt=time_before_fix
             )
             self.assertEquals(len(result), 1,
-                              "Couldn't find a warning message with the change"
-                              "from {} to {}".format(state, calc_states.FAILED)
+                              "Couldn't find a warning message with the change "
+                              "from {} to {}, or found too many: I got {} log "
+                              "messages".format(state, calc_states.FAILED, len(result))
                               )

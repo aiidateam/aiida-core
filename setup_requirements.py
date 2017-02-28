@@ -1,7 +1,7 @@
 # Requirements for core AiiDA functionalities
 install_requires = [
     'pip==9.0.1',
-    'setuptools==34.1.0',
+#    'setuptools==34.1.0',
     'wheel==0.29.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',

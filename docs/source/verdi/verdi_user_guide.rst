@@ -38,6 +38,16 @@ accessed simultaneously by AiiDA. To install a new profile, use the
 
 .. note:: This profile selection has no effect on the ``verdi daemon`` commands.
 
+Some ambiguity might arise when a certain ``verdi`` subcommand manages both positional arguments and at least one option which accepts an unspecified number of arguments. Make sure you insert the separator ``--`` between the last optional argument and the first positional argument. As an example, instead of typing::
+
+  verdi export -g group1 group2 group3 export.aiida
+
+rather type::
+
+  verdi export -g group1 group2 group3 -- export.aiida
+
+ The previous comman will export the nodes owing to ``group1``, ``group2``, and ``group3`` (specified by the option ``-g``) into the file ``export.aiida``, which is taken as a positional argument.
+
 Below is a list with all the available subcommands.
 
 .. _calculation:

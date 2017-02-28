@@ -12,7 +12,7 @@ import numpy as np
 from aiida.parsers.plugins.quantumespresso.constants import bohr_to_ang
 from aiida.common.exceptions import ParsingError
 from aiida.orm.data.structure import StructureData, _valid_symbols
-
+from aiida.orm.calculation.job.quantumespresso import _uppercase_dict
 
 RE_FLAGS = re.M | re.X | re.I
 
@@ -409,7 +409,7 @@ def parse_namelists(txt):
             'No data was found while parsing the namelist in the following '
             'text\n' + txt
         )
-    return params_dict
+    return _uppercase_dict(params_dict, "params_dict")
 
 
 def parse_atomic_positions(txt):
@@ -446,9 +446,68 @@ def parse_atomic_positions(txt):
     :raises aiida.common.exceptions.ParsingError: if there are issues
         parsing the input.
     """
+    def str01_to_bool(s):
+        """
+        Map strings '0', '1' strings to bools: '0' --> True; '1' --> False.
+
+        While this is opposite to the QE standard, this mapping is what needs to
+        be passed to aiida in a 'settings' ParameterData object.
+        (See the _if_pos method of BasePwCpInputGenerator)
+        """
+        if s == '0':
+            return True
+        elif s == '1':
+            return False
+        else:
+            raise ParsingError(
+                'Unable to convert if_pos = "{}" to bool'.format(s)
+            )
+    
     # Define re for the card block.
     # NOTE: This will match card block lines w/ or w/out force modifications.
     atomic_positions_block_re = re.compile(r"""
+        ^ \s* ATOMIC_POSITIONS \s*                      # Atomic positions start with that string
+        [{(]? \s* (?P<units>\S+?)? \s* [)}]? \s* $\n    # The units are after the string in optional brackets
+        (?P<block>                                  # This is the block of positions
+            (
+                (
+                    \s*                                 # White space in front of the element spec is ok
+                    (
+                        [A-Za-z]+[A-Za-z0-9]{0,2}       # Element spec
+                        (
+                            \s+                         # White space in front of the number
+                            [-|+]?                      # Plus or minus in front of the number (optional)
+                            (
+                                (
+                                    \d*                 # optional decimal in the beginning .0001 is ok, for example
+                                    [\.]                # There has to be a dot followed by
+                                    \d+                 # at least one decimal
+                                )
+                                |                       # OR
+                                (
+                                    \d+                 # at least one decimal, followed by
+                                    [\.]?               # an optional dot ( both 1 and 1. are fine)
+                                    \d*                 # And optional number of decimals (1.00001)
+                                )                        # followed by optional decimals
+                            )
+                            ([E|e|d|D][+|-]?\d+)?       # optional exponents E+03, e-05
+                        ){3}                            # I expect three float values
+                        ((\s+[0-1]){3}\s*)?             # Followed by optional ifpos
+                        \s*                             # Followed by optional white space
+                        |
+                        \#.*                            # If a line is commented out, that is also ok
+                        |
+                        \!.*                            # Comments also with excl. mark in fortran
+                    )
+                    |                                   # OR
+                    \s*                                 # A line only containing white space
+                 )
+                [\n]                                    # line break at the end
+            )+                                          # A positions block should be one or more lines
+        )
+        """, re.X | re.M)
+
+    atomic_positions_block_re_ = re.compile(r"""
         ^ [ \t]* ATOMIC_POSITIONS [ \t]*
             [{(]? [ \t]* (?P<units>\S+?)? [ \t]* [)}]? [ \t]* $\n
         (?P<block>
@@ -463,19 +522,33 @@ def parse_atomic_positions(txt):
         )
         """, RE_FLAGS)
     # Define re for atomic positions without force modifications.
-    atomic_positions_re = re.compile(r"""
-        ^ [ \t]*
-        (?P<name>\S+) [ \t]+ (?P<x>\S+) [ \t]+ (?P<y>\S+) [ \t]+ (?P<z>\S+)
-            [ \t]* $\n?
-        """, RE_FLAGS)
-    # Define re for atomic positions with force modifications.
-    atomic_positions_constraints_re = re.compile(r"""
-        ^ [ \t]*
-        (?P<name>\S+) [ \t]+ (?P<x>\S+) [ \t]+ (?P<y>\S+) [ \t]+ (?P<z>\S+)
-            [ \t]+ [{(]? [ \t]* (?P<if_pos1>[01]) [ \t]+ (?P<if_pos2>[01])
-            [ \t]+ (?P<if_pos3>[01]) [ \t]* [)}]?
-        [ \t]* $\n?
-        """, RE_FLAGS)
+
+    
+    atomic_positions_w_constraints_re = re.compile(r"""
+        ^                                       # Linestart
+        [ \t]*                                  # Optional white space
+        (?P<name>[A-Za-z]+[A-Za-z0-9]{0,2})\s+   # get the symbol, max 3 chars, starting with a char
+        (?P<x>                                  # Get x
+            [\-|\+]?(\d*[\.]\d+ | \d+[\.]?\d*)
+            ([E|e|d|D][+|-]?\d+)?
+        )
+        [ \t]+
+        (?P<y>                                  # Get y
+            [\-|\+]?(\d*[\.]\d+ | \d+[\.]?\d*)
+            ([E|e|d|D][+|-]?\d+)?
+        )
+        [ \t]+
+        (?P<z>                                  # Get z
+            [\-|\+]?(\d*[\.]\d+ | \d+[\.]?\d*)
+            ([E|e|d|D][+|-]?\d+)?
+        )
+        [ \t]*
+        (?P<fx>[01]?)                           # Get fx
+        [ \t]*
+        (?P<fy>[01]?)                           # Get fx
+        [ \t]*
+        (?P<fz>[01]?)                           # Get fx
+        """, re.X | re.M)
     # Find the card block and extract units and the lines of the block.
     match = atomic_positions_block_re.search(txt)
     if not match:
@@ -496,23 +569,7 @@ def parse_atomic_positions(txt):
 
     # Define a small helper function to convert if_pos strings to bools that
     # correspond to the mapping of BasePwCpInputGenerator._if_pos method.
-    def str01_to_bool(s):
-        """
-        Map strings '0', '1' strings to bools: '0' --> True; '1' --> False.
-
-        While this is opposite to the QE standard, this mapping is what needs to
-        be passed to aiida in a 'settings' ParameterData object.
-        (See the _if_pos method of BasePwCpInputGenerator)
-        """
-        if s == '0':
-            return True
-        elif s == '1':
-            return False
-        else:
-            raise ParsingError(
-                'Unable to convert if_pos = {} to bool'.format(s)
-            )
-
+    
     # Define a small helper function to convert strings of fortran-type floats.
     fortfloat = lambda s: float(s.replace('d', 'e').replace('D', 'E'))
     # Parse the lines of the card block, extracting an atom name, position
@@ -520,25 +577,28 @@ def parse_atomic_positions(txt):
     names, positions, fixed_coords = [], [], []
     # First, try using the re for lines without force modifications. Set the
     # default force modification to the default (True) for each atom.
-    for match in atomic_positions_re.finditer(blockstr):
-        names.append(match.group('name'))
-        positions.append(map(fortfloat, match.group('x', 'y', 'z')))
-        fixed_coords.append(3 * [False])  # False <--> not fixed (the default)
+    # PROBLEM this changes the order of the atoms, which is unwanted!
+    #~ for match in atomic_positions_re.finditer(blockstr):
+        #~ names.append(match.group('name'))
+        #~ positions.append(map(fortfloat, match.group('x', 'y', 'z')))
+        #~ fixed_coords.append(3 * [False])  # False <--> not fixed (the default)
     # Next, try using the re for lines with force modifications.
-    for match in atomic_positions_constraints_re.finditer(blockstr):
-        names.append(match.group('name'))
+    for match in atomic_positions_w_constraints_re.finditer(blockstr):
         positions.append(map(fortfloat, match.group('x', 'y', 'z')))
-        if_pos123 = match.group('if_pos1', 'if_pos2', 'if_pos3')
-        fixed_coords.append(map(str01_to_bool, if_pos123))
+        fixed_coords_this_pos = [f or '1' for f in match.group('fx', 'fy', 'fz')] # False <--> not fixed (the default)
+        fixed_coords.append(map(str01_to_bool, fixed_coords_this_pos)) 
+        names.append(match.group('name'))
+
     # Check that the number of atomic positions parsed is equal to the number of
     # lines in blockstr
-    n_lines = len(blockstr.rstrip().split('\n'))
-    if len(names) != n_lines:
-        raise ParsingError(
-            'Only {} atomic positions were parsed from the {} lines of the '
-            'ATOMIC_POSITIONS card block:\n{}'.format(len(names), n_lines,
-                                                      blockstr)
-        )
+    # LK removed this check since lines can be commented out, and that is fine.
+    # n_lines = len(blockstr.rstrip().split('\n'))
+    #~ if len(names) != n_lines:
+        #~ raise ParsingError(
+            #~ 'Only {} atomic positions were parsed from the {} lines of the '
+            #~ 'ATOMIC_POSITIONS card block:\n{}'.format(len(names), n_lines,
+                                                      #~ blockstr)
+        #~ )
     info_dict = dict(units=units, names=names, positions=positions,
                      fixed_coords=fixed_coords)
     return info_dict
@@ -576,18 +636,85 @@ def parse_cell_parameters(txt):
     """
     # Define re for the card block.
     cell_parameters_block_re = re.compile(r"""
-        ^ [ \t]* CELL_PARAMETERS [ \t]*
-            [{(]? [ \t]* (?P<units>\S+?)? [ \t]* [)}]? [ \t]* $\n
+        ^ [ \t]*
+        CELL_PARAMETERS [ \t]*
+        [{(]? \s* (?P<units>[a-z]*) \s* [)}]? \s* [\n]
         (?P<block>
-         (?:
-          ^ [ \t]* \S+ [ \t]+ \S+ [ \t]+ \S+ [ \t]* $\n?
-         ){3}
+        (
+            (
+                \s*             # White space in front of the element spec is ok
+                (
+                    # First number
+                    (
+                        [-|+]?   # Plus or minus in front of the number (optional)
+                        (\d*     # optional decimal in the beginning .0001 is ok, for example
+                        [\.]     # There has to be a dot followed by
+                        \d+)     # at least one decimal
+                        |        # OR
+                        (\d+     # at least one decimal, followed by
+                        [\.]?    # an optional dot
+                        \d*)     # followed by optional decimals
+                        ([E|e|d|D][+|-]?\d+)?  # optional exponents E+03, e-05, d0, D0
+                    
+                        (
+                            \s+      # White space between numbers
+                            [-|+]?   # Plus or minus in front of the number (optional)
+                            (\d*     # optional decimal in the beginning .0001 is ok, for example
+                            [\.]     # There has to be a dot followed by
+                            \d+)     # at least one decimal
+                            |        # OR
+                            (\d+     # at least one decimal, followed by
+                            [\.]?    # an optional dot
+                            \d*)     # followed by optional decimals
+                            ([E|e|d|D][+|-]?\d+)?  # optional exponents E+03, e-05, d0, D0
+                        ){2}         # I expect three float values
+                    )
+                    |
+                    \#
+                    |
+                    !            # If a line is commented out, that is also ok
+                )
+                .*               # I do not care what is after the comment or the vector
+                |                # OR
+                \s*              # A line only containing white space
+             )
+            [\n]                 # line break at the end
+        ){3}                     # I need exactly 3 vectors
+    )
+    """, RE_FLAGS)
+    
+    
+    cell_vector_regex = re.compile(r"""
+        ^                        # Linestart
+        [ \t]*                   # Optional white space
+        (?P<x>                   # Get x
+            [\-|\+]? ( \d*[\.]\d+ | \d+[\.]?\d*)
+            ([E|e|d|D][+|-]?\d+)?
         )
-        """, RE_FLAGS)
+        [ \t]+
+        (?P<y>                   # Get y
+            [\-|\+]? (\d*[\.]\d+ | \d+[\.]?\d*)
+            ([E|e|d|D][+|-]?\d+)?
+        )
+        [ \t]+
+        (?P<z>                   # Get z
+            [\-|\+]? (\d*[\.]\d+ | \d+[\.]?\d*)
+            ([E|e|d|D][+|-]?\d+)?
+        )
+        """, re.X | re.M) 
+    #~ cell_parameters_block_re = re.compile(r"""
+        #~ ^ [ \t]* CELL_PARAMETERS [ \t]*
+            #~ [{(]? [ \t]* (?P<units>\S+?)? [ \t]* [)}]? [ \t]* $\n
+        #~ (?P<block>
+         #~ (?:
+          #~ ^ [ \t]* \S+ [ \t]+ \S+ [ \t]+ \S+ [ \t]* $\n?
+         #~ ){3}
+        #~ )
+        #~ """, RE_FLAGS)
     # Define re for the info contained in the block.
-    atomic_species_re = re.compile(r"""
-        ^ [ \t]* (\S+) [ \t]+ (\S+) [ \t]+ (\S+) [ \t]* $\n?
-        """, RE_FLAGS)
+    #~ atomic_species_re = re.compile(r"""
+        #~ ^ [ \t]* (\S+) [ \t]+ (\S+) [ \t]+ (\S+) [ \t]* $\n?
+        #~ """, RE_FLAGS)
     # Find the card block and extract units and the lines of the block.
     match = cell_parameters_block_re.search(txt)
     if not match:
@@ -607,8 +734,8 @@ def parse_cell_parameters(txt):
     fortfloat = lambda s: float(s.replace('d', 'e').replace('D', 'E'))
     # Now, extract the lattice vectors.
     lattice_vectors = []
-    for match in atomic_species_re.finditer(blockstr):
-        lattice_vectors.append(map(fortfloat, match.groups()))
+    for match in cell_vector_regex.finditer(blockstr):
+        lattice_vectors.append(map(fortfloat, (match.group('x'),match.group('y'),match.group('z'))))
     info_dict = dict(units=units, cell=lattice_vectors)
     return info_dict
 
@@ -685,7 +812,7 @@ def parse_atomic_species(txt):
 
 
 
-def get_structuredata_from_qeinput(filepath=None, text=None):
+def get_structuredata_from_qeinput(filepath=None, text=None, namelists=None):
     """
     Function that receives either
     :param filepath: the filepath storing **or**
@@ -700,142 +827,9 @@ def get_structuredata_from_qeinput(filepath=None, text=None):
     from aiida.common.exceptions import InputValidationError
     from aiida.common.utils import get_fortfloat
     # This regular expression finds the block where Atomic positions are defined:
-    pos_block_regex = re.compile(r"""
-        ^ \s* ATOMIC_POSITIONS \s*                      # Atomic positions start with that string
-        [{(]? \s* (?P<units>\S+?)? \s* [)}]? \s* $\n    # The units are after the string in optional brackets
-        (?P<positions>                                  # This is the block of positions
-            (
-                (
-                    \s*                                 # White space in front of the element spec is ok
-                    (
-                        [A-Za-z]+[A-Za-z0-9]{0,2}       # Element spec
-                        (
-                            \s+                         # White space in front of the number
-                            [-|+]?                      # Plus or minus in front of the number (optional)
-                            (
-                                (
-                                    \d*                 # optional decimal in the beginning .0001 is ok, for example
-                                    [\.]                # There has to be a dot followed by
-                                    \d+                 # at least one decimal
-                                )
-                                |                       # OR
-                                (
-                                    \d+                 # at least one decimal, followed by
-                                    [\.]?               # an optional dot ( both 1 and 1. are fine)
-                                    \d*                 # And optional number of decimals (1.00001)
-                                )                        # followed by optional decimals
-                            )
-                            ([E|e|d|D][+|-]?\d+)?       # optional exponents E+03, e-05
-                        ){3}                            # I expect three float values
-                        ((\s+[0-1]){3}\s*)?             # Followed by optional ifpos
-                        \s*                             # Followed by optional white space
-                        |
-                        \#.*                            # If a line is commented out, that is also ok
-                        |
-                        \!.*                            # Comments also with excl. mark in fortran
-                    )
-                    |                                   # OR
-                    \s*                                 # A line only containing white space
-                 )
-                [\n]                                    # line break at the end
-            )+                                          # A positions block should be one or more lines
-        )
-        """, re.X | re.M)
 
-    # This regular expression finds the each position in a block of positions:
-    # Matches eg: Li 0.21212e-3  2.d0 -23312.
-    pos_regex = re.compile(r"""
-        ^                                       # Linestart
-        [ \t]*                                  # Optional white space
-        (?P<sym>[A-Za-z]+[A-Za-z0-9]{0,2})\s+   # get the symbol, max 3 chars, starting with a char
-        (?P<x>                                  # Get x
-            [\-|\+]?(\d*[\.]\d+ | \d+[\.]?\d*)
-            ([E|e|d|D][+|-]?\d+)?
-        )
-        [ \t]+
-        (?P<y>                                  # Get y
-            [\-|\+]?(\d*[\.]\d+ | \d+[\.]?\d*)
-            ([E|e|d|D][+|-]?\d+)?
-        )
-        [ \t]+
-        (?P<z>                                  # Get z
-            [\-|\+]?(\d*[\.]\d+ | \d+[\.]?\d*)
-            ([E|e|d|D][+|-]?\d+)?
-        )
-        """, re.X | re.M)
-    # Find the block for the cell
-    cell_block_regex = re.compile(r"""
-        ^ [ \t]*
-        CELL_PARAMETERS [ \t]*
-        [{(]? \s* (?P<units>[a-z]*) \s* [)}]? \s* [\n]
-        (?P<cell>
-        (
-            (
-                \s*             # White space in front of the element spec is ok
-                (
-                    # First number
-                    (
-                        [-|+]?   # Plus or minus in front of the number (optional)
-                        (\d*     # optional decimal in the beginning .0001 is ok, for example
-                        [\.]     # There has to be a dot followed by
-                        \d+)     # at least one decimal
-                        |        # OR
-                        (\d+     # at least one decimal, followed by
-                        [\.]?    # an optional dot
-                        \d*)     # followed by optional decimals
-                        ([E|e|d|D][+|-]?\d+)?  # optional exponents E+03, e-05, d0, D0
-                    
-                        (
-                            \s+      # White space between numbers
-                            [-|+]?   # Plus or minus in front of the number (optional)
-                            (\d*     # optional decimal in the beginning .0001 is ok, for example
-                            [\.]     # There has to be a dot followed by
-                            \d+)     # at least one decimal
-                            |        # OR
-                            (\d+     # at least one decimal, followed by
-                            [\.]?    # an optional dot
-                            \d*)     # followed by optional decimals
-                            ([E|e|d|D][+|-]?\d+)?  # optional exponents E+03, e-05, d0, D0
-                        ){2}         # I expect three float values
-                    )
-                    |
-                    \#
-                    |
-                    !            # If a line is commented out, that is also ok
-                )
-                .*               # I do not care what is after the comment or the vector
-                |                # OR
-                \s*              # A line only containing white space
-             )
-            [\n]                 # line break at the end
-        ){3}                     # I need exactly 3 vectors
-    )
-    """, re.X | re.M)
-
-    # Matches each vector inside the cell block
-    cell_vector_regex = re.compile(r"""
-        ^                        # Linestart
-        [ \t]*                   # Optional white space
-        (?P<x>                   # Get x
-            [\-|\+]? ( \d*[\.]\d+ | \d+[\.]?\d*)
-            ([E|e|d|D][+|-]?\d+)?
-        )
-        [ \t]+
-        (?P<y>                   # Get y
-            [\-|\+]? (\d*[\.]\d+ | \d+[\.]?\d*)
-            ([E|e|d|D][+|-]?\d+)?
-        )
-        [ \t]+
-        (?P<z>                   # Get z
-            [\-|\+]? (\d*[\.]\d+ | \d+[\.]?\d*)
-            ([E|e|d|D][+|-]?\d+)?
-        )
-        """, re.X | re.M)
-
-    # Finds the ibrav
-    ibrav_regex = re.compile(
-        'ibrav [ \t]* \= [ \t]*(?P<ibrav>\-?[ \t]* \d{1,2})', re.X)
-
+   
+   
     # Match the block where atomic species are defined:
     atomic_species_block_regex = re.compile("""
         ATOMIC_SPECIES \s+       # Prepended by ATOMIC_SPECIES
@@ -895,10 +889,14 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
             'Provide either a filepath or text to be parsed'
         )
 
+    if namelists is None:
+        namelists = parse_namelists(text)
+
     #########  THE CELL ################
 
+    system_dict = namelists['SYSTEM']
     # get ibrav and check if it is valid
-    ibrav = int(ibrav_regex.search(txt).group('ibrav'))
+    ibrav = system_dict['ibrav']
     valid_ibravs = range(15) + [-5, -9, -12]
     if ibrav not in valid_ibravs:
         raise InputValidationError(
@@ -906,76 +904,32 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
             'but it is not among the valid values\n'
             '{}'.format(ibrav, valid_ibravs))
 
-    # First case, ibrav is 0
-    if ibrav == 0:
-        # The cell is defined explicitly in a block CELL_PARAMETERS
-        # Match the cell block using the regex defined above:
-        match = cell_block_regex.search(txt)
-        if match is None:
-            raise InputValidationError(
-                'ibrav was found to be 0\n',
-                'but I did not find the necessary block of CELL_PARAMETERS\n'
-                'in the file'
-            )
-        valid_cell_units = ('angstrom', 'bohr', 'alat')
-
-        # Check if unit was matched, default is bohr (a.u.)
-        cell_unit = match.group('units').lower() or 'bohr'
-        if cell_unit not in valid_cell_units:
-            raise InputValidationError(
-                '{} is not a valid  cell unit.\n'
-                'Valid cell units are: {}'.format(cell_unit, valid_cell_units)
-            )
-        # cell was matched, transform to np.array:
-        cell = np.array(
-            [
-                [float(match.group(i).replace('D', 'e').replace('d', 'e'))
-                 for i in ('x', 'y', 'z')
-                 ]
-                for match
-                in cell_vector_regex.finditer(match.group('cell'))
-                ]
-        )
-
-        # Now, we do the convert the cell to the right units (we want angstrom):
-        if cell_unit == 'angstrom':
-            conversion = 1.
-        elif cell_unit == 'bohr':
-            conversion = bohr_to_ang
-        elif cell_unit == 'alat':
-            # Cell units are defined with respect to atomic lattice
-            # defined either under key A or celldm(1),
-            celldm1 = get_fortfloat('celldm\(1\)', txt)
-            a = get_fortfloat('A', txt)
-            # Check that not both were specified
-            if celldm1 and a:
-                raise InputValidationError('Both A and celldm(1) specified')
-            if a:
-                conversion = a
-            elif celldm1:
-                conversion = bohr_to_ang * celldm1
-            else:
-                raise InputValidationError(
-                    'You have to define lattice vector'
-                    'celldm(1) or A'
-                )
-        cell = conversion * cell
-
-    # Ok, user was not nice and used ibrav > 0 to define cell using
-    # either the keys celldm(n) n = 1,2,...,6  (celldm - system)
-    # or A,B,C, cosAB, cosAC, cosBC (ABC-system)
-    # to define the necessary cell geometry factors
-    else:
+    # Let's figure out what alat is:
+    # I am using angstrom!
+    if 'a' in system_dict and 'celldm(1)' in system_dict:
         # The user should define exclusively in celldm or ABC-system
+        raise InputValidationError(
+                'Both a and celldm(1) specified'
+            )        
+    elif 'a' in system_dict:
+        alat = system_dict['a']
+        using_celldm = False
+    elif 'celldm(1)' in system_dict:
+        alat = bohr_to_ang * system_dict['celldm(1)']
+        using_celldm = True
+    else:
+        alat = None
+
+
+    if ibrav != 0:
+        # Ok, user was not nice and used ibrav > 0 to define cell using
+        # either the keys celldm(n) n = 1,2,...,6  (celldm - system)
+        # or A,B,C, cosAB, cosAC, cosBC (ABC-system)
+        # to define the necessary cell geometry factors
         # NOT both
         # I am only going to this for the important first lattice vector
-        celldm1 = get_fortfloat('celldm\(1\)', txt)
-        a = get_fortfloat('A', txt)
-        if celldm1 and a:
-            raise InputValidationError(
-                'Both A and celldm(1) specified'
-            )
-        elif not (celldm1 or a):
+      
+        if alat is None:
             raise Exception('You have to define lattice vector'
                             'celldm(1) or A'
                             )
@@ -983,50 +937,36 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         # I define the keys that I will look for to find the other
         # geometry definitions
         try:
-            if celldm1:
-                keys_in_qeinput = (
-                    'celldm\(2\)',
-                    'celldm\(3\)',
-                    'celldm\(4\)',
-                    'celldm\(5\)',
-                    'celldm\(6\)',
-                )
-                # I will do all my calculations in ABC-system and
-                # therefore need a conversion factor
-                # if celldm system is chosen:
-                a = bohr_to_ang * celldm1
-                length_conversion = a
-            else:
-                keys_in_qeinput = (
-                    'B',
-                    'C',
-                    'cosAB',
-                    'cosAC',
-                    'cosBC',
-                )
-                length_conversion = 1.
-            # Not all geometry definitions are needs,
+            # Not all geometry definitions are needed,
             # but some are necessary depending on ibrav
             # and will be matched here:
             if abs(ibrav) > 7:
-                i = 0
-                b = length_conversion * get_fortfloat(keys_in_qeinput[i], txt)
+                if using_celldm:
+                    b = alat * system_dict['celldm(2)']
+                else:
+                    b = system_dict['b']
             if abs(ibrav) > 3 and ibrav not in (-5, 5):
-                i = 1
-                c = length_conversion * get_fortfloat(keys_in_qeinput[i], txt)
+                if using_celldm:
+                    c = alat * system_dict['celldm(3)']
+                else:
+                    c = system_dict['c']
             if ibrav in (12, 13, 14):
-                i = 2
-                cosg = get_fortfloat(keys_in_qeinput[i], txt)
+                if using_celldm:
+                    cosg = system_dict['celldm(4)']
+                else:
+                    cosg = system_dict['cosab']
                 sing = np.sqrt(1. - cosg ** 2)
             if ibrav in (-12, 14):
-                i = 3
-                cosb = get_fortfloat(keys_in_qeinput[i], txt)
+                if using_celldm:
+                    cosb = system_dict['celldm(5)']
+                else:
+                    cosb = system_dict['cosac']
                 sinb = np.sqrt(1. - cosb ** 2)
             if ibrav in (5, 14):
-                i = 4
-                cosa = 1. * get_fortfloat(keys_in_qeinput[i], txt)
-                # The multiplication with 1.
-                # raises Exception here if None was returned by get_fortfloat
+                if using_celldm:
+                    cosa = system_dict['celldm(6)']
+                else:
+                    cosa = system_dict['cosbc']
         except Exception as e:
             raise InputValidationError(
                 '\nException {} raised when searching for\n'
@@ -1037,6 +977,24 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     # Calculating the cell according to ibrav.
     # The comments in each case are taken from
     # http://www.quantum-espresso.org/wp-content/uploads/Doc/INPUT_PW.html#ibrav
+
+    if ibrav == 0:
+        # The cell is defined explicitly in a block CELL_PARAMETERS
+        # Match the cell block using the regex defined above:
+        cell_dict =  parse_cell_parameters(txt)
+        cell = np.array(cell_dict['cell'])
+        cell_unit = cell_dict['units']
+        # Now, we do the convert the cell to the right units (we want angstrom):
+        if cell_unit == 'angstrom':
+            pass
+        elif cell_unit == 'bohr':
+            cell = bohr_to_ang * cell
+        elif cell_unit == 'alat':
+            if alat is None:
+                raise InputValidationError("You have specified units of alat for the cell, \n"
+                    "but you have not provided a value for alat")
+            cell = alat * cell
+
     if ibrav == 1:
         # 1          cubic P (sc)
         # v1 = a(1,0,0),  v2 = a(0,1,0),  v3 = a(0,0,1)
@@ -1225,76 +1183,57 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
 
     #################  KINDS ##########################
 
-    atomic_species = atomic_species_block_regex.search(txt).group('block')
-    for match in atomic_species_regex.finditer(atomic_species):
+    atomic_species = parse_atomic_species(txt)
+    
+    for mass, name, pseudo in zip(
+            atomic_species['masses'],
+            atomic_species['names'],
+            atomic_species['pseudo_file_names']
+        ):
         try:
-            symbols = valid_elements_regex.search(
-                match.group('pseudo')
-            ).group('ele').capitalize()
+            symbols = valid_elements_regex.search(pseudo).group('ele').capitalize()
         except Exception as e:
             raise InputValidationError(
                 'I could not read an element name in {}'.format(match.group(0))
             )
-        name = match.group('tag')
-        mass = match.group('mass')
         structuredata.append_kind(Kind(
-            name=name,
-            symbols=symbols,
-            mass=mass,
-        ))
+                name=name,
+                symbols=symbols,
+                mass=mass,
+            ))
 
     ################## POSITIONS #######################
+    atom_pos_dict = parse_atomic_positions(txt)
+    positions_units = atom_pos_dict['units']
+    positions = np.array(atom_pos_dict['positions'])
 
-    atom_block_match = pos_block_regex.search(txt)
-    valid_atom_units = ('alat', 'bohr', 'angstrom', 'crystal', 'crystal_sg')
-    atom_unit = atom_block_match.group('units') or 'alat'
-    atom_unit = atom_unit.lower()
-
-    if atom_unit not in valid_atom_units:
+    if positions_units is None:
+        raise InputValidationError("There is no unit for positions\n"
+                "This is deprecated behavior for QE.\n"
+                "In addition the default values by CP and PW differ (bohr and alat)"
+            )
+    elif positions_units == 'angstrom':
+        pass
+    elif positions_units == 'bohr':
+        positions = bohr_to_ang * positions
+    elif positions_units == 'crystal':
+        positions = np.dot(positions, cell)
+    elif positions_units == 'alat':
+        positions = np.linalg.norm(cell[0]) * positions
+    elif positions_units == 'crystal_sg':
+        raise NotImplementedError('crystal_sg is not implemented')
+    else:
+        valid_positions_units = ('alat', 'bohr', 'angstrom', 'crystal', 'crystal_sg')
         raise InputValidationError(
             '\nFound atom unit {}, which is not\n'
             'among the valid units: {}'.format(
-                atom_unit, ', '.join(valid_atom_units)
+                positions_units, ', '.join(valid_positions_units)
             )
         )
-
-    if atom_unit == 'crystal_sg':
-        raise NotImplementedError('crystal_sg is not implemented')
-    position_block = atom_block_match.group('positions')
-
-    if not position_block:
-        raise InputValidationError('Could not read CARD POSITIONS')
-
-    symbols, positions = [], []
-
-    for atom_match in pos_regex.finditer(position_block):
-        symbols.append(atom_match.group('sym'))
-        try:
-            positions.append(
-                [
-                    float(
-                        atom_match.group(c).replace('D', 'e').replace('d', 'e'))
-                    for c in ('x', 'y', 'z')
-                    ]
-            )
-        except Exception as e:
-            raise InputValidationError(
-                'I could not get position in\n'
-                '{}\n'
-                '({})'.format(atom_match.group(0), e)
-            )
-    positions = np.array(positions)
-
-    if atom_unit == 'bohr':
-        positions = bohr_to_ang * positions
-    elif atom_unit == 'crystal':
-        positions = np.dot(positions, cell)
-    elif atom_unit == 'alat':
-        positions = np.linalg.norm(cell[0]) * positions
-
     ######### DEFINE SITES ######################
 
     positions = positions.tolist()
-    [structuredata.append_site(Site(kind_name=sym, position=pos,))
-     for sym, pos in zip(symbols, positions)]
+    [
+        structuredata.append_site(Site(kind_name=sym, position=pos,))
+        for sym, pos in zip(atom_pos_dict['names'], positions)]
     return structuredata

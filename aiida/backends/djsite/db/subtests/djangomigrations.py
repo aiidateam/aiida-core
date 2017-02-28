@@ -67,6 +67,9 @@ class CalcStateChanges(AiidaTestCase):
                 levelname__exact=logging.getLevelName(logging.WARNING),
                 time__gt=time_before_fix
             )
+
+            print DbLog.objects.filter(objpk__exact=job.pk).values()
+
             self.assertEquals(len(result), 1,
                               "Couldn't find a warning message with the change "
                               "from {} to {}, or found too many: I got {} log "

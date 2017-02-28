@@ -465,7 +465,8 @@ class TestAttributes(AiidaTestCase):
                         {'attributes.whatever':{'<':val}}
                     ],
             }, project='uuid')
-        res = set(zip(*qb.all())[0])
+        res_query = set([str(_[0]) for _ in qb.all()])
+        self.assertEqual(res_query, res_uuids)
 
 
 

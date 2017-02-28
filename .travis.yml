@@ -30,8 +30,8 @@ addons:
 ## because otherwise the code would complain. Also, I need latex.
 env: 
     - TEST_AIIDA_BACKEND=django COMPILE_DOCS=false
-#    - TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
-#    - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
+    - TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
+    - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
 
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command

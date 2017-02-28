@@ -143,7 +143,14 @@ class BaseTranslator(object):
                 schema[k]['related_resource'] = table2resource(
                     schema[k].pop('related_table'))
 
-        return dict(columns=schema)
+        # TODO Construct the ordering (all these things have to be moved in matcloud_backend)
+        if self._default_projections != ['**']:
+            ordering=self._default_projections
+        else:
+            # random ordering if not set explicitely in
+            ordering=schema.keys()
+
+        return dict(fields=schema,ordering=ordering)
 
     def init_qb(self):
         """

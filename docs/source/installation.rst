@@ -955,7 +955,7 @@ do the following::
 
 (<VERSION> being the intermediate version you are updating to, in our example 0.6). 
 The two first steps above can be removed if do not want to install this AiiDA
-version into a virtual environment (which is *not* recommended).
+version into a virtual environment (reminder: this is *not* recommended).
 
 Then get the code with the appropriate version and install its dependencies:
 if you are updating to a version prior or equal to 0.7, do::
@@ -964,7 +964,7 @@ if you are updating to a version prior or equal to 0.7, do::
   cd aiida_core_<VERSION>
   git checkout "v<VERSION>"
   pip install -U -r requirements.txt
-  
+
 For the final update (to version 0.8) type instead::
 
   git clone git@github.com:aiidateam/aiida_core.git
@@ -974,7 +974,14 @@ where <EXTRAS> is a coma separated list of the optional features
 you wish to install (see the :ref:`quick start instructions<quickstart-ubuntu>`).
 
 .. note::
-  If you encounter any problems and/or inconsistencies, delete any .pyc
+  A few general remarks:
+  * For some early version (0.5, )you might need to install (with `pip install`)
+    some dependencies located in `optional_requirements.txt` (e.g. `psycopg2==2.6`
+    for postgresql database users), as well as `ipython` to get a proper shell.
+  * If you want to update the code in the same folder, but modified some files locally,
+    you can stash them (`git stash`) before cloning or pulling the new code.
+    Then put them back with `git stash pop` (note that conflicts might appear).
+  * If you encounter any problems and/or inconsistencies, delete any .pyc
   files that may have remained from the previous version. E.g. If you are
   in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
 
@@ -1087,23 +1094,26 @@ To perform the update:
 
 Updating from 0.4.1 to 0.5.0
 ----------------------------
-* Replace the AiiDA folder with the new one (either from the tar.gz or,
-  if you are using git, by doing a ``git pull``). If you use the same
-  folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
-  variables
+* Follow the general update instructions above (see :ref:`here<updating_aiida>`).
+  If needed, update the ``PATH`` and ``PYTHONPATH`` environment variables 
+  in your `~/.bashrc` file (replacing <AiiDA_folder> with the folder in 
+  which you just installed AiiDA)::
+  
+    export PATH="${PATH}:<AiiDA_folder>/bin"
+    export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
+    
 * Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
   raise an exception, and in the exception message you will see the
-  command to run to update the schema version of the DB (v.0.5.0
+  command to run to update the schema version of the DB (version 0.5
   is using a newer version of the schema).
   The command will look like
-  ``python manage.py --aiida-profile=default migrate``, but please read the
+  ``python manage.py --aiida-profile=default migrate``
+  (to be run from `aiida/djsite`) but please read the
   message for the correct command to run.
 * If you run ``verdi calculation list`` again now, it should work without
   error messages.
-* You can now restart your daemon and work as usual.
 
-.. note:: If you modified or added files, you need to put them back in place.
-  Note that if you were working on a plugin, the plugin interface changed:
+.. note:: If you were working on a plugin, the plugin interface changed:
   you need to change the CalcInfo returning also a CodeInfo, as specified
   :ref:`here<qeplugin-prepare-input>` and also accept a ``Code`` object
   among the inputs (also described in the same page).

@@ -1,8 +1,6 @@
 Dos
 +++
 
-.. note:: The Dos plugin referenced below is available in the EPFL version.
-
 Description
 -----------
 Use the plugin to support inputs of Quantum Espresso dos.x executable. Computes the

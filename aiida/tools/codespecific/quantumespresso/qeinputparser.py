@@ -205,95 +205,12 @@ class QeInputFile(object):
         :raises aiida.common.exceptions.ParsingError: if there are issues
             parsing the input.
         """
-        return get_structuredata_from_qeinput(text=self.input_txt)
-        # CELL_PARAMETERS are present.
-        if self.cell_parameters is None:
-            raise ParsingError(
-                'CELL_PARAMETERS not found while parsing the input file. This '
-                'card is needed for AiiDa.'
+        return get_structuredata_from_qeinput(
+                text=self.input_txt, namelists=self.namelists,
+                atomic_positions=self.atomic_positions,
+                atomic_species=self.atomic_species,
+                cell_parameters=self.cell_parameters
             )
-
-        # Figure out the factor needed to convert the lattice vectors
-        # to Angstroms.
-        # TODO: ***ASK GEORGE IF I SHOULD MULTIPLY OR DIVIDE BY ALAT***
-        cell_units = self.cell_parameters.get('units')
-        if (cell_units == 'alat') or (cell_units is None):
-            # Try to determine the value of alat from the namelist.
-            celldm1 = self.namelists['SYSTEM'].get('celldm(1)')
-            a = self.namelists['SYSTEM'].get('a')
-            # Only one of 'celldm(1)' or 'a' can be set.
-            if (celldm1 is not None) and (a is not None):
-                raise ParsingError(
-                    "Both 'celldm(1)' and 'a' were set in the input file."
-                )
-            elif celldm1 is not None:
-                cell_conv_factor = celldm1 * bohr_to_ang  # celldm(1) in Bohr
-            elif a is not None:
-                cell_conv_factor = a  # a is in Angstroms
-            else:
-                if cell_units is None:
-                    cell_conv_factor = bohr_to_ang  # QE assumes Bohr
-                else:
-                    raise ParsingError(
-                        "Unable to determine the units of the lattice vectors."
-                    )
-        elif cell_units == 'bohr':
-            cell_conv_factor = bohr_to_ang
-        elif cell_units == 'angstrom':
-            cell_conv_factor = 1.0
-        else:
-            raise ParsingError(
-                "Unable to determine the units of the lattice vectors."
-            )
-
-        # Get the lattice vectors and convert them to units of Angstroms.
-        cell = np.array(self.cell_parameters['cell']) * cell_conv_factor
-
-        # Get the positions and convert them to [x, y, z] Angstrom vectors.
-        pos_units = self.atomic_positions['units']
-        positions = np.array(self.atomic_positions['positions'])
-        if pos_units in (None, 'alat'):  # QE assumes alat
-            alat = np.linalg.norm(cell[0])  # Cell in Ang, so alat in Ang
-            positions *= alat
-        elif pos_units == 'bohr':
-            positions = positions * bohr_to_ang
-        elif pos_units == 'angstrom':
-            pass
-        elif pos_units == 'crystal':
-            positions = np.dot(positions, cell)  # rotate into [x y z] basis
-        else:
-            raise ParsingError(
-                'Unable to determine to convert positions to [x y z] Angstrom.'
-            )
-
-        # Get the atom names corresponding to positions.
-        names = self.atomic_positions['names']
-
-        # Create a dictionary that maps an atom name to it's mass.
-        mass_dict = dict(zip(self.atomic_species['names'],
-                             self.atomic_species['masses']))
-
-        # Use the names to figure out the atomic symbols.
-        symbols = []
-        for name in names:
-            candiates = [s for s in _valid_symbols
-                         if name.lower().startswith(s.lower())]
-            if len(candiates) == 0:
-                raise ParsingError(
-                    'Unable to figure out the element represented by the '
-                    'label, {}, in the input file.'.format(name))
-            # Choose the longest match, since, for example, S and Si match Si.
-            symbols.append(max(candiates, key=lambda x: len(x)))
-
-        # Now that we have the names and their corresponding symbol and mass, as
-        # well as the positions and cell in units of Angstroms, we create the
-        # StructureData object.
-        structuredata = StructureData(cell=cell)
-        for name, symbol, position in zip(names, symbols, positions):
-            mass = mass_dict[name]
-            structuredata.append_atom(name=name, symbols=symbol,
-                                      position=position, mass=mass)
-        return structuredata
 
 
 def str2val(valstr):
@@ -812,114 +729,23 @@ def parse_atomic_species(txt):
 
 
 
-def get_structuredata_from_qeinput(filepath=None, text=None, namelists=None):
+def get_cell_from_parameters(cell_parameters, system_dict, alat):
     """
-    Function that receives either
-    :param filepath: the filepath storing **or**
-    :param text: the string of a standard QE-input file.
-    An instance of :func:`StructureData` is initialized with kinds, positions and cell
-    as defined in the input file.
-    This function can deal with ibrav being set different from 0 and the cell being defined
-    with celldm(n) or A,B,C, cosAB etc.
+    A function to get the cell from cell parameters and SYSTEM card dictionary as read by 
+    parse_namelists.
+    :param cell_parameters: The parameters as returned by parse_cell_parameters
+    :param system_dict: the dictionary for card SYSTEM
+    :param alat: The value for alat
+    :returns: The cell as a numpy array
     """
-    from aiida.orm.data.structure import StructureData, Kind, Site
-    from aiida.common.constants import bohr_to_ang
-    from aiida.common.exceptions import InputValidationError
-    from aiida.common.utils import get_fortfloat
-    # This regular expression finds the block where Atomic positions are defined:
-
-   
-   
-    # Match the block where atomic species are defined:
-    atomic_species_block_regex = re.compile("""
-        ATOMIC_SPECIES \s+       # Prepended by ATOMIC_SPECIES
-        (?P<block>
-            ([ \t]*              # Space at line beginning
-            [A-Za-z0-9]+         # tag for atom, max 3 characters
-            [ \t]+               # Space
-            ( \d*[\.]\d+  | \d+[\.]?\d* )
-            ([D|d|E|e][+|-]?\d+)?                   # Mass
-            [ \t]+                                  # Space
-            \S+ \.(UPF | upf)                       # Pseudofile
-            \s+)+
-         )
-         """, re.X | re.M)
-
-    # Matches each atomic species inside the atomic specis block:
-    atomic_species_regex = re.compile("""
-        ^[ \t]*                  # Space at line beginning
-        (?P<tag>
-            [A-Za-z0-9]+         # tag for atom, max 3 characters
-        )
-            [ \t]+               # Space
-        (?P<mass>                # Mass
-            ( \d*[\.]\d+  | \d+[\.]?\d* )
-            ([D|d|E|e][+|-]?\d+)?
-        )
-            [ \t]+               # Space
-        (?P<pseudo>
-            \S+ \.(UPF | upf)    # Pseudofile
-        )
-        """, re.X | re.M)
-
-    valid_elements_regex = re.compile("""
-        (?P<ele>
-H  | He |
-Li | Be | B  | C  | N  | O  | F  | Ne |
-Na | Mg | Al | Si | P  | S  | Cl | Ar |
-K  | Ca | Sc | Ti | V  | Cr | Mn | Fe | Co | Ni | Cu | Zn | Ga | Ge | As | Se | Br | Kr |
-Rb | Sr | Y  | Zr | Nb | Mo | Tc | Ru | Rh | Pd | Ag | Cd | In | Sn | Sb | Te | I  | Xe |
-Cs | Ba | Hf | Ta | W  | Re | Os | Ir | Pt | Au | Hg | Tl | Pb | Bi | Po | At | Rn |
-Fr | Ra | Rf | Db | Sg | Bh | Hs | Mt |
-
-La | Ce | Pr | Nd | Pm | Sm | Eu | Gd | Tb | Dy | Ho | Er | Tm | Yb | Lu | # Lanthanides
-Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Actinides
-        )
-        [^a-z]  # Any specification of an element is followed by some number
-                # or capital letter or special character.
-    """, re.X | re.I)
-    # I need either a valid filepath or the text of the qeinput file:
-    if filepath:
-        with open(filepath) as f:
-            txt = f.read()
-    elif text:
-        txt = text
-    else:
-        raise InputValidationError(
-            'Provide either a filepath or text to be parsed'
-        )
-
-    if namelists is None:
-        namelists = parse_namelists(text)
-
-    #########  THE CELL ################
-
-    system_dict = namelists['SYSTEM']
-    # get ibrav and check if it is valid
     ibrav = system_dict['ibrav']
+
     valid_ibravs = range(15) + [-5, -9, -12]
     if ibrav not in valid_ibravs:
         raise InputValidationError(
             'I found ibrav = {} in input, \n'
             'but it is not among the valid values\n'
             '{}'.format(ibrav, valid_ibravs))
-
-    # Let's figure out what alat is:
-    # I am using angstrom!
-    if 'a' in system_dict and 'celldm(1)' in system_dict:
-        # The user should define exclusively in celldm or ABC-system
-        raise InputValidationError(
-                'Both a and celldm(1) specified'
-            )        
-    elif 'a' in system_dict:
-        alat = system_dict['a']
-        using_celldm = False
-    elif 'celldm(1)' in system_dict:
-        alat = bohr_to_ang * system_dict['celldm(1)']
-        using_celldm = True
-    else:
-        alat = None
-
 
     if ibrav != 0:
         # Ok, user was not nice and used ibrav > 0 to define cell using
@@ -981,9 +807,8 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     if ibrav == 0:
         # The cell is defined explicitly in a block CELL_PARAMETERS
         # Match the cell block using the regex defined above:
-        cell_dict =  parse_cell_parameters(txt)
-        cell = np.array(cell_dict['cell'])
-        cell_unit = cell_dict['units']
+        cell = np.array(cell_parameters['cell'])
+        cell_unit = cell_parameters['units']
         # Now, we do the convert the cell to the right units (we want angstrom):
         if cell_unit == 'angstrom':
             pass
@@ -994,6 +819,17 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
                 raise InputValidationError("You have specified units of alat for the cell, \n"
                     "but you have not provided a value for alat")
             cell = alat * cell
+        elif cell_unit == '':
+            # Now here comes some piece of retardedness in QE:
+            # If alat was somehow specified, cell is given in units of alats
+            # if alat was not specified, the default is bohr:
+            if alat is None:
+                cell = bohr_to_ang * cell
+            else:
+                cell = alat * cell
+        else:
+            raise InputValidationError("Unknown unit for CELL_PARAMETERS {}".format(cell_unit))
+
 
     if ibrav == 1:
         # 1          cubic P (sc)
@@ -1176,14 +1012,90 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
             ]
         ])
 
-    # Ok, I have a valid cell, so let's initialize a structuredata
+    return cell
+
+def get_structuredata_from_qeinput(
+        filepath=None, text=None, namelists=None,
+        atomic_species=None, atomic_positions=None, cell_parameters=None
+        
+    ):
+    """
+    Function that receives either
+    :param filepath: the filepath storing **or**
+    :param text: the string of a standard QE-input file.
+    An instance of :func:`StructureData` is initialized with kinds, positions and cell
+    as defined in the input file.
+    This function can deal with ibrav being set different from 0 and the cell being defined
+    with celldm(n) or A,B,C, cosAB etc.
+    """
+    from aiida.orm.data.structure import StructureData, Kind, Site
+    from aiida.common.constants import bohr_to_ang
+    from aiida.common.exceptions import InputValidationError
+    #~ from aiida.common.utils import get_fortfloat
+
+    valid_elements_regex = re.compile("""
+        (?P<ele>
+H  | He |
+Li | Be | B  | C  | N  | O  | F  | Ne |
+Na | Mg | Al | Si | P  | S  | Cl | Ar |
+K  | Ca | Sc | Ti | V  | Cr | Mn | Fe | Co | Ni | Cu | Zn | Ga | Ge | As | Se | Br | Kr |
+Rb | Sr | Y  | Zr | Nb | Mo | Tc | Ru | Rh | Pd | Ag | Cd | In | Sn | Sb | Te | I  | Xe |
+Cs | Ba | Hf | Ta | W  | Re | Os | Ir | Pt | Au | Hg | Tl | Pb | Bi | Po | At | Rn |
+Fr | Ra | Rf | Db | Sg | Bh | Hs | Mt |
+
+La | Ce | Pr | Nd | Pm | Sm | Eu | Gd | Tb | Dy | Ho | Er | Tm | Yb | Lu | # Lanthanides
+Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Actinides
+        )
+        [^a-z]  # Any specification of an element is followed by some number
+                # or capital letter or special character.
+    """, re.X | re.I)
+    # I need either a valid filepath or the text of the qeinput file:
+    if filepath:
+        with open(filepath) as f:
+            txt = f.read()
+    elif text:
+        txt = text
+    else:
+        raise InputValidationError(
+            'Provide either a filepath or text to be parsed'
+        )
+
+    if namelists is None:
+        namelists = parse_namelists(text)
+    if atomic_species is None:
+        atomic_species = parse_atomic_species(txt)
+    if cell_parameters is None:
+        cell_parameters = parse_cell_parameters(txt)
+    if atomic_positions is None:
+        atomic_positions = parse_atomic_positions(txt)
+    
+
+    # First, I'm trying to figure out whether alat was specified:
+    system_dict = namelists['SYSTEM']
+
+    if 'a' in system_dict and 'celldm(1)' in system_dict:
+        # The user should define exclusively in celldm or ABC-system
+        raise InputValidationError(
+                'Both a and celldm(1) specified'
+            )        
+    elif 'a' in system_dict:
+        alat = system_dict['a']
+        using_celldm = False
+    elif 'celldm(1)' in system_dict:
+        alat = bohr_to_ang * system_dict['celldm(1)']
+        using_celldm = True
+    else:
+        alat = None
+
+    cell = get_cell_from_parameters(cell_parameters, system_dict, alat)   
+
     # instance and set the cell
     structuredata = StructureData()
     structuredata._set_attr('cell', cell.tolist())
 
     #################  KINDS ##########################
 
-    atomic_species = parse_atomic_species(txt)
+
     
     for mass, name, pseudo in zip(
             atomic_species['masses'],
@@ -1203,9 +1115,8 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
             ))
 
     ################## POSITIONS #######################
-    atom_pos_dict = parse_atomic_positions(txt)
-    positions_units = atom_pos_dict['units']
-    positions = np.array(atom_pos_dict['positions'])
+    positions_units = atomic_positions['units']
+    positions = np.array(atomic_positions['positions'])
 
     if positions_units is None:
         raise InputValidationError("There is no unit for positions\n"
@@ -1235,5 +1146,5 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     positions = positions.tolist()
     [
         structuredata.append_site(Site(kind_name=sym, position=pos,))
-        for sym, pos in zip(atom_pos_dict['names'], positions)]
+        for sym, pos in zip(atomic_positions['names'], positions)]
     return structuredata

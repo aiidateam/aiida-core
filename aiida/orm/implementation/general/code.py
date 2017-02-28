@@ -89,26 +89,7 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
                                                              self.pk, self.uuid)
 
     @classmethod
-    @abstractmethod
-    def get(cls, label, computername=None, useremail=None):
-        """
-        Get a code from its label.
-
-        :param label: the code label
-        :param computername: filter only codes on computers with this name
-        :param useremail: filter only codes belonging to a user with this
-          email
-
-        :raise NotExistent: if no matches are found
-        :raise MultipleObjectsError: if multiple matches are found. In this case
-          you may want to pass the additional parameters to filter the codes,
-          or relabel the codes.
-        """
-        pass
-
-    @classmethod
-    @abstractmethod
-    def get_from_string(cls, code_string):
+    def get(cls, code_string):
         """
         Get a Computer object with given identifier string, that can either be
         the numeric ID (pk), or the label (if unique); the label can either
@@ -170,6 +151,13 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
                 raise MultipleObjectsError(retstr)
             else:
                 return qb.first()[0]
+
+
+    @classmethod
+    @abstractmethod
+    def get_from_string(cls, code_string):
+        return cls.get(code_string)
+
 
     @classmethod
     @abstractmethod

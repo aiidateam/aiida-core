@@ -130,7 +130,6 @@ def is_valid_folder_name(name):
 
     return True
 
-
 class TestParsers(AiidaTestCase):
     """
     This class dynamically finds all tests in a given subfolder, and loads

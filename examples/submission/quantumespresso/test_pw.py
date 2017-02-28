@@ -9,11 +9,16 @@ __authors__ = "The AiiDA team."
 import sys
 import os
 
+from aiida.common.example_helpers import test_and_get_code
+from aiida.orm import DataFactory
 from aiida.common.exceptions import NotExistent
 
-from aiida.common.example_helpers import test_and_get_code
+# If set to True, will ask AiiDA to run in serial mode (i.e., AiiDA will not
+# invoke the mpirun command in the submission script)
+run_in_serial_mode = False
 
 ################################################################
+
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 KpointsData = DataFactory('array.kpoints')
@@ -86,10 +91,8 @@ if auto_pseudos:
 
 parameters = ParameterData(dict={
     'CONTROL': {
-        'calculation': 'md',
+        'calculation': 'scf',
         'restart_mode': 'from_scratch',
-        'dt': 40,
-        'nstep': 10,
         'wf_collect': True,
         'tstress': True,
         'tprnfor': True,
@@ -97,15 +100,9 @@ parameters = ParameterData(dict={
     'SYSTEM': {
         'ecutwfc': 40.,
         'ecutrho': 320.,
-        'nosym': True,
     },
     'ELECTRONS': {
-        'conv_thr': 1.e-9,
-    },
-    'IONS': {
-        'ion_temperature': 'not_controlled',
-        'pot_extrapolation': 'first_order',
-        'wfc_extrapolation': 'first_order',
+        'conv_thr': 1.e-10,
     }})
 
 kpoints = KpointsData()
@@ -138,12 +135,14 @@ calc.label = "Test QE pw.x"
 calc.description = "Test calculation with the Quantum ESPRESSO pw.x code"
 calc.set_max_wallclock_seconds(30 * 60)  # 30 min
 # Valid only for Slurm and PBS (using default values for the
-# number_cpus_per_machine), change for SGE-like schedulers 
+# number_cpus_per_machine), change for SGE-like schedulers
 calc.set_resources({"num_machines": 1})
+if run_in_serial_mode:
+    calc.set_withmpi(False)
 ## Otherwise, to specify a given # of cpus per machine, uncomment the following:
 # calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 8})
 
-#calc.set_prepend_text("#SBATCH --account=ch3")
+#calc.set_custom_scheduler_commands("#SBATCH --account=ch3")
 
 if queue is not None:
     calc.set_queue_name(queue)
@@ -168,7 +167,7 @@ else:
     pseudos_to_use = {}
     for fname, elem, pot_type in raw_pseudos:
         absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
-                                                "data", fname))
+                                                os.pardir, "data", fname))
         pseudo, created = UpfData.get_or_create(
             absname, use_first=True)
         if created:

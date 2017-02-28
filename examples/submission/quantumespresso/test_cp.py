@@ -138,7 +138,7 @@ else:
     pseudos_to_use = {}
     for fname, elem, pot_type in raw_pseudos:
         absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
-                                                "data", fname))
+                                                os.pardir, "data", fname))
         pseudo, created = UpfData.get_or_create(
             absname, use_first=True)
         if created:

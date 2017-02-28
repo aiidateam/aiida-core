@@ -1,0 +1,35 @@
+&CONTROL
+  calculation = 'scf'
+  outdir = './out/'
+  prefix = 'aiida'
+  pseudo_dir = './pseudo/'
+  restart_mode = 'from_scratch'
+  verbosity = 'high'
+/
+&SYSTEM
+  ecutrho =   2.4000000000d+02
+  ecutwfc =   3.0000000000d+01
+  ibrav = 0
+  nat = 5
+  ntyp = 3
+/
+&ELECTRONS
+  conv_thr =   1.0000000000d-08
+  mixing_beta =   3.0000000000d-01
+/
+ATOMIC_SPECIES
+Ba     137.327 ba_pbe_v1.uspp.F.UPF
+O      15.9994 o_pbe_v1.2.uspp.F.UPF
+Ti     47.867 ti_pbe_v1.uspp.F.UPF
+ATOMIC_POSITIONS angstrom
+Ba           0.0000000000       0.0000000000       0.0000000000   0 0 0
+Ti           2.0000000000       2.0000000000       2.1094747840   0 0 1
+O            2.0000000000       2.0000000000      -0.1835068320   0 0 1
+O            2.0000000000       0.0000000000       1.8336816930   0 0 1
+O            0.0000000000       2.0000000000       1.8336816930   0 0 1
+K_POINTS automatic
+2 2 2 0 0 0
+CELL_PARAMETERS angstrom
+      4.0000000000       0.0000000000       0.0000000000
+      0.0000000000       4.0000000000       0.0000000000
+      0.0000000000       0.0000000000       4.0500000000

@@ -2345,5 +2345,5 @@ class Site(object):
                                                   self.position[1],
                                                   self.position[2])
 
-
-# I moved get_structuredata_from_qeinput  to tools.codespecific.quantumespresso.qeinputparser
+# get_structuredata_from_qeinput has been moved to:
+# aiida.tools.codespecific.quantumespresso.qeinputparser

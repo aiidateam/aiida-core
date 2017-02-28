@@ -46,7 +46,7 @@ rather type::
 
   verdi export -g group1 group2 group3 -- export.aiida
 
- The previous comman will export the nodes owing to ``group1``, ``group2``, and ``group3`` (specified by the option ``-g``) into the file ``export.aiida``, which is taken as a positional argument.
+ The previous command will export the nodes belonging to groups ``group1``, ``group2``, and ``group3`` (specified by the option ``-g``) into the file ``export.aiida``, which is taken as a positional argument.
 
 Below is a list with all the available subcommands.
 

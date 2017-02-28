@@ -920,16 +920,56 @@ Further comments and troubleshooting
 Updating AiiDA from a previous version
 ++++++++++++++++++++++++++++++++++++++
 
-.. note::
-  A few important points regarding the updates:
+AiiDA can be update from a previously installed version. Before beginning 
+the procedure, make sure of the following
+  
+  * your daemon is stopped (use ``verdi daemon stop`` in case),
+  * you have a backup of your database(s) (follow the guidelines in the 
+    :ref:`backup section<backup>`),
+  * you have a backup of the full ``~/.aiida`` folder (where configuration
+    files are stored),
+  * (optional) ``virtualenv`` is installed, i.e. you ran the command (only once)::
+    
+      pip install --user -U setuptools pip wheel virtualenv
+  
 
-  * If you encounter any problems and/or inconsistencies, delete any .pyc
-    files that may have remained from the previous version. E.g. If you are
-    in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
-  * The requirements file may have changed. Please be sure that you have
-    installed all the needed requirements. This can be done by executing:
-    ``pip install --user -U -r requirements.txt``.
-  * If you installed AiiDA using pip you should be simply able to pip install --upgrade aiida (from the python environment into which AiiDA is installed).
+Because the database schema changes typically at every version, one needs
+to run a migration that will update your database to the current standard.
+The migration script assumes that you are using the previous AiiDA version,
+so this means one has to migrate in steps, from the version of AiiDA you were using, 
+until the current one. For instance, if you are currently using AiiDA 0.5,
+you should first update to 0.6, then to 0.7, and finally to 0.8.
+
+For *each intermediate update* (e.g. when you update from 0.5 to 0.6 in the above example),
+do the following::
+  
+  virtualenv ~/aiidapy_<VERSION>
+  source ~/aiidapy_<VERSION>/bin/activate
+  cd <where_you_want_the_aiida_sourcecode>
+
+(<VERSION> being the intermediate version you are updating to, in our example 0.6).
+
+Then get the code with the appropriate version and install its dependencies:
+if you are updating to a version prior or equal to 0.7, do::
+  
+  git clone git@bitbucket.org:aiida_team/aiida_core.git aiida_core_<VERSION>
+  cd aiida_core_<VERSION>
+  git checkout "v<VERSION>"
+  pip install --user -U -r requirements.txt
+  
+For the final update (to version 0.8) type instead::
+
+  git clone git@github.com:aiidateam/aiida_core.git
+  pip install -e aiida_core[<EXTRAS>] --process-dependency-links
+
+where <EXTRAS> is a coma separated list of the optional features
+you wish to install (see the :ref:`quick start instructions<quickstart-ubuntu>`).
+
+.. note::
+  If you encounter any problems and/or inconsistencies, delete any .pyc
+  files that may have remained from the previous version. E.g. If you are
+  in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
+
 
 Updating from 0.7.0 Django to 0.8.0 Django
 ------------------------------------------

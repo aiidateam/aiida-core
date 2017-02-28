@@ -122,6 +122,9 @@ class TestParserBjobs(unittest.TestCase):
                             if j.job_id == '764245175'][0], 
                            datetime.datetime(current_year, 12, 31, 23, 40) )
 
+        # Important to enable again logs!
+        logging.disable(logging.NOTSET)
+
 
 class TestSubmitScript(unittest.TestCase):
     

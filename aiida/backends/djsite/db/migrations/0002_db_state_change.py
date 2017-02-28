@@ -27,14 +27,10 @@ def fix_calc_states(apps, schema_editor):
         calc_state.save()
         # Now add a note in the log to say what we've done
         calc = load_node(pk=calc_state.dbnode.pk)
-        print ">> before logging"
-        import logging
-        print logging.getLogger('aiida').handlers
         calc.logger.warning(
             "Job state {} found for calculation {} which should never be in "
             "the database. Changed state to FAILED.".format(
                 old_state, calc_state.dbnode.pk))
-        print ">> after logging"
 
 class Migration(migrations.Migration):
     dependencies = [

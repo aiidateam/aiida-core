@@ -10,12 +10,6 @@ import sys
 import os
 
 from aiida.common.example_helpers import test_and_get_code
-from aiida.orm import DataFactory
-from aiida.common.exceptions import NotExistent
-
-# If set to True, will ask AiiDA to run in serial mode (i.e., AiiDA will not
-# invoke the mpirun command in the submission script)
-run_in_serial_mode = False
 
 ################################################################
 
@@ -89,13 +83,14 @@ if auto_pseudos:
         print >> sys.stderr, ",".join(i.name for i in valid_pseudo_groups)
         sys.exit(1)
 
+max_seconds = 100
+
 parameters = ParameterData(dict={
     'CONTROL': {
-        'calculation': 'scf',
+        'calculation': 'vc-relax',
         'restart_mode': 'from_scratch',
         'wf_collect': True,
-        'tstress': True,
-        'tprnfor': True,
+        'max_seconds': max_seconds,
     },
     'SYSTEM': {
         'ecutwfc': 40.,
@@ -106,43 +101,20 @@ parameters = ParameterData(dict={
     }})
 
 kpoints = KpointsData()
-
-# method gamma only
-#settings = ParameterData(dict={'gamma_only':True})
-#kpoints.set_kpoints_mesh([1,1,1])
-
-# method list
-#import numpy
-#kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)],
-#                    weights = [1. for i in range(10)])
-
-# method mesh
-kpoints_mesh = 2
+kpoints_mesh = 4
 kpoints.set_kpoints_mesh([kpoints_mesh, kpoints_mesh, kpoints_mesh])
-
-# to retrieve the bands
-# (the object settings is optional)
-settings_dict = {'also_bands': True}
-settings = ParameterData(dict=settings_dict)
-
-## For remote codes, it is not necessary to manually set the computer,
-## since it is set automatically by new_calc
-#computer = code.get_remote_computer()
-#calc = code.new_calc(computer=computer)
 
 calc = code.new_calc()
 calc.label = "Test QE pw.x"
-calc.description = "Test calculation with the Quantum ESPRESSO pw.x code"
-calc.set_max_wallclock_seconds(30 * 60)  # 30 min
+calc.description = "Test vc-relax calculation with the Quantum ESPRESSO pw.x code"
+calc.set_max_wallclock_seconds(max_seconds)
 # Valid only for Slurm and PBS (using default values for the
-# number_cpus_per_machine), change for SGE-like schedulers
+# number_cpus_per_machine), change for SGE-like schedulers 
 calc.set_resources({"num_machines": 1})
-if run_in_serial_mode:
-    calc.set_withmpi(False)
 ## Otherwise, to specify a given # of cpus per machine, uncomment the following:
 # calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 8})
 
-#calc.set_custom_scheduler_commands("#SBATCH --account=ch3")
+#calc.set_prepend_text("#SBATCH --account=ch3")
 
 if queue is not None:
     calc.set_queue_name(queue)
@@ -167,7 +139,7 @@ else:
     pseudos_to_use = {}
     for fname, elem, pot_type in raw_pseudos:
         absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
-                                                "data", fname))
+                                                os.pardir, "data", fname))
         pseudo, created = UpfData.get_or_create(
             absname, use_first=True)
         if created:

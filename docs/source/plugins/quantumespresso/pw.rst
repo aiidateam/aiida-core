@@ -65,7 +65,6 @@ Inputs
 
 Outputs
 -------
-.. note:: The `output_parameters` has more parsed values in the EPFL version and `output_bands` is parsed only in the EPFL version.
 
 There are several output nodes that can be created by the plugin, according to the calculation details.
 All output nodes can be accessed with the ``calculation.out`` method.

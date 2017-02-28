@@ -1,0 +1,11 @@
+&PATH
+  ds =   2.0000000000d+00
+  k_max =   3.0000000000d-01
+  k_min =   2.0000000000d-01
+  nstep_path = 20
+  num_of_images = 7
+  opt_scheme = 'broyden'
+  path_thr =   2.0000000000d-01
+  restart_mode = 'from_scratch'
+  string_method = 'neb'
+/

@@ -468,7 +468,10 @@ class CifData(SinglefileData):
         .. note:: requires PyCifRW module.
         """
         if self._values is None:
-            import CifFile
+            try:
+                import CifFile
+            except ImportError as e:
+                raise ImportError(str(e) + '. You need to install the PyCifRW package.')
             self._values = CifFile.ReadCif(self.get_file_abs_path())
         return self._values
 

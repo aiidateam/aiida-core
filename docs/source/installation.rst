@@ -924,6 +924,12 @@ AiiDA can be update from a previously installed version. Before beginning
 the procedure, make sure of the following
   
   * your daemon is stopped (use ``verdi daemon stop`` in case),
+  * you know your current AiiDA version. In case, you can get it from the `verdi shell`::
+  
+      import aiida
+      aiida.__version__
+    
+    (only the two first digits matter),
   * you have a backup of your database(s) (follow the guidelines in the 
     :ref:`backup section<backup>`),
   * you have a backup of the full ``~/.aiida`` folder (where configuration
@@ -947,7 +953,9 @@ do the following::
   source ~/aiidapy_<VERSION>/bin/activate
   cd <where_you_want_the_aiida_sourcecode>
 
-(<VERSION> being the intermediate version you are updating to, in our example 0.6).
+(<VERSION> being the intermediate version you are updating to, in our example 0.6). 
+The two first steps above can be removed if do not want to install this AiiDA
+version into a virtual environment (which is *not* recommended).
 
 Then get the code with the appropriate version and install its dependencies:
 if you are updating to a version prior or equal to 0.7, do::
@@ -955,7 +963,7 @@ if you are updating to a version prior or equal to 0.7, do::
   git clone git@bitbucket.org:aiida_team/aiida_core.git aiida_core_<VERSION>
   cd aiida_core_<VERSION>
   git checkout "v<VERSION>"
-  pip install --user -U -r requirements.txt
+  pip install -U -r requirements.txt
   
 For the final update (to version 0.8) type instead::
 
@@ -1079,9 +1087,6 @@ To perform the update:
 
 Updating from 0.4.1 to 0.5.0
 ----------------------------
-* Stop your daemon (using ``verdi daemon stop``)
-* Store your AiiDA source folder somewhere in case you did some
-  modifications to some files
 * Replace the AiiDA folder with the new one (either from the tar.gz or,
   if you are using git, by doing a ``git pull``). If you use the same
   folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``

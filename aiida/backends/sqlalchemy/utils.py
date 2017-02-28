@@ -73,7 +73,7 @@ def get_engine(config):
 
 def load_dbenv(process=None, profile=None, connection=None):
     """
-    Load the database environment (Django) and perform some checks.
+    Load the database environment (SQLAlchemy) and perform some checks.
 
     :param process: the process that is calling this command ('verdi', or
         'daemon')
@@ -82,7 +82,7 @@ def load_dbenv(process=None, profile=None, connection=None):
     """
     _load_dbenv_noschemacheck(process=process, profile=profile)
     # Check schema version and the existence of the needed tables
-    # check_schema_version()
+    check_schema_version()
 
 
 def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
@@ -431,14 +431,13 @@ def check_schema_version():
       Otherwise, just return.
     """
     from aiida.common.exceptions import ConfigurationError
-    from aiida.backends import sqlalchemy as sa
     from sqlalchemy.engine import reflection
     from aiida.backends.sqlalchemy.models import SCHEMA_VERSION
     from aiida.backends.utils import (
         get_db_schema_version, set_db_schema_version,get_current_profile)
 
     # Do not do anything if the table does not exist yet
-    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    inspector = reflection.Inspector.from_engine(sqlalchemy.session.bind)
     if 'db_dbsetting' not in inspector.get_table_names():
         return
 

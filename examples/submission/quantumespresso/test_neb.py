@@ -1,15 +1,11 @@
 #!/usr/bin/env runaiida
 # -*- coding: utf-8 -*-
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
-
 import sys
 import os
 
 from aiida.common.example_helpers import test_and_get_code
+
+from aiida.common.exceptions import NotExistent
 
 ################################################################
 
@@ -37,30 +33,54 @@ except IndexError:
 
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
-auto_pseudos = False
+auto_pseudos = True
 
 queue = None
 # queue = "Q_aries_free"
 settings = None
 #####
 
-code = test_and_get_code(codename, expected_code_type='quantumespresso.pw')
+code = test_and_get_code(codename, expected_code_type='quantumespresso.neb')
 
-alat = 4.  # angstrom
-cell = [[alat, 0., 0., ],
-        [0., alat, 0., ],
-        [0., 0., alat, ],
-]
+cell = [[4.0, 0., 0., ],
+        [0., 4.0, 0., ],
+        [0., 0.,  4.05, ],]
 
-# BaTiO3 cubic structure
-s = StructureData(cell=cell)
-s.append_atom(position=(0., 0., 0.), symbols=['Ba'])
-s.append_atom(position=(alat / 2., alat / 2., alat / 2.), symbols=['Ti'])
-s.append_atom(position=(alat / 2., alat / 2., 0.), symbols=['O'])
-s.append_atom(position=(alat / 2., 0., alat / 2.), symbols=['O'])
-s.append_atom(position=(0., alat / 2., alat / 2.), symbols=['O'])
+# Displacements
+d1 = 1.940525216
+d2 = 0.183506832
+d3 = 2.216318307
 
-elements = list(s.get_symbols_set())
+# Initial structure
+s1 = StructureData(cell=cell)
+s1.append_atom(position=(0., 0., 0.), symbols=['Ba'])
+s1.append_atom(position=(2., 2., d1), symbols=['Ti'])
+s1.append_atom(position=(2., 2., d2), symbols=['O'])
+s1.append_atom(position=(2., 0., d3), symbols=['O'])
+s1.append_atom(position=(0., 2., d3), symbols=['O'])
+
+# Final structure
+s2 = StructureData(cell=cell)
+s2.append_atom(position=(0., 0., 0.), symbols=['Ba'])
+s2.append_atom(position=( 2., 2., 4.05 - d1), symbols=['Ti'])
+s2.append_atom(position=( 2., 2., -d2), symbols=['O'])
+s2.append_atom(position=( 2., 0., 4.05 - d3), symbols=['O'])
+s2.append_atom(position=( 0., 2., 4.05 - d3), symbols=['O'])
+
+fixed_coords = [] 
+for site in s1.sites:
+    if site.kind_name == 'Ba':
+        fixed_coords.append([True,True,True])
+    else:
+        fixed_coords.append([True,True,False])
+settings = ParameterData(dict={
+        'fixed_coords': fixed_coords
+        })
+
+elements = list(s1.get_symbols_set())
+
+valid_pseudo_groups = UpfData.get_upf_groups(filter_elements=elements)
+
 
 if auto_pseudos:
     valid_pseudo_groups = UpfData.get_upf_groups(filter_elements=elements)
@@ -82,74 +102,77 @@ if auto_pseudos:
         print >> sys.stderr, "Valid UPF groups are:"
         print >> sys.stderr, ",".join(i.name for i in valid_pseudo_groups)
         sys.exit(1)
-
-max_seconds = 100
-
-parameters = ParameterData(dict={
+    
+pw_parameters = ParameterData(dict={
     'CONTROL': {
-        'calculation': 'vc-relax',
+        'calculation': 'scf',
         'restart_mode': 'from_scratch',
-        'wf_collect': True,
-        'max_seconds': max_seconds,
     },
     'SYSTEM': {
-        'ecutwfc': 40.,
-        'ecutrho': 320.,
+        'ecutwfc': 30.,
+        'ecutrho': 240.,
     },
     'ELECTRONS': {
-        'conv_thr': 1.e-10,
+        'conv_thr': 1.e-8,
+        'mixing_beta': 0.3,
+
     }})
 
+neb_parameters = ParameterData(dict={
+        'PATH': {
+            'restart_mode': 'from_scratch',
+            'string_method': 'neb',
+            'nstep_path': 20, 
+            'ds': 2.0,
+            'opt_scheme': 'broyden',
+            'num_of_images': 7,
+            'k_max': 0.3,
+            'k_min': 0.2,
+            'path_thr': 0.2,
+        }})
+
+# If you want to set a manual climbing image:
+#neb_parameters.dict.PATH['ci_scheme']=  'manual'
+# and specify the climbing image(s) index in settings
+#try:
+#    settings.update_dict({'climbing_images': [4]})
+#except NameError:
+#    settings = ParameterData(dict={'climbing_images': [4]})
+
 kpoints = KpointsData()
-kpoints_mesh = 4
+
+# method mesh
+kpoints_mesh = 2
 kpoints.set_kpoints_mesh([kpoints_mesh, kpoints_mesh, kpoints_mesh])
 
+
 calc = code.new_calc()
-calc.label = "Test QE pw.x"
-calc.description = "Test vc-relax calculation with the Quantum ESPRESSO pw.x code"
-calc.set_max_wallclock_seconds(max_seconds)
+calc.label = "Test QE neb.x"
+calc.description = "Test calculation with the Quantum ESPRESSO neb.x code"
+calc.set_max_wallclock_seconds(30 * 60)  # 30 min
 # Valid only for Slurm and PBS (using default values for the
 # number_cpus_per_machine), change for SGE-like schedulers 
 calc.set_resources({"num_machines": 1})
 ## Otherwise, to specify a given # of cpus per machine, uncomment the following:
 # calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 8})
 
-#calc.set_prepend_text("#SBATCH --account=ch3")
+#calc.set_custom_scheduler_commands("#SBATCH --account=ch3")
 
 if queue is not None:
     calc.set_queue_name(queue)
 
-calc.use_structure(s)
-calc.use_parameters(parameters)
+calc.use_first_structure(s1)
+calc.use_last_structure(s2)
+calc.use_pw_parameters(pw_parameters)
+calc.use_neb_parameters(neb_parameters)
 
-if auto_pseudos:
-    try:
-        calc.use_pseudos_from_family(pseudo_family)
-        print "Pseudos successfully loaded from family {}".format(pseudo_family)
-    except NotExistent:
-        print ("Pseudo or pseudo family not found. You may want to load the "
-               "pseudo family, or set auto_pseudos to False.")
-        raise
-else:
-    raw_pseudos = [
-        ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba', 'pbesol'),
-        ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti', 'pbesol'),
-        ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O', 'pbesol')]
-
-    pseudos_to_use = {}
-    for fname, elem, pot_type in raw_pseudos:
-        absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
-                                                "data", fname))
-        pseudo, created = UpfData.get_or_create(
-            absname, use_first=True)
-        if created:
-            print "Created the pseudo for {}".format(elem)
-        else:
-            print "Using the pseudo for {} from DB: {}".format(elem, pseudo.pk)
-        pseudos_to_use[elem] = pseudo
-
-    for k, v in pseudos_to_use.iteritems():
-        calc.use_pseudo(v, kind=k)
+try:
+    calc.use_pseudos_from_family(pseudo_family)
+    print "Pseudos successfully loaded from family {}".format(pseudo_family)
+except NotExistent:
+    print ("Pseudo or pseudo family not found. You may want to load the "
+           "pseudo family, or set auto_pseudos to False.")
+    raise
 
 calc.use_kpoints(kpoints)
 
@@ -157,7 +180,6 @@ if settings is not None:
     calc.use_settings(settings)
 #from aiida.orm.data.remote import RemoteData
 #calc.set_outdir(remotedata)
-
 
 if submit_test:
     subfolder, script_filename = calc.submit_test()

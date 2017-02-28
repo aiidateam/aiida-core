@@ -966,14 +966,14 @@ if you are updating to a version prior or equal to 0.7, do::
   git checkout "v<VERSION>"
   pip install -U -r requirements.txt
 
-If needed, update the ``PATH`` and ``PYTHONPATH`` environment variables 
+and update the ``PATH`` and ``PYTHONPATH`` environment variables 
 in your `~/.bashrc` file (replacing <AiiDA_folder> with the folder in 
 which you just installed AiiDA)::
   
     export PATH="${PATH}:<AiiDA_folder>/bin"
     export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
 
-For the final update (to version 0.8) type instead::
+For the final update (to version 0.8), clone and install it from github using::
 
   git clone git@github.com:aiidateam/aiida_core.git
   pip install -e aiida_core[<EXTRAS>] --process-dependency-links
@@ -997,14 +997,15 @@ you wish to install (see the :ref:`quick start instructions<quickstart-ubuntu>`)
 Updating from 0.7.0 Django to 0.8.0 Django
 ------------------------------------------
 
-1. Stop the AiiDA daemon using ``verdi daemon stop``
-
-2. Undo all PATH and PYTHONPATH changes in your ``.bashrc`` and similar files you did to add ``verdi`` and ``runaiida``. The link in step 3 documents how to set them for the new version.
-
-3. Install AiiDA into a :ref:`virtual python environment (virtualenv) <install.faq.virtualenv>`, following :ref:`install.other.install`.
-   Optionally set bash aliases for the ``verdi`` and ``runaiida`` installed into the ``bin/`` folder of the virtual environment
-
-4. Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes to your profile should be necessary. This step is necessary as it updates some internal configuration files and run a database migration.
+* Undo all PATH and PYTHONPATH changes in your ``.bashrc`` and similar 
+  files you did to add ``verdi`` and ``runaiida``. The link in step 3 
+  documents how to set them for the new version.
+* Install AiiDA into a :ref:`virtual python environment (virtualenv) <install.faq.virtualenv>`,
+  following :ref:`install.other.install`. Optionally set bash aliases for
+  the ``verdi`` and ``runaiida`` installed into the ``bin/`` folder of the virtual environment
+* Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes 
+  to your profile should be necessary. This step is necessary as it
+  updates some internal configuration files and run a database migration.
 
 .. TODO: Add "Execute the migration script" if necessary
 
@@ -1013,54 +1014,35 @@ Updating from 0.6.0 Django to 0.7.0 Django
 In version 0.7 we have changed the Django database schema and we also have
 updated the AiiDA configuration files.
 
-* Stop your daemon (using ``verdi daemon stop``).
-* Store your AiiDA source folder somewhere in case you did some
-  modifications to some files.
-* Replace the AiiDA folder with the new one (either from the tar.gz or,
-  if you are using git, by doing a ``git pull``). If you use the same
-  folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
-  variables.
+* Follow the general update instructions above (see :ref:`here<updating_aiida>`).
+  **Note: before the `pip install` step, replace `ultrajson` with
+  `ujson` in the `requirements.txt` file.** 
 * Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
   raise an exception, and in the exception message you will see the
   command to run to update the schema version of the DB (v.0.7.0
   is using a newer version of the schema).
   The command will look like
-  ``python manage.py --aiida-profile=default migrate``, but please read the
+  ``python manage.py --aiida-profile=default migrate`` (to be run from 
+  aiida/backends/djsite) but please read the
   message for the correct command to run.
 * If you run ``verdi calculation list`` again now, it should work without
   error messages.
 * To update the AiiDA configuration files, you should execute the migration
-  script (``python _your_aiida_folder_/aiida/common/additions/migration_06dj_to_07dj.py``).
-* You can now restart your daemon and work as usual.
+  script (``python <AiiDA_folder>/aiida/common/additions/migration_06dj_to_07dj.py``).
 
 Updating from 0.6.0 Django to 0.7.0 SQLAlchemy
 ----------------------------------------------
-The SQLAlchemy backend is in beta mode for version 0.7.0. Therefore some of
+The SQLAlchemy backend was in beta mode for version 0.7.0. Therefore some of
 the verdi commands may not work as expected or at all (these are very few).
-If you would like to test the new backend with your existing AiiDA database,
-you should convert it to the new JSON format. We provide a transition script
-that will update your config files and change your database to the new schema.
+If you would like to test the SQLAlchemy backend with your existing AiiDA database,
+you should convert it to the JSON format. We provide a transition script
+that will update your config files and change your database to the proper schema.
 
-
-.. note::
-  Please note that the transition script expects that you are already at
-  version 0.6.0. Therefore if you use a previous version of AiiDA please
-  update first to 0.6.0.
-
-* Stop your daemon (using ``verdi daemon stop``).
-* Store your AiiDA source folder somewhere in case you did some
-  modifications to some files.
-* Replace the AiiDA folder with the new one (either from the tar.gz or,
-  if you are using git, by doing a ``git pull``). If you use the same
-  folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
-  variables.
 * Go to you AiiDA folder and run ``ipython``. Then execute
   ``from aiida.backends.sqlalchemy.transition_06dj_to_07sqla import transition``
   and ``transition(profile="your_profile",group_size=10000)`` by replacing
   ``your_profile`` with the name of the profile that you would like to
   transition.
-* You can now exit ipython, restart your daemon and work as usual.
-
 
 Updating from 0.5.0 to 0.6.0
 ----------------------------
@@ -1090,7 +1072,6 @@ To perform the update:
 
 Updating from 0.4.1 to 0.5.0
 ----------------------------
-
 * Follow the general update instructions above (see :ref:`here<updating_aiida>`).   
 * Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
   raise an exception, and in the exception message you will see the

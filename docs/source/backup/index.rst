@@ -12,20 +12,8 @@ How to backup the databases
 +++++++++++++++++++++++++++
 
 It is strongly advised to backup the content of your database daily. Below are
-instructions to set this up for the SQLite, PostgreSQL and MySQL databases, under Ubuntu
+instructions to set this up for the PostgreSQL database, under Ubuntu
 (tested with version 12.04).
-
-.. _backup_sqlite:
-
-SQLite backup
--------------
-
-.. note:: Perform the following operation after having set up AiiDA. Only then
-  the ``~/.aiida`` folder (and the files within) will be created.
-
-Simply make sure your database folder (typically /home/USERNAME/.aiida/ containing
-the file ``aiida.db`` and the ``repository`` directory) is properly backed up by
-your backup software (under Ubuntu, Backup -> check the "Folders" tab).
 
 .. _backup_postgresql:
 
@@ -95,15 +83,6 @@ your backup software (under Ubuntu, Backup -> check the "Folders" tab).
   this problem you can set up an incremental backup of your repository by following
   the instructions :ref:`here<repository_backup>`.
 
-.. _backup_mysql:
-
-MySQL backup
-------------
-
-.. todo:: Back-up instructions for the MySQL database.
-
-We do not have explicit instructions on how to back-up MySQL yet, but you
-can find plenty of information on Google.
 
 How to retrieve the database from a backup
 ------------------------------------------

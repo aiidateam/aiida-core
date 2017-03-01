@@ -126,34 +126,3 @@ Here is a full example how the icsd importer can be used::
         print result.source['db_id']
         aiida_structure = result.get_aiida_structure()
         #do something with the structure
-
-
-Troubleshooting: Testing the mysql connection
-+++++++++++++++++++++++++++++++++++++++++++++
-
-To test your mysql connection, first make sure that you can connect
-to the 3306 port of the machine hosting the database.
-If the database is not hosted by your local machine,
-use the local port tunneling provided by ssh, as follows::
-
-    ssh -L 3306:localhost:3306 username@icsddbhostname.com
-
-.. note:: If you get an URLError with Errno 111 (Connection refused) when
-  you query the database, try to use instead::
-        
-    ssh -L 3306:localhost:3306 -L 8010:localhost:80 username@icsddbhostname.com
-
-
-.. note:: You need an account on the host machine.
-.. note:: There are plenty of explanations online explaining
-  how to setup an tunnel over a SSH connection using the ``-L``
-  option, just google for it in case you need more information.
-
-Then open a new ``verdi shell`` and type::
-
-    import MySQLdb
-
-    db = MySQLdb.connect(host = "127.0.0.1", user ="dba", passwd = "sql", db = "icsd", port=3306)
-
-If you do not get an error and it does not hang, you have successfully
-established your connection to the mysql database.

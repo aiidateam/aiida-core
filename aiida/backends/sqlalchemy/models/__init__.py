@@ -16,17 +16,3 @@ __version__ = "0.7.1"
 # load_dbenv() function).
 SCHEMA_VERSION = 0.1
 
-
-
-# This is convenience so that one can import all ORM classes from one module
-# from aiida.backends.sqlalchemy.models import *
-# Also, only by import
-from comment import DbComment
-from computer import DbComputer
-from group import DbGroup
-from lock import DbLock
-from log import DbLog
-from node import DbNode, DbLink, DbPath, DbCalcState
-from settings import DbSetting
-from user import DbUser
-from workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep

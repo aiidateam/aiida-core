@@ -12,7 +12,7 @@ Setup
 +++++
 
 To be able to export data to TCOD, one has to
-:ref:`install dependencies for CIF manipulation <CIF_manipulation_dependencies>`
+:ref:`install dependencies for CIF manipulation <install_optional_dependencies>`
 as well as the :ref:`cod-tools package and plugin <codtools_plugin>`, and set up an
 AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>` for ``cif_cod_deposit`` script
 from **cod-tools**.

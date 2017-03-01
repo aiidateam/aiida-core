@@ -1,10 +1,8 @@
-.. _my-ref-to-pseudo-tutorial:
-
-Handling pseudopotentials
-=========================
 
 .. contents :: Contents
     :local:
+
+.. _my-ref-to-pseudo-tutorial:
 
 Introduction: Pseudopotential families
 ++++++++++++++++++++++++++++++++++++++

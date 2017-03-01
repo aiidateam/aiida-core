@@ -1,55 +1,3 @@
-######################
-The ``verdi`` commands
-######################
-
-For some of the most common operations in AiiDA, you can work directly from the command line using the a set of ``verdi`` commands. You already used ``verdi install`` when installing the software. There are quite some more functionalities attached to this command; here's a list:
-
-* :ref:`calculation<calculation>`:				query and interact with calculations
-* :ref:`code<code>`:                			setup and manage codes to be used
-* :ref:`comment<comment>`:          			manage general properties of nodes in the database
-* :ref:`completioncommand<completioncommand>`:	return the bash completion function to put in ~/.bashrc
-* :ref:`computer<computer>`:            		setup and manage computers to be used
-* :ref:`daemon<daemon>`:              			manage the AiiDA daemon
-* :ref:`data<data>`:                			setup and manage data specific types
-* :ref:`devel<devel>`:               			AiiDA commands for developers
-* :ref:`export<export>`:              			export nodes and group of nodes
-* :ref:`graph<graph>`:                    create a graph from a given root node
-* :ref:`group<group>`:               			setup and manage groups
-* :ref:`import<import>`:              			export nodes and group of nodes
-* :ref:`install<install>`:             			install/setup aiida for the current user/create a new profile
-* :ref:`node<node>`:                			manage operations on AiiDA nodes
-* :ref:`profile<profile>`:                		list and manage AiiDA profiles
-* :ref:`run<run>`:                  			execute an AiiDA script
-* :ref:`runserver<runserver>`:           		run the AiiDA webserver on localhost
-* :ref:`shell<shell>`:               			run the interactive shell with the Django environment
-* :ref:`user<user>`:                			list and configure new AiiDA users.
-* :ref:`workflow<workflow>`:            		manage the AiiDA worflow manager
-
-
-Each command above can be preceded by the ``-p <profile>`` or ``--profile=<profile>``
-option, as in::
-  
-  verdi -p <profile> calculation list
-
-This allows to select a specific AiiDA profile, and therefore a specific database,
-on which the command is executed. Thus several databases can be handled and 
-accessed simultaneously by AiiDA. To install a new profile, use the 
-:ref:`install<install>` command.
-
-.. note:: This profile selection has no effect on the ``verdi daemon`` commands.
-
-Some ambiguity might arise when a certain ``verdi`` subcommand manages both positional arguments and at least one option which accepts an unspecified number of arguments. Make sure you insert the separator ``--`` between the last optional argument and the first positional argument. As an example, instead of typing::
-
-  verdi export -g group1 group2 group3 export.aiida
-
-rather type::
-
-  verdi export -g group1 group2 group3 -- export.aiida
-
- The previous command will export the nodes belonging to groups ``group1``, ``group2``, and ``group3`` (specified by the option ``-g``) into the file ``export.aiida``, which is taken as a positional argument.
-
-Below is a list with all the available subcommands.
-
 .. _calculation:
 
 ``verdi calculation``
@@ -102,12 +50,17 @@ Below is a list with all the available subcommands.
 
 ``verdi comment``
 +++++++++++++++++
-Manages the comments attached to a database node.
+There are various ways of attaching notes/comments to a node within AiiDA. In the first scripting examples, you might already have noticed the possibility of storing a ``label`` or a ``description`` to any AiiDA Node. However, these properties are defined when the Node is created, and it is not possible to modify them after the Node has been stored.
 
-  *  **add**: add a new comment
-  *  **update**: change an existing comment
-  *  **remove**: remove a comment
-  *  **show**: show the comments attached to a node.
+The Node ``comment`` provides a simple way to have a more dynamic management of comments, in which any user can write a comment on the Node, or modify it or delete it.
+
+The ``verdi comment`` provides a set of methods that are used to manipulate the comments:
+
+* **add**: add a new comment to a Node.
+* **update**: modify a comment.
+* **show**: show the existing comments attached to the Node.
+* **remove**: remove a comment.
+
 
 
 .. _completioncommand:
@@ -277,16 +230,7 @@ Imports data (coming from other AiiDA databases) in the current database
 ``verdi install``
 +++++++++++++++++
 
-Used in the installation to configure the database.
-If it finds an already installed database, it updates the tables migrating them 
-to the new schema.
-
-.. note:: One can also create a new profile with this command::
-
-    verdi -p <new_profile_name> install
-    
-  The install procedure then works as usual, and one can select there a new database.
-  See also the :ref:`profile<profile>` command.
+This command is deprecated, please use the :ref:`setup <setup>` command instead
 
 
 .. _node:
@@ -331,6 +275,24 @@ a call of verdi run will be grouped together.
 
 Starts a lightweight Web server for development and also serves static files.
 Currently in ongoing development.
+
+
+.. _setup:
+
+``verdi setup``
++++++++++++++++++
+
+Used in the installation to configure the database.
+If it finds an already installed database, it updates the tables migrating them 
+to the new schema.
+
+.. note:: One can also create a new profile with this command::
+
+    verdi -p <new_profile_name> setup
+    
+  The setup procedure then works as usual, and one can select there a new database.
+  See also the :ref:`profile<profile>` command.
+
 
 .. _shell:
 

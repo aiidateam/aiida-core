@@ -1,6 +1,6 @@
 .. _my-ref-to-cp-tutorial:
 
-Quantum Espresso Car-Parrinello user-tutorial
+Car-Parrinello
 =============================================
 
 .. toctree::

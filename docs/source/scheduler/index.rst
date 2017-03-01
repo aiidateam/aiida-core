@@ -1,10 +1,3 @@
-################
-AiiDA schedulers
-################
-
-.. contents :: Contents
-    :local:
-
 .. _my-reference-to-scheduler:
 
 Supported schedulers

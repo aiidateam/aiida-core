@@ -1,6 +1,6 @@
 .. _my-ref-to-pwimmigration-tutorial:
 
-Quantum Espresso PWscf immigration user-tutorial
+PWscf immigration
 ================================================
 
 .. toctree::

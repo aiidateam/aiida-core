@@ -750,11 +750,11 @@ class Node(AbstractNode):
 
     @property
     def has_children(self):
-        return self.dbnode.children_q.count() > 0
+        return self.dbnode.children_q.first() is not None
 
     @property
     def has_parents(self):
-        return self.dbnode.parents_q.count() > 0
+        return self.dbnode.parents_q.first() is not None
 
     @property
     def uuid(self):

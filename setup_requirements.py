@@ -1,7 +1,7 @@
 # Requirements for core AiiDA functionalities
 install_requires = [
     'pip==9.0.1',
-    'setuptools==34.1.0',
+#    'setuptools==34.1.0',
     'wheel==0.29.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',
@@ -31,18 +31,16 @@ install_requires = [
     'uritools==1.0.2',
     'psycopg2==2.6.1',
     'amqp==1.4.9',
+    # Requirements for ssh transport
+    'paramiko==1.15.2',
+    'ecdsa==0.13',
+    'pycrypto==2.6.1',
+    # Requirements for verdi shell (version of ipython non enforced, because
+    # there are people who still prefer version 4 rather than the latest)
+    'ipython',
 ]
 
 extras_require = {
-    # Requirements for verdi shell (version of ipython non enforced, because
-    # there are people who still prefer version 4 rather than the latest)
-    'verdi_shell': ['ipython'],
-    # Requirements for ssh transport
-    'ssh': [
-        'paramiko==1.15.2',
-        'ecdsa==0.13',
-        'pycrypto==2.6.1',
-    ],
     # Requirements for ssh transport with authentification through Kerberos
     # token
     # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.

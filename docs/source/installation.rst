@@ -920,10 +920,10 @@ Further comments and troubleshooting
 Updating AiiDA from a previous version
 ++++++++++++++++++++++++++++++++++++++
 
-AiiDA can be update from a previously installed version. Before beginning 
+AiiDA can be updated from a previously installed version. Before beginning 
 the procedure, make sure of the following
   
-  * your daemon is stopped (use ``verdi daemon stop`` in case),
+  * your daemon is stopped (use ``verdi daemon stop``),
   * you know your current AiiDA version. In case, you can get it from the `verdi shell`::
   
       import aiida
@@ -938,6 +938,45 @@ the procedure, make sure of the following
     
       pip install --user -U setuptools pip wheel virtualenv
   
+.. note::
+  A few general remarks:
+  * If you want to update the code in the same folder, but modified some files locally,
+    you can stash them (`git stash`) before cloning or pulling the new code.
+    Then put them back with `git stash pop` (note that conflicts might appear).
+  * If you encounter any problems and/or inconsistencies, delete any .pyc
+    files that may have remained from the previous version. E.g. If you are
+    in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
+
+Updating from 0.7.0 Django to 0.8.0 Django
+------------------------------------------
+
+* In a virtual environment, clone and install the code from github with::
+
+  virtualenv ~/aiidapy_<VERSION>
+  source ~/aiidapy_<VERSION>/bin/activate
+  cd <where_you_want_the_aiida_sourcecode>
+  git clone git@github.com:aiidateam/aiida_core.git
+  pip install -e aiida_core[<EXTRAS>] --process-dependency-links
+
+  where <EXTRAS> is a coma separated list of the optional features
+  you wish to install (see the :ref:`quick start instructions<quickstart-ubuntu>`).
+  The two first steps above can be removed if you do not want to install AiiDA
+  into a virtual environment (reminder: this is *not* recommended).
+
+* Undo all PATH and PYTHONPATH changes in your ``.bashrc`` and similar 
+  files you did to add ``verdi`` and ``runaiida``. The link in step 3 
+  documents how to set them for the new version.
+* Install AiiDA into a :ref:`virtual python environment (virtualenv) <install.faq.virtualenv>`,
+  following :ref:`install.other.install`. Optionally set bash aliases for
+  the ``verdi`` and ``runaiida`` installed into the ``bin/`` folder of the virtual environment
+* Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes 
+  to your profile should be necessary. This step is necessary as it
+  updates some internal configuration files and run a database migration.
+
+.. TODO: Add "Execute the migration script" if necessary
+
+Updating from an older version
+------------------------------
 
 Because the database schema changes typically at every version, one needs
 to run a migration that will update your database to the current standard.
@@ -955,8 +994,6 @@ do the following::
   cd <where_you_want_the_aiida_sourcecode>
 
 (<VERSION> being the intermediate version you are updating to, in our example 0.6). 
-The two first steps above can be removed if do not want to install this AiiDA
-version into a virtual environment (reminder: this is *not* recommended).
 
 Then get the code with the appropriate version and install its dependencies:
 if you are updating to a version prior or equal to 0.7, do::
@@ -973,41 +1010,15 @@ which you just installed AiiDA)::
     export PATH="${PATH}:<AiiDA_folder>/bin"
     export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
 
-For the final update (to version 0.8), clone and install it from github using::
-
-  git clone git@github.com:aiidateam/aiida_core.git
-  pip install -e aiida_core[<EXTRAS>] --process-dependency-links
-
-where <EXTRAS> is a coma separated list of the optional features
-you wish to install (see the :ref:`quick start instructions<quickstart-ubuntu>`).
-
 .. note::
-  A few general remarks:
-  * For some early version (0.5, 0.6, ) you might need to install (with `pip install`)
-    some dependencies located in `optional_requirements.txt` (e.g. `psycopg2==2.6`
-    for postgresql database users), as well as `ipython` to get a proper shell.
-  * If you want to update the code in the same folder, but modified some files locally,
-    you can stash them (`git stash`) before cloning or pulling the new code.
-    Then put them back with `git stash pop` (note that conflicts might appear).
-  * If you encounter any problems and/or inconsistencies, delete any .pyc
-  files that may have remained from the previous version. E.g. If you are
-  in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
-
-
-Updating from 0.7.0 Django to 0.8.0 Django
-------------------------------------------
-
-* Undo all PATH and PYTHONPATH changes in your ``.bashrc`` and similar 
-  files you did to add ``verdi`` and ``runaiida``. The link in step 3 
-  documents how to set them for the new version.
-* Install AiiDA into a :ref:`virtual python environment (virtualenv) <install.faq.virtualenv>`,
-  following :ref:`install.other.install`. Optionally set bash aliases for
-  the ``verdi`` and ``runaiida`` installed into the ``bin/`` folder of the virtual environment
-* Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes 
-  to your profile should be necessary. This step is necessary as it
-  updates some internal configuration files and run a database migration.
-
-.. TODO: Add "Execute the migration script" if necessary
+  * If you have an issue with `ultrajson` during the `pip install` step, 
+    replace `ultrajson` with `ujson` in the `requirements.txt` file 
+    (the name of this module changed over time).
+  * in the `pip install` step, you might need to install some dependencies
+    located in `optional_requirements.txt` (e.g. `psycopg2` for postgresql
+    database users), as well as `ipython` to get a proper shell, e.g.::
+      
+      pip install -U -r requirements.txt psycopg2==2.6 ipython
 
 Updating from 0.6.0 Django to 0.7.0 Django
 ------------------------------------------
@@ -1015,8 +1026,6 @@ In version 0.7 we have changed the Django database schema and we also have
 updated the AiiDA configuration files.
 
 * Follow the general update instructions above (see :ref:`here<updating_aiida>`).
-  **Note: before the `pip install` step, replace `ultrajson` with
-  `ujson` in the `requirements.txt` file.** 
 * Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
   raise an exception, and in the exception message you will see the
   command to run to update the schema version of the DB (v.0.7.0
@@ -1066,8 +1075,6 @@ compatible with AiiDA version 0.6.0.
 To perform the update:
 
 * Follow the general update instructions above (see :ref:`here<updating_aiida>`).
-  **Note: before the `pip install` step, replace `ultrajson` with
-  `ujson` in the `requirements.txt` file.** 
 * Execute the migration script (``python <AiiDA_folder>/aiida/common/additions/migration.py``).
 
 Updating from 0.4.1 to 0.5.0

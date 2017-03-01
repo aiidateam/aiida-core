@@ -1,0 +1,636 @@
+.. _installation:
+
+############
+Installation
+############
+
+=============
+Quick install
+=============
+
+This section of the manual will guide you through the process of installing AiiDA on your system as quick as possible.
+For more detailed instructions and explanations refer to the later sections.
+The installation procedure can generally be split into three separate steps:
+
+1. Install prerequisite software
+2. Install AiiDA and its python dependencies
+3. Configure the AiiDA installation
+
+Install prerequisite software
++++++++++++++++++++++++++++++
+The installation procedure itself requires certain software, which therefore will have to be installed first.
+The following software is required to continue with the installation:
+
+* `git`_ (To download the ``aiida`` package)
+* `python-2.7.x`_ (The programming language used for AiiDA)
+* `python-pip`_ (Python package manager)
+* `python-virtualenv`_ (Software to create a virtual environment to install AiiDA in)
+* `postgresql`_ (Database software version 9.4 or higher)
+
+.. _git: https://git-scm.com/downloads
+.. _python-2.7.x: https://www.python.org/downloads
+.. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
+.. _python-virtualenv: https://virtualenv.pypa.io/en/stable/
+.. _postgresql: https://www.postgresql.org/downloads
+
+
+Installation instructions will depend on your system.
+For Ubuntu and any other Debian derived distributions you can use::
+
+    $ sudo apt-get install git python-pip python2.7-dev postgresql postgresql-server-dev-all postgresql-client
+
+For MacOS X using `Homebrew`_ as the package manager::
+
+    $ brew install git python postgresql
+    $ pg_ctl -D /usr/local/var/postgres start
+
+.. _Homebrew: http://brew.sh/index_de.html
+
+For a more detailed description of database requirements and usage see section `database`_.
+
+Install AiiDA and its python dependencies
++++++++++++++++++++++++++++++++++++++++++
+With the prerequisites installed, we can now download AiiDA itself and install it along with all its python dependencies.
+Create a directory where you want to install AiiDA and clone the repository::
+
+    $ mkdir <your_directory>
+    $ cd <your_directory>
+    $ git clone https://github.com/aiidateam/aiida_core
+
+To install AiiDA and its dependencies we employ the python package manager ``pip``::
+
+    $ pip install --user -U setuptools pip wheel virtualenv
+
+To prevent the python packages that AiiDA depends on, from clashing with the packages you already have installed on your system, we will install them in a virtual environment.
+For detailed information about virtual environment refer to the section :ref:`virtual-environment`.
+To create a new virtual environment and activate it, run the following commands::
+
+    $ virtualenv ~/aiidapy
+    $ source ~/aiidapy/bin/activate
+
+This will create a directory in your home directory named ``aiidapy`` where all the packages will be installed.
+After activation, your prompt now should have ``(aiidapy)`` in front of it, indicating that you are working in the virtual environment.
+Finally, to install AiiDA, run the following command from the directory where you cloned the repository::
+
+   (aiidapy) $ pip install -e aiida_core
+
+
+.. _install_optional_dependencies:
+
+There are additional optional packages that you may want to install, which are grouped in the following categories:
+
+    * ``atomic_tools`` (packages that allow importing and manipulating crystal structure from various formats)
+    * ``ssh_kerberos`` (adds support for ssh transport authentication through Kerberos)
+    * ``REST`` (allows a REST server to be ran locally to serve AiiDA data)
+    * ``docs`` (tools to build the documentation)
+    * ``advanced_plotting`` (tools for advanced plotting)
+
+In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command::
+
+    (aiidapy) $ pip install -e aiida_core[atomic_tools,docs,advanced_plotting]
+
+
+Configure the AiiDA installation
+++++++++++++++++++++++++++++++++
+After successful installation, AiiDA needs to be configured, such as setting up a profile and creating a database, which can be done through AiiDA's command line interface ``verdi``.
+For a fast and default setup use ``verdi quicksetup`` and for greater control use ``verdi setup`` (see `verdi-setup`_).
+Here we will use the quicksetup by executing::
+
+    (aiidapy) $ verdi quicksetup
+
+You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
+Alternatively you can give your information as commandline options (use ``verdi quicksetup --help`` option for a list of options).
+
+.. note:: ``verdi setup`` used to be called ``verdi install``, but the new name better reflects the command's purpose
+
+Congratulations, you should now have a working installation of AiiDA.
+You can verify that the installation was successful by running::
+
+    $ verdi profile list
+
+This should list the profile that was just created by the ``quicksetup``::
+
+    > quicksetup (DEFAULT) (DAEMON PROFILE)
+
+Remember that in order to work with AiiDA through for example the ``verdi`` command, you need to be in your virtual environment.
+If you open a new terminal for example, be sure to activate it first with::
+
+    $ source ~/aiidapy/bin/activate
+
+At this point, you can choose to read on for additional installation details and configuration options, or you can choose to start using
+AiiDA and go straight to the section :ref:`get-started`.
+
+
+======================
+Optional configuration
+======================
+
+Verdi tab-completion
+++++++++++++++++++++
+The ``verdi`` command line tool has many commands and options.
+To simplify its usage there is a way to add support tab-completion for it to your bash shell.
+To do so, simply run the following command::
+
+    $ verdi completioncommand
+
+and add the result to your bash config, e.g. ``.bashrc``, or if you are using a virtual environment, simply append it to the activation script.
+Alternatively, for both both cases you can accomplish the same by simply by adding the following line to the ``.bashrc`` or activation script.
+
+    eval "$(verdi completioncommand)
+
+For the changes to apply to your current shell, make sure to source the ``.bashrc`` or activation script.
+
+Adding AiiDA to the PATH
+++++++++++++++++++++++++
+If you used a virtual environment for the installation of AiiDA, the required commands such as ``verdi`` should have been added automatically to your ``PATH``.
+Otherwise, you may have to add the install directory of AiiDA manually to your ``PATH`` so that the binaries are found.
+
+For Linux systems, the path to add is usually ``~/.local/bin``::
+
+    export PATH=~/.local/bin:${PATH}
+
+For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
+
+    export PATH=~/Library/Python/2.7/bin:${PATH}
+
+To verify if this is the correct path to add, navigate to this location and you should find the executable ``supervisord``, or ``celeryd``, in the directory.
+
+After updating your ``PATH`` you can check if it worked in the following way:
+
+* type ``verdi`` on your terminal, and check if the program starts (it should
+  provide a list of valid commands). If it doesn't, check if you correctly set
+  up the ``PATH`` environmente variable above.
+* go in your home folder or in another folder different from the AiiDA folder,
+  run ``python`` or ``ipython`` and try to import a module, e.g. typing::
+
+    import aiida
+
+  If the setup is ok, you shouldn't get any error. If you do get an ``ImportError`` instead, check if you correctly set up the ``PYTHONPATH``
+  environment variable in the steps above.
+
+
+.. _virtual-environment:
+
+===================
+Virtual environment
+===================
+
+Why a virtual environment?
+++++++++++++++++++++++++++
+
+AiiDA depends on third party python packages and very often on specific versions of those packages.
+If AiiDA were to be installed system wide, it may up- or downgrade third party packages used by other parts of the system and leave them potentially broken.
+Conversely, if a different version of a package is later installed which is incompatible with AiiDA, it too will become broken.
+
+In short; installing AiiDA might interfere with installed python packages and installing other packages might interfere with AiiDA.
+Since your scientific data is important to you and to us, we *strongly* recommend isolating AiiDA in what is called a virtual environment.
+
+For a single purpose machine, only meant to run AiiDA and nothing else, you may at your own risk opt to omit working in a virtual environment.
+In this case, you may want to install AiiDA and its dependencies in user space by using a ``--user`` flag, in order to avoid having to have administrative rights to install them system wide.
+
+What is a virtual environment?
+++++++++++++++++++++++++++++++
+A python virtual environment is essentially a folder, that contains everything that is needed to run python programs, including
+
+* python executable
+* python standard packages
+* package managers such as ``pip``
+* an activation script that sets the ``PYTHONPATH`` and ``PATH`` variables
+
+The ``python`` executable might be a link to an executable elswhere, depending on the way the environment is created.
+The activation script ensures that the python executable of the virtualenv is the first in ``PATH``, and that python programs have access only to packages installed inside the virtualenv (unless specified otherwise during creation).
+This allows to have an isolated environment for programs that rely on running with a specific version of python or specific versions of third party python packages.
+
+A virtual environment as well as the packages that will be installed within it, will often be installed in the home space of the user such that administrative rights are not required, therefore also making this technique very useful on machines where one has restricted access.
+
+Creating a virtual environment
+++++++++++++++++++++++++++++++
+There are different programs that can create and work with virtual environments.
+An example for python virtual environments is called ``virtualenv`` and can be installed with for example ``pip`` by running::
+
+    $ pip install --user -U virtualenv
+
+As explained before, a virtual environment is in essence little more than a directory containing everything it needs.
+In principle a virtual environment can thus be created anywhere where you can create a directory.
+You could for example opt to create a directory for all your virtual environments in your home folder::
+
+    $ mkdir ~/.virtualenvs
+
+Using ``virtualenv`` you can then create a new virtual environment by running::
+
+    $ virtualenv ~/.virtualenvs/my_env
+
+This will create the environment ``my_env`` and automatically activate it for you.
+If you open a new terminal, or you have deactivated the environment, you can reactivate it as follows::
+
+    $ ~/.virtualenvs/my_env/bin/activate
+
+If it is activated successfully, you should see that your prompt is prefixed with the name of the environment::
+
+    (my_env) $
+
+To leave or deactivate the environment and set all the settings back to default, simply run::
+
+    (my_env) $ deactivate
+
+
+.. _database:
+
+========
+Database
+========
+AiiDA needs a database backend to store the nodes, node attributes and other
+information, allowing the end user to perform very fast queries of the results.
+Currently, only `postgresql`_ is allowed as a database backend.
+
+
+Setup instructions
+++++++++++++++++++
+In order for AiiDA to be able to use postgres it needs to be installed first.
+On Ubuntu and other Debian derivative distributions this can be accomplished with::
+
+    $ sudo apt-get install postgresql postgresql-server-dev-all postgresql-client
+
+For Mac OS X, binary packages can be downloaded from the official website of `postgresql`_ or you can use ``brew``::
+
+    $ brew install postgresql
+    $ pg_ctl -D /usr/local/var/postgres start
+
+To manually create a database for AiiDA that will later be used in the configuration with ``verdi setup``, you should follow these instructions.
+First you will need to run the program ``psql`` to interact with postgres and you have to do so as the ``postgres`` user that was created upon installing the software.
+To assume the role of ``postgres`` run as root::
+
+    $ su - postgres
+
+and launch the postgres program::
+
+    $ psql
+
+Create a new database user account for AiiDA by running::
+
+    CREATE USER aiida WITH PASSWORD '<password>';
+
+replacing ``<password>`` with a password of your choice.
+Make sure to remember it, as you will need it again when you configure AiiDA to use this database through ``verdi setup``.
+If you want to change the password you just created use the command::
+
+    ALTER USER aiida PASSWORD '<password>';
+
+Next we create the database itself::
+
+    CREATE DATABASE aiidadb OWNER aiida;
+
+and grant all privileges on this DB to the previously-created ``aiida`` user::
+
+    GRANT ALL PRIVILEGES ON DATABASE aiidadb to aiida;
+
+You have now created a database for AiiDA and you can close the postgres shell by typing ``\q``.
+To test if the database was created successfully, you can run the following command as a regular user in a bash terminal::
+
+    $ psql -h localhost -d aiidadb -U aiida -W
+
+and type the password you inserted before, when prompted.
+If everything worked well, you should get no error and see the prompt of the ``psql`` shell.
+
+If you uses the same names used in the example commands above, during the ``verdi setup`` phase you want to use the following parameters to use the database you just created::
+
+    Database engine: postgresql_psycopg2
+    PostgreSQL host: localhost
+    PostgreSQL port: 5432
+    AiiDA Database name: aiidadb
+    AiiDA Database user: aiida
+    AiiDA Database password: <password>
+
+.. note:: Do not forget to backup your database (instructions :ref:`here<backup_postgresql>`).
+
+.. note:: If you want to move the physical location of the data files
+  on your hard drive AFTER it has been created and filled, look at the
+  instructions :ref:`here<move_postgresql>`.
+
+.. note:: Due to the presence of a bug, PostgreSQL could refuse to restart after a crash.
+  If this happens you should follow the instructions written `here`_.
+
+.. _here: https://wiki.postgresql.org/wiki/May_2015_Fsync_Permissions_Bug/
+
+
+
+.. _verdi-setup:
+
+===========
+Verdi setup
+===========
+The quick install section detailed how ``verdi quicksetup`` can be used to quickly setup AiiDA by creating a profile and a database for you.
+If you want more control over this process, for example if you want to use a database that you created yourself, you can use ``verdi setup``::
+
+    $ verdi setup <profile_name>
+
+or equivalently::
+
+    $ verdi -p <profile_name> setup
+
+The same commands can also be used to edit already existing profiles.
+The ``verdi setup`` command will guide you through the setup process through a series of prompts.
+
+The first thing that will be asked to you is the timezone, extremely important to get correct dates and times for your calculations.
+
+AiiDA will do its best to try and understand the local timezone (if properly configured on your machine), and will suggest a set of sensible values.
+Choose the timezone that fits best to you (that is, the nearest city in your timezone - for Lausanne, for instance, we choose ``Europe/Zurich``) and type it at the prompt.
+
+As a second parameter to input during the ``verdi setup`` phase, the "Default user email" is asked.
+We suggest here to use your institution email, that will be used to associate the calculations to you.
+
+.. note:: In AiiDA, the user email is used as username, and also as unique identifier when importing/exporting data from AiiDA.
+
+.. note:: Even if you choose an email different from the default one
+  (``aiida@localhost``), a user with email ``aiida@localhost`` will be
+  set up,
+  with its password set to ``None`` (disabling access via this user
+  via API or Web interface).
+
+  The existence of a default user is internally useful for multi-user
+  setups, where only one user
+  runs the daemon, even if many users can simultaneously access the DB.
+  See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
+  for more details (only for advanced users).
+
+.. note:: The password, in the current version of AiiDA, is not used (it will
+    be used only in the REST API and in the web interface). If you leave the
+    field empty, no password will be set and no access will be granted to the
+    user via the REST API and the web interface.
+
+Then, the following prompts will help you configure the database. Typical settings are::
+
+    Insert your timezone: Europe/Zurich
+    Default user email: richard.wagner@leipzig.de
+    Database engine: postgresql_psycopg2
+    PostgreSQL host: localhost
+    PostgreSQL port: 5432
+    AiiDA Database name: aiida_dev
+    AiiDA Database user: aiida
+    AiiDA Database password: <password>
+    AiiDA repository directory: /home/wagner/.aiida/repository/
+    [...]
+    Configuring a new user with email 'richard.wagner@leipzig.de'
+    First name: Richard
+    Last name: Wagner
+    Institution: BRUHL, LEIPZIG
+    The user has no password, do you want to set one? [y/N] y
+    Insert the new password:
+    Insert the new password (again):
+
+
+=========================
+Installation requirements
+=========================
+Read on for more information about the kind of operating system AiiDA can run on and what software needs to be installed before AiiDA can work.
+
+Supported architecture
+++++++++++++++++++++++
+AiiDA is tested to run on:
+
+* Mac OS X (tested)
+* Ubuntu 14.04 & 16.04
+
+AiiDA should run on:
+
+* Older / newer Ubuntu versions
+* Other Linux distributions
+
+
+===============
+Troubleshooting
+===============
+
+* if the ``pip install`` command gives you an error that
+  resembles the one
+  shown below, you might need to downgrade to an older version of pip::
+
+    Cannot fetch index base URL https://pypi.python.org/simple/
+
+  To downgrade pip, use the following command::
+
+    sudo easy_install pip==1.2.1
+
+* Several users reported the need to install also ``libpq-dev`` (header files for libpq5 - PostgreSQL library)::
+
+    apt-get install libpq-dev
+
+  But under Ubuntu 12.04 this is not needed.
+ 
+* If the installation fails while installing the packages related
+  to the database, you may have not installed or set up the database
+  libraries.
+
+  In particular, on Mac OS X, if you installed the binary package of
+  PostgreSQL, it is possible that the PATH environment variable is not
+  set correctly, and you get a "Error: pg_config executable not found." error.
+  In this case, discover where the binary is located, then add a line to
+  your ``~/.bashrc`` file similar to the following::
+
+    export PATH=/the/path/to/the/pg_config/file:${PATH}
+
+  and then open a new bash shell.
+  Some possible paths can be found at this
+  `Stackoverflow link`_ and a non-exhaustive list of possible
+  paths is the following (version number may change):
+
+  * ``/Applications/Postgres93.app/Contents/MacOS/bin``
+  * ``/Applications/Postgres.app/Contents/Versions/9.3/bin``
+  * ``/Library/PostgreSQL/9.3/bin/pg_config``
+
+  Similarly, if the package installs but then errors occur during the first
+  of AiiDA (with ``Symbol not found`` errors or similar), you may need to
+  point to the path where the dynamical libraries are. A way to do it is to
+  add a line similar to the following to the ``~/.bashrc`` and then open
+  a new shell::
+
+    export DYLD_FALLBACK_LIBRARY_PATH=/Library/PostgreSQL/9.3/lib:$DYLD_FALLBACK_LIBRARY_PATH
+
+  (you should of course adapt the path to the PostgreSQL libraries).
+
+.. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
+ 
+
+* For some reasons, on some machines (notably often on Mac OS X) there is no
+  default locale defined, and when you run ``verdi setup`` for the first
+  time it fails (see also `this issue`_ of django).  To solve the problem, first
+  remove the sqlite database that was created.
+
+  Then, run in your terminal (or maybe even better, add to your ``.bashrc``, but
+  then remember to open a new shell window!)::
+
+     export LANG="en_US.UTF-8"
+     export LC_ALL="en_US.UTF-8"
+
+  and then run ``verdi setup`` again.
+
+.. _this issue: https://code.djangoproject.com/ticket/16017
+
+* [*Only for developers*] The developer tests of the *SSH* transport plugin are
+  performed connecting to ``localhost``. The tests will fail if
+  a passwordless ssh connection is not set up. Therefore, if you want to run
+  the tests:
+
+  + make sure to have a ssh server. On Ubuntu, for instance, you can install
+    it using::
+
+       sudo apt-get install openssh-server
+
+  + Configure a ssh key for your user on your machine, and then add
+    your public key to the authorized keys of localhsot.
+    The easiest way to achieve this is to run::
+
+       ssh-copy-id localhost
+
+    (it will ask your password, because it is connecting via ssh to ``localhost``
+    to install your public key inside ~/.ssh/authorized_keys).
+
+.. _updating_aiida:
+
+
+======================================
+Updating AiiDA from a previous version
+======================================
+
+.. note::
+  A few important points regarding the updates:
+
+  * If you encounter any problems and/or inconsistencies, delete any .pyc
+    files that may have remained from the previous version. E.g. If you are
+    in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
+  * The requirements file may have changed. Please be sure that you have
+    installed all the needed requirements. This can be done by executing:
+    ``pip install --user -U -r requirements.txt``.
+  * If you installed AiiDA using pip you should be simply able to pip install --upgrade aiida (from the python environment into which AiiDA is installed).
+
+Updating from 0.7.0 Django to 0.8.0 Django
+++++++++++++++++++++++++++++++++++++++++++
+
+1. Stop the AiiDA daemon using ``verdi daemon stop``
+
+2. Undo all ``PATH`` and ``PYTHONPATH`` changes in your ``.bashrc`` and similar files you did to add ``verdi`` and ``runaiida``. The link in step 3 documents how to set them for the new version.
+
+3. Install AiiDA into a virtual python environment (virtualenv) :ref:`virtual-environment`, following the install instruction in :ref:`installation`.
+   Optionally set bash aliases for the ``verdi`` and ``runaiida`` installed into the ``bin/`` folder of the virtual environment
+
+4. Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes to your profile should be necessary. This step is necessary as it updates some internal configuration files and run a database migration.
+
+.. TODO: Add "Execute the migration script" if necessary
+
+Updating from 0.6.0 Django to 0.7.0 Django
+++++++++++++++++++++++++++++++++++++++++++
+In version 0.7 we have changed the Django database schema and we also have
+updated the AiiDA configuration files.
+
+* Stop your daemon (using ``verdi daemon stop``).
+* Store your AiiDA source folder somewhere in case you did some
+  modifications to some files.
+* Replace the AiiDA folder with the new one (either from the tar.gz or,
+  if you are using git, by doing a ``git pull``). If you use the same
+  folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
+  variables.
+* Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
+  raise an exception, and in the exception message you will see the
+  command to run to update the schema version of the DB (v.0.7.0
+  is using a newer version of the schema).
+  The command will look like
+  ``python manage.py --aiida-profile=default migrate``, but please read the
+  message for the correct command to run.
+* If you run ``verdi calculation list`` again now, it should work without
+  error messages.
+* To update the AiiDA configuration files, you should execute the migration
+  script (``python _your_aiida_folder_/aiida/common/additions/migration_06dj_to_07dj.py``).
+* You can now restart your daemon and work as usual.
+
+Updating from 0.6.0 Django to 0.7.0 SQLAlchemy
+++++++++++++++++++++++++++++++++++++++++++++++
+The SQLAlchemy backend is in beta mode for version 0.7.0. Therefore some of
+the verdi commands may not work as expected or at all (these are very few).
+If you would like to test the new backend with your existing AiiDA database,
+you should convert it to the new JSON format. We provide a transition script
+that will update your config files and change your database to the new schema.
+
+
+.. note::
+  Please note that the transition script expects that you are already at
+  version 0.6.0. Therefore if you use a previous version of AiiDA please
+  update first to 0.6.0.
+
+* Stop your daemon (using ``verdi daemon stop``).
+* Store your AiiDA source folder somewhere in case you did some
+  modifications to some files.
+* Replace the AiiDA folder with the new one (either from the tar.gz or,
+  if you are using git, by doing a ``git pull``). If you use the same
+  folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
+  variables.
+* Go to you AiiDA folder and run ``ipython``. Then execute
+  ``from aiida.backends.sqlalchemy.transition_06dj_to_07sqla import transition``
+  and ``transition(profile="your_profile",group_size=10000)`` by replacing
+  ``your_profile`` with the name of the profile that you would like to
+  transition.
+* You can now exit ipython, restart your daemon and work as usual.
+
+
+Updating from 0.5.0 to 0.6.0
+++++++++++++++++++++++++++++
+This migration will update your AiiDA configuration files making them
+compatible with AiiDA version 0.6.0.
+
+.. note::
+  We performed a lot of changes to introduce in one of our following
+  releases a second object-relational mapper (we will refer to it as
+  back-end) for the management of the used DBMSs and more specifically
+  of PostgreSQL.
+
+  Even if most of the needed restructuring & code addition has been finished,
+  a bit of more work is needed before we make the new back-end available.
+
+.. note::
+  A few important points regarding the upgrade:
+
+  * Please try to checkout the latest version from the corresponding
+    development branch. Problems encountered are resolved and fixes are
+    pushed to the branch.
+  * You can not directly import data (``verdi import``) that you have exported
+    (``verdi export``) with a previous version of AiiDA. Please use
+    :download:`this script <../examples/convert_exportfile_version.py>`
+    to convert it to the new schema. (Usage: ``python
+    convert_exportfile_version.py input_file output_file``).
+
+
+To perform the update:
+
+* Stop your daemon (using ``verdi daemon stop``).
+* Backup your configuration files that are in .aiida directory.
+* Replace the AiiDA folder with the new one (e.g. by doing a ``git pull``).
+  If you use the same folder name, you will not need to update the
+  ``PATH`` and ``PYTHONPATH`` variables.
+* Execute the migration script (``python _your_aiida_folder_/aiida/common/additions/migration.py``).
+* Start again you daemon (using ``verdi daemon start``).
+
+
+Updating from 0.4.1 to 0.5.0
+++++++++++++++++++++++++++++
+* Stop your daemon (using ``verdi daemon stop``)
+* Store your AiiDA source folder somewhere in case you did some
+  modifications to some files
+* Replace the AiiDA folder with the new one (either from the tar.gz or,
+  if you are using git, by doing a ``git pull``). If you use the same
+  folder name, you will not need to update the ``PATH`` and ``PYTHONPATH``
+  variables
+* Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
+  raise an exception, and in the exception message you will see the
+  command to run to update the schema version of the DB (v.0.5.0
+  is using a newer version of the schema).
+  The command will look like
+  ``python manage.py --aiida-profile=default migrate``, but please read the
+  message for the correct command to run.
+* If you run ``verdi calculation list`` again now, it should work without
+  error messages.
+* You can now restart your daemon and work as usual.
+
+.. note:: If you modified or added files, you need to put them back in place.
+  Note that if you were working on a plugin, the plugin interface changed:
+  you need to change the CalcInfo returning also a CodeInfo, as specified
+  :ref:`here<qeplugin-prepare-input>` and also accept a ``Code`` object
+  among the inputs (also described in the same page).

@@ -4,10 +4,9 @@ User's guide
 .. toctree::
    :maxdepth: 4
 
-   ../database/index
+   ../installation/index
+   ../get_started/index
    ../backup/index
-   ../installation
-   ../setup/computerandcodes
    ../plugins/index
    ../examples/scripting
    ../examples/structure_tutorial

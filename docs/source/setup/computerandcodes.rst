@@ -298,14 +298,13 @@ The configuration of computers happens in two steps.
  After these two steps have been completed, your computer is ready to go!
 
 .. note:: If the cluster you are using requires authentication through a Kerberos
-	token (that you need to obtain before using ssh), you typically need to install 
-	``libffi`` (``sudo apt-get install libffi-dev`` under Ubuntu), and then
-        ``python-gssapi`` and ``pyasn1`` (see the ``optional_requirements.txt`` file
-	at the root of the AiiDA distribution).
-	Then, if your ``.ssh/config`` file is configured properly (in particular includes
-	all the necessary ``GSSAPI`` options), ``verdi computer configure`` will
-	contain already the correct suggestions for all the gss options needed to support Kerberos.
-	   
+    token (that you need to obtain before using ssh), you typically need to install 
+    ``libffi`` (``sudo apt-get install libffi-dev`` under Ubuntu), and make sure you install
+    the ``ssh_kerberos`` :ref:`optional dependencies<install_optional_dependencies>` during the installation process of AiiDA.
+    Then, if your ``.ssh/config`` file is configured properly (in particular includes
+    all the necessary ``GSSAPI`` options), ``verdi computer configure`` will
+    contain already the correct suggestions for all the gss options needed to support Kerberos.
+
 .. note:: To check if you set up the computer correctly,
   execute::
 

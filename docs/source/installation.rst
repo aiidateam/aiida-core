@@ -52,6 +52,8 @@ Since your scientific data is important to you and to us, we *strongly* recommen
 
 For a single purpose machine, only meant to run AiiDA and nothing else, you may at your own risk simply leaving away the steps to setup and activate the virtual environment. You may want to install AiiDA and it's dependencies with the --user flag to avoid having to use sudo in that case.
 
+.. _tab-completion:
+
 How to use verdi tab-completion with a virtualenv?
 --------------------------------------------------
 
@@ -952,11 +954,11 @@ Updating from 0.7.0 Django to 0.8.0 Django
 
 * In a virtual environment, clone and install the code from github with::
 
-  virtualenv ~/aiidapy_<VERSION>
-  source ~/aiidapy_<VERSION>/bin/activate
+  virtualenv ~/aiidapy
+  source ~/aiidapy/bin/activate
   cd <where_you_want_the_aiida_sourcecode>
   git clone git@github.com:aiidateam/aiida_core.git
-  pip install -e aiida_core[<EXTRAS>] --process-dependency-links
+  pip install -e aiida_core[<EXTRAS>]
 
   where <EXTRAS> is a coma separated list of the optional features
   you wish to install (see the :ref:`quick start instructions<quickstart-ubuntu>`).
@@ -964,16 +966,27 @@ Updating from 0.7.0 Django to 0.8.0 Django
   into a virtual environment (reminder: this is *not* recommended).
 
 * Undo all PATH and PYTHONPATH changes in your ``.bashrc`` and similar 
-  files you did to add ``verdi`` and ``runaiida``. The link in step 3 
-  documents how to set them for the new version.
-* Install AiiDA into a :ref:`virtual python environment (virtualenv) <install.faq.virtualenv>`,
-  following :ref:`install.other.install`. Optionally set bash aliases for
-  the ``verdi`` and ``runaiida`` installed into the ``bin/`` folder of the virtual environment
-* Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes 
+  files you did to add ``verdi`` and ``runaiida`` of the previous version.
+  When using the virtual environment, you do not need anymore to update 
+  the PYTHONPATH nor the PATH.
+* Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
+  raise an exception, and in the exception message you will see the
+  command to run to update the schema version of the DB (version 0.8
+  is using a newer version of the schema). The command will look like
+  ``python manage.py --aiida-profile=default migrate`` (to be run from 
+  <AiiDA_folder>/aiida/backends/djsite) but please read the message for the correct command to run.
+* If you run ``verdi calculation list`` again now, it should work without
+  error messages.
+* Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes. 
   to your profile should be necessary. This step is necessary as it
   updates some internal configuration files and run a database migration.
+* You might want to create an alias to easily go into the correct virtual
+  environment and have all AiiDA commands available: in your `~/.bashrc`
+  file you can add an alias like::
+  
+    alias aiida_env='source ~/aiidapy/bin/activate'
 
-.. TODO: Add "Execute the migration script" if necessary
+* Activate the tab-completion of `verdi` commands (see :ref:`here<tab-completion>`).
 
 Updating from an older version
 ------------------------------
@@ -984,7 +997,7 @@ The migration script assumes that you are using the previous AiiDA version,
 so this means one has to migrate in steps, from the version of AiiDA you were using, 
 until the current one. For instance, if you are currently using AiiDA 0.5,
 you should first update to 0.6, then to 0.7, and finally to 0.8. Do not forget to 
-**deactivate** the current virtual environment before switching to the new version.
+**deactivate** the current virtual environment before installing any new version.
 
 For *each intermediate update* (e.g. when you update from 0.5 to 0.6 in the above example),
 do the following::
@@ -996,11 +1009,11 @@ do the following::
 (<VERSION> being the intermediate version you are updating to, in our example 0.6). 
 
 Then get the code with the appropriate version and install its dependencies:
-if you are updating to a version prior or equal to 0.7, do::
+AiiDA versions prior or equal to 0.7 can be cloned from bitbucket::
   
   git clone git@bitbucket.org:aiida_team/aiida_core.git aiida_core_<VERSION>
   cd aiida_core_<VERSION>
-  git checkout "v<VERSION>"
+  git checkout v<VERSION>
   pip install -U -r requirements.txt
 
 and update the ``PATH`` and ``PYTHONPATH`` environment variables 
@@ -1028,11 +1041,11 @@ updated the AiiDA configuration files.
 * Follow the general update instructions above (see :ref:`here<updating_aiida>`).
 * Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
   raise an exception, and in the exception message you will see the
-  command to run to update the schema version of the DB (v.0.7.0
+  command to run to update the schema version of the DB (version 0.7
   is using a newer version of the schema).
   The command will look like
   ``python manage.py --aiida-profile=default migrate`` (to be run from 
-  aiida/backends/djsite) but please read the
+  <AiiDA_folder>/aiida/backends/djsite) but please read the
   message for the correct command to run.
 * If you run ``verdi calculation list`` again now, it should work without
   error messages.
@@ -1086,7 +1099,7 @@ Updating from 0.4.1 to 0.5.0
   is using a newer version of the schema).
   The command will look like
   ``python manage.py --aiida-profile=default migrate``
-  (to be run from `aiida/djsite`) but please read the
+  (to be run from `<AiiDA_folder>/ai    aiida/djsite`) but please read the
   message for the correct command to run.
 * If you run ``verdi calculation list`` again now, it should work without
   error messages.

@@ -39,8 +39,13 @@ class CalcStateChanges(AiidaTestCase):
             # Now save the errant state
             DbCalcState(dbnode=job.dbnode, state=state).save()
 
+
             time_before_fix = timezone.now()
 
+            # First of all, I re-enable logging in case it was disabled by
+            # mistake by a previous test (e.g. one that disables and reenables
+            # again, but that failed)
+            logging.disable(logging.NOTSET)
             # Temporarily disable logging to the stream handler (i.e. screen)
             # because otherwise fix_calc_states will print warnings
             handler = next((h for h in logging.getLogger('aiida').handlers if
@@ -67,7 +72,9 @@ class CalcStateChanges(AiidaTestCase):
                 levelname__exact=logging.getLevelName(logging.WARNING),
                 time__gt=time_before_fix
             )
+
             self.assertEquals(len(result), 1,
-                              "Couldn't find a warning message with the change"
-                              "from {} to {}".format(state, calc_states.FAILED)
+                              "Couldn't find a warning message with the change "
+                              "from {} to {}, or found too many: I got {} log "
+                              "messages".format(state, calc_states.FAILED, len(result))
                               )

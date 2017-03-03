@@ -79,8 +79,4 @@ class CodeTranslator(NodeTranslator):
         Initialise the parameters.
         Create the basic query_help
         """
-        # basic query_help object
-
-        print self.__class__,self.__class__.__label__
-
         super(CodeTranslator, self).__init__(Class=self.__class__, **kwargs)

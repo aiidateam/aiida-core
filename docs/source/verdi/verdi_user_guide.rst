@@ -20,7 +20,6 @@ For some of the most common operations in AiiDA, you can work directly from the 
 * :ref:`node<node>`:                			manage operations on AiiDA nodes
 * :ref:`profile<profile>`:                		list and manage AiiDA profiles
 * :ref:`run<run>`:                  			execute an AiiDA script
-* :ref:`runserver<runserver>`:           		run the AiiDA webserver on localhost
 * :ref:`shell<shell>`:               			run the interactive shell with the Django environment
 * :ref:`user<user>`:                			list and configure new AiiDA users.
 * :ref:`workflow<workflow>`:            		manage the AiiDA worflow manager
@@ -313,14 +312,6 @@ Run a python script for AiiDA. This is the command line equivalent of the verdi
 shell. Has also features of autogroupin: by default, every node created in one
 a call of verdi run will be grouped together.
 
-
-.. _runserver:
-
-``verdi runserver``
-+++++++++++++++++++
-
-Starts a lightweight Web server for development and also serves static files.
-Currently in ongoing development.
 
 .. _shell:
 

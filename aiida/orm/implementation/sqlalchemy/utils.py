@@ -237,8 +237,6 @@ def get_db_columns(db_class):
 
     from sqlalchemy.dialects.postgresql import UUID, JSONB
 
-    print column_names, column_types
-
     for type in column_types:
         # Treat the case where there is no natural python_type
         # counterpart to the column type (specifically because of usage
@@ -267,7 +265,6 @@ def get_db_columns(db_class):
 
     # Add infos about the foreign relationships
     for k, referred_table_name, referred_field_name in foreign_keys:
-        print k, referred_field_name, referred_table_name
         schema[k].update({
             'is_foreign_key': True,
             'related_table': referred_table_name,

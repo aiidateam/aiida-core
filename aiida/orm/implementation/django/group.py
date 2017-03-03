@@ -16,7 +16,7 @@ from django.db import transaction, IntegrityError
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.django.utils import get_db_columns
+from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
 
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -62,7 +62,8 @@ class Group(AbstractGroup):
 
     @staticmethod
     def get_db_columns():
-        from aiida.backends.djsite.db.models import DbGroup
+        # from aiida.backends.djsite.db.models import DbGroup
+        from aiida.backends.djsite.querybuilder_django.dummy_model import DbGroup
         return get_db_columns(DbGroup)
 
     @property

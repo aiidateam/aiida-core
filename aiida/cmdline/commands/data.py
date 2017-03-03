@@ -693,12 +693,12 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.group import Group
         qb = QueryBuilder()
-        qb.append(UpfData)
+        qb.append(UpfData, tag='upfdata')
         if parsed_args.element is not None:
             qb.add_filter(UpfData, {'attributes.element': {'in': parsed_args.element}})
         qb.append(
             Group,
-            group_of=UpfData,
+            group_of='upfdata', tag='group',
             project=["name", "description"],
             filters={"type": {'==': UPFGROUP_TYPE}}
         )
@@ -711,12 +711,13 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
                 qb = QueryBuilder()
                 qb.append(
                     Group,
+                    tag='thisgroup',
                     filters={"name":  {'like': group_name}}
                 )
                 qb.append(
                     UpfData,
                     project=["id"],
-                    member_of=Group
+                    member_of='thisgroup'
                 )
 
                 if parsed_args.with_description:

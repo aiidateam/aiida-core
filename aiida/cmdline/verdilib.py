@@ -947,18 +947,6 @@ class Quicksetup(VerdiCommand):
         return dbname, create
 
 
-class Runserver(VerdiCommand):
-    """
-    Run the AiiDA webserver on localhost
-
-    This command runs the webserver on the default port. Further command line
-    options are passed to the Django manage runserver command
-    """
-
-    def run(self, *args):
-        pass_to_django_manage([execname, 'runserver'] + list(args))
-
-
 class Run(VerdiCommand):
     """
     Execute an AiiDA script

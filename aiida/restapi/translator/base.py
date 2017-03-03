@@ -405,17 +405,8 @@ class BaseTranslator(object):
                                    "initialized.")
 
         results = []
-        from aiida.backends.settings import BACKEND
-
         if self._total_count > 0:
-            if BACKEND == "django":
-                from django.db import transaction
-                with transaction.atomic():
-                    for tmp in self.qb.iterdict():
-                        results.append(tmp[label])
-            elif BACKEND == "sqlalchemy":
-                for tmp in self.qb.iterdict():
-                    results.append(tmp[label])
+            results = [res[label] for res in self.qb.dict()]
 
         # TODO think how to make it less hardcoded
         if self._result_type == 'input_of':

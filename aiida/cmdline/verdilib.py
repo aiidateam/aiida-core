@@ -808,18 +808,25 @@ class Quicksetup(VerdiCommand):
         }
         setup(profile_name, only_config=False, non_interactive=True, **setup_args)
 
-        # set as new default profile
-        # prompt if there is another non-quicksetup profile
-        use_new = False
-        defprof = confs.get('default_profiles', {})
-        if defprof.get('daemon', '').startswith('quicksetup'):
-            use_new = click.confirm('The daemon default profile is set to {}, do you want to set the newly created one ({}) as default? (can be changed back later)'.format(defprof['daemon'], profile_name))
-            if use_new:
-                set_default_profile('daemon', profile_name, force_rewrite=True)
-        if defprof.get('verdi'):
-            use_new = click.confirm('The verdi default profile is set to {}, do you want to set the newly created one ({}) as new default? (can be changed back later)'.format(defprof['verdi'], profile_name))
-            if use_new:
-                set_default_profile('verdi', profile_name, force_rewrite=True)
+        # Loop over all valid processes and check if a default profile is set for them
+        # If not set the newly created profile as default, otherwise prompt whether to override
+        from aiida.cmdline.commands.profile import valid_processes
+
+        default_profiles = confs.get('default_profiles', {})
+
+        for process in valid_processes:
+
+            default_profile  = default_profiles.get(process, '')
+            default_override = False
+
+            if default_profile:
+                default_override = click.confirm("The default profile for the '{}' process is set to '{}': "
+                    "do you want to set the newly created '{}' as the new default? (can be reverted later)"
+                    .format(process, default_profile, profile_name))
+
+            if not default_profile or default_override:
+                set_default_profile(process, profile_name, force_rewrite=True)
+
 
     def _try_connect(self, **kwargs):
         '''

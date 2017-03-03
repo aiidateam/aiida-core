@@ -3,7 +3,9 @@ from sqlalchemy import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
+__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For " \
+                u"further information please visit http://www.aiida.net/. All " \
+                u"rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
@@ -23,7 +25,7 @@ def iter_dict(attrs):
     elif isinstance(attrs, list):
         for i, val in enumerate(attrs):
             it = iter_dict(val)
-            for k, v  in it:
+            for k, v in it:
                 new_key = str(i)
                 if k:
                     new_key += "." + str(k)
@@ -80,14 +82,13 @@ def django_filter(cls_query, **kwargs):
     # query.
     current_join = None
 
-
     tmp_attr = dict(key=None, val=None)
     tmp_extra = dict(key=None, val=None)
 
     for key in sorted(kwargs.iterkeys()):
         val = kwargs[key]
 
-        join, field, op = [None]*3
+        join, field, op = [None] * 3
 
         splits = key.split("__")
         if len(splits) > 3:
@@ -206,13 +207,32 @@ def get_db_columns(db_class):
     ## Retrieve the columns of the table corresponding to the present class
     # and its foreignkeys
     table = db_class.metadata.tables[db_class.__tablename__]
+
+    # Here we check both columns and column properties
+    from sqlalchemy.orm import class_mapper
+    from sqlalchemy.orm.properties import ColumnProperty
+    column_properties = [_ for _ in class_mapper(db_class).iterate_properties
+                         if isinstance(_, ColumnProperty)]
     columns = table.columns
+
+    column_property_keys = map(lambda x: x.key, column_properties)
+    column_keys = map(lambda x: x.key, columns)
+
+    # Check whether properties contain objects that are not columns
+    property_keys = [_ for _ in column_property_keys if _ not in column_keys]
+
+    column_types = map(lambda x: x.type, columns.values())
+    # Assume None for the time being for property types
+    # TODO find a way to assess the type
+    property_types = [None] * len(property_keys)
+
     foreign_keys = [get_foreign_key_infos(foreign_key) for foreign_key in
                     table.foreign_keys]
 
-    ## retrieve the types and convert them in python types
-    column_names = columns.keys()
-    column_types = map(lambda x: x.type, columns.values())
+    ## merge first column_keys and than column_property_keys
+    column_names = column_keys + property_keys
+    column_types.extend(property_types)
+
     column_python_types = []
 
     from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -221,16 +241,19 @@ def get_db_columns(db_class):
         # Treat the case where there is no natural python_type
         # counterpart to the column type (specifically because of usage
         # of sqlalchemy dialect)
-        try:
-            column_python_types.append(type.python_type)
-        except NotImplementedError:
-            if isinstance(type, UUID):
-                column_python_types.append(unicode)
-            elif isinstance(type, JSONB):
-                column_python_types.append(dict)
-            else:
-                raise NotImplementedError("Unknown type from the "
-                                          "database schema")
+        if type is not None:
+            try:
+                column_python_types.append(type.python_type)
+            except NotImplementedError:
+                if isinstance(type, UUID):
+                    column_python_types.append(unicode)
+                elif isinstance(type, JSONB):
+                    column_python_types.append(dict)
+                else:
+                    raise NotImplementedError("Unknown type from the "
+                                              "database schema")
+        else:
+            column_python_types.append(None)
 
     ## Fill in the returned dictionary
     schema = {}
@@ -241,9 +264,7 @@ def get_db_columns(db_class):
         schema[k] = {'type': v, 'is_foreign_key': False}
 
     # Add infos about the foreign relationships
-    for k, referred_table_name, referred_field_name  in foreign_keys:
-
-        print k, referred_field_name, referred_table_name
+    for k, referred_table_name, referred_field_name in foreign_keys:
         schema[k].update({
             'is_foreign_key': True,
             'related_table': referred_table_name,
@@ -251,4 +272,3 @@ def get_db_columns(db_class):
         })
 
     return schema
-

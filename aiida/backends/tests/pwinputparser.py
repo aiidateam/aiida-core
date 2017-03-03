@@ -2,7 +2,7 @@
 """
 Tests for ``aiida.tools.codespecific.quantumespresso.pwinputparser``.
 
-Since the AiiDa-specific methods of PwInputFile generates (unstored) Node
+Since the AiiDA-specific methods of PwInputFile generates (unstored) Node
 objects, this  has to be run with a temporary database.
 
 The directory, ``./pwtestjobs/``, contains small QE jobs that are used to test

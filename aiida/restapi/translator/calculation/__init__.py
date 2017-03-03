@@ -91,3 +91,4 @@ class CalculationTranslator(NodeTranslator):
         # basic query_help object
         super(CalculationTranslator, self).__init__(
             Class=self.__class__, **kwargs)
+

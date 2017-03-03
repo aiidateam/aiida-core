@@ -64,3 +64,4 @@ class ComputerTranslator(BaseTranslator):
         """
         super(ComputerTranslator, self).__init__(Class=self.__class__,
                                                  **kwargs)
+

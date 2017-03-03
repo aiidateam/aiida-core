@@ -88,11 +88,7 @@ class DataTranslator(NodeTranslator):
         Initialise the parameters.
         Create the basic query_help
         """
-
         super(DataTranslator, self).__init__(Class=self.__class__, **kwargs)
-
-
-
 
     def get_json_for_visualizer(cell, relcoords, atomic_numbers):
         system = (np.array(cell), np.array(relcoords), np.array(atomic_numbers))
@@ -135,3 +131,4 @@ class DataTranslator(NodeTranslator):
 
         # Response for JS, and path_results
         return response, res
+

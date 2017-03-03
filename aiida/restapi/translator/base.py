@@ -143,7 +143,14 @@ class BaseTranslator(object):
                 schema[k]['related_resource'] = table2resource(
                     schema[k].pop('related_table'))
 
-        return dict(columns=schema)
+        # TODO Construct the ordering (all these things have to be moved in matcloud_backend)
+        if self._default_projections != ['**']:
+            ordering=self._default_projections
+        else:
+            # random ordering if not set explicitely in
+            ordering=schema.keys()
+
+        return dict(fields=schema,ordering=ordering)
 
     def init_qb(self):
         """
@@ -407,6 +414,7 @@ class BaseTranslator(object):
         results = []
         if self._total_count > 0:
             results = [res[label] for res in self.qb.dict()]
+
 
         # TODO think how to make it less hardcoded
         if self._result_type == 'input_of':

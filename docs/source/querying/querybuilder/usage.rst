@@ -900,7 +900,7 @@ What do you have to specify:
             }
         }
 
-.. ~     With the key 'filters', we instruct the querytool to
+.. ~     With the key 'filters', we instruct the querybuilder to
 .. ~     build filters and attach them to the query.
 .. ~     Filters are passed as dictionaries.
 .. ~     In each key-value pair, the key is the column-name
@@ -933,7 +933,7 @@ What do you have to specify:
 .. ~         the storage of jsons.
 .. ~         It is convenient to dump the structure-data
 .. ~         into a json and store that as a column.
-.. ~         The querytool needs to be told how to query the json.
+.. ~         The querybuilder needs to be told how to query the json.
 .. ~
 .. ~ Let's get to a really complex use-case,
 .. ~ where we need to reconstruct a workflow:

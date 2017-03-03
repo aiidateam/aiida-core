@@ -1,8 +1,6 @@
 Q2R
 +++
 
-.. note:: The Q2R plugin referenced below is available in the EPFL version.
-
 Description
 -----------
 Use the plugin to support inputs of Quantum Espresso q2r.x executable.

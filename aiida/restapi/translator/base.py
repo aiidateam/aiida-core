@@ -101,19 +101,53 @@ class BaseTranslator(object):
         # Construct the json object to be returned
         basic_schema = orm_class.get_db_columns()
 
+        """
+        Determine the API schema (spartially overlapping with the ORM/database one).
+        When the ORM is based on django, however, attributes and extras are not colums of the database but are nevertheless         valid projections. We add them by hand into the API schema.
+        """
+        # TODO change the get_db_columns method to include also relationships such as attributes, extras, input, and outputs        in order to have a more complete definition of the schema.
+
         if self._default_projections == ['**']:
             schema = basic_schema  # No custom schema, take the basic one
         else:
-            schema = dict([(k, basic_schema[k]) for k in
-                           self._default_projections
-                           if k in basic_schema.keys()])
 
-        # Convert the related_tablevalues to the RESTAPI resources
-        # (orm class/db table ==> RESTapi resource)
+            # Non-schema possible projections (only for nodes when django is backend)
+            non_schema_projs = ('attributes', 'extras')
+            # Sub-projections of JSON fields (applies to both SQLA and Django)
+            non_schema_proj_prefix = ('attributes.', 'extras.')
+
+            schema_key = []
+            schema_values = []
+
+            for k in self._default_projections:
+                if k in basic_schema.keys():
+                    schema_key.append(k)
+                    schema_values.append(basic_schema[k])
+                elif k in non_schema_projs:
+                    # Catches 'attributes' and 'extras'
+                    schema_key.append(k)
+                    value = dict(type=dict, is_foreign_key=False)
+                    schema_values.append(value)
+                elif k.startswith(non_schema_proj_prefix):
+                    # Catches 'attributes.<key>' and 'extras.<key>'
+                    schema_key.append(k)
+                    value = dict(type=None, is_foreign_key=False)
+                    schema_values.append(value)
+
+            schema = dict(zip(schema_key, schema_values))
+
+
         def table2resource(table_name):
+            """
+            Convert the related_tablevalues to the RESTAPI resources
+            (orm class/db table ==> RESTapi resource)
+
+            :param table_name (str): name of the table (in SQLA is __tablename__)
+            :return: resource_name (str): name of the API resource
+            """
             # TODO Consider ways to make this function backend independent (one
             # idea would be to go from table name to aiida class name which is
-            # univoque)
+            # unique)
             if BACKEND == BACKEND_DJANGO:
                 (spam, resource_name) = issingular(table_name[2:].lower())
             elif BACKEND == BACKEND_SQLA:
@@ -145,12 +179,12 @@ class BaseTranslator(object):
 
         # TODO Construct the ordering (all these things have to be moved in matcloud_backend)
         if self._default_projections != ['**']:
-            ordering=self._default_projections
+            ordering = self._default_projections
         else:
             # random ordering if not set explicitely in
-            ordering=schema.keys()
+            ordering = schema.keys()
 
-        return dict(fields=schema,ordering=ordering)
+        return dict(fields=schema, ordering=ordering)
 
     def init_qb(self):
         """
@@ -414,7 +448,6 @@ class BaseTranslator(object):
         results = []
         if self._total_count > 0:
             results = [res[label] for res in self.qb.dict()]
-
 
         # TODO think how to make it less hardcoded
         if self._result_type == 'input_of':

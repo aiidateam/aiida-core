@@ -12,7 +12,6 @@ __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
-
 def get_session():
     """
     Return the global session for SQLA
@@ -72,7 +71,6 @@ def get_global_setting_description(key):
 
     # Check first that the table exists
     table_check_test()
-
     validate_key(key)
 
     try:

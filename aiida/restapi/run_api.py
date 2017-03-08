@@ -48,6 +48,8 @@ def run_api(App, Api, *args, **kwargs):
     parse_aiida_profile = kwargs['parse_aiida_profile'] if \
         'parse_aiida_profile' in kwargs else False
 
+    hookup = kwargs['hookup'] if 'hookup' in kwargs else False
+
     # Set up the command-line options
     parser = argparse.ArgumentParser(prog=prog_name,
                                      description='Hook up the AiiDA '
@@ -152,19 +154,31 @@ def run_api(App, Api, *args, **kwargs):
                                           restrictions=[30])
 
     # Instantiate an Api associating its app
-    kwargs = dict(PREFIX=confs.PREFIX,
+    api_kwargs = dict(PREFIX=confs.PREFIX,
                   PERPAGE_DEFAULT=confs.PERPAGE_DEFAULT,
                   LIMIT_DEFAULT=confs.LIMIT_DEFAULT,
                   custom_schema=confs.custom_schema)
 
-    api = Api(app, **kwargs)
+    api = Api(app, **api_kwargs)
 
-    # Hook up the app
-    api.app.run(
-        debug=parsed_args.debug,
-        host=parsed_args.host,
-        port=int(parsed_args.port)
-    )
+    # Check if the app has to be hooked-up or just returned
+    if hookup:
+        # Hook up the app
+        api.app.run(
+            debug=parsed_args.debug,
+            host=parsed_args.host,
+            port=int(parsed_args.port),
+            threaded=True
+        )
+
+    else:
+        # here we return the app, and the api with no specifications on debug
+        #  mode, port and host. This can be handled by an external server,
+        # e.g. apache2, which will set the host and port. This implies that
+        # the user-defined configuration of the app is ineffective (it only
+        # affects the internal werkzeug server used by Flask).
+        return (app, api)
+
 
 
 # Standard boilerplate to run the api
@@ -187,4 +201,5 @@ if __name__ == '__main__':
     import the app object and the Api class that you want to combine.
     """
 
-    run_api(App, AiidaApi, *sys.argv[1:], parse_aiida_profile=True)
+    run_api(App, AiidaApi, *sys.argv[1:], parse_aiida_profile=True,
+            hookup=True, catch_internal_server=True)

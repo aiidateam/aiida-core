@@ -1,8 +1,6 @@
 Projwfc
 +++++++
 
-.. note:: The Projwfc plugin referenced below is available in the EPFL version.
-
 Description
 -----------
 Use the plugin to support inputs of Quantum Espresso projwfc.x executable. Computes the

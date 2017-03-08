@@ -22,6 +22,9 @@ __authors__ = "The AiiDA team."
 class QueryTool(AbstractQueryTool):
 
     def __init__(self):
+        from warnings import warn
+        warn("QueryTool is deprecated, use QueryBuilder instead", DeprecationWarning)
+ 
         self._class_string = None
         self._group_queries = []
         self._attr_queries = []

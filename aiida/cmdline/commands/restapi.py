@@ -37,6 +37,7 @@ class Restapi(VerdiCommand):
 
         # Construct dparameter dictionary
         kwargs = dict(
+            hookup=True,
             prog_name=self.get_full_command_name(),
             default_host=self.default_host,
             default_port=self.default_port,

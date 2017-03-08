@@ -1,0 +1,612 @@
+<?xml version="1.0"?>
+<?iotk version="1.2.0"?>
+<?iotk file_version="1.0"?>
+<?iotk binary="F"?>
+<?iotk qe_syntax="F"?>
+<Root>
+  <HEADER>
+    <FORMAT NAME="QEXML" VERSION="1.4.0"/>
+    <CREATOR NAME="PWSCF" VERSION="5.2.0"/>
+  </HEADER>
+  <CONTROL>
+    <PP_CHECK_FLAG type="logical" size="1">
+F
+    </PP_CHECK_FLAG>
+    <LKPOINT_DIR type="logical" size="1">
+T
+    </LKPOINT_DIR>
+    <Q_REAL_SPACE type="logical" size="1">
+F
+    </Q_REAL_SPACE>
+    <BETA_REAL_SPACE type="logical" size="1">
+F
+    </BETA_REAL_SPACE>
+  </CONTROL>
+  <CELL>
+    <NON-PERIODIC_CELL_CORRECTION type="character" size="1" len="4">
+None
+    </NON-PERIODIC_CELL_CORRECTION>
+    <BRAVAIS_LATTICE type="character" size="1" len="4">
+free
+    </BRAVAIS_LATTICE>
+    <LATTICE_PARAMETER type="real" size="1" UNITS="Bohr">
+ 7.558904531542573E+000
+    </LATTICE_PARAMETER>
+    <CELL_DIMENSIONS type="real" size="6">
+ 7.558904531542573E+000
+ 0.000000000000000E+000
+ 0.000000000000000E+000
+ 0.000000000000000E+000
+ 0.000000000000000E+000
+ 0.000000000000000E+000
+    </CELL_DIMENSIONS>
+    <DIRECT_LATTICE_VECTORS>
+      <UNITS_FOR_DIRECT_LATTICE_VECTORS UNITS="Bohr"/>
+      <a1 type="real" size="3" columns="3">
+ 7.558904531542573E+000  0.000000000000000E+000  0.000000000000000E+000
+      </a1>
+      <a2 type="real" size="3" columns="3">
+ 0.000000000000000E+000  7.558904531542573E+000  0.000000000000000E+000
+      </a2>
+      <a3 type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  7.653390838186855E+000
+      </a3>
+    </DIRECT_LATTICE_VECTORS>
+    <RECIPROCAL_LATTICE_VECTORS>
+      <UNITS_FOR_RECIPROCAL_LATTICE_VECTORS UNITS="2 pi / a"/>
+      <b1 type="real" size="3" columns="3">
+ 1.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+      </b1>
+      <b2 type="real" size="3" columns="3">
+ 0.000000000000000E+000  1.000000000000000E+000  0.000000000000000E+000
+      </b2>
+      <b3 type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  9.876543209876544E-001
+      </b3>
+    </RECIPROCAL_LATTICE_VECTORS>
+  </CELL>
+  <IONS>
+    <NUMBER_OF_ATOMS type="integer" size="1">
+         5
+    </NUMBER_OF_ATOMS>
+    <NUMBER_OF_SPECIES type="integer" size="1">
+         3
+    </NUMBER_OF_SPECIES>
+    <UNITS_FOR_ATOMIC_MASSES UNITS="a.m.u."/>
+    <SPECIE.1>
+      <ATOM_TYPE type="character" size="1" len="3">
+Ba 
+      </ATOM_TYPE>
+      <MASS type="real" size="1">
+ 1.373270000000000E+002
+      </MASS>
+      <PSEUDO type="character" size="1" len="20">
+ba_pbe_v1.uspp.F.UPF
+      </PSEUDO>
+    </SPECIE.1>
+    <SPECIE.2>
+      <ATOM_TYPE type="character" size="1" len="3">
+O  
+      </ATOM_TYPE>
+      <MASS type="real" size="1">
+ 1.599940000000000E+001
+      </MASS>
+      <PSEUDO type="character" size="1" len="21">
+o_pbe_v1.2.uspp.F.UPF
+      </PSEUDO>
+    </SPECIE.2>
+    <SPECIE.3>
+      <ATOM_TYPE type="character" size="1" len="3">
+Ti 
+      </ATOM_TYPE>
+      <MASS type="real" size="1">
+ 4.786700000000000E+001
+      </MASS>
+      <PSEUDO type="character" size="1" len="20">
+ti_pbe_v1.uspp.F.UPF
+      </PSEUDO>
+    </SPECIE.3>
+    <PSEUDO_DIR type="character" size="1" len="9">
+./pseudo/
+    </PSEUDO_DIR>
+    <UNITS_FOR_ATOMIC_POSITIONS UNITS="Bohr"/>
+    <ATOM.1 SPECIES="Ba " INDEX="1" tau="0.000000000000000E+000 0.000000000000000E+000 0.000000000000000E+000" if_pos="0 0 0"/>
+    <ATOM.2 SPECIES="Ti " INDEX="3" tau="3.779452265771286E+000 3.779452265771286E+000 3.667061212198758E+000" if_pos="0 0 1"/>
+    <ATOM.3 SPECIES="O  " INDEX="2" tau="3.779452265771286E+000 3.779452265771286E+000 3.467776559934554E-001" if_pos="0 0 1"/>
+    <ATOM.4 SPECIES="O  " INDEX="2" tau="3.779452265771286E+000 0.000000000000000E+000 4.188234623530765E+000" if_pos="0 0 1"/>
+    <ATOM.5 SPECIES="O  " INDEX="2" tau="0.000000000000000E+000 3.779452265771286E+000 4.188234623530765E+000" if_pos="0 0 1"/>
+  </IONS>
+  <SYMMETRIES>
+    <NUMBER_OF_SYMMETRIES type="integer" size="1">
+         8
+    </NUMBER_OF_SYMMETRIES>
+    <NUMBER_OF_BRAVAIS_SYMMETRIES type="integer" size="1">
+        16
+    </NUMBER_OF_BRAVAIS_SYMMETRIES>
+    <INVERSION_SYMMETRY type="logical" size="1">
+F
+    </INVERSION_SYMMETRY>
+    <DO_NOT_USE_TIME_REVERSAL type="logical" size="1">
+F
+    </DO_NOT_USE_TIME_REVERSAL>
+    <TIME_REVERSAL_FLAG type="logical" size="1">
+T
+    </TIME_REVERSAL_FLAG>
+    <NO_TIME_REV_OPERATIONS type="logical" size="1">
+F
+    </NO_TIME_REV_OPERATIONS>
+    <NUMBER_OF_ATOMS type="integer" size="1">
+         5
+    </NUMBER_OF_ATOMS>
+    <UNITS_FOR_SYMMETRIES UNITS="Crystal"/>
+    <SYMM.1>
+      <INFO NAME="identity" T_REV="0"/>
+      <ROTATION type="integer" size="9" columns="3">
+         1          0          0 
+         0          1          0 
+         0          0          1
+      </ROTATION>
+      <FRACTIONAL_TRANSLATION type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+      </FRACTIONAL_TRANSLATION>
+      <EQUIVALENT_IONS type="integer" size="5" columns="8">
+         1          2          3          4          5
+      </EQUIVALENT_IONS>
+    </SYMM.1>
+    <SYMM.2>
+      <INFO NAME="180 deg rotation - cart. axis [0,0,1]" T_REV="0"/>
+      <ROTATION type="integer" size="9" columns="3">
+        -1          0          0 
+         0         -1          0 
+         0          0          1
+      </ROTATION>
+      <FRACTIONAL_TRANSLATION type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+      </FRACTIONAL_TRANSLATION>
+      <EQUIVALENT_IONS type="integer" size="5" columns="8">
+         1          2          3          4          5
+      </EQUIVALENT_IONS>
+    </SYMM.2>
+    <SYMM.3>
+      <INFO NAME=" 90 deg rotation - cart. axis [0,0,-1]" T_REV="0"/>
+      <ROTATION type="integer" size="9" columns="3">
+         0          1          0 
+        -1          0          0 
+         0          0          1
+      </ROTATION>
+      <FRACTIONAL_TRANSLATION type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+      </FRACTIONAL_TRANSLATION>
+      <EQUIVALENT_IONS type="integer" size="5" columns="8">
+         1          2          3          5          4
+      </EQUIVALENT_IONS>
+    </SYMM.3>
+    <SYMM.4>
+      <INFO NAME=" 90 deg rotation - cart. axis [0,0,1]" T_REV="0"/>
+      <ROTATION type="integer" size="9" columns="3">
+         0         -1          0 
+         1          0          0 
+         0          0          1
+      </ROTATION>
+      <FRACTIONAL_TRANSLATION type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+      </FRACTIONAL_TRANSLATION>
+      <EQUIVALENT_IONS type="integer" size="5" columns="8">
+         1          2          3          5          4
+      </EQUIVALENT_IONS>
+    </SYMM.4>
+    <SYMM.5>
+      <INFO NAME="inv. 180 deg rotation - cart. axis [0,1,0]" T_REV="0"/>
+      <ROTATION type="integer" size="9" columns="3">
+         1          0          0 
+         0         -1          0 
+         0          0          1
+      </ROTATION>
+      <FRACTIONAL_TRANSLATION type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+      </FRACTIONAL_TRANSLATION>
+      <EQUIVALENT_IONS type="integer" size="5" columns="8">
+         1          2          3          4          5
+      </EQUIVALENT_IONS>
+    </SYMM.5>
+    <SYMM.6>
+      <INFO NAME="inv. 180 deg rotation - cart. axis [1,0,0]" T_REV="0"/>
+      <ROTATION type="integer" size="9" columns="3">
+        -1          0          0 
+         0          1          0 
+         0          0          1
+      </ROTATION>
+      <FRACTIONAL_TRANSLATION type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+      </FRACTIONAL_TRANSLATION>
+      <EQUIVALENT_IONS type="integer" size="5" columns="8">
+         1          2          3          4          5
+      </EQUIVALENT_IONS>
+    </SYMM.6>
+    <SYMM.7>
+      <INFO NAME="inv. 180 deg rotation - cart. axis [1,1,0]" T_REV="0"/>
+      <ROTATION type="integer" size="9" columns="3">
+         0         -1          0 
+        -1          0          0 
+         0          0          1
+      </ROTATION>
+      <FRACTIONAL_TRANSLATION type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+      </FRACTIONAL_TRANSLATION>
+      <EQUIVALENT_IONS type="integer" size="5" columns="8">
+         1          2          3          5          4
+      </EQUIVALENT_IONS>
+    </SYMM.7>
+    <SYMM.8>
+      <INFO NAME="inv. 180 deg rotation - cart. axis [1,-1,0]" T_REV="0"/>
+      <ROTATION type="integer" size="9" columns="3">
+         0          1          0 
+         1          0          0 
+         0          0          1
+      </ROTATION>
+      <FRACTIONAL_TRANSLATION type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+      </FRACTIONAL_TRANSLATION>
+      <EQUIVALENT_IONS type="integer" size="5" columns="8">
+         1          2          3          5          4
+      </EQUIVALENT_IONS>
+    </SYMM.8>
+    <SYMM.9>
+      <INFO NAME="inversion"/>
+      <ROTATION type="integer" size="9" columns="3">
+        -1          0          0 
+         0         -1          0 
+         0          0         -1
+      </ROTATION>
+    </SYMM.9>
+    <SYMM.10>
+      <INFO NAME="inv. 180 deg rotation - cart. axis [0,0,1]"/>
+      <ROTATION type="integer" size="9" columns="3">
+         1          0          0 
+         0          1          0 
+         0          0         -1
+      </ROTATION>
+    </SYMM.10>
+    <SYMM.11>
+      <INFO NAME="180 deg rotation - cart. axis [1,1,0]"/>
+      <ROTATION type="integer" size="9" columns="3">
+         0          1          0 
+         1          0          0 
+         0          0         -1
+      </ROTATION>
+    </SYMM.11>
+    <SYMM.12>
+      <INFO NAME="180 deg rotation - cart. axis [1,-1,0]"/>
+      <ROTATION type="integer" size="9" columns="3">
+         0         -1          0 
+        -1          0          0 
+         0          0         -1
+      </ROTATION>
+    </SYMM.12>
+    <SYMM.13>
+      <INFO NAME="180 deg rotation - cart. axis [0,1,0]"/>
+      <ROTATION type="integer" size="9" columns="3">
+        -1          0          0 
+         0          1          0 
+         0          0         -1
+      </ROTATION>
+    </SYMM.13>
+    <SYMM.14>
+      <INFO NAME="180 deg rotation - cart. axis [1,0,0]"/>
+      <ROTATION type="integer" size="9" columns="3">
+         1          0          0 
+         0         -1          0 
+         0          0         -1
+      </ROTATION>
+    </SYMM.14>
+    <SYMM.15>
+      <INFO NAME="inv.  90 deg rotation - cart. axis [0,0,-1]"/>
+      <ROTATION type="integer" size="9" columns="3">
+         0         -1          0 
+         1          0          0 
+         0          0         -1
+      </ROTATION>
+    </SYMM.15>
+    <SYMM.16>
+      <INFO NAME="inv.  90 deg rotation - cart. axis [0,0,1]"/>
+      <ROTATION type="integer" size="9" columns="3">
+         0          1          0 
+        -1          0          0 
+         0          0         -1
+      </ROTATION>
+    </SYMM.16>
+  </SYMMETRIES>
+  <ELECTRIC_FIELD>
+    <HAS_ELECTRIC_FIELD type="logical" size="1">
+F
+    </HAS_ELECTRIC_FIELD>
+    <HAS_DIPOLE_CORRECTION type="logical" size="1">
+F
+    </HAS_DIPOLE_CORRECTION>
+    <FIELD_DIRECTION type="integer" size="1">
+         1
+    </FIELD_DIRECTION>
+    <MAXIMUM_POSITION type="real" size="1">
+ 5.000000000000000E-001
+    </MAXIMUM_POSITION>
+    <INVERSE_REGION type="real" size="1">
+ 1.000000000000000E-001
+    </INVERSE_REGION>
+    <FIELD_AMPLITUDE type="real" size="1">
+ 0.000000000000000E+000
+    </FIELD_AMPLITUDE>
+  </ELECTRIC_FIELD>
+  <PLANE_WAVES>
+    <UNITS_FOR_CUTOFF UNITS="Hartree"/>
+    <WFC_CUTOFF type="real" size="1">
+ 1.500000000000000E+001
+    </WFC_CUTOFF>
+    <RHO_CUTOFF type="real" size="1">
+ 1.200000000000000E+002
+    </RHO_CUTOFF>
+    <MAX_NUMBER_OF_GK-VECTORS type="integer" size="1">
+      1230
+    </MAX_NUMBER_OF_GK-VECTORS>
+    <GAMMA_ONLY type="logical" size="1">
+F
+    </GAMMA_ONLY>
+    <FFT_GRID nr1="40" nr2="40" nr3="40"/>
+    <GVECT_NUMBER type="integer" size="1">
+     27457
+    </GVECT_NUMBER>
+    <SMOOTH_FFT_GRID nr1s="27" nr2s="27" nr3s="27"/>
+    <SMOOTH_GVECT_NUMBER type="integer" size="1">
+      9739
+    </SMOOTH_GVECT_NUMBER>
+    <SMALLBOX_FFT_GRID nr1b="40" nr2b="40" nr3b="40"/>
+  </PLANE_WAVES>
+  <SPIN>
+    <LSDA type="logical" size="1">
+F
+    </LSDA>
+    <NON-COLINEAR_CALCULATION type="logical" size="1">
+F
+    </NON-COLINEAR_CALCULATION>
+    <SPIN-ORBIT_CALCULATION type="logical" size="1">
+F
+    </SPIN-ORBIT_CALCULATION>
+    <SPIN-ORBIT_DOMAG type="logical" size="1">
+F
+    </SPIN-ORBIT_DOMAG>
+  </SPIN>
+  <MAGNETIZATION_INIT>
+    <CONSTRAINT_MAG type="integer" size="1">
+         0
+    </CONSTRAINT_MAG>
+    <NUMBER_OF_SPECIES type="integer" size="1">
+         3
+    </NUMBER_OF_SPECIES>
+    <SPECIE.1>
+      <STARTING_MAGNETIZATION type="real" size="1">
+ 0.000000000000000E+000
+      </STARTING_MAGNETIZATION>
+      <ANGLE1 type="real" size="1">
+ 0.000000000000000E+000
+      </ANGLE1>
+      <ANGLE2 type="real" size="1">
+ 0.000000000000000E+000
+      </ANGLE2>
+    </SPECIE.1>
+    <SPECIE.2>
+      <STARTING_MAGNETIZATION type="real" size="1">
+ 0.000000000000000E+000
+      </STARTING_MAGNETIZATION>
+      <ANGLE1 type="real" size="1">
+ 0.000000000000000E+000
+      </ANGLE1>
+      <ANGLE2 type="real" size="1">
+ 0.000000000000000E+000
+      </ANGLE2>
+    </SPECIE.2>
+    <SPECIE.3>
+      <STARTING_MAGNETIZATION type="real" size="1">
+ 0.000000000000000E+000
+      </STARTING_MAGNETIZATION>
+      <ANGLE1 type="real" size="1">
+ 0.000000000000000E+000
+      </ANGLE1>
+      <ANGLE2 type="real" size="1">
+ 0.000000000000000E+000
+      </ANGLE2>
+    </SPECIE.3>
+    <TWO_FERMI_ENERGIES type="logical" size="1">
+F
+    </TWO_FERMI_ENERGIES>
+  </MAGNETIZATION_INIT>
+  <EXCHANGE_CORRELATION>
+    <DFT type="character" size="1" len="20">
+SLA  PW   PBE  PBE  
+    </DFT>
+  </EXCHANGE_CORRELATION>
+  <OCCUPATIONS>
+    <SMEARING_METHOD type="logical" size="1">
+F
+    </SMEARING_METHOD>
+    <TETRAHEDRON_METHOD type="logical" size="1">
+F
+    </TETRAHEDRON_METHOD>
+    <FIXED_OCCUPATIONS type="logical" size="1">
+F
+    </FIXED_OCCUPATIONS>
+  </OCCUPATIONS>
+  <BRILLOUIN_ZONE>
+    <NUMBER_OF_K-POINTS type="integer" size="1">
+         6
+    </NUMBER_OF_K-POINTS>
+    <UNITS_FOR_K-POINTS UNITS="2 pi / a"/>
+    <MONKHORST_PACK_GRID nk1="2" nk2="2" nk3="2"/>
+    <MONKHORST_PACK_OFFSET k1="0" k2="0" k3="0"/>
+    <K-POINT.1 XYZ="0.000000000000000E+000 0.000000000000000E+000 0.000000000000000E+000" WEIGHT="2.500000000000000E-001"/>
+    <K-POINT.2 XYZ="0.000000000000000E+000 0.000000000000000E+000 -4.938271604938272E-001" WEIGHT="2.500000000000000E-001"/>
+    <K-POINT.3 XYZ="0.000000000000000E+000 -5.000000000000000E-001 0.000000000000000E+000" WEIGHT="5.000000000000000E-001"/>
+    <K-POINT.4 XYZ="0.000000000000000E+000 -5.000000000000000E-001 -4.938271604938272E-001" WEIGHT="5.000000000000000E-001"/>
+    <K-POINT.5 XYZ="-5.000000000000000E-001 -5.000000000000000E-001 0.000000000000000E+000" WEIGHT="2.500000000000000E-001"/>
+    <K-POINT.6 XYZ="-5.000000000000000E-001 -5.000000000000000E-001 -4.938271604938272E-001" WEIGHT="2.500000000000000E-001"/>
+    <NORM-OF-Q type="real" size="1">
+ 0.000000000000000E+000
+    </NORM-OF-Q>
+  </BRILLOUIN_ZONE>
+  <PARALLELISM>
+    <GRANULARITY_OF_K-POINTS_DISTRIBUTION type="integer" size="1">
+         1
+    </GRANULARITY_OF_K-POINTS_DISTRIBUTION>
+    <NUMBER_OF_PROCESSORS type="integer" size="1">
+         6
+    </NUMBER_OF_PROCESSORS>
+    <NUMBER_OF_PROCESSORS_PER_POOL type="integer" size="1">
+         6
+    </NUMBER_OF_PROCESSORS_PER_POOL>
+    <NUMBER_OF_PROCESSORS_PER_IMAGE type="integer" size="1">
+         6
+    </NUMBER_OF_PROCESSORS_PER_IMAGE>
+    <NUMBER_OF_PROCESSORS_PER_TASKGROUP type="integer" size="1">
+         1
+    </NUMBER_OF_PROCESSORS_PER_TASKGROUP>
+    <NUMBER_OF_PROCESSORS_PER_POT type="integer" size="1">
+         6
+    </NUMBER_OF_PROCESSORS_PER_POT>
+    <NUMBER_OF_PROCESSORS_PER_BAND_GROUP type="integer" size="1">
+         6
+    </NUMBER_OF_PROCESSORS_PER_BAND_GROUP>
+    <NUMBER_OF_PROCESSORS_PER_DIAGONALIZATION type="integer" size="1">
+         1
+    </NUMBER_OF_PROCESSORS_PER_DIAGONALIZATION>
+  </PARALLELISM>
+  <CHARGE-DENSITY iotk_link="./charge-density.dat">
+    <!--This is a link to the file indicated in the iotk_link attribute-->
+  </CHARGE-DENSITY>
+  <BAND_STRUCTURE_INFO>
+    <NUMBER_OF_K-POINTS type="integer" size="1">
+         6
+    </NUMBER_OF_K-POINTS>
+    <NUMBER_OF_SPIN_COMPONENTS type="integer" size="1">
+         1
+    </NUMBER_OF_SPIN_COMPONENTS>
+    <NON-COLINEAR_CALCULATION type="logical" size="1">
+F
+    </NON-COLINEAR_CALCULATION>
+    <NUMBER_OF_ATOMIC_WFC type="integer" size="1">
+        35
+    </NUMBER_OF_ATOMIC_WFC>
+    <NUMBER_OF_BANDS type="integer" size="1">
+        20
+    </NUMBER_OF_BANDS>
+    <NUMBER_OF_ELECTRONS type="real" size="1">
+ 4.000000000000000E+001
+    </NUMBER_OF_ELECTRONS>
+    <UNITS_FOR_K-POINTS UNITS="2 pi / a"/>
+    <UNITS_FOR_ENERGIES UNITS="Hartree"/>
+    <FERMI_ENERGY type="real" size="1">
+ 3.821429593052567E-001
+    </FERMI_ENERGY>
+  </BAND_STRUCTURE_INFO>
+  <EIGENVALUES>
+    <K-POINT.1>
+      <K-POINT_COORDS type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+      </K-POINT_COORDS>
+      <WEIGHT type="real" size="1">
+ 2.500000000000000E-001
+      </WEIGHT>
+      <DATAFILE iotk_link="./K00001/eigenval.xml">
+        <!--This is a link to the file indicated in the iotk_link attribute-->
+      </DATAFILE>
+    </K-POINT.1>
+    <K-POINT.2>
+      <K-POINT_COORDS type="real" size="3" columns="3">
+ 0.000000000000000E+000  0.000000000000000E+000 -4.938271604938272E-001
+      </K-POINT_COORDS>
+      <WEIGHT type="real" size="1">
+ 2.500000000000000E-001
+      </WEIGHT>
+      <DATAFILE iotk_link="./K00002/eigenval.xml">
+        <!--This is a link to the file indicated in the iotk_link attribute-->
+      </DATAFILE>
+    </K-POINT.2>
+    <K-POINT.3>
+      <K-POINT_COORDS type="real" size="3" columns="3">
+ 0.000000000000000E+000 -5.000000000000000E-001  0.000000000000000E+000
+      </K-POINT_COORDS>
+      <WEIGHT type="real" size="1">
+ 5.000000000000000E-001
+      </WEIGHT>
+      <DATAFILE iotk_link="./K00003/eigenval.xml">
+        <!--This is a link to the file indicated in the iotk_link attribute-->
+      </DATAFILE>
+    </K-POINT.3>
+    <K-POINT.4>
+      <K-POINT_COORDS type="real" size="3" columns="3">
+ 0.000000000000000E+000 -5.000000000000000E-001 -4.938271604938272E-001
+      </K-POINT_COORDS>
+      <WEIGHT type="real" size="1">
+ 5.000000000000000E-001
+      </WEIGHT>
+      <DATAFILE iotk_link="./K00004/eigenval.xml">
+        <!--This is a link to the file indicated in the iotk_link attribute-->
+      </DATAFILE>
+    </K-POINT.4>
+    <K-POINT.5>
+      <K-POINT_COORDS type="real" size="3" columns="3">
+-5.000000000000000E-001 -5.000000000000000E-001  0.000000000000000E+000
+      </K-POINT_COORDS>
+      <WEIGHT type="real" size="1">
+ 2.500000000000000E-001
+      </WEIGHT>
+      <DATAFILE iotk_link="./K00005/eigenval.xml">
+        <!--This is a link to the file indicated in the iotk_link attribute-->
+      </DATAFILE>
+    </K-POINT.5>
+    <K-POINT.6>
+      <K-POINT_COORDS type="real" size="3" columns="3">
+-5.000000000000000E-001 -5.000000000000000E-001 -4.938271604938272E-001
+      </K-POINT_COORDS>
+      <WEIGHT type="real" size="1">
+ 2.500000000000000E-001
+      </WEIGHT>
+      <DATAFILE iotk_link="./K00006/eigenval.xml">
+        <!--This is a link to the file indicated in the iotk_link attribute-->
+      </DATAFILE>
+    </K-POINT.6>
+  </EIGENVALUES>
+  <EIGENVECTORS>
+    <MAX_NUMBER_OF_GK-VECTORS type="integer" size="1">
+      1230
+    </MAX_NUMBER_OF_GK-VECTORS>
+    <K-POINT.1>
+      <NUMBER_OF_GK-VECTORS type="integer" size="1">
+      1221
+      </NUMBER_OF_GK-VECTORS>
+    </K-POINT.1>
+    <K-POINT.2>
+      <NUMBER_OF_GK-VECTORS type="integer" size="1">
+      1230
+      </NUMBER_OF_GK-VECTORS>
+    </K-POINT.2>
+    <K-POINT.3>
+      <NUMBER_OF_GK-VECTORS type="integer" size="1">
+      1222
+      </NUMBER_OF_GK-VECTORS>
+    </K-POINT.3>
+    <K-POINT.4>
+      <NUMBER_OF_GK-VECTORS type="integer" size="1">
+      1220
+      </NUMBER_OF_GK-VECTORS>
+    </K-POINT.4>
+    <K-POINT.5>
+      <NUMBER_OF_GK-VECTORS type="integer" size="1">
+      1196
+      </NUMBER_OF_GK-VECTORS>
+    </K-POINT.5>
+    <K-POINT.6>
+      <NUMBER_OF_GK-VECTORS type="integer" size="1">
+      1208
+      </NUMBER_OF_GK-VECTORS>
+    </K-POINT.6>
+  </EIGENVECTORS>
+</Root>
+ 

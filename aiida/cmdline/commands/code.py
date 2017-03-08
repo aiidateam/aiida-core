@@ -227,6 +227,9 @@ class CodeInputValidationClass(object):
         if not label.strip():
             raise ValidationError("No label specified")
 
+        if "@" in label:
+            raise ValidationError("Can not use '@' in label")
+
     description = ""
 
     def _get_description_string(self):

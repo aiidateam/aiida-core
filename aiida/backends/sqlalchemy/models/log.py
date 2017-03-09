@@ -29,13 +29,14 @@ class DbLog(Base):
     message = Column(Text(), nullable=True)
     _metadata = Column('metadata', JSONB)
 
-    def __init__(self, loggername="", levelname="", objname="", objpk=None,
+    def __init__(self, time, loggername="", levelname="", objname="", objpk=None,
                  message=None, metadata=None):
 
         if not loggername or not levelname:
             raise ValidationError(
                 "The loggername and levelname can't be empty")
 
+        self.time = time
         self.loggername = loggername
         self.levelname = levelname
         self.objname = objname

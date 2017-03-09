@@ -63,6 +63,14 @@ class Log(object):
         """
         pass
 
+    @abstractmethod
+    def delete_all(self):
+        """
+        This is temporarily added to be used only in tests
+        Deletes all log entries in the table
+        """
+        pass
+
 
 class LogEntry(object):
     __metaclass__ = ABCMeta

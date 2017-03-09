@@ -1,5 +1,5 @@
-from aiida.backend.backend import Backend
-from aiida.backend.sqlalchemy.log import SqlaLog
+from aiida.orm.backend import Backend
+from aiida.orm.implementation.sqlalchemy.log import SqlaLog
 
 
 class SqlaBackend(Backend):

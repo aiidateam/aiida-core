@@ -1,5 +1,6 @@
 import json
-from aiida.backend.log import Log, LogEntry
+from aiida.orm.log import Log, LogEntry
+from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
 from aiida.backends.djsite.db.models import DbLog
 
 
@@ -8,9 +9,12 @@ class DjangoLog(Log):
     def create_entry(self, time, loggername, levelname, objname,
                      objpk=None, message="", metadata=None):
         """
-        Create a log entry.
+        Create a log entry if and only if objpk and objname are set
         """
-        return DjangoLogEntry(
+        if objpk is None or objname is None:
+            return None
+
+        entry = DjangoLogEntry(
             DbLog(
                 time=time,
                 loggername=loggername,
@@ -21,6 +25,10 @@ class DjangoLog(Log):
                 metadata=json.dumps(metadata)
             )
         )
+        entry.persist()
+
+        return entry
+
 
     def create_entry_from_record(self, record):
         """
@@ -28,17 +36,28 @@ class DjangoLog(Log):
         """
         from datetime import datetime
 
-        return DjangoLogEntry(
+        objpk   = record.__dict__.get('objpk', None)
+        objname = record.__dict__.get('objname', None)
+
+        # Do not store if objpk and objname are not set
+        if objpk is None or objname is None:
+            return None
+
+        entry = DjangoLogEntry(
             DbLog(
                 time=datetime.fromtimestamp(record.created),
                 loggername=record.name,
                 levelname=record.levelname,
-                objname=record.objname,
-                objpk=record.objpk,
-                message=record.message,
+                objname=objname,
+                objpk=objpk,
+                message=record.getMessage(),
                 metadata=json.dumps(record.__dict__)
             )
         )
+        entry.persist()
+
+        return entry
+
 
     def find(self, filter_by=None, order_by=None, limit=None):
         """
@@ -51,15 +70,18 @@ class DjangoLog(Log):
         if not filter_by:
             filter_by = {}
 
-        if not order_by:
-            order_by = []
-
         # Map the LogEntry property names to DbLog field names
         for key, value in filter_by.iteritems():
             filters[key] = value
 
+        if not order_by:
+            order_by = []
+
         for column in order_by:
-            order.append(column.field)
+            if column.direction == ASCENDING:
+                order.append(column.field)
+            else:
+                order.append('-' + column.field)
 
         if filters:
             entries = DbLog.objects.filter(**filters).order_by(*order)[:limit]
@@ -67,6 +89,13 @@ class DjangoLog(Log):
             entries = DbLog.objects.filter().order_by(*order)[:limit]
 
         return [DjangoLogEntry(entry) for entry in entries]
+
+
+    def delete_all(self):
+        """
+        Delete all log entries in the table
+        """
+        DbLog.objects.all().delete()
 
 
 class DjangoLogEntry(LogEntry):

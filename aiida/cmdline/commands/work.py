@@ -112,10 +112,10 @@ def do_report(pk, levelname, order_by):
     if not is_dbenv_loaded():
         load_dbenv()
 
-    from aiida.backend import construct_backend
-    from aiida.backend.log import OrderSpecifier, ASCENDING, DESCENDING
+    from aiida.orm.backend import construct
+    from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
 
-    backend  = construct_backend()
+    backend  = construct()
     order_by = [OrderSpecifier(order_by, ASCENDING)]
     filters  = {
         'objpk' : pk,

@@ -1,5 +1,5 @@
-from aiida.backend.backend import Backend
-from aiida.backend.django.log import DjangoLog
+from aiida.orm.backend import Backend
+from aiida.orm.implementation.django.log import DjangoLog
 
 
 class DjangoBackend(Backend):

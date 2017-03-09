@@ -3,7 +3,7 @@ from abc import abstractproperty, ABCMeta
 _DJANGO_BACKEND = None
 _SQLA_BACKEND   = None
 
-def construct_backend(backend_type=None):
+def construct(backend_type=None):
     """
     Construct a concrete backend instance based on the backend_type
     or use the global backend value if not specified.
@@ -19,14 +19,32 @@ def construct_backend(backend_type=None):
     if backend_type == 'django':
         global _DJANGO_BACKEND
         if _DJANGO_BACKEND is None:
-            from aiida.backend.django.backend import DjangoBackend
+            from aiida.orm.implementation.django.backend import DjangoBackend
             _DJANGO_BACKEND = DjangoBackend()
         return _DJANGO_BACKEND
     elif backend_type == 'sqlalchemy':
         global _SQLA_BACKEND
         if _SQLA_BACKEND is None:
-            from aiida.backend.sqlalchemy.backend import SqlaBackend
+            from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
             _SQLA_BACKEND = SqlaBackend()
         return _SQLA_BACKEND
     else:
         raise ValueError("The specified backend {} is currently not implemented".format(backend_type))
+
+
+class Backend(object):
+    """
+    The public interface that defines a backend factory that creates backend
+    specific concrete objects.
+    """
+    __metaclass__ = ABCMeta
+
+    @abstractproperty
+    def log(self):
+        """
+        Get an object that implements the logging utilities interface.
+
+        :return: An concrete log utils object
+        :rtype: :class:`aiida.orm.log.Log`
+        """
+        pass

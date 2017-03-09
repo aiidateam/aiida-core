@@ -272,7 +272,7 @@ LOGGING = {
             # NOTE: To modify properties, use the 'verdi devel setproperty'
             #   command and similar ones (getproperty, describeproperties, ...)
             'level': get_property('logging.db_loglevel'),
-            'class': 'aiida.backends.djsite.utils.DBLogHandler',
+            'class': 'aiida.utils.logger.DBLogHandler',
         },
     },
     'loggers': {

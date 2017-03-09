@@ -35,3 +35,25 @@ def get_dblogger_extra(obj):
         objname = obj.__class__.__module__ + "." + obj.__class__.__name__
     objpk = obj.pk
     return {'objpk': objpk, 'objname': objname}
+
+
+class DBLogHandler(logging.Handler):
+    def emit(self, record):
+        from aiida.orm.backend import construct
+        from django.core.exceptions import ImproperlyConfigured
+
+        try:
+            backend   = construct()
+            log_entry = backend.log.create_entry_from_record(record)
+
+        except ImproperlyConfigured:
+            # Probably, the logger was called without the
+            # Django settings module loaded. Then,
+            # This ignore should be a no-op.
+            pass
+        except Exception:
+            # To avoid loops with the error handler, I just print.
+            # Hopefully, though, this should not happen!
+            import traceback
+
+            traceback.print_exc()

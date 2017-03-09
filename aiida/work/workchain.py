@@ -278,6 +278,11 @@ class ToContext(Interstep):
         for key, val in kwargs.iteritems():
             if isinstance(val, self.Action):
                 self._to_assign[key] = val
+            elif isinstance(val, RunningInfo):
+                self._to_assign[key] = Calc(val)
+            elif isinstance(val, Future):
+                self._to_assign[key] = \
+                    Calc(RunningInfo(RunningType.PROCESS, val.pid))
             else:
                 # Assume it's a pk
                 self._to_assign[key] = Legacy(val)

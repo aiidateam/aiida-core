@@ -4,7 +4,6 @@ import sys
 import os
 
 from aiida.common.exceptions import ConfigurationError
-import aiida.optional as optional
 
 # get_property is used to read properties stored in the config json
 from aiida.common.setup import (get_config, get_secret_key, get_property,
@@ -227,8 +226,12 @@ INSTALLED_APPS = [
     'aiida.backends.djsite.db',
     # ~ 'djcelery',
 ]
-if optional.KOMBU_FOUND:
+try:
+    import kombu
+
     INSTALLED_APPS.append('kombu.transport.django')
+except ImportError:
+    pass
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to

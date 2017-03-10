@@ -4,7 +4,6 @@ import click
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from tabulate import tabulate
-from aiida.utils.ascii_vis import build_tree
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -147,6 +146,7 @@ def do_report(pk, levelname, order_by):
 @click.argument('pks', nargs=-1, type=int)
 def do_tree(node_label, depth, pks):
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    from aiida.utils.ascii_vis import build_tree
     if not is_dbenv_loaded():
         load_dbenv()
 

@@ -58,10 +58,10 @@ class UserTranslator(BaseTranslator):
         _default_projections = ['**']
 
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
         """
-        super(UserTranslator, self).__init__()
+        super(UserTranslator, self).__init__(Class=self.__class__, **kwargs)
 

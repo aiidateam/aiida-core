@@ -2,6 +2,7 @@
 
 import logging
 from aiida import LOG_LEVEL_REPORT
+from aiida.backends.utils import is_dbenv_loaded
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -39,6 +40,10 @@ def get_dblogger_extra(obj):
 
 class DBLogHandler(logging.Handler):
     def emit(self, record):
+        # If this is reached before a backend is defined, simply pass
+        if not is_dbenv_loaded():
+            return
+
         from aiida.orm.backend import construct
         from django.core.exceptions import ImproperlyConfigured
 

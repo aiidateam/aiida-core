@@ -26,7 +26,6 @@ db_test_list = {
     # Must be always defined (in the worst case, an empty dict)
     'common': {
         'generic': ['aiida.backends.tests.generic'],
-        'logger': ['aiida.backends.tests.logger'],
         'nodes': ['aiida.backends.tests.nodes'],
         'nwchem': ['aiida.backends.tests.nwchem'],
         'base_dataclasses': ['aiida.backends.tests.base_dataclasses'],

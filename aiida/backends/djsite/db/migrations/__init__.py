@@ -5,7 +5,7 @@ __license__ = "MIT license, see LICENSE.txt file."
 __version__ = "0.7.1"
 __authors__ = "The AiiDA team."
 
-LATEST_MIGRATION = '0003_add_link_type'
+LATEST_MIGRATION = '0004_add_daemon_and_uuid_indices'
 
 
 def _update_schema_version(version, apps, schema_editor):

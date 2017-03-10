@@ -1,8 +1,6 @@
 NEB
 +++
 
-.. note:: The NEB plugin referenced below is available in the EPFL version.
-
 Description
 -----------
 Plugin for the Quantum Espresso neb.x executable.

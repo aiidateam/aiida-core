@@ -7,5 +7,3 @@ Other guide resources
    cookbook
    ../troubleshooting/index
    ../setup/aiida_multiuser
-   ../website/web.rst
-

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+from aiida.backends.testbase import AiidaTestCase
 from aiida.common import pluginloader as pl
 import unittest
 
 
-class TestExistingPlugins(unittest.TestCase):
+class TestExistingPlugins(AiidaTestCase):
     """
     Test pluginloader's existing_plugins function.
 
@@ -11,11 +12,6 @@ class TestExistingPlugins(unittest.TestCase):
     * will fail when pluginloader gets broken.
     * will fail if pluginloader returns something else than a list
     """
-    def setUp(self):
-        from aiida import load_dbenv, is_dbenv_loaded
-        if not is_dbenv_loaded():
-            load_dbenv()
-
     def test_existing_calculations(self):
         """Test listing all preinstalled calculations """
         from aiida.orm.calculation.job import JobCalculation

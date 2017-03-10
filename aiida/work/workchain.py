@@ -276,7 +276,7 @@ class ToContext(Interstep):
     @classmethod
     def action_from_running_info(cls, running_info):
         if running_info.type is RunningType.PROCESS:
-            Calc(running_info)
+            return Calc(running_info)
         elif running_info.type is RunningType.LEGACY_CALC or \
                 running_info.type is RunningType.LEGACY_WORKFLOW:
             return Legacy(running_info)

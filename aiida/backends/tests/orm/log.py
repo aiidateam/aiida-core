@@ -4,6 +4,7 @@ from aiida.utils import timezone as dtimezone
 from aiida import LOG_LEVEL_REPORT
 from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
 from aiida.orm.backend import construct
+from aiida.orm.calculation import Calculation
 from aiida.backends.testbase import AiidaTestCase
 
 
@@ -122,3 +123,30 @@ class TestBackendLog(AiidaTestCase):
         entries = self._backend.log.find(filter_by={'objpk' : target_pk})
         self.assertEquals(len(entries), 1)
         self.assertEquals(entries[0].objpk, target_pk)
+
+
+    def test_db_log_handler(self):
+        """
+        Verify that the db log handler is attached correctly
+        by firing a log message through the regular logging module
+        attached to a calculation node
+        """
+        message = 'Testing logging of critical failure'
+        calc = Calculation()
+
+        # Make sure that global logging is not accidentally disabled
+        logging.disable(logging.NOTSET)
+
+        # Firing a log for an unstored should not end up in the database
+        calc.logger.critical(message)
+        logs = self._backend.log.find()
+
+        self.assertEquals(len(logs), 0)
+
+        # After storing the node, logs above log level should be stored
+        calc.store()
+        calc.logger.critical(message)
+        logs = self._backend.log.find()
+
+        self.assertEquals(len(logs), 1)
+        self.assertEquals(logs[0].message, message)

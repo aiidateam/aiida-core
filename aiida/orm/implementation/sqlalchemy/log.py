@@ -1,7 +1,7 @@
 from aiida.orm.log import Log, LogEntry
 from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
 from aiida.backends.sqlalchemy import session
-from aiida.backends.sqlalchemy.models import DbLog
+from aiida.backends.sqlalchemy.models.log import DbLog
 
 
 class SqlaLog(Log):

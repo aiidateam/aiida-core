@@ -426,7 +426,47 @@ class TestQueryBuilder(AiidaTestCase):
                 'Calculation_1--StructureData_2',
                 'Calculation_1--ParameterData_1'
             ])
+
+
+class TestAttributes(AiidaTestCase):
+    def test_attribute_existence(self):
+        # I'm storing a value under key whatever:
+        from aiida.orm.node import Node
+        from aiida.orm.querybuilder import QueryBuilder
+        val = 1.
+        res_uuids = set()
+        n1 = Node()
+        n1._set_attr("whatever", 3.)
+        n1._set_attr("test_case", "test_attribute_existence")
+        n1.store()
+
+        n1 = Node()
+        n1._set_attr("whatever", 0.)
+        n1._set_attr("test_case", "test_attribute_existence")
+        n1.store()
+        res_uuids.add(n1.uuid)
+
+        n1 = Node()
+        n1._set_attr("whatever", None)
+        n1._set_attr("test_case", "test_attribute_existence")
+        n1.store()
+
+        n1 = Node()
+        n1._set_attr("test_case", "test_attribute_existence")
+        n1.store()
+        res_uuids.add(n1.uuid)
+
+        # I want all the nodes where whatever is smaller than 1. or there is no such value:
         
+        qb = QueryBuilder()
+        qb.append(Node, filters={
+                    'or':[
+                        {'attributes': {'!has_key': 'whatever'}},
+                        {'attributes.whatever':{'<':val}}
+                    ],
+            }, project='uuid')
+        res_query = set([str(_[0]) for _ in qb.all()])
+        self.assertEqual(res_query, res_uuids)
 
 
 

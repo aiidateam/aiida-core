@@ -285,7 +285,8 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
 
     def get_session(self):
-        return dummy_model.session
+        return dummy_model.get_aldjemy_session()
+        # return dummy_model.session
 
 
     def modify_expansions(self, alias, expansions):

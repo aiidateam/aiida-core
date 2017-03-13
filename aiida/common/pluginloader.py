@@ -43,7 +43,7 @@ def get_query_type_string(plugin_type_string):
     # First case, an empty string for Node:
     if plugin_type_string == '':
         query_type_string = ''
-    # Anything else should have baseclass.Class., so at least 2 dots 
+    # Anything else should have baseclass.Class., so at least 2 dots
     # and end with a dot:
     elif not(plugin_type_string.endswith('.')) or plugin_type_string.count('.') == 1:
         raise DbContentError(
@@ -77,7 +77,7 @@ def get_class_typestring(type_string):
 
 
 def _existing_plugins_with_module(base_class, plugins_module_path,
-                                  pkgname, basename, max_depth, suffix=None):
+                                  pkgname, basename, max_depth, suffix=None, verbose=False):
     """
         Recursive function to return the existing plugins within a given module.
 
@@ -102,19 +102,20 @@ def _existing_plugins_with_module(base_class, plugins_module_path,
     else:
         retlist = _find_module(base_class, pkgname, basename, suffix)
 
-        for _, name, ismod in pkgutil.walk_packages([plugins_module_path]):
+        prefix = pkgname + '.'
+        for _, name, ismod in pkgutil.walk_packages([plugins_module_path], prefix=prefix):
+            plugin_name = name[len(prefix):]
             if ismod:
                 retlist += _existing_plugins_with_module(
-                    base_class, os.path.join(plugins_module_path, name),
-                    "{}.{}".format(pkgname, name),
-                    "{}.{}".format(basename, name) if basename else name,
+                    base_class, os.path.join(plugins_module_path, plugin_name),
+                    name,
+                    "{}.{}".format(basename, plugin_name) if basename else plugin_name,
                     max_depth - 1, suffix=suffix)
 
             # This has to be done anyway, for classes in the __init__ file.
-            this_pkgname = "{}.{}".format(pkgname, name)
-            this_basename = "{}.{}".format(basename, name) if basename else name
+            this_basename = "{}.{}".format(basename, plugin_name) if basename else plugin_name
 
-            retlist += _find_module(base_class, this_pkgname, this_basename, suffix)
+            retlist += _find_module(base_class, name, this_basename, suffix)
 
         return list(set(retlist))
 
@@ -179,7 +180,7 @@ def _find_module(base_class, pkgname, this_basename, suffix=None):
     return retlist
 
 
-def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
+def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None, verbose=False):
     """
     Return a list of strings of valid plugins.
 
@@ -206,7 +207,7 @@ def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
                                          pluginmod.__path__[0],
                                          plugins_module_name,
                                          "",
-                                         max_depth, suffix)
+                                         max_depth, suffix, verbose=verbose)
 
 
 def load_plugin(base_class, plugins_module, plugin_type):

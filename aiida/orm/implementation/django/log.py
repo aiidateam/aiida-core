@@ -2,10 +2,10 @@ import json
 from aiida.orm.log import Log, LogEntry
 from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
 from aiida.backends.djsite.db.models import DbLog
+from aiida.utils import timezone
 
 
 class DjangoLog(Log):
-
     def create_entry(self, time, loggername, levelname, objname,
                      objpk=None, message="", metadata=None):
         """
@@ -29,14 +29,13 @@ class DjangoLog(Log):
 
         return entry
 
-
     def create_entry_from_record(self, record):
         """
         Create a log entry from a record created by the python logging
         """
         from datetime import datetime
 
-        objpk   = record.__dict__.get('objpk', None)
+        objpk = record.__dict__.get('objpk', None)
         objname = record.__dict__.get('objname', None)
 
         # Do not store if objpk and objname are not set
@@ -45,7 +44,7 @@ class DjangoLog(Log):
 
         entry = DjangoLogEntry(
             DbLog(
-                time=datetime.fromtimestamp(record.created),
+                time=timezone.make_aware(datetime.fromtimestamp(record.created)),
                 loggername=record.name,
                 levelname=record.levelname,
                 objname=objname,
@@ -58,13 +57,12 @@ class DjangoLog(Log):
 
         return entry
 
-
     def find(self, filter_by=None, order_by=None, limit=None):
         """
         Find all entries in the Log collection that confirm to the filter and
         optionally sort and/or apply a limit.
         """
-        order   = []
+        order = []
         filters = {}
 
         if not filter_by:
@@ -89,7 +87,6 @@ class DjangoLog(Log):
             entries = DbLog.objects.filter().order_by(*order)[:limit]
 
         return [DjangoLogEntry(entry) for entry in entries]
-
 
     def delete_all(self):
         """

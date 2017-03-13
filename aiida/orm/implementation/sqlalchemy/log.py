@@ -2,6 +2,7 @@ from aiida.orm.log import Log, LogEntry
 from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
 from aiida.backends.sqlalchemy import session
 from aiida.backends.sqlalchemy.models.log import DbLog
+from aiida.utils import timezone
 
 
 class SqlaLog(Log):
@@ -45,7 +46,7 @@ class SqlaLog(Log):
 
         entry = SqlaLogEntry(
             DbLog(
-                time=datetime.fromtimestamp(record.created),
+                time=timezone.make_aware(datetime.fromtimestamp(record.created)),
                 loggername=record.name,
                 levelname=record.levelname,
                 objname=objname,

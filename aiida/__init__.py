@@ -35,17 +35,7 @@ LOGGING = {
             'datefmt': '%m/%d/%Y %I:%M:%S %p',
         },
     },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
-    },
     'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
@@ -62,21 +52,11 @@ LOGGING = {
         },
     },
     'loggers': {
-        'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
         'aiida': {
             'handlers': ['console', 'dblogger'],
             'level': get_property('logging.aiida_loglevel'),
             'propagate': False,
         },
-        # ~ 'celery': {
-        # ~ 'handlers': ['console'],
-        # ~ 'level': get_property('logging.celery_loglevel'),
-        # ~ 'propagate': False,
-        # ~ },
         'paramiko': {
             'handlers': ['console'],
             'level': get_property('logging.paramiko_loglevel'),

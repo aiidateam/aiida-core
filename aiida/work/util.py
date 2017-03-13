@@ -125,8 +125,6 @@ def get_or_create_output_group(calculation):
     has as its values all output Data nodes of the Calculation.
 
     :param calculation: Calculation
-    :return:
-    :rtype: FrozenDict
     """
     if not isinstance(calculation, Calculation):
         raise TypeError("Can only create output groups for type Calculation")

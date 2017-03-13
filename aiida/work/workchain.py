@@ -277,11 +277,26 @@ class ToContext(Interstep):
 
     Action = namedtuple("Action", "running_info fn")
 
+    @classmethod
+    def action_from_running_info(cls, running_info):
+        if running_info.type is RunningType.PROCESS:
+            return Calc(running_info)
+        elif running_info.type is RunningType.LEGACY_CALC or \
+                running_info.type is RunningType.LEGACY_WORKFLOW:
+            return Legacy(running_info)
+        else:
+            raise ValueError("Unknown running type '{}'".format(running_info.type))
+
     def __init__(self, **kwargs):
         self._to_assign = {}
         for key, val in kwargs.iteritems():
             if isinstance(val, self.Action):
                 self._to_assign[key] = val
+            elif isinstance(val, RunningInfo):
+                self._to_assign[key] = self.action_from_running_info(val)
+            elif isinstance(val, Future):
+                self._to_assign[key] = \
+                    Calc(RunningInfo(RunningType.PROCESS, val.pid))
             else:
                 # Assume it's a pk
                 self._to_assign[key] = Legacy(val)

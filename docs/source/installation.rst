@@ -62,6 +62,14 @@ There are many projects that aim to make managing many virtual environments easi
 
 Tab-completion is only supported for bash.
 
+Where did requirements.txt go?
+------------------------------
+
+The recommended way of installing dependencies is now to use `python-pip_`.
+The information that used to be in ``requirements.txt`` is now in ``setup_requirements.py``. The script ``aiida_core/utils/create_requirements.py`` generates a ``requirements.txt`` file from it.
+
+If you are wondering how to update dependencies after pulling a newer instable verion from the repository, have a look at `install.other.devel_`
+
 .. _install.quickstart:
 
 Quickstart (new users)
@@ -270,9 +278,6 @@ Next steps:
 
 * set up AiiDA using :ref:`verdi quicksetup (New Users)<quicksetup>` or :ref:`verdi setup (Experienced Users)<setup>`
 
-.. _create_db:
-
-
 .. _install.other.devel:
 
 Developer installs
@@ -295,6 +300,8 @@ The following points may be helpful:
 * If you work on feature branches you may want to install them in a separate virtual environment, to avoid frequently running `pip install` when switching between branches.
 * The same applies to any plugins you may be working on.
 * Keep in mind that all versions of aiida access the same profiles and databases, independently of which virtual environment they were installed in.
+
+.. _create_db:
 
 Create a database
 -----------------

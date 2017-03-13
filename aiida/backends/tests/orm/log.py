@@ -135,6 +135,7 @@ class TestBackendLog(AiidaTestCase):
 
         try:
             if handler:
+                original_level = handler.level
                 handler.setLevel(logging.CRITICAL + 1)
 
             # Firing a log for an unstored should not end up in the database
@@ -154,4 +155,4 @@ class TestBackendLog(AiidaTestCase):
 
         finally:
             if handler:
-                handler.setLevel(logging.NOTSET)
+                handler.setLevel(original_level)

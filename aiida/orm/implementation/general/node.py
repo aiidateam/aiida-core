@@ -568,8 +568,7 @@ class AbstractNode(object):
         Return a dictionary where the key is the label of the input link, and
         the value is the input node.
 
-        :param only_in
-        self._cache = {}_db: If true only get stored links, not cached
+        :param only_in_db: If true only get stored links, not cached
         :param link_type: Only get inputs of this link type, if None then
                 returns all inputs of all link types.
         :return: a dictionary {label:object}

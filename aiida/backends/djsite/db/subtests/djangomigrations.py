@@ -49,8 +49,9 @@ class CalcStateChanges(AiidaTestCase):
             # because otherwise fix_calc_states will print warnings
             handler = next((h for h in logging.getLogger('aiida').handlers if
                             isinstance(h, logging.StreamHandler)), None)
+
             if handler:
-                orignal_level = handler.level
+                original_level = handler.level
                 handler.setLevel(logging.ERROR)
 
             # Call the code that deals with updating these states

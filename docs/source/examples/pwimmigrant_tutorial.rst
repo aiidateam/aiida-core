@@ -1,7 +1,7 @@
 .. _my-ref-to-pwimmigration-tutorial:
 
 PWscf immigration
-================================================
+=================
 
 .. toctree::
    :maxdepth: 2

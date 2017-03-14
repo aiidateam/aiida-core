@@ -1,7 +1,7 @@
 .. _my-ref-to-cp-tutorial:
 
 Car-Parrinello
-=============================================
+==============
 
 .. toctree::
    :maxdepth: 2

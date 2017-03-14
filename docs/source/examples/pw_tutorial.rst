@@ -1,7 +1,7 @@
 .. _my-ref-to-pw-tutorial:
 
 PWscf
-====================================
+=====
 
 .. toctree::
    :maxdepth: 2

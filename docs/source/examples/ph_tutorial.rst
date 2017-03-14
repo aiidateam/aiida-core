@@ -1,7 +1,7 @@
 .. _my-ref-to-ph-tutorial:
 
 Phonon
-=====================================
+======
 
 .. toctree::
    :maxdepth: 2

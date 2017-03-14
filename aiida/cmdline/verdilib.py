@@ -702,7 +702,7 @@ class Quicksetup(VerdiCommand):
     @click.option('--first-name', prompt='First Name', type=str)
     @click.option('--last-name', prompt='Last Name', type=str)
     @click.option('--institution', prompt='Institution', type=str)
-    @click.option('--backend', type=click.Choice([BACKEND_DJANGO,BACKEND_SQLA]), default=BACKEND_SQLA)
+    @click.option('--backend', type=click.Choice([BACKEND_DJANGO,BACKEND_SQLA]), default=BACKEND_DJANGO)
     @click.option('--db-port', type=str)
     @click.option('--db-user', type=str)
     @click.option('--db-user-pw', type=str)

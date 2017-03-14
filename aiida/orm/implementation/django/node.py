@@ -150,14 +150,14 @@ class Node(AbstractNode):
     def _update_db_label_field(self, field_value):
         self.dbnode.label = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
         self.dbnode.description = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
 
@@ -166,7 +166,7 @@ class Node(AbstractNode):
             self._add_dblink_from(src, label, link_type)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._remove_dblink_from(label)
                 self._add_dblink_from(src, label, link_type)
 
@@ -603,7 +603,7 @@ class Node(AbstractNode):
         from aiida.common.utils import EmptyContextManager
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 
@@ -690,7 +690,7 @@ class Node(AbstractNode):
         from aiida.common.utils import EmptyContextManager
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 
@@ -741,7 +741,7 @@ class Node(AbstractNode):
         import aiida.orm.autogroup
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 

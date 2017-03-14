@@ -561,6 +561,20 @@ the procedure, make sure of the following:
   * If you encounter any problems and/or inconsistencies, delete any .pyc
     files that may have remained from the previous version. E.g. If you are
     in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
+  * From 0.8.0 onwards there is no ``requirements.txt`` file anymore. It has been replaced by ``setup_requirements.py`` and ``pip`` will install all the requirements automatically. If for some reason you would still like to get such a file, you can create it using the script ``aiida_core/utils/create_requirements.py``
+
+Updating between development versions (for Developers)
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+After you checkout a development branch or pull a new state from the repository
+
+* run ``pip install -e`` again (or in a different virtualenv)
+  This applies changes to the distribution system (setup.py and related)
+
+To use the new version in production:
+
+* run ``verdi setup``
+  This updates your daemon profile and related files. It should not be done when another version of aiida is wished to be used productively on the same machine/user.
 
 
 Updating from 0.7.0 Django to 0.8.0 Django

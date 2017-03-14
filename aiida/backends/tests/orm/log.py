@@ -1,6 +1,6 @@
 import logging
-from datetime import datetime
-from aiida.utils import timezone as dtimezone
+import unittest
+from aiida.utils.timezone import now
 from aiida import LOG_LEVEL_REPORT
 from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
 from aiida.orm.backend import construct
@@ -9,20 +9,18 @@ from aiida.backends.testbase import AiidaTestCase
 
 
 class TestBackendLog(AiidaTestCase):
-
     def setUp(self):
         super(TestBackendLog, self).setUp()
         self._backend = construct()
         self._record = {
-            'time'       : datetime.now(dtimezone.get_current_timezone()),
-            'loggername' : 'loggername',
-            'levelname'  : logging.getLevelName(LOG_LEVEL_REPORT),
-            'objname'    : 'objname',
-            'objpk'      : 0,
-            'message'    : 'This is a template record message',
-            'metadata'   : {'content' : 'test'},
+            'time': now(),
+            'loggername': 'loggername',
+            'levelname': logging.getLevelName(LOG_LEVEL_REPORT),
+            'objname': 'objname',
+            'objpk': 0,
+            'message': 'This is a template record message',
+            'metadata': {'content': 'test'},
         }
-
 
     def tearDown(self):
         """
@@ -31,13 +29,11 @@ class TestBackendLog(AiidaTestCase):
         super(TestBackendLog, self).tearDown()
         self._backend.log.delete_all()
 
-
     def test_create_backend(self):
         """
         Test creating the backend specific backend instance
         """
         backend = construct()
-
 
     def test_delete_all(self):
         """
@@ -45,7 +41,7 @@ class TestBackendLog(AiidaTestCase):
         Bit superfluous, given that other tests most likely would fail
         anyway if this method does not work properly
         """
-        count=10
+        count = 10
         for _ in range(count):
             self._backend.log.create_entry(**self._record)
 
@@ -53,13 +49,12 @@ class TestBackendLog(AiidaTestCase):
         self._backend.log.delete_all()
         self.assertEquals(len(self._backend.log.find()), 0)
 
-
     def test_create_log_message(self):
         """
         Test the manual creation of a log entry 
         """
         record = self._record
-        entry  = self._backend.log.create_entry(
+        entry = self._backend.log.create_entry(
             record['time'],
             record['loggername'],
             record['levelname'],
@@ -69,14 +64,13 @@ class TestBackendLog(AiidaTestCase):
             record['metadata']
         )
 
-        self.assertEquals(entry.time,       record['time'])
+        self.assertEquals(entry.time, record['time'])
         self.assertEquals(entry.loggername, record['loggername'])
-        self.assertEquals(entry.levelname,  record['levelname'])
-        self.assertEquals(entry.objname,    record['objname'])
-        self.assertEquals(entry.objpk,      record['objpk'])
-        self.assertEquals(entry.message,    record['message'])
-        self.assertEquals(entry.metadata,   record['metadata'])
-
+        self.assertEquals(entry.levelname, record['levelname'])
+        self.assertEquals(entry.objname, record['objname'])
+        self.assertEquals(entry.objpk, record['objpk'])
+        self.assertEquals(entry.message, record['message'])
+        self.assertEquals(entry.metadata, record['metadata'])
 
     def test_find_orderby(self):
         """
@@ -88,27 +82,25 @@ class TestBackendLog(AiidaTestCase):
             self._backend.log.create_entry(**record)
 
         order_by = [OrderSpecifier('objpk', ASCENDING)]
-        entries  = self._backend.log.find(order_by=order_by)
+        entries = self._backend.log.find(order_by=order_by)
 
         self.assertEquals(entries[0].objpk, 0)
 
         order_by = [OrderSpecifier('objpk', DESCENDING)]
-        entries  = self._backend.log.find(order_by=order_by)
+        entries = self._backend.log.find(order_by=order_by)
 
         self.assertEquals(entries[0].objpk, 9)
-
 
     def test_find_limit(self):
         """
         Test the limit option of log.find
         """
-        limit=2
-        for _ in range(limit*2):
+        limit = 2
+        for _ in range(limit * 2):
             self._backend.log.create_entry(**self._record)
 
         entries = self._backend.log.find(limit=limit)
         self.assertEquals(len(entries), limit)
-
 
     def test_find_filter(self):
         """
@@ -120,10 +112,9 @@ class TestBackendLog(AiidaTestCase):
             record['objpk'] = pk
             self._backend.log.create_entry(**record)
 
-        entries = self._backend.log.find(filter_by={'objpk' : target_pk})
+        entries = self._backend.log.find(filter_by={'objpk': target_pk})
         self.assertEquals(len(entries), 1)
         self.assertEquals(entries[0].objpk, target_pk)
-
 
     def test_db_log_handler(self):
         """
@@ -137,16 +128,31 @@ class TestBackendLog(AiidaTestCase):
         # Make sure that global logging is not accidentally disabled
         logging.disable(logging.NOTSET)
 
-        # Firing a log for an unstored should not end up in the database
-        calc.logger.critical(message)
-        logs = self._backend.log.find()
+        # Temporarily disable logging to the stream handler (i.e. screen)
+        # because otherwise fix_calc_states will print warnings
+        handler = next((h for h in logging.getLogger('aiida').handlers if
+                        isinstance(h, logging.StreamHandler)), None)
 
-        self.assertEquals(len(logs), 0)
+        try:
+            if handler:
+                original_level = handler.level
+                handler.setLevel(logging.CRITICAL + 1)
 
-        # After storing the node, logs above log level should be stored
-        calc.store()
-        calc.logger.critical(message)
-        logs = self._backend.log.find()
+            # Firing a log for an unstored should not end up in the database
+            calc.logger.critical(message)
 
-        self.assertEquals(len(logs), 1)
-        self.assertEquals(logs[0].message, message)
+            logs = self._backend.log.find()
+
+            self.assertEquals(len(logs), 0)
+
+            # After storing the node, logs above log level should be stored
+            calc.store()
+            calc.logger.critical(message)
+            logs = self._backend.log.find()
+
+            self.assertEquals(len(logs), 1)
+            self.assertEquals(logs[0].message, message)
+
+        finally:
+            if handler:
+                handler.setLevel(original_level)

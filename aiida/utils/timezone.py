@@ -40,6 +40,14 @@ def is_aware(value):
 
 
 def make_aware(value, timezone=None, is_dst=None):
+    """
+
+    :param value: The datetime to make aware
+    :type value: :class:`datetime.datetime`
+    :param timezone:
+    :param is_dst:
+    :return:
+    """
     if timezone is None:
         timezone = get_current_timezone()
     if hasattr(timezone, 'localize'):

@@ -77,7 +77,7 @@ def get_class_typestring(type_string):
 
 
 def _existing_plugins_with_module(base_class, plugins_module_path,
-                                  pkgname, basename, max_depth, suffix=None, verbose=False):
+                                  pkgname, basename, max_depth, suffix=None):
     """
         Recursive function to return the existing plugins within a given module.
 
@@ -180,7 +180,7 @@ def _find_module(base_class, pkgname, this_basename, suffix=None):
     return retlist
 
 
-def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None, verbose=False):
+def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
     """
     Return a list of strings of valid plugins.
 
@@ -207,7 +207,7 @@ def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None, 
                                          pluginmod.__path__[0],
                                          plugins_module_name,
                                          "",
-                                         max_depth, suffix, verbose=verbose)
+                                         max_depth, suffix)
 
 
 def load_plugin(base_class, plugins_module, plugin_type):

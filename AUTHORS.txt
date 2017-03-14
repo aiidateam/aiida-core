@@ -1,22 +1,56 @@
-The members of the AiiDA team:
-Andrea Cepellotti
-Leonid Kahle
-Boris Kozinsky
-Nicola Marzari
-Andrius Merkys
-Nicolas Mounet
-Giovanni Pizzi
-Riccardo Sabatini
-Martin Uhrin
-Snehal Waychal
-Spyros Zoupanos
+This file lists the authors of the AiiDA code (i.e., the members of the AiiDA team)
+as well as the known contributors to the code.
+
+The current members of the AiiDA team are, in alphabetical order:
+#################################################################
+* Andrea Cepellotti
+* Fernando Gargiulo
+* Leonid Kahle
+* Boris Kozinsky
+* Rico Haeuselmann
+* Sebastiaan P. Huber
+* Nicola Marzari
+* Andrius Merkys
+* Nicolas Mounet
+* Giovanni Pizzi
+* Martin Uhrin
+* Snehal Waychal
+* Spyros Zoupanos
 
 
-We would also like to thank the following people for their contibution:
-Valentin Bersier
-Jocelyn Boullier
-Ivano Castelli
-Marco Dorigo
-Marco Gibertini
-Eric Hontz
-Phillippe Schwaller
+
+Former members of the AiiDA team
+################################
+* Riccardo Sabatini (2013-2015)
+
+
+
+Contributors
+############
+We would like to thank the following people for their contibution 
+(beside generic comments and bugfixes):
+
+* Valentin Bersier (EPFL, Switzerland): for the early version of the 
+  AiiDA web interface
+* Jocelyn Boullier (EPFL, Switzerland): for the first version of the 
+  SQLAlchemy implementation
+* Marco Dorigo (ICAMS, Germany): for the SGE scheduler plugin
+* Marco Gibertini: for the Quantum ESPRESSO plugin for the NEB code and 
+  the extension of the PW plugin to the ENVIRON code
+* Eric Hontz (MIT, USA): for the Quantum Espresso pwimmigrant plugin
+* Daniel Marchand (EPFL, Switzerland): for the Quantum ESPRESSO plugins 
+  for PP, PROJWFC, and the first version of the Wannier90 plugin
+* Tiziano Müller (ETHZ, Switzerland): for the first implementation of 
+  the new plugin system (developed in 2017)
+* Phillippe Schwaller (EPFL, Switzerland): for the ICSD importer
+
+And the following people for corrections, improving the documentation, 
+spotting typos or useful suggestions:
+
+Jens Broeder, Ivano Castelli, Dominik Gresch, Gianluca Prandini, 
+Jianxing Huang, Antimo Marrazzo, Nicola Varini, Mario Zic
+
+---
+
+Please, don't hesitate to contact the AiiDA team if you see that 
+information is wrong or missing in this file.

@@ -1,3 +1,54 @@
+######################
+The ``verdi`` commands
+######################
+
+For some of the most common operations in AiiDA, you can work directly from the command line using the a set of ``verdi`` commands. You already used ``verdi install`` when installing the software. There are quite some more functionalities attached to this command; here's a list:
+
+* :ref:`calculation<calculation>`:				query and interact with calculations
+* :ref:`code<code>`:                			setup and manage codes to be used
+* :ref:`comment<comment>`:          			manage general properties of nodes in the database
+* :ref:`completioncommand<completioncommand>`:	return the bash completion function to put in ~/.bashrc
+* :ref:`computer<computer>`:            		setup and manage computers to be used
+* :ref:`daemon<daemon>`:              			manage the AiiDA daemon
+* :ref:`data<data>`:                			setup and manage data specific types
+* :ref:`devel<devel>`:               			AiiDA commands for developers
+* :ref:`export<export>`:              			export nodes and group of nodes
+* :ref:`graph<graph>`:                    create a graph from a given root node
+* :ref:`group<group>`:               			setup and manage groups
+* :ref:`import<import>`:              			export nodes and group of nodes
+* :ref:`install<install>`:             			install/setup aiida for the current user/create a new profile
+* :ref:`node<node>`:                			manage operations on AiiDA nodes
+* :ref:`profile<profile>`:                		list and manage AiiDA profiles
+* :ref:`run<run>`:                  			execute an AiiDA script
+* :ref:`shell<shell>`:               			run the interactive shell with the Django environment
+* :ref:`user<user>`:                			list and configure new AiiDA users.
+* :ref:`workflow<workflow>`:            		manage the AiiDA worflow manager
+
+
+Each command above can be preceded by the ``-p <profile>`` or ``--profile=<profile>``
+option, as in::
+  
+  verdi -p <profile> calculation list
+
+This allows to select a specific AiiDA profile, and therefore a specific database,
+on which the command is executed. Thus several databases can be handled and 
+accessed simultaneously by AiiDA. To install a new profile, use the 
+:ref:`install<install>` command.
+
+.. note:: This profile selection has no effect on the ``verdi daemon`` commands.
+
+Some ambiguity might arise when a certain ``verdi`` subcommand manages both positional arguments and at least one option which accepts an unspecified number of arguments. Make sure you insert the separator ``--`` between the last optional argument and the first positional argument. As an example, instead of typing::
+
+  verdi export -g group1 group2 group3 export.aiida
+
+rather type::
+
+  verdi export -g group1 group2 group3 -- export.aiida
+
+ The previous command will export the nodes belonging to groups ``group1``, ``group2``, and ``group3`` (specified by the option ``-g``) into the file ``export.aiida``, which is taken as a positional argument.
+
+Below is a list with all the available subcommands.
+
 .. _calculation:
 
 ``verdi calculation``

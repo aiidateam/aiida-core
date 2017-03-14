@@ -117,13 +117,13 @@ class Group(AbstractGroup):
 
     def store(self):
         if not self.is_stored:
-            with transaction.atomic():
-                try:
+            try:
+                with transaction.atomic():
                     self.dbgroup.save()
-                except IntegrityError:
-                    raise UniquenessError("A group with the same name (and of the "
-                                          "same type) already "
-                                          "exists, unable to store")
+            except IntegrityError:
+                raise UniquenessError("A group with the same name (and of the "
+                                      "same type) already "
+                                      "exists, unable to store")
 
         # To allow to do directly g = Group(...).store()
         return self

@@ -19,6 +19,10 @@ __version__ = "0.7.1"
 class Code(AbstractCode):
 
     @classmethod
+    def get(cls, pk=None, label=None, machinename=None):
+        return super(Code, cls).get(pk, label, machinename)
+
+    @classmethod
     def get_from_string(cls, code_string):
         return super(Code, cls).get_from_string(code_string)
 

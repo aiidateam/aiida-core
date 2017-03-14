@@ -46,6 +46,11 @@ For MacOS X using `Homebrew`_ as the package manager::
 
 .. _Homebrew: http://brew.sh/index_de.html
 
+Then use the python package manager ``pip`` to install ``virtualenv``::
+
+    $ pip install --user -U setuptools pip wheel virtualenv
+
+
 For a more detailed description of database requirements and usage see section `database`_.
 
 Install AiiDA and its python dependencies
@@ -56,10 +61,6 @@ Create a directory where you want to install AiiDA and clone the repository::
     $ mkdir <your_directory>
     $ cd <your_directory>
     $ git clone https://github.com/aiidateam/aiida_core
-
-To install AiiDA and its dependencies we employ the python package manager ``pip``::
-
-    $ pip install --user -U setuptools pip wheel virtualenv
 
 To prevent the python packages that AiiDA depends on, from clashing with the packages you already have installed on your system, we will install them in a virtual environment.
 For detailed information about virtual environment refer to the section :ref:`virtual-environment`.
@@ -74,16 +75,17 @@ Finally, to install AiiDA, run the following command from the directory where yo
 
    (aiidapy) $ pip install -e aiida_core
 
+(In this example the AiiDA directory is in ``aiida_core``)
 
 .. _install_optional_dependencies:
 
 There are additional optional packages that you may want to install, which are grouped in the following categories:
 
-    * ``atomic_tools`` (packages that allow importing and manipulating crystal structure from various formats)
-    * ``ssh_kerberos`` (adds support for ssh transport authentication through Kerberos)
-    * ``REST`` (allows a REST server to be ran locally to serve AiiDA data)
-    * ``docs`` (tools to build the documentation)
-    * ``advanced_plotting`` (tools for advanced plotting)
+    * ``atomic_tools``: packages that allow importing and manipulating crystal structure from various formats
+    * ``ssh_kerberos``: adds support for ssh transport authentication through Kerberos
+    * ``REST``: allows a REST server to be ran locally to serve AiiDA data
+    * ``docs``: tools to build the documentation
+    * ``advanced_plotting``: tools for advanced plotting
 
 In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command::
 
@@ -101,7 +103,7 @@ Here we will use the quicksetup by executing::
 You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
 Alternatively you can give your information as commandline options (use ``verdi quicksetup --help`` option for a list of options).
 
-.. note:: ``verdi setup`` used to be called ``verdi install``, but the new name better reflects the command's purpose
+.. note:: ``verdi setup`` used to be called ``verdi install``, but the new name better reflects the command's purpose.
 
 Congratulations, you should now have a working installation of AiiDA.
 You can verify that the installation was successful by running::

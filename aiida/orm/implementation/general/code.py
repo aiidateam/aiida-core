@@ -170,15 +170,16 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
         detection algorithm.
 
         .. note:: the (leftmost) '@' symbol is always used to split code
-           and computername. Therefore do not use
-          '@' in the code name if you want to use this function
-          ('@' in the computer name are instead valid).
+            and computername. Therefore do not use
+            '@' in the code name if you want to use this function
+            ('@' in the computer name are instead valid).
 
         :param code_string: the code string identifying the code to load
 
         :raise NotExistent: if no code identified by the given string is found
         :raise MultipleObjectsError: if the string cannot identify uniquely
             a code
+
         """
 
         from aiida.common.exceptions import InputValidationError

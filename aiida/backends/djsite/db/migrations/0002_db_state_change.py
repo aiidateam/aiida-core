@@ -32,7 +32,6 @@ def fix_calc_states(apps, schema_editor):
             "the database. Changed state to FAILED.".format(
                 old_state, calc_state.dbnode.pk))
 
-
 class Migration(migrations.Migration):
     dependencies = [
         ('db', '0001_initial'),

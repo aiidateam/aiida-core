@@ -25,6 +25,7 @@ User's guide
    ../querying/index
    ../work/index
    ../old_workflows/index
+   ../import_export/index
    ../dbimporters/index
    ../dbexporters/index
    ../cmdline/scripting_and_shell.rst

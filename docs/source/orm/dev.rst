@@ -163,18 +163,17 @@ Quantum Espresso - pw.x
 .. automodule:: aiida.orm.calculation.job.quantumespresso.helpers
    :members:
 
-.. NOTE: NEXT TWO PACKAGES NOT YET MERGED
-.. Quantum Espresso - Dos
-.. ----------------------
-.. .. automodule:: aiida.orm.calculation.job.quantumespresso.dos
-..    :members:
-..    :special-members: __init__
+Quantum Espresso - Dos
+----------------------
+.. automodule:: aiida.orm.calculation.job.quantumespresso.dos
+   :members:
+   :special-members: __init__
 
-.. Quantum Espresso - Projwfc
-.. --------------------------
-.. .. automodule:: aiida.orm.calculation.job.quantumespresso.projwfc
-..    :members:
-..    :special-members: __init__
+Quantum Espresso - Projwfc
+--------------------------
+.. automodule:: aiida.orm.calculation.job.quantumespresso.projwfc
+   :members:
+   :special-members: __init__
 
 Quantum Espresso - PW immigrant
 -------------------------------

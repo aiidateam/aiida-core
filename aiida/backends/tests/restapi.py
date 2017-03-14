@@ -7,7 +7,7 @@ from aiida.orm.calculation import Calculation
 from aiida.orm.computer import Computer
 from aiida.orm.data import Data
 from aiida.orm.querybuilder import QueryBuilder
-from aiida.restapi.api import app
+from aiida.restapi.api import App, AiidaApi
 
 StructureData = DataFactory('structure')
 ParameterData = DataFactory('parameter')
@@ -20,6 +20,8 @@ class RESTApiTestCase(AiidaTestCase):
     """
     _url_prefix = "/api/v2"
     _dummy_data = {}
+    _PERPAGE_DEFAULT = 20
+    _LIMIT_DEFAULT = 400
 
     @classmethod
     def setUpClass(cls):
@@ -30,6 +32,16 @@ class RESTApiTestCase(AiidaTestCase):
 
         # call parent setUpClass method
         super(RESTApiTestCase, cls).setUpClass()
+
+        # connect the app and the api
+        # Init the api by connecting it the the app (N.B. respect the following
+        # order, api.__init__)
+        kwargs = dict(PREFIX=cls._url_prefix,
+                      PERPAGE_DEFAULT=cls._PERPAGE_DEFAULT,
+                      LIMIT_DEFAULT=cls._LIMIT_DEFAULT)
+
+        cls.app = App(__name__)
+        api = AiidaApi(cls.app, **kwargs)
 
         # create test inputs
         cell = ((2., 0., 0.), (0., 2., 0.), (0., 0., 2.))
@@ -208,8 +220,8 @@ class RESTApiTestCase(AiidaTestCase):
             result_node_type = node_type
             result_name = node_type
         url = self._url_prefix + url
-        app.config['TESTING'] = True
-        with app.test_client() as client:
+        self.app.config['TESTING'] = True
+        with self.app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
             if expected_errormsg:
@@ -691,8 +703,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_pk = self.get_dummy_data()["calculations"][1]["id"]
         url = self.get_url_prefix() + "/calculations/" + str(
             node_pk) + "/content/attributes"
-        app.config['TESTING'] = True
-        with app.test_client() as client:
+        self.app.config['TESTING'] = True
+        with self.app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
             self.assertEqual(response["data"]["attributes"],
@@ -708,8 +720,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_pk = self.get_dummy_data()["calculations"][1]["id"]
         url = self.get_url_prefix() + '/calculations/' + str(
             node_pk) + '/content/attributes?nalist="attr1"'
-        app.config['TESTING'] = True
-        with app.test_client() as client:
+        self.app.config['TESTING'] = True
+        with self.app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
             self.assertEqual(response["data"]["attributes"], {'attr2': 'OK'})
@@ -724,8 +736,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_pk = self.get_dummy_data()["calculations"][1]["id"]
         url = self.get_url_prefix() + '/calculations/' + str(
             node_pk) + '/content/attributes?alist="attr1"'
-        app.config['TESTING'] = True
-        with app.test_client() as client:
+        self.app.config['TESTING'] = True
+        with self.app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
             self.assertEqual(response["data"]["attributes"], {'attr1': 'OK'})

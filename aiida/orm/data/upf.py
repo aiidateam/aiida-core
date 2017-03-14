@@ -130,7 +130,7 @@ def upload_upf_family(folder, group_name, group_description,
     from aiida.orm import Group
     from aiida.common.exceptions import UniquenessError, NotExistent
     from aiida.backends.utils import get_automatic_user
-    from aiida.orm import QueryBuilder
+    from aiida.orm.querybuilder import QueryBuilder
     if not os.path.isdir(folder):
         raise ValueError("folder must be a directory")
 

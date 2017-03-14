@@ -59,10 +59,10 @@ class GroupTranslator(BaseTranslator):
         _default_projections = ['**']
 
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
         """
-        super(GroupTranslator, self).__init__()
+        super(GroupTranslator, self).__init__(Class=self.__class__, **kwargs)
 

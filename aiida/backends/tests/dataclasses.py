@@ -615,6 +615,28 @@ _publ_section_title                     'Test CIF'
         with self.assertRaises(ValueError):
             ret_dict = refine_inline(c)
 
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    def test_parse_formula(self):
+        from aiida.orm.data.cif import parse_formula
+
+        self.assertEqual(parse_formula("C H"),
+                         {'C': 1, 'H': 1})
+
+        self.assertEqual(parse_formula("C5 H1"),
+                         {'C': 5, 'H': 1})
+
+        self.assertEqual(parse_formula("Ca5 Ho"),
+                         {'Ca': 5, 'Ho': 1})
+
+        self.assertEqual(parse_formula("H0.5 O"),
+                         {'H': 0.5, 'O': 1})
+
+        # Invalid literal for float()
+        with self.assertRaises(ValueError):
+            parse_formula("H0.5.2 O")
+
 
 class TestKindValidSymbols(AiidaTestCase):
     """
@@ -2644,6 +2666,139 @@ class TestKpointsData(AiidaTestCase):
         k.set_kpoints(input_klist, cartesian=True)
         klist = k.get_kpoints(cartesian=True)
         self.assertTrue(numpy.allclose(klist, input_klist, atol=1e-16))
+
+    def test_path(self):
+        """
+        Test the methods to generate automatically a list of kpoints
+        """
+        from aiida.orm.data.array.kpoints import KpointsData
+        import numpy
+        
+        k = KpointsData()
+        
+        # shouldn't get anything wiothout having set the cell
+        with self.assertRaises(ValueError):
+            k.set_kpoints_path()
+        
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+        
+        k.set_cell(cell)
+        k.set_kpoints_path()
+        # something should be retrieved
+        klist = k.get_kpoints()
+        
+        # test the various formats for specifying the path
+        k.set_kpoints_path([('G','M'),
+                            ])
+        k.set_kpoints_path([('G','M',30),
+                            ])
+        k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.)),
+                            ])
+        k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.),30),
+                            ])
+
+        # at least 2 points per segment
+        with self.assertRaises(ValueError):
+            k.set_kpoints_path([('G','M',1),
+                                ])
+        with self.assertRaises(ValueError):
+            k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.),1),
+                                ])
+        
+        # try to set points with a spacing
+        k.set_kpoints_path(kpoint_distance=0.1)
+        
+        # try to modify after storage
+        k.store()
+        with self.assertRaises(ModificationNotAllowed):
+            k.set_kpoints_path()
+
+    def test_tetra_x(self):
+      """
+      testing tetragonal cells with axis along X
+      """
+      import numpy
+      from aiida.orm import DataFactory
+      alat = 1.5
+      cell_x = [[alat,0,0],[0,1,0],[0,0,1]]
+      K = DataFactory('array.kpoints')
+      k = K()
+      k.set_cell(cell_x)
+      points = k.get_special_points(cartesian=True)
+
+      self.assertAlmostEqual(points[0]['Z'][0], numpy.pi/alat )
+      self.assertAlmostEqual(points[0]['Z'][1], 0.)
+
+    def test_tetra_z(self):
+      """
+      testing tetragonal cells with axis along X
+      """
+      import numpy
+      from aiida.orm import DataFactory
+      alat = 1.5
+      cell_x = [[1,0,0],[0,1,0],[0,0,alat]]
+      K = DataFactory('array.kpoints')
+      k = K()
+      k.set_cell(cell_x)
+      points = k.get_special_points(cartesian=True)
+
+      self.assertAlmostEqual(points[0]['Z'][2], numpy.pi/alat )
+      self.assertAlmostEqual(points[0]['Z'][0], 0.)
+
+            
+class TestBandsData(AiidaTestCase):
+    """
+    Tests the BandsData objects.
+    """
+    
+    def test_band(self):
+        """
+        Check the methods to set and retrieve a mesh.
+        """
+        from aiida.orm.data.array.bands import BandsData
+        from aiida.orm.data.array.kpoints import KpointsData
+        import numpy
+        
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+        
+        k = KpointsData()
+        k.set_cell(cell)
+        k.set_kpoints_path()
+        
+        b = BandsData()
+        b.set_kpointsdata(k)
+        self.assertTrue( numpy.array_equal(b.cell,k.cell) )
+        
+        input_bands = numpy.array([numpy.ones(4) for i in range(k.get_kpoints().shape[0]) ]) 
+        input_occupations = input_bands
+        
+        b.set_bands(input_bands, occupations=input_occupations, units='ev')
+        b.set_bands(input_bands, units='ev')
+        b.set_bands(input_bands, occupations=input_occupations)
+        with self.assertRaises(TypeError):
+            b.set_bands(occupations=input_occupations, units='ev')
+        
+        b.set_bands(input_bands, occupations=input_occupations, units='ev')
+        bands,occupations = b.get_bands(also_occupations=True)
+        
+        self.assertTrue( numpy.array_equal(bands,input_bands) )
+        self.assertTrue( numpy.array_equal(occupations,input_occupations) )
+        self.assertTrue( b.units=='ev' )
+        
+        b.store()
+        with self.assertRaises(ModificationNotAllowed):
+            b.set_bands(bands)
+
 
 # class TestData(AiidaTestCase):
 #     """

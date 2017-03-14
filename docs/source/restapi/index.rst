@@ -10,22 +10,38 @@ the details of a specific object as well as its inputs/outputs/attributes/extras
 
 The AiiDA REST API is implemented using ``Flask RESTFul`` framework.  For the time being, it only supports GET methods. The response data are always returned in ``JSON`` format.
 
-In this document, the paths of the file systems are defined with respect to the AiiDA installation folder. The source files of the API are contained in the folder ``aiida/restapi``. To start the REST server open a terminal, reach this folder and type
+In this document, the paths of the file systems are defined with respect to the AiiDA installation folder. The source files of the API are contained in the folder ``aiida/restapi``. To start the REST server open a terminal and type
 
 .. code-block:: bash
 
-    $ python api.py --host=HOST --port=PORT
+    $ verdi restapi
 
-If you do not specify the host and port flags, the REST API will run on port *5000* 
-of *localhost*. So the base url for your REST API will be:
+This command will hook up a REST api with the default parameters, namely on port *5000*
+of *localhost*, connecting to the AiiDA default profile and assuming the default folder for the REST configuration files, namely ``common``. For an overview of options accepted by ``verdi restapi`` you can type
+
+.. code-block:: bash
+
+    $ verdi restapi --help
+
+
+As all the ``verdi`` commands the AiiDA profile can be changed by putting the option ``-p PROFILE`` right after ``verdi``. The base url for your REST API will then be:
 
     ::
-    
+
         http://localhost:5000/api/v2
 
-where the last field identifies the version of the API. This field enables running  multiple versions of the API simultaneously, so that the clients should not be obliged to update immediately the format of their requests when a new version of the API is deployed. The current latest version is ``v2``. 
+where the last field identifies the version of the API. This field enables running  multiple versions of the API simultaneously, so that the clients should not be obliged to update immediately the format of their requests when a new version of the API is deployed. The current latest version is ``v2``.
 
-The configuration of the API can be set by changing the file ``aiida/restapi/config.py``. The available configuration option is documented therein.
+
+An alternative way to hook up the Api is to run the script ``run_api.py`` from folder ``aiida/restapi``. Move to the latter and type
+
+.. code-block:: bash
+
+    $ python run_api.py
+
+This script has the same options as the ``verdi command`` (they actually invoke the same function) with the addition of ``--aiida-profile=AIIDA_PROFILE`` to set the AiiDA profile to which the Api should connect.
+
+The default configuration file is  ``config.py`` `and by default is looked for in the folder `aiida/restapi``. The default folder can be overwritten by the the option ``--config-dir=CONFIG_DIR`` . All the available configuration options of the REST Api are documented therein.
 
 In order to send requests to the REST API you can simply type the url of the request in the address bar of your browser or you can use command line tools such as ``curl`` or ``wget``.
 
@@ -91,14 +107,19 @@ Example::
 How to build the path
 ---------------------
 
-There are two type of paths: those that request a list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: ``users``, ``computers``, ``groups``, ``nodes``, ``codes``, ``calculations``, and ``data``.
-If you request data for a specific object you have to append its pk to the path (note that the pk is also called id). Here are few examples::
+There are two type of paths: those that request the list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: ``users``, ``computers``, ``groups``, ``nodes``, ``codes``, ``calculations``, and ``data``. If no specific endpoint is appended to the name of the resource, the Api will return the full list of objects of that resource (the Api default limit applies nevertheless to the number of results).
+Appending the endpoint ``schema`` to a resource will give the list of fields that are normally returned by the Api for an object of a specific resource, whereas the endpoint ``statistics`` returns a list of statistical facts concerning a resource.
+Here are few examples of valid URIs::
 
-    http://localhost:5000/api/v2/users/    
-    http://localhost:5000/api/v2/users/2    
+    http://localhost:5000/api/v2/users/
+    http://localhost:5000/api/v2/groups/schema
+    http://localhost:5000/api/v2/nodes/statistics
+
+
+If you request informations of a specific object you have to append its pk to the path (note that the pk is also called id). Here is an example::
+
     http://localhost:5000/api/v2/nodes/345
-    
-    
+
 When you ask for a single object (and only in that case) you can construct more complex requests, namely, you can ask for its inputs/outputs or for its attributes/extras. In the first case you have to append to the path the string ``/io/inputs`` or ``io/outputs`` depending on the desired relation between the nodes, whereas in the second case you have to append ``content/attributes`` or ``content/extras`` depending on the kind of content you want to access. Here are some examples::
 
     http://localhost:5000/api/v2/calculations/345/io/inputs

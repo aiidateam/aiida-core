@@ -132,13 +132,13 @@ Optional configuration
 Verdi tab-completion
 ++++++++++++++++++++
 The ``verdi`` command line tool has many commands and options.
-To simplify its usage there is a way to add support tab-completion for it to your bash shell.
+To simplify its usage there is a way to enable tab-completion for it to your bash shell.
 To do so, simply run the following command::
 
     $ verdi completioncommand
 
 and add the result to your bash config, e.g. ``.bashrc``, or if you are using a virtual environment, simply append it to the activation script.
-Alternatively, for both cases you can accomplish the same by simply by adding the following line to the ``.bashrc`` or activation script.
+Alternatively, for both cases you can accomplish the same by simply by adding the following line to the ``.bashrc`` or activation script::
 
     eval "$(verdi completioncommand)
 
@@ -163,15 +163,19 @@ After updating your ``PATH`` you can check if it worked in the following way:
 
 * type ``verdi`` on your terminal, and check if the program starts (it should
   provide a list of valid commands). If it doesn't, check if you correctly set
-  up the ``PATH`` environmente variable above.
-* go in your home folder or in another folder different from the AiiDA folder,
+  up the ``PATH`` environment variable above.
+* go into your home folder or in another folder different from the AiiDA folder,
   run ``python`` or ``ipython`` and try to import a module, e.g. typing::
 
     import aiida
 
-  If the setup is ok, you shouldn't get any error. If you do get an ``ImportError`` instead, check if you correctly set up the ``PYTHONPATH``
-  environment variable in the steps above.
-
+  If the setup is ok, you shouldn't get any error. If you do get an ``ImportError`` instead, check 
+  that you are in the correct virtual environment. If you did not install AiiDA
+  within a virtual environment, you will have to set up the ``PYTHONPATH``
+  environment variable in your ``.bashrc``::
+  
+    export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
+ 
 
 .. _virtual-environment:
 

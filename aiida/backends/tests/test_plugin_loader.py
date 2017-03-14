@@ -22,7 +22,7 @@ class TestExistingPlugins(AiidaTestCase):
         """Test listing all preinstalled parsers"""
         from aiida.parsers import Parser
         pars = pl.existing_plugins(Parser, 'aiida.parsers.plugins')
-        self.assertIsInstance(calcs, list)
+        self.assertIsInstance(pars, list)
 
     def test_existing_data(self):
         """Test listing all preinstalled data formats"""

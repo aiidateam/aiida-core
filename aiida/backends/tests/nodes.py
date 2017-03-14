@@ -1277,6 +1277,28 @@ class TestSubNodesAndLinks(AiidaTestCase):
                               for i in endnode.get_inputs(also_labels=True)]),
                          set([("N2", n2.uuid)]))
 
+    def test_has_children_has_parents(self):
+        """
+        This check verifies that the properties has_children has_parents of the
+        Node class behave correctly.
+        """
+
+        # Create 2 nodes and store them
+        n1 = Node().store()
+        n2 = Node().store()
+
+        # Create a link between these 2 nodes
+        n2.add_link_from(n1, "N1")
+
+        self.assertTrue(n1.has_children, "It should be true since n2 is the "
+                                         "child of n1.")
+        self.assertFalse(n1.has_parents, "It should be false since n1 doesn't "
+                                         "have any parents.")
+        self.assertFalse(n2.has_children, "It should be false since n2 "
+                                          "doesn't have any children.")
+        self.assertTrue(n2.has_parents, "It should be true since n1 is the "
+                                        "parent of n2.")
+
     def test_use_code(self):
         from aiida.orm import JobCalculation
         from aiida.orm.code import Code

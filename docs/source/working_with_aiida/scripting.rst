@@ -1,15 +1,5 @@
-Scripting with AiiDA
-====================
-
-While many common functionalities are provided by either command-line tools 
-(via ``verdi``) or the web interface, for fine tuning (or automatization) 
-it is useful to directly access the python objects and call their methods.
-
-This is possible in two ways, either via an interactive shell, or writing and 
-running a script. Both methods are described below.
-
-``verdi shell``
----------------
+Verdi shell
+-----------
 By running ``verdi shell`` on the terminal, a new interactive 
 `IPython <http://ipython.org/>`_ shell will be opened (this requires that
 IPython is installed on your computer).
@@ -38,8 +28,8 @@ the documentation of the :doc:`ResultManager <../orm/resultmanager>`).
 
 .. _writing_python_scripts_for_aiida:
 
-Writing python scripts for AiiDA
---------------------------------
+Python scripts
+--------------
 Alternatively, if you do not need an interactive shell but you prefer to write
 a script and then launch it from the command line, you can just write a 
 standard python ``.py`` file. The only modification that you need to do is
@@ -114,7 +104,3 @@ executable that is run using AiiDA. A simple example could be::
 
   import aiida
   print "AiiDA version is: {}".format(aiida.get_version())
-
-
-
- 

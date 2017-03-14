@@ -697,7 +697,7 @@ class Quicksetup(VerdiCommand):
         return dbinfo
 
     @click.command('quicksetup', context_settings=CONTEXT_SETTINGS)
-    @click.option('--email', prompt='Email Address (for publishing experiments)', type=str,
+    @click.option('--email', prompt='Email Address (will be used to identify your data when sharing)', type=str,
                   help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')
     @click.option('--first-name', prompt='First Name', type=str)
     @click.option('--last-name', prompt='Last Name', type=str)

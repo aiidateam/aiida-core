@@ -11,7 +11,7 @@ from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
-from aiida.work.run import async, legacy_workflow
+from aiida.work.run import run, async, legacy_workflow
 from aiida.orm.data.base import Int, Str
 import aiida.work.util as util
 from aiida.common.links import LinkType
@@ -275,6 +275,31 @@ class TestWorkchain(AiidaTestCase):
                 raise RuntimeError("Shouldn't get here")
 
         WcWithReturn.run()
+
+    def test_tocontext_async_workchain(self):
+        class MainWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(MainWorkChain, cls).define(spec)
+                spec.outline(cls.run, cls.check)
+                spec.dynamic_output()
+
+            def run(self):
+                return ToContext(subwc=async(SubWorkChain))
+
+            def check(self):
+                assert self.ctx.subwc.out.value == Int(5)
+
+        class SubWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(SubWorkChain, cls).define(spec)
+                spec.outline(cls.run)
+
+            def run(self):
+                self.out("value", Int(5))
+
+        run(MainWorkChain)
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
         finished_steps = {}

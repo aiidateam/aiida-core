@@ -315,11 +315,46 @@ If you uses the same names used in the example commands above, during the ``verd
   on your hard drive AFTER it has been created and filled, look at the
   instructions :ref:`here<move_postgresql>`.
 
-.. note:: Due to the presence of a bug, PostgreSQL could refuse to restart after a crash.
-  If this happens you should follow the instructions written `here`_.
+.. note:: Due to the presence of a bug, PostgreSQL could refuse to restart after a crash, 
+  or after a restore from binary backup. The workaround given below is adapted from `here`_.
+  The error message would be something like::
 
-.. _here: https://wiki.postgresql.org/wiki/May_2015_Fsync_Permissions_Bug/
+    * Starting PostgreSQL 9.1 database server
+    * The PostgreSQL server failed to start. Please check the log output:
+    2015-05-26 03:27:20 UTC [331-1] LOG:  database system was interrupted; last known up at 2015-05-21 19:56:58 UTC
+    2015-05-26 03:27:20 UTC [331-2] FATAL:  could not open file "/etc/ssl/certs/ssl-cert-snakeoil.pem": Permission denied
+    2015-05-26 03:27:20 UTC [330-1] LOG:  startup process (PID 331) exited with exit code 1
+    2015-05-26 03:27:20 UTC [330-2] LOG:  aborting startup due to startup process failure
 
+  If this happens you should change the permissions on any symlinked files 
+  to being writable by the Postgres user. For example, on Ubuntu, with PostgreSQL 9.1, 
+  the following should work (**WARNING**: Make sure these configuration files are 
+  symbolic links before executing these commands! If someone has customized the server.crt 
+  or server.key file, you can erase them by following these steps. 
+  It's a good idea to make a backup of the server.crt and server.key files before removing them)::
+
+    (as root)
+    # go to PGDATA directory
+    cd /var/lib/postgresql/9.1/main 
+    ls -l server.crt server.key
+    # confirm both of those files are symbolic links
+    # to files in /etc/ssl before going further
+    # remove symlinks to SSL certs
+    rm server.crt
+    rm server.key 
+    # copy the SSL certs to the local directory
+    cp /etc/ssl/certs/ssl-cert-snakeoil.pem server.crt
+    cp /etc/ssl/private/ssl-cert-snakeoil.key server.key
+    # set permissions on ssl certs
+    # and postgres ownership on everything else
+    # just in case
+    chown postgres *
+    chmod 640 server.crt server.key
+
+    service postgresql start
+
+
+.. _here: https://wiki.postgresql.org/wiki/May_2015_Fsync_Permissions_Bug
 
 
 .. _verdi-setup:

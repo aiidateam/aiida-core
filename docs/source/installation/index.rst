@@ -190,11 +190,11 @@ AiiDA depends on third party python packages and very often on specific versions
 If AiiDA were to be installed system wide, it may up- or downgrade third party packages used by other parts of the system and leave them potentially broken.
 Conversely, if a different version of a package is later installed which is incompatible with AiiDA, it too will become broken.
 
-In short; installing AiiDA might interfere with installed python packages and installing other packages might interfere with AiiDA.
+In short, installing AiiDA might interfere with installed python packages and installing other packages might interfere with AiiDA.
 Since your scientific data is important to you and to us, we *strongly* recommend isolating AiiDA in what is called a virtual environment.
 
 For a single purpose machine, only meant to run AiiDA and nothing else, you may at your own risk opt to omit working in a virtual environment.
-In this case, you may want to install AiiDA and its dependencies in user space by using a ``--user`` flag, in order to avoid having to have administrative rights to install them system wide.
+In this case, you may want to install AiiDA and its dependencies in user space by using a ``--user`` flag, to avoid the need for administrative rights to install them system wide.
 
 What is a virtual environment?
 ++++++++++++++++++++++++++++++
@@ -205,7 +205,7 @@ A python virtual environment is essentially a folder, that contains everything t
 * package managers such as ``pip``
 * an activation script that sets the ``PYTHONPATH`` and ``PATH`` variables
 
-The ``python`` executable might be a link to an executable elswhere, depending on the way the environment is created.
+The ``python`` executable might be a link to an executable elsewhere, depending on the way the environment is created.
 The activation script ensures that the python executable of the virtualenv is the first in ``PATH``, and that python programs have access only to packages installed inside the virtualenv (unless specified otherwise during creation).
 This allows to have an isolated environment for programs that rely on running with a specific version of python or specific versions of third party python packages.
 

@@ -128,31 +128,31 @@ class TestBackendLog(AiidaTestCase):
         # Make sure that global logging is not accidentally disabled
         logging.disable(logging.NOTSET)
 
-        # Temporarily disable logging to the stream handler (i.e. screen)
-        # because otherwise fix_calc_states will print warnings
-        handler = next((h for h in logging.getLogger('aiida').handlers if
-                        isinstance(h, logging.StreamHandler)), None)
+        # # Temporarily disable logging to the stream handler (i.e. screen)
+        # # because otherwise fix_calc_states will print warnings
+        # handler = next((h for h in logging.getLogger('aiida').handlers if
+        #                 isinstance(h, logging.StreamHandler)), None)
 
-        try:
-            if handler:
-                original_level = handler.level
-                handler.setLevel(logging.CRITICAL + 1)
+        # # try:
+        # if handler:
+        #     original_level = handler.level
+        #     handler.setLevel(logging.CRITICAL + 1)
 
-            # Firing a log for an unstored should not end up in the database
-            calc.logger.critical(message)
+        # Firing a log for an unstored should not end up in the database
+        calc.logger.critical(message)
 
-            logs = self._backend.log.find()
+        logs = self._backend.log.find()
 
-            self.assertEquals(len(logs), 0)
+        self.assertEquals(len(logs), 0)
 
-            # After storing the node, logs above log level should be stored
-            calc.store()
-            calc.logger.critical(message)
-            logs = self._backend.log.find()
+        # After storing the node, logs above log level should be stored
+        calc.store()
+        calc.logger.critical(message)
+        logs = self._backend.log.find()
 
-            self.assertEquals(len(logs), 1)
-            self.assertEquals(logs[0].message, message)
+        self.assertEquals(len(logs), 1)
+        self.assertEquals(logs[0].message, message)
 
-        finally:
-            if handler:
-                handler.setLevel(original_level)
+        # finally:
+        #     if handler:
+        #         handler.setLevel(original_level)

@@ -19,7 +19,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(calcs, list)
         from aiida.orm import CalculationFactory
         for i in calcs:
-            self.assertIsInstance(CalculationFactory(i), JobCalculation)
+            self.assertTrue(issubclass(CalculationFactory(i), JobCalculation))
 
     def test_existing_parsers(self):
         """Test listing all preinstalled parsers"""
@@ -28,7 +28,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(pars, list)
         from aiida.parsers import ParserFactory
         for i in pars:
-            self.assertIsInstance(ParserFactory(i), Parser)
+            self.assertTrue(issubclass(ParserFactory(i), Parser))
 
     def test_existing_data(self):
         """Test listing all preinstalled data formats"""
@@ -37,7 +37,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(data, list)
         from aiida.orm import DataFactory
         for i in data:
-            self.assertIsInstance(DataFactory(i), Data)
+            self.assertTrue(issubclass(DataFactory(i), Data))
 
     def test_existing_schedulers(self):
         """Test listing all preinstalled schedulers"""
@@ -58,7 +58,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(work, list)
         from aiida.orm import WorkflowFactory
         for i in work:
-            self.assertIsInstance(WorkflowFactory(i), Workflow)
+            self.assertTrue(issubclass(WorkflowFactory(i), Workflow))
 
     def test_existing_tcod_plugins(self):
         """Test listing all preinstalled tcod exporter plugins"""

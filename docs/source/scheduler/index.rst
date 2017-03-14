@@ -39,9 +39,17 @@ The :ref:`JobResource <job_resources>` class to be used when setting the job res
 
 .. _SGE: http://www.oracle.com/us/products/tools/oracle-grid-engine-075549.html
 
+LSF
+---
+
+The IBM `LSF`_ scheduler is supported and has been tested with version 9.1.3
+on the CERN `lxplus` cluster.
+
+.. _LSF: https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_welcome.html
 
 PBS/Torque & Loadleveler
 ------------------------
+
 PBS/Torque and Loadleveler are not fully supported yet, even if their support is one of our top priorities. For the moment, you can try the PBSPro plugin instead of PBS/Torque, that *may* also work for PBS/Torque (even if there will probably be some small issues).
 
 Direct execution (bypassing schedulers)

@@ -68,7 +68,7 @@ Where did requirements.txt go?
 The recommended way of installing dependencies is now to use `python-pip_`.
 The information that used to be in ``requirements.txt`` is now in ``setup_requirements.py``. The script ``aiida_core/utils/create_requirements.py`` generates a ``requirements.txt`` file from it.
 
-If you are wondering how to update dependencies after pulling a newer instable verion from the repository, have a look at `install.other.devel_`
+If you are wondering how to update dependencies after pulling a newer stable or development version from the repository, have a look at `install.other.devel_`
 
 .. _install.quickstart:
 
@@ -295,7 +295,7 @@ The same applies for feature branches.
 
 The following points may be helpful:
 
-* When switching to using virtual environments make sure to outcomment your path settings for older aiida installs.
+* When switching to using virtual environments make sure to outcomment your path settings for older AiiDA installs.
 * Whenever you pull from github you may have to run `pip install -e` again. This updates dependencies and entry points.
 * If you work on feature branches you may want to install them in a separate virtual environment, to avoid frequently running `pip install` when switching between branches.
 * The same applies to any plugins you may be working on.

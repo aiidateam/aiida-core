@@ -100,7 +100,7 @@ Here we will use the quicksetup by executing::
 
     (aiidapy) $ verdi quicksetup
 
-You will be asked for your user information. Be aware that this information will be associated with your experiments and results for sharing.
+You will be asked for your user information. Be aware that this information will be associated with your data if you decide later to share it.
 Alternatively you can give your information as commandline options (use ``verdi quicksetup --help`` option for a list of options).
 
 .. note:: ``verdi setup`` used to be called ``verdi install``, but the new name better reflects the command's purpose.

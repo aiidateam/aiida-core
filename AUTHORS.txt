@@ -47,7 +47,7 @@ We would like to thank the following people for their contibution
 And the following people for corrections, improving the documentation, 
 spotting typos or useful suggestions:
 
-Jens Broeder, Ivano Castelli, Dominik Gresch, Gianluca Prandini, 
+Jens Broeder, Ivano E. Castelli, Dominik Gresch, Ian Lee, Gianluca Prandini, 
 Jianxing Huang, Antimo Marrazzo, Nicola Varini, Mario Zic
 
 ---

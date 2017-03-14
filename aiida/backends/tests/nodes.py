@@ -1039,12 +1039,6 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(q_code_1.label, code1.label)
         self.assertEquals(q_code_1.get_remote_exec_path(),
                           code1.get_remote_exec_path())
-        # Test that the code1 can be loaded correctly with its id/pk
-        q_code_1 = Code.get_from_string(code1.id)
-        self.assertEquals(q_code_1.id, code1.id)
-        self.assertEquals(q_code_1.label, code1.label)
-        self.assertEquals(q_code_1.get_remote_exec_path(),
-                          code1.get_remote_exec_path())
 
         # Test that the code2 can be loaded correctly with its label
         q_code_2 = Code.get_from_string(code2.label + '@' +
@@ -1054,12 +1048,11 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(q_code_2.get_remote_exec_path(),
                           code2.get_remote_exec_path())
 
-        # Test that the code2 can be loaded correctly with its id/pk
-        q_code_2 = Code.get_from_string(code2.id)
-        self.assertEquals(q_code_2.id, code2.id)
-        self.assertEquals(q_code_2.label, code2.label)
-        self.assertEquals(q_code_2.get_remote_exec_path(),
-                          code2.get_remote_exec_path())
+
+        # Test that the code1 can be loaded correctly with its id/pk
+        from aiida.common.exceptions import InputValidationError
+        with self.assertRaises(InputValidationError):
+            Code.get_from_string(code1.id)
 
         # Test that the lookup of a nonexistent code works as expected
         with self.assertRaises(NotExistent):
@@ -1075,9 +1068,10 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(MultipleObjectsError):
             Code.get_from_string(code3.label)
 
+
     def test_code_loading_using_get(self):
         """
-        Checks that the method Code.get_from_string works correctly.
+        Checks that the method Code.get(pk) works correctly.
         """
         from aiida.orm.code import Code
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
@@ -1093,12 +1087,13 @@ class TestNodeBasic(AiidaTestCase):
         code2.label = 'test_code4'
         code2.store()
 
-        # Test that the code1 can be loaded correctly with its label
-        q_code_1 = Code.get(code1.label)
+        # Test that the code1 can be loaded correctly with its label only
+        q_code_1 = Code.get(label=code1.label)
         self.assertEquals(q_code_1.id, code1.id)
         self.assertEquals(q_code_1.label, code1.label)
         self.assertEquals(q_code_1.get_remote_exec_path(),
                           code1.get_remote_exec_path())
+
         # Test that the code1 can be loaded correctly with its id/pk
         q_code_1 = Code.get(code1.id)
         self.assertEquals(q_code_1.id, code1.id)
@@ -1106,9 +1101,9 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(q_code_1.get_remote_exec_path(),
                           code1.get_remote_exec_path())
 
-        # Test that the code2 can be loaded correctly with its label
-        q_code_2 = Code.get(code2.label + '@' +
-                                        self.computer.get_name())
+        # Test that the code2 can be loaded correctly with its label and computername
+        q_code_2 = Code.get(label=code2.label,
+                            machinename=self.computer.get_name())
         self.assertEquals(q_code_2.id, code2.id)
         self.assertEquals(q_code_2.label, code2.label)
         self.assertEquals(q_code_2.get_remote_exec_path(),
@@ -1123,7 +1118,7 @@ class TestNodeBasic(AiidaTestCase):
 
         # Test that the lookup of a nonexistent code works as expected
         with self.assertRaises(NotExistent):
-            Code.get_from_string('nonexistent_code')
+            Code.get(label='nonexistent_code')
 
         # Add another code with the label of code1
         code3 = Code()
@@ -1133,7 +1128,7 @@ class TestNodeBasic(AiidaTestCase):
 
         # Query with the common label
         with self.assertRaises(MultipleObjectsError):
-            Code.get(code3.label)
+            Code.get(label=code3.label)
 
     def test_list_for_plugin(self):
         """

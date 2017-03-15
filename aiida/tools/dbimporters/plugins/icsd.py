@@ -133,7 +133,7 @@ class IcsdDbImporter(DbImporter):
                                  "' -- only strings are accepted")
         return self._str_exact_clause(key, \
                                      alias, \
-                                     map(lambda f: "- " + str(f) + " -", \
+                                     map(lambda f: str(f), \
                                          values))
 
     def _str_fuzzy_clause(self, key, alias, values):

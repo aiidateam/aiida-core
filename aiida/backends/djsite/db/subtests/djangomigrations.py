@@ -39,7 +39,6 @@ class CalcStateChanges(AiidaTestCase):
             # Now save the errant state
             DbCalcState(dbnode=job.dbnode, state=state).save()
 
-
             time_before_fix = timezone.now()
 
             # First of all, I re-enable logging in case it was disabled by
@@ -49,15 +48,17 @@ class CalcStateChanges(AiidaTestCase):
             # Temporarily disable logging to the stream handler (i.e. screen)
             # because otherwise fix_calc_states will print warnings
             handler = next((h for h in logging.getLogger('aiida').handlers if
-                           isinstance(h, logging.StreamHandler)), None)
+                            isinstance(h, logging.StreamHandler)), None)
+
             if handler:
+                original_level = handler.level
                 handler.setLevel(logging.ERROR)
 
             # Call the code that deals with updating these states
             state_change.fix_calc_states(None, None)
 
             if handler:
-                handler.setLevel(logging.NOTSET)
+                handler.setLevel(original_level)
 
             current_state = job.get_state()
             self.assertNotEqual(current_state, state,

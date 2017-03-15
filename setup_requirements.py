@@ -98,4 +98,3 @@ extras_require = {
         'pysqlite==2.6.3',
     ]
 }
-

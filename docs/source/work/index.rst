@@ -302,3 +302,14 @@ specified `[name]` variables in the context.
 
 On line 25 we iterate the context looking for those entries that start with `s_` and emit the results from these
 calculations.
+
+
+Converting from old workflows
++++++++++++++++++++++++++++++
+
+This section details some of the changes that need to be made to convert old workflows to the new system.
+
+We begin with changes to the nomenclature where the rough correspondence in terms is as follows:
+
+`workflows -> workchain`
+`inline function -> workfunction`

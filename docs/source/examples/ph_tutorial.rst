@@ -1,7 +1,7 @@
 .. _my-ref-to-ph-tutorial:
 
-Quantum Espresso Phonon user-tutorial
-=====================================
+Phonon
+======
 
 .. toctree::
    :maxdepth: 2

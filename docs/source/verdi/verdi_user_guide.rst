@@ -101,12 +101,17 @@ Below is a list with all the available subcommands.
 
 ``verdi comment``
 +++++++++++++++++
-Manages the comments attached to a database node.
+There are various ways of attaching notes/comments to a node within AiiDA. In the first scripting examples, you might already have noticed the possibility of storing a ``label`` or a ``description`` to any AiiDA Node. However, these properties are defined when the Node is created, and it is not possible to modify them after the Node has been stored.
 
-  *  **add**: add a new comment
-  *  **update**: change an existing comment
-  *  **remove**: remove a comment
-  *  **show**: show the comments attached to a node.
+The Node ``comment`` provides a simple way to have a more dynamic management of comments, in which any user can write a comment on the Node, or modify it or delete it.
+
+The ``verdi comment`` provides a set of methods that are used to manipulate the comments:
+
+* **add**: add a new comment to a Node.
+* **update**: modify a comment.
+* **show**: show the existing comments attached to the Node.
+* **remove**: remove a comment.
+
 
 
 .. _completioncommand:
@@ -276,16 +281,7 @@ Imports data (coming from other AiiDA databases) in the current database
 ``verdi install``
 +++++++++++++++++
 
-Used in the installation to configure the database.
-If it finds an already installed database, it updates the tables migrating them 
-to the new schema.
-
-.. note:: One can also create a new profile with this command::
-
-    verdi -p <new_profile_name> install
-    
-  The install procedure then works as usual, and one can select there a new database.
-  See also the :ref:`profile<profile>` command.
+This command is deprecated, please use the :ref:`setup <setup>` command instead
 
 
 .. _node:
@@ -321,6 +317,32 @@ to the new schema.
 Run a python script for AiiDA. This is the command line equivalent of the verdi
 shell. Has also features of autogroupin: by default, every node created in one
 a call of verdi run will be grouped together.
+
+
+.. _runserver:
+
+``verdi runserver``
++++++++++++++++++++
+
+Starts a lightweight Web server for development and also serves static files.
+Currently in ongoing development.
+
+
+.. _setup:
+
+``verdi setup``
++++++++++++++++++
+
+Used in the installation to configure the database.
+If it finds an already installed database, it updates the tables migrating them 
+to the new schema.
+
+.. note:: One can also create a new profile with this command::
+
+    verdi -p <new_profile_name> setup
+    
+  The setup procedure then works as usual, and one can select there a new database.
+  See also the :ref:`profile<profile>` command.
 
 
 .. _shell:

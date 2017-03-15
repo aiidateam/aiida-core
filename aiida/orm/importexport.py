@@ -448,7 +448,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
         # IMPORT DATA #
         ###############
         # DO ALL WITH A TRANSACTION
-        with transaction.commit_on_success():
+        with transaction.atomic():
             foreign_ids_reverse_mappings = {}
             new_entries = {}
             existing_entries = {}
@@ -938,7 +938,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # IMPORT DATA #
         ###############
         # DO ALL WITH A TRANSACTION
-        # with transaction.commit_on_success():
+        # with transaction.atomic():
         # if True
         import aiida.backends.sqlalchemy
         try:

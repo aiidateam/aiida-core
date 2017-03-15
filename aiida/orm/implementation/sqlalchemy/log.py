@@ -6,7 +6,6 @@ from aiida.utils import timezone
 
 
 class SqlaLog(Log):
-
     def create_entry(self, time, loggername, levelname, objname,
                      objpk=None, message="", metadata=None):
         """
@@ -26,46 +25,16 @@ class SqlaLog(Log):
                 metadata=metadata
             )
         )
-        entry.persist()
+        entry.save()
 
         return entry
-
-
-    def create_entry_from_record(self, record):
-        """
-        Create a log entry from a record created by the python logging
-        """
-        from datetime import datetime
-
-        objpk   = record.__dict__.get('objpk', None)
-        objname = record.__dict__.get('objname', None)
-
-        # Do not store if objpk and objname are not set
-        if objpk is None or objname is None:
-            return None
-
-        entry = SqlaLogEntry(
-            DbLog(
-                time=timezone.make_aware(datetime.fromtimestamp(record.created)),
-                loggername=record.name,
-                levelname=record.levelname,
-                objname=objname,
-                objpk=objpk,
-                message=record.getMessage(),
-                metadata=record.__dict__
-            )
-        )
-        entry.persist()
-
-        return entry
-
 
     def find(self, filter_by=None, order_by=None, limit=None):
         """
         Find all entries in the Log collection that confirm to the filter and
         optionally sort and/or apply a limit.
         """
-        order   = []
+        order = []
         filters = {}
 
         if not filter_by:
@@ -96,15 +65,18 @@ class SqlaLog(Log):
 
         return [SqlaLogEntry(entry) for entry in entries]
 
-
-    def delete_all(self):
+    def delete_many(self, filter):
         """
         Delete all log entries in the table
         """
-        for entry in DbLog.query.all():
-            entry.delete()
-        session.commit()
-
+        if not filter:
+            for entry in DbLog.query.all():
+                entry.delete()
+            session.commit()
+        else:
+            raise NotImplemented(
+                "Only deleting all by passing an empty filer dictionary is "
+                "currently supported")
 
 
 class SqlaLogEntry(LogEntry):
@@ -170,7 +142,7 @@ class SqlaLogEntry(LogEntry):
         """
         return self._model._metadata
 
-    def persist(self):
+    def save(self):
         """
         Persist the log entry to the database
         """

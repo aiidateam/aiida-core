@@ -617,6 +617,34 @@ Updating from 0.7.0 Django to 0.8.0 Django
 
 * Activate the tab-completion of `verdi` commands (see :ref:`here<tab-completion>`).
 
+**Updating the backup script**
+
+In case you used the AiiDA repository backup mechanism in 0.7.0 and you would
+like to continue using it in 0.8.0, you should update the backup scripts.
+
+To do so:
+
+* Re-run the backup_setup.py (``verdi -p PROFILENAME run MY_AIIDA_FOLDER/aiida/common/additions/backup_script/backup_setup.py``).
+  Keep in mind that you should have activated your virtual environment in case
+  you use one.
+
+* Provide the backup folder by providing the full path. This is the folder
+  where the backup configuration files and scripts reside.
+
+* Provide the destination folder of the backup (normally in the previously
+  provided backup folder)
+
+* Reply *No* when the scripts asks you to print the configuration parameters
+  explanation.
+
+* Reply *No* when the scripts asks you to configure backup configuration file.
+
+* The script should have exited now. Ignore its proposals to update the
+  ``backup_info.json.tmpl`` and the startup script.
+
+* Your backup mechanism is ready to be used again. You can continue using it
+  by executing ``start_backup.py``.
+
 Updating from an older version
 ++++++++++++++++++++++++++++++
 
@@ -662,7 +690,6 @@ Then follow the specific instructions below for each intermediate update.
     database users), as well as ``ipython`` to get a proper shell, e.g.::
       
       pip install -U -r requirements.txt psycopg2==2.6 ipython
-
 
 Updating from 0.6.0 Django to 0.7.0 Django
 ------------------------------------------

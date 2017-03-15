@@ -125,7 +125,12 @@ class Node(AbstractNode):
     def get_subclass_from_pk(cls, pk):
         from aiida.orm.querybuilder import QueryBuilder
         from sqlalchemy.exc import DatabaseError
-        if not isinstance(pk, int):
+        # If it is not an int make a final attempt
+        # to convert to an integer. If you fail,
+        # raise an exception.
+        try:
+            pk = int(pk)
+        except:
             raise ValueError("Incorrect type for int")
 
         try:

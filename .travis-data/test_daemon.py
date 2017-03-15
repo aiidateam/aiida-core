@@ -18,6 +18,7 @@ def have_finished(pks):
 
 def results_are_ok(values_to_check):
     retval = True
+    actual_value = None
     for pk, exp_value in values_to_check.iteritems():
         calc = load_node(pk)
         try:
@@ -25,8 +26,16 @@ def results_are_ok(values_to_check):
         except (AttributeError, IOError, ValueError) as e:
             print "* UNABLE TO RETRIEVE VALUE for calc pk={}: I expected {}, I got {}: {}".format(
                 pk, exp_value, type(e), e)
-            retval = False
-            continue
+
+            print "Output of 'verdi calculation logshow {}':".format(pk)
+            try:
+                print subprocess.check_output(
+                    ["verdi", "calculation", "logshow", "{}".format(pk)],
+                    stderr=subprocess.STDOUT,
+                    )
+            except subprocess.CalledProcessError as e2:
+                print "Note: the command failed, message: {}".format(e2.message)            
+                retval = False
 
         if actual_value != exp_value:
             print "* UNEXPECTED VALUE {} for calc pk={}: I expected {}".format(
@@ -93,10 +102,11 @@ while time.time() - start_time < timeout_secs:
         print "Note: the command failed, message: {}".format(e.message)
 
 
-    print "Output of 'cat ~/.aiida/daemon/log/aiida_daemon.log':"
+    home = os.environ['HOME']
+    print "Output of 'cat {}/.aiida/daemon/log/aiida_daemon.log':".format(home)
     try:
         print subprocess.check_output(
-            ["cat", "~/.aiida/daemon/log/aiida_daemon.log"], 
+            ["cat", "{}/.aiida/daemon/log/aiida_daemon.log".format(home)], 
             stderr=subprocess.STDOUT,
         )
     except subprocess.CalledProcessError as e:

@@ -1,3 +1,74 @@
+== v0.8.0 ==
+
+Installation and setup
+
+    Simplified installation procedure by adopting standard python package installation method through setuptools and pip
+    Verdi install replaced by verdi setup
+    New verdi command `quicksetup` to simplify the setup procedure
+    Significantly updated and improved the installation documentation
+
+
+General
+
+    Significantly increased test coverage and implemented for both backends
+    Activated continuous integration through Travis CI
+    Application-wide logging is now abstracted and implemented for all backends
+    Added a REST API layer with hook through verdi cli: `verdi restapi`
+    Improved QueryBuilder
+        * Composition model instead of inheritance removing the requirement of determining the implementation on import
+        * Added keyword with_dbpath that makes QueryBuilder switch between using the DbPath and not using it.
+        * Updated and improved documentation
+    The QueryTool as well as the `class Node.query()` method are now deprecated in favor of the QueryBuilder
+    Migration of verdi cli to use the QueryBuilder in order to support both database backends
+    Added option `--project` to `verdi calculation list` to specify which attributes to print
+
+
+Documentation
+
+    Documentation is restructured to improve navigability
+    Added pseudopotential tutorial
+
+
+Database
+
+    Dropped support for MySQL and SQLite to fully support efficient features in Postgres like JSONB fields
+    Database efficiency improvements with orders of magnitude speedup for large databases [added indices for daemon queries and node UUID queries]
+    Replace deprecated commit_on_success with atomic for Django transactions
+
+
+Workflows
+    Finalized the naming for the new workflow system from workflows2 to work
+        * FragmentedWorkFunction is replaced by WorkChain
+        * InlineCalculation is replaced by Workfunction
+        * ProcessCalculation is replaced by WorkCalculation
+    Old style Workflows can still be called and run from a new style WorkChain
+    Major improvements to the WorkChain and Workfunction implementation
+    Improvements to WorkChain
+        * Implemented a `return` statement for WorkChain spec
+        * Logging to the database implemented through WorkChain.report() for debugging
+
+
+Plugins
+
+    Added finer granularity for parsing PW timers in output
+    New Quantum ESPRESSO and scheduler plugins contributed from EPFL
+        * ASE/GPAW plugins: Andrea Cepellotti (EPFL and Berkeley)
+        * Quantum ESPRESSO DOS, Projwfc: Daniel Marchand (EPFL and McGill)
+        * Quantum ESPRESSO phonon, matdyn, q2r, force constants plugins: Giovanni Pizzi, Nicolas Mounet (EPFL); Andrea Cepellotti (EPFL and Berkeley)
+        * Quantum ESPRESSO cp.x plugin: Giovanni Pizzi (EPFL)
+        * Quantum ESPRESSO neb.x plugin: Marco Gibertini (EPFL)
+        * LSF scheduler: Nicolas Mounet (EPFL)
+    Implemented functionality to export and visualize molecular-dynamics trajectories (using e.g. matplotlib, mayavi)
+    Improved the TCODExporter (some fixes to adapt to changes of external libraries, added some additional TCOD CIF tags, various bugfixes)
+
+
+Various fixes and improvements
+
+    Fix for the direct scheduler on Mac OS X
+    Fix for the import of computers with name collisions
+    Generated backup scripts are now made profile specific and saved as start_backup_<profile>.py
+
+
 == v0.7.1 ==
 
 Functionalities

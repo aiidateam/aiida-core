@@ -16,7 +16,7 @@ import plum.process_monitor
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work.workchain import WorkChain, \
-    ToContext, _Block, _If, _While, if_, while_
+    ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
 from aiida.work.run import run, async, legacy_workflow
@@ -255,6 +255,30 @@ class TestWorkchain(AiidaTestCase):
             if step not in ['isA', 's2', 'isB', 's3']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
+
+    def test_return(self):
+        class WcWithReturn(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(WcWithReturn, cls).define(spec)
+                spec.outline(
+                    cls.s1,
+                    if_(cls.isA)(
+                        return_
+                    ),
+                    cls.after
+                )
+
+            def s1(self):
+                pass
+
+            def isA(self):
+                return True
+
+            def after(self):
+                raise RuntimeError("Shouldn't get here")
+
+        WcWithReturn.run()
 
     def test_tocontext_async_workchain(self):
         class MainWorkChain(WorkChain):

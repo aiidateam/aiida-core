@@ -10,6 +10,9 @@
 
 import importlib
 from threading import local
+from aiida.orm.calculation import Calculation
+from aiida.common.links import LinkType
+from aiida.orm.data.frozendict import FrozenDict
 
 
 # The name of the attribute to store the label of a process in a node with.
@@ -118,3 +121,20 @@ def is_workfunction(func):
         return func._is_workfunction
     except AttributeError:
         return False
+
+
+def get_or_create_output_group(calculation):
+    """
+    For a given Calculation, get or create a new frozendict Data node that
+    has as its values all output Data nodes of the Calculation.
+
+    :param calculation: Calculation
+    """
+    if not isinstance(calculation, Calculation):
+        raise TypeError("Can only create output groups for type Calculation")
+
+    d = calculation.get_outputs_dict(link_type=(LinkType.CREATE))
+    d.update(calculation.get_outputs_dict(link_type=(LinkType.RETURN)))
+
+    return FrozenDict(dict=d)
+

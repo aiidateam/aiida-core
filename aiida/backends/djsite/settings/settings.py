@@ -231,74 +231,9 @@ try:
 except ImportError:
     pass
 
-# A sample logging configuration. The only tangible logging
-# performed by this configuration is to send an email to
-# the site admins on every HTTP 500 error when DEBUG=False.
-# See http://docs.djangoproject.com/en/dev/topics/logging for
-# more details on how to customize your logging configuration.
-#
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s %(process)d '
-                      '%(thread)d %(message)s',
-        },
-        'halfverbose': {
-            'format': '%(asctime)s, %(name)s: [%(levelname)s] %(message)s',
-            'datefmt': '%m/%d/%Y %I:%M:%S %p',
-        },
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
-    },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'halfverbose',
-        },
-        'dblogger': {
-            # get_property takes the property from the config json file
-            # The key used in the json, and the default value, are
-            # specified in the _property_table inside aiida.common.setup
-            # NOTE: To modify properties, use the 'verdi devel setproperty'
-            #   command and similar ones (getproperty, describeproperties, ...)
-            'level': get_property('logging.db_loglevel'),
-            'class': 'aiida.backends.djsite.utils.DBLogHandler',
-        },
-    },
-    'loggers': {
-        'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'aiida': {
-            'handlers': ['console', 'dblogger'],
-            'level': get_property('logging.aiida_loglevel'),
-            'propagate': False,
-        },
-        # ~ 'celery': {
-        # ~ 'handlers': ['console'],
-        # ~ 'level': get_property('logging.celery_loglevel'),
-        # ~ 'propagate': False,
-        # ~ },
-        'paramiko': {
-            'handlers': ['console'],
-            'level': get_property('logging.paramiko_loglevel'),
-            'propagate': False,
-        },
-    },
-}
+# Automatic logging configuration for Django is disabled here
+# and done for all backends in aiida/__init__.py
+LOGGING_CONFIG = None
 
 # -------------------------
 # Tastypie (API) settings

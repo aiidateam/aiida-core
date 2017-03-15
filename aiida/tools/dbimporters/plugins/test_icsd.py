@@ -19,7 +19,10 @@ def has_mysqldb():
     try:
         import MySQLdb
     except ImportError:
-        return False
+        try:
+            import pymysql as MySQLdb
+        except ImportError:
+            return False
     return True
 
 server = None

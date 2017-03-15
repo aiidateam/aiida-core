@@ -14,7 +14,7 @@ else
     verdi -p test_$TEST_AIIDA_BACKEND devel tests
 
     # Run the daemon tests using docker
-    verdi -p $TEST_AIIDA_BACKEND run ${HOME}/.travis-data/test-daemon.py
+    verdi -p $TEST_AIIDA_BACKEND run ${TRAVIS_BUILD_DIR}/.travis-data/test-daemon.py
 fi
 
 

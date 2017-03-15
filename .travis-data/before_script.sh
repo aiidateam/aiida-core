@@ -11,13 +11,13 @@ then
     verdi -p $TEST_AIIDA_BACKEND daemon start
     
     # Setup the torquessh computer
-    cat ${HOME}/.travis-data/computer-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND computer setup
+    cat ${TRAVIS_BUILD_DIR}/.travis-data/computer-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND computer setup
 
     # Configure the torquessh computer
-    cat ${HOME}/.travis-data/computer-configure-input.txt | verdi -p $TEST_AIIDA_BACKEND computer configure torquessh
+    cat ${TRAVIS_BUILD_DIR}/.travis-data/computer-configure-input.txt | verdi -p $TEST_AIIDA_BACKEND computer configure torquessh
 
     # Configure the 'doubler' code inside torquessh
-    cat ${HOME}/.travis-data/code-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
+    cat ${TRAVIS_BUILD_DIR}/.travis-data/code-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
     
 fi
 

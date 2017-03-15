@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import unittest
+import aiida.utils.timezone as timezone
 from aiida.utils.timezone import now, make_aware
 from datetime import datetime, timedelta
 import time
@@ -14,9 +15,7 @@ __authors__ = "The AiiDA team."
 class TimezoneTest(unittest.TestCase):
     def test_timezone_now(self):
         DELTA = timedelta(minutes=1)
-        for tz in pytz.all_timezones:
-            ref = now()
-            from_tz = datetime.fromtimestamp(time.time(), tz=pytz.timezone(tz))
-            self.assertLessEqual(from_tz, ref + DELTA)
-            self.assertGreaterEqual(from_tz, ref - DELTA)
-
+        ref = timezone.now()
+        from_tz = timezone.make_aware(datetime.fromtimestamp(time.time()))
+        self.assertLessEqual(from_tz, ref + DELTA)
+        self.assertGreaterEqual(from_tz, ref - DELTA)

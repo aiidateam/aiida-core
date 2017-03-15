@@ -271,77 +271,6 @@ def get_secret_key():
     return secret_key.strip()
 
 
-def ask_for_timezone(existing_timezone):
-    """
-    Interactively ask for the current timezone.
-
-    :param existing_timezone: the string for the already configured timezone,
-      or None if there is no previous configuration.
-    :return: a string with the timezone as chosen by the user.
-    """
-    import time
-    import pytz
-    import datetime
-
-    if existing_timezone is not None:
-        print "Configured timezone: {}".format(existing_timezone)
-        answer = raw_input("Do you want to change it? [y/N] ")
-        if answer.lower() != 'y':
-            # No configuration to do, return the existing value
-            return existing_timezone
-
-    # If we are here, either there was no configuration, or the user asked to
-    # change it.
-
-    # Try to get a set of valid timezones, as suggested in
-    # one of the answers of http://stackoverflow.com/questions/7669938
-
-    # Get some information on the local TZ and the local offset, doing the
-    # right thing it we are in DST. (time.daylight just tells whether the
-    # local timezone has DST, not the current state
-    if time.daylight and time.localtime().tm_isdst > 0:
-        local_offset = time.altzone
-        localtz = time.tzname[1]
-    else:
-        local_offset = time.timezone
-        localtz = time.tzname[0]
-
-    # convert to a datetime.timedelta object
-    local_offset = datetime.timedelta(seconds=-local_offset)
-
-    valid_zones = []
-    # Iterate over all valid TZ
-    for name in pytz.all_timezones:
-        # get the TZ obejct
-        timezone = pytz.timezone(name)
-        # skip if a TZ has no info
-        if not hasattr(timezone, '_tzinfos'):
-            continue
-        # Append to the list if the offset and the localtz match
-        for (utcoffset, daylight, tzname), _ in timezone._tzinfos.iteritems():
-            if utcoffset == local_offset and tzname == localtz:
-                valid_zones.append(name)
-
-    print "# These seem to be valid timezones for the current environment:"
-    for z in sorted(valid_zones):
-        print "* {}".format(z)
-
-    print "# Type here a valid timezone (one of the above, or if the detection "
-    print "# did not work, any other valid timezone string)"
-
-    valid_zone = False
-    while not valid_zone:
-        answer = raw_input("Insert your timezone: ")
-        if answer in pytz.all_timezones:
-            valid_zone = True
-        else:
-            print "* ERROR! Invalid timezone inserted."
-            print "*        Valid timezones can be obtainedin a python shell with"
-            print "*        the 'import pytz; print pytz.all_timezones' command"
-
-    return answer
-
-
 def create_base_dirs(config_dir=None):
     """
     Create dirs for AiiDA, and install default daemon files.
@@ -526,7 +455,6 @@ key_explanation = {
     "AIIDADB_PORT": "Database port",
     "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
     "AIIDADB_USER": "AiiDA Database user",
-    "TIMEZONE": "Timezone",
     DEFAULT_USER_CONFIG_FIELD: "Default user email"
 }
 
@@ -599,10 +527,6 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
         raise ValueError(
             '{} is not a valid backend choice.'.format(
                 backend_v))
-
-    # setting timezone
-    from tzlocal import get_localzone
-    new_profile['TIMEZONE'] = get_localzone().zone
 
     # Setting email
     from validate_email import validate_email
@@ -729,11 +653,6 @@ def create_configuration(profile='default'):
                                .format(', '.join(backend_possibilities)))
                 this_new_confs['AIIDADB_BACKEND'] = backend_ans
                 aiida_backend = backend_ans
-
-        # Setting the timezone
-        timezone = ask_for_timezone(
-            existing_timezone=this_existing_confs.get('TIMEZONE', None))
-        this_new_confs['TIMEZONE'] = timezone
 
         # Setting the email
         valid_email = False

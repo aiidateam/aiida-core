@@ -180,7 +180,11 @@ class WorkChain(Process):
             self._intersteps = None
         self._barriers = []
 
-        finished, retval = self._stepper.step()
+        try:
+            finished, retval = self._stepper.step()
+        except _PropagateReturn:
+            finished, retval = True, None
+
         if not finished:
             if retval is not None:
                 if isinstance(retval, tuple):
@@ -344,7 +348,8 @@ def Wf(running_info):
 
 
 def Legacy(object):
-    if object.type == RunningType.LEGACY_CALC:
+    if object.type == RunningType.LEGACY_CALC or \
+     object.type == RunningType.PROCESS:
         return Calc(object)
     elif object.type is RunningType.LEGACY_WORKFLOW:
         return Wf(object)
@@ -723,6 +728,51 @@ class _While(_Conditional, _Instruction):
         return "while {}:\n{}".format(self.condition.__name__, self.body)
 
 
+class _PropagateReturn(BaseException):
+    pass
+
+
+class _ReturnStepper(Stepper):
+    def step(self):
+        """
+        Execute on step of the instructions.
+        :return: A 2-tuple with entries:
+            0. True if the stepper has finished, False otherwise
+            1. The return value from the executed step
+        :rtype: tuple
+        """
+        raise _PropagateReturn()
+
+    def save_position(self, out_position):
+        return
+
+    def load_position(self, bundle):
+        """
+        Nothing to be done: no internal state.
+        :param bundle:
+        :return:
+        """
+        return
+
+
+class _Return(_Instruction):
+    """
+    A return instruction to tell the workchain to stop stepping through the
+    outline and cease execution immediately.
+    """
+
+    def create_stepper(self, workflow):
+        return _ReturnStepper(workflow)
+
+    def get_description(self):
+        """
+        Get a text description of these instructions.
+        :return: The description
+        :rtype: str
+        """
+        return "Return from the outline immediately"
+
+
 def if_(condition):
     """
     A conditional that can be used in a workchain outline.
@@ -757,3 +807,7 @@ def while_(condition):
     :param condition: The workchain method that will return True or False
     """
     return _While(condition)
+
+
+# Global singleton for return statements in workchain outlines
+return_ = _Return()

@@ -102,4 +102,3 @@ extras_require = {
         'jupyter',
     ]
 }
-

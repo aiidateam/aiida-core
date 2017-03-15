@@ -78,6 +78,9 @@ class AbstractNode(object):
 
             return newcls
 
+    # This will be set by the metaclass call
+    _logger = None
+
     # Name to be used for the Repository section
     _section_name = 'node'
 
@@ -394,7 +397,7 @@ class AbstractNode(object):
         :param link_type: The type of link, must be one of the enum values
                           from :class:`~aiida.common.links.LinkType`
         """
-        assert src, "You must provide a valid Node to link"
+        assert src is not None, "You must provide a valid Node to link"
 
         # Check that the label does not already exist
 

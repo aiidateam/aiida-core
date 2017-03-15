@@ -22,9 +22,11 @@ from aiida.orm.data.base import Int
 from aiida.work.persistence import Persistence
 from aiida.work.process import Process, FunctionProcess
 from aiida.work.run import run, submit
+from aiida.work.workfunction import workfunction
 import aiida.work.util as util
 from aiida.work.test_utils import DummyProcess, BadOutput
 from aiida.common.lang import override
+from aiida.orm.data.frozendict import FrozenDict
 
 
 class ProcessStackTest(Process):
@@ -125,6 +127,20 @@ class TestProcess(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             DummyProcess.new_instance(inputs={'_label': 5})
+
+    def test_calculation_input(self):
+        @workfunction
+        def simple_wf():
+            return {'a': Int(6), 'b': Int(7)}
+
+        outputs, pid = run(simple_wf, _return_pid=True)
+        calc = load_node(pid)
+        dp = DummyProcess.new_instance(inputs={'calc': calc})
+        dp.run_until_complete()
+
+        input_calc = dp.calc.get_inputs_dict()['calc']
+        self.assertTrue(isinstance(input_calc, FrozenDict))
+        self.assertEqual(input_calc['a'], outputs['a'])
 
 
 class TestFunctionProcess(AiidaTestCase):

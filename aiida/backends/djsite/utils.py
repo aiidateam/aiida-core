@@ -49,28 +49,6 @@ def _load_dbenv_noschemacheck(process, profile):
     django.setup()
 
 
-class DBLogHandler(logging.Handler):
-    def emit(self, record):
-        from django.core.exceptions import ImproperlyConfigured
-
-        try:
-            from aiida.backends.djsite.db.models import DbLog
-
-            DbLog.add_from_logrecord(record)
-
-        except ImproperlyConfigured:
-            # Probably, the logger was called without the
-            # Django settings module loaded. Then,
-            # This ignore should be a no-op.
-            pass
-        except Exception:
-            # To avoid loops with the error handler, I just print.
-            # Hopefully, though, this should not happen!
-            import traceback
-
-            traceback.print_exc()
-
-
 def get_log_messages(obj):
     from aiida.backends.djsite.db.models import DbLog
     import json

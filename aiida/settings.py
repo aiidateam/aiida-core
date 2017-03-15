@@ -16,7 +16,6 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.1"
 
 
-TIME_ZONE = "Europe/Paris"
 USE_TZ = True
 
 try:

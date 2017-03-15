@@ -17,15 +17,9 @@ __version__ = "0.7.1"
 
 utc = pytz.utc
 
-
-def get_default_timezone():
-    return pytz.timezone(settings.TIME_ZONE)
-
-#get_current_timezone = get_default_timezone
 def get_current_timezone():
     from tzlocal import get_localzone
     return get_localzone()
-
 
 
 def now():

@@ -163,7 +163,7 @@ class Workflow(AbstractWorkflow):
 
         self.dbworkflowinstance.label = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()
 
@@ -190,7 +190,7 @@ class Workflow(AbstractWorkflow):
 
         self.dbworkflowinstance.description = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()
 

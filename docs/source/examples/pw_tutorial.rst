@@ -1,7 +1,7 @@
 .. _my-ref-to-pw-tutorial:
 
-Quantum Espresso PWscf user-tutorial
-====================================
+PWscf
+=====
 
 .. toctree::
    :maxdepth: 2
@@ -102,8 +102,7 @@ Where in the last line we just load the database object representing the code.
   ``.get_from_string()`` method to get those calculations). 
   In this case, you can use directly the ``.get()`` method, for instance::
   
-    code = Code.get(label='pw-5.1', machinename='TheHive', 
-                    useremail='user@domain.com')
+    code = Code.get(label='pw-5.1', machinename='TheHive')
 
   or even more generally get the code from its (integer) PK::
     

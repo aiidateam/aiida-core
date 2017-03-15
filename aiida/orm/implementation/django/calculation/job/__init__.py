@@ -60,7 +60,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                                              "to {}".format(old_state, state))
 
         try:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
         except IntegrityError:
             raise ModificationNotAllowed(

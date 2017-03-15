@@ -1,6 +1,7 @@
 from aiida.common.exceptions import InternalError
 from abc import ABCMeta, abstractmethod
 
+
 class AiidaTestImplementation(object):
     """
     For each implementation, define what to do at setUp and tearDown.

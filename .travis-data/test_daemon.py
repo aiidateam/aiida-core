@@ -83,6 +83,26 @@ while time.time() - start_time < timeout_secs:
     except subprocess.CalledProcessError as e:
         print "Note: the command failed, message: {}".format(e.message)
 
+    print "Output of 'verdi daemon status':"
+    try:
+        print subprocess.check_output(
+            ["verdi", "daemon", "status"], 
+            stderr=subprocess.STDOUT,
+        )
+    except subprocess.CalledProcessError as e:
+        print "Note: the command failed, message: {}".format(e.message)
+
+
+    print "Output of 'cat ~/.aiida/daemon/log/aiida_daemon.log':"
+    try:
+        print subprocess.check_output(
+            ["cat", "~/.aiida/daemon/log/aiida_daemon.log"], 
+            stderr=subprocess.STDOUT,
+        )
+    except subprocess.CalledProcessError as e:
+        print "Note: the command failed, message: {}".format(e.message)
+
+
     if have_finished(pks):
         print "Calculation terminated its execution"
         exited_with_timeout = False

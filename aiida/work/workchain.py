@@ -15,7 +15,7 @@ from aiida.work.run import RunningType, RunningInfo
 from aiida.work.process import Process, ProcessSpec
 from aiida.work.legacy.wait_on import WaitOnWorkflow
 from aiida.common.lang import override
-from aiida.common.utils import get_class_string, get_object_string,\
+from aiida.common.utils import get_class_string, get_object_string, \
     get_object_from_string
 from aiida.orm import load_node, load_workflow
 from plum.wait_ons import Checkpoint, WaitOnAll, WaitOnProcess
@@ -227,7 +227,7 @@ class WorkChain(Process):
                                   b in saved_instance_state[self._BARRIERS]]
             except KeyError:
                 pass
-    #####################################################
+                #####################################################
 
 
 class Interstep(object):
@@ -277,11 +277,26 @@ class ToContext(Interstep):
 
     Action = namedtuple("Action", "running_info fn")
 
+    @classmethod
+    def action_from_running_info(cls, running_info):
+        if running_info.type is RunningType.PROCESS:
+            return Calc(running_info)
+        elif running_info.type is RunningType.LEGACY_CALC or \
+                running_info.type is RunningType.LEGACY_WORKFLOW:
+            return Legacy(running_info)
+        else:
+            raise ValueError("Unknown running type '{}'".format(running_info.type))
+
     def __init__(self, **kwargs):
         self._to_assign = {}
         for key, val in kwargs.iteritems():
             if isinstance(val, self.Action):
                 self._to_assign[key] = val
+            elif isinstance(val, RunningInfo):
+                self._to_assign[key] = self.action_from_running_info(val)
+            elif isinstance(val, Future):
+                self._to_assign[key] = \
+                    Calc(RunningInfo(RunningType.PROCESS, val.pid))
             else:
                 # Assume it's a pk
                 self._to_assign[key] = Legacy(val)
@@ -426,6 +441,7 @@ class _Block(_Instruction):
     """
     Represents a block of instructions i.e. a sequential list of instructions.
     """
+
     class Stepper(Stepper):
         _POSITION = 'pos'
         _STEPPER_POS = 'stepper_pos'
@@ -441,7 +457,7 @@ class _Block(_Instruction):
 
         def step(self):
             assert self._pos != len(self._commands), \
-                   "Can't call step after the block is finished"
+                "Can't call step after the block is finished"
 
             command = self._commands[self._pos]
 
@@ -475,7 +491,7 @@ class _Block(_Instruction):
 
             # Do we have a stepper position to load?
             if self._STEPPER_POS in bundle:
-                self._current_stepper =\
+                self._current_stepper = \
                     self._commands[self._pos].create_stepper(self._workflow)
                 self._current_stepper.load_position(bundle[self._STEPPER_POS])
 
@@ -486,7 +502,7 @@ class _Block(_Instruction):
                 if not inspect.ismethod(command):
                     raise ValueError(
                         "Workflow commands {} is not a class method.".
-                        format(command))
+                            format(command))
         self._commands = commands
 
     @override
@@ -521,6 +537,7 @@ class _Conditional(object):
     while(condition):
       body
     """
+
     def __init__(self, parent, condition):
         self._parent = parent
         self._condition = condition
@@ -651,14 +668,14 @@ class _While(_Conditional, _Instruction):
 
         def step(self):
             assert not self._finished, \
-                   "Can't call step after the loop has finished"
+                "Can't call step after the loop has finished"
 
             # Do we need to check the condition?
             if self._check_condition is True:
                 self._check_condition = False
                 # Should we go into the loop body?
                 if self._spec.is_true(self._workflow):
-                    self._stepper =\
+                    self._stepper = \
                         self._spec.body.create_stepper(self._workflow)
                 else:  # Nope...
                     self._finished = True
@@ -740,4 +757,3 @@ def while_(condition):
     :param condition: The workchain method that will return True or False
     """
     return _While(condition)
-

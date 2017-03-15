@@ -20,7 +20,6 @@ from aiida.common.setup import (get_config, get_secret_key, get_property,
 
 
 
-TIME_ZONE = "Europe/Paris"
 USE_TZ = True
 
 try:

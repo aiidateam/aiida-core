@@ -50,6 +50,8 @@ db_test_list = {
         'restapi': ['aiida.backends.tests.restapi'],
         'computer': ['aiida.backends.tests.computer'],
         'examplehelpers': ['aiida.backends.tests.example_helpers'],
+        'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
+        'orm.log': ['aiida.backends.tests.orm.log'],
         'work.class_loader': ['aiida.backends.tests.work.class_loader'],
         'work.daemon': ['aiida.backends.tests.work.daemon'],
         'work.persistence': ['aiida.backends.tests.work.persistence'],

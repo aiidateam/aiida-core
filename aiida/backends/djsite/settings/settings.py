@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 # Django settings for the AiiDA project.
 import sys
 import os
@@ -9,14 +17,11 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.common.setup import (get_config, get_secret_key, get_property,
                                 get_profile_config, parse_repository_uri)
 from aiida.backends import settings
+from aiida.utils.timezone import get_current_timezone
 
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 AIIDA_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.split(AIIDA_DIR)[0]
@@ -111,15 +116,8 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-# Local time zone for this installation. Choices can be found here:
-# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
-# although not all choices may be available on all operating systems.
-# In a Windows environment this must be set to your system time zone.
-try:
-    TIME_ZONE = profile_conf['TIMEZONE']
-except KeyError:
-    raise ConfigurationError("You did not set your timezone during the "
-                             "verdi install phase.")
+# Local time zone for this installation. Always choose the system timezone
+TIME_ZONE = get_current_timezone().zone
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html

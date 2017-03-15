@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 from xml.dom.minidom import parseString
 from aiida.parsers.plugins.quantumespresso.raw_parser_pw import (read_xml_card,
@@ -7,10 +15,6 @@ from aiida.parsers.plugins.quantumespresso.raw_parser_pw import (read_xml_card,
                    parse_xml_child_attribute_str,xml_card_cell,xml_card_ions,
                    xml_card_exchangecorrelation,xml_card_spin,xml_card_planewaves)
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 def parse_cp_traj_stanzas(num_elements, splitlines, prepend_name,rescale=1.):

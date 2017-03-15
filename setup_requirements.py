@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 # Requirements for core AiiDA functionalities
 install_requires = [
     'pip==9.0.1',
@@ -96,5 +105,9 @@ extras_require = {
     # Requirements for sqlite (anyway, do not use sqlite for production)
     'sqlite': [
         'pysqlite==2.6.3',
+    ],
+    # Requirements for jupyter notebook
+    'notebook': [
+        'jupyter',
     ]
 }

@@ -580,7 +580,8 @@ def _collect_tags(node, calc,parameters=None,
     and prepare it to be saved in TCOD CIF.
     """
     import os, json
-    tags = { '_audit_creation_method': "AiiDA version {}".format(__version__) }
+    import aiida
+    tags = { '_audit_creation_method': "AiiDA version {}".format(aiida.__version__) }
 
     # Recording the dictionaries (if any)
 

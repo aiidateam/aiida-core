@@ -1,5 +1,6 @@
 from abc import abstractmethod, abstractproperty, ABCMeta
 from collections import namedtuple
+from aiida.utils import timezone
 
 ASCENDING = 1
 DESCENDING = -1
@@ -35,22 +36,39 @@ class Log(object):
         """
         pass
 
-    @abstractmethod
     def create_entry_from_record(self, record):
         """
-        Create a log entry from a record created by the python logging
+        Helper function to create a log entry from a record created as by the
+        python logging lobrary
 
         :param record: The record created by the logging module
         :type record: :class:`logging.record`
         :return: An object implementing the log entry interface
         :rtype: :class:`aiida.orm.log.LogEntry`
         """
-        pass
+        from datetime import datetime
+
+        objpk = record.__dict__.get('objpk', None)
+        objname = record.__dict__.get('objname', None)
+
+        # Do not store if objpk and objname are not set
+        if objpk is None or objname is None:
+            return None
+
+        return self.create_entry(
+            time=timezone.make_aware(datetime.fromtimestamp(record.created)),
+            loggername=record.name,
+            levelname=record.levelname,
+            objname=objname,
+            objpk=objpk,
+            message=record.getMessage(),
+            metadata=record.__dict__
+        )
 
     @abstractmethod
     def find(self, filter_by=None, order_by=None, limit=None):
         """
-        Find all entries in the Log collection that confirm to the filter and
+        Find all entries in the Log collection that conforms to the filter and
         optionally sort and/or apply a limit.
 
         :param filter_by: A dictionary of key value pairs where the entries have
@@ -64,10 +82,9 @@ class Log(object):
         pass
 
     @abstractmethod
-    def delete_all(self):
+    def delete_many(self, filter):
         """
-        This is temporarily added to be used only in tests
-        Deletes all log entries in the table
+        Delete all the log entries matching the given filter
         """
         pass
 
@@ -156,7 +173,7 @@ class LogEntry(object):
         pass
 
     @abstractmethod
-    def persist(self):
+    def save(self):
         """
         Persist the log entry to the database
 

@@ -45,6 +45,7 @@ db_test_list = {
         'backup_setup_script': ['aiida.backends.tests.backup_setup_script'],
         'restapi': ['aiida.backends.tests.restapi'],
         'computer': ['aiida.backends.tests.computer'],
+        'examplehelpers': ['aiida.backends.tests.example_helpers'],
         'work.class_loader': ['aiida.backends.tests.work.class_loader'],
         'work.daemon': ['aiida.backends.tests.work.daemon'],
         'work.persistence': ['aiida.backends.tests.work.persistence'],
@@ -57,6 +58,7 @@ db_test_list = {
         'work.workChain': ['aiida.backends.tests.work.workChain'],
         'work.workfunction': ['aiida.backends.tests.work.workfunction'],
         'work.legacy.job_process': ['aiida.backends.tests.work.legacy.job_process'],
+        'pluginloader': ['aiida.backends.tests.test_plugin_loader'],
     }
 }
 
@@ -67,7 +69,7 @@ def get_db_test_names():
             retlist.append(name)
 
 
-    # Explode the list so that if I have a.b.c, 
+    # Explode the list so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
     final_list = [_ for _ in retlist]
     for k in retlist:
@@ -83,7 +85,7 @@ def get_db_test_names():
 
 def get_db_test_list():
     """
-    This function returns the db_test_list for the current backend, 
+    This function returns the db_test_list for the current backend,
     merged with the 'common' tests.
 
     :note: This function should be called only after setting the
@@ -113,7 +115,7 @@ def get_db_test_list():
         for t in tests:
             retdict[k].append(t)
 
-    # Explode the dictionary so that if I have a.b.c, 
+    # Explode the dictionary so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
     final_retdict = defaultdict(list)
     for k, v in retdict.iteritems():

@@ -1,11 +1,5 @@
 .. _structure_tutorial:
 
-StructureData tutorial
-======================
-
-.. toctree::
-   :maxdepth: 2
-
 General comments
 ----------------
 

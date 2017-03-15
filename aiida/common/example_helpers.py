@@ -30,9 +30,16 @@ def test_and_get_code(codename, expected_code_type, use_exceptions=False):
         if code.get_input_plugin_name() != expected_code_type:
             raise ValueError
     except (NotExistent, ValueError):
-        valid_code_labels = ["{}@{}".format(c.label, c.get_computer().name) for c in Code.query(
-            dbattributes__key="input_plugin",
-            dbattributes__tval=expected_code_type)]
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(Code,
+                  filters={'attributes.input_plugin':
+                               {'==': expected_code_type}},
+                  project='*')
+
+        valid_code_labels = ["{}@{}".format(c.label, c.get_computer().name)
+                             for [c] in qb.all()]
+
         if valid_code_labels:
             msg = ("Pass as further parameter a valid code label.\n"
                    "Valid labels with a {} executable are:\n".format(

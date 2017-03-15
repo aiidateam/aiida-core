@@ -397,8 +397,10 @@ class IcsdDbImporter(DbImporter):
                         "JOIN space_group_number ON "\
                         "space_group_number.sgr_num=space_group.sgr_num "\
                         + "WHERE" + " AND ".join(sql_where_query)
-        else:
+        elif sql_where_query:
             sql_query = "WHERE" + " AND ".join(sql_where_query)
+        else:
+            sql_query = ""
 
         return IcsdSearchResults(query=sql_query, db_parameters=self.db_parameters)
 

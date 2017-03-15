@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Tests for nodes, attributes and links
 """
@@ -11,10 +19,6 @@ from aiida.orm.data import Data
 from aiida.orm.node import Node
 from aiida.orm.utils import load_node
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class TestDataNode(AiidaTestCase):
@@ -1068,6 +1072,51 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(MultipleObjectsError):
             Code.get_from_string(code3.label)
 
+    def test_get_subclass_from_pk(self):
+        """
+        This test checks that
+        aiida.orm.implementation.general.node.AbstractNode#get_subclass_from_pk
+        works correctly for both backends.
+        """
+        a1 = Node().store()
+
+        # Check that you can load it with a simple integer id.
+        a2 = Node.get_subclass_from_pk(a1.id)
+        self.assertEquals(a1.id, a2.id, "The ids of the stored and loaded node"
+                                        "should be equal (since it should be "
+                                        "the same node")
+
+        # Check that you can load it with an id of type long.
+        # a3 = Node.get_subclass_from_pk(long(a1.id))
+        a3 = Node.get_subclass_from_pk(long(a1.id))
+        self.assertEquals(a1.id, a3.id, "The ids of the stored and loaded node"
+                                        "should be equal (since it should be "
+                                        "the same node")
+
+        # Check that it manages to load the node even if the id is
+        # passed as a string.
+        a4 = Node.get_subclass_from_pk(str(a1.id))
+        self.assertEquals(a1.id, a4.id, "The ids of the stored and loaded node"
+                                        "should be equal (since it should be "
+                                        "the same node")
+
+        # Check that a ValueError exception is raised when a string that can
+        # not be casted to integer is passed.
+        with self.assertRaises(ValueError):
+            Node.get_subclass_from_pk("not_existing_node")
+
+        # Check that a NotExistent exception is raised when an unknown id
+        # is passed.
+        from aiida.common.exceptions import NotExistent
+        with self.assertRaises(NotExistent):
+            Node.get_subclass_from_pk(9999999999)
+
+        # Check that we get a NotExistent exception if we try to load an
+        # instance of a node that doesn't correspond to the Class used to
+        # load it.
+        from aiida.orm.code import Code
+        with self.assertRaises(NotExistent):
+            Code.get_subclass_from_pk(a1.id)
 
     def test_code_loading_using_get(self):
         """

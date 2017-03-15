@@ -28,6 +28,11 @@ def is_daemon_user():
     return daemon_user == this_user
 
 
+def _get_env_with_venv_bin():
+    currenv = os.environ.copy()
+    currenv['PATH'] += ':' + ':'.join([i for i in sys.path if i.endswith('bin')])
+    return currenv
+
 class Daemon(VerdiCommandWithSubcommands):
     """
     Manage the AiiDA daemon
@@ -149,9 +154,7 @@ class Daemon(VerdiCommandWithSubcommands):
         LockManager().clear_all()
 
         print "Starting AiiDA Daemon ..."
-        currenv = os.environ.copy()
-        currenv['PATH'] += ':' + ':'.join([i for i in sys.path if i.endswith('bin')])
-        print currenv['PATH']
+        currenv = _get_env_with_venv_bin()
         process = subprocess.Popen(
             "supervisord -c {}".format(self.conffile_full_path),
             shell=True, stdout=subprocess.PIPE, env=currenv)
@@ -373,10 +376,11 @@ class Daemon(VerdiCommandWithSubcommands):
             return
 
         try:
+            currenv = _get_env_with_venv_bin()
             process = subprocess.Popen(
                 "supervisorctl -c {} tail -f aiida-daemon".format(
                     self.conffile_full_path),
-                shell=True)  # , stdout=subprocess.PIPE)
+                shell=True, env=currenv)  # , stdout=subprocess.PIPE)
             process.wait()
         except KeyboardInterrupt:
             # exit on CTRL+C

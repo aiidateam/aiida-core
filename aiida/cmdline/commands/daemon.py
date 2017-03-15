@@ -28,6 +28,12 @@ def is_daemon_user():
     return daemon_user == this_user
 
 
+def _get_env_with_venv_bin():
+    pybin = os.path.dirname(sys.executable)
+    currenv = os.environ.copy()
+    currenv['PATH'] = pybin + ':' + currenv['PATH']
+    return currenv
+
 class Daemon(VerdiCommandWithSubcommands):
     """
     Manage the AiiDA daemon
@@ -149,9 +155,10 @@ class Daemon(VerdiCommandWithSubcommands):
         LockManager().clear_all()
 
         print "Starting AiiDA Daemon ..."
+        currenv = _get_env_with_venv_bin()
         process = subprocess.Popen(
             "supervisord -c {}".format(self.conffile_full_path),
-            shell=True, stdout=subprocess.PIPE)
+            shell=True, stdout=subprocess.PIPE, env=currenv)
         process.wait()
 
         # The following lines are needed for the workflow_stepper
@@ -219,7 +226,7 @@ class Daemon(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             from aiida.backends.utils import load_dbenv
             load_dbenv(process='daemon')
-        
+
         from aiida.daemon.timestamps import get_last_daemon_timestamp,set_daemon_timestamp
 
         if args:
@@ -370,10 +377,11 @@ class Daemon(VerdiCommandWithSubcommands):
             return
 
         try:
+            currenv = _get_env_with_venv_bin()
             process = subprocess.Popen(
                 "supervisorctl -c {} tail -f aiida-daemon".format(
                     self.conffile_full_path),
-                shell=True)  # , stdout=subprocess.PIPE)
+                shell=True, env=currenv)  # , stdout=subprocess.PIPE)
             process.wait()
         except KeyboardInterrupt:
             # exit on CTRL+C

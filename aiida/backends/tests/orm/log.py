@@ -27,7 +27,7 @@ class TestBackendLog(AiidaTestCase):
         Delete all the created log entries
         """
         super(TestBackendLog, self).tearDown()
-        self._backend.log.delete_all()
+        self._backend.log.delete_many({})
 
     def test_create_backend(self):
         """
@@ -35,7 +35,7 @@ class TestBackendLog(AiidaTestCase):
         """
         backend = construct()
 
-    def test_delete_all(self):
+    def test_delete_many(self):
         """
         Test deleting all log entries
         Bit superfluous, given that other tests most likely would fail
@@ -46,7 +46,7 @@ class TestBackendLog(AiidaTestCase):
             self._backend.log.create_entry(**self._record)
 
         self.assertEquals(len(self._backend.log.find()), count)
-        self._backend.log.delete_all()
+        self._backend.log.delete_many({})
         self.assertEquals(len(self._backend.log.find()), 0)
 
     def test_create_log_message(self):

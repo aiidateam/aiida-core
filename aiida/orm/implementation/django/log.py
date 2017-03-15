@@ -25,35 +25,7 @@ class DjangoLog(Log):
                 metadata=json.dumps(metadata)
             )
         )
-        entry.persist()
-
-        return entry
-
-    def create_entry_from_record(self, record):
-        """
-        Create a log entry from a record created by the python logging
-        """
-        from datetime import datetime
-
-        objpk = record.__dict__.get('objpk', None)
-        objname = record.__dict__.get('objname', None)
-
-        # Do not store if objpk and objname are not set
-        if objpk is None or objname is None:
-            return None
-
-        entry = DjangoLogEntry(
-            DbLog(
-                time=timezone.make_aware(datetime.fromtimestamp(record.created)),
-                loggername=record.name,
-                levelname=record.levelname,
-                objname=objname,
-                objpk=objpk,
-                message=record.getMessage(),
-                metadata=json.dumps(record.__dict__)
-            )
-        )
-        entry.persist()
+        entry.save()
 
         return entry
 
@@ -88,11 +60,16 @@ class DjangoLog(Log):
 
         return [DjangoLogEntry(entry) for entry in entries]
 
-    def delete_all(self):
+    def delete_many(self, filter):
         """
         Delete all log entries in the table
         """
-        DbLog.objects.all().delete()
+        if not filter:
+            DbLog.objects.all().delete()
+        else:
+            raise NotImplemented(
+                "Only deleting all by passing an empty filer dictionary is "
+                "currently supported")
 
 
 class DjangoLogEntry(LogEntry):
@@ -158,7 +135,7 @@ class DjangoLogEntry(LogEntry):
         """
         return json.loads(self._model.metadata)
 
-    def persist(self):
+    def save(self):
         """
         Persist the log entry to the database
         """

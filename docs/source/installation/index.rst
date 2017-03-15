@@ -86,6 +86,7 @@ There are additional optional packages that you may want to install, which are g
     * ``REST``: allows a REST server to be ran locally to serve AiiDA data
     * ``docs``: tools to build the documentation
     * ``advanced_plotting``: tools for advanced plotting
+    * ``notebook``: jupyter notebook - to allow it to import AiiDA modules
 
 In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command::
 

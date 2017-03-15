@@ -1,9 +1,12 @@
-The licenses for some open-source components used in AiiDA include:
+Some files in AiiDA include snippets of code taken from other open-source
+licenses. The files affected are the following (also the original code
+is mentioned):
 
 Django:
-  * aiida.backends.djsite/settings/settings.py
-  * aiida.backends.djsite/db/management/commands/customshell.py
-  * aiida.backends.djsite/manage.py
+  * aiida/backends/djsite/settings/settings.py
+  * aiida/backends/djsite/db/management/commands/customshell.py
+  * aiida/backends/djsite/manage.py
+  * aiida/utils/timezone.py
 
 Python: 
   * aiida/transport/__init__.py
@@ -11,7 +14,7 @@ Python:
 Fastep:
   * fastentrypoints.py
 
-The respective copyright notices follow.
+The respective copyright notices follow below.
 
 --------------------------------------------------------------------------
 

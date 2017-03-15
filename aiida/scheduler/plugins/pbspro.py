@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Plugin for PBSPro.
 This has been tested on PBSPro v. 12.
@@ -23,10 +31,6 @@ from .pbsbaseclasses import PbsBaseClass
 #W  Job is waiting for its submitter-assigned start time to be reached.
 #X  Subjob has completed execution or has been deleted.
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class PbsproScheduler(PbsBaseClass):

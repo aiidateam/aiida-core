@@ -5,7 +5,6 @@ set -ev
 
 if [[ "$COMPILE_DOCS" == "true" ]]
 then
-    verdi profile setdefault verdi ${TEST_AIIDA_BACKEND} 
     # Compile the docs (HTML format); -W to convert warnings in errors, 
     # -n to warn about all missing references
     SPHINXOPTS="-nW" make -C docs html

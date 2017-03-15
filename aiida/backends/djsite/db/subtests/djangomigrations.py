@@ -48,16 +48,16 @@ class CalcStateChanges(AiidaTestCase):
             logging.disable(logging.NOTSET)
             # Temporarily disable logging to the stream handler (i.e. screen)
             # because otherwise fix_calc_states will print warnings
-            handler = next((h for h in logging.getLogger('aiida').handlers if
-                           isinstance(h, logging.StreamHandler)), None)
-            if handler:
-                handler.setLevel(logging.ERROR)
+            #handler = next((h for h in logging.getLogger('aiida').handlers if
+            #               isinstance(h, logging.StreamHandler)), None)
+            #if handler:
+            #    handler.setLevel(logging.ERROR)
 
             # Call the code that deals with updating these states
             state_change.fix_calc_states(None, None)
 
-            if handler:
-                handler.setLevel(logging.NOTSET)
+            #if handler:
+            #    handler.setLevel(logging.NOTSET)
 
             current_state = job.get_state()
             self.assertNotEqual(current_state, state,

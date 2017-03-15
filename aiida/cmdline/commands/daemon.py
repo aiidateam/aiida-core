@@ -30,10 +30,8 @@ def is_daemon_user():
 
 def _get_env_with_venv_bin():
     pybin = os.path.dirname(sys.executable)
-    print pybin
     currenv = os.environ.copy()
     currenv['PATH'] = pybin + ':' + currenv['PATH']
-    print currenv['PATH']
     return currenv
 
 class Daemon(VerdiCommandWithSubcommands):

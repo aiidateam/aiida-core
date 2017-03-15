@@ -1075,17 +1075,24 @@ class TestNodeBasic(AiidaTestCase):
         works correctly for both backends.
         """
         a1 = Node().store()
-        a2 = Node.get_subclass_from_pk(a1.id)
 
-        # Check that you can load it with a simple id
+        # Check that you can load it with a simple integer id.
+        a2 = Node.get_subclass_from_pk(a1.id)
         self.assertEquals(a1.id, a2.id, "The ids of the stored and loaded node"
+                                        "should be equal (since it should be "
+                                        "the same node")
+
+        # Check that you can load it with an id of type long.
+        # a3 = Node.get_subclass_from_pk(long(a1.id))
+        a3 = Node.get_subclass_from_pk(long(a1.id))
+        self.assertEquals(a1.id, a3.id, "The ids of the stored and loaded node"
                                         "should be equal (since it should be "
                                         "the same node")
 
         # Check that it manages to load the node even if the id is
         # passed as a string.
-        a3 = Node.get_subclass_from_pk(str(a1.id))
-        self.assertEquals(a1.id, a3.id, "The ids of the stored and loaded node"
+        a4 = Node.get_subclass_from_pk(str(a1.id))
+        self.assertEquals(a1.id, a4.id, "The ids of the stored and loaded node"
                                         "should be equal (since it should be "
                                         "the same node")
 
@@ -1095,7 +1102,7 @@ class TestNodeBasic(AiidaTestCase):
             Node.get_subclass_from_pk("not_existing_node")
 
         # Check that a NotExistent exception is raised when an unknown id
-        # is passed
+        # is passed.
         from aiida.common.exceptions import NotExistent
         with self.assertRaises(NotExistent):
             Node.get_subclass_from_pk(9999999999)
@@ -1106,7 +1113,6 @@ class TestNodeBasic(AiidaTestCase):
         from aiida.orm.code import Code
         with self.assertRaises(NotExistent):
             Code.get_subclass_from_pk(a1.id)
-
 
     def test_code_loading_using_get(self):
         """

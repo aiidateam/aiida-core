@@ -19,7 +19,6 @@ TODO: to test:
 - empty namelists
 - content for non-existent namelists specified
 """
-
 import os
 
 import aiida
@@ -29,16 +28,11 @@ from aiida.orm import CalculationFactory, DataFactory
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Code
 
-
-                u"further information please visit http://www.aiida.net/. All " \
-                u"rights reserved."
-
 QECalc = CalculationFactory('quantumespresso.pw')
 StructureData = DataFactory('structure')
 ParameterData = DataFactory('parameter')
 UpfData = DataFactory('upf')
 KpointsData = DataFactory('array.kpoints')
-
 
 class TestQEPWInputGeneration(AiidaTestCase):
     """

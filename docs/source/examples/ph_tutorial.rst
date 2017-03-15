@@ -196,6 +196,6 @@ Exception tolerant code
 -----------------------
 You can find a more sophisticated example, that checks the possible exceptions
 and prints nice error messages inside your AiiDA folder, under
-``examples/submission/test_ph.py``.
+``examples/submission/quantumespresso/test_ph.py``.
 
  

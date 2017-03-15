@@ -9,10 +9,6 @@ from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import classproperty
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 def _prepare_pymatgen_dict(parameters,struct=None):
     from pymatgen.io.nwchem import NwInput

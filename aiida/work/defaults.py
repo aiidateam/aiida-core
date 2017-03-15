@@ -9,10 +9,6 @@ import plum.knowledge_base
 from aiida.work.class_loader import ClassLoader
 from aiida.work.process_registry import ProcessRegistry
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 _kb = plum.knowledge_base.KnowledgeBase()

@@ -23,10 +23,6 @@ bjobs_stderr_to_test = "Job <864220165> is not found"
 submit_stdout_to_test = "Job <764254593> is submitted to queue <test>."
 bkill_stdout_to_test = "Job <764254593> is being terminated"
 
-__copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Nicolas Mounet, Giovanni Pizzi, Martin Uhrin, Snehal Waychal"
 
 
 class TestParserBjobs(unittest.TestCase):

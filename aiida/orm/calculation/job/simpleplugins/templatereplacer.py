@@ -44,10 +44,6 @@ from aiida.orm.data.parameter import ParameterData
 # TODO: write a 'input_type_checker' routine to automatically check the existence
 # and type of inputs + default values etc.
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class TemplatereplacerCalculation(JobCalculation):

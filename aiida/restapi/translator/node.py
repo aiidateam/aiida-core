@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.common.exceptions import InputValidationError, ValidationError, \
     InvalidOperation
 from aiida.restapi.common.exceptions import RestValidationError

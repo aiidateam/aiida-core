@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.common.exceptions import InternalError
 from abc import ABCMeta, abstractmethod
 

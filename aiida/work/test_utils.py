@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 
 from aiida.work.process import Process

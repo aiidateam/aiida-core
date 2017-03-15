@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.models.node import DbNode

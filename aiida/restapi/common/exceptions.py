@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 This file contains the exceptions that are raised by the RESTapi at the
 highest level, namely that of the interaction with the client. Their

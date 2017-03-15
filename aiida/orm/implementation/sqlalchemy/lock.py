@@ -9,10 +9,6 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.orm.implementation.general.lock import AbstractLockManager, AbstractLock
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 class LockManager(AbstractLockManager):
     def aquire(self, key, timeout=3600, owner="None"):

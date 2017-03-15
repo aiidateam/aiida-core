@@ -18,10 +18,6 @@ from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.mixins import Sealable
 from aiida.orm.implementation.django.utils import get_db_columns
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class Node(AbstractNode):

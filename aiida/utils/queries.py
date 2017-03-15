@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 class jsonb_array_length(FunctionElement):
     name = 'jsonb_array_len'
 

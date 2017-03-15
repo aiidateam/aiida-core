@@ -6,10 +6,6 @@ from datetime import timedelta
 from aiida.common import aiidalogger
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 from aiida.backends.utils import is_dbenv_loaded
 logger = aiidalogger.getChild('workflowmanager')

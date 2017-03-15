@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from flask_cache import Cache
 from aiida.restapi.api import app
 from aiida.restapi.common.config import cache_config

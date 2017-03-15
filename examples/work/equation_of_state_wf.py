@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
 if not is_dbenv_loaded():

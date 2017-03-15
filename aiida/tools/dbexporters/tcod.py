@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 from aiida.orm import DataFactory
 from aiida.orm.calculation.inline import optional_inline
@@ -382,7 +378,6 @@ def _inline_to_standalone_script(calc):
             for x in input_dict.keys()]
     args_string = ",\n    ".join(sorted(args))
     return """#!/usr/bin/env runaiida
-# -*- coding: utf-8 -*-
 {}
 
 for key, value in {}(

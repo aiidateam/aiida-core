@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Implementation of RESTful API for materialscloud.org based on flask +
 flask_restful module

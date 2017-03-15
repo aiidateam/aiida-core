@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.restapi.translator.base import BaseTranslator
 from aiida.restapi.common.config import custom_schema
 

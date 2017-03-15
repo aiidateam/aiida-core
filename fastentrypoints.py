@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2016, Aaron Christianson
 # All rights reserved.
 #
@@ -38,7 +39,6 @@ http://github.com/ninjaaron/fast-entry_points
 from setuptools.command import easy_install
 import re
 TEMPLATE = '''\
-# -*- coding: utf-8 -*-
 import re
 import sys
 

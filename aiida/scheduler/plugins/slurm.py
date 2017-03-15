@@ -35,10 +35,6 @@ from aiida.scheduler.datastructures import (
 ##                     pended.
 ## TO  TIMEOUT         Job terminated upon reaching its time limit.
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 _map_status_slurm = {
     'CA': job_states.DONE,

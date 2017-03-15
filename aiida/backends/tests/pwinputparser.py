@@ -21,10 +21,6 @@ from aiida.tools.codespecific.quantumespresso import pwinputparser
 from aiida.orm.data.structure import StructureData
 from aiida.backends.testbase import AiidaTestCase
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 # File names: a_celldm(1)_kpoints_cellparameters_atomicposition
 

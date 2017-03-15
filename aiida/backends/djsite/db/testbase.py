@@ -12,10 +12,6 @@ from aiida.backends.testimplbase import AiidaTestImplementation
 # can be run using 'verdi test db.generic')
 # The value must be the module name containing the subclasses of unittest.TestCase
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 # This contains the codebase for the setUpClass and tearDown methods used internally by the AiidaTestCase
 # This inherits only from 'object' to avoid that it is picked up by the automatic discovery of tests

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 from distutils.version import StrictVersion
 from aiida.orm.data.structure import has_pymatgen, get_pymatgen_version

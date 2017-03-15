@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Requirements for core AiiDA functionalities
 install_requires = [
     'pip==9.0.1',

@@ -22,12 +22,8 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Code
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For " \
                 u"further information please visit http://www.aiida.net/. All " \
                 u"rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 QECalc = CalculationFactory('quantumespresso.pw')
 StructureData = DataFactory('structure')

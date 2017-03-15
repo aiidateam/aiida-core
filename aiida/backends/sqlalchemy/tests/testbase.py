@@ -18,10 +18,6 @@ from aiida.common.setup import get_profile_config
 from aiida.common.utils import get_configured_user_email
 from aiida.orm.computer import Computer
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 # Querying for expired objects automatically doesn't seem to work.
 # That's why expire on commit=False resolves many issues of objects beeing

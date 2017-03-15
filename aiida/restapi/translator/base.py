@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.backends.settings import BACKEND
 from aiida.common.exceptions import InputValidationError, InvalidOperation, \

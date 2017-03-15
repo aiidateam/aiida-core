@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 from aiida.common.links import LinkType
 from ete3 import Tree

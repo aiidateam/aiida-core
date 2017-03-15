@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from urllib import unquote
 
 from flask import request

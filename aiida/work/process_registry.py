@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import plum.process
 import plum.knowledge_provider

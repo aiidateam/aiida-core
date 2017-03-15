@@ -30,10 +30,6 @@ import IPython
 from IPython.core.magic import (magics_class, line_magic, Magics, 
                                 needs_local_scope)
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 def add_to_ns(local_ns, name, obj):
     """

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ## Pagination defaults
 LIMIT_DEFAULT = 400
 PERPAGE_DEFAULT = 20

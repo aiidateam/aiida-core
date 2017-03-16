@@ -18,7 +18,7 @@ install_requires = [
     'django_extensions==1.5',
     'tzlocal==1.3',
     'pytz==2014.10',
-    'celery==4.0.2',
+    'celery==3.1.25',
     'anyjson==0.3.3',
     'supervisor==3.1.3',
     'meld3==1.0.0',

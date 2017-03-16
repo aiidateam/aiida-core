@@ -18,9 +18,7 @@ install_requires = [
     'django_extensions==1.5',
     'tzlocal==1.3',
     'pytz==2014.10',
-    'django-celery==3.1.16',
-    'celery==3.1.17',
-    'billiard==3.3.0.19',
+    'celery==4.0.2',
     'anyjson==0.3.3',
     'supervisor==3.1.3',
     'meld3==1.0.0',
@@ -39,7 +37,6 @@ install_requires = [
     'ete3==3.0.0b35',
     'uritools==1.0.2',
     'psycopg2==2.6.1',
-    'amqp==1.4.9',
     # Requirements for ssh transport
     'paramiko==1.15.2',
     'ecdsa==0.13',

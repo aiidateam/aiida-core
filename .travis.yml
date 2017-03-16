@@ -39,7 +39,6 @@ before_install:
     # And will also be used for the docker test
     - ssh-keygen -t rsa -N "" -f "${HOME}/.ssh/id_rsa"
     - cp "${HOME}/.ssh/id_rsa.pub" "${HOME}/.ssh/authorized_keys"
-    - if [ ! -d "${HOME}/.ssh/" ] ; then mkdir "${HOME}/.ssh/" ; fi
     - ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
 
     # Build the docker image if needed

@@ -17,7 +17,8 @@ then
     # Wait for SSH to be up
     ${TRAVIS_BUILD_DIR}/.travis-data/wait-for-it.sh localhost:10022 -t 0
 
-    # Add the key to the known_hosts
-    ssh-keyscan -p 10022 localhost >> ${HOME}/.ssh/known_hosts
+    # I will add the key to the known_hosts later, to give the time to ssh
+    # to be really up - see the before_script script
+    #ssh-keyscan -p 10022 localhost >> ${HOME}/.ssh/known_hosts
     
 fi

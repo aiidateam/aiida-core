@@ -737,7 +737,7 @@ class Utils(object):
         value = (valueString | valueBool | valueDateTime | valueNum |
                  valueOrderby)
         # List of values (I do not check the homogeneity of the types of values,
-        # query builder will do it in a sense)
+        # query builder will do it somehow)
         valueList = Group(value + OneOrMore(Suppress(',') + value) + Optional(
             Suppress(',')))
 
@@ -759,7 +759,6 @@ class Utils(object):
         ## Parse the query string
         try:
             fields = generalGrammar.parseString(query_string)
-            field_dict = fields.asDict()
             field_list = fields.asList()
         except ParseException as e:
             raise RestInputValidationError(

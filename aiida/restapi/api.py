@@ -28,34 +28,34 @@ class App(Flask):
         # default is True)
         catch_internal_server = True
 
-        if 'catch_internal_server' in kwargs and not kwargs[
-            'catch_internal_server']:
-            catch_internal_server = False
-
-        if catch_internal_server:
-            # Error handler
-            @self.errorhandler(Exception)
-            def error_handler(error):
-                if isinstance(error, RestValidationError):
-                    response = jsonify({'message': error.message})
-                    response.status_code = 400
-                elif isinstance(error, RestInputValidationError):
-                    response = jsonify({'message': error.message})
-                    response.status_code = 400
-                # Generic server-side error (not to make the api crash if an
-                # unhandled exception is raised. Caution is never enough!!)
-                else:
-                    response = jsonify({
-                        'message': 'Internal server error. The original '
-                                   'message was: \"{}\"'.format(
-                            error.message)
-                    })
-                    response.status_code = 500
-
-                return response
-
-        else:
-            pass
+        # if 'catch_internal_server' in kwargs and kwargs[
+        #     'catch_internal_server'] == False:
+        #     catch_internal_server = False
+        #
+        # if catch_internal_server:
+        #     # Error handler
+        #     @self.errorhandler(Exception)
+        #     def error_handler(error):
+        #         if isinstance(error, RestValidationError):
+        #             response = jsonify({'message': error.message})
+        #             response.status_code = 400
+        #         elif isinstance(error, RestInputValidationError):
+        #             response = jsonify({'message': error.message})
+        #             response.status_code = 400
+        #         # Generic server-side error (not to make the api crash if an
+        #         # unhandled exception is raised. Caution is never enough!!)
+        #         else:
+        #             response = jsonify({
+        #                 'message': 'Internal server error. The original '
+        #                            'message was: \"{}\"'.format(
+        #                     error.message)
+        #             })
+        #             response.status_code = 500
+        #
+        #         return response
+        #
+        # else:
+        #     pass
 
 
 class AiidaApi(Api):
@@ -75,8 +75,7 @@ class AiidaApi(Api):
         """
 
         from aiida.restapi.resources import Calculation, Computer, Code, Data, \
-            Group, \
-            Node, User
+            Group, Node, User, StructureData, KpointsData
 
         super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'])
 
@@ -166,6 +165,48 @@ class AiidaApi(Api):
                           '/codes/<int:pk>/content/extras/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
+
+        self.add_resource(StructureData,
+                          '/structures/',
+                          '/structures/schema/',
+                          '/structures/statistics/',
+                          '/structures/page/',
+                          '/structures/page/<int:page>',
+                          '/structures/<int:pk>/',
+                          '/structures/<int:pk>/io/inputs/',
+                          '/structures/<int:pk>/io/inputs/page/',
+                          '/structures/<int:pk>/io/inputs/page/<int:page>/',
+                          '/structures/<int:pk>/io/outputs/',
+                          '/structures/<int:pk>/io/outputs/page/',
+                          '/structures/<int:pk>/io/outputs/page/<int:page>/',
+                          '/structures/<int:pk>/io/tree/',
+                          '/structures/<int:pk>/content/attributes/',
+                          '/structures/<int:pk>/content/extras/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
+
+
+        #TODO add complete list of endpoints
+        self.add_resource(KpointsData,
+                          '/structures/',
+                          '/structures/schema/',
+                          '/structures/statistics/',
+                          '/structures/page/',
+                          '/structures/page/<int:page>',
+                          '/structures/<int:pk>/',
+                          '/structures/<int:pk>/io/inputs/',
+                          '/structures/<int:pk>/io/inputs/page/',
+                          '/structures/<int:pk>/io/inputs/page/<int:page>/',
+                          '/structures/<int:pk>/io/outputs/',
+                          '/structures/<int:pk>/io/outputs/page/',
+                          '/structures/<int:pk>/io/outputs/page/<int:page>/',
+                          '/structures/<int:pk>/io/tree/',
+                          '/structures/<int:pk>/content/attributes/',
+                          '/structures/<int:pk>/content/extras/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
 
         self.add_resource(User,
                           '/users/',

@@ -240,3 +240,21 @@ class Data(Node):
         self.trans = DataTranslator(**kwargs)
         from aiida.orm import Data as DataTclass
         self.tclass = DataTclass
+
+class StructureData(Data):
+    def __init__(self, **kwargs):
+        super(StructureData, self).__init__(**kwargs)
+
+        from aiida.restapi.translators.data.structure import StructureDataTransaltor
+        self.trans = StructureDataTransaltor(**kwargs)
+        from aiida.orm.data.structure import StructureData as StructureDataTclass
+        self.tclass = StructureDataTClass
+
+class KpointsData(Data):
+    def __init__(self, **kwargs):
+        super(KpointsData, self).__init__(**kwargs)
+
+        from aiida.restapi.translators.data.kpoints import KpointsDataTransaltor
+        self.trans = KpointsDataTransaltor(**kwargs)
+        from aiida.orm.data.array.kpoints import KpointsData as KpointsDataTclass
+        self.tclass = KpointsDataTClass

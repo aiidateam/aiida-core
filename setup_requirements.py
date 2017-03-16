@@ -24,9 +24,7 @@ install_requires = [
     # versions... Actually, this might be source or problems with 
     # SQLA for us... probably switch to using rabbitmq?
     # Note that however this requires a new server process.
-    'celery==3.1.17',
-    'billiard==3.3.0.19',
-    'amqp==1.4.9',
+    'celery==3.1.25',
     'anyjson==0.3.3',
     'supervisor==3.1.3',
     'meld3==1.0.0',

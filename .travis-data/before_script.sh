@@ -21,7 +21,16 @@ then
 
     # Make sure that the torquessh (localhost:10022) key is hashed
     # in the known_hosts file
-    ssh-keyscan -p 10022 localhost >> ${HOME}/.ssh/known_hosts
+    echo "'ssh-keyscan -p 10022 -t rsa localhost' output:"
+    ssh-keyscan -p 10022 -t rsa localhost > /tmp/localhost10022key.txt
+    cat /tmp/localhost10022key.txt
+    
+    # Patch for OpenSSH 6, that does not write the port number in the
+    # known_hosts file. OpenSSH 7 would work, instead
+    if grep -e '^localhost' /tmp/localhost10022key.txt > /dev/null 2>&1 ; then cat /tmp/localhost10022key.txt | sed 's/^localhost/[localhost]:10022/' >> ${HOME}/.ssh/known_hosts ; else  cat /tmp/localhost10022key.txt >> ${HOME}/.ssh/known_hosts; fi
+
+    echo "Content of the known_hosts file:"
+    cat ${HOME}/.ssh/known_hosts
     
 fi
 

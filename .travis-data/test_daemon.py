@@ -10,6 +10,18 @@ codename = 'doubler@torquessh'
 timeout_secs = 10*60 # 10 minutes
 num_jobs = 30 # Num jobs to submit
 
+def print_daemon_log():
+    home = os.environ['HOME']
+    print "Output of 'cat {}/.aiida/daemon/log/aiida_daemon.log':".format(home)
+    try:
+        print subprocess.check_output(
+            ["cat", "{}/.aiida/daemon/log/aiida_daemon.log".format(home)], 
+            stderr=subprocess.STDOUT,
+        )
+    except subprocess.CalledProcessError as e:
+        print "Note: the command failed, message: {}".format(e.message)
+
+
 def have_finished(pks):
     finished_list = [load_node(pk).has_finished() for pk in pks]
     num_finished = len([_ for _ in finished_list if _])
@@ -101,32 +113,26 @@ while time.time() - start_time < timeout_secs:
     except subprocess.CalledProcessError as e:
         print "Note: the command failed, message: {}".format(e.message)
 
-
-    home = os.environ['HOME']
-    print "Output of 'cat {}/.aiida/daemon/log/aiida_daemon.log':".format(home)
-    try:
-        print subprocess.check_output(
-            ["cat", "{}/.aiida/daemon/log/aiida_daemon.log".format(home)], 
-            stderr=subprocess.STDOUT,
-        )
-    except subprocess.CalledProcessError as e:
-        print "Note: the command failed, message: {}".format(e.message)
-
-
     if have_finished(pks):
         print "Calculation terminated its execution"
         exited_with_timeout = False
         break
 
 if exited_with_timeout:
+    print_daemon_log()
+    print ""
     print "Timeout!! Calculation did not complete after {} seconds".format(
         timeout_secs)
     sys.exit(2)
 else:
     if results_are_ok(values_to_check):
+        print_daemon_log()
+        print ""
         print "OK, all calculations have the expected parsed result"
         sys.exit(0)
     else:
+        print_daemon_log()
+        print ""
         print "ERROR! Some return values are different from the expected value"
         sys.exit(3)
         

@@ -63,6 +63,8 @@ def get_session(engine=None, expire_on_commit=True):
 
 
 def get_engine(config):
+    from multiprocessing.util import register_after_fork
+
     engine_url = (
         "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
         "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"

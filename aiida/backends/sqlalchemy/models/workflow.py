@@ -228,17 +228,16 @@ class DbWorkflowData(Base):
         UniqueConstraint("parent_id", "name", "data_type"),
     )
 
-    ### To be removed: seems unused, and anyway the 'else' part uses undeclared variables
-    # def get_or_create(self, **kwargs):  # this is to emulate the django method
-    #     from sqlalchemy.sql.expression import ClauseElement
-    #     instance = self.query().filter_by(kwargs).first()
-    #     if instance:
-    #         return instance, False
-    #     else:
-    #         params = dict((k, v) for k, v in kwargs.iteritems() if not isinstance(v, ClauseElement))
-    #         instance = model(**params)
-    #         session.add(instance)
-    #         return instance, True
+    def get_or_create(self, **kwargs):  # this is to emulate the django method
+        from sqlalchemy.sql.expression import ClauseElement
+        instance = self.query().filter_by(kwargs).first()
+        if instance:
+            return instance, False
+        else:
+            params = dict((k, v) for k, v in kwargs.iteritems() if not isinstance(v, ClauseElement))
+            instance = model(**params)
+            session.add(instance)
+            return instance, True
 
     def set_value(self, arg):
         from aiida.orm import Node

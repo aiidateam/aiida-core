@@ -53,12 +53,12 @@ def get_log_messages(obj):
     Get the log messages for the object.
     """
     from aiida.backends.sqlalchemy.models.log import DbLog
-    from aiida.backends.sqlalchemy.utils import get_session as get_new_session
+    from aiida.backends.sqlalchemy import session
 
     extra = get_dblogger_extra(obj)
     log_messages = []
     for log_message in (
-            get_new_session().query(DbLog).filter_by(**extra).order_by('time').all()):
+            session.query(DbLog).filter_by(**extra).order_by('time').all()):
         val_dict = log_message.__dict__
         updated_val_dict = {
             "loggername": val_dict["loggername"],

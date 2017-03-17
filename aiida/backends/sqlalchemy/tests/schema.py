@@ -131,8 +131,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
         self.assertIsNone(dbn1.id)
 
         # Add only the node and commit
-        aiida.backends.sqlalchemy.session.add(dbn1)
-        aiida.backends.sqlalchemy.session.commit()
+        aiida.backends.sqlalchemy.get_scoped_session().add(dbn1)
+        aiida.backends.sqlalchemy.get_scoped_session().commit()
 
         # Check that a pk has been assigned, which means that things have
         # been flushed into the database
@@ -167,8 +167,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
             warnings.simplefilter("ignore", category=sa_exc.SAWarning)
 
             # Add only the user and commit
-            aiida.backends.sqlalchemy.session.add(dbu1)
-            aiida.backends.sqlalchemy.session.commit()
+            aiida.backends.sqlalchemy.get_scoped_session().add(dbu1)
+            aiida.backends.sqlalchemy.get_scoped_session().commit()
 
         # Check that a pk has been assigned (or not), which means that things
         # have been flushed into the database
@@ -200,8 +200,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
         self.assertIsNone(dbn2.id)
 
         # Add only first node and commit
-        aiida.backends.sqlalchemy.session.add(dbn1)
-        aiida.backends.sqlalchemy.session.commit()
+        aiida.backends.sqlalchemy.get_scoped_session().add(dbn1)
+        aiida.backends.sqlalchemy.get_scoped_session().commit()
 
         # Check for which object a pk has been assigned, which means that
         # things have been at least flushed into the database
@@ -237,8 +237,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
         self.assertIsNone(dbn1.id)
 
         # Add only first node and commit
-        aiida.backends.sqlalchemy.session.add(dbn1)
-        aiida.backends.sqlalchemy.session.commit()
+        aiida.backends.sqlalchemy.get_scoped_session().add(dbn1)
+        aiida.backends.sqlalchemy.get_scoped_session().commit()
 
         # Check for which object a pk has been assigned, which means that
         # things have been at least flushed into the database
@@ -272,8 +272,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
     #     self.assertIsNone(dbn1.id)
     #
     #     # Add only the node and commit
-    #     aiida.backends.sqlalchemy.session.add(dbn1)
-    #     aiida.backends.sqlalchemy.session.commit()
+    #     aiida.backends.sqlalchemy.get_scoped_session().add(dbn1)
+    #     aiida.backends.sqlalchemy.get_scoped_session().commit()
     #
     #     # Check that a pk has been assigned, which means that things have
     #     # been flushed into the database
@@ -302,8 +302,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
     #     self.assertIsNone(dbn1.id)
     #
     #     # Add only the user and commit
-    #     aiida.backends.sqlalchemy.session.add(dbc1)
-    #     aiida.backends.sqlalchemy.session.commit()
+    #     aiida.backends.sqlalchemy.get_scoped_session().add(dbc1)
+    #     aiida.backends.sqlalchemy.get_scoped_session().commit()
     #
     #     # Check that a pk has been assigned (or not), which means that things
     #     # have been flushed into the database
@@ -335,8 +335,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
     #     self.assertIsNone(dbn2.id)
     #
     #     # Add only first node and commit
-    #     aiida.backends.sqlalchemy.session.add(dbn1)
-    #     aiida.backends.sqlalchemy.session.commit()
+    #     aiida.backends.sqlalchemy.get_scoped_session().add(dbn1)
+    #     aiida.backends.sqlalchemy.get_scoped_session().commit()
     #
     #     # Check for which object a pk has been assigned, which means that
     #     # things have been at least flushed into the database
@@ -373,8 +373,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
     #     self.assertIsNone(dbn1.id)
     #
     #     # Add only first node and commit
-    #     aiida.backends.sqlalchemy.session.add(dbn1)
-    #     aiida.backends.sqlalchemy.session.commit()
+    #     aiida.backends.sqlalchemy.get_scoped_session().add(dbn1)
+    #     aiida.backends.sqlalchemy.get_scoped_session().commit()
     #
     #     # Check for which object a pk has been assigned, which means that
     #     # things have been at least flushed into the database

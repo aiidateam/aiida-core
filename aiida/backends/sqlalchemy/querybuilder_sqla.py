@@ -149,7 +149,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         self.Path = DbPath
 
     def get_session(self):
-        return aiida.backends.sqlalchemy.session
+        return aiida.backends.sqlalchemy.get_scoped_session()
 
     def modify_expansions(self, alias, expansions):
         """

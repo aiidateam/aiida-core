@@ -1,6 +1,7 @@
 from aiida.orm.log import Log, LogEntry
 from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
-from aiida.backends.sqlalchemy import session
+from aiida.backends.sqlalchemy import get_scoped_session
+session = get_scoped_session()
 from aiida.backends.sqlalchemy.models.log import DbLog
 from aiida.utils import timezone
 

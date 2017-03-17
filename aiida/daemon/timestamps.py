@@ -57,7 +57,9 @@ def get_most_recent_daemon_timestamp():
 
     elif settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.models.settings import DbSetting
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+
         from sqlalchemy import func
         from pytz import utc
         from sqlalchemy.dialects.postgresql import TIMESTAMP

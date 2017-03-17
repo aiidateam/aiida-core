@@ -34,7 +34,6 @@ from aiida.common.exceptions import InvalidOperation, ConfigurationError
 from aiida.common.setup import (get_profile_config, DEFAULT_USER_CONFIG_FIELD)
 
 from aiida.backends import sqlalchemy, settings
-from aiida.backends.utils import check_schema_version
 
 from aiida.backends.profile import (is_profile_loaded,
                                     load_profile)
@@ -44,9 +43,9 @@ from aiida.backends.profile import (is_profile_loaded,
 #     """
 #     Return if the environment has already been loaded or not.
 #     """
-#     return sqlalchemy.session is not None
+#     return sqlalchemy.get_scoped_session() is not None
 
-def get_session(engine=None, expire_on_commit=True):
+def get_sessionfactory(engine=None, expire_on_commit=True):
     """
     :param engine: the engine that will be used by the sessionmaker
     :param expire_on_commit: should the session expire on commits?
@@ -55,11 +54,7 @@ def get_session(engine=None, expire_on_commit=True):
     """
     Session = sessionmaker(bind=engine, expire_on_commit=expire_on_commit)
 
-    # Return a scoped session class instead of a
-    # from sqlalchemy.orm import scoped_session
-    # ScopedSession  = scoped_session(Session)
-    # return ScopedSession()
-    return Session()
+    return Session
 
 
 def get_engine(config):
@@ -96,30 +91,10 @@ def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
     """
     Load the SQLAlchemy database.
     """
+    from sqlalchemy.orm import scoped_session
     config = get_profile_config(settings.AIIDADB_PROFILE)
-
-    # Those import are necessary for SQLAlchemy to correctly detect the models
-    # These should be on top of the file, but because of a circular import they need to be
-    # here.
-    from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-    # from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
-    from aiida.backends.sqlalchemy.models.comment import DbComment
-    from aiida.backends.sqlalchemy.models.computer import DbComputer
-    from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes #, table_groups_users
-    from aiida.backends.sqlalchemy.models.lock import DbLock
-    from aiida.backends.sqlalchemy.models.log import DbLog
-    from aiida.backends.sqlalchemy.models.node import (
-            DbLink, DbNode, DbPath, DbCalcState)
-    from aiida.backends.sqlalchemy.models.user import DbUser
-    from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
-
-    if not connection:
-        engine = get_engine(config)
-        sqlalchemy.raw_session = get_session(engine=engine)
-    else:
-        Session = sessionmaker()
-        #sqlalchemy.session = Session(bind=connection)
-        sqlalchemy.raw_session = Session(bind=connection)
+    engine = get_engine(config)
+    sqlalchemy.scopedsessionclass = scoped_session(get_sessionfactory(engine=engine))
 
 _aiida_autouser_cache = None
 
@@ -445,7 +420,7 @@ def check_schema_version():
         get_db_schema_version, set_db_schema_version,get_current_profile)
 
     # Do not do anything if the table does not exist yet
-    inspector = reflection.Inspector.from_engine(sqlalchemy.session.bind)
+    inspector = reflection.Inspector.from_engine(sqlalchemy.get_scoped_session().bind)
     if 'db_dbsetting' not in inspector.get_table_names():
         return
 

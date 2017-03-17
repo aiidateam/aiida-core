@@ -19,8 +19,8 @@ from aiida.backends.settings import AIIDADB_PROFILE
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.utils import get_session, get_engine
-from aiida.backends.sqlalchemy.utils import (install_tc)
+from aiida.backends.sqlalchemy.utils import get_engine
+from aiida.backends.sqlalchemy.utils import install_tc
 from aiida.backends.testimplbase import AiidaTestImplementation
 from aiida.common.setup import get_profile_config
 from aiida.common.utils import get_configured_user_email
@@ -53,16 +53,18 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def setUpClass_method(self):
 
+        from aiida.backends import settings
+        from aiida.backends.sqlalchemy.utils import get_sessionfactory
+        from aiida.backends.sqlalchemy import get_scoped_session
+
         if self.test_session is None:
             if self.connection is None:
                 config = get_profile_config(AIIDADB_PROFILE)
                 engine = get_engine(config)
-                
-                self.test_session = get_session(engine=engine)
                 self.connection = engine.connect()
 
-            self.test_session = Session(bind=self.connection)
-            aiida.backends.sqlalchemy.session = self.test_session
+            #aiida.backends.sqlalchemy.sessionfactory = get_sessionfactory(engine=engine)
+            self.test_session = get_scoped_session()
 
         if self.drop_all:
             Base.metadata.drop_all(self.connection)

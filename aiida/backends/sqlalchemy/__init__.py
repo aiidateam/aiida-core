@@ -9,17 +9,13 @@
 ###########################################################################
 
 
-
-raw_session = None
+scopedsessionclass = None
 
 def get_scoped_session():
-    from sqlalchemy.orm import scoped_session
-
-    if raw_session is None:
+    if scopedsessionclass is None:
         s = None
     else:
-        ScopedSession  = scoped_session(raw_session)
-        s = ScopedSession()
+        s = scopedsessionclass()
 
     return s
 

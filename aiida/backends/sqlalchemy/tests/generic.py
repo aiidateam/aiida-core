@@ -48,11 +48,11 @@ class TestComputer(AiidaTestCase):
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
         try:
-            aiida.backends.sqlalchemy.session.begin_nested()
+            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
             with self.assertRaises(InvalidOperation):
                 delete_computer(self.computer)
         finally:
-            aiida.backends.sqlalchemy.session.rollback()
+            aiida.backends.sqlalchemy.get_scoped_session().rollback()
 
 
 class TestGroupsSqla(AiidaTestCase):

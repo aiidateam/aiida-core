@@ -131,7 +131,9 @@ class TestNodeBasicSQLA(AiidaTestCase):
         Test the settings table (similar to Attributes, but without the key.
         """
         from aiida.backends.sqlalchemy.models.settings import DbSetting
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+
         from pytz import UTC
         from aiida.utils import timezone
         from sqlalchemy.exc import IntegrityError
@@ -173,39 +175,39 @@ class TestNodeBasicSQLA(AiidaTestCase):
         self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)
 
         try:
-            aiida.backends.sqlalchemy.session.begin_nested()
+            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
             with self.assertRaises(ValueError):
                 load_node(node_id=a.pk, pk=a.pk)
         finally:
-            aiida.backends.sqlalchemy.session.rollback()
+            aiida.backends.sqlalchemy.get_scoped_session().rollback()
 
         try:
-            aiida.backends.sqlalchemy.session.begin_nested()
+            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
             with self.assertRaises(ValueError):
                 load_node(pk=a.pk, uuid=a.uuid)
         finally:
-            aiida.backends.sqlalchemy.session.rollback()
+            aiida.backends.sqlalchemy.get_scoped_session().rollback()
 
         try:
-            aiida.backends.sqlalchemy.session.begin_nested()
+            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
             with self.assertRaises(ValueError):
                 load_node(pk=a.uuid)
         finally:
-            aiida.backends.sqlalchemy.session.rollback()
+            aiida.backends.sqlalchemy.get_scoped_session().rollback()
 
         try:
-            aiida.backends.sqlalchemy.session.begin_nested()
+            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
             with self.assertRaises(ValueError):
                 load_node(uuid=a.pk)
         finally:
-            aiida.backends.sqlalchemy.session.rollback()
+            aiida.backends.sqlalchemy.get_scoped_session().rollback()
 
         try:
-            aiida.backends.sqlalchemy.session.begin_nested()
+            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
             with self.assertRaises(ValueError):
                 load_node()
         finally:
-            aiida.backends.sqlalchemy.session.rollback()
+            aiida.backends.sqlalchemy.get_scoped_session().rollback()
 
     def test_multiple_node_creation(self):
         """
@@ -226,16 +228,16 @@ class TestNodeBasicSQLA(AiidaTestCase):
         DbNode(user=user, uuid=node_uuid, type=None)
 
         # Query the session before commit
-        res = aiida.backends.sqlalchemy.session.query(DbNode.uuid).filter(
+        res = aiida.backends.sqlalchemy.get_scoped_session().query(DbNode.uuid).filter(
             DbNode.uuid == node_uuid).all()
         self.assertEqual(len(res), 0, "There should not be any nodes with this"
                                       "UUID in the session/DB.")
 
         # Commit the transaction
-        aiida.backends.sqlalchemy.session.commit()
+        aiida.backends.sqlalchemy.get_scoped_session().commit()
 
         # Check again that the node is not in the DB
-        res = aiida.backends.sqlalchemy.session.query(DbNode.uuid).filter(
+        res = aiida.backends.sqlalchemy.get_scoped_session().query(DbNode.uuid).filter(
             DbNode.uuid == node_uuid).all()
         self.assertEqual(len(res), 0, "There should not be any nodes with this"
                                       "UUID in the session/DB.")
@@ -245,20 +247,20 @@ class TestNodeBasicSQLA(AiidaTestCase):
         # Create a new node but now add it to the session
         node_uuid = get_new_uuid()
         node = DbNode(user=user, uuid=node_uuid, type=None)
-        aiida.backends.sqlalchemy.session.add(node)
+        aiida.backends.sqlalchemy.get_scoped_session().add(node)
 
         # Query the session before commit
-        res = aiida.backends.sqlalchemy.session.query(DbNode.uuid).filter(
+        res = aiida.backends.sqlalchemy.get_scoped_session().query(DbNode.uuid).filter(
             DbNode.uuid == node_uuid).all()
         self.assertEqual(len(res), 1,
                          "There should be a node in the session/DB with the "
                          "UUID {}".format(node_uuid))
 
         # Commit the transaction
-        aiida.backends.sqlalchemy.session.commit()
+        aiida.backends.sqlalchemy.get_scoped_session().commit()
 
         # Check again that the node is in the db
-        res = aiida.backends.sqlalchemy.session.query(DbNode.uuid).filter(
+        res = aiida.backends.sqlalchemy.get_scoped_session().query(DbNode.uuid).filter(
             DbNode.uuid == node_uuid).all()
         self.assertEqual(len(res), 1,
                          "There should be a node in the session/DB with the "

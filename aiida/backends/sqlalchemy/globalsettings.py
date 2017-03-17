@@ -21,7 +21,7 @@ def get_session():
     Return the global session for SQLA
     """
     import aiida.backends.sqlalchemy
-    return aiida.backends.sqlalchemy.session
+    return aiida.backends.sqlalchemy.get_scoped_session()
 
 def set_global_setting(key, value, description=None):
     """

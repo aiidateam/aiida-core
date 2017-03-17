@@ -205,8 +205,8 @@ class Workflow(AbstractWorkflow):
         # I use self._dbnode because this will not do a query to update the node; here I only
         # need to get its pk
         self.dbworkflowinstance.nodeversion = DbWorkflow.nodeversion + 1
-        sa.session.add(self.dbworkflowinstance)
-        sa.session.commit()
+        sa.get_scoped_session().add(self.dbworkflowinstance)
+        sa.get_scoped_session().commit()
 
     @classmethod
     def query(cls, *args, **kwargs):
@@ -529,10 +529,10 @@ class Workflow(AbstractWorkflow):
     def get_subclass_from_pk(cls, pk):
         import aiida.backends.sqlalchemy
         try:
-            aiida.backends.sqlalchemy.session.begin_nested()
+            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
             dbworkflowinstance = DbWorkflow.query.filter_by(id=pk).first()
         except:
-            aiida.backends.sqlalchemy.session.rollback()
+            aiida.backends.sqlalchemy.get_scoped_session().rollback()
             raise
 
         if not dbworkflowinstance:
@@ -545,10 +545,10 @@ class Workflow(AbstractWorkflow):
     def get_subclass_from_uuid(cls, uuid):
         import aiida.backends.sqlalchemy
         try:
-            aiida.backends.sqlalchemy.session.begin_nested()
+            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
             dbworkflowinstance = DbWorkflow.query.filter_by(uuid=uuid).first()
         except:
-            aiida.backends.sqlalchemy.session.rollback()
+            aiida.backends.sqlalchemy.get_scoped_session().rollback()
             raise
 
         if not dbworkflowinstance:

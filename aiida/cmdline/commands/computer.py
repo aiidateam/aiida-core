@@ -535,7 +535,8 @@ class Computer(VerdiCommandWithSubcommands):
 
         elif BACKEND == BACKEND_SQLA:
             from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-            from aiida.backends.sqlalchemy import session
+            from aiida.backends.sqlalchemy import get_scoped_session
+            session = get_scoped_session()
 
             authinfo = session.query(DbAuthInfo).filter(
                 DbAuthInfo.dbcomputer == computer.dbcomputer

@@ -7,7 +7,7 @@ from aiida.orm import DataFactory
 ParameterData = DataFactory('parameter')
 
 codename = 'doubler@torquessh'
-timeout_secs = 10*60 # 10 minutes
+timeout_secs = 4*60 # 4 minutes
 num_jobs = 30 # Num jobs to submit
 
 def print_daemon_log():

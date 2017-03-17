@@ -42,7 +42,7 @@ install_requires = [
     'tabulate==0.7.5',
     'ete3==3.0.0b35',
     'uritools==1.0.2',
-    'psycopg2==2.6.1',
+    'psycopg2==2.7.1',
     # Requirements for ssh transport
     'paramiko==1.15.2',
     'ecdsa==0.13',

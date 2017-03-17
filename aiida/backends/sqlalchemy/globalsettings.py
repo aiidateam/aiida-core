@@ -13,15 +13,16 @@ table.
 """
 
 from aiida.backends.sqlalchemy.models.settings import DbSetting
+from aiida.backends.sqlalchemy.utils import get_session
 from sqlalchemy.orm.exc import NoResultFound
 
 
-def get_session():
-    """
-    Return the global session for SQLA
-    """
-    import aiida.backends.sqlalchemy
-    return aiida.backends.sqlalchemy.session
+#def get_session():
+#    """
+#    Return the global session for SQLA
+#    """
+#    import aiida.backends.sqlalchemy
+#    return aiida.backends.sqlalchemy.session
 
 def set_global_setting(key, value, description=None):
     """

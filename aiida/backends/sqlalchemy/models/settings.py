@@ -14,7 +14,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.types import Integer, String, DateTime
 
-import aiida.backends.sqlalchemy as sa
+from aiida.backends.sqlalchemy.utils import get_session as get_new_session
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.utils import timezone
 
@@ -41,7 +41,7 @@ class DbSetting(Base):
                   subspecifier_value=None, other_attribs={},
                   stop_if_existing=False):
 
-        setting = sa.session.query(DbSetting).filter_by(key=key).first()
+        setting = get_new_session().query(DbSetting).filter_by(key=key).first()
         if setting is not None:
             if stop_if_existing:
                 return
@@ -71,7 +71,7 @@ class DbSetting(Base):
 
     @classmethod
     def del_value(cls, key, only_children=False, subspecifier_value=None):
-        setting = sa.session.query(DbSetting).filter(key=key)
+        setting = get_new_session().query(DbSetting).filter(key=key)
         setting.val = None
         setting.time = timezone.datetime.utcnow()
         flag_modified(setting, "val")

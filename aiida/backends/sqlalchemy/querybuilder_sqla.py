@@ -10,6 +10,7 @@
 
 from datetime import datetime
 import aiida.backends.sqlalchemy
+from aiida.backends.sqlalchemy.utils import get_session as get_new_session
 
 from sqlalchemy import and_, or_, not_
 from sqlalchemy.types import Integer, Float, Boolean, DateTime
@@ -91,6 +92,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         #~ self.AiidaGroup         = AiidaGroup
         #~ self.AiidaComputer      = AiidaComputer
         #~ self.AiidaUser          = AiidaUser
+        self._this_session = get_new_session()
         super(QueryBuilderImplSQLA, self).__init__(*args, **kwargs)
 
 
@@ -149,7 +151,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         self.Path = DbPath
 
     def get_session(self):
-        return aiida.backends.sqlalchemy.session
+        return self._this_session
 
     def modify_expansions(self, alias, expansions):
         """

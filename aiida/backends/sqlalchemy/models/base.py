@@ -14,6 +14,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.exc import UnmappedClassError
 
 import aiida.backends.sqlalchemy
+from aiida.backends.sqlalchemy.utils import get_session as get_new_session
 from aiida.common.exceptions import InvalidOperation
 
 # Taken from
@@ -31,18 +32,24 @@ class _QueryProperty(object):
         try:
             mapper = orm.class_mapper(_type)
             if mapper:
+                # return self.query_class(
+                #     mapper, session=aiida.backends.sqlalchemy.session)
                 return self.query_class(
-                    mapper, session=aiida.backends.sqlalchemy.session)
+                    mapper, session=get_new_session())
         except UnmappedClassError:
             return None
 
 
+
+# class _SessionProperty(object):
+#     def __get__(self, obj, _type):
+#         if not aiida.backends.sqlalchemy.session:
+#             raise InvalidOperation("You need to call load_dbenv before "
+#                                    "accessing the session of SQLALchemy.")
+#         return aiida.backends.sqlalchemy.session
 class _SessionProperty(object):
     def __get__(self, obj, _type):
-        if not aiida.backends.sqlalchemy.session:
-            raise InvalidOperation("You need to call load_dbenv before "
-                                   "accessing the session of SQLALchemy.")
-        return aiida.backends.sqlalchemy.session
+        return get_new_session()
 
 
 class _AiidaQuery(orm.Query):

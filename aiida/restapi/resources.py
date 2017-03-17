@@ -245,16 +245,27 @@ class StructureData(Data):
     def __init__(self, **kwargs):
         super(StructureData, self).__init__(**kwargs)
 
-        from aiida.restapi.translators.data.structure import StructureDataTransaltor
-        self.trans = StructureDataTransaltor(**kwargs)
+        from aiida.restapi.translator.data.structure import \
+            StructureDataTranslator
+        self.trans = StructureDataTranslator(**kwargs)
         from aiida.orm.data.structure import StructureData as StructureDataTclass
-        self.tclass = StructureDataTClass
+        self.tclass = StructureDataTclass
 
 class KpointsData(Data):
     def __init__(self, **kwargs):
         super(KpointsData, self).__init__(**kwargs)
 
-        from aiida.restapi.translators.data.kpoints import KpointsDataTransaltor
-        self.trans = KpointsDataTransaltor(**kwargs)
+        from aiida.restapi.translator.data.kpoints import KpointsDataTranslator
+        self.trans = KpointsDataTranslator(**kwargs)
         from aiida.orm.data.array.kpoints import KpointsData as KpointsDataTclass
-        self.tclass = KpointsDataTClass
+        self.tclass = KpointsDataTclass
+
+class BandsData(Data):
+    def __init__(self, **kwargs):
+        super(BandsData, self).__init__(**kwargs)
+
+        from aiida.restapi.translator.data.bands import \
+            BandsDataTranslator
+        self.trans = BandsDataTranslator(**kwargs)
+        from aiida.orm.data.array.bands import BandsData as BandsDataTclass
+        self.tclass = BandsDataTclass

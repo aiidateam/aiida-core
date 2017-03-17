@@ -340,6 +340,7 @@ class BaseTranslator(object):
 
         :param filters: dictionary with the filters
         :param orders: dictionary with the order for each tag
+        :param orders: dictionary with the projections
         :param pk (integer): pk of a specific node
         """
 

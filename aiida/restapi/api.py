@@ -8,6 +8,7 @@ Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 from flask import Flask, jsonify
 from flask_restful import Api
 
+
 # TODo Transform the app into aa class to be instantiated by the runner
 
 class App(Flask):
@@ -23,33 +24,37 @@ class App(Flask):
         # Basic initialization
         super(App, self).__init__(*args, **kwargs)
 
-
         # Decide whether or not to catch the internal server exceptions (
         # default is True)
         catch_internal_server = True
 
-        # if 'catch_internal_server' in kwargs and kwargs[
-        #     'catch_internal_server'] == False:
-        #     catch_internal_server = False
-        #
+        if 'catch_internal_server' in kwargs and kwargs[
+            'catch_internal_server'] == False:
+            catch_internal_server = False
+
         # if catch_internal_server:
-        #     # Error handler
+        #
         #     @self.errorhandler(Exception)
         #     def error_handler(error):
+        #
         #         if isinstance(error, RestValidationError):
         #             response = jsonify({'message': error.message})
         #             response.status_code = 400
+        #
         #         elif isinstance(error, RestInputValidationError):
         #             response = jsonify({'message': error.message})
         #             response.status_code = 400
+        #
         #         # Generic server-side error (not to make the api crash if an
         #         # unhandled exception is raised. Caution is never enough!!)
         #         else:
-        #             response = jsonify({
-        #                 'message': 'Internal server error. The original '
-        #                            'message was: \"{}\"'.format(
-        #                     error.message)
-        #             })
+        #             response = jsonify(
+        #                 {
+        #                     'message': 'Internal server error. The original '
+        #                                'message was: \"{}\"'.format(
+        #                         error.message)
+        #                 }
+        #             )
         #             response.status_code = 500
         #
         #         return response
@@ -75,7 +80,7 @@ class AiidaApi(Api):
         """
 
         from aiida.restapi.resources import Calculation, Computer, Code, Data, \
-            Group, Node, User, StructureData, KpointsData
+            Group, Node, User, StructureData, KpointsData, BandsData
 
         super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'])
 
@@ -144,6 +149,7 @@ class AiidaApi(Api):
                           '/data/<int:pk>/io/tree/',
                           '/data/<int:pk>/content/attributes/',
                           '/data/<int:pk>/content/extras/',
+                          '/data/<int:pk>/content/visualization/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
@@ -163,6 +169,7 @@ class AiidaApi(Api):
                           '/codes/<int:pk>/io/tree/',
                           '/codes/<int:pk>/content/attributes/',
                           '/codes/<int:pk>/content/extras/',
+                          '/codes/<int:pk>/content/visualization/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
@@ -182,28 +189,49 @@ class AiidaApi(Api):
                           '/structures/<int:pk>/io/tree/',
                           '/structures/<int:pk>/content/attributes/',
                           '/structures/<int:pk>/content/extras/',
+                          '/structures/<int:pk>/content/visualization/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs
                           )
 
-
-        #TODO add complete list of endpoints
         self.add_resource(KpointsData,
-                          '/structures/',
-                          '/structures/schema/',
-                          '/structures/statistics/',
-                          '/structures/page/',
-                          '/structures/page/<int:page>',
-                          '/structures/<int:pk>/',
-                          '/structures/<int:pk>/io/inputs/',
-                          '/structures/<int:pk>/io/inputs/page/',
-                          '/structures/<int:pk>/io/inputs/page/<int:page>/',
-                          '/structures/<int:pk>/io/outputs/',
-                          '/structures/<int:pk>/io/outputs/page/',
-                          '/structures/<int:pk>/io/outputs/page/<int:page>/',
-                          '/structures/<int:pk>/io/tree/',
-                          '/structures/<int:pk>/content/attributes/',
-                          '/structures/<int:pk>/content/extras/',
+                          '/kpoints/',
+                          '/kpoints/schema/',
+                          '/kpoints/statistics/',
+                          '/kpoints/page/',
+                          '/kpoints/page/<int:page>',
+                          '/kpoints/<int:pk>/',
+                          '/kpoints/<int:pk>/io/inputs/',
+                          '/kpoints/<int:pk>/io/inputs/page/',
+                          '/kpoints/<int:pk>/io/inputs/page/<int:page>/',
+                          '/kpoints/<int:pk>/io/outputs/',
+                          '/kpoints/<int:pk>/io/outputs/page/',
+                          '/kpoints/<int:pk>/io/outputs/page/<int:page>/',
+                          '/kpoints/<int:pk>/io/tree/',
+                          '/kpoints/<int:pk>/content/attributes/',
+                          '/kpoints/<int:pk>/content/extras/',
+                          '/kpoints/<int:pk>/content/visualization/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
+
+        self.add_resource(BandsData,
+                          '/bands/',
+                          '/bands/schema/',
+                          '/bands/statistics/',
+                          '/bands/page/',
+                          '/bands/page/<int:page>',
+                          '/bands/<int:pk>/',
+                          '/bands/<int:pk>/io/inputs/',
+                          '/bands/<int:pk>/io/inputs/page/',
+                          '/bands/<int:pk>/io/inputs/page/<int:page>/',
+                          '/bands/<int:pk>/io/outputs/',
+                          '/bands/<int:pk>/io/outputs/page/',
+                          '/bands/<int:pk>/io/outputs/page/<int:page>/',
+                          '/bands/<int:pk>/io/tree/',
+                          '/bands/<int:pk>/content/attributes/',
+                          '/bands/<int:pk>/content/extras/',
+                          '/bands/<int:pk>/content/visualization/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs
                           )

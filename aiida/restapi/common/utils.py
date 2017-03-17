@@ -157,7 +157,7 @@ class Utils(object):
         # Node_pk
         try:
             pk = int(path[0])
-            foo = path.pop(0)
+            path.pop(0)
         except ValueError:
             pass
         if not path:
@@ -180,14 +180,13 @@ class Utils(object):
             else:
                 return (resource_type, page, pk, query_type)
         elif path[0] == "io" or path[0] == "content":
-            foo = path.pop(0)
+            path.pop(0)
             query_type = path.pop(0)
             if not path:
                 return (resource_type, page, pk, query_type)
         # Page (this has to be in any case the last field)
         if path[0] == "page":
-            do_paginate = True
-            foo = path.pop(0)
+            path.pop(0)
             if not path:
                 page = 1
                 return (resource_type, page, pk, query_type)

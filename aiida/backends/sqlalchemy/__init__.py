@@ -12,14 +12,14 @@
 
 raw_session = None
 
-def _generate_thread_safe_session():
+def get_scoped_session():
     from sqlalchemy.orm import scoped_session
 
     if raw_session is None:
-        return None
+        s = None
     else:
         ScopedSession  = scoped_session(raw_session)
-        return ScopedSession()
+        s = ScopedSession()
 
-session = property(_generate_thread_safe_session)
+    return s
 

@@ -115,7 +115,7 @@ def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
 
     if not connection:
         engine = get_engine(config)
-        sqlalchemy.session = get_session(engine=engine)
+        sqlalchemy.raw_session = get_session(engine=engine)
     else:
         Session = sessionmaker()
         #sqlalchemy.session = Session(bind=connection)

@@ -118,7 +118,8 @@ def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
         sqlalchemy.session = get_session(engine=engine)
     else:
         Session = sessionmaker()
-        sqlalchemy.session = Session(bind=connection)
+        #sqlalchemy.session = Session(bind=connection)
+        sqlalchemy.raw_session = Session(bind=connection)
 
 _aiida_autouser_cache = None
 

@@ -22,3 +22,6 @@ class BandsDataTranslator(DataTranslator):
         """
         super(BandsDataTranslator, self).__init__(Class=self.__class__,
                                                   **kwargs)
+
+
+    def

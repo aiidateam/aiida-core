@@ -86,7 +86,7 @@ class NodeTranslator(BaseTranslator):
                 })
 
     def set_query(self, filters=None, orders=None, projections=None,
-                  query_type=None, pk=None, alist=None, nalist=None,
+                  query_type=None, id=None, alist=None, nalist=None,
                   elist=None, nelist=None):
         """
         Adds filters, default projections, order specs to the query_help,
@@ -98,13 +98,13 @@ class NodeTranslator(BaseTranslator):
         if query_type=='attributes'/'extras'
         :param query_type: (string) specify the result or the content (
         "attr")
-        :param pk: (integer) pk of a specific node
+        :param id: (integer) id of a specific node
         """
 
-        ## Check the compatibility of query_type and pk
-        if query_type is not "default" and pk is None:
+        ## Check the compatibility of query_type and id
+        if query_type is not "default" and id is None:
             raise ValidationError("non default result/content can only be "
-                                  "applied to a specific pk")
+                                  "applied to a specific node (specify an id)")
 
         ## Set the type of query
         self.set_query_type(query_type, alist=alist, nalist=nalist,
@@ -127,7 +127,7 @@ class NodeTranslator(BaseTranslator):
         super(NodeTranslator, self).set_query(filters=filters,
                                               orders=orders,
                                               projections=projections,
-                                              pk=pk)
+                                              id=id)
 
     def _get_content(self):
         """

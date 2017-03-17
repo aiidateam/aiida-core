@@ -24,4 +24,18 @@ class BandsDataTranslator(DataTranslator):
                                                   **kwargs)
 
 
-    def
+    def get_visualization_data(self, node):
+        """
+
+        Returns: data in a format required by dr.js to visualize a 2D plot
+        with multiple data series.
+
+        """
+
+        import numpy as np
+
+
+
+
+        return json_content
+

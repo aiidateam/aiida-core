@@ -137,31 +137,46 @@ class Utils(object):
         :param path_string: the path string
         :return:resource_type (string)
                 page (integer)
-                pk (integer)
+                id (integer or uuid)
                 result_type (string))
         """
+        import uuid
 
         ## Initialization
         page = None
-        pk = None
+        id = None
         query_type = "default"
         path = self.split_path(self.strip_prefix(path_string))
 
         ## Pop out iteratively the "words" of the path until it is an empty
         # list.
         ##  This way it should be easier to plug in more endpoint logic
+
         # Resource type
         resource_type = path.pop(0)
         if not path:
-            return (resource_type, page, pk, query_type)
-        # Node_pk
+            return (resource_type, page, id, query_type)
+
+        # Node id
+        raw_id = path[0]
         try:
-            pk = int(path[0])
-            path.pop(0)
+            id = int(raw_id)
         except ValueError:
-            pass
+            try:
+                id = uuid.UUID(raw_id, version=4)
+            except ValueError:
+                # assume that it cannot be an id and go to the next check
+                pass
+            else:
+                # It is an id so pop out the path element
+                path.pop(0)
+        else:
+            # It is an id so pop out the path element
+            path.pop(0)
+
         if not path:
-            return (resource_type, page, pk, query_type)
+            return (resource_type, page, id, query_type)
+
         # Result type (input, output, attributes, extras, schema)
         if path[0] == 'schema':
             query_type = path.pop(0)
@@ -170,7 +185,7 @@ class Utils(object):
                     "url requesting schema resources do not "
                     "admit further fields")
             else:
-                return (resource_type, page, pk, query_type)
+                return (resource_type, page, id, query_type)
         elif path[0] == 'statistics':
             query_type = path.pop(0)
             if path:
@@ -178,21 +193,22 @@ class Utils(object):
                     "url requesting statistics resources do not "
                     "admit further fields")
             else:
-                return (resource_type, page, pk, query_type)
+                return (resource_type, page, id, query_type)
         elif path[0] == "io" or path[0] == "content":
             path.pop(0)
             query_type = path.pop(0)
             if not path:
-                return (resource_type, page, pk, query_type)
+                return (resource_type, page, id, query_type)
+
         # Page (this has to be in any case the last field)
         if path[0] == "page":
             path.pop(0)
             if not path:
                 page = 1
-                return (resource_type, page, pk, query_type)
+                return (resource_type, page, id, query_type)
             else:
                 page = int(path.pop(0))
-                return (resource_type, page, pk, query_type)
+                return (resource_type, page, id, query_type)
 
     def validate_request(self, limit=None, offset=None, perpage=None, page=None,
                          query_type=None, is_querystring_defined=False):

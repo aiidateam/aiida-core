@@ -67,8 +67,7 @@ def get_engine(config):
 
     engine = create_engine(engine_url,
                            json_serializer=dumps_json,
-                           json_deserializer=loads_json,
-                           strategy='threadlocal')
+                           json_deserializer=loads_json)
     register_after_fork(engine, engine.dispose)
 
     return engine

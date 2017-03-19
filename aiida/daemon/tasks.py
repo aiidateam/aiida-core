@@ -14,9 +14,16 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from celery import Celery
 from celery.task import periodic_task
 
+import os
+
+from aiida.backends import settings
+from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+from aiida.common.setup import AIIDA_CONFIG_FOLDER, DAEMON_SUBDIR
 
 if not is_dbenv_loaded():
     load_dbenv(process="daemon")
+
+print "THE BACKEND:", settings.BACKEND
 
 from aiida.common.setup import get_profile_config
 from aiida.common.exceptions import ConfigurationError
@@ -38,18 +45,12 @@ engine = config["AIIDADB_ENGINE"]
 # since now it is decoupled from a backend
 # one would simply substitute the broker with whatever the user wants...
 
-if engine == "sqlite3":
-    broker = (
-        "sqla+sqlite:///{AIIDADB_NAME}"
-    ).format(**config)
-elif engine.startswith("postgre"):
-    broker = (
-        "sqla+postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-        "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-    ).format(**config)
-else:
-    raise ConfigurationError("Unknown DB engine: {}".format(
-        engine))
+if not engine.startswith("postgre"):
+    raise ConfigurationError("Only PostgreSQL is currently supported as database engine, you have {}".format(engine))
+broker = (
+    "sqla+postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+    "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+).format(**config)
 
 app = Celery('tasks', broker=broker)
 
@@ -65,6 +66,12 @@ app = Celery('tasks', broker=broker)
 def submitter():
     from aiida.daemon.execmanager import submit_jobs
     print "aiida.daemon.tasks.submitter:  Checking for calculations to submit"
+
+    if settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy import get_scoped_session
+        s = get_scoped_session()
+        print 'submitter [SQLA]:', s.hash_key, s, s.connection(), s.bind, id(s.bind)
+
     set_daemon_timestamp(task_name='submitter', when='start')
     submit_jobs()
     set_daemon_timestamp(task_name='submitter', when='stop')
@@ -77,6 +84,13 @@ def submitter():
 )
 def updater():
     from aiida.daemon.execmanager import update_jobs
+
+    if settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy import get_scoped_session
+        s = get_scoped_session()
+        print 'updater [SQLA]:', s.hash_key, s, s.connection(), s.bind, id(s.bind)
+
+
     print "aiida.daemon.tasks.update:  Checking for calculations to update"
     set_daemon_timestamp(task_name='updater', when='start')
     update_jobs()
@@ -91,6 +105,12 @@ def updater():
 )
 def retriever():
     from aiida.daemon.execmanager import retrieve_jobs
+
+    if settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy import get_scoped_session
+        s = get_scoped_session()
+        print 'retriever [SQLA]:', s.hash_key, s, s.connection(), s.bind, id(s.bind)
+
     print "aiida.daemon.tasks.retrieve:  Checking for calculations to retrieve"
     set_daemon_timestamp(task_name='retriever', when='start')
     retrieve_jobs()
@@ -115,6 +135,13 @@ def tick_work():
                )
 def workflow_stepper(): # daemon for legacy workflow 
     from aiida.daemon.workflowmanager import execute_steps
+
+    if settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy import get_scoped_session
+        s = get_scoped_session()
+        print 'submitter [SQLA]:', s.hash_key, s, s.connection(), s.bind, id(s.bind)
+
+
     print "aiida.daemon.tasks.workflowmanager:  Checking for workflows to manage"
     # RUDIMENTARY way to check if this task is already running (to avoid acting
     # again and again on the same workflow steps)

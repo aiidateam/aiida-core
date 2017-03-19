@@ -33,7 +33,7 @@ from sqlalchemy.orm import sessionmaker
 from aiida.common.exceptions import InvalidOperation, ConfigurationError
 from aiida.common.setup import (get_profile_config, DEFAULT_USER_CONFIG_FIELD)
 
-from aiida.backends import sqlalchemy, settings
+from aiida.backends import sqlalchemy as sa, settings
 
 from aiida.backends.profile import (is_profile_loaded,
                                     load_profile)
@@ -43,7 +43,7 @@ from aiida.backends.profile import (is_profile_loaded,
 #     """
 #     Return if the environment has already been loaded or not.
 #     """
-#     return sqlalchemy.get_scoped_session() is not None
+#     return sa.get_scoped_session() is not None
 
 def get_sessionfactory(engine=None, expire_on_commit=True):
     """
@@ -56,6 +56,14 @@ def get_sessionfactory(engine=None, expire_on_commit=True):
 
     return Session
 
+def recreate_after_fork(engine):
+    """
+    Callback called after a fork. Not only disposes the engine, but also recreates a new scoped session
+    to use independent sessions in the forked process.
+    """
+    from sqlalchemy.orm import scoped_session
+    engine.dispose()
+    sa.scopedsessionclass = scoped_session(get_sessionfactory(engine=engine))
 
 def get_engine(config):
     from multiprocessing.util import register_after_fork
@@ -68,7 +76,7 @@ def get_engine(config):
     engine = create_engine(engine_url,
                            json_serializer=dumps_json,
                            json_deserializer=loads_json)
-    register_after_fork(engine, engine.dispose)
+    register_after_fork(engine, recreate_after_fork)
 
     return engine
 
@@ -94,7 +102,7 @@ def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
     from sqlalchemy.orm import scoped_session
     config = get_profile_config(settings.AIIDADB_PROFILE)
     engine = get_engine(config)
-    sqlalchemy.scopedsessionclass = scoped_session(get_sessionfactory(engine=engine))
+    sa.scopedsessionclass = scoped_session(get_sessionfactory(engine=engine))
 
 _aiida_autouser_cache = None
 
@@ -420,7 +428,7 @@ def check_schema_version():
         get_db_schema_version, set_db_schema_version,get_current_profile)
 
     # Do not do anything if the table does not exist yet
-    inspector = reflection.Inspector.from_engine(sqlalchemy.get_scoped_session().bind)
+    inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
     if 'db_dbsetting' not in inspector.get_table_names():
         return
 

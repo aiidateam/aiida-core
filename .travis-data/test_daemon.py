@@ -95,10 +95,10 @@ while time.time() - start_time < timeout_secs:
     print "#"*78
     print "####### TIME ELAPSED: {} s".format(time.time() - start_time)
     print "#"*78
-    print "Output of 'verdi calculation list':"
+    print "Output of 'verdi calculation list -a':"
     try:
         print subprocess.check_output(
-            ["verdi", "calculation", "list"], 
+            ["verdi", "calculation", "list", "-a"], 
             stderr=subprocess.STDOUT,
         )
     except subprocess.CalledProcessError as e:

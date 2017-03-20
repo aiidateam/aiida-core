@@ -32,10 +32,19 @@ class BandsDataTranslator(DataTranslator):
 
         """
 
-        import numpy as np
 
+        """
+        Strategy: I take advantage of the export functionality of BandsData
+        objects. The raw export has to be filtered for string escape characters.
+        this is done by decoding the string returned by node._exportstring.
 
+        TODO: modify the function exportstring (or add another function in
+        BandsData) so that it returns a python object rather than a string.
+        """
 
+        import ujson as uj
+        json_string = node._exportstring('json', comments=False)
+        json_content = uj.decode(json_string)
 
         return json_content
 

@@ -215,6 +215,61 @@ class NodeTranslator(BaseTranslator):
 
         return data
 
+    def import_submodules(self, package, parent_class=object, recursive=True):
+        """ Import all submodules of a module, recursively, including
+        subpackages
+
+        :param package: package (name or actual module)
+        :type package: str | module
+        :rtype: dict[str, types.ModuleType]
+        """
+
+        # TODO, ideally thids function should be moved into the resource
+        # definition (loaded once for all)
+
+
+        import pkgutil
+        import importlib
+        import imp
+        import inspect
+        import os
+
+        # If a class is passed, look for the package where the class is
+        # contained
+        if inspect.isclass(package):
+            classfile = inspect.getfile(package)
+            path = os.path.dirname(classfile)
+            package = imp.load_source(path, path)
+            basename = package.__name__
+
+
+            print 'classfile: ', classfile
+            print 'path', path
+            print 'package', package
+            print 'basename', basename
+
+        else:
+        # If it is aloready a [ackage take the relevant infos
+            path = package.__path__
+            basename = package.__name__
+
+        # Recursively checking the subpackages
+        results = {}
+
+        for loader, name, is_pkg in pkgutil.walk_packages(path):
+
+            full_name = package.__name__ + '.' + name
+            app_module = importlib.import_module(full_name)
+
+            for name, obj in inspect.getmembers(app_module):
+                if inspect.isclass(obj) and issubclass(obj, parent_class):
+                    results[name] = obj
+            if recursive and is_pkg:
+                results.update(self.import_submodules(full_name))
+        return results
+
+
+
     def get_visualization_data(self, node):
         """
         Generic function to get the data required to visualize the node with
@@ -226,7 +281,26 @@ class NodeTranslator(BaseTranslator):
         :param node: node object that has to be visualized
         :returns: data selected and serializaed for visualization
         """
-        pass
+
+        """
+        If this method is called by Node resource it will look for the type
+        of object and invoke the correct method in the lowest-compatibel
+        subclass
+        """
+
+        # Look for the translator associated to class of which node is instance
+        tclass = type(node)
+
+        print self.__class__
+        node_trans_subcls = self.import_submodules(self.__class__)
+
+        for subclass in node_trans_subcls.values():
+            if subclass._aiida_type.split('.')[-1] == tclass.__name__:
+                lowtrans = subclass
+
+        # Invoke the get_visualization function connected to that node
+        return lowtrans.get_visualization_data(self, node)
+
 
     def get_results(self):
         """

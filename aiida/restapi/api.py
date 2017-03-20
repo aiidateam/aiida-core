@@ -32,35 +32,35 @@ class App(Flask):
             'catch_internal_server'] == False:
             catch_internal_server = False
 
-        if catch_internal_server:
-
-            @self.errorhandler(Exception)
-            def error_handler(error):
-
-                if isinstance(error, RestValidationError):
-                    response = jsonify({'message': error.message})
-                    response.status_code = 400
-
-                elif isinstance(error, RestInputValidationError):
-                    response = jsonify({'message': error.message})
-                    response.status_code = 400
-
-                # Generic server-side error (not to make the api crash if an
-                # unhandled exception is raised. Caution is never enough!!)
-                else:
-                    response = jsonify(
-                        {
-                            'message': 'Internal server error. The original '
-                                       'message was: \"{}\"'.format(
-                                error.message)
-                        }
-                    )
-                    response.status_code = 500
-
-                return response
-
-        else:
-            pass
+        # if catch_internal_server:
+        #
+        #     @self.errorhandler(Exception)
+        #     def error_handler(error):
+        #
+        #         if isinstance(error, RestValidationError):
+        #             response = jsonify({'message': error.message})
+        #             response.status_code = 400
+        #
+        #         elif isinstance(error, RestInputValidationError):
+        #             response = jsonify({'message': error.message})
+        #             response.status_code = 400
+        #
+        #         # Generic server-side error (not to make the api crash if an
+        #         # unhandled exception is raised. Caution is never enough!!)
+        #         else:
+        #             response = jsonify(
+        #                 {
+        #                     'message': 'Internal server error. The original '
+        #                                'message was: \"{}\"'.format(
+        #                         error.message)
+        #                 }
+        #             )
+        #             response.status_code = 500
+        #
+        #         return response
+        #
+        # else:
+        #     pass
 
 
 class AiidaApi(Api):
@@ -111,6 +111,7 @@ class AiidaApi(Api):
                           '/nodes/<id>/io/tree/',
                           '/nodes/<id>/content/attributes/',
                           '/nodes/<id>/content/extras/',
+                          '/nodes/<id>/content/visualization/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 

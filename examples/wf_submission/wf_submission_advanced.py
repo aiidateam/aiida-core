@@ -22,11 +22,14 @@ def launch_ws():
     """
 
     import aiida.orm.workflow as wf
-    from aiida.workflows import wf_demo
+    from aiida.workflows import wf_demo_spyros
     from aiida.common.datastructures import wf_states
 
     params = {}
     params['nmachine'] = 2
 
-    w = wf_demo.SubWorkflowDemo()
+    w = wf_demo_spyros.SubWorkflowDemo()
     w.start()
+
+if __name__ == '__main__':
+    launch_ws()

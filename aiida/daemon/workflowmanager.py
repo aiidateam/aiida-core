@@ -104,6 +104,22 @@ def advance_workflow(w, step):
     :return: True if the step has been executed, False otherwise
     """
 
+    logger.info("-------------> w {}".format(w.__class__.__name__))
+    logger.info("-------------> w.state {}".format(w.dbworkflowinstance.state))
+    logger.info("-------------> w.is_subworkflow() {}".format(w.dbworkflowinstance.is_subworkflow()))
+    if(w.dbworkflowinstance.is_subworkflow()):
+        logger.info("-------------> w.parent {}".format(w.dbworkflowinstance.parent_workflow_step.get().parent))
+        logger.info("-------------> w.parent.state {}".format(
+            w.dbworkflowinstance.parent_workflow_step.get().parent.state))
+
+        if w.dbworkflowinstance.parent_workflow_step.get().parent.state is wf_states.FINISHED:
+            w.set_state(wf_states.FINISHED)
+            return False
+
+    logger.info("-------------> step {}".format(step.__class__.__name__))
+
+
+
     from aiida.orm.workflow import Workflow
 
     if step.nextcall == wf_exit_call:

@@ -9,6 +9,7 @@
 ###########################################################################
 
 
+engine =  None
 scopedsessionclass = None
 
 def get_scoped_session():

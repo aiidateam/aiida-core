@@ -29,6 +29,7 @@ import re
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import scoped_session
 
 from aiida.common.exceptions import InvalidOperation, ConfigurationError
 from aiida.common.setup import (get_profile_config, DEFAULT_USER_CONFIG_FIELD)
@@ -45,27 +46,16 @@ from aiida.backends.profile import (is_profile_loaded,
 #     """
 #     return sa.get_scoped_session() is not None
 
-def get_sessionfactory(engine=None, expire_on_commit=True):
-    """
-    :param engine: the engine that will be used by the sessionmaker
-    :param expire_on_commit: should the session expire on commits?
-
-    :returns: A sqlalchemy session (connection to DB)
-    """
-    Session = sessionmaker(bind=engine, expire_on_commit=expire_on_commit)
-
-    return Session
-
 def recreate_after_fork(engine):
     """
     Callback called after a fork. Not only disposes the engine, but also recreates a new scoped session
     to use independent sessions in the forked process.
     """
-    from sqlalchemy.orm import scoped_session
-    engine.dispose()
-    sa.scopedsessionclass = scoped_session(get_sessionfactory(engine=engine))
+    sa.engine.dispose()
+    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
+    print "after fork", sa.engine, id(sa.engine), sa.scopedsessionclass
 
-def get_engine(config):
+def reset_session(config):
     from multiprocessing.util import register_after_fork
 
     engine_url = (
@@ -73,12 +63,11 @@ def get_engine(config):
         "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
     ).format(**config)
 
-    engine = create_engine(engine_url,
+    sa.engine = create_engine(engine_url,
                            json_serializer=dumps_json,
                            json_deserializer=loads_json)
-    register_after_fork(engine, recreate_after_fork)
-
-    return engine
+    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
+    register_after_fork(sa.engine, recreate_after_fork)
 
 
 def load_dbenv(process=None, profile=None, connection=None):
@@ -99,10 +88,8 @@ def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
     """
     Load the SQLAlchemy database.
     """
-    from sqlalchemy.orm import scoped_session
     config = get_profile_config(settings.AIIDADB_PROFILE)
-    engine = get_engine(config)
-    sa.scopedsessionclass = scoped_session(get_sessionfactory(engine=engine))
+    reset_session(config)
 
 _aiida_autouser_cache = None
 

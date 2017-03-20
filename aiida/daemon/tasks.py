@@ -70,7 +70,7 @@ def submitter():
     if settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy import get_scoped_session
         s = get_scoped_session()
-        print 'submitter [SQLA]:', s.hash_key, s, s.connection(), s.bind, id(s.bind)
+        print 'submitter [SQLA]:', s.hash_key, s, s.connection(), id(s.connection().engine), s.bind, id(s.bind)
 
     set_daemon_timestamp(task_name='submitter', when='start')
     submit_jobs()
@@ -88,7 +88,7 @@ def updater():
     if settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy import get_scoped_session
         s = get_scoped_session()
-        print 'updater [SQLA]:', s.hash_key, s, s.connection(), s.bind, id(s.bind)
+        print 'updater [SQLA]:', s.hash_key, s, s.connection(), id(s.connection().engine), s.bind, id(s.bind)
 
 
     print "aiida.daemon.tasks.update:  Checking for calculations to update"
@@ -109,7 +109,7 @@ def retriever():
     if settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy import get_scoped_session
         s = get_scoped_session()
-        print 'retriever [SQLA]:', s.hash_key, s, s.connection(), s.bind, id(s.bind)
+        print 'retriever [SQLA]:', s.hash_key, s, s.connection(), id(s.connection().engine), s.bind, id(s.bind)
 
     print "aiida.daemon.tasks.retrieve:  Checking for calculations to retrieve"
     set_daemon_timestamp(task_name='retriever', when='start')
@@ -139,7 +139,7 @@ def workflow_stepper(): # daemon for legacy workflow
     if settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy import get_scoped_session
         s = get_scoped_session()
-        print 'submitter [SQLA]:', s.hash_key, s, s.connection(), s.bind, id(s.bind)
+        print 'submitter [SQLA]:', s.hash_key, s, s.connection(), id(s.connection().engine), s.bind, id(s.bind)
 
 
     print "aiida.daemon.tasks.workflowmanager:  Checking for workflows to manage"

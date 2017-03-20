@@ -177,7 +177,8 @@ class Utils(object):
         if not path:
             return (resource_type, page, id, query_type)
 
-        # Result type (input, output, attributes, extras, schema)
+        # Query type (input, output, attributes, extras, visualization,
+        # schema, statistics)
         if path[0] == 'schema':
             query_type = path.pop(0)
             if path:
@@ -234,10 +235,12 @@ class Utils(object):
             raise RestValidationError("perpage key requires that a page is "
                                       "requested (i.e. the path must contain "
                                       "/page/)")
-        # 4. if resource_type=='schema'
-        if query_type == 'schema' and is_querystring_defined:
+        # 4. No querystring if query type = schema', 'visualization', 'schema'
+        if query_type in ('schema', 'visualization', 'statistics') and \
+                is_querystring_defined:
             raise RestInputValidationError("schema requests do not allow "
                                            "specifying a query string")
+
 
     def paginate(self, page, perpage, total_count):
         """

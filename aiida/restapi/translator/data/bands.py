@@ -24,7 +24,7 @@ class BandsDataTranslator(DataTranslator):
                                                   **kwargs)
 
     @staticmethod
-    def get_visualization_data(self, node):
+    def get_visualization_data(node):
         """
 
         Returns: data in a format required by dr.js to visualize a 2D plot

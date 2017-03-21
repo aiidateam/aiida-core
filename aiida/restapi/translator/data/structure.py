@@ -25,7 +25,7 @@ class StructureDataTranslator(DataTranslator):
 
 
     @staticmethod
-    def get_visualization_data(self, node):
+    def get_visualization_data(node):
         """
 
         Returns: data in a format required by chemdoodle to visualize a

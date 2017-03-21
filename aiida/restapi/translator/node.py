@@ -307,7 +307,7 @@ class NodeTranslator(BaseTranslator):
                 lowtrans = subclass
 
         # Invoke the get_visualization function connected to that node
-        return lowtrans.get_visualization_data(self, node)
+        return lowtrans.get_visualization_data(node)
 
 
     def get_results(self):

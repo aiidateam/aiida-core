@@ -1,18 +1,27 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Functions to manage the global settings stored in the DB (in the DbSettings
 table.
 """
 
-from aiida.backends.sqlalchemy import session
 from aiida.backends.sqlalchemy.models.settings import DbSetting
 from sqlalchemy.orm.exc import NoResultFound
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
+def get_session():
+    """
+    Return the global session for SQLA
+    """
+    import aiida.backends.sqlalchemy
+    return aiida.backends.sqlalchemy.session
 
 def set_global_setting(key, value, description=None):
     """
@@ -30,7 +39,7 @@ def del_global_setting(key):
     :raise KeyError: if the setting does not exist in the DB
     """
     try:
-        setting = session.query(DbSetting).filter_by(key=key).one()
+        setting = get_session().query(DbSetting).filter_by(key=key).one()
         setting.delete()
     except NoResultFound:
         raise KeyError("No global setting with key={}".format(key))
@@ -50,7 +59,7 @@ def get_global_setting(key):
 
     try:
         return get_value_of_sub_field(
-            key, lambda given_key: session.query(DbSetting).filter_by(
+            key, lambda given_key: get_session().query(DbSetting).filter_by(
                 key=given_key).one().getvalue())
     except NoResultFound:
         raise KeyError("No global setting with key={}".format(key))
@@ -66,11 +75,10 @@ def get_global_setting_description(key):
 
     # Check first that the table exists
     table_check_test()
-
     validate_key(key)
 
     try:
-        return (session.query(DbSetting).filter_by(key=key).
+        return (get_session().query(DbSetting).filter_by(key=key).
                 one().get_description())
     except NoResultFound:
         raise KeyError("No global setting with key={}".format(key))
@@ -83,7 +91,7 @@ def table_check_test():
     """
     from sqlalchemy.engine import reflection
     from aiida.backends import sqlalchemy as sa
-    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    inspector = reflection.Inspector.from_engine(get_session().bind)
     if 'db_dbsetting' not in inspector.get_table_names():
         raise KeyError("No table found")
 

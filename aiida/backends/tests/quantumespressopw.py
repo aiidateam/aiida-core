@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Tests for the pw input plugin.
 
@@ -11,7 +19,6 @@ TODO: to test:
 - empty namelists
 - content for non-existent namelists specified
 """
-
 import os
 
 import aiida
@@ -21,20 +28,11 @@ from aiida.orm import CalculationFactory, DataFactory
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Code
 
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For " \
-                u"further information please visit http://www.aiida.net/. All " \
-                u"rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
-
 QECalc = CalculationFactory('quantumespresso.pw')
 StructureData = DataFactory('structure')
 ParameterData = DataFactory('parameter')
 UpfData = DataFactory('upf')
 KpointsData = DataFactory('array.kpoints')
-
 
 class TestQEPWInputGeneration(AiidaTestCase):
     """

@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 from aiida.orm import DataFactory
 from aiida.orm.calculation.inline import optional_inline
@@ -382,7 +386,6 @@ def _inline_to_standalone_script(calc):
             for x in input_dict.keys()]
     args_string = ",\n    ".join(sorted(args))
     return """#!/usr/bin/env runaiida
-# -*- coding: utf-8 -*-
 {}
 
 for key, value in {}(
@@ -577,7 +580,8 @@ def _collect_tags(node, calc,parameters=None,
     and prepare it to be saved in TCOD CIF.
     """
     import os, json
-    tags = { '_audit_creation_method': "AiiDA version {}".format(__version__) }
+    import aiida
+    tags = { '_audit_creation_method': "AiiDA version {}".format(aiida.__version__) }
 
     # Recording the dictionaries (if any)
 

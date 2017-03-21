@@ -33,9 +33,6 @@ from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.datastructures import calc_states
 
 
-# Magic to make the most recent state given in DbCalcState an attribute
-# of the DbNode (None if node is not a calculation)
-
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
 
@@ -50,7 +47,6 @@ class DbCalcState(Base):
     )
     dbnode = relationship(
         'DbNode', backref=backref('dbstates', passive_deletes=True),
-        #order_by='DbCalcState.time'
     )
 
     state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
@@ -260,6 +256,9 @@ class DbNode(Base):
 
     @hybrid_property
     def state(self):
+        """
+        Return the most recent state from DbCalcState
+        """
         if not self.id:
             return None
         all_states = DbCalcState.query.filter(DbCalcState.dbnode_id == self.id).all()
@@ -270,7 +269,10 @@ class DbNode(Base):
 
     @state.expression
     def state(cls):
-
+        """
+        Return the expression to get the most recent state from DbCalcState,
+        to be used in queries
+        """
         subq = select(
             [
                 DbCalcState.dbnode_id.label('dbnode_id'),
@@ -288,7 +290,6 @@ class DbNode(Base):
                     )
                 ).\
             label('laststate')
-
 
 
 class DbLink(Base):

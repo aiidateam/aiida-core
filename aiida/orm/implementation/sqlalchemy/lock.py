@@ -23,10 +23,11 @@ from aiida.orm.implementation.general.lock import AbstractLockManager, AbstractL
 
 class LockManager(AbstractLockManager):
     def aquire(self, key, timeout=3600, owner="None"):
+        session = get_scoped_session()
         try:
-            with get_scoped_session().begin(subtransactions=True):
+            with session.begin(subtransactions=True):
                 dblock = DbLock(key=key, timeout=timeout, owner=owner)
-                get_scoped_session().add(dblock)
+                session.add(dblock)
 
             return Lock(dblock)
 
@@ -46,19 +47,21 @@ class LockManager(AbstractLockManager):
             raise InternalError("Something went wrong, try to keep on.")
 
     def clear_all(self):
-        with get_scoped_session().begin(subtransactions=True):
+        session = get_scoped_session()
+        with session.begin(subtransactions=True):
             DbLock.query.delete()
 
 class Lock(AbstractLock):
 
     def release(self, owner="None"):
-        if self.dblock == None:
+        session = get_scoped_session()
+        if self.dblock is None:
             raise InternalError("No dblock present.")
 
         try:
             if self.dblock.owner == owner:
-                get_scoped_session().delete(self.dblock)
-                get_scoped_session().commit()
+                session.delete(self.dblock)
+                session.commit()
                 self.dblock = None
             else:
                 raise ModificationNotAllowed("Only the owner can release the lock.")

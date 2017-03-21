@@ -204,9 +204,11 @@ class Workflow(AbstractWorkflow):
         # every save; moreover in this way I should do the right thing for concurrent writings
         # I use self._dbnode because this will not do a query to update the node; here I only
         # need to get its pk
+        session = sa.get_scoped_session()
+
         self.dbworkflowinstance.nodeversion = DbWorkflow.nodeversion + 1
-        sa.get_scoped_session().add(self.dbworkflowinstance)
-        sa.get_scoped_session().commit()
+        session.add(self.dbworkflowinstance)
+        session.commit()
 
     @classmethod
     def query(cls, *args, **kwargs):
@@ -528,11 +530,14 @@ class Workflow(AbstractWorkflow):
     @classmethod
     def get_subclass_from_pk(cls, pk):
         import aiida.backends.sqlalchemy
+
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         try:
-            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
+            session.begin_nested()
             dbworkflowinstance = DbWorkflow.query.filter_by(id=pk).first()
         except:
-            aiida.backends.sqlalchemy.get_scoped_session().rollback()
+            session.rollback()
             raise
 
         if not dbworkflowinstance:
@@ -544,11 +549,14 @@ class Workflow(AbstractWorkflow):
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
         import aiida.backends.sqlalchemy
+
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         try:
-            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
+            session.begin_nested()
             dbworkflowinstance = DbWorkflow.query.filter_by(uuid=uuid).first()
         except:
-            aiida.backends.sqlalchemy.get_scoped_session().rollback()
+            session.rollback()
             raise
 
         if not dbworkflowinstance:

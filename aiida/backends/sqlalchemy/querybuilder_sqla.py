@@ -316,8 +316,8 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
 
     def _get_filter_expr_from_column(self, operator, value, column):
 
-        # Label is used because is what is returned for the
-        # 'state' column by the hybrid_column
+        # Label is used because it is what is returned for the
+        # 'state' column by the hybrid_column construct
         if not isinstance(column, (Cast, InstrumentedAttribute, Label)):
             raise TypeError(
                 'column ({}) {} is not a valid column'.format(

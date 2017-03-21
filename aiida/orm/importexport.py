@@ -944,6 +944,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # with transaction.atomic():
         # if True
         import aiida.backends.sqlalchemy
+
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         try:
             foreign_ids_reverse_mappings = {}
             new_entries = {}
@@ -1111,7 +1114,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # Store them all in once; however, the PK are not set in this way...
                 # Model.objects.bulk_create(objects_to_create)
                 if objects_to_create:
-                    aiida.backends.sqlalchemy.get_scoped_session().add_all(objects_to_create)
+                    session.add_all(objects_to_create)
                     # session.commit()
 
                 # Get back the just-saved entries
@@ -1142,7 +1145,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                             DbCalcState(dbnode_id=new_pk,
                                                state=calc_states.IMPORTED))
 
-                    aiida.backends.sqlalchemy.get_scoped_session().add_all(imported_states)
+                    session.add_all(imported_states)
                     # session.commit()
                     # models.DbCalcState.objects.bulk_create(imported_states)
 
@@ -1173,7 +1176,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
             # Needed for fast checks of existing links
             from aiida.backends.sqlalchemy.models.node import DbLink
-            existing_links_raw = aiida.backends.sqlalchemy.get_scoped_session().query(DbLink.input, DbLink.output, DbLink.label).all()
+            existing_links_raw = session.query(DbLink.input, DbLink.output, DbLink.label).all()
             # existing_links_raw = DbLink.objects.all().values_list(
             #     'input', 'output', 'label')
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
@@ -1225,7 +1228,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             if links_to_store:
                 if not silent:
                     print "   ({} new links...)".format(len(links_to_store))
-                aiida.backends.sqlalchemy.get_scoped_session().add_all(links_to_store)
+                session.add_all(links_to_store)
                 # session.commit()
                 # models.DbLink.objects.bulk_create(links_to_store)
             else:
@@ -1239,7 +1242,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # TODO: cache these to avoid too many queries
                 from aiida.backends.sqlalchemy.models.group import DbGroup
                 from uuid import UUID
-                group = aiida.backends.sqlalchemy.get_scoped_session().query(DbGroup).filter(
+                group = session.query(DbGroup).filter(
                     DbGroup.uuid == UUID(groupuuid)).all()
 
                 # group = DbGroup.objects.get(uuid=groupuuid)
@@ -1279,9 +1282,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     group = Group(name=group_name,
                                   type_string=IMPORTGROUP_TYPE)
                     from aiida.backends.sqlalchemy.models.group import DbGroup
-                    if aiida.backends.sqlalchemy.get_scoped_session().query(DbGroup).filter(
+                    if session.query(DbGroup).filter(
                         DbGroup.name == group._dbgroup.name).count() == 0:
-                        aiida.backends.sqlalchemy.get_scoped_session().add(group._dbgroup)
+                        session.add(group._dbgroup)
                         created = True
                     else:
                         counter += 1
@@ -1289,7 +1292,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # Add all the nodes to the new group
                 # TODO: decide if we want to return the group name
                 from aiida.backends.sqlalchemy.models.node import DbNode
-                group.add_nodes(aiida.backends.sqlalchemy.get_scoped_session().query(DbNode).filter(
+                group.add_nodes(session.query(DbNode).filter(
                     DbNode.id.in_(pks_for_group)).distinct().all())
 
                 # group.add_nodes(models.DbNode.objects.filter(
@@ -1301,10 +1304,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 if not silent:
                     print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
 
-            aiida.backends.sqlalchemy.get_scoped_session().commit()
+            session.commit()
         except:
             print "Rolling back"
-            aiida.backends.sqlalchemy.get_scoped_session().rollback()
+            session.rollback()
             raise
 
     if not silent:

@@ -25,6 +25,11 @@ install_requires = [
     # SQLA for us... probably switch to using rabbitmq?
     # Note that however this requires a new server process.
     'celery==3.1.25',
+    # The next two are internal dependencies of celery, but since
+    # in the past we had version mismatch problems, we freeze them
+    # as well
+    'billiard==3.3.0.23',
+    'amqp==1.4.9',
     'anyjson==0.3.3',
     'supervisor==3.1.3',
     'meld3==1.0.0',

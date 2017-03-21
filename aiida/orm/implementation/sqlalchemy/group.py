@@ -245,6 +245,8 @@ class Group(AbstractGroup):
               name_filters=None, **kwargs):
         from aiida.orm.implementation.sqlalchemy.node import Node
 
+        session = sa.get_scoped_session()
+
         filters = []
 
         if name is not None:
@@ -268,7 +270,7 @@ class Group(AbstractGroup):
 
             # In the case of the Node orm from Sqlalchemy, there is an id
             # property on it.
-            sub_query = (sa.get_scoped_session().query(table_groups_nodes).filter(
+            sub_query = (session.query(table_groups_nodes).filter(
                 table_groups_nodes.c["dbnode_id"].in_(
                     map(lambda n: n.id, nodes)),
                 table_groups_nodes.c["dbgroup_id"] == DbGroup.id
@@ -298,15 +300,18 @@ class Group(AbstractGroup):
             pass
 
         # TODO SP: handle **kwargs
-        groups = (sa.get_scoped_session().query(DbGroup.id).filter(*filters)
+        groups = (session.query(DbGroup.id).filter(*filters)
                   .order_by(DbGroup.id).distinct().all())
 
         return [cls(dbgroup=g[0]) for g in groups]
 
     def delete(self):
+
+        session = sa.get_scoped_session()
+
         if self.pk is not None:
-            sa.get_scoped_session().delete(self._dbgroup)
-            sa.get_scoped_session().commit()
+            session.delete(self._dbgroup)
+            session.commit()
 
             new_group = copy(self._dbgroup)
             make_transient(new_group)

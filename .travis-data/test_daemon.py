@@ -24,7 +24,6 @@ def print_daemon_log():
 
 def have_finished(pks):
     finished_list = [load_node(pk).has_finished() for pk in pks]
-    print {pk: (load_node(pk).get_state(), load_node(pk).has_finished()) for pk in pks}
     num_finished = len([_ for _ in finished_list if _])
     print "{}/{} finished".format(num_finished, len(finished_list))
     return not (False in finished_list)

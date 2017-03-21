@@ -14,14 +14,8 @@ table.
 
 from aiida.backends.sqlalchemy.models.settings import DbSetting
 from sqlalchemy.orm.exc import NoResultFound
+from aiida.backends.sqlalchemy import get_scoped_session
 
-
-def get_session():
-    """
-    Return the global session for SQLA
-    """
-    import aiida.backends.sqlalchemy
-    return aiida.backends.sqlalchemy.get_scoped_session()
 
 def set_global_setting(key, value, description=None):
     """
@@ -39,7 +33,7 @@ def del_global_setting(key):
     :raise KeyError: if the setting does not exist in the DB
     """
     try:
-        setting = get_session().query(DbSetting).filter_by(key=key).one()
+        setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
         setting.delete()
     except NoResultFound:
         raise KeyError("No global setting with key={}".format(key))
@@ -59,7 +53,7 @@ def get_global_setting(key):
 
     try:
         return get_value_of_sub_field(
-            key, lambda given_key: get_session().query(DbSetting).filter_by(
+            key, lambda given_key: get_scoped_session().query(DbSetting).filter_by(
                 key=given_key).one().getvalue())
     except NoResultFound:
         raise KeyError("No global setting with key={}".format(key))
@@ -78,7 +72,7 @@ def get_global_setting_description(key):
     validate_key(key)
 
     try:
-        return (get_session().query(DbSetting).filter_by(key=key).
+        return (get_scoped_session().query(DbSetting).filter_by(key=key).
                 one().get_description())
     except NoResultFound:
         raise KeyError("No global setting with key={}".format(key))
@@ -91,7 +85,7 @@ def table_check_test():
     """
     from sqlalchemy.engine import reflection
     from aiida.backends import sqlalchemy as sa
-    inspector = reflection.Inspector.from_engine(get_session().bind)
+    inspector = reflection.Inspector.from_engine(get_scoped_session().bind)
     if 'db_dbsetting' not in inspector.get_table_names():
         raise KeyError("No table found")
 

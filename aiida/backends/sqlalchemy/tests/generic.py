@@ -43,16 +43,16 @@ class TestComputer(AiidaTestCase):
 
         _ = JobCalculation(**calc_params).store()
 
-        #print "Node stored with pk:",  _.dbnode.pk
+        session = aiida.backends.sqlalchemy.get_scoped_session()
 
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
         try:
-            aiida.backends.sqlalchemy.get_scoped_session().begin_nested()
+            session.begin_nested()
             with self.assertRaises(InvalidOperation):
                 delete_computer(self.computer)
         finally:
-            aiida.backends.sqlalchemy.get_scoped_session().rollback()
+            session.rollback()
 
 
 class TestGroupsSqla(AiidaTestCase):

@@ -48,14 +48,22 @@ from aiida.backends.profile import (is_profile_loaded,
 
 def recreate_after_fork(engine):
     """
+    :param engine: the engine that will be used by the sessionmaker
+
     Callback called after a fork. Not only disposes the engine, but also recreates a new scoped session
     to use independent sessions in the forked process.
     """
     sa.engine.dispose()
     sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
-    print "after fork", sa.engine, id(sa.engine), sa.scopedsessionclass
 
 def reset_session(config):
+    """
+    :param config: the configuration of the profile from the
+       configuration file
+
+    Resets (global) engine and sessionmaker classes, to create a new one
+    (or creates a new one from scratch if not already available)
+    """
     from multiprocessing.util import register_after_fork
 
     engine_url = (

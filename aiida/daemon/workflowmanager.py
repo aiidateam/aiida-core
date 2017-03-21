@@ -40,9 +40,14 @@ def execute_steps():
     logger.info("Querying the worflow DB")
     
     running_steps = get_all_running_steps()
-    
+
+    rs = list(running_steps)
     for s in running_steps:
         w = s.parent.get_aiida_class()
+
+        if w.get_state() == wf_states.FINISHED:
+            s.set_state(wf_states.FINISHED)
+            continue
 
         logger.info("[{0}] Found active step: {1}".format(w.pk, s.name))
 
@@ -79,7 +84,6 @@ def execute_steps():
                     logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.pk, s.name, pk))
 
 
-
 def advance_workflow(w, step):
     """
     The method tries to advance a step running its next method and handling 
@@ -112,9 +116,11 @@ def advance_workflow(w, step):
         logger.info("-------------> w.parent.state {}".format(
             w.dbworkflowinstance.parent_workflow_step.get().parent.state))
 
-        if w.dbworkflowinstance.parent_workflow_step.get().parent.state is wf_states.FINISHED:
-            w.set_state(wf_states.FINISHED)
-            return False
+        # if w.dbworkflowinstance.parent_workflow_step.get().parent.state == wf_states.FINISHED:
+        #     logger.info("-------------> !!!!!! My parent has finished. "
+        #                 "I also exit.")
+        #     w.set_state(wf_states.FINISHED)
+        #     return False
 
     logger.info("-------------> step {}".format(step.__class__.__name__))
 
@@ -144,7 +150,7 @@ def advance_workflow(w, step):
                                       "to kick.".format(step.name))
         return True
 
-    elif not step.nextcall == None:
+    elif not step.nextcall is None:
 
         logger.info("[{0}] In advance_workflow the step {1} goes to nextcall {2}"
                     "".format(w.pk, step.name, step.nextcall))

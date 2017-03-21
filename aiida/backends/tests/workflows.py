@@ -12,7 +12,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.utils import get_workflow_list
 from aiida.common.datastructures import wf_states
 from aiida.orm import User
-from aiida.workflows.test import WorkflowTestEmpty
+from aiida.workflows.test import WFTestEmpty
 
 
 
@@ -28,7 +28,7 @@ class TestWorkflowBasic(AiidaTestCase):
         """
         from aiida.orm import load_workflow
 
-        a = WorkflowTestEmpty()
+        a = WFTestEmpty()
         a.store()
 
         self.assertEquals(a.pk, load_workflow(wf_id=a.pk).pk)
@@ -56,7 +56,7 @@ class TestWorkflowBasic(AiidaTestCase):
         # Assuming there is only one user
         dbuser = User.search_for_users(email=self.user_email)[0]
         # Creating a workflow & storing it
-        a = WorkflowTestEmpty()
+        a = WFTestEmpty()
         a.store()
 
         # Setting manually the state to RUNNING.

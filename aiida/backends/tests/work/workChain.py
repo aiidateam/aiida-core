@@ -17,7 +17,7 @@ from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
-from aiida.work.workchain import _WorkChainSpec, Outputs
+from aiida.work.workchain import _WorkChainSpec, Outputs, assign_, append_
 from aiida.work.workfunction import workfunction
 from aiida.work.run import run, async, legacy_workflow
 from aiida.orm.data.base import Int, Str
@@ -320,6 +320,104 @@ class TestWorkchain(AiidaTestCase):
         te.shutdown()
 
         return finished_steps
+
+    def test_insert_interstep_assign(self):
+        val = Int(5)
+
+        @workfunction
+        def wf():
+            return val
+
+        class Workchain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Workchain, cls).define(spec)
+                spec.outline(cls.run, cls.test)
+
+            def run(self):
+                self.insert_intersteps(ToContext(result_a=Outputs(async(wf))))
+                self.insert_intersteps(ToContext(result_b=assign_(Outputs(async(wf)))))
+                return
+
+            def test(self):
+                assert self.ctx.result_a['_return'] == val
+                assert self.ctx.result_b['_return'] == val
+                return
+
+        run(Workchain)
+
+    def test_insert_interstep_append(self):
+        val = Int(5)
+
+        @workfunction
+        def wf():
+            return val
+
+        class Workchain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Workchain, cls).define(spec)
+                spec.outline(cls.run, cls.test)
+
+            def run(self):
+                self.insert_intersteps(ToContext(result_a=append_(Outputs(async(wf)))))
+                self.insert_intersteps(ToContext(result_a=append_(Outputs(async(wf)))))
+                return
+
+            def test(self):
+                assert self.ctx.result_a[0]['_return'] == val
+                assert len(self.ctx.result_a) == 2
+                return
+
+        run(Workchain)
+
+    def test_insert_interstep_assign_append(self):
+        val = Int(5)
+
+        @workfunction
+        def wf():
+            return val
+
+        class Workchain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Workchain, cls).define(spec)
+                spec.outline(cls.run, cls.result)
+
+            def run(self):
+                self.insert_intersteps(ToContext(result_a=assign_(Outputs(async(wf)))))
+                self.insert_intersteps(ToContext(result_a=append_(Outputs(async(wf)))))
+                return
+
+            def result(self):
+                return
+
+        with self.assertRaises(KeyError):
+            run(Workchain)
+
+    def test_to_context(self):
+        val = Int(5)
+
+        @workfunction
+        def wf():
+            return val
+
+        class Workchain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Workchain, cls).define(spec)
+                spec.outline(cls.run, cls.result)
+
+            def run(self):
+                self.to_context(result_a=Outputs(async(wf)))
+                return ToContext(result_b=Outputs(async(wf)))
+
+            def result(self):
+                assert self.ctx.result_a['_return'] == val
+                assert self.ctx.result_b['_return'] == val
+                return
+
+        run(Workchain)
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):

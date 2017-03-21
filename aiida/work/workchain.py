@@ -129,7 +129,7 @@ class WorkChain(Process):
         self._context = None
         self._stepper = None
         self._barriers = []
-        self._intersteps = None
+        self._intersteps = []
 
     @property
     def ctx(self):
@@ -168,16 +168,47 @@ class WorkChain(Process):
         """
         del self._barriers[wait_on]
 
+    def insert_intersteps(self, intersteps):
+        """
+        Insert an interstep to be executed after the current step
+        ends but before the next step ends
+
+        :param interstep: class:Interstep
+        """
+        if not isinstance(intersteps, list):
+            intersteps = [intersteps]
+
+        for interstep in intersteps:
+            self._intersteps.append(interstep)
+
+    def to_context(self, **kwargs):
+        """
+        This is a convenience method that provides syntactic sugar, for
+        a user to add multiple intersteps that will assign a certain value
+        to the corresponding key in the context of the workchain
+        """
+        intersteps = []
+        for key, value in kwargs.iteritems():
+            if not isinstance(value, UpdateContext):
+                interstep = assign_(value)
+            else:
+                interstep = value
+
+            interstep.set_key(key)
+            intersteps.append(interstep)
+
+        self.insert_intersteps(intersteps)
+
+
     @override
     def _run(self, **kwargs):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
     def _do_step(self, wait_on=None):
-        if self._intersteps:
-            for i in self._intersteps:
-                i.on_next_step_starting(self)
-            self._intersteps = None
+        for interstep in self._intersteps:
+            interstep.on_next_step_starting(self)
+        self._intersteps = []
         self._barriers = []
 
         try:
@@ -187,15 +218,16 @@ class WorkChain(Process):
 
         if not finished:
             if retval is not None:
-                if isinstance(retval, tuple):
-                    self._intersteps = retval
+                if isinstance(retval, list) and all(isinstance(interstep, Interstep) for interstep in retval):
+                    self.insert_intersteps(retval)
                 elif isinstance(retval, Interstep):
-                    self._intersteps = (retval,)
+                    self.insert_intersteps([Interstep])
                 else:
                     raise TypeError(
-                        "Invalid value returned from step '{}'".format(retval))
-                for i in self._intersteps:
-                    i.on_last_step_finished(self)
+                        "Invalid value returned from step '{}'".format(interstep))
+
+                for interstep in self._intersteps:
+                    interstep.on_last_step_finished(self)
 
             if self._barriers:
                 return WaitOnAll(self._do_step.__name__, self._barriers)
@@ -232,7 +264,6 @@ class WorkChain(Process):
             except KeyError:
                 pass
                 #####################################################
-
 
 class Interstep(object):
     """
@@ -271,63 +302,112 @@ class Interstep(object):
         """
         pass
 
-
-class ToContext(Interstep):
+class UpdateContext(Interstep):
     """
-    Class to wrap future objects and return them in a WorkChain step.
+    Intersteps that evaluate an action and store
+    the results in the context of the Process
     """
-    TO_ASSIGN = 'to_assign'
-    WAITING_ON = 'waiting_on'
+    def __init__(self, action):
+        self._action = action
+        self._key = None
 
-    Action = namedtuple("Action", "running_info fn")
-
-    @classmethod
-    def action_from_running_info(cls, running_info):
-        if running_info.type is RunningType.PROCESS:
-            return Calc(running_info)
-        elif running_info.type is RunningType.LEGACY_CALC or \
-                running_info.type is RunningType.LEGACY_WORKFLOW:
-            return Legacy(running_info)
-        else:
-            raise ValueError("Unknown running type '{}'".format(running_info.type))
-
-    def __init__(self, **kwargs):
-        self._to_assign = {}
-        for key, val in kwargs.iteritems():
-            if isinstance(val, self.Action):
-                self._to_assign[key] = val
-            elif isinstance(val, RunningInfo):
-                self._to_assign[key] = self.action_from_running_info(val)
-            elif isinstance(val, Future):
-                self._to_assign[key] = \
-                    Calc(RunningInfo(RunningType.PROCESS, val.pid))
-            else:
-                # Assume it's a pk
-                self._to_assign[key] = Legacy(val)
+    def set_key(self, key):
+        self._key = key
+        return self
 
     @override
     def on_last_step_finished(self, workchain):
-        for action in self._to_assign.itervalues():
-            workchain.insert_barrier(self._create_wait_on(action))
+        workchain.insert_barrier(self._create_wait_on())
 
-    @override
-    def on_next_step_starting(self, workchain):
-        for key, action in self._to_assign.iteritems():
-            fn = get_object_from_string(action.fn)
-            workchain.ctx[key] = fn(action.running_info.pid)
-
-    @override
-    def save_instance_state(self, out_state):
-        out_state['class'] = get_class_string(ToContext)
-        out_state[self.TO_ASSIGN] = self._to_assign
-
-    def _create_wait_on(self, action):
-        rinfo = action.running_info
+    def _create_wait_on(self):
+        rinfo = self._action.running_info
         if rinfo.type is RunningType.LEGACY_CALC \
                 or rinfo.type is RunningType.PROCESS:
             return WaitOnProcess(None, rinfo.pid)
         elif rinfo.type is RunningType.LEGACY_WORKFLOW:
             return WaitOnWorkflow(None, rinfo.pid)
+
+    @override
+    def save_instance_state(self, out_state):
+        pass
+
+
+class Assign(UpdateContext):
+    """
+    """
+    @override
+    def on_next_step_starting(self, workchain):
+        fn  = get_object_from_string(self._action.fn)
+        key = self._key
+        val = fn(self._action.running_info.pid)
+        workchain.ctx[key] = val
+
+
+class Append(UpdateContext):
+    """
+    """
+    @override
+    def on_next_step_starting(self, workchain):
+        fn  = get_object_from_string(self._action.fn)
+        key = self._key
+        val = fn(self._action.running_info.pid)
+
+        if key in workchain.ctx and not type(workchain.ctx[key]) == list:
+            raise KeyError("You are trying to append to an existing key that is not a list")
+
+        workchain.ctx.setdefault(key, []).append(val)
+
+
+Action = namedtuple("Action", "running_info fn")
+
+def action_from_running_info(running_info):
+    if running_info.type is RunningType.PROCESS:
+        return Calc(running_info)
+    elif running_info.type is RunningType.LEGACY_CALC or \
+            running_info.type is RunningType.LEGACY_WORKFLOW:
+        return Legacy(running_info)
+    else:
+        raise ValueError("Unknown running type '{}'".format(running_info.type))
+
+def assign_(value):
+    if isinstance(value, Action):
+        return Assign(value)
+    elif isinstance(value, RunningInfo):
+        return Assign(action_from_running_info(value))
+    elif isinstance(value, Future):
+        return Assign(Calc(RunningInfo(RunningType.PROCESS, value.pid)))
+    else:
+        return Assign(Legacy(value))
+
+def append_(value):
+    if isinstance(value, Action):
+        return Append(value)
+    elif isinstance(value, RunningInfo):
+        return Append(action_from_running_info(value))
+    elif isinstance(value, Future):
+        return Append(Calc(RunningInfo(RunningType.PROCESS, value.pid)))
+    else:
+        return Append(Legacy(value))
+
+
+def ToContext(**kwargs):
+    """
+    Utility function that returns a list of UpdateContext Interstep instances
+
+    NOTE: This is effectively a copy of WorkChain.to_context method added to
+    keep backwards compatibility, but should eventually be deprecated
+    """
+    intersteps = []
+    for key, value in kwargs.iteritems():
+        if not isinstance(value, UpdateContext):
+            interstep = assign_(value)
+        else:
+            interstep = value
+
+        interstep.set_key(key)
+        intersteps.append(interstep)
+
+    return intersteps
 
 
 def _get_proc_outputs_from_registry(pid):
@@ -339,12 +419,11 @@ def _get_wf_outputs(pk):
 
 
 def Calc(running_info):
-    return ToContext.Action(running_info, get_object_string(load_node))
+    return Action(running_info, get_object_string(load_node))
 
 
 def Wf(running_info):
-    return ToContext.Action(
-        running_info, get_object_string(load_workflow))
+    return Action(running_info, get_object_string(load_workflow))
 
 
 def Legacy(object):
@@ -361,14 +440,11 @@ def Outputs(running_info):
     if isinstance(running_info, Future):
         # Create the correct information from the future
         rinfo = RunningInfo(RunningType.PROCESS, running_info.pid)
-        return ToContext.Action(
-            rinfo, get_object_string(_get_proc_outputs_from_registry))
+        return Action(rinfo, get_object_string(_get_proc_outputs_from_registry))
     elif running_info.type == RunningType.LEGACY_CALC:
-        return ToContext.Action(
-            running_info, get_object_string(_get_proc_outputs_from_registry))
+        return Action(running_info, get_object_string(_get_proc_outputs_from_registry))
     elif running_info.type is RunningType.LEGACY_WORKFLOW:
-        return ToContext.Action(
-            running_info, get_object_string(_get_wf_outputs))
+        return Action(running_info, get_object_string(_get_wf_outputs))
 
 
 class _InterstepFactory(object):

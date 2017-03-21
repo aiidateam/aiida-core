@@ -4,9 +4,11 @@ import argparse
 import imp
 import os
 
+from flask_cors import CORS
+
 import aiida  # Mainly needed to locate the correct aiida path
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from flask_cors import CORS
+
 
 def run_api(App, Api, *args, **kwargs):
     """
@@ -48,6 +50,9 @@ def run_api(App, Api, *args, **kwargs):
 
     parse_aiida_profile = kwargs['parse_aiida_profile'] if \
         'parse_aiida_profile' in kwargs else False
+
+    catch_internal_server = kwargs['catch_internal_server'] if\
+        'catch_intenral_server' in kwargs else False
 
     hookup = kwargs['hookup'] if 'hookup' in kwargs else False
 
@@ -135,14 +140,15 @@ def run_api(App, Api, *args, **kwargs):
         load_dbenv()
 
     # Instantiate an app
-    app = App(__name__)
+    app_kwargs = dict(catch_internal_server=catch_internal_server)
+    app = App(__name__, **app_kwargs)
 
     # Config the app
     app.config.update(**confs.APP_CONFIG)
 
     # cors
     cors_prefix = os.path.join(confs.PREFIX, "*");
-    cors = CORS(app, resources={r"" + cors_prefix : {"origins": "*"}})
+    cors = CORS(app, resources={r"" + cors_prefix: {"origins": "*"}})
 
     # Config the serializer used by the app
     if confs.SERIALIZER_CONFIG:
@@ -160,9 +166,9 @@ def run_api(App, Api, *args, **kwargs):
 
     # Instantiate an Api associating its app
     api_kwargs = dict(PREFIX=confs.PREFIX,
-                  PERPAGE_DEFAULT=confs.PERPAGE_DEFAULT,
-                  LIMIT_DEFAULT=confs.LIMIT_DEFAULT,
-                  custom_schema=confs.custom_schema)
+                      PERPAGE_DEFAULT=confs.PERPAGE_DEFAULT,
+                      LIMIT_DEFAULT=confs.LIMIT_DEFAULT,
+                      custom_schema=confs.custom_schema)
 
     api = Api(app, **api_kwargs)
 
@@ -185,7 +191,6 @@ def run_api(App, Api, *args, **kwargs):
         return (app, api)
 
 
-
 # Standard boilerplate to run the api
 if __name__ == '__main__':
     """
@@ -201,6 +206,7 @@ if __name__ == '__main__':
     """
     import sys
     from aiida.restapi.api import AiidaApi, App
+
     """
     Or, equivalently, (useful starting point for derived apps)
     import the app object and the Api class that you want to combine.

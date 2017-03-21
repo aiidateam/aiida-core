@@ -8,9 +8,6 @@ Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 from flask import Flask, jsonify
 from flask_restful import Api
 
-
-# TODo Transform the app into aa class to be instantiated by the runner
-
 class App(Flask):
     """
     Basic Flask App customized for this REST Api purposes
@@ -18,22 +15,22 @@ class App(Flask):
 
     def __init__(self, *args, **kwargs):
 
-        from aiida.restapi.common.exceptions import RestInputValidationError, \
-            RestValidationError
+        # Decide whether or not to catch the internal server exceptions (
+        # default is True)
+        catch_internal_server = True
+        try:
+            catch_internal_server = kwargs.pop('catch_internal_server')
+        except KeyError:
+            pass
 
         # Basic initialization
         super(App, self).__init__(*args, **kwargs)
 
-        # Decide whether or not to catch the internal server exceptions (
-        # default is True)
-        catch_internal_server = True
-
-        if 'catch_internal_server' in kwargs and kwargs[
-            'catch_internal_server'] == False:
-            catch_internal_server = False
+        # Error handler
+        from aiida.restapi.common.exceptions import RestInputValidationError, \
+            RestValidationError
 
         if catch_internal_server:
-
             @self.errorhandler(Exception)
             def error_handler(error):
 

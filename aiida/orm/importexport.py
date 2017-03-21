@@ -1596,7 +1596,7 @@ def get_all_fields_info_sqla_old():
         user_model_string: ['password', 'is_staff',
                             'is_superuser', 'is_active',
                             'last_login', 'date_joined'],
-        node_model_string: ['state_instance', 'dbstates', 'workflow_step',
+        node_model_string: ['dbstates', 'workflow_step',
                             'inputs', 'dbcomments', 'parents']
     }
 

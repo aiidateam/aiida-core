@@ -11,8 +11,9 @@
 from sqlalchemy import ForeignKey, select, func, join, and_
 from sqlalchemy.orm import (
     relationship, backref, Query, mapper,
-    foreign, column_property, aliased
+    foreign, aliased
 )
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
@@ -31,6 +32,34 @@ from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.datastructures import calc_states
 
+
+# Magic to make the most recent state given in DbCalcState an attribute
+# of the DbNode (None if node is not a calculation)
+
+class DbCalcState(Base):
+    __tablename__ = "db_dbcalcstate"
+
+    id = Column(Integer, primary_key=True)
+
+    dbnode_id = Column(
+        Integer,
+        ForeignKey(
+            'db_dbnode.id', ondelete="CASCADE",
+            deferrable=True, initially="DEFERRED"
+        )
+    )
+    dbnode = relationship(
+        'DbNode', backref=backref('dbstates', passive_deletes=True),
+        #order_by='DbCalcState.time'
+    )
+
+    state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
+
+    time = Column(DateTime(timezone=True), default=timezone.now)
+
+    __table_args__ = (
+        UniqueConstraint('dbnode_id', 'state'),
+    )
 
 
 class DbNode(Base):
@@ -229,6 +258,39 @@ class DbNode(Base):
             return "{} node [{}]".format(simplename, self.pk)
 
 
+    @hybrid_property
+    def state(self):
+        if not self.id:
+            return None
+        all_states = DbCalcState.query.filter(DbCalcState.dbnode_id == self.id).all()
+        if all_states:
+            return max((st.time, st.state) for st in all_states)[1]
+        else:
+            return None
+
+    @state.expression
+    def state(cls):
+
+        subq = select(
+            [
+                DbCalcState.dbnode_id.label('dbnode_id'),
+                func.max(DbCalcState.time).label('lasttime'),
+
+            ]
+        ).where(DbCalcState.dbnode_id == cls.id).\
+            group_by(DbCalcState.dbnode_id).alias()
+
+        return select([DbCalcState.state]).\
+            where(
+                and_(
+                    DbCalcState.time == subq.c.lasttime,
+                    DbCalcState.dbnode_id == cls.id,
+                    )
+                ).\
+            label('laststate')
+
+
+
 class DbLink(Base):
     __tablename__ = "db_dblink"
 
@@ -325,80 +387,3 @@ class DbPath(Base):
 
             return path_entry + path_direct + path_exit
 
-
-class DbCalcState(Base):
-    __tablename__ = "db_dbcalcstate"
-
-    id = Column(Integer, primary_key=True)
-
-    dbnode_id = Column(
-        Integer,
-        ForeignKey(
-            'db_dbnode.id', ondelete="CASCADE",
-            deferrable=True, initially="DEFERRED"
-        )
-    )
-    dbnode = relationship(
-        'DbNode', backref=backref('dbstates', passive_deletes=True)
-    )
-
-    state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
-
-    time = Column(DateTime(timezone=True), default=timezone.now)
-
-    __table_args__ = (
-        UniqueConstraint('dbnode_id', 'state'),
-    )
-
-
-# Magic to make the most recent state given in DbCalcState an attribute
-# of the DbNode (None if node is not a calculation)
-
-# First, find the most recent state for all nodes in DbCalcState table
-# using a select statement:
-states = select(
-    [
-        DbCalcState.dbnode_id.label('dbnode_id'),
-        func.max(DbCalcState.time).label('lasttime'),
-    ]
-).group_by(DbCalcState.dbnode_id).alias()
-
-# recent_states is something compatible with DbNode, so that we can map
-recent_states = select([
-    DbCalcState.id.label('id'),
-    DbCalcState.dbnode_id.label('dbnode_id'),
-    DbCalcState.state.label('state'),
-    states.c.lasttime.label('time')
-]). \
-    select_from(
-    join(
-        DbCalcState,
-        states,
-        and_(
-            DbCalcState.dbnode_id == states.c.dbnode_id,
-            DbCalcState.time == states.c.lasttime,
-        )
-    )
-).alias()  # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
-
-# Use a mapper to create a "table"
-state_mapper = mapper(
-    DbCalcState,
-    recent_states,
-    primary_key=recent_states.c.dbnode_id,
-    non_primary=True,
-)
-
-# State_instance is a relationship that returns the row of DbCalcState
-DbNode.state_instance = relationship(
-    state_mapper,
-    primaryjoin=recent_states.c.dbnode_id == foreign(DbNode.id),
-    viewonly=True,
-)
-
-# State is a column_property that returns the
-# most recent state's state (the string) for this dbnode
-DbNode.state = column_property(
-    select([recent_states.c.state]).
-        where(recent_states.c.dbnode_id == foreign(DbNode.id))
-)

@@ -27,10 +27,11 @@ from sqlalchemy.types import (
 from sqlalchemy.orm import (
     relationship,
     backref,
-    column_property,
     sessionmaker,
     foreign, mapper, aliased
 )
+
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import Cast
 from sqlalchemy.dialects.postgresql import UUID, JSONB, INTEGER, array
@@ -354,79 +355,36 @@ class DbNode(Base):
         return dbnode.get_aiida_class()
 
 
+    @hybrid_property
+    def state(self):
+        if not self.id:
+            return None
+        all_states = DbCalcState.query.filter(DbCalcState.dbnode_id == self.id).all()
+        if all_states:
+            return max((st.time, st.state) for st in all_states)[1]
+        else:
+            return None
 
+    @state.expression
+    def state(cls):
 
-states = select(
-        [
-            DbCalcState.dbnode_id.label('dbnode_id'),
-            func.max(DbCalcState.time).label('lasttime'),
-        ]
-    ).group_by(DbCalcState.dbnode_id).alias()
+        subq = select(
+            [
+                DbCalcState.dbnode_id.label('dbnode_id'),
+                func.max(DbCalcState.time).label('lasttime'),
 
-recent_states = select([
-        DbCalcState.id.label('id'),
-        DbCalcState.dbnode_id.label('dbnode_id'),
-        DbCalcState.state.label('state'),
-        states.c.lasttime.label('time')
-    ]).\
-    select_from(
-        join(
-            DbCalcState,
-            states,
-            and_(
-                DbCalcState.dbnode_id == states.c.dbnode_id,
-                DbCalcState.time == states.c.lasttime,
-            )
-        )
-    ).alias() # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
+            ]
+        ).where(DbCalcState.dbnode_id == cls.id).\
+            group_by(DbCalcState.dbnode_id).alias()
 
-state_mapper = mapper(
-    DbCalcState,
-    recent_states,
-    primary_key= recent_states.c.dbnode_id,
-    non_primary=True,
-)
-
-DbNode.state_instance = relationship(
-    state_mapper,
-    primaryjoin = recent_states.c.dbnode_id == foreign(DbNode.id),
-    viewonly=True,
-)
-
-DbNode.state = column_property(
-    select([recent_states.c.state]).
-    where(recent_states.c.dbnode_id == foreign(DbNode.id))
-)
-
-
-
-#~ DbAttribute.value_str = column_property(
-        #~ case([
-            #~ (DbAttribute.datatype == 'txt', DbAttribute.tval),
-            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
-            #~ (DbAttribute.datatype == 'int', cast(DbAttribute.ival, String)),
-            #~ (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, String)),
-            #~ (DbAttribute.datatype == 'date', cast(DbAttribute.dval, String)),
-            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, String)),
-            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
-            #~ (DbAttribute.datatype == 'list', None),
-            #~ (DbAttribute.datatype == 'dict', None),
-        #~ ])
-    #~ )
-#~
-#~ DbAttribute.value_float = column_property(
-        #~ case([
-            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
-            #~ (DbAttribute.datatype == 'float', DbAttribute.fval),
-            #~ (DbAttribute.datatype == 'int', cast(DbAttribute.ival, Float)),
-            #~ (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, Float)),
-            #~ (DbAttribute.datatype == 'date', cast(DbAttribute.dval, Float)),
-            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
-            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, Float)),
-            #~ (DbAttribute.datatype == 'list', None),
-            #~ (DbAttribute.datatype == 'dict', None),
-        #~ ])
-    #~ )
+        return select([DbCalcState.state]).\
+            where(
+                and_(
+                    DbCalcState.time == subq.c.lasttime,
+                    DbCalcState.dbnode_id == cls.id,
+                    )
+                ).\
+            label('laststate')
 
 
 

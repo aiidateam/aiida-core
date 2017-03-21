@@ -20,7 +20,7 @@ from sqlalchemy.sql.expression import cast
 
 
 from sqlalchemy.orm.attributes import InstrumentedAttribute
-from sqlalchemy.sql.elements import Cast
+from sqlalchemy.sql.elements import Cast, Label
 from sqlalchemy_utils.types.choice import Choice
 
 from aiida.common.exceptions import (
@@ -316,7 +316,9 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
 
     def _get_filter_expr_from_column(self, operator, value, column):
 
-        if not isinstance(column, (Cast, InstrumentedAttribute)):
+        # Label is used because is what is returned for the
+        # 'state' column by the hybrid_column
+        if not isinstance(column, (Cast, InstrumentedAttribute, Label)):
             raise TypeError(
                 'column ({}) {} is not a valid column'.format(
                     type(column), column

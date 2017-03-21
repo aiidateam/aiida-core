@@ -24,6 +24,7 @@ class StructureDataTranslator(DataTranslator):
                                                       **kwargs)
 
 
+    @staticmethod
     def get_visualization_data(self, node):
         """
 

@@ -23,7 +23,7 @@ class BandsDataTranslator(DataTranslator):
         super(BandsDataTranslator, self).__init__(Class=self.__class__,
                                                   **kwargs)
 
-
+    @staticmethod
     def get_visualization_data(self, node):
         """
 

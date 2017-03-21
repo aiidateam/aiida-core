@@ -48,6 +48,8 @@ class NodeTranslator(BaseTranslator):
         else:
             self._default_projections = ['**']
 
+        self._subclasses = self._get_subclasses()
+
     def set_query_type(self, query_type, alist=None, nalist=None, elist=None,
                        nelist=None):
         """
@@ -215,60 +217,69 @@ class NodeTranslator(BaseTranslator):
 
         return data
 
-    def import_submodules(self, package, parent_class=object, recursive=True):
-        """ Import all submodules of a module, recursively, including
-        subpackages
-
-        :param package: package (name or actual module)
-        :type package: str | module
-        :rtype: dict[str, types.ModuleType]
+    def _get_subclasses(self, parent=None, parent_class=None, recursive=True):
+        """
+         Import all submodules of the package containing the present class,
+         including subpackages recursively, if specified.
+        :parent: package/class. If package look for the classes in submodules.
+          If class, it first looks for the package where it is contained
+        :parent_class: class of which to look for subclasses
+        :recursive: True/False (go recursively into submodules)
         """
 
-        # TODO, ideally thids function should be moved into the resource
-        # definition (loaded once for all)
-
-
         import pkgutil
-        import importlib
         import imp
         import inspect
         import os
 
-        # If a class is passed, look for the package where the class is
-        # contained
-        if inspect.isclass(package):
-            classfile = inspect.getfile(package)
-            path = os.path.dirname(classfile)
-            package = imp.load_source(path, path)
-            basename = package.__name__
+        # If no parent class is specified set it to self.__class
+        parent = self.__class__ if parent is None else parent
 
+        # Suppose parent is class
+        if inspect.isclass(parent):
 
-            print 'classfile: ', classfile
-            print 'path', path
-            print 'package', package
-            print 'basename', basename
+            # Set the package where the class is contained
+            classfile = inspect.getfile(parent)
+            package_path = os.path.dirname(classfile)
 
-        else:
-        # If it is aloready a [ackage take the relevant infos
-            path = package.__path__
-            basename = package.__name__
+            # If parent class is not specified, assume it is the parent
+            if parent_class is None:
+                parent_class = parent
 
-        # Recursively checking the subpackages
+        # Suppose parent is a package (directory). Check if it contains __path__
+        elif inspect.ismodule(parent) and hasattr(parent, '__path__'):
+            package_path = parent.__path__[0]
+
+            # if parent is a package, parent_class cannot be None
+            if parent_class is None:
+                raise TypeError('argument parent_class cannot be None')
+
+            # Recursively check the subpackages
         results = {}
 
-        for loader, name, is_pkg in pkgutil.walk_packages(path):
+        for loader, name, is_pkg in pkgutil.walk_packages([package_path]):
+            # N.B. pkgutil.walk_package requires a LIST of paths. (all'anema
+            # e chi t'e mmuort)
 
-            full_name = package.__name__ + '.' + name
-            app_module = importlib.import_module(full_name)
+            full_path_base = os.path.join(package_path, name)
 
-            for name, obj in inspect.getmembers(app_module):
-                if inspect.isclass(obj) and issubclass(obj, parent_class):
-                    results[name] = obj
-            if recursive and is_pkg:
-                results.update(self.import_submodules(full_name))
+            if is_pkg:
+                app_module = imp.load_package(full_path_base, full_path_base)
+            else:
+                full_path = full_path_base + '.py'
+                # I could use load_module but it takes lots of arguments, then I use load_source
+                app_module = imp.load_source(full_path, full_path)
+
+            # Go through the content of the module
+            if not is_pkg:
+                for name, obj in inspect.getmembers(app_module):
+                    if inspect.isclass(obj) and issubclass(obj, parent_class):
+                        results[name] = obj
+            # Look in submodules
+            elif is_pkg and recursive:
+                results.update(self._get_subclasses(parent=app_module, parent_class=parent_class))
+
         return results
-
-
 
     def get_visualization_data(self, node):
         """
@@ -291,10 +302,7 @@ class NodeTranslator(BaseTranslator):
         # Look for the translator associated to class of which node is instance
         tclass = type(node)
 
-        print self.__class__
-        node_trans_subcls = self.import_submodules(self.__class__)
-
-        for subclass in node_trans_subcls.values():
+        for subclass in self._subclasses.values():
             if subclass._aiida_type.split('.')[-1] == tclass.__name__:
                 lowtrans = subclass
 

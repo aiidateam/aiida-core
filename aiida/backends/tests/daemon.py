@@ -13,7 +13,7 @@ from aiida.backends.utils import get_workflow_list
 from aiida.orm import User
 from aiida.orm.workflow import Workflow
 from aiida.workflows.test import WFTestSimpleWithSubWF
-from aiida.orm.implementation.django.workflow import get_workflow_info
+from aiida.orm import get_workflow_info
 from aiida.daemon.tasks import manual_tick_all
 
 
@@ -21,7 +21,7 @@ class TestDaemonBasic(AiidaTestCase):
     def test_workflow_fast_kill(self):
         from aiida.workflows import wf_demo
 
-        params = {}
+        params = dict()
         params['nmachine'] = 2
 
         w = WFTestSimpleWithSubWF()

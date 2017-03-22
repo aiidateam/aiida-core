@@ -13,7 +13,9 @@ from aiida.backends.utils import get_workflow_list
 from aiida.common.datastructures import wf_states
 from aiida.orm import User
 from aiida.workflows.test import WFTestEmpty
-
+# from aiida.orm import get_workflow_info
+from aiida.orm.implementation import Workflow, get_workflow_info
+from aiida.workflows.test import WFTestSimpleWithSubWF
 
 
 class TestWorkflowBasic(AiidaTestCase):
@@ -95,7 +97,7 @@ class TestWorkflowBasic(AiidaTestCase):
         # We change the state of the workflow to INITIALIZED.
         a.set_state(wf_states.INITIALIZED)
 
-                # We ask all the running workflows. We should get one workflow.
+        # We ask all the running workflows. We should get one workflow.
         wfqs = get_workflow_list(all_states=True, user=dbuser)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
@@ -108,3 +110,46 @@ class TestWorkflowBasic(AiidaTestCase):
         # We ask all the running workflows. We should get zero results.
         wfqs = get_workflow_list(all_states=False, user=dbuser)
         self.assertTrue(len(wfqs) == 0, "We expect zero workflows")
+
+    def test_workflow_info(self):
+        """
+        This test checks that the workflow info is generate without any
+        exceptions
+        :return:
+        """
+        # Assuming there is only one user
+        dbuser = User.search_for_users(email=self.user_email)[0]
+
+        # Creating a simple workflow & storing it
+        a = WFTestEmpty()
+        a.store()
+
+        # Emulate the workflow list
+        for w in get_workflow_list(all_states=True, user=dbuser):
+            if not w.is_subworkflow():
+                get_workflow_info(w)
+
+        # Create a workflow with sub-workflows and store it
+        b = WFTestSimpleWithSubWF()
+        b.store()
+
+        # Emulate the workflow list
+        for w in get_workflow_list(all_states=True, user=dbuser):
+            if not w.is_subworkflow():
+                get_workflow_info(w)
+
+        # Start the first workflow and perform a workflow list
+        b.start()
+        for w in get_workflow_list(all_states=True, user=dbuser):
+            if not w.is_subworkflow():
+                get_workflow_info(w)
+
+    def tearDown(self):
+        """
+        Cleaning the database after each test. Since I don't
+        want the workflows of one test to interfere with the
+        workflows of the other tests.
+        """
+        self._class_was_setup = True
+        self.clean_db()
+        self.insert_data()

@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from sqlalchemy import ForeignKey, select, func, join, and_
+from sqlalchemy import ForeignKey, select, func, join, and_, case
 from sqlalchemy.orm import (
     relationship, backref, Query, mapper,
     foreign, aliased
@@ -30,7 +30,7 @@ from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.common import aiidalogger
 from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
-from aiida.common.datastructures import calc_states
+from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
 
 
 class DbCalcState(Base):
@@ -49,6 +49,11 @@ class DbCalcState(Base):
         'DbNode', backref=backref('dbstates', passive_deletes=True),
     )
 
+    # Note: this is suboptimal: calc_states is not sorted
+    # therefore the order is not the expected one. If we
+    # were to use the correct order here, we could directly sort
+    # without specifying a custom order. This is probably faster,
+    # but requires a schema migration at this point
     state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
 
     time = Column(DateTime(timezone=True), default=timezone.now)
@@ -263,31 +268,46 @@ class DbNode(Base):
             return None
         all_states = DbCalcState.query.filter(DbCalcState.dbnode_id == self.id).all()
         if all_states:
-            return max((st.time, st.state) for st in all_states)[1]
+            #return max((st.time, st.state) for st in all_states)[1]
+            return sort_states(((dbcalcstate.state, dbcalcstate.state.value)
+                                for dbcalcstate in all_states),
+                                use_key=True)[0]
         else:
             return None
 
     @state.expression
     def state(cls):
         """
-        Return the expression to get the most recent state from DbCalcState,
-        to be used in queries
+        Return the expression to get the 'latest' state from DbCalcState,
+        to be used in queries, where 'latest' is defined using the state order
+        defined in _sorted_datastates.
         """
-        subq = select(
-            [
-                DbCalcState.dbnode_id.label('dbnode_id'),
-                func.max(DbCalcState.time).label('lasttime'),
+        # Sort first the latest states
+        whens = {
+            v: idx for idx, v
+            in enumerate(_sorted_datastates[::-1], start=1)}
+        custom_sort_order = case(value=DbCalcState.state,
+                                 whens=whens,
+                                 else_=100) # else: high value to put it at the bottom
 
-            ]
-        ).where(DbCalcState.dbnode_id == cls.id).\
-            group_by(DbCalcState.dbnode_id).alias()
+        q1 = select([
+            DbCalcState.id.label('id'),
+            DbCalcState.dbnode_id.label('dbnode_id'),
+            DbCalcState.state.label('state'),
+            func.row_number().over(partition_by=DbCalcState.dbnode_id,
+                                                 order_by=custom_sort_order).label('the_row_number')
+        ])
+        q1 = q1.cte('recentstates')
 
-        return select([DbCalcState.state]).\
+        subq = select([
+            q1.c.dbnode_id.label('dbnode_id'),
+            q1.c.state.label('state')
+        ]).select_from(q1).where(q1.c.the_row_number==1).alias()
+
+
+        return select([subq.c.state]).\
             where(
-                and_(
-                    DbCalcState.time == subq.c.lasttime,
-                    DbCalcState.dbnode_id == cls.id,
-                    )
+                    subq.c.dbnode_id == cls.id,
                 ).\
             label('laststate')
 

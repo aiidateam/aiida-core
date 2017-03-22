@@ -135,8 +135,9 @@ def delete_code(code):
         session.begin(subtransactions=True)
         try:
             code.dbnode.delete()
-            repo_folder.erase()
             session.commit()
         except:
             session.rollback()
             raise
+    # If all went well, erase also the folder
+    repo_folder.erase()

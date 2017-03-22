@@ -14,6 +14,7 @@ from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
 
 logger = aiidalogger.getChild('workflowmanager')
 
+
 def execute_steps():
     """
     This method loops on the RUNNING workflows and handled the execution of the
@@ -42,11 +43,11 @@ def execute_steps():
     running_steps = get_all_running_steps()
 
     for s in running_steps:
-        w = s.parent.get_aiida_class()
-
-        if w.get_state() == wf_states.FINISHED:
+        if s.parent.state == wf_states.FINISHED:
             s.set_state(wf_states.FINISHED)
             continue
+
+        w = s.parent.get_aiida_class()
 
         logger.info("[{0}] Found active step: {1}".format(w.pk, s.name))
 

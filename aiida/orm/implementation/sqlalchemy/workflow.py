@@ -400,7 +400,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow's state
         :return: a state from wf_states in aiida.common.datastructures
         """
-        return self.dbworkflowinstance.state.value
+        return self.dbworkflowinstance.state
 
     def set_state(self, state):
         """
@@ -767,7 +767,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
 
     lines.append(pre_string)  # put an empty line before any workflow
     lines.append(pre_string + "+ Workflow {} ({}pk: {}) is {} [{}]".format(
-        w.module_class, wf_labelstring, w.id, w.state.value, str_timedelta(
+        w.module_class, wf_labelstring, w.id, w.state, str_timedelta(
             now - w.ctime, negative_to_zero=True)))
 
     # print information on the steps only if depth is higher than 0
@@ -783,12 +783,12 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
             calc_id = None
             if step.calculations:
                 for calc in step.calculations:
-                    steps_and_subwf_pks.append( [step.id, wf_id, calc.id, step.name, step.nextcall, step.state.value] )
+                    steps_and_subwf_pks.append( [step.id, wf_id, calc.id, step.name, step.nextcall, step.state])
             if step.sub_workflows:
                 for www in step.sub_workflows:
-                    steps_and_subwf_pks.append( [step.id, www.id, calc_id, step.name, step.nextcall, step.state.value] )
+                    steps_and_subwf_pks.append( [step.id, www.id, calc_id, step.name, step.nextcall, step.state])
             if (not step.calculations) and (not step.sub_workflows): 
-                steps_and_subwf_pks.append( [step.id, wf_id, calc_id, step.name, step.nextcall, step.state.value] )
+                steps_and_subwf_pks.append( [step.id, wf_id, calc_id, step.name, step.nextcall, step.state])
 
         # get the list of step pks (distinct), preserving the order
         steps_pk = []

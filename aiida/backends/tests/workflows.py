@@ -13,8 +13,7 @@ from aiida.backends.utils import get_workflow_list
 from aiida.common.datastructures import wf_states
 from aiida.orm import User
 from aiida.workflows.test import WFTestEmpty
-# from aiida.orm import get_workflow_info
-from aiida.orm.implementation import Workflow, get_workflow_info
+from aiida.orm.implementation import get_workflow_info
 from aiida.workflows.test import WFTestSimpleWithSubWF
 
 
@@ -143,6 +142,16 @@ class TestWorkflowBasic(AiidaTestCase):
         for w in get_workflow_list(all_states=True, user=dbuser):
             if not w.is_subworkflow():
                 get_workflow_info(w)
+
+    def test_wf_get_state(self):
+        # Creating a simple workflow & storing it
+        wf = WFTestEmpty()
+        wf.store()
+
+        # Checking that the get_state doesn't throw exceptions and that
+        # it is a valid state
+        self.assertIn(wf.get_state(), wf_states)
+
 
     def tearDown(self):
         """

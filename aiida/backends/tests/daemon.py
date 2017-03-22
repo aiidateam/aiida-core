@@ -13,7 +13,6 @@ from aiida.backends.utils import get_workflow_list
 from aiida.common.datastructures import wf_states
 from aiida.daemon.tasks import manual_tick_all
 from aiida.orm import User
-from aiida.orm import get_workflow_info
 from aiida.orm.implementation import get_all_running_steps
 from aiida.workflows.test import WFTestSimpleWithSubWF
 

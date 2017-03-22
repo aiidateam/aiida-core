@@ -32,17 +32,17 @@ class _QueryProperty(object):
             mapper = orm.class_mapper(_type)
             if mapper:
                 return self.query_class(
-                    mapper, session=aiida.backends.sqlalchemy.session)
+                    mapper, session=aiida.backends.sqlalchemy.get_scoped_session())
         except UnmappedClassError:
             return None
 
 
 class _SessionProperty(object):
     def __get__(self, obj, _type):
-        if not aiida.backends.sqlalchemy.session:
+        if not aiida.backends.sqlalchemy.get_scoped_session():
             raise InvalidOperation("You need to call load_dbenv before "
                                    "accessing the session of SQLALchemy.")
-        return aiida.backends.sqlalchemy.session
+        return aiida.backends.sqlalchemy.get_scoped_session()
 
 
 class _AiidaQuery(orm.Query):
@@ -60,6 +60,8 @@ class _AiidaQuery(orm.Query):
                 yield r
 
 
+from aiida.backends.sqlalchemy import get_scoped_session
+
 class Model(object):
 
     query = _QueryProperty()
@@ -67,14 +69,17 @@ class Model(object):
     session = _SessionProperty()
 
     def save(self, commit=True):
-        self.session.add(self)
+        sess = get_scoped_session()
+        sess.add(self)
         if commit:
-            self.session.commit()
+            sess.commit()
         return self
 
+
     def delete(self, commit=True):
-        self.session.delete(self)
+        sess = get_scoped_session()
+        sess.delete(self)
         if commit:
-            self.session.commit()
+            sess.commit()
 
 Base = declarative_base(cls=Model, name='Model')

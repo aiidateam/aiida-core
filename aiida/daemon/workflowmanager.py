@@ -41,7 +41,6 @@ def execute_steps():
     
     running_steps = get_all_running_steps()
 
-    rs = list(running_steps)
     for s in running_steps:
         w = s.parent.get_aiida_class()
 

@@ -6,6 +6,7 @@ Django:
   * aiida/backends/djsite/settings/settings.py
   * aiida/backends/djsite/db/management/commands/customshell.py
   * aiida/backends/djsite/manage.py
+  * aiida/common/hashing.py
   * aiida/utils/timezone.py
 
 Python: 

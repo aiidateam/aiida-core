@@ -131,9 +131,9 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return self.str_exact_clause(key, \
+        return self._str_exact_clause(key, \
                                      alias, \
-                                     map(lambda f: "- " + str(f) + " -", \
+                                     map(lambda f: str(f), \
                                          values))
 
     def _str_fuzzy_clause(self, key, alias, values):
@@ -397,8 +397,10 @@ class IcsdDbImporter(DbImporter):
                         "JOIN space_group_number ON "\
                         "space_group_number.sgr_num=space_group.sgr_num "\
                         + "WHERE" + " AND ".join(sql_where_query)
-        else:
+        elif sql_where_query:
             sql_query = "WHERE" + " AND ".join(sql_where_query)
+        else:
+            sql_query = ""
 
         return IcsdSearchResults(query=sql_query, db_parameters=self.db_parameters)
 

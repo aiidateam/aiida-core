@@ -103,9 +103,9 @@ class TestWfBasic(AiidaTestCase):
         """
         Checks the versioning.
         """
-        from aiida.workflows.test import WorkflowTestEmpty
+        from aiida.workflows.test import WFTestEmpty
 
-        w = WorkflowTestEmpty().store()
+        w = WFTestEmpty().store()
 
         # Even if I stored many attributes, this should stay at 1
         self.assertEquals(w._dbworkflowinstance.nodeversion, 1)

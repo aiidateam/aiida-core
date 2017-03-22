@@ -748,8 +748,6 @@ class AbstractWorkflow(object):
         Calls the ``kill`` method for each Calculation linked to the step method passed as argument.
         :param step: a Workflow step (decorated) method
         """
-        print "Killing step calculations!!!"
-
         counter = 0
         for c in step.get_calculations():
             if c._is_new() or c._is_running():

@@ -8,9 +8,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import sys
-import os
-
 
 
 def launch_ws():
@@ -20,15 +17,12 @@ def launch_ws():
     verdi workflow list pk
     
     """
+    from aiida.workflows import wf_demo
 
-    import aiida.orm.workflow as wf
-    from aiida.workflows import wf_demo_spyros
-    from aiida.common.datastructures import wf_states
-
-    params = {}
+    params = dict()
     params['nmachine'] = 2
 
-    w = wf_demo_spyros.SubWorkflowDemo()
+    w = wf_demo.SubWorkflowDemo()
     w.start()
 
 if __name__ == '__main__':

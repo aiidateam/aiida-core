@@ -752,7 +752,6 @@ class AbstractWorkflow(object):
         for c in step.get_calculations():
             if c._is_new() or c._is_running():
                 try:
-                    print "Killing calculation with id ", c.id
                     c.kill()
                 except (InvalidOperation, RemoteOperationError) as e:
                     counter += 1
@@ -774,9 +773,6 @@ class AbstractWorkflow(object):
                                  workflow will be also put to SLEEP so that it
                                  can be killed later on)
         """
-        print "Killing workflow!!! ", self.dbworkflowinstance.id
-
-
         if self.get_state() not in [wf_states.FINISHED, wf_states.ERROR]:
 
             # put in SLEEP state first

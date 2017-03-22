@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 class BaseTcodtranslator(object):
     """
@@ -248,5 +252,29 @@ class BaseTcodtranslator(object):
         """
         Returns kinetic energy cutoff for exact exchange (EEX)
         operator in eV.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_pseudopotential_atom_type(cls,calc,**kwargs):
+        """
+        Returns a list of atom types. Each atom type MUST occur only
+        once in this list. List MUST be sorted.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_pseudopotential_type(cls,calc,**kwargs):
+        """
+        Returns a list of pseudopotential types. List MUST be sorted
+        by atom types.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_pseudopotential_type_other_name(cls,calc,**kwargs):
+        """
+        Returns a list of other pseudopotential type names. List MUST be
+        sorted by atom types.
         """
         raise NotImplementedError("not implemented in base class")

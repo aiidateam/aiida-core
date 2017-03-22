@@ -39,7 +39,7 @@ Code
 ----
 The code is an external program that does a useful calculation for us. For
 detailed information on how to setup the new codes, you can have a look at the
-:doc:`respective documentation page <../../setup/computerandcodes>`.
+:ref:`respective documentation page <setup_computers_codes>`.
 
 Imagine that we have the following python code that we want to install. It
 does the simple task of adding two numbers that are found in a JSON file, whose
@@ -196,7 +196,7 @@ using ``CalculationFactory``.
 
 .. note:: The base ``Calculation`` class should only be used as the abstract
   base class. Any calculation that needs to run on a remote scheduler must
-  inherit from  :class:`~aiida.orm.calculation.job.JobCalculation`, that
+  inherit from  :class:`~aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`, that
   contains all the methods to run on a remote scheduler, get the calculation
   state, copy files remotely and retrieve them, ...
 

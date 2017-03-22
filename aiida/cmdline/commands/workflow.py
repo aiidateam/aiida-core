@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class Workflow(VerdiCommandWithSubcommands):
@@ -43,6 +46,7 @@ class Workflow(VerdiCommandWithSubcommands):
 
         from aiida.backends.utils import get_workflow_list, get_automatic_user
         from aiida.orm.workflow import get_workflow_info
+        from aiida.orm import User
 
         import argparse
 
@@ -79,7 +83,7 @@ class Workflow(VerdiCommandWithSubcommands):
         parsed_args = parser.parse_args(args)
 
         workflows = get_workflow_list(parsed_args.pks,
-                                      user=get_automatic_user(),
+                                      user=User(dbuser=get_automatic_user()),
                                       all_states=parsed_args.all_states,
                                       n_days_ago=parsed_args.past_days)
 
@@ -131,9 +135,9 @@ class Workflow(VerdiCommandWithSubcommands):
         Pass a list of workflow PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
-        from aiida.backends.utils import load_dbenv
-
-        load_dbenv()
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.workflow import kill_from_pk

@@ -1,0 +1,14 @@
+{
+  "output": {
+    "energies": [
+      {
+        "comparison": "AlmostEqual",
+        "value": [ -2057.9902827834667 ]
+      }
+    ]
+  },
+  "trajectory": {
+  },
+  "job_info": {
+  }
+}

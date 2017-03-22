@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import json
-
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
@@ -10,9 +17,7 @@ from sqlalchemy.types import Integer, String, DateTime, Text
 
 from sqlalchemy.dialects.postgresql import UUID
 
-
 from sqlalchemy_utils.types.choice import ChoiceType
-
 
 from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQuery
 from aiida.backends.sqlalchemy.models.utils import uuid_func
@@ -21,10 +26,6 @@ from aiida.common.datastructures import (wf_states, wf_data_types,
 from aiida.utils import timezone
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 class DbWorkflow(Base):
     __tablename__ = "db_dbworkflow"
@@ -51,6 +52,8 @@ class DbWorkflow(Base):
 
     report = Column(Text)
 
+    data = relationship("DbWorkflowData", backref='parent')
+
     # XXX the next three attributes have "blank=False", but can be null. It may
     # be needed to add some validation for this, but only at commit time.
     # To do so: see https://stackoverflow.com/questions/28228766/running-cleaning-validation-code-before-committing-in-sqlalchemy
@@ -59,35 +62,66 @@ class DbWorkflow(Base):
     script_path = Column(Text)
 
     # XXX restrict the size of this column, MD5 have a fixed size
-    script_md5 = Column(String(255)) # Blank = False.
+    script_md5 = Column(String(255))  # Blank = False.
 
     def __init__(self, *args, **kwargs):
         super(DbWorkflow, self).__init__(*args, **kwargs)
         self.nodeversion = 1
         self.lastsyncedversion = 0
 
+    @property
+    def pk(self):
+        return self.id
+
     def get_aiida_class(self):
         """
         Return the corresponding aiida instance of class aiida.worflow
         """
+        from aiida.orm.workflow import Workflow
         return Workflow.get_subclass_from_uuid(self.uuid)
 
     def set_state(self, state):
-        self.state = state;
+        self.state = state
         self.save()
 
     def set_script_md5(self, md5):
         self.script_md5 = md5
         self.save()
 
+    #    def add_data(self, dict, d_type):
+    #        for k in dict.keys():
+    #            p, create = self.data.get_or_create(name=k, data_type=d_type)
+    #            p.set_value(dict[k])
+
     def add_data(self, dict, d_type):
         for k in dict.keys():
-            p, create = self.data.get_or_create(name=k, data_type=d_type)
+            p, create = self._get_or_create_data(name=k, data_type=d_type)
             p.set_value(dict[k])
+
+    def _get_or_create_data(self, name, data_type):
+        match_data = {name: _ for _ in self.data if _.name == name}
+
+        if not match_data:  # create case
+            dbdata = DbWorkflowData(parent_id=self.id, name=name, data_type=data_type)
+            self.data.append(dbdata)
+            return dbdata, True
+        else:  # already existing case
+            return match_data[name], False
+
+    def _get_or_create_step(self, name, user):
+        match_step = [_ for _ in self.steps if (_.name == name and _.user == user)]
+
+        if not match_step:  # create case
+            dbstep = DbWorkflowStep(parent_id=self.id, name=name, user_id=user.id)
+            self.steps.append(dbstep)
+            return dbstep, True
+        else:  # already existing case
+            return match_step[0], False
 
     def get_data(self, d_type):
         dict = {}
-        for p in self.data.filter(parent=self, data_type=d_type):
+        # for p in self.data.filter(parent=self, data_type=d_type):
+        for p in [_ for _ in self.data if _.data_type == d_type]:
             dict[p.name] = p.get_value()
         return dict
 
@@ -143,10 +177,12 @@ class DbWorkflow(Base):
             raise ValueError("Error retrieving results: {0}".format(name))
 
     def clear_report(self):
-        self.report = None
+        self.report = ''
         self.save()
 
     def append_to_report(self, _text):
+        if self.report == None:
+            self.report = ''
         self.report += str(timezone.now()) + "] " + _text + "\n"
         self.save()
 
@@ -162,7 +198,7 @@ class DbWorkflow(Base):
         Return True if this is a subworkflow, False if it is a root workflow,
         launched by the user.
         """
-        return len(self.parent_workflow_step.all()) > 0
+        return len(self.parent_workflow_step) > 0
 
     def finish(self):
         self.state = wf_states.FINISHED
@@ -182,12 +218,11 @@ class DbWorkflowData(Base):
     id = Column(Integer, primary_key=True)
 
     parent_id = Column(Integer, ForeignKey('db_dbworkflow.id'))
-    parent = relationship("DbWorkflow", backref='data')
 
-    name = Column(String(255)) # Blank = false
+    name = Column(String(255))  # Blank = false
     time = Column(DateTime(timezone=True), default=timezone.now)
-    data_type = Column(String(255), default=wf_data_types.PARAMETER) # blank = false
-    value_type = Column(String(255), default=wf_data_value_types.NONE) # blank = false
+    data_type = Column(String(255), default=wf_data_types.PARAMETER)  # blank = false
+    value_type = Column(String(255), default=wf_data_value_types.NONE)  # blank = false
     json_value = Column(Text)
 
     aiida_obj_id = Column(Integer, ForeignKey('db_dbnode.id'), nullable=True)
@@ -197,8 +232,18 @@ class DbWorkflowData(Base):
         UniqueConstraint("parent_id", "name", "data_type"),
     )
 
-    def set_value(self, arg):
+    def get_or_create(self, **kwargs):  # this is to emulate the django method
+        from sqlalchemy.sql.expression import ClauseElement
+        instance = self.query().filter_by(kwargs).first()
+        if instance:
+            return instance, False
+        else:
+            params = dict((k, v) for k, v in kwargs.iteritems() if not isinstance(v, ClauseElement))
+            instance = model(**params)
+            session.add(instance)
+            return instance, True
 
+    def set_value(self, arg):
         from aiida.orm import Node
         try:
             if isinstance(arg, Node) or issubclass(arg.__class__, Node):
@@ -252,11 +297,14 @@ class DbWorkflowStep(Base):
     id = Column(Integer, primary_key=True)
 
     parent_id = Column(Integer, ForeignKey('db_dbworkflow.id'))
-    parent = relationship("DbWorkflow", backref=backref('steps', lazy='dynamic'))
+    parent = relationship("DbWorkflow", backref='steps')
 
-    name = Column(String(255)) # Blank = false
+    user_id = Column(Integer, ForeignKey('db_dbuser.id'))
+    user = relationship('DbUser')
+
+    name = Column(String(255))  # Blank = false
     time = Column(DateTime(timezone=True), default=timezone.now)
-    nextcall = Column(String(255), default=wf_default_call) # Blank = false
+    nextcall = Column(String(255), default=wf_default_call)  # Blank = false
 
     state = Column(ChoiceType((_, _) for _ in wf_states), default=wf_states.CREATED)
 
@@ -264,46 +312,45 @@ class DbWorkflowStep(Base):
                                 backref="workflow_step")
     sub_workflows = relationship("DbWorkflow",
                                  secondary=table_workflowstep_subworkflow,
-                                 backref=backref("parent_workflow_step", lazy="dynamic"))
+                                 backref="parent_workflow_step")
 
     __table_args__ = (
         UniqueConstraint('parent_id', 'name'),
     )
 
     def add_calculation(self, step_calculation):
-
         from aiida.orm import JobCalculation
         if (not isinstance(step_calculation, JobCalculation)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")
 
         try:
-            self.calculations.add(step_calculation)
+            self.calculations.append(step_calculation.dbnode)
         except:
             raise ValueError("Error adding calculation to step")
 
     def get_calculations(self, state=None):
-
-        from aiida.orm import JobCalculation
+        dbnodes = self.calculations
+        calcs = [_.get_aiida_class() for _ in dbnodes]
         if (state == None):
-            return JobCalculation.query(workflow_step=self)
+            return calcs
         else:
-            return JobCalculation.query(workflow_step=self).filter(
-                dbattributes__key="state", dbattributes__tval=state)
+            return [_ for _ in calcs if _.get_state() == state]
 
     def remove_calculations(self):
         self.calculations.all().delete()
 
     def add_sub_workflow(self, sub_wf):
         from aiida.orm import Workflow
-        if (not issubclass(sub_wf.__class__, Workflow) and not isinstance(sub_wf, Workflow)):
+        if not issubclass(sub_wf.__class__, Workflow) and \
+                not isinstance(sub_wf, Workflow):
             raise ValueError("Cannot add a workflow not of type Workflow")
         try:
-            self.sub_workflows.add(sub_wf.dbworkflowinstance)
+            self.sub_workflows.append(sub_wf.dbworkflowinstance)
         except:
             raise ValueError("Error adding calculation to step")
 
     def get_sub_workflows(self):
-        return self.sub_workflows(manager='aiidaobjects').all()
+        return [_.get_aiida_class() for _ in self.sub_workflows]
 
     def remove_sub_workflows(self):
         self.sub_workflows.all().delete()
@@ -316,7 +363,7 @@ class DbWorkflowStep(Base):
         self.save()
 
     def set_state(self, _state):
-        self.state = _state;
+        self.state = _state
         self.save()
 
     def reinitialize(self):
@@ -326,6 +373,5 @@ class DbWorkflowStep(Base):
         self.set_state(wf_states.FINISHED)
 
     def __str__(self):
-        return "Step {} for workflow {} [{}]".format(self.name,
-                                                     self.parent.module_class,
-                                                     self.parent.pk)
+        return "Step {} for workflow {} [{}]".format(
+            self.name, self.parent.module_class, self.parent.id)

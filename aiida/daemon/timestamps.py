@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from pytz import UTC
 
 from aiida.backends import settings
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 if settings.BACKEND == BACKEND_DJANGO:
     from aiida.backends.djsite.globalsettings import set_global_setting, get_global_setting
@@ -53,7 +57,9 @@ def get_most_recent_daemon_timestamp():
 
     elif settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.models.settings import DbSetting
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+
         from sqlalchemy import func
         from pytz import utc
         from sqlalchemy.dialects.postgresql import TIMESTAMP
@@ -93,7 +99,7 @@ def set_daemon_timestamp(task_name, when):
         actual_task_name = celery_tasks[task_name]
     except KeyError:
         raise ValueError("Unknown value for 'task_name', not found in the "
-                         "djcelery_tasks dictionary")
+                         "celery_tasks dictionary")
 
     set_global_setting(
             'daemon|task_{}|{}'.format(when, actual_task_name),
@@ -117,7 +123,7 @@ def get_last_daemon_timestamp(task_name, when='stop'):
 
     :param task_name: the task for which we want the information.
       It has to be one of the keys of the
-      ``aiida.backends.djsite.settings.settings.djcelery_tasks`` dictionary.
+      ``celery_tasks`` dictionary.
     :param when: can either be 'start' (to know when the task started) or
       'stop' (to know when the task ended)
 
@@ -128,7 +134,7 @@ def get_last_daemon_timestamp(task_name, when='stop'):
         actual_task_name = celery_tasks[task_name]
     except KeyError:
         raise ValueError("Unknown value for '{}', not found in the "
-                         "djcelery_tasks dictionary".format(task_name))
+                         "celery_tasks dictionary".format(task_name))
 
     try:
         return get_global_setting('daemon|task_{}|{}'.format(when,

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from __future__ import absolute_import
 
 import copy
@@ -25,14 +33,14 @@ from aiida.common.lang import override
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
-from aiida.orm.implementation.sqlalchemy.utils import django_filter, get_attr
+from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
+    get_attr, get_db_columns
+from aiida.orm.mixins import Sealable
+
+import aiida.backends.sqlalchemy
 
 import aiida.orm.autogroup
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 
 class Node(AbstractNode):
@@ -69,6 +77,7 @@ class Node(AbstractNode):
         else:
             # TODO: allow to get the user from the parameters
             user = get_automatic_user()
+
             self._dbnode = DbNode(user=user,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
@@ -88,32 +97,57 @@ class Node(AbstractNode):
             # stop
             self._set_with_defaults(**kwargs)
 
+    @staticmethod
+    def get_db_columns():
+        return get_db_columns(DbNode)
+
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
+        from aiida.orm.querybuilder import QueryBuilder
+        from sqlalchemy.exc import DatabaseError
         try:
-            node = cls.query(uuid=uuid).one()
-        except (NoResultFound, ProgrammingError):
-            raise NotExistent("No entry with UUID={} found".format(uuid))
-        if not isinstance(node, cls):
-            raise NotExistent("UUID={} is not an instance of {}".format(
-                uuid, cls.__name__))
-        return node
+            qb = QueryBuilder()
+            qb.append(cls, filters={'uuid': {'==': str(uuid)}})
+
+            if qb.count() == 0:
+                raise NotExistent("No entry with UUID={} found".format(uuid))
+
+            node = qb.first()[0]
+
+            if not isinstance(node, cls):
+                raise NotExistent("UUID={} is not an instance of {}".format(
+                    uuid, cls.__name__))
+            return node
+        except DatabaseError as de:
+            raise ValueError(de.message)
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
-        if not isinstance(pk, int):
-            raise ValueError("Incorrect type for int")
+        from aiida.orm.querybuilder import QueryBuilder
+        from sqlalchemy.exc import DatabaseError
+        # If it is not an int make a final attempt
+        # to convert to an integer. If you fail,
+        # raise an exception.
         try:
-            from aiida.backends.sqlalchemy import session
-            node = cls.query(id=pk).one()
-        except NoResultFound:
-            # DataError is thrown when you pass a string instead of an int for
-            # instance
-            raise NotExistent("No entry with pk= {} found".format(pk))
-        if not isinstance(node, cls):
-            raise NotExistent("pk= {} is not an instance of {}".format(
-                pk, cls.__name__))
-        return node
+            pk = int(pk)
+        except:
+            raise ValueError("Incorrect type for int")
+
+        try:
+            qb = QueryBuilder()
+            qb.append(cls, filters={'id': {'==': pk}})
+
+            if qb.count() == 0:
+                raise NotExistent("No entry with pk= {} found".format(pk))
+
+            node = qb.first()[0]
+
+            if not isinstance(node, cls):
+                raise NotExistent("pk= {} is not an instance of {}".format(
+                    pk, cls.__name__))
+            return node
+        except DatabaseError as de:
+            raise ValueError(de.message)
 
     def __int__(self):
         if self._to_be_store:
@@ -123,60 +157,52 @@ class Node(AbstractNode):
 
     @classmethod
     def query(cls, *args, **kwargs):
-        q = django_filter(DbNode.aiida_query, **kwargs)
-        q = q.reset_joinpoint()
-
-        if cls._plugin_type_string:
-            if not cls._plugin_type_string.endswith('.'):
-                raise InternalError("The plugin type string does not "
-                                    "finish with a dot??")
-
-            # If it is 'calculation.Calculation.', we want to filter
-            # for things that start with 'calculation.' and so on
-            plug_type = cls._plugin_type_string
-
-            # Remove the implementation.django or sqla part.
-            if plug_type.startswith('implementation.'):
-                plug_type = '.'.join(plug_type.split('.')[2:])
-
-            pre, sep, _ = plug_type[:-1].rpartition('.')
-            superclass_string = "".join([pre, sep])
-
-            q = q.filter(DbNode.type.like("{}%".format(superclass_string)))
-
-        return q
+        raise NotImplementedError("The node query method is not supported in "
+                                  "SQLAlchemy. Please use QueryBuilder.")
 
     def _update_db_label_field(self, field_value):
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+
         self.dbnode.label = field_value
         if not self._to_be_stored:
-            self._dbnode.save(commit=False)
+            session.add(self._dbnode)
             self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+
         self.dbnode.description = field_value
         if not self._to_be_stored:
-            self._dbnode.save(commit=False)
+            session.add(self._dbnode)
             self._increment_version_number_db()
 
     def _replace_dblink_from(self, src, label, link_type):
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
         try:
             self._add_dblink_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
-            self._remove_dblink_from(label)
-            self._add_dblink_from(src, label, link_type)
+            try:
+                self._remove_dblink_from(label)
+                self._add_dblink_from(src, label, link_type)
+                session.commit()
+            except:
+                session.rollback()
+                raise
 
     def _remove_dblink_from(self, label):
-        from aiida.backends.sqlalchemy import session
-        link = self.dbnode.outputs.filter_by(label=label).first()
-        session.delete(link)
-        session.commit()
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+        link = DbLink.query.filter_by(label=label).first()
+        if link is not None:
+            session.delete(link)
 
     def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
         if self.uuid == src.uuid:
@@ -197,12 +223,13 @@ class Node(AbstractNode):
         #
         # I am linking src->self; a loop would be created if a DbPath exists
         # already in the TC table from self to src
-        c = session.query(literal(True)).filter(DbPath.query
+        if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
+            c = session.query(literal(True)).filter(DbPath.query
                                                 .filter_by(parent_id=self.dbnode.id, child_id=src.dbnode.id)
                                                 .exists()).scalar()
-        if c:
-            raise ValueError(
-                "The link you are attempting to create would generate a loop")
+            if c:
+                raise ValueError(
+                    "The link you are attempting to create would generate a loop")
 
         if label is None:
             autolabel_idx = 1
@@ -218,7 +245,7 @@ class Node(AbstractNode):
             safety_counter = 0
             while True:
                 safety_counter += 1
-                if safety_counter > 3:
+                if safety_counter > 100:
                     # Well, if you have more than 100 concurrent addings
                     # to the same node, you are clearly doing something wrong...
                     raise InternalError("Hey! We found more than 100 concurrent"
@@ -234,14 +261,14 @@ class Node(AbstractNode):
             self._do_create_link(src, label, link_type)
 
     def _do_create_link(self, src, label, link_type):
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
         try:
-            link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
-                          label=label, type=link_type.value)
-            session.add(link)
-            session.commit()
+            with session.begin_nested():
+                link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
+                              label=label, type=link_type.value)
+                session.add(link)
         except SQLAlchemyError as e:
-            session.rollback()
             raise UniquenessError("There is already a link with the same "
                                   "name (raw message was {})"
                                   "".format(e))
@@ -357,6 +384,19 @@ class Node(AbstractNode):
         self.dbnode.set_extra(key, value)
         self._increment_version_number_db()
 
+    def reset_extras(self, new_extras):
+
+        if type(new_extras) is not dict:
+            raise ValueError("The new extras have to be a dictionary")
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The extras of a node can be set only after "
+                "storing the node")
+
+        self.dbnode.reset_extras(new_extras)
+        self._increment_version_number_db()
+
     def get_extra(self, key, default=None):
         # TODO SP: in the Django implementation, if the node is not stored,
         # we can't get an extra. In the SQLA one, because this is simply a
@@ -376,9 +416,15 @@ class Node(AbstractNode):
         self.dbnode.del_extra(key)
 
     def extras(self):
+        if self.dbnode.extras is None:
+            return dict()
+
         return self.dbnode.extras
 
     def iterextras(self):
+        if self.dbnode.extras is None:
+            return dict().iteritems()
+
         return self.dbnode.extras.iteritems()
 
     def iterattrs(self):
@@ -393,7 +439,7 @@ class Node(AbstractNode):
             yield (k, v)
 
     def get_attrs(self):
-        return self.dbnode.attributes
+        return dict(self.iterattrs())
 
     def attrs(self):
         if self._to_be_stored:
@@ -404,7 +450,9 @@ class Node(AbstractNode):
             yield k
 
     def add_comment(self, content, user=None):
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+
         if self._to_be_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
@@ -493,7 +541,8 @@ class Node(AbstractNode):
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
         for k, v in self.iterattrs():
-            newobject._set_attr(k, v)
+            if k != Sealable.SEALED_KEY:
+                newobject._set_attr(k, v)
 
         for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path), path)
@@ -540,7 +589,8 @@ class Node(AbstractNode):
         self._store_input_nodes()
         self.store(with_transaction=False)
         self._store_cached_input_links(with_transaction=False)
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
 
         if with_transaction:
             try:
@@ -625,7 +675,9 @@ class Node(AbstractNode):
         # would have been raised, and the following lines are not executed)
         self._inputlinks_cache.clear()
 
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+
         if with_transaction:
             try:
                 session.commit()
@@ -649,6 +701,9 @@ class Node(AbstractNode):
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
         """
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
         if self._to_be_stored:
@@ -666,8 +721,10 @@ class Node(AbstractNode):
             self._repository_folder.replace_with_folder(
                 self._get_temp_folder().abspath, move=True, overwrite=True)
 
+        #    import aiida.backends.sqlalchemy
             try:
-                self._dbnode.save(commit=False)
+                # aiida.backends.sqlalchemy.get_scoped_session().add(self._dbnode)
+                session.add(self._dbnode)
                 # Save its attributes 'manually' without incrementing
                 # the version for each add.
                 self.dbnode.attributes = self._attrs_cache
@@ -684,7 +741,14 @@ class Node(AbstractNode):
                 self._store_cached_input_links(with_transaction=False)
 
                 if with_transaction:
-                    self.dbnode.session.commit()
+                    try:
+                        # aiida.backends.sqlalchemy.get_scoped_session().commit()
+                        session.commit()
+                    except SQLAlchemyError as e:
+                        print "Cannot store the node. Original exception: {" \
+                              "}".format(e)
+                        session.rollback()
+                        # aiida.backends.sqlalchemy.get_scoped_session().rollback()
 
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception
@@ -713,15 +777,11 @@ class Node(AbstractNode):
 
     @property
     def has_children(self):
-        #~ from aiida.backends.sqlalchemy.model.node import DbNode
-        return self.dbnode.outputs_q.all()
-        #~ return session.query(literal(True)).filter(
-            #~ self.dbnode.child_paths.exists()).scalar() or False
+        return self.dbnode.children_q.first() is not None
 
     @property
     def has_parents(self):
-        return session.query(literal(True)).filter(
-            self.dbnode.parent_paths.exists()).scalar() or False
+        return self.dbnode.parents_q.first() is not None
 
     @property
     def uuid(self):

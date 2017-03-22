@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from __future__ import absolute_import
 
@@ -9,10 +17,6 @@ from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common.pluginloader import from_type_to_pluginclassname
 from aiida.orm.implementation.general.calculation.job import _input_subfolder
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.calculation import Calculation

@@ -18,3 +18,4 @@ Developer's guide
    git_cheatsheet
    sphinx_cheatsheet
    ../verdi/properties
+   database_schema

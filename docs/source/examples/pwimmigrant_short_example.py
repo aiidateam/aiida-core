@@ -1,10 +1,20 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+# Load the database environment.
 from aiida import load_dbenv
+load_dbenv()
+
 from aiida.orm.code import Code
 from aiida.orm import CalculationFactory
 
-# Load the database environment.
-load_dbenv()
 
 # Load the PwimmigrantCalculation class.
 PwimmigrantCalculation = CalculationFactory('quantumespresso.pwimmigrant')
@@ -37,8 +47,9 @@ calc1.use_code(code)
 calc2.use_code(code)
 
 # Get the computer's transport and create an instance.
-Transport = computer.get_transport_class()
-transport = Transport()
+from aiida.backends.utils import get_authinfo, get_automatic_user
+authinfo = get_authinfo(computer=computer, aiidauser=get_automatic_user())
+transport = a.get_transport()
 
 # Open the transport for the duration of the immigrations, so it's not
 # reopened for each one. This is best performed using the transport's

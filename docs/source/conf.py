@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 #
 # aiida documentation build configuration file, created by
 # sphinx-quickstart on Wed Oct 24 11:33:37 2012.
@@ -22,11 +30,11 @@ import sys, os
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
+needs_sphinx = '1.5.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.viewcode']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.viewcode']
 
 todo_include_todos = True
 
@@ -44,7 +52,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'AiiDA'
-copyright = u'2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved'
+copyright = u'2016, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -326,3 +334,66 @@ epub_copyright = copyright
 
 # otherwise, readthedocs.org uses their theme by default, so no need
 # to specify it
+
+
+# Warnings to ignore when using the -n (nitpicky) option
+# We should ignore any python built-in exception, for instance
+nitpick_ignore = [
+    ('py:exc', 'ArithmeticError'),
+    ('py:exc', 'AssertionError'),
+    ('py:exc', 'AttributeError'),
+    ('py:exc', 'BaseException'),
+    ('py:exc', 'BufferError'),
+    ('py:exc', 'DeprecationWarning'),
+    ('py:exc', 'EOFError'),
+    ('py:exc', 'EnvironmentError'),
+    ('py:exc', 'Exception'),
+    ('py:exc', 'FloatingPointError'),
+    ('py:exc', 'FutureWarning'),
+    ('py:exc', 'GeneratorExit'),
+    ('py:exc', 'IOError'),
+    ('py:exc', 'ImportError'),
+    ('py:exc', 'ImportWarning'),
+    ('py:exc', 'IndentationError'),
+    ('py:exc', 'IndexError'),
+    ('py:exc', 'KeyError'),
+    ('py:exc', 'KeyboardInterrupt'),
+    ('py:exc', 'LookupError'),
+    ('py:exc', 'MemoryError'),
+    ('py:exc', 'NameError'),
+    ('py:exc', 'NotImplementedError'),
+    ('py:exc', 'OSError'),
+    ('py:exc', 'OverflowError'),
+    ('py:exc', 'PendingDeprecationWarning'),
+    ('py:exc', 'ReferenceError'),
+    ('py:exc', 'RuntimeError'),
+    ('py:exc', 'RuntimeWarning'),
+    ('py:exc', 'StandardError'),
+    ('py:exc', 'StopIteration'),
+    ('py:exc', 'SyntaxError'),
+    ('py:exc', 'SyntaxWarning'),
+    ('py:exc', 'SystemError'),
+    ('py:exc', 'SystemExit'),
+    ('py:exc', 'TabError'),
+    ('py:exc', 'TypeError'),
+    ('py:exc', 'UnboundLocalError'),
+    ('py:exc', 'UnicodeDecodeError'),
+    ('py:exc', 'UnicodeEncodeError'),
+    ('py:exc', 'UnicodeError'),
+    ('py:exc', 'UnicodeTranslateError'),
+    ('py:exc', 'UnicodeWarning'),
+    ('py:exc', 'UserWarning'),
+    ('py:exc', 'VMSError'),
+    ('py:exc', 'ValueError'),
+    ('py:exc', 'Warning'),
+    ('py:exc', 'WindowsError'),
+    ('py:exc', 'ZeroDivisionError'),
+    ('py:obj', 'str'),
+    ('py:obj', 'list'),
+    ('py:obj', 'tuple'),
+    ('py:obj', 'int'),
+    ('py:obj', 'float'),
+    ('py:obj', 'bool'),
+    ('py:obj', 'Mapping'),
+    ('py:obj', 'plum'),
+]

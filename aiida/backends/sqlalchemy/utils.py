@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 try:
     import ultrajson as json
@@ -25,12 +29,12 @@ import re
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import scoped_session
 
 from aiida.common.exceptions import InvalidOperation, ConfigurationError
 from aiida.common.setup import (get_profile_config, DEFAULT_USER_CONFIG_FIELD)
 
-from aiida.backends import sqlalchemy, settings
-from aiida.backends.utils import check_schema_version
+from aiida.backends import sqlalchemy as sa, settings
 
 from aiida.backends.profile import (is_profile_loaded,
                                     load_profile)
@@ -40,34 +44,43 @@ from aiida.backends.profile import (is_profile_loaded,
 #     """
 #     Return if the environment has already been loaded or not.
 #     """
-#     return sqlalchemy.session is not None
+#     return sa.get_scoped_session() is not None
 
-def get_session(config):
+def recreate_after_fork(engine):
     """
-    :param config: the configuration for the set profile
+    :param engine: the engine that will be used by the sessionmaker
 
-    :returns: A sqlalchemy session (connection to DB)
+    Callback called after a fork. Not only disposes the engine, but also recreates a new scoped session
+    to use independent sessions in the forked process.
     """
-    Session = sessionmaker(bind=get_engine(config))
-    return Session()
+    sa.engine.dispose()
+    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
 
+def reset_session(config):
+    """
+    :param config: the configuration of the profile from the
+       configuration file
 
-def get_engine(config):
+    Resets (global) engine and sessionmaker classes, to create a new one
+    (or creates a new one from scratch if not already available)
+    """
+    from multiprocessing.util import register_after_fork
+
     engine_url = (
         "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
         "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
     ).format(**config)
 
-    engine = create_engine(engine_url,
+    sa.engine = create_engine(engine_url,
                            json_serializer=dumps_json,
                            json_deserializer=loads_json)
-
-    return engine
+    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
+    register_after_fork(sa.engine, recreate_after_fork)
 
 
 def load_dbenv(process=None, profile=None, connection=None):
     """
-    Load the database environment (Django) and perform some checks.
+    Load the database environment (SQLAlchemy) and perform some checks.
 
     :param process: the process that is calling this command ('verdi', or
         'daemon')
@@ -76,7 +89,7 @@ def load_dbenv(process=None, profile=None, connection=None):
     """
     _load_dbenv_noschemacheck(process=process, profile=profile)
     # Check schema version and the existence of the needed tables
-    # check_schema_version()
+    check_schema_version()
 
 
 def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
@@ -84,37 +97,17 @@ def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
     Load the SQLAlchemy database.
     """
     config = get_profile_config(settings.AIIDADB_PROFILE)
-
-    # Those import are necessary for SQLAlchemy to correctly detect the models
-    # These should be on top of the file, but because of a circular import they need to be
-    # here.
-    from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-    # from aiida.backends.sqlalchemy.models.calcstate import DbCalcState
-    from aiida.backends.sqlalchemy.models.comment import DbComment
-    from aiida.backends.sqlalchemy.models.computer import DbComputer
-    from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes #, table_groups_users
-    from aiida.backends.sqlalchemy.models.lock import DbLock
-    from aiida.backends.sqlalchemy.models.log import DbLog
-    from aiida.backends.sqlalchemy.models.node import (
-            DbLink, DbNode, DbPath, DbCalcState)
-    from aiida.backends.sqlalchemy.models.user import DbUser
-    from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowData, DbWorkflowStep
-
-    if not connection:
-        sqlalchemy.session = get_session(config)
-    else:
-        Session = sessionmaker()
-        sqlalchemy.session = Session(bind=connection)
+    reset_session(config)
 
 _aiida_autouser_cache = None
 
 
 def get_automatic_user():
     from aiida.common.utils import get_configured_user_email
-    global _aiida_autouser_cache
+    # global _aiida_autouser_cache
 
-    if _aiida_autouser_cache is not None:
-        return _aiida_autouser_cache
+    # if _aiida_autouser_cache is not None:
+    #     return _aiida_autouser_cache
 
     from aiida.backends.sqlalchemy.models.user import DbUser
     from aiida.common.utils import get_configured_user_email
@@ -424,14 +417,13 @@ def check_schema_version():
       Otherwise, just return.
     """
     from aiida.common.exceptions import ConfigurationError
-    from aiida.backends import sqlalchemy as sa
     from sqlalchemy.engine import reflection
     from aiida.backends.sqlalchemy.models import SCHEMA_VERSION
     from aiida.backends.utils import (
         get_db_schema_version, set_db_schema_version,get_current_profile)
 
     # Do not do anything if the table does not exist yet
-    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
     if 'db_dbsetting' not in inspector.get_table_names():
         return
 

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 A collection of function that are used to parse the output of Quantum Espresso PW.
 The function that needs to be called from outside is parse_raw_output().
@@ -17,10 +25,6 @@ from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 
 # parameter that will be used later for comparisons
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 lattice_tolerance = 1.e-5
 
@@ -49,7 +53,7 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
     :returns out_dict: a dictionary with parsed data
     :return successful: a boolean that is False in case of failed calculations
             
-    :raises QEOutputParsingError: for errors in the parsing,
+    :raises aiida.parsers.plugins.quantumespresso.QEOutputParsingError: for errors in the parsing,
     :raises AssertionError: if two keys in the parsed dicts are found to be qual
 
     3 different keys to check in output: parser_warnings, xml_warnings and warnings.
@@ -719,20 +723,33 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None, input_dict=No
             # save dipole in debye units, only at last iteration of scf cycle
 
             # grep energy and eventually, magnetization
-            if '!' in line:
-                try:
-                    for key in ['energy', 'energy_accuracy']:
-                        if key not in trajectory_data:
-                            trajectory_data[key] = []
+            if '!' in line:                
+                if 'makov-payne' in line.lower():
+                    try:
+                        for key in ['total','envir']:
+                            if key in line.lower():                                
+                                En = float(line.split('=')[1].split('Ry')[0]) * ry_to_ev
+                                try:
+                                    trajectory_data[key+'_makov-payne'].append(En)
+                                except KeyError:
+                                    trajectory_data[key+'_makov-payne'] = [En]
+                                    parsed_data[key +'_makov-payne'+ units_suffix] = default_energy_units
+                    except Exception:
+                        parsed_data['warnings'].append('Error while parsing the energy')
+                else:    
+                    try:
+                        for key in ['energy', 'energy_accuracy']:
+                            if key not in trajectory_data:
+                                trajectory_data[key] = []
 
-                    En = float(line.split('=')[1].split('Ry')[0]) * ry_to_ev
-                    E_acc = float(data_step[count + 2].split('<')[1].split('Ry')[0]) * ry_to_ev
+                        En = float(line.split('=')[1].split('Ry')[0]) * ry_to_ev
+                        E_acc = float(data_step[count + 2].split('<')[1].split('Ry')[0]) * ry_to_ev
 
-                    for key, value in [['energy', En], ['energy_accuracy', E_acc]]:
-                        trajectory_data[key].append(value)
-                        parsed_data[key + units_suffix] = default_energy_units
-                except Exception:
-                    parsed_data['warnings'].append('Error while parsing the energy')
+                        for key, value in [['energy', En], ['energy_accuracy', E_acc]]:
+                            trajectory_data[key].append(value)
+                            parsed_data[key + units_suffix] = default_energy_units
+                    except Exception:
+                        parsed_data['warnings'].append('Error while parsing the energy')
 
             elif 'the Fermi energy is' in line:
                 try:

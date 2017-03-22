@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import os
 import sys
 
@@ -6,10 +14,6 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class Calculation(VerdiCommandWithSubcommands):
@@ -174,19 +178,25 @@ class Calculation(VerdiCommandWithSubcommands):
                             help="Show calculations for all users, rather than only for the current user")
         parser.set_defaults(all_users=False)
         parser.add_argument('-t', '--absolute-time',
-                            dest='relative_ctime', action='store_false',
+                            dest='relative_ctime', action='store_false', default=True,
                             help="Print the absolute creation time, rather than the relative creation time")
-        # ~ parser.add_argument('-w', '--with-scheduler-state',
-        # ~ action='store_true',
-        # ~ help='Print the scheduler state (slow)')
         parser.add_argument('-l', '--limit',
-                            type=int,
-                            default=None,
+                            type=int, default=None,
                             help='set a limit to the number of rows returned')
         parser.add_argument('-o', '--order-by',
-                            choices=['id', 'ctime'], default='ctime',
+                            choices=['id', 'ctime'], 
+                            default='ctime',
                             help='order the results')
-        parser.set_defaults(relative_ctime=True)
+        parser.add_argument('--project',
+                            choices=(
+                                    'pk', 'state', 'ctime', 'sched', 'computer',
+                                    'type', 'description', 'label', 'uuid',
+                                    'mtime', 'user'
+                                ),
+                            nargs='+',
+                            default=('pk', 'state', 'ctime', 'sched', 'computer', 'type'),
+                            help="Define the list of properties to show"
+                        )
 
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -208,7 +218,8 @@ class Calculation(VerdiCommandWithSubcommands):
                 relative_ctime=parsed_args.relative_ctime,
                 # with_scheduler_state=parsed_args.with_scheduler_state,
                 order_by=parsed_args.order_by,
-                limit=parsed_args.limit
+                limit=parsed_args.limit,
+                projections=parsed_args.project,
             )
         except Exception as e:
             import traceback

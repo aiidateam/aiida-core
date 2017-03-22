@@ -1,10 +1,18 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import json
 
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -15,10 +23,7 @@ from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.common.exceptions import NotExistent, DbContentError, ConfigurationError
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+
 
 class DbComputer(Base):
     __tablename__ = "db_dbcomputer"
@@ -38,10 +43,6 @@ class DbComputer(Base):
     transport_params = Column(JSONB)
     _metadata = Column('metadata', JSONB)
 
-    dbnodes_q = relationship(
-            'DbNode',
-            lazy='dynamic'
-        )
     def __init__(self, *args, **kwargs):
         self.enabled = True
         self._metadata = {}
@@ -73,19 +74,17 @@ class DbComputer(Base):
                 dbcomputer = cls.session.query(cls).filter(cls.id==computer).one()
             except NoResultFound:
                 raise NotExistent("No computer found in the table of computers with "
-                                  "the given pk '{}'".format(computer))
-
+                                  "the given id '{}'".format(computer))
         elif isinstance(computer, DbComputer):
             if computer.id is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer
-
         elif isinstance(computer, Computer):
             if computer.dbcomputer.id is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer.dbcomputer
         else:
-            raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
+            raise TypeError("Pass either a computer name, a DbComputer SQLAlchemy instance, a Computer id or a Computer object")
         return dbcomputer
 
     def get_aiida_class(self):
@@ -99,6 +98,9 @@ class DbComputer(Base):
             raise ConfigurationError('No workdir found for DbComputer {} '.format(
                 self.name))
 
+    @property
+    def pk(self):
+        return self.id
 
     def __str__(self):
         if self.enabled:

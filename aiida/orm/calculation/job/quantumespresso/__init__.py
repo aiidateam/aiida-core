@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import os
 
 from aiida.common.exceptions import InputValidationError
@@ -15,10 +23,6 @@ from aiida.orm.data.remote import RemoteData
 from aiida.common.datastructures import CodeInfo
 from aiida.common.links import LinkType
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class BasePwCpInputGenerator(object):
@@ -298,6 +302,37 @@ class BasePwCpInputGenerator(object):
         atomic_positions_card = "".join(atomic_positions_card_list)
         del atomic_positions_card_list  # Free memory
 
+        # velocities (to initialize MD, if set)
+        atomic_velocities = settings_dict.pop('ATOMIC_VELOCITIES', None)
+        if atomic_velocities is not None:
+            # Checking if as many velocities are set as structures:
+            if len(atomic_velocities) != len(structure.sites):
+                raise InputValidationError(
+                    "Input structure contains {:d} sites, but "
+                    "atomic velocities has length {:d}".format(
+                            len(structure.sites),
+                            len(atomic_velocities)
+                        )
+                    )
+            atomic_velocities_strings = ["ATOMIC_VELOCITIES\n"]
+            for site, vel in zip(structure.sites, atomic_velocities):
+                # Checking that all 3 dimension are specified:
+                if len(vel) != 3:
+                    raise InputValidationError(
+                        "Velocities({}) for {} has not length three"
+                        "".format(vel, site))
+                # Appending to atomic_velocities_strings
+                atomic_velocities_strings.append(
+                    "{0} {1:18.10f} {2:18.10f} {3:18.10f}\n".format(
+                            site.kind_name.ljust(6),
+                            vel[0], vel[1], vel[2]
+                        )
+                    )
+            # I append to atomic_positions_card  so that velocities 
+            # are defined right after positions:
+            atomic_positions_card = atomic_positions_card + "".join(atomic_velocities_strings)
+            # Freeing the memory
+            del atomic_velocities_strings
         # I set the variables that must be specified, related to the system
         # Set some variables (look out at the case! NAMELISTS should be
         # uppercase, internal flag names must be lowercase)

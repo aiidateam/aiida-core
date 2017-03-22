@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import os
 import shutil
 import fnmatch
@@ -10,10 +18,6 @@ from aiida.common.utils import get_repository_folder
 # Otherwise, tries to make everything only readable and writable by the user.
 # TODO: put it in a global variable, and check if it really works!
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 group_writable = True
 
@@ -170,8 +174,6 @@ class Folder(object):
         if not isinstance(src, unicode):
             src = unicode(src)
 
-        # I get the full path of the filename, checking also that I don't
-        # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)
 
         if not os.path.isabs(src):

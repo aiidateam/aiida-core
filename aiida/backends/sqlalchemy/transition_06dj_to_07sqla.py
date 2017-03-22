@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import gc
 import getpass
@@ -23,10 +31,6 @@ from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.utils import query_yes_no
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 # Profile keys
 aiidadb_backend_key = "AIIDADB_BACKEND"
@@ -124,19 +128,21 @@ def select_from_key(key, d):
 
 def modify_link_table():
 
-    with sa.session.begin(subtransactions=True):
+    session = sa.get_scoped_session()
+
+    with session.begin(subtransactions=True):
         print("\nStaring the modification of link table.")
 
-        inspector = reflection.Inspector.from_engine(sa.session.bind)
+        inspector = reflection.Inspector.from_engine(session.bind)
         table_cols = inspector.get_columns("db_dblink")
         col_type_list = [_["type"] for _ in table_cols if _["name"] == "type"]
         if len(col_type_list) == 0:
             print("Creating link type column")
-            sa.session.execute('ALTER TABLE db_dblink ADD COLUMN '
+            session.execute('ALTER TABLE db_dblink ADD COLUMN '
                                'type varchar(255)')
         else:
             print("Link type column already exists.")
-    sa.session.commit()
+    session.commit()
 
 
 def transition_extras(profile=None, group_size=1000, delete_table=False):
@@ -168,7 +174,7 @@ def transition_extras(profile=None, group_size=1000, delete_table=False):
 
     print("\nStarting migration of extras.")
 
-    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
 
     table_names = inspector.get_table_names()
     if NODE_TABLE_NAME not in table_names:
@@ -186,12 +192,14 @@ def transition_extras(profile=None, group_size=1000, delete_table=False):
               .format(EXTRAS_COL_NAME, NODE_TABLE_NAME))
         return
 
-    with sa.session.begin(subtransactions=True):
+    session = sa.get_scoped_session()
+
+    with session.begin(subtransactions=True):
         print("Creating columns..")
-        sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN extras '
+        session.execute('ALTER TABLE db_dbnode ADD COLUMN extras '
                            'JSONB DEFAULT \'{}\'')
         from aiida.backends.sqlalchemy.models.node import DbNode
-        total_nodes = sa.session.query(func.count(DbNode.id)).scalar()
+        total_nodes = session.query(func.count(DbNode.id)).scalar()
 
         total_groups = int(math.ceil(total_nodes/float(group_size)))
         error = False
@@ -209,20 +217,20 @@ def transition_extras(profile=None, group_size=1000, delete_table=False):
                 error |= err_
 
                 node.extras = attrs
-                sa.session.add(node)
+                session.add(node)
 
-            sa.session.flush()
-            sa.session.expunge_all()
+            session.flush()
+            session.expunge_all()
 
         if error:
             cont = query_yes_no("There has been some errors during the "
                                 "migration. Do you want to continue?", "no")
             if not cont:
-                sa.session.rollback()
+                session.rollback()
                 sys.exit(-1)
         if delete_table:
-            sa.session.execute('DROP TABLE db_dbextra')
-    sa.session.commit()
+            session.execute('DROP TABLE db_dbextra')
+    session.commit()
     print("Migration of extras finished.")
 
 
@@ -256,7 +264,7 @@ def transition_attributes(profile=None, group_size=1000, debug=False,
 
     print("\nStarting migration of attributes")
 
-    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
 
     table_names = inspector.get_table_names()
     if NODE_TABLE_NAME not in table_names:
@@ -274,12 +282,14 @@ def transition_attributes(profile=None, group_size=1000, debug=False,
               .format(ATTR_COL_NAME, NODE_TABLE_NAME))
         return
 
-    with sa.session.begin(subtransactions=True):
+    session = sa.get_scoped_session()
+
+    with session.begin(subtransactions=True):
         print("Creating columns..")
-        sa.session.execute('ALTER TABLE db_dbnode ADD COLUMN attributes '
+        session.execute('ALTER TABLE db_dbnode ADD COLUMN attributes '
                            'JSONB DEFAULT \'{}\'')
         from aiida.backends.sqlalchemy.models.node import DbNode
-        total_nodes = sa.session.query(func.count(DbNode.id)).scalar()
+        total_nodes = session.query(func.count(DbNode.id)).scalar()
 
         total_groups = int(math.ceil(total_nodes/float(group_size)))
         error = False
@@ -297,12 +307,12 @@ def transition_attributes(profile=None, group_size=1000, debug=False,
                 error |= err_
 
                 node.attributes = attrs
-                sa.session.add(node)
+                session.add(node)
 
             # Remove the db_dbnode from sqlalchemy, to allow the GC to do its
             # job.
-            sa.session.flush()
-            sa.session.expunge_all()
+            session.flush()
+            session.expunge_all()
 
             del nodes
             gc.collect()
@@ -311,11 +321,11 @@ def transition_attributes(profile=None, group_size=1000, debug=False,
             cont = query_yes_no("There has been some errors during the "
                                 "migration. Do you want to continue?", "no")
             if not cont:
-                sa.session.rollback()
+                session.rollback()
                 sys.exit(-1)
         if delete_table:
-            sa.session.execute('DROP TABLE db_dbattribute')
-    sa.session.commit()
+            session.execute('DROP TABLE db_dbattribute')
+    session.commit()
     print("Migration of attributes finished.")
 
 
@@ -347,7 +357,7 @@ def transition_settings(profile=None):
 
     print("\nStarting migration of settings.")
 
-    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
 
     settings_table_cols = inspector.get_columns(SETTINGS_TABLE_NAME)
     col_names = [_["name"] for _ in settings_table_cols]
@@ -359,14 +369,16 @@ def transition_settings(profile=None):
               .format(SETTINGS_VAL_COL_NAME, SETTINGS_TABLE_NAME))
         return
 
-    with sa.session.begin(subtransactions=True):
-        print("Creating columns..")
-        sa.session.execute('ALTER TABLE db_dbsetting ADD COLUMN val '
-                           'JSONB DEFAULT \'{}\'')
-    sa.session.commit()
+    session = sa.get_scoped_session()
 
-    with sa.session.begin(subtransactions=True):
-        total_settings = sa.session.query(DbSetting).all()
+    with session.begin(subtransactions=True):
+        print("Creating columns..")
+        session.execute('ALTER TABLE db_dbsetting ADD COLUMN val '
+                           'JSONB DEFAULT \'{}\'')
+    session.commit()
+
+    with session.begin(subtransactions=True):
+        total_settings = session.query(DbSetting).all()
 
         for settings in total_settings:
 
@@ -387,17 +399,17 @@ def transition_settings(profile=None):
 
             settings.val = val
             flag_modified(settings, "val")
-            sa.session.flush()
+            session.flush()
 
-    sa.session.commit()
+    session.commit()
 
-    with sa.session.begin(subtransactions=True):
+    with session.begin(subtransactions=True):
         for col_name in ["datatype", "tval", "fval", "ival", "bval", "dval"]:
             sql = ("ALTER TABLE {table} DROP COLUMN {column}")
-            sa.session.execute(sql.format(table=SETTINGS_TABLE_NAME,
+            session.execute(sql.format(table=SETTINGS_TABLE_NAME,
                                           column=col_name))
 
-    sa.session.commit()
+    session.commit()
     print("Migration of settings finished.")
 
 
@@ -419,12 +431,14 @@ def transition_json_column(profile=None):
         ('db_dblog', 'metadata')
     ]
 
-    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
 
     sql = ("ALTER TABLE {table} ALTER COLUMN {column} TYPE JSONB "
            "USING {column}::JSONB")
 
-    with sa.session.begin(subtransactions=True):
+    session = sa.get_scoped_session()
+
+    with session.begin(subtransactions=True):
 
         for table, col in table_col:
             table_cols = inspector.get_columns(table)
@@ -442,9 +456,9 @@ def transition_json_column(profile=None):
 
             print("Changing column {} of table {} in JSON format."
                   .format(table, col))
-            sa.session.execute(sql.format(table=table, column=col))
+            session.execute(sql.format(table=table, column=col))
 
-    sa.session.commit()
+    session.commit()
 
 
 def create_gin_index():
@@ -452,12 +466,12 @@ def create_gin_index():
     Create the GIN index for the attributes column of db_dbnode.
     """
     print("\nChecking if GIN indexes have to be created.")
-    inspector = reflection.Inspector.from_engine(sa.session.bind)
+    inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
     db_node_idx = inspector.get_indexes("db_dbnode")
     db_node_idx_names = [_["name"] for _ in db_node_idx]
     if "db_dbnode_attributes_idx" not in db_node_idx_names:
         print("Creating db_dbnode_attributes_idx on db_node.")
-        sa.session.bind.execute("CREATE INDEX db_dbnode_attributes_idx ON "
+        sa.get_scoped_session().bind.execute("CREATE INDEX db_dbnode_attributes_idx ON "
                                 "db_dbnode USING gin(attributes)")
     else:
         print("db_dbnode_attributes_idx on db_node already exists.")
@@ -481,24 +495,27 @@ def set_correct_schema_version_and_backend():
     from aiida.utils import timezone
     # Setting the correct backend and schema version
     SQLA_SCHEMA_VERSION = 0.1
-    with sa.session.begin(subtransactions=True):
+
+    session = sa.get_scoped_session()
+
+    with session.begin(subtransactions=True):
         # Setting manually the correct schema version
-        sa.session.execute(
+        session.execute(
             'DELETE FROM db_dbsetting WHERE key=\'db|schemaversion\'')
-        sa.session.execute(
+        session.execute(
             'INSERT INTO db_dbsetting (key, val, description, time) values '
             '(\'db|schemaversion\', \'{}\', '
             '\'The version of the schema used in this database.\', \'{}\')'
                 .format(SQLA_SCHEMA_VERSION, timezone.datetime.now()))
 
         # Setting the correct backend
-        sa.session.execute('DELETE FROM db_dbsetting WHERE key=\'db|backend\'')
-        sa.session.execute(
+        session.execute('DELETE FROM db_dbsetting WHERE key=\'db|backend\'')
+        session.execute(
             'INSERT INTO db_dbsetting (key, val, description, time) values '
             '(\'db|backend\', \'"{}"\', '
             '\'The backend used to communicate with database.\', \'{}\')'
                 .format(BACKEND_SQLA, timezone.datetime.now()))
-    sa.session.commit()
+    session.commit()
 
 
 def transition_db(profile=None, group_size=1000, delete_table=False):

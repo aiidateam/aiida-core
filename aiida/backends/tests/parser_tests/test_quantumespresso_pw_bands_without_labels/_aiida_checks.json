@@ -1,0 +1,24 @@
+{
+  "output_band": {
+    "array|bands": [
+      {
+        "comparison": "Equal",
+        "value": [49, 14]
+      }
+    ]
+  },
+  "output_parameters": {
+    "number_of_k_points": [
+      {
+        "comparison": "Equal", 
+        "value": 49
+      }
+    ],
+    "warnings": [
+      {
+        "comparison": "LengthEqual",
+        "value": 0
+      }
+    ]
+  }
+}

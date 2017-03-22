@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 This allows to setup and configure a code from command line.
 
@@ -8,10 +16,6 @@ import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 def cmdline_fill(attributes, store, print_header=True):
@@ -226,6 +230,9 @@ class CodeInputValidationClass(object):
 
         if not label.strip():
             raise ValidationError("No label specified")
+
+        if "@" in label:
+            raise ValidationError("Can not use '@' in label")
 
     description = ""
 
@@ -694,21 +701,77 @@ class Code(VerdiCommandWithSubcommands):
         if not reveal_filter:
             qb_code_filters['attributes.hidden'] = {"~==": True}
 
-        qb = QueryBuilder()
-        qb.append(Code, tag="code",
-                  filters=qb_code_filters,
-                  project=["id", "label"])
-        qb.append(Computer, computer_of="code",
-                  project=["name"],
-                  filters=qb_computer_filters)
-        qb.append(User, creator_of="code",
-                  project=["email"],
-                  filters=qb_user_filters)
-
         print "# List of configured codes:"
         print "# (use 'verdi code show CODEID' to see the details)"
-        if qb.count > 0:
-            for pk, label, computername, useremail in qb.iterall():
+        if computer_filter is not None:
+            qb = QueryBuilder()
+            qb.append(Code, tag="code",
+                      filters=qb_code_filters,
+                      project=["id", "label"])
+            # We have a user assigned to the code so we can ask for the
+            # presence of a user even if there is no user filter
+            qb.append(User, creator_of="code",
+                      project=["email"],
+                      filters=qb_user_filters)
+            # We also add the filter on computer. This will automatically
+            # return codes that have a computer (and of course satisfy the
+            # other filters). The codes that have a computer attached are the
+            # remote codes.
+            qb.append(Computer, computer_of="code",
+                      project=["name"],
+                      filters=qb_computer_filters)
+            self.print_list_res(qb, show_owner)
+
+        # If there is no filter on computers
+        else:
+            # Print all codes that have a computer assigned to them
+            # (these are the remote codes)
+            qb = QueryBuilder()
+            qb.append(Code, tag="code",
+                      filters=qb_code_filters,
+                      project=["id", "label"])
+            # We have a user assigned to the code so we can ask for the
+            # presence of a user even if there is no user filter
+            qb.append(User, creator_of="code",
+                      project=["email"],
+                      filters=qb_user_filters)
+            qb.append(Computer, computer_of="code",
+                      project=["name"])
+            self.print_list_res(qb, show_owner)
+
+            # Now print all the local codes. To get the local codes we ask
+            # the dbcomputer_id variable to be None.
+            qb = QueryBuilder()
+            comp_non_existence = {"dbcomputer_id": {"==": None}}
+            if not qb_code_filters:
+                qb_code_filters = comp_non_existence
+            else:
+                new_qb_code_filters = {"and": [qb_code_filters,
+                                       comp_non_existence]}
+                qb_code_filters = new_qb_code_filters
+            qb.append(Code, tag="code",
+                      filters=qb_code_filters,
+                      project=["id", "label"])
+            # We have a user assigned to the code so we can ask for the
+            # presence of a user even if there is no user filter
+            qb.append(User, creator_of="code",
+                      project=["email"],
+                      filters=qb_user_filters)
+            self.print_list_res(qb, show_owner)
+
+    @staticmethod
+    def print_list_res(qb_query, show_owner):
+        if qb_query.count > 0:
+            for tuple_ in qb_query.all():
+                if len(tuple_) == 3:
+                    (pk, label, useremail) = tuple_
+                    computername = None
+                elif len(tuple_) == 4:
+                    (pk, label, useremail, computername) = tuple_
+                else:
+                    print "Wrong tuple size"
+                    return
+
                 if show_owner:
                     owner_string = " ({})".format(useremail)
                 else:

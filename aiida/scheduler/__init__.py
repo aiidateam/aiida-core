@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from abc import ABCMeta, abstractmethod
 import aiida.common
@@ -6,10 +14,6 @@ from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import AiidaException
 from aiida.scheduler.datastructures import JobTemplate
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 def SchedulerFactory(module):
@@ -163,12 +167,27 @@ class Scheduler(object):
             script_lines.append(job_tmpl.append_text)
             script_lines.append(empty_line)
 
+        try:
+            script_lines.append(self._get_submit_script_footer(job_tmpl))
+            script_lines.append(empty_line)
+        except NotImplementedError:
+            pass
+
         return "\n".join(script_lines)
 
     @abstractmethod
     def _get_submit_script_header(self, job_tmpl):
         """
         Return the submit script header, using the parameters from the
+        job_tmpl.
+
+        :param job_tmpl: a JobTemplate instance with relevant parameters set.
+        """
+        raise NotImplementedError
+
+    def _get_submit_script_footer(self, job_tmpl):
+        """
+        Return the submit script final part, using the parameters from the
         job_tmpl.
 
         :param job_tmpl: a JobTemplate instance with relevant parameters set.

@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import os
 from abc import abstractmethod
 from aiida.orm.implementation import Node
 from aiida.common.exceptions import (ValidationError, MissingPluginError)
 from aiida.common.links import LinkType
-from aiida.orm.mixins import SealableWithUpdatableAttributesMixin
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
+from aiida.orm.mixins import SealableWithUpdatableAttributes
 
 
-class AbstractCode(SealableWithUpdatableAttributesMixin, Node):
+
+class AbstractCode(SealableWithUpdatableAttributes, Node):
     """
     A code entity.
     It can either be 'local', or 'remote'.
@@ -89,83 +93,114 @@ class AbstractCode(SealableWithUpdatableAttributesMixin, Node):
                                                              self.pk, self.uuid)
 
     @classmethod
+    def get_code_helper(cls, label, machinename=None):
+        """
+        :param label: the code label identifying the code to load
+        :param machinename: the machine name where code is setup
+
+        :raise NotExistent: if no code identified by the given string is found
+        :raise MultipleObjectsError: if the string cannot identify uniquely
+            a code
+        """
+        from aiida.common.exceptions import (NotExistent, MultipleObjectsError,
+                                             InputValidationError)
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.computer import Computer
+
+        qb = QueryBuilder()
+        qb.append(cls, filters={'label': {'==': label}},
+                  project=['*'], tag='code')
+        if machinename:
+            qb.append(Computer, filters={'name': {'==': machinename}},
+                  computer_of='code')
+
+        if qb.count() == 0:
+            raise NotExistent("'{}' is not a valid code "
+                              "name.".format(label))
+        elif qb.count() > 1:
+            codes = [_ for [_] in qb.all()]
+            retstr = ("There are multiple codes with label '{}', "
+                      "having IDs: ".format(label))
+            retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
+            retstr += ("Relabel them (using their ID), or refer to them "
+                       "with their ID.")
+            raise MultipleObjectsError(retstr)
+        else:
+            return qb.first()[0]
+
+    @classmethod
     @abstractmethod
-    def get(cls, label, computername=None, useremail=None):
+    def get(cls, pk=None, label=None, machinename=None):
         """
-        Get a code from its label.
+        Get a Computer object with given identifier string, that can either be
+        the numeric ID (pk), or the label (and computername) (if unique).
 
-        :param label: the code label
-        :param computername: filter only codes on computers with this name
-        :param useremail: filter only codes belonging to a user with this
-          email
+        :param pk: the numeric ID (pk) for code
+        :param label: the code label identifying the code to load
+        :param machinename: the machine name where code is setup
 
-        :raise NotExistent: if no matches are found
-        :raise MultipleObjectsError: if multiple matches are found. In this case
-          you may want to pass the additional parameters to filter the codes,
-          or relabel the codes.
+        :raise NotExistent: if no code identified by the given string is found
+        :raise MultipleObjectsError: if the string cannot identify uniquely
+            a code
         """
-        pass
+        from aiida.common.exceptions import (NotExistent, MultipleObjectsError,
+                                             InputValidationError)
+
+        # first check if code pk is provided
+        if(pk):
+            code_int = int(pk)
+            try:
+                return cls.get_subclass_from_pk(code_int)
+            except NotExistent:
+                raise ValueError("{} is not valid code pk".format(pk))
+            except MultipleObjectsError:
+                raise MultipleObjectsError("More than one code in the DB "
+                                           "with pk='{}'!".format(pk))
+
+        # check if label (and machinename) is provided
+        elif(label != None):
+            return cls.get_code_helper(label, machinename)
+
+        else:
+            raise InputValidationError("Pass either pk or code label (and machinename)")
+
 
     @classmethod
     @abstractmethod
     def get_from_string(cls, code_string):
         """
-        Get a Computer object with given identifier string, that can either be
-        the numeric ID (pk), or the label (if unique); the label can either
-        be simply the label, or in the format label@machinename. See the note
-        below for details on the string detection algorithm.
+        Get a Computer object with given identifier string in the format
+        label@machinename. See the note below for details on the string
+        detection algorithm.
 
-        .. note:: If a string that can be converted to an integer is given,
-          the numeric ID is verified first (therefore, is a code A with a
-          label equal to the ID of another code B is present, code A cannot
-          be referenced by label). Similarly, the (leftmost) '@' symbol is
-          always used to split code and computername. Therefore do not use
-          '@' in the code name if you want to use this function
-          ('@' in the computer name are instead valid).
+        .. note:: the (leftmost) '@' symbol is always used to split code
+            and computername. Therefore do not use
+            '@' in the code name if you want to use this function
+            ('@' in the computer name are instead valid).
 
         :param code_string: the code string identifying the code to load
 
         :raise NotExistent: if no code identified by the given string is found
         :raise MultipleObjectsError: if the string cannot identify uniquely
             a code
-        """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        from aiida.orm.utils import load_node
 
+        """
+
+        from aiida.common.exceptions import InputValidationError
+
+        # check if code_string is a integer
         try:
-            code_int = int(code_string)
-            try:
-                return load_node(code_int, parent_class=cls)
-            except NotExistent:
-                raise ValueError()  # Jump to the following section
-                # to check if a code with the given
-                # label exists.
-            except MultipleObjectsError:
-                raise MultipleObjectsError("More than one code in the DB "
-                                           "with pk='{}'!".format(code_string))
+            int(code_string)
+            raise InputValidationError("Pass code string in the format of label@machinename")
+
         except ValueError:
-            # Before dying, try to see if the user passed a (unique) label.
+
             # split with the leftmost '@' symbol (i.e. code names cannot
             # contain '@' symbols, computer names can)
-            codename, sep, computername = code_string.partition('@')
-            if sep:
-                codes = cls.query(label=codename, dbcomputer__name=computername)
-            else:
-                codes = cls.query(label=codename)
+            label, sep, machinename = code_string.partition('@')
 
-            if len(codes) == 0:
-                raise NotExistent("'{}' is not a valid code "
-                                  "ID or label.".format(code_string))
-            elif len(codes) > 1:
-                retstr = (
-                "There are multiple codes with label '{}', having IDs: "
-                "".format(code_string))
-                retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
-                retstr += ("Relabel them (using their ID), or refer to them "
-                           "with their ID.")
-                raise MultipleObjectsError(retstr)
-            else:
-                return codes[0]
+            return cls.get_code_helper(label, machinename)
+
 
     @classmethod
     @abstractmethod
@@ -179,7 +214,15 @@ class AbstractCode(SealableWithUpdatableAttributesMixin, Node):
         :return: a list of string, with the code names if labels is True,
           otherwise a list of integers with the code PKs.
         """
-        pass
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(cls, filters={'attributes.input_plugin': {'==': plugin}})
+        valid_codes = [_ for [_] in qb.all()]
+
+        if labels:
+            return [c.label for c in valid_codes]
+        else:
+            return [c.pk for c in valid_codes]
 
     def _validate(self):
 

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import datetime
 import unittest
 
@@ -7,10 +15,6 @@ from dateutil.parser import parse
 from aiida.common import utils
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class UniqueTest(unittest.TestCase):
@@ -59,43 +63,45 @@ class UniqueTest(unittest.TestCase):
         This method tests the query_yes_no method behaves as expected. To
         perform this, a lambda function is used to simulate the user input.
         """
-        # original_raw_input = __builtins__.raw_input
+        from aiida.utils.capturing import Capturing
 
-        # Check the yes
-        utils.raw_input = lambda _: "y"
-        self.assertTrue(utils.query_yes_no("", "yes"))
+        # Capture the sysout for the following code
+        with Capturing():
+            # Check the yes
+            utils.raw_input = lambda _: "y"
+            self.assertTrue(utils.query_yes_no("", "yes"))
 
-        utils.raw_input = lambda _: "yes"
-        self.assertTrue(utils.query_yes_no("", "yes"))
+            utils.raw_input = lambda _: "yes"
+            self.assertTrue(utils.query_yes_no("", "yes"))
 
-        # Check the no
-        utils.raw_input = lambda _: "no"
-        self.assertFalse(utils.query_yes_no("", "yes"))
+            # Check the no
+            utils.raw_input = lambda _: "no"
+            self.assertFalse(utils.query_yes_no("", "yes"))
 
-        utils.raw_input = lambda _: "n"
-        self.assertFalse(utils.query_yes_no("", "yes"))
+            utils.raw_input = lambda _: "n"
+            self.assertFalse(utils.query_yes_no("", "yes"))
 
-        # Check the empty default value that should
-        # lead to an error
-        with self.assertRaises(ValueError):
-            utils.query_yes_no("", "")
+            # Check the empty default value that should
+            # lead to an error
+            with self.assertRaises(ValueError):
+                utils.query_yes_no("", "")
 
-        # Check that a None default value and no answer from
-        # the user should lead to the repetition of the query until
-        # it is answered properly
-        self.seq = -1
-        answers = ["", "", "", "yes"]
-        utils.raw_input = lambda _: answers[self.array_counter()]
-        self.assertTrue(utils.query_yes_no("", None))
-        self.assertEqual(self.seq, len(answers) - 1)
+            # Check that a None default value and no answer from
+            # the user should lead to the repetition of the query until
+            # it is answered properly
+            self.seq = -1
+            answers = ["", "", "", "yes"]
+            utils.raw_input = lambda _: answers[self.array_counter()]
+            self.assertTrue(utils.query_yes_no("", None))
+            self.assertEqual(self.seq, len(answers) - 1)
 
-        # Check that the default answer is returned
-        # when the user doesn't give an answer
-        utils.raw_input = lambda _: ""
-        self.assertTrue(utils.query_yes_no("", "yes"))
+            # Check that the default answer is returned
+            # when the user doesn't give an answer
+            utils.raw_input = lambda _: ""
+            self.assertTrue(utils.query_yes_no("", "yes"))
 
-        utils.raw_input = lambda _: ""
-        self.assertFalse(utils.query_yes_no("", "no"))
+            utils.raw_input = lambda _: ""
+            self.assertFalse(utils.query_yes_no("", "no"))
 
     def test_query_string(self):
         """
@@ -122,27 +128,30 @@ class UniqueTest(unittest.TestCase):
         This method checks that the combined use of query_string and
         query_yes_no by the ask_backup_question is done as expected.
         """
+        from aiida.utils.capturing import Capturing
 
-        # Test that a question that asks for an integer is working
-        # The given answers are in order:
-        # - a non-accepted empty answer
-        # - an answer that can not be parsed based on the given type
-        # - the final expected answer
-        self.seq = -1
-        answers = ["", "3fd43", "1", "yes"]
-        utils.raw_input = lambda _: answers[self.array_counter()]
-        self.assertEqual(utils.ask_question("", int, False), int(answers[2]))
+        # Capture the sysout for the following code
+        with Capturing():
+            # Test that a question that asks for an integer is working
+            # The given answers are in order:
+            # - a non-accepted empty answer
+            # - an answer that can not be parsed based on the given type
+            # - the final expected answer
+            self.seq = -1
+            answers = ["", "3fd43", "1", "yes"]
+            utils.raw_input = lambda _: answers[self.array_counter()]
+            self.assertEqual(utils.ask_question("", int, False), int(answers[2]))
 
-        # Test that a question that asks for a date is working correctly.
-        # The behavior is similar to the above test.
-        self.seq = -1
-        answers = ["", "3fd43", "2015-07-28 20:48:53.197537+02:00", "yes"]
-        utils.raw_input = lambda _: answers[self.array_counter()]
-        self.assertEqual(utils.ask_question("", datetime.datetime, False),
-                         parse(answers[2]))
+            # Test that a question that asks for a date is working correctly.
+            # The behavior is similar to the above test.
+            self.seq = -1
+            answers = ["", "3fd43", "2015-07-28 20:48:53.197537+02:00", "yes"]
+            utils.raw_input = lambda _: answers[self.array_counter()]
+            self.assertEqual(utils.ask_question("", datetime.datetime, False),
+                             parse(answers[2]))
 
-        # Check that None is not allowed as answer
-        question = ""
-        answer = ""
-        utils.raw_input = lambda x: answer if x == question else "y"
-        self.assertEqual(utils.ask_question(question, int, True), None)
+            # Check that None is not allowed as answer
+            question = ""
+            answer = ""
+            utils.raw_input = lambda x: answer if x == question else "y"
+            self.assertEqual(utils.ask_question(question, int, True), None)

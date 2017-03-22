@@ -1,13 +1,17 @@
 #!/usr/bin/env runaiida
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.workflows.wf_XTiO3 import WorkflowXTiO3_EOS
 import sys
 from aiida.common.example_helpers import test_and_get_code
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 # This example runs a set of calculation for at various lattice parameter
 # and fit a BirchMurnaghan equation of state.

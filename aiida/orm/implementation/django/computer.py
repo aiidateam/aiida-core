@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import json
 import collections
@@ -6,14 +14,13 @@ import collections
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.general.computer import AbstractComputer
+from aiida.backends.djsite.db.models import DbComputer
+from aiida.common.lang import override
+from aiida.orm.implementation.general.computer import AbstractComputer, Util as ComputerUtil
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
+from aiida.orm.implementation.django.utils import get_db_columns
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 
 class Computer(AbstractComputer):
@@ -30,7 +37,6 @@ class Computer(AbstractComputer):
         return self._dbcomputer.pk
 
     def __init__(self, **kwargs):
-        from aiida.backends.djsite.db.models import DbComputer
         super(Computer, self).__init__()
 
         uuid = kwargs.pop('uuid', None)
@@ -71,6 +77,12 @@ class Computer(AbstractComputer):
                 raise ValueError("Unable to set '{0}', set_{0} is not "
                                  "callable!".format(k))
             method(v)
+
+
+    @staticmethod
+    def get_db_columns():
+        from aiida.backends.djsite.db.models import DbComputer
+        return get_db_columns(DbComputer)
 
     @classmethod
     def list_names(cls):
@@ -295,3 +307,18 @@ class Computer(AbstractComputer):
         self.dbcomputer.transport_type = val
         if not self.to_be_stored:
             self.dbcomputer.save()
+
+
+class Util(ComputerUtil):
+    @override
+    def delete_computer(self, pk):
+        """
+        Delete the computer with the given pk.
+        :param pk: The computer pk.
+        """
+        from django.db.models.deletion import ProtectedError
+        try:
+            DbComputer.objects.filter(pk=pk).delete()
+        except ProtectedError:
+            raise InvalidOperation("Unable to delete the requested computer: there"
+                                   "is at least one node using this computer")

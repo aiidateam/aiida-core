@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.orm import Data
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class RemoteData(Data):
@@ -36,7 +40,7 @@ class RemoteData(Data):
         """
         Check if remote folder is empty
         """
-        from aiida.execmanager import get_authinfo
+        from aiida.backends.utils import get_authinfo
 
         authinfo = get_authinfo(computer=self.get_computer(),
                                 aiidauser=self.get_user())
@@ -54,7 +58,7 @@ class RemoteData(Data):
         """
         Remove all content of the remote folder on the remote computer
         """
-        from aiida.execmanager import get_authinfo
+        from aiida.backends.utils import get_authinfo
         import os
 
         authinfo = get_authinfo(computer=self.get_computer(),

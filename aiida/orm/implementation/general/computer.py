@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
-from abc import abstractmethod, abstractproperty
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 import logging
 import os
@@ -13,10 +21,6 @@ from aiida.common.exceptions import (
 
 from aiida.common.utils import classproperty
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class AbstractComputer(object):
@@ -173,6 +177,17 @@ class AbstractComputer(object):
 
     @abstractmethod
     def set(self, **kwargs):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_db_columns():
+        """
+        This method returns a list with the column names and types of the
+        table
+        corresponding to this class.
+        :return: a list with the names of the columns
+        """
         pass
 
     @classmethod
@@ -790,3 +805,11 @@ class AbstractComputer(object):
         else:
             return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname,
                                                        self.pk)
+
+
+class Util(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def delete_computer(self, pk):
+        pass

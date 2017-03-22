@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Plugin for direct execution.
 """
@@ -9,10 +17,6 @@ from aiida.scheduler import SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (
     JobInfo, job_states, MachineInfo, NodeNumberJobResource)
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 _map_status_ps = {
     'R': job_states.RUNNING,
@@ -64,11 +68,11 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         """
         from aiida.common.exceptions import FeatureNotAvailable
 
-        command = 'ps o pid,stat,user,time'
+        command = 'ps -o pid,stat,user,time'
 
         if jobs:
             if isinstance(jobs, basestring):
-                command += ' h {}'.format(escape_for_bash(jobs))
+                command += ' {}'.format(escape_for_bash(jobs))
             else:
                 try:
                     command += ' {}'.format(' '.join(escape_for_bash(j) for j in jobs))
@@ -76,10 +80,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                     raise TypeError(
                         "If provided, the 'jobs' variable must be a string or a list of strings")
 
-        if user and not jobs:
-            if user != '$USER':
-                user = escape_for_bash(user)
-            command += ' -U {} -u {} h'.format(user, user)
+        command +='| tail -n +2' # -header, do not use 'h'
 
         return command
 
@@ -201,6 +202,10 @@ class DirectScheduler(aiida.scheduler.Scheduler):
             this_job = JobInfo()
             this_job.job_id = job[0]
 
+            if len(job) < 3:
+                raise SchedulerError("Unexpected output from the scheduler, "
+                    "not enough fields in line '{}'".format(line))
+
             try:
                 job_state_string = job[1]
                 try:
@@ -274,7 +279,9 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         """
         Convert a string in the format HH:MM:SS to a number of seconds.
         """
-        pieces = string.split(':')
+        import re
+        
+        pieces = re.split('[:.]', string)
         if len(pieces) != 3:
             self.logger.warning("Wrong number of pieces (expected 3) for "
                                 "time string {}".format(string))

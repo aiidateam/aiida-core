@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+import re
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
-
+from aiida.orm.data.upf import UpfData
 from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
+
 
 class PwTcodtranslator(BaseTcodtranslator):
     """
@@ -28,6 +34,14 @@ class PwTcodtranslator(BaseTcodtranslator):
         'f-d': 'Marzari-Vanderbilt',
         'fd': 'Marzari-Vanderbilt',
     }
+
+    _pseudopotential_types = [ 'NCPP', 'USPP', 'PAW' ]
+
+    _upf_type_v2_regexp = re.compile(
+        r"""
+        \s*
+        Pseudopotential type:\s*(?P<upf_type>.*)
+        """, re.VERBOSE)
 
     @classmethod
     def get_software_package(cls,calc,**kwargs):
@@ -370,3 +384,68 @@ class PwTcodtranslator(BaseTcodtranslator):
         except KeyError:
             pass
         return cls.get_kinetic_energy_cutoff_charge_density(calc)
+
+    @classmethod
+    def _get_raw_pseudopotential_type(cls,calc,**kwargs):
+        """
+        """
+        from aiida.orm.data.upf import parse_upf
+        types = {}
+        for node in calc.get_inputs():
+            if not isinstance(node,UpfData):
+                continue
+            element = node.element
+            parsed = parse_upf(node.get_file_abs_path())
+            if parsed['version'] != "2":
+                types[element] = None
+                continue
+            upf_type = None
+            with open(fname) as f:
+                for line in f:
+                    match = _upf_type_v2_regexp.match(line.strip())
+                    if match:
+                        upf_type = match.group('upf_type')
+                        break
+            types[element] = upf_type
+        return types
+
+    @classmethod
+    def get_pseudopotential_atom_type(cls,calc,**kwargs):
+        """
+        Returns a list of atom types. Each atom type MUST occur only
+        once in this list. List MUST be sorted.
+        """
+        raw_types = cls._get_raw_pseudopotential_type(calc,**kwargs)
+        return sorted(raw_types)
+
+    @classmethod
+    def get_pseudopotential_type(cls,calc,**kwargs):
+        """
+        Returns a list of pseudopotential types. List MUST be sorted
+        by atom types.
+        """
+        types = []
+        raw_types = cls._get_raw_pseudopotential_type(calc,**kwargs)
+        for element in sorted(raw_types):
+            if raw_types[element] is None or \
+               raw_types[element] in _pseudopotential_types:
+                types.append(raw_types[element])
+            else:
+                types.append('other')
+        return types
+
+    @classmethod
+    def get_pseudopotential_type_other_name(cls,calc,**kwargs):
+        """
+        Returns a list of other pseudopotential type names. List MUST be
+        sorted by atom types.
+        """
+        types = []
+        raw_types = cls._get_raw_pseudopotential_type(calc,**kwargs)
+        for element in sorted(raw_types):
+            if raw_types[element] is None or \
+               raw_types[element] in _pseudopotential_types:
+                types.append(None)
+            else:
+                types.append(raw_types[element])
+        return types

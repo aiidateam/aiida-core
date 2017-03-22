@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 This module manages the UPF pseudopotentials in the local repository.
 """
@@ -7,10 +15,6 @@ import re
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.common.utils import classproperty
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 UPFGROUP_TYPE = 'data.upf.family'
 
@@ -45,7 +49,7 @@ def get_pseudos_from_structure(structure, family_name):
     Given a family name (a UpfFamily group in the DB) and a AiiDA
     structure, return a dictionary associating each kind name with its
     UpfData object.
-    
+
     :raise MultipleObjectsError: if more than one UPF for the same element is
        found in the group.
     :raise NotExistent: if no UPF for an element in the group is
@@ -75,11 +79,44 @@ def get_pseudos_from_structure(structure, family_name):
     return pseudo_list
 
 
+def get_pseudos_dict(structure, family_name):
+    """
+    Get a dictionary of {kind: pseudo} for all the elements within the given
+    structure using a the given pseudo family name.
+
+    :param structure: The structure that will be used.
+    :param family_name: the name of the group containing the pseudos
+    """
+    from collections import defaultdict
+
+    # A dict {kind_name: pseudo_object}
+    kind_pseudo_dict = get_pseudos_from_structure(structure, family_name)
+
+    # We have to group the species by pseudo, I use the pseudo PK
+    # pseudo_dict will just map PK->pseudo_object
+    pseudo_dict = {}
+    # Will contain a list of all species of the pseudo with given PK
+    pseudo_species = defaultdict(list)
+
+    for kindname, pseudo in kind_pseudo_dict.iteritems():
+        pseudo_dict[pseudo.pk] = pseudo
+        pseudo_species[pseudo.pk].append(kindname)
+
+    pseudos = {}
+    for pseudo_pk in pseudo_dict:
+        pseudo = pseudo_dict[pseudo_pk]
+        kinds = pseudo_species[pseudo_pk]
+        for kind in kinds:
+            pseudos[kind] = pseudo
+
+    return pseudos
+
+
 def upload_upf_family(folder, group_name, group_description,
                       stop_if_existing=True):
     """
     Upload a set of UPF files in a given group.
-    
+
     :param folder: a path containing all UPF files to be added.
         Only files ending in .UPF (case-insensitive) are considered.
     :param group_name: the name of the group to create. If it exists and is
@@ -97,7 +134,7 @@ def upload_upf_family(folder, group_name, group_description,
     from aiida.orm import Group
     from aiida.common.exceptions import UniquenessError, NotExistent
     from aiida.backends.utils import get_automatic_user
-    from aiida.orm import QueryBuilder
+    from aiida.orm.querybuilder import QueryBuilder
     if not os.path.isdir(folder):
         raise ValueError("folder must be a directory")
 
@@ -136,7 +173,7 @@ def upload_upf_family(folder, group_name, group_description,
         qb = QueryBuilder()
         qb.append(UpfData, filters={'attributes.md5':{'==':md5sum}})
         existing_upf = qb.first()
-        
+
         #~ existing_upf = UpfData.query(dbattributes__key="md5",
                                      #~ dbattributes__tval=md5sum)
 
@@ -183,7 +220,7 @@ def upload_upf_family(folder, group_name, group_description,
     if group_created:
         group.store()
 
-    # save the upf in the database, and add them to group    
+    # save the upf in the database, and add them to group
     for pseudo, created in pseudo_and_created:
         if created:
             pseudo.store()
@@ -204,11 +241,11 @@ def upload_upf_family(folder, group_name, group_description,
 
 def parse_upf(fname, check_filename=True):
     """
-    Try to get relevant information from the UPF. For the moment, only the 
+    Try to get relevant information from the UPF. For the moment, only the
     element name. Note that even UPF v.2 cannot be parsed with the XML minidom!
     (e.g. due to the & characters in the human-readable section).
-    
-    If check_filename is True, raise a ParsingError exception if the filename 
+
+    If check_filename is True, raise a ParsingError exception if the filename
     does not start with the element name.
     """
     import os
@@ -278,7 +315,7 @@ def parse_upf(fname, check_filename=True):
 # def test_parser(folder):
 #    import os
 #    from aiida.common.exceptions import ParsingError
-#    
+#
 #    for fn in os.listdir(folder):
 #        if os.path.isfile(fn) and fn.lower().endswith('.upf'):
 #            try:
@@ -297,13 +334,13 @@ class UpfData(SinglefileData):
     def get_or_create(cls, filename, use_first=False, store_upf=True):
         """
         Pass the same parameter of the init; if a file with the same md5
-        is found, that UpfData is returned. 
-        
+        is found, that UpfData is returned.
+
         :param filename: an absolute filename on disk
         :param use_first: if False (default), raise an exception if more than \
                 one potential is found.\
                 If it is True, instead, use the first available pseudopotential.
-        :param bool store_upf: If false, the UpfData objects are not stored in 
+        :param bool store_upf: If false, the UpfData objects are not stored in
                 the database. default=True.
         :return (upf, created): where upf is the UpfData object, and create is either\
             True if the object was created, or False if the object was retrieved\
@@ -342,7 +379,7 @@ class UpfData(SinglefileData):
 
     def store(self, *args, **kwargs):
         """
-        Store the node, reparsing the file so that the md5 and the element 
+        Store the node, reparsing the file so that the md5 and the element
         are correctly reset.
         """
         from aiida.common.exceptions import ParsingError, ValidationError
@@ -371,12 +408,14 @@ class UpfData(SinglefileData):
     def from_md5(cls, md5):
         """
         Return a list of all UPF pseudopotentials that match a given MD5 hash.
-        
+
         Note that the hash has to be stored in a _md5 attribute, otherwise
         the pseudo will not be found.
         """
-        queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
-        return list(queryset)
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(cls, filters={'attributes.md5': {'==': md5}})
+        return [_ for [_] in qb.all()]
 
     def set_file(self, filename):
         """
@@ -474,8 +513,8 @@ class UpfData(SinglefileData):
     def get_upf_groups(cls, filter_elements=None, user=None):
         """
         Return all names of groups of type UpfFamily, possibly with some filters.
-            
-        :param filter_elements: A string or a list of strings. 
+
+        :param filter_elements: A string or a list of strings.
                If present, returns only the groups that contains one Upf for
                every element present in the list. Default=None, meaning that
                all families are returned.
@@ -506,4 +545,4 @@ class UpfData(SinglefileData):
         groups.sort()
         # Return the groups, without name
         return [_[1] for _ in groups]
-        
+

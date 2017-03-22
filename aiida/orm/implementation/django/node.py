@@ -1,26 +1,31 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import copy
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
 from django.db.models import F
-from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.backends.djsite.db.models import DbLink
+from aiida.backends.djsite.utils import get_automatic_user
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
-from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
-from aiida.common.links import LinkType
 from aiida.common.lang import override
+from aiida.common.links import LinkType
+from aiida.common.utils import get_new_uuid
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.mixins import Sealable
+from aiida.orm.implementation.django.utils import get_db_columns
 
-from aiida.backends.djsite.utils import get_automatic_user
-from aiida.backends.djsite.db.models import DbLink
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class Node(AbstractNode):
@@ -35,6 +40,11 @@ class Node(AbstractNode):
             raise NotExistent("UUID={} is not an instance of {}".format(
                 uuid, cls.__name__))
         return node
+
+    @staticmethod
+    def get_db_columns():
+        from aiida.backends.djsite.db.models import DbNode
+        return get_db_columns(DbNode)
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
@@ -144,14 +154,14 @@ class Node(AbstractNode):
     def _update_db_label_field(self, field_value):
         self.dbnode.label = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
         self.dbnode.description = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
 
@@ -160,7 +170,7 @@ class Node(AbstractNode):
             self._add_dblink_from(src, label, link_type)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._remove_dblink_from(label)
                 self._add_dblink_from(src, label, link_type)
 
@@ -364,6 +374,10 @@ class Node(AbstractNode):
                                    stop_if_existing=True)
         self._increment_version_number_db()
 
+    def reset_extras(self, new_extras):
+        raise NotImplementedError("Reset of extras has not been implemented"
+                                  "for Django backend.")
+
     def get_extra(self, key, *args):
         from aiida.backends.djsite.db.models import DbExtra
         if len(args) > 1:
@@ -405,8 +419,8 @@ class Node(AbstractNode):
             return
         else:
             extraslist = DbExtra.list_all_node_elements(self.dbnode)
-        for e in extraslist:
-            yield e.key
+            for e in extraslist:
+                yield e.key
 
     def iterextras(self):
         from aiida.backends.djsite.db.models import DbExtra
@@ -552,7 +566,8 @@ class Node(AbstractNode):
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
 
         for k, v in self.iterattrs():
-            newobject._set_attr(k, v)
+            if k != Sealable.SEALED_KEY:
+                newobject._set_attr(k, v)
 
         for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path), path)
@@ -592,7 +607,7 @@ class Node(AbstractNode):
         from aiida.common.utils import EmptyContextManager
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 
@@ -679,7 +694,7 @@ class Node(AbstractNode):
         from aiida.common.utils import EmptyContextManager
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 
@@ -730,7 +745,7 @@ class Node(AbstractNode):
         import aiida.orm.autogroup
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 

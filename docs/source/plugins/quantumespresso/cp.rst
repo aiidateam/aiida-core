@@ -9,8 +9,7 @@ Note that most of the options are the same of the pw.x plugin, so refer to
 
 Supported codes
 ---------------
-* tested from cp.x v5.0 onwards. Back compatibility is not guaranteed (although
-  versions 4.3x might work most of the times).
+* tested from cp.x v5.0 onwards.
 
 Inputs
 ------
@@ -27,10 +26,11 @@ Inputs
       {"ELECTRONS":{"ecutwfc":"30","ecutrho":"100"},
       }
   
-  See the QE documentation for the full list of variables and their meaning. 
-  Note: some keywords don't have to be specified or Calculation will enter 
-  the SUBMISSIONFAILED state, and are already taken care of by AiiDA (are related 
-  with the structure or with path to files)::
+  A full list of variables and their meaning is found in the `cp.x documentation`_.
+
+  .. _cp.x documentation: http://www.quantum-espresso.org/wp-content/uploads/Doc/INPUT_CP.html
+
+  Following keywords, related to the structure or to the file paths, are already taken care of by AiiDA::
     
       'CONTROL', 'pseudo_dir': pseudopotential directory
       'CONTROL', 'outdir': scratch directory
@@ -45,6 +45,8 @@ Inputs
       'SYSTEM', 'cosab': cell parameters
       'SYSTEM', 'cosac': cell parameters
       'SYSTEM', 'cosbc': cell parameters
+
+  Those keywords should not be specified, otherwise the submission will fail.
      
 * **structure**, class :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
   The initial ionic configuration of the CP molecular dynamics.
@@ -62,11 +64,10 @@ Outputs
 There are several output nodes that can be created by the plugin, according to the calculation details.
 All output nodes can be accessed with the ``calculation.out`` method.
 
-* output_parameters :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` 
-  (accessed by ``calculation.res``)
+* output_parameters :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`
   Contains the scalar properties. Example: energies (in eV) of the last configuration, 
-  wall_time,
-  warnings (possible error messages generated in the run).
+  wall_time, warnings (possible error messages generated in the run).
+  ``calculation.out.output_parameters`` can also be accessed by the ``calculation.res`` shortcut.
 * output_trajectory_array :py:class:`TrajectoryData <aiida.orm.data.array.trajectory.TrajectoryData>`
   Contains vectorial properties, too big to be put in the dictionary, like
   energies, positions, velocities, cells, at every saved step.  

@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import datetime
 import filecmp
 import functools
+import inspect
 import os.path
 import string
 import sys
@@ -10,10 +19,6 @@ from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class classproperty(object):
@@ -210,6 +215,37 @@ def conv_to_fortran(val):
     return val_str
 
 
+def conv_to_fortran_withlists(val):
+    """
+    Same as conv_to_fortran but with extra logic to handle lists
+    :param val: the value to be read and converted to a Fortran-friendly string.
+    """
+    # Note that bool should come before integer, because a boolean matches also
+    # isinstance(...,int)
+    if (isinstance(val, (list, tuple))):
+        out_list = []
+        for thing in val:
+            out_list.append(conv_to_fortran(thing))
+        val_str = ", ".join(out_list)
+        return val_str
+    if (isinstance(val, bool)):
+        if val:
+            val_str = '.true.'
+        else:
+            val_str = '.false.'
+    elif (isinstance(val, (int, long))):
+        val_str = "{:d}".format(val)
+    elif (isinstance(val, float)):
+        val_str = ("{:18.10e}".format(val)).replace('e', 'd')
+    elif (isinstance(val, basestring)):
+        val_str = "'{!s}'".format(val)
+    else:
+        raise ValueError("Invalid value passed, accepts only bools, ints, "
+                         "floats and strings")
+
+    return val_str
+
+
 def get_unique_filename(filename, list_of_filenames):
     """
     Return a unique filename that can be added to the list_of_filenames.
@@ -370,6 +406,20 @@ def create_display_name(field):
     return ' '.join(_.capitalize() for _ in field.split('_'))
 
 
+def get_object_string(obj):
+    """
+    Get a string that identifies this object which can be used to retrieve
+    it via :func:`get_object_from_string`.
+
+    :param obj: The object to get the string for
+    :return: The string that identifies the object
+    """
+    if inspect.isfunction(obj):
+        return "{}.{}".format(obj.__module__, obj.__name__)
+    else:
+        return get_class_string(obj)
+
+
 def get_class_string(obj):
     """
     Return the string identifying the class of the object (module + object name,
@@ -377,16 +427,10 @@ def get_class_string(obj):
 
     It works both for classes and for class instances.
     """
-    import inspect
-
     if inspect.isclass(obj):
-        return "{}.{}".format(
-            obj.__module__,
-            obj.__name__)
+        return "{}.{}".format(obj.__module__, obj.__name__)
     else:
-        return "{}.{}".format(
-            obj.__module__,
-            obj.__class__.__name__)
+        return "{}.{}".format(obj.__module__, obj.__class__.__name__)
 
 
 def get_object_from_string(string):
@@ -525,9 +569,9 @@ def xyz_parser_iterator(string):
 ^                                                                             # Linestart
 [ \t]*                                                                        # Optional white space
 (?P<sym>[A-Za-z]+[A-Za-z0-9]*)\s+                                             # get the symbol
-(?P<x> [\-|\+]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([E | e][+|-]?\d+)? ) [ \t]+  # Get x
-(?P<y> [\-|\+]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([E | e][+|-]?\d+)? ) [ \t]+  # Get y
-(?P<z> [\-|\+]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([E | e][+|-]?\d+)? )         # Get z
+(?P<x> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get x
+(?P<y> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get y
+(?P<z> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? )            # Get z
 """, re.X | re.M)
     pos_block_regex = re.compile(r"""
                                                             # First line contains an integer
@@ -541,16 +585,22 @@ def xyz_parser_iterator(string):
             (
                 [A-Za-z]+[A-Za-z0-9]*                       # Element spec
                 (
-                   \s+                                      # White space in front of the number
-                   [\- | \+ ]?                              # Plus or minus in front of the number (optional)
-                    (\d*                                    # optional decimal in the beginning .0001 is ok, for example
-                    [\.]                                    # There has to be a dot followed by
-                    \d+)                                    # at least one decimal
-                    |                                       # OR
-                    (\d+                                    # at least one decimal, followed by
-                    [\.]?                                   # an optional dot
-                    \d*)                                    # followed by optional decimals
-                    ([E | e][+|-]?\d+)?                     # optional exponents E+03, e-05
+                    \s+                                     # White space in front of the number
+                    [\+\-]?                                 # Plus or minus in front of the number (optional)
+                    (
+                        (
+                            \d*                             # optional decimal in the beginning .0001 is ok, for example
+                            [\.]                            # There has to be a dot followed by
+                            \d+                             # at least one decimal
+                        )
+                        |                                   # OR
+                        (
+                            \d+                             # at least one decimal, followed by
+                            [\.]?                           # an optional dot
+                            \d*                             # followed by optional decimals
+                        )
+                    )
+                    ([Ee][\+\-]?\d+)?                       # optional exponents E+03, e-05
                 ){3}                                        # I expect three float values
                 |
                 \#                                          # If a line is commented out, that is also ok
@@ -858,4 +908,20 @@ def are_dir_trees_equal(dir1, dir2):
 
 
 def indent(txt, spaces=4):
-    return "\n".join(" "*spaces + ln for ln in txt.splitlines())
+    return "\n".join(" " * spaces + ln for ln in txt.splitlines())
+
+
+def issingular(singularForm):
+    """
+    Checks whether a noun is singular
+    :param pluralForm: a string defining an English noun
+    :return: the t-ple (singular, pluralform).
+    singular: True/Flalse if noun is singular/plural
+    pluralfrom: (a string with the noun in the plural form))
+    """
+
+    from pattern.en import pluralize
+
+    pluralForm = pluralize(singularForm)
+    singular = True if singularForm is not pluralForm else False
+    return singular, pluralForm

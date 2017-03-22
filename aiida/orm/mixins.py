@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 
-class SealableMixin(object):
+class Sealable(object):
 
-    # The name of the attribute to indiate if the node is sealed or not.
+    # The name of the attribute to indicate if the node is sealed or not.
     SEALED_KEY = '_sealed'
 
     def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
@@ -30,8 +34,8 @@ class SealableMixin(object):
         assert not self.is_sealed, \
             "Cannot add incoming links to a sealed calculation node"
 
-        super(SealableMixin, self).add_link_from(src, label=label,
-                                                 link_type=link_type)
+        super(Sealable, self).add_link_from(src, label=label,
+                                            link_type=link_type)
 
     @property
     def is_sealed(self):
@@ -42,7 +46,7 @@ class SealableMixin(object):
             self._set_attr(self.SEALED_KEY, True)
 
 
-class SealableWithUpdatableAttributesMixin(SealableMixin):
+class SealableWithUpdatableAttributes(Sealable):
     _updatable_attributes = tuple()
 
     @override
@@ -62,7 +66,7 @@ class SealableWithUpdatableAttributesMixin(SealableMixin):
         if self.is_sealed and key not in self._updatable_attributes:
             raise ModificationNotAllowed(
                 "Cannot change the attributes of a sealed calculation.")
-        super(SealableWithUpdatableAttributesMixin, self)._set_attr(key, value)
+        super(SealableWithUpdatableAttributes, self)._set_attr(key, value)
 
     @override
     def _del_attr(self, key):
@@ -76,7 +80,7 @@ class SealableWithUpdatableAttributesMixin(SealableMixin):
         if self.is_sealed and key not in self._updatable_attributes:
             raise ModificationNotAllowed(
                 "Cannot delete the attributes of a sealed calculation.")
-        super(SealableWithUpdatableAttributesMixin, self)._del_attr(key)
+        super(SealableWithUpdatableAttributes, self)._del_attr(key)
 
 
     @override
@@ -84,7 +88,7 @@ class SealableWithUpdatableAttributesMixin(SealableMixin):
         if self.is_sealed and key not in self._updatable_attributes:
             raise ModificationNotAllowed(
                 "Cannot delete an attribute of a sealed calculation node")
-        super(SealableWithUpdatableAttributesMixin, self)._del_attr(key)
+        super(SealableWithUpdatableAttributes, self)._del_attr(key)
 
     def iter_updatable_attrs(self):
         for k in list(self._updatable_attributes):
@@ -95,7 +99,7 @@ class SealableWithUpdatableAttributesMixin(SealableMixin):
 
     @override
     def copy(self):
-        newobj = super(SealableWithUpdatableAttributesMixin, self).copy()
+        newobj = super(SealableWithUpdatableAttributes, self).copy()
 
         # Remove the updatable attributes
         for k, v in self.iter_updatable_attrs():

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from __future__ import absolute_import
 
@@ -10,10 +18,18 @@ from aiida.common.exceptions import (
     )
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+
+
+
+def QueryFactory():
+    if settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.queries import QueryManagerSQLA as QueryManager
+    elif settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.queries import QueryManagerDjango as QueryManager
+    else:
+        raise ConfigurationError("Invalid settings.BACKEND: {}".format(
+            settings.BACKEND))
+    return QueryManager
 
 
 def is_dbenv_loaded():
@@ -63,7 +79,9 @@ def get_automatic_user():
 
 def get_workflow_list(*args, **kwargs):
     if settings.BACKEND == BACKEND_SQLA:
-        raise ValueError("This method doesn't exist for this backend")
+        from aiida.backends.sqlalchemy.cmdline import (
+            get_workflow_list as get_workflow_list_sqla)
+        return get_workflow_list_sqla(*args, **kwargs)
     elif settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.cmdline import (
             get_workflow_list as get_workflow_list_dj)
@@ -109,7 +127,8 @@ def get_authinfo(computer, aiidauser):
                     aiidauser.email, computer.name))
     elif settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
         from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
         try:
             authinfo = session.query(DbAuthInfo).filter_by(
@@ -157,19 +176,23 @@ def set_daemon_user(user_email):
 def get_global_setting(key):
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.globalsettings import get_global_setting
-        from django.db import connection
-        if 'db_dbsetting' not in connection.introspection.table_names():
-            raise KeyError("No table found")
     elif settings.BACKEND == BACKEND_SQLA:
-        from sqlalchemy.engine import reflection
-        from aiida.backends import sqlalchemy as sa
-        inspector = reflection.Inspector.from_engine(sa.session.bind)
-        if 'db_dbsetting' not in inspector.get_table_names():
-            raise KeyError("No table found")
         from aiida.backends.sqlalchemy.globalsettings import get_global_setting
     else:
         raise Exception("unknown backend {}".format(settings.BACKEND))
     return get_global_setting(key)
+
+
+def get_global_setting_description(key):
+    if settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.globalsettings import (
+            get_global_setting_description)
+    elif settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.globalsettings import (
+            get_global_setting_description)
+    else:
+        raise Exception("unknown backend {}".format(settings.BACKEND))
+    return get_global_setting_description(key)
 
 
 def get_db_schema_version():
@@ -200,6 +223,17 @@ def set_global_setting(key, value, description=None):
         raise Exception("unknown backend {}".format(settings.BACKEND))
 
     set_global_setting(key, value, description)
+
+
+def del_global_setting(key):
+    if settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.globalsettings import del_global_setting
+    elif settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.globalsettings import del_global_setting
+    else:
+        raise Exception("unknown backend {}".format(settings.BACKEND))
+
+    del_global_setting(key)
 
 
 def set_db_schema_version(version):
@@ -253,4 +287,21 @@ def get_current_profile():
     else:
         return None
 
+
+def _get_column(colname, alias):
+    """
+    Return the column for a given projection. Needed by the QueryBuilder
+    """
+
+    try:
+        return getattr(alias, colname)
+    except:
+        raise InputValidationError(
+            "\n{} is not a column of {}\n"
+            "Valid columns are:\n"
+            "{}".format(
+                    colname, alias,
+                    '\n'.join(alias._sa_class_manager.mapper.c.keys())
+                )
+        )
 

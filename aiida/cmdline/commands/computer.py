@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.exceptions import ValidationError
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 def prompt_for_computer_configuration(computer):
@@ -168,18 +172,18 @@ class Computer(VerdiCommandWithSubcommands):
         # The default states are those that are shown if no option is given
         parser.add_argument('-C', '--color', action='store_true',
                             help="Use colors to help visualizing the different categories",
-        )
+                            )
         parser.add_argument('-o', '--only-usable', action='store_true',
                             help="Show only computers that are usable (i.e., "
                                  "configured for the given user and enabled)",
-        )
+                            )
         parser.add_argument('-p', '--parsable', action='store_true',
                             help="Show only the computer names, one per line, "
                                  "without any other information or string.",
-        )
+                            )
         parser.add_argument('-a', '--all', action='store_true',
                             help="Show also disabled or unconfigured computers",
-        )
+                            )
         parser.set_defaults(also_disabled=False)
         parsed_args = parser.parse_args(args)
         use_colors = parsed_args.color
@@ -383,7 +387,6 @@ class Computer(VerdiCommandWithSubcommands):
         from aiida.common.exceptions import NotExistent, ValidationError
         from aiida.orm.computer import Computer as AiidaOrmComputer
 
-
         print "At any prompt, type ? to get some help."
         print "---------------------------------------"
 
@@ -490,7 +493,7 @@ class Computer(VerdiCommandWithSubcommands):
         # The default states are those that are shown if no option is given
         parser.add_argument('-u', '--user', type=str, metavar='EMAIL',
                             help="Configure the computer for the given AiiDA user (otherwise, configure the current default user)",
-        )
+                            )
         parser.add_argument('computer', type=str,
                             help="The name of the computer that you want to configure")
 
@@ -498,7 +501,6 @@ class Computer(VerdiCommandWithSubcommands):
 
         user_email = parsed_args.user
         computername = parsed_args.computer
-
 
         try:
             computer = self.get_computer(name=computername)
@@ -511,7 +513,7 @@ class Computer(VerdiCommandWithSubcommands):
         else:
             from aiida.orm.querybuilder import QueryBuilder
             qb = QueryBuilder()
-            qb.append(type="user", filters={'email':user_email})
+            qb.append(type="user", filters={'email': user_email})
             user = qb.first()
             if user is None:
                 print >> sys.stderr, ("No user with email '{}' in the "
@@ -531,28 +533,28 @@ class Computer(VerdiCommandWithSubcommands):
                 authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
                 old_authparams = {}
 
-        elif BACKEND==BACKEND_SQLA:
+        elif BACKEND == BACKEND_SQLA:
             from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-            from aiida.backends.sqlalchemy import session
-
+            from aiida.backends.sqlalchemy import get_scoped_session
+            session = get_scoped_session()
 
             authinfo = session.query(DbAuthInfo).filter(
-                    DbAuthInfo.dbcomputer==computer.dbcomputer
-                ).filter(
-                    DbAuthInfo.aiidauser==user
-                ).first()
+                DbAuthInfo.dbcomputer == computer.dbcomputer
+            ).filter(
+                DbAuthInfo.aiidauser == user
+            ).first()
             if authinfo is None:
                 authinfo = DbAuthInfo(
-                        dbcomputer=computer.dbcomputer,
-                        aiidauser=user
-                    )
+                    dbcomputer=computer.dbcomputer,
+                    aiidauser=user
+                )
                 old_authparams = {}
             else:
                 old_authparams = authinfo.get_auth_params()
         else:
             raise Exception(
-                    "Unknown backend {}".format(BACKEND)
-                )
+                "Unknown backend {}".format(BACKEND)
+            )
         Transport = computer.get_transport_class()
 
         print ("Configuring computer '{}' for the AiiDA user '{}'".format(
@@ -702,11 +704,11 @@ class Computer(VerdiCommandWithSubcommands):
                             help="Test the connection for a given AiiDA user."
                                  "If not specified, uses the current "
                                  "default user.",
-        )
+                            )
         parser.add_argument('-t', '--traceback', action='store_true',
                             help="Print the full traceback in case an exception "
                                  "is raised",
-        )
+                            )
         parser.add_argument('computer', type=str,
                             help="The name of the computer that you "
                                  "want to test")
@@ -799,8 +801,8 @@ class Computer(VerdiCommandWithSubcommands):
                 print "Test completed (all {} tests succeeded)".format(
                     num_tests)
         except Exception as e:
-            print "** Error while trying to connect to the computer! I cannot "
-            print "   perform following tests, so I stop."
+            print "** Error while trying to connect to the computer! Cannot "
+            print "   perform following tests, stopping."
             if print_traceback:
                 print "** Full traceback:"
                 # Indent
@@ -826,8 +828,8 @@ class Computer(VerdiCommandWithSubcommands):
         """
         print "> Getting job list..."
         found_jobs = scheduler.getJobs(as_dict=True)
-        #For debug
-        #for jid, data in found_jobs.iteritems():
+        # For debug
+        # for jid, data in found_jobs.iteritems():
         #    print jid, data['submission_time'], data['dispatch_time'], data['job_state']
         print "  `-> OK, {} jobs found in the queue.".format(len(found_jobs))
         return True
@@ -927,7 +929,7 @@ class Computer(VerdiCommandWithSubcommands):
                             help="Enable a computer only for the given user. "
                                  "If not specified, enables the computer "
                                  "globally.",
-        )
+                            )
         parser.add_argument('computer', type=str,
                             help="The name of the computer that you "
                                  "want to enable")
@@ -997,7 +999,7 @@ class Computer(VerdiCommandWithSubcommands):
                             help="Disable a computer only for the given user. "
                                  "If not specified, disables the computer "
                                  "globally.",
-        )
+                            )
         parser.add_argument('computer', type=str,
                             help="The name of the computer that you "
                                  "want to disable")
@@ -1036,7 +1038,7 @@ class Computer(VerdiCommandWithSubcommands):
                         computername, user.get_full_name())
                 else:
                     print("Computer '{}' was already disabled for user {} {}."
-                        .format(computername, user.first_name, user.last_name))
+                          .format(computername, user.first_name, user.last_name))
             except NotExistent:
                 print >> sys.stderr, ("User with email '{}' is not configured "
                                       "for computer '{}' yet.".format(
@@ -1063,4 +1065,3 @@ class Computer(VerdiCommandWithSubcommands):
         from aiida.orm.computer import Computer as AiidaOrmComputer
 
         return AiidaOrmComputer.get(name)
-

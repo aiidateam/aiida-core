@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+from abc import ABCMeta, abstractmethod
 from aiida.common.pluginloader import BaseFactory
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 def CalculationFactory(module, from_abstract=False):
@@ -101,7 +106,7 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     """
     Return an AiiDA workflow given PK or UUID.
 
-    :param wf_id: PK (integer) or UUID (string) or a workflow
+    :param wf_id: PK (integer) or UUID (string) or UUID instance or a workflow
     :param pk: PK of a workflow
     :param uuid: UUID of a workflow
     :return: an AiiDA workflow
@@ -112,6 +117,7 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     # must have been already loaded. If you put it at the module level,
     # the implementation is frozen to the default one at import time.
     from aiida.orm.implementation import Workflow
+    from uuid import UUID as uuid_type
 
     if int(wf_id is None) + int(pk is None) + int(uuid is None) == 3:
         raise ValueError("one of the parameters 'wf_id', 'pk' and 'uuid' "
@@ -119,15 +125,55 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     if int(wf_id is None) + int(pk is None) + int(uuid is None) < 2:
         raise ValueError("only one of parameters 'wf_id', 'pk' and 'uuid' "
                          "has to be supplied")
+
     if wf_id is not None:
-        if isinstance(wf_id, str) or isinstance(wf_id, unicode):
+        if wf_id and isinstance(wf_id, uuid_type):
+            wf_id = str(wf_id)
+
+        if isinstance(wf_id, basestring):
             return Workflow.get_subclass_from_uuid(wf_id)
         elif isinstance(wf_id, int):
             return Workflow.get_subclass_from_pk(wf_id)
         else:
-            raise ValueError("'wf_id' has to be either string, unicode or "
-                             "integer, {} given".format(type(wf_id)))
+            raise ValueError("'wf_id' has to be either string, unicode, "
+                             "integer or UUID instance, {} given".format(type(wf_id)))
     if pk is not None:
-        return Workflow.get_subclass_from_pk(pk)
+        if isinstance(pk, int):
+            return Workflow.get_subclass_from_pk(pk)
+        else:
+            raise ValueError("'pk' has to be an integer")
     else:
-        return Workflow.get_subclass_from_uuid(uuid)
+        if uuid and isinstance(uuid, uuid_type):
+            uuid = str(uuid)
+        if isinstance(uuid, str) or isinstance(uuid, unicode):
+            return Workflow.get_subclass_from_uuid(uuid)
+        else:
+            raise ValueError("'uuid' has to be a string, unicode or a UUID instance")
+
+
+class BackendDelegateWithDefault(object):
+    """
+    This class is a helper to implement the delegation pattern [1] by
+    delegating functionality (i.e. calling through) to the backend class
+    which will do the actual work.
+
+
+    [1] https://en.wikipedia.org/wiki/Delegation_pattern
+    """
+    __metaclass__ = ABCMeta
+
+    _DEFAULT = None
+
+    @classmethod
+    @abstractmethod
+    def create_default(cls):
+        raise NotImplementedError("The subclass should implement this")
+
+    @classmethod
+    def get_default(cls):
+        if cls._DEFAULT is None:
+            cls._DEFAULT = cls.create_default()
+        return cls._DEFAULT
+
+    def __init__(self, backend):
+        self._backend = backend

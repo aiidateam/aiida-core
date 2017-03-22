@@ -1,17 +1,13 @@
 Matdyn
 ++++++
 
-.. note:: The Matdyn plugin referenced below is available in the EPFL
-        version.
-
 Description
 -----------
 Use the plugin to support inputs of Quantum Espresso matdyn.x executable.
 
 Supported codes
 ---------------
-* tested from matdyn.x v5.0 onwards. Back compatibility is not guaranteed (although
-  versions 4.3x might work most of the times).
+* tested from matdyn.x v5.0 onwards.
 
 Inputs
 ------
@@ -45,9 +41,10 @@ Outputs
 There are several output nodes that can be created by the plugin, according to the calculation details.
 All output nodes can be accessed with the ``calculation.out`` method.
 
-* output_parameters :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` 
-  (accessed by ``calculation.res``)
-  Contains warnings
+* output_parameters :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`
+  Contains warnings. ``calculation.out.output_parameters`` can also be accessed
+  by the ``calculation.res`` shortcut.
+
 * output_phonon_bands :py:class:`BandsData <aiida.orm.data.array.bands.BandsData>`
   Phonon frequencies as a function of qpoints.
 

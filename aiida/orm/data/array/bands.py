@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
@@ -9,10 +17,6 @@ import numpy
 from string import Template
 from aiida.common.exceptions import ValidationError
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 # TODO: set and get bands could have more functionalities: how do I know the number of bands for example?
@@ -29,8 +33,8 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
     intersection between valence and conduction band if present.
     Use this function with care!
 
-    :param (float) number_electrons: (optional) number of electrons in the unit cell
-    :param (float) fermi_energy: (optional) value of the fermi energy.
+    :param number_electrons: (optional, float) number of electrons in the unit cell
+    :param fermi_energy: (optional, float) value of the fermi energy.
 
     :note: By default, the algorithm uses the occupations array
       to guess the number of electrons and the occupied bands. This is to be
@@ -301,10 +305,10 @@ class BandsData(KpointsData):
         Set an array of band energies of dimension (nkpoints x nbands).
         Kpoints must be set in advance. Can contain floats or None.
         :param bands: a list of nkpoints lists of nbands bands, or a 2D array
-                of shape (nkpoints x nbands), with band energies for each kpoint
+        of shape (nkpoints x nbands), with band energies for each kpoint
         :param units: optional, energy units
-        :param occupations: optional, a 2D list or array of floats of same shape
-                as bands, with the occupation associated to each band
+        :param occupations: optional, a 2D list or array of floats of same
+        shape as bands, with the occupation associated to each band
         """
         # checks bands and occupations
         the_bands, the_occupations, the_labels = self._validate_bands_occupations(bands,
@@ -366,7 +370,7 @@ class BandsData(KpointsData):
         Returns an array (nkpoints x num_bands or nspins x nkpoints x num_bands)
         of energies.
         :param also_occupations: if True, returns also the occupations array.
-            Default = False
+        Default = False
         """
         try:
             bands = numpy.array(self.get_array('bands'))
@@ -510,17 +514,18 @@ class BandsData(KpointsData):
                cartesian=True, **kwargs):
         """
         Export the bands to a file.
+
         :param path: absolute path of the file to be created
-        :param fileformat: format of the file created. If None, tries to use the
-                     extension of path to understand the correct one.
+        :param fileformat: format of the file created. If None, tries to use
+          the extension of path to understand the correct one.
         :param overwrite: if set to True, overwrites file found at path. Default=False
         :param comments: if True, append some extra informations at the
-                beginning of the file.
+          beginning of the file.
         :param cartesian: if True, distances (for the x-axis) are computed in
-                cartesian coordinates, otherwise they are computed in reciprocal
-                coordinates. cartesian=True will fail if no cell has been set.
-        :param **kwargs: additional parameters to be passed to the
-                _prepare_[fileformat] method
+          cartesian coordinates, otherwise they are computed in reciprocal
+          coordinates. cartesian=True will fail if no cell has been set.
+        :param kwargs: additional parameters to be passed to the
+          _prepare_[fileformat] method
 
         :note: this function will NOT produce nice plots if:
               - there is no path of kpoints, but a set of isolated points

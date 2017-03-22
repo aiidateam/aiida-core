@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 This is a simple plugin that takes two node inputs, both of type ParameterData,
 with the following labels: template and parameters.
@@ -38,14 +46,12 @@ TODO: catch exceptions
 from aiida.orm.calculation.job import JobCalculation
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
+from aiida.common.utils import classproperty
+from aiida.orm.data.parameter import ParameterData
 
 # TODO: write a 'input_type_checker' routine to automatically check the existence
 # and type of inputs + default values etc.
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class TemplatereplacerCalculation(JobCalculation):
@@ -54,6 +60,25 @@ class TemplatereplacerCalculation(JobCalculation):
     template. Can be used for many different codes, or as a starting point
     to develop a new plugin.
     """
+
+    @classproperty
+    def _use_methods(cls):
+        retdict = JobCalculation._use_methods
+        retdict.update({
+            "template": {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'template',
+               'docstring': "A template for the input file",
+               },
+            "parameters": {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'parameters',
+               'docstring': "Parameters used to replace placeholders in the template",
+               },
+            })
+        return retdict
 
     def _prepare_for_submission(self, tempfolder, inputdict):
         """
@@ -77,16 +102,10 @@ class TemplatereplacerCalculation(JobCalculation):
         if parameters_node is None:
             parameters = {}
         else:
-            if not isinstance(parameters_node, ParameterData):
-                raise InputValidationError("'parameters' data is not of type ParameterData")
-            parameters = dict(parameters_node.iterattrs())
+            parameters = parameters_node.get_dict()
 
         template_node = inputdict.pop('template', None)
-        if template_node is None:
-            raise InputValidationError("No 'template' input data")
-        if not isinstance(template_node, ParameterData):
-            raise InputValidationError("'template' data is not of type ParameterData")
-        template = dict(template_node.iterattrs())
+        template = template_node.get_dict()
 
         input_file_template = template.pop('input_file_template', "")
         input_file_name = template.pop('input_file_name', None)

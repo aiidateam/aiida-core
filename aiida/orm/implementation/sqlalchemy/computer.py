@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import json
 
@@ -12,13 +20,9 @@ from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
-from aiida.orm.implementation.general.computer import AbstractComputer
+from aiida.orm.implementation.general.computer import AbstractComputer, Util as ComputerUtil
+from aiida.common.lang import override
 
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 
 class Computer(AbstractComputer):
@@ -36,8 +40,9 @@ class Computer(AbstractComputer):
         return self._dbcomputer.id
 
     def __init__(self, **kwargs):
-        uuid = kwargs.pop('uuid', None)
+        super(Computer, self).__init__()
 
+        uuid = kwargs.pop('uuid', None)
         if uuid is not None:
             if kwargs:
                 raise ValueError("If you pass a uuid, you cannot pass any "
@@ -66,20 +71,33 @@ class Computer(AbstractComputer):
             self.set(**kwargs)
 
     def set(self, **kwargs):
+
+        is_modified = False
+
         for key, val in kwargs.iteritems():
             if hasattr(self._dbcomputer, key):
                 setattr(self._dbcomputer, key, val)
             else:
                 self._dbcomputer._metadata[key] = val
+                is_modified = True
 
-        flag_modified(self._dbcomputer, "_metadata")
+        if is_modified:
+            flag_modified(self._dbcomputer, "_metadata")
+
+
+    @staticmethod
+    def get_db_columns():
+        #I import get_db_columns here to avoid circular imports.
+        #Indeed, aiida.orm.implementation.django.utils imports Computer
+        from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
+        return get_db_columns(DbComputer)
 
 
     @classmethod
     def list_names(cls):
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
         return session.query(DbComputer.name).all()
-
 
     @property
     def full_text_info(self):
@@ -129,7 +147,11 @@ class Computer(AbstractComputer):
     def get(cls, computer):
         return cls(dbcomputer=DbComputer.get_dbcomputer(computer))
 
+    @override
     def copy(self):
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+
         if self.to_be_stored:
             raise InvalidOperation("You can copy a computer only after having stored it")
 
@@ -293,3 +315,22 @@ class Computer(AbstractComputer):
         self.dbcomputer.transport_type = val
         if not self.to_be_stored:
             self.dbcomputer.save()
+
+
+class Util(ComputerUtil):
+    @override
+    def delete_computer(self, pk):
+        """
+        Delete the computer with the given pk.
+        :param pk: The computer pk.
+        """
+        import aiida.backends.sqlalchemy
+        try:
+            session = aiida.backends.sqlalchemy.get_scoped_session()
+            session.query(DbComputer).get(pk).delete()
+            session.commit()
+        except SQLAlchemyError as e:
+            raise InvalidOperation("Unable to delete the requested computer: it is possible that there "
+                                   "is at least one node using this computer (original message: {})".format(
+                e.message
+            ))

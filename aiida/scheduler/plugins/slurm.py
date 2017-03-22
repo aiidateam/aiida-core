@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Plugin for SLURM.
 This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
@@ -35,10 +43,6 @@ from aiida.scheduler.datastructures import (
 ##                     pended.
 ## TO  TIMEOUT         Job terminated upon reaching its time limit.
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 _map_status_slurm = {
     'CA': job_states.DONE,
@@ -426,11 +430,16 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             raise SchedulerError("Error during submission, retval={}\n"
                                  "stdout={}\nstderr={}".format(
                 retval, stdout, stderr))
-            
+
+        try:
+            transport_string = " for {}".format(self.transport)
+        except SchedulerError:
+            transport_string = ""
+ 
         if stderr.strip():
-            self.logger.warning("in _parse_submit_output for {}: "
+            self.logger.warning("in _parse_submit_output{}: "
                 "there was some text in stderr: {}".format(
-                    str(self.transport),stderr))
+                    transport_string,stderr))
          
         # I check for a valid string in the output.
         # See comments near the regexp above.
@@ -440,9 +449,9 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             if match:
                 return match.group('jobid')
         # If I am here, no valid line could be found.
-        self.logger.error("in _parse_submit_output for {}: "
+        self.logger.error("in _parse_submit_output{}: "
                           "unable to find the job id: {}".format(
-                str(self.transport),stdout))
+                transport_string,stdout))
         raise SchedulerError(
             "Error during submission, could not retrieve the jobID from "
             "sbatch output; see log for more info.")
@@ -710,15 +719,20 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
                 "stdout={}; stderr={}".format(retval, stdout, stderr))
             return False
 
+        try:
+            transport_string = " for {}".format(self.transport)
+        except SchedulerError:
+            transport_string = ""
+
         if stderr.strip():
-            self.logger.warning("in _parse_kill_output for {}: "
+            self.logger.warning("in _parse_kill_output{}: "
                 "there was some text in stderr: {}".format(
-                    str(self.transport),stderr))
+                    transport_string,stderr))
 
         if stdout.strip():
-            self.logger.warning("in _parse_kill_output for {}: "
+            self.logger.warning("in _parse_kill_output{}: "
                 "there was some text in stdout: {}".format(
-                    str(self.transport),stdout))
+                    transport_string,stdout))
 
         return True
     

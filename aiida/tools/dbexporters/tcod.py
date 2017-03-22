@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 from aiida.orm import DataFactory
 from aiida.orm.calculation.inline import optional_inline
@@ -53,17 +57,22 @@ tcod_loops = {
         '_tcod_atom_site_resid_force_Cartn_y',
         '_tcod_atom_site_resid_force_Cartn_z',
     ],
+    '_dft_pseudopotential_': [
+        '_dft_pseudopotential_atom_type',
+        '_dft_pseudopotential_type',
+        '_dft_pseudopotential_type_other_name',
+    ],
 }
 
 conforming_dictionaries = [
     {
         'name': 'cif_tcod.dic',
-        'version': '0.008',
+        'version': '0.009',
         'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_tcod.dic'
     },
     {
         'name': 'cif_dft.dic',
-        'version': '0.008',
+        'version': '0.020',
         'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_dft.dic'
     }
 ]
@@ -173,7 +182,7 @@ def encode_textfield_quoted_printable(content):
     function ``quopri.encodestring()``, following characters are encoded:
 
         * '``;``', if encountered on the beginning of the line;
-        * '``\\t``'
+        * '``\\t``' and '``\\r``';
         * '``.``' and '``?``', if comprise the entire textfield.
 
     :param content: a string with contents
@@ -197,7 +206,7 @@ def encode_textfield_quoted_printable(content):
         return "{}={}{}".format(prefix, h, postfix)
 
     content = re.sub('^(?P<chr>;)', match2qp, content)
-    content = re.sub('(?P<chr>\t)', match2qp, content)
+    content = re.sub('(?P<chr>[\t\r])', match2qp, content)
     content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2qp, content)
     content = re.sub('^(?P<chr>[\.\?])$', match2qp, content)
     return content
@@ -377,7 +386,6 @@ def _inline_to_standalone_script(calc):
             for x in input_dict.keys()]
     args_string = ",\n    ".join(sorted(args))
     return """#!/usr/bin/env runaiida
-# -*- coding: utf-8 -*-
 {}
 
 for key, value in {}(
@@ -572,7 +580,8 @@ def _collect_tags(node, calc,parameters=None,
     and prepare it to be saved in TCOD CIF.
     """
     import os, json
-    tags = { '_audit_creation_method': "AiiDA version {}".format(__version__) }
+    import aiida
+    tags = { '_audit_creation_method': "AiiDA version {}".format(aiida.__version__) }
 
     # Recording the dictionaries (if any)
 
@@ -970,14 +979,16 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
             replace=None, message=None, **kwargs):
     """
     Launches a
-    :py:class:`aiida.orm.calculation.job.JobCalculation`
+    :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`
     to deposit data node to \*COD-type database.
 
-    :return: launched :py:class:`aiida.orm.calculation.job.JobCalculation`
+    :return: launched :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`
         instance.
     :raises ValueError: if any of the required parameters are not given.
     """
     from aiida.common.setup import get_property
+
+    parameters = {}
 
     if not what:
         raise ValueError("Node to be deposited is not supplied")
@@ -990,13 +1001,17 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         if not username:
             raise ValueError("Depositor username is not supplied")
     if not password:
-        password = get_property('tcod.depositor_password')
-        if not password:
+        parameters['password'] = get_property('tcod.depositor_password')
+        if not parameters['password']:
             raise ValueError("Depositor password is not supplied")
     if not user_email:
         user_email = get_property('tcod.depositor_email')
         if not user_email:
             raise ValueError("Depositor email is not supplied")
+
+    parameters['deposition-type'] = type
+    parameters['username'] = username
+    parameters['user_email'] = user_email
 
     if type == 'published':
         pass
@@ -1033,7 +1048,7 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
     if author_name:
         kwargs['additional_tags']['_publ_author_name'] = author_name
     if replace:
-        kwargs['additional_tags']['_cod_database_code'] = replace
+        kwargs['additional_tags']['_tcod_database_code'] = replace
         kwargs['datablock_names'] = [replace]
 
     cif = export_cifnode(what, store=True, **kwargs)
@@ -1050,11 +1065,6 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
     calc = code.new_calc(computer=computer)
     calc.set_resources({'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
-    parameters = {
-        'deposition-type': type,
-        'username'       : username,
-        'user_email'     : user_email,
-    }
     if password:
         import getpass
         parameters['password'] = getpass.getpass("Password: ")
@@ -1129,11 +1139,11 @@ def deposition_cmdline_parameters(parser, expclass="Data"):
 def translate_calculation_specific_values(calc, translator, **kwargs):
     """
     Translates calculation-specific values from
-    :py:class:`aiida.orm.calculation.job.JobCalculation` subclass to
+    :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation` subclass to
     appropriate TCOD CIF tags.
 
     :param calc: an instance of
-        :py:class:`aiida.orm.calculation.job.JobCalculation` subclass.
+        :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation` subclass.
     :param translator: class, derived from
         :py:class:`aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator`.
     :raises ValueError: if **translator** is not derived from proper class.
@@ -1166,17 +1176,21 @@ def translate_calculation_specific_values(calc, translator, **kwargs):
         '_dft_BZ_integration_smearing_method_other': 'get_integration_smearing_method_other',
         '_dft_BZ_integration_MP_order': 'get_integration_Methfessel_Paxton_order',
 
-        '_integration_grid_X': 'get_BZ_integration_grid_X',
-        '_integration_grid_Y': 'get_BZ_integration_grid_Y',
-        '_integration_grid_Z': 'get_BZ_integration_grid_Z',
+        '_dft_BZ_integration_grid_X': 'get_BZ_integration_grid_X',
+        '_dft_BZ_integration_grid_Y': 'get_BZ_integration_grid_Y',
+        '_dft_BZ_integration_grid_Z': 'get_BZ_integration_grid_Z',
 
-        '_integration_grid_shift_X': 'get_BZ_integration_grid_shift_X',
-        '_integration_grid_shift_Y': 'get_BZ_integration_grid_shift_Y',
-        '_integration_grid_shift_Z': 'get_BZ_integration_grid_shift_Z',
+        '_dft_BZ_integration_grid_shift_X': 'get_BZ_integration_grid_shift_X',
+        '_dft_BZ_integration_grid_shift_Y': 'get_BZ_integration_grid_shift_Y',
+        '_dft_BZ_integration_grid_shift_Z': 'get_BZ_integration_grid_shift_Z',
 
         '_dft_kinetic_energy_cutoff_wavefunctions': 'get_kinetic_energy_cutoff_wavefunctions',
         '_dft_kinetic_energy_cutoff_charge_density': 'get_kinetic_energy_cutoff_charge_density',
         '_dft_kinetic_energy_cutoff_EEX': 'get_kinetic_energy_cutoff_EEX',
+
+        '_dft_pseudopotential_atom_type': 'get_pseudopotential_atom_type',
+        '_dft_pseudopotential_type': 'get_pseudopotential_type',
+        '_dft_pseudopotential_type_other_name': 'get_pseudopotential_type_other_name',
 
         ## Residual forces are no longer produced, as they should
         ## be in the same CIF loop with coordinates -- to be
@@ -1193,6 +1207,10 @@ def translate_calculation_specific_values(calc, translator, **kwargs):
         except NotImplementedError as e:
             pass
         if value is not None:
+            if isinstance(value,list):
+                for i in range(0,len(value)):
+                    if value[i] is None:
+                        value[i] = '?'
             tags[tag] = value
 
     return tags

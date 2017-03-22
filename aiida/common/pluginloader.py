@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import importlib
 
 import aiida.common
 from aiida.common.exceptions import MissingPluginError
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 logger = aiida.common.aiidalogger.getChild('pluginloader')
 
@@ -33,10 +37,9 @@ def get_query_type_string(plugin_type_string):
     to return a string that in a query returns all instances of a class and
     all instances of subclasses.
 
-    :param str plugin_type_string: The plugin_type_string
+    :param plugin_type_string: The plugin_type_string
 
     :returns: the query_type_string
-
     """
     from aiida.common.exceptions import DbContentError, InputValidationError
     if not isinstance(plugin_type_string, basestring):
@@ -44,7 +47,7 @@ def get_query_type_string(plugin_type_string):
     # First case, an empty string for Node:
     if plugin_type_string == '':
         query_type_string = ''
-    # Anything else should have baseclass.Class., so at least 2 dots 
+    # Anything else should have baseclass.Class., so at least 2 dots
     # and end with a dot:
     elif not(plugin_type_string.endswith('.')) or plugin_type_string.count('.') == 1:
         raise DbContentError(
@@ -103,19 +106,20 @@ def _existing_plugins_with_module(base_class, plugins_module_path,
     else:
         retlist = _find_module(base_class, pkgname, basename, suffix)
 
-        for _, name, ismod in pkgutil.walk_packages([plugins_module_path]):
+        prefix = pkgname + '.'
+        for _, name, ismod in pkgutil.walk_packages([plugins_module_path], prefix=prefix):
+            plugin_name = name[len(prefix):]
             if ismod:
                 retlist += _existing_plugins_with_module(
-                    base_class, os.path.join(plugins_module_path, name),
-                    "{}.{}".format(pkgname, name),
-                    "{}.{}".format(basename, name) if basename else name,
+                    base_class, os.path.join(plugins_module_path, plugin_name),
+                    name,
+                    "{}.{}".format(basename, plugin_name) if basename else plugin_name,
                     max_depth - 1, suffix=suffix)
 
             # This has to be done anyway, for classes in the __init__ file.
-            this_pkgname = "{}.{}".format(pkgname, name)
-            this_basename = "{}.{}".format(basename, name) if basename else name
+            this_basename = "{}.{}".format(basename, plugin_name) if basename else plugin_name
 
-            retlist += _find_module(base_class, this_pkgname, this_basename, suffix)
+            retlist += _find_module(base_class, name, this_basename, suffix)
 
         return list(set(retlist))
 

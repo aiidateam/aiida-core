@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import sys
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -8,10 +16,6 @@ from aiida.cmdline.baseclass import (
 from aiida.cmdline.commands.node import _Label, _Description
 from aiida.common.exceptions import MultipleObjectsError
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class Data(VerdiCommandRouter):
@@ -45,7 +49,7 @@ class Listable(object):
     Provides shell completion for listable data nodes.
 
     .. note:: classes, inheriting Listable, MUST define value for property
-        :py:class:`dataclass` (preferably in :py:class:`__init__`), which
+        ``dataclass`` (preferably in ``__init__``), which
         has to point to correct \*Data class.
     """
 
@@ -198,7 +202,7 @@ class Listable(object):
         Return the list with column names.
 
         .. note:: neither the number nor correspondence of column names and
-            actual columns in the output from the :py:class:`query` are checked.
+            actual columns in the output from the :py:meth:`query` are checked.
         """
         return ["ID"]
 
@@ -212,8 +216,8 @@ class Visualizable(object):
         visualization.
 
     In order to specify a default visualization format, one has to override
-    :py:class:`_default_show_format` property (preferably in
-    :py:class:`__init__`), setting it to the name of default visualization tool.
+    ``_default_show_format`` property (preferably in
+    ``__init__``), setting it to the name of default visualization tool.
     """
     show_prefix = '_show_'
     show_parameters_postfix = '_parameters'
@@ -276,7 +280,7 @@ class Visualizable(object):
 
         if format is None:
             print >> sys.stderr, (
-                "Default format is not defined, please specify.\n" 
+                "Default format is not defined, please specify.\n"
                   "Valid formats are:")
             for i in self.get_show_plugins().keys():
                 print >> sys.stderr, "  {}".format(i)
@@ -384,7 +388,7 @@ class Exportable(object):
 
         if format is None:
             print >> sys.stderr, (
-                "Default format is not defined, please specify.\n" 
+                "Default format is not defined, please specify.\n"
                   "Valid formats are:")
             for i in self.get_export_plugins().keys():
                 print >> sys.stderr, "  {}".format(i)
@@ -474,7 +478,7 @@ class Importable(object):
 
         if format is None:
             print >> sys.stderr, (
-                "Default format is not defined, please specify.\n" 
+                "Default format is not defined, please specify.\n"
                   "Valid formats are:")
             for i in self.get_import_plugins().keys():
                 print >> sys.stderr, "  {}".format(i)
@@ -693,12 +697,12 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.group import Group
         qb = QueryBuilder()
-        qb.append(UpfData)
+        qb.append(UpfData, tag='upfdata')
         if parsed_args.element is not None:
             qb.add_filter(UpfData, {'attributes.element': {'in': parsed_args.element}})
         qb.append(
             Group,
-            group_of=UpfData,
+            group_of='upfdata', tag='group',
             project=["name", "description"],
             filters={"type": {'==': UPFGROUP_TYPE}}
         )
@@ -711,12 +715,13 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
                 qb = QueryBuilder()
                 qb.append(
                     Group,
+                    tag='thisgroup',
                     filters={"name":  {'like': group_name}}
                 )
                 qb.append(
                     UpfData,
                     project=["id"],
-                    member_of=Group
+                    member_of='thisgroup'
                 )
 
                 if parsed_args.with_description:
@@ -846,7 +851,7 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         entry_list = []
         already_visited_bdata = set()
         if list_data.count() > 0:
-            for [bid, blabel, bdate, sid, akinds, asites] in list_data.iterall():
+            for [bid, blabel, bdate, sid, akinds, asites] in list_data.all():
 
                 # We process only one StructureData per BandsData.
                 # We want to process the closest StructureData to
@@ -1070,7 +1075,7 @@ class _Structure(VerdiCommandWithSubcommands,
 
         entry_list = []
         if struc_list_data.count() > 0:
-            for [id, label, akinds, asites] in struc_list_data.iterall():
+            for [id, label, akinds, asites] in struc_list_data.all():
 
                 # If symbols are defined there is a filtering of the structures
                 # based on the element
@@ -1333,7 +1338,7 @@ class _Structure(VerdiCommandWithSubcommands,
         Imports a structure from a quantumespresso input file.
         """
         from os.path import abspath
-        from aiida.orm.data.structure import get_structuredata_from_qeinput
+        from aiida.tools.codespecific.quantumespresso.qeinputparser import get_structuredata_from_qeinput
         dont_store = kwargs.pop('dont_store')
         view_in_ase = kwargs.pop('view')
 
@@ -1625,6 +1630,65 @@ class _Trajectory(VerdiCommandWithSubcommands,
                     sys.exit(1)
                 else:
                     raise
+
+    def _show_mpl_pos_parameters(self, parser):
+        """
+        Describe command line parameters for _show_pos
+        """
+        parser.add_argument('-s', '--stepsize',
+                type=int,
+                help=''
+                    'The stepsize for the trajectory, set it higher to reduce '
+                    'number of points',
+                default=1
+            )
+        parser.add_argument('--mintime',
+                type=int, default=None,
+                help='The time to plot from'
+            )
+        parser.add_argument('--maxtime',
+                type=int, default=None,
+                help='The time to plot to'
+            )
+        parser.add_argument('-e', '--elements',
+                type=str, nargs='+',
+                help='Show only atoms of that species'
+            )
+        parser.add_argument('-i', '--indices',
+                type=int, nargs='+',
+                help='Show only these indices'
+            )
+        parser.add_argument('--dont-block',
+                action='store_true',
+                help="Don't block interpreter when showing plot"
+            )
+
+    def _show_mpl_heatmap_parameters(self, parser):
+        """
+        Describe command line parameters for _show_mpl_heatmap
+        """
+        parser.add_argument('-c', '--contours',
+                type=float, nargs='+',
+                help='Isovalues to plot'
+            )
+        parser.add_argument( '--sampling-stepsize',
+                type=int,
+                help='Sample positions in plot every sampling_stepsize timestep'
+            )
+    def _show_mpl_pos(self, exec_name, trajectory_list, **kwargs):
+        """
+        Produces a matplotlib plot of the trajectory
+        """
+        for t in trajectory_list:
+            t.show_mpl_pos(**kwargs)
+
+    def _show_mpl_heatmap(self, exec_name, trajectory_list, **kwargs):
+        """
+        Produces a matplotlib plot of the trajectory
+        """
+        for t in trajectory_list:
+            t.show_mpl_heatmap(**kwargs)
+
 
     def _export_xsf(self, node, **kwargs):
         """

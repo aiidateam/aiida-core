@@ -1,10 +1,19 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
-from sqlalchemy import ForeignKey, select, func, join, and_
+from sqlalchemy import ForeignKey, select, func, join, and_, case
 from sqlalchemy.orm import (
-        relationship, backref, Query, mapper,
-        foreign, column_property,
-    )
+    relationship, backref, Query, mapper,
+    foreign, aliased
+)
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
@@ -21,12 +30,38 @@ from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.common import aiidalogger
 from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
-from aiida.common.datastructures import calc_states
+from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
+
+class DbCalcState(Base):
+    __tablename__ = "db_dbcalcstate"
+
+    id = Column(Integer, primary_key=True)
+
+    dbnode_id = Column(
+        Integer,
+        ForeignKey(
+            'db_dbnode.id', ondelete="CASCADE",
+            deferrable=True, initially="DEFERRED"
+        )
+    )
+    dbnode = relationship(
+        'DbNode', backref=backref('dbstates', passive_deletes=True),
+    )
+
+    # Note: this is suboptimal: calc_states is not sorted
+    # therefore the order is not the expected one. If we
+    # were to use the correct order here, we could directly sort
+    # without specifying a custom order. This is probably faster,
+    # but requires a schema migration at this point
+    state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
+
+    time = Column(DateTime(timezone=True), default=timezone.now)
+
+    __table_args__ = (
+        UniqueConstraint('dbnode_id', 'state'),
+    )
+
 
 class DbNode(Base):
     __tablename__ = "db_dbnode"
@@ -36,27 +71,30 @@ class DbNode(Base):
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
     type = Column(String(255), index=True)
-    label = Column(String(255), index=True, nullable=True, default="") # Does it make sense to be nullable and have a default?
+    label = Column(String(255), index=True, nullable=True,
+                   default="")  # Does it make sense to be nullable and have a default?
     description = Column(Text(), nullable=True, default="")
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now)
     nodeversion = Column(Integer, default=1)
     public = Column(Boolean, default=False)
-    dbcomputer_id = Column(
-            Integer,
-            ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED"),
-            nullable=True
-        )
+    attributes = Column(JSONB)
+    extras = Column(JSONB)
 
+    dbcomputer_id = Column(
+        Integer,
+        ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED", ondelete="RESTRICT"),
+        nullable=True
+    )
+
+    # This should have the same ondelet behaviour as db_computer_id, right?
     user_id = Column(
-            Integer,
-            ForeignKey(
-                    'db_dbuser.id',deferrable=True,initially="DEFERRED"
-                ),
-            nullable=False
-        )
-    attributes = Column(JSONB, default={})
-    extras = Column(JSONB, default={})
+        Integer,
+        ForeignKey(
+            'db_dbuser.id', deferrable=True, initially="DEFERRED", ondelete="restrict"
+        ),
+        nullable=False
+    )
 
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
     # won't take care of automatic deleting in the DbLink table. This still
@@ -66,58 +104,63 @@ class DbNode(Base):
 
     ######### RELATIONSSHIPS ################
 
-    # Computer & user
     dbcomputer = relationship(
-            'DbComputer',
-            backref=backref('dbnodes', passive_deletes=True)
-        )
-    user = relationship('DbUser', backref='dbnodes')
+        'DbComputer',
+        backref=backref('dbnodes', passive_deletes='all', cascade='merge')
+    )
+
+    # User
+    user = relationship(
+        'DbUser',
+        backref=backref('dbnodes', passive_deletes='all', cascade='merge',)
+    )
 
     # outputs via db_dblink table
-    outputs = relationship(
-            "DbNode", secondary="db_dblink",
-            primaryjoin="DbNode.id == DbLink.input_id",
-            secondaryjoin="DbNode.id == DbLink.output_id",
-            backref=backref("inputs", passive_deletes=True),
-            passive_deletes=True
-        )
+    outputs_q = relationship(
+        "DbNode", secondary="db_dblink",
+        primaryjoin="DbNode.id == DbLink.input_id",
+        secondaryjoin="DbNode.id == DbLink.output_id",
+        backref=backref("inputs_q", passive_deletes=True, lazy='dynamic'),
+        lazy='dynamic',
+        passive_deletes=True
+    )
+
+    @property
+    def outputs(self):
+        return self.outputs_q.all()
+
+    @property
+    def inputs(self):
+        return self.inputs_q.all()
 
     # children via db_dbpath
     # suggest change name to descendants
-    children = relationship(
-            "DbNode", secondary="db_dbpath",
-            primaryjoin="DbNode.id == DbPath.parent_id",
-            secondaryjoin="DbNode.id == DbPath.child_id",
-            backref=backref("parents", passive_deletes=True),
-            passive_deletes=True,
-        )
-
-    # Appender-query, so one can query the results:
-    #~ dbcomputer_q = relationship(
-            #~ 'DbComputer',
-            #~ backref=backref('dbnodes_q', passive_deletes=True, lazy='dynamic'),
-            #~ lazy='dynamic'
-        #~ )
-    outputs_q = relationship(
-            "DbNode", secondary="db_dblink",
-            primaryjoin= "DbNode.id == DbLink.input_id",
-            secondaryjoin= "DbNode.id == DbLink.output_id",
-            backref=backref(
-                "inputs_q",
-                passive_deletes=True,
-                lazy='dynamic'
-            ),
-            passive_deletes=True,
-            lazy = 'dynamic'
-        )
     children_q = relationship(
-            "DbNode", secondary="db_dbpath",
-            primaryjoin="DbNode.id == DbPath.parent_id",
-            secondaryjoin="DbNode.id == DbPath.child_id",
-            backref=backref("parents_q", lazy='dynamic', passive_deletes=True),
-            lazy='dynamic',
-            passive_deletes=True
-        )
+        "DbNode", secondary="db_dbpath",
+        primaryjoin="DbNode.id == DbPath.parent_id",
+        secondaryjoin="DbNode.id == DbPath.child_id",
+        backref=backref("parents_q", passive_deletes=True, lazy='dynamic'),
+        lazy='dynamic',
+        passive_deletes=True
+    )
+
+    @property
+    def children(self):
+        return self.children_q.all()
+
+    @property
+    def parents(self):
+        return self.parents_q.all()
+
+    def __init__(self, *args, **kwargs):
+        super(DbNode, self).__init__(*args, **kwargs)
+
+        if self.attributes is None:
+            self.attributes = dict()
+
+        if self.extras is None:
+            self.extras = dict()
+
 
     # XXX repetition between django/sqlalchemy here.
     def get_aiida_class(self):
@@ -127,7 +170,6 @@ class DbNode(Base):
         """
         from aiida.common.pluginloader import from_type_to_pluginclassname
         from aiida.orm.node import Node
-
 
         try:
             pluginclassname = from_type_to_pluginclassname(self.type)
@@ -173,6 +215,11 @@ class DbNode(Base):
         DbNode._set_attr(self.extras, key, value)
         flag_modified(self, "extras")
 
+    def reset_extras(self, new_extras):
+        self.extras.clear()
+        self.extras.update(new_extras)
+        flag_modified(self, "extras")
+
     def del_attr(self, key):
         DbNode._del_attr(self.attributes, key)
         flag_modified(self, "attributes")
@@ -212,34 +259,92 @@ class DbNode(Base):
             return "{} node [{}]".format(simplename, self.pk)
 
 
+    @hybrid_property
+    def state(self):
+        """
+        Return the most recent state from DbCalcState
+        """
+        if not self.id:
+            return None
+        all_states = DbCalcState.query.filter(DbCalcState.dbnode_id == self.id).all()
+        if all_states:
+            #return max((st.time, st.state) for st in all_states)[1]
+            return sort_states(((dbcalcstate.state, dbcalcstate.state.value)
+                                for dbcalcstate in all_states),
+                                use_key=True)[0]
+        else:
+            return None
+
+    @state.expression
+    def state(cls):
+        """
+        Return the expression to get the 'latest' state from DbCalcState,
+        to be used in queries, where 'latest' is defined using the state order
+        defined in _sorted_datastates.
+        """
+        # Sort first the latest states
+        whens = {
+            v: idx for idx, v
+            in enumerate(_sorted_datastates[::-1], start=1)}
+        custom_sort_order = case(value=DbCalcState.state,
+                                 whens=whens,
+                                 else_=100) # else: high value to put it at the bottom
+
+        q1 = select([
+            DbCalcState.id.label('id'),
+            DbCalcState.dbnode_id.label('dbnode_id'),
+            DbCalcState.state.label('state'),
+            func.row_number().over(partition_by=DbCalcState.dbnode_id,
+                                                 order_by=custom_sort_order).label('the_row_number')
+        ])
+        q1 = q1.cte('recentstates')
+
+        subq = select([
+            q1.c.dbnode_id.label('dbnode_id'),
+            q1.c.state.label('state')
+        ]).select_from(q1).where(q1.c.the_row_number==1).alias()
+
+
+        return select([subq.c.state]).\
+            where(
+                    subq.c.dbnode_id == cls.id,
+                ).\
+            label('laststate')
+
+
 class DbLink(Base):
     __tablename__ = "db_dblink"
 
     id = Column(Integer, primary_key=True)
     input_id = Column(
-            Integer,
-            ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-        )
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+    )
     output_id = Column(
-            Integer,
-            ForeignKey(
-                    'db_dbnode.id',
-                    ondelete="CASCADE",
-                    deferrable=True,
-                    initially="DEFERRED"
-                )
+        Integer,
+        ForeignKey(
+            'db_dbnode.id',
+            ondelete="CASCADE",
+            deferrable=True,
+            initially="DEFERRED"
         )
+    )
 
     input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
 
-
     label = Column(String(255), index=True, nullable=False)
     type = Column(String(255))
 
+    # A calculation can have both a 'return' and a 'create' link to
+    # a single data output node, which would violate the unique constraint
+    # defined below, since the difference in link type is not considered.
+    # The distinction between the type of a 'create' and a 'return' link is not
+    # implemented at the moment, so the unique constraint is disabled.
     __table_args__ = (
-        UniqueConstraint('input_id', 'output_id'),
-        UniqueConstraint('output_id', 'label'),
+        # I cannot add twice the same link
+        # I want unique labels among all inputs of a node
+        # UniqueConstraint('output_id', 'label'),
     )
 
     def __str__(self):
@@ -256,24 +361,24 @@ class DbPath(Base):
 
     id = Column(Integer, primary_key=True)
     parent_id = Column(
-            Integer,
-            ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-        )
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+    )
     child_id = Column(
-            Integer,
-            ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-        )
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+    )
 
     parent = relationship(
-            "DbNode",
-            primaryjoin="DbPath.parent_id == DbNode.id",
-            backref="child_paths"
-        )
+        "DbNode",
+        primaryjoin="DbPath.parent_id == DbNode.id",
+        backref="child_paths"
+    )
     child = relationship(
-            "DbNode",
-            primaryjoin="DbPath.child_id == DbNode.id",
-            backref="parent_paths"
-        )
+        "DbNode",
+        primaryjoin="DbPath.child_id == DbNode.id",
+        backref="parent_paths"
+    )
 
     depth = Column(Integer)
 
@@ -303,82 +408,3 @@ class DbPath(Base):
 
             return path_entry + path_direct + path_exit
 
-
-
-class DbCalcState(Base):
-    __tablename__ = "db_dbcalcstate"
-
-    id = Column(Integer, primary_key=True)
-
-    dbnode_id = Column(
-            Integer,
-            ForeignKey(
-                    'db_dbnode.id', ondelete="CASCADE",
-                    deferrable=True, initially="DEFERRED"
-                )
-        )
-    dbnode = relationship(
-            'DbNode', backref=backref('dbstates', passive_deletes=True)
-        )
-
-    state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
-
-    time = Column(DateTime(timezone=True), default=timezone.now)
-
-    __table_args__ = (
-        UniqueConstraint('dbnode_id', 'state'),
-    )
-
-
-
-# Magic to make the most recent state given in DbCalcState an attribute
-# of the DbNode (None if node is not a calculation)
-
-# First, find the most recent state for all nodes in DbCalcState table
-# using a select statement:
-states = select(
-        [
-            DbCalcState.dbnode_id.label('dbnode_id'),
-            func.max(DbCalcState.time).label('lasttime'),
-        ]
-    ).group_by(DbCalcState.dbnode_id).alias()
-
-# recent_states is something compatible with DbNode, so that we can map
-recent_states = select([
-        DbCalcState.id.label('id'),
-        DbCalcState.dbnode_id.label('dbnode_id'),
-        DbCalcState.state.label('state'),
-        states.c.lasttime.label('time')
-    ]).\
-    select_from(
-        join(
-            DbCalcState,
-            states,
-            and_(
-                DbCalcState.dbnode_id == states.c.dbnode_id,
-                DbCalcState.time == states.c.lasttime,
-            )
-        )
-    ).alias() # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
-
-# Use a mapper to create a "table"
-state_mapper = mapper(
-    DbCalcState,
-    recent_states,
-    primary_key= recent_states.c.dbnode_id,
-    non_primary=True,
-)
-
-# State_instance is a relationship that returns the row of DbCalcState
-DbNode.state_instance = relationship(
-    state_mapper,
-    primaryjoin = recent_states.c.dbnode_id == foreign(DbNode.id),
-    viewonly=True,
-)
-
-# State is a column_property that returns the
-# most recent state's state (the string) for this dbnode
-DbNode.state = column_property(
-    select([recent_states.c.state]).
-    where(recent_states.c.dbnode_id == foreign(DbNode.id))
-)

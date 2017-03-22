@@ -1,0 +1,446 @@
+{
+  "links_uuid": [
+    {
+      "output": "c6708b15-0590-401c-9e52-030ca2b10261",
+      "label": "code",
+      "input": "e61ca228-7657-4b01-87ce-b762d39d1b13"
+    },
+    {
+      "output": "c6708b15-0590-401c-9e52-030ca2b10261",
+      "label": "parameters",
+      "input": "ba4394d9-c564-456e-947b-be5d4595b162"
+    },
+    {
+      "output": "be75309f-358e-4e64-ad44-762f5ba278e0",
+      "label": "remote_folder",
+      "input": "c6708b15-0590-401c-9e52-030ca2b10261"
+    },
+    {
+      "output": "c9013d3e-7306-401d-95c0-ed9336e2f472",
+      "label": "retrieved",
+      "input": "c6708b15-0590-401c-9e52-030ca2b10261"
+    },
+    {
+      "output": "764a0e65-8e78-471b-9b47-7173b515fea3",
+      "label": "output",
+      "input": "c6708b15-0590-401c-9e52-030ca2b10261"
+    },
+    {
+      "output": "07d09528-8264-4d20-b372-1b2b60558ec0",
+      "label": "job_info",
+      "input": "c6708b15-0590-401c-9e52-030ca2b10261"
+    }
+  ],
+  "export_data": {
+    "aiida.backends.djsite.db.models.DbNode": {
+      "27370": {
+        "uuid": "be75309f-358e-4e64-ad44-762f5ba278e0",
+        "description": "",
+        "dbcomputer": 2,
+        "label": "",
+        "user": 1,
+        "mtime": "2015-04-02T07:29:50.000000",
+        "nodeversion": 1,
+        "type": "data.remote.RemoteData.",
+        "public": false,
+        "ctime": "2015-04-02T07:29:50.000000"
+      },
+      "27371": {
+        "uuid": "c9013d3e-7306-401d-95c0-ed9336e2f472",
+        "description": "",
+        "dbcomputer": null,
+        "label": "",
+        "user": 1,
+        "mtime": "2015-04-02T07:30:51.000000",
+        "nodeversion": 1,
+        "type": "data.folder.FolderData.",
+        "public": false,
+        "ctime": "2015-04-02T07:30:51.000000"
+      },
+      "27372": {
+        "uuid": "764a0e65-8e78-471b-9b47-7173b515fea3",
+        "description": "",
+        "dbcomputer": null,
+        "label": "",
+        "user": 1,
+        "mtime": "2015-04-02T07:30:51.000000",
+        "nodeversion": 1,
+        "type": "data.parameter.ParameterData.",
+        "public": false,
+        "ctime": "2015-04-02T07:30:51.000000"
+      },
+      "27373": {
+        "uuid": "07d09528-8264-4d20-b372-1b2b60558ec0",
+        "description": "",
+        "dbcomputer": null,
+        "label": "",
+        "user": 1,
+        "mtime": "2015-04-02T07:30:51.000000",
+        "nodeversion": 1,
+        "type": "data.parameter.ParameterData.",
+        "public": false,
+        "ctime": "2015-04-02T07:30:51.000000"
+      },
+      "27369": {
+        "uuid": "c6708b15-0590-401c-9e52-030ca2b10261",
+        "description": "Test calculation with the NWChem SCF code",
+        "dbcomputer": 2,
+        "label": "Test NWChem",
+        "user": 1,
+        "mtime": "2015-04-02T07:30:51.000000",
+        "nodeversion": 16,
+        "type": "calculation.job.nwchem.nwcpymatgen.NwcpymatgenCalculation.",
+        "public": false,
+        "ctime": "2015-04-02T07:29:44.000000"
+      },
+      "27368": {
+        "uuid": "ba4394d9-c564-456e-947b-be5d4595b162",
+        "description": "",
+        "dbcomputer": null,
+        "label": "",
+        "user": 1,
+        "mtime": "2015-04-02T07:29:44.000000",
+        "nodeversion": 1,
+        "type": "data.parameter.ParameterData.",
+        "public": false,
+        "ctime": "2015-04-02T07:29:44.000000"
+      },
+      "27323": {
+        "uuid": "e61ca228-7657-4b01-87ce-b762d39d1b13",
+        "description": "",
+        "dbcomputer": 2,
+        "label": "nwchem-pymatgen",
+        "user": 1,
+        "mtime": "2015-04-01T13:47:16.000000",
+        "nodeversion": 6,
+        "type": "code.Code.",
+        "public": false,
+        "ctime": "2015-04-01T13:39:38.000000"
+      }
+    },
+    "aiida.backends.djsite.db.models.DbUser": {
+      "1": {
+        "first_name": "AiiDA",
+        "last_name": "Daemon",
+        "institution": "",
+        "email": "aiida@localhost"
+      }
+    },
+    "aiida.backends.djsite.db.models.DbComputer": {
+      "2": {
+        "name": "theospc11",
+        "transport_params": "{}",
+        "description": "",
+        "hostname": "localhost",
+        "enabled": true,
+        "transport_type": "local",
+        "metadata": "{\"default_mpiprocs_per_machine\": 6, \"workdir\": \"/scratch/{username}/aiida_run/\", \"append_text\": \"\", \"prepend_text\": \"\", \"mpirun_command\": [\"mpirun\", \"-np\", \"{tot_num_mpiprocs}\"]}",
+        "scheduler_type": "pbspro",
+        "uuid": "9da8b59b-7842-428b-8f17-53571e2c71b8"
+      }
+    }
+  },
+  "groups_uuid": {},
+  "node_attributes_conversion": {
+    "27370": {
+      "remote_path": null
+    },
+    "27371": {},
+    "27372": {
+      "errors": [],
+      "energies": [
+        null
+      ],
+      "frequencies": null,
+      "job_type": null,
+      "has_error": null,
+      "corrections": {},
+      "basis_set": {
+        "H": {
+          "functions": null,
+          "description": null,
+          "types": null,
+          "shells": null
+        },
+        "O": {
+          "functions": null,
+          "description": null,
+          "types": null,
+          "shells": null
+        }
+      }
+    },
+    "27373": {
+      "data base": null,
+      "global": null,
+      "nwchem branch": null,
+      "prefix": null,
+      "total": null,
+      "hardfail": null,
+      "0 permanent": null,
+      "ga revision": null,
+      "verify": null,
+      "hostname": null,
+      "source": null,
+      "program": null,
+      "input": null,
+      "time left": null,
+      "status": null,
+      "compiled": null,
+      "heap": null,
+      "nproc": null,
+      "date": null,
+      "stack": null,
+      "0 scratch": null,
+      "nwchem revision": null,
+      "argument  1": null
+    },
+    "27369": {
+      "retrieve_list": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "last_jobinfo": null,
+      "job_id": null,
+      "scheduler_state": null,
+      "parser": null,
+      "max_wallclock_seconds": null,
+      "jobresource_params": {
+        "num_machines": null,
+        "default_mpiprocs_per_machine": null
+      },
+      "remote_workdir": null,
+      "state": null,
+      "linkname_retrieved": null,
+      "retrieve_singlefile_list": [],
+      "scheduler_lastchecktime": "date"
+    },
+    "27368": {
+      "memory_options": [],
+      "tasks": [
+        {
+          "theory": null,
+          "title": null,
+          "alternate_directives": {},
+          "charge": null,
+          "theory_directives": [],
+          "spin_multiplicity": null,
+          "operation": null,
+          "basis_set": {
+            "H": null,
+            "O": null
+          }
+        }
+      ],
+      "directives": [],
+      "mol": {
+        "sites": [
+          {
+            "xyz": [
+              null,
+              null,
+              null
+            ],
+            "species": [
+              {
+                "occu": null,
+                "element": null
+              }
+            ]
+          },
+          {
+            "xyz": [
+              null,
+              null,
+              null
+            ],
+            "species": [
+              {
+                "occu": null,
+                "element": null
+              }
+            ]
+          },
+          {
+            "xyz": [
+              null,
+              null,
+              null
+            ],
+            "species": [
+              {
+                "occu": null,
+                "element": null
+              }
+            ]
+          }
+        ]
+      },
+      "symmetry_options": [],
+      "geometry_options": [
+        null,
+        null
+      ]
+    },
+    "27323": {
+      "is_local": null,
+      "append_text": null,
+      "remote_exec_path": null,
+      "input_plugin": null,
+      "prepend_text": null
+    }
+  },
+  "node_attributes": {
+    "27370": {
+      "remote_path": "/scratch/merkys/aiida_run/c6/70/8b15-0590-401c-9e52-030ca2b10261"
+    },
+    "27371": {},
+    "27372": {
+      "errors": [],
+      "energies": [
+        -2057.99011937535
+      ],
+      "frequencies": null,
+      "job_type": "NWChem SCF Module",
+      "has_error": false,
+      "corrections": {},
+      "basis_set": {
+        "H": {
+          "functions": "2",
+          "description": "6-31g",
+          "types": "2s",
+          "shells": "2"
+        },
+        "O": {
+          "functions": "9",
+          "description": "6-31g",
+          "types": "3s2p",
+          "shells": "5"
+        }
+      }
+    },
+    "27373": {
+      "data base": "./aiida.db",
+      "global": "200.0 Mbytes (distinct from heap & stack)",
+      "nwchem branch": "6.3",
+      "prefix": "aiida.",
+      "total": "400.0 Mbytes",
+      "hardfail": "no",
+      "0 permanent": ".",
+      "ga revision": "10379",
+      "verify": "yes",
+      "hostname": "theospc11",
+      "source": "/build/buildd/nwchem-6.3+r1",
+      "program": "/usr/bin/nwchem",
+      "input": "aiida.in",
+      "time left": "-1s",
+      "status": "startup",
+      "compiled": "Sun_Dec_22_04:02:59_2013",
+      "heap": "100.0 Mbytes",
+      "nproc": "6",
+      "date": "Thu Apr  2 09:29:53 2015",
+      "stack": "100.0 Mbytes",
+      "0 scratch": ".",
+      "nwchem revision": "24277",
+      "argument  1": "aiida.in"
+    },
+    "27369": {
+      "retrieve_list": [
+        "aiida.out",
+        "aiida.err",
+        "_scheduler-stdout.txt",
+        "_scheduler-stderr.txt"
+      ],
+      "last_jobinfo": "{\"job_state\": \"DONE\", \"detailedJobinfo\": \"Detailed jobinfo obtained with command 'tracejob -v '34.localhost''\\nReturn Code: 0\\n-------------------------------------------------------------\\nstdout:\\n\\nJob: 34.localhost\\n\\n04/02/2015 09:29:50  S    enqueuing into batch, state 1 hop 1\\n04/02/2015 09:29:50  S    Job Queued at request of merkys@localhost, owner = merkys@localhost, job name = aiida-27369, queue = batch\\n04/02/2015 09:29:50  S    Job Modified at request of Scheduler@localhost\\n04/02/2015 09:29:50  L    Job Run\\n04/02/2015 09:29:50  S    Job Run at request of Scheduler@localhost\\n04/02/2015 09:29:50  S    Not sending email: job requested no e-mail\\n04/02/2015 09:29:50  A    queue=batch\\n04/02/2015 09:29:50  A    user=merkys group=merkys jobname=aiida-27369 queue=batch ctime=1427959790 qtime=1427959790 etime=1427959790 start=1427959790 owner=merkys@localhost exec_host=theospc11.epfl.ch/0 Resource_List.neednodes=1 Resource_List.nodect=1 Resource_List.nodes=1 Resource_List.select=1:mpiprocs=6 Resource_List.walltime=00:30:00 \\n04/02/2015 09:29:53  S    Not sending email: job requested no e-mail\\n04/02/2015 09:29:53  S    Exit_status=0 resources_used.cput=00:00:05 resources_used.mem=0kb resources_used.vmem=0kb resources_used.walltime=00:00:03\\n04/02/2015 09:29:53  M    scan_for_terminated: job 34.localhost task 1 terminated, sid=4772\\n04/02/2015 09:29:53  M    job was terminated\\n04/02/2015 09:29:53  M    obit sent to server\\n04/02/2015 09:29:53  A    user=merkys group=merkys jobname=aiida-27369 queue=batch ctime=1427959790 qtime=1427959790 etime=1427959790 start=1427959790 owner=merkys@localhost exec_host=theospc11.epfl.ch/0 Resource_List.neednodes=1 Resource_List.nodect=1 Resource_List.nodes=1 Resource_List.select=1:mpiprocs=6 Resource_List.walltime=00:30:00 session=4772 end=1427959793 Exit_status=0 resources_used.cput=00:00:05 resources_used.mem=0kb resources_used.vmem=0kb resources_used.walltime=00:00:03\\n04/02/2015 09:30:01  S    Post job file processing error\\n04/02/2015 09:30:01  S    dequeuing from batch, state COMPLETE\\n\\nstderr:\\n/var/spool/torque/server_priv/accounting/20150402: Successfully located matching job records\\n/var/spool/torque/server_logs/20150402: Successfully located matching job records\\n/var/spool/torque/mom_logs/20150402: Successfully located matching job records\\n/var/spool/torque/sched_logs/20150402: Successfully located matching job records\\n\\n\", \"job_id\": \"34.localhost\"}",
+      "job_id": "34.localhost",
+      "scheduler_state": "DONE",
+      "parser": "nwchem.nwcpymatgen",
+      "max_wallclock_seconds": 1800,
+      "jobresource_params": {
+        "num_machines": 1,
+        "default_mpiprocs_per_machine": 6
+      },
+      "remote_workdir": "/scratch/merkys/aiida_run/c6/70/8b15-0590-401c-9e52-030ca2b10261",
+      "state": "FINISHED",
+      "linkname_retrieved": "retrieved",
+      "retrieve_singlefile_list": [],
+      "scheduler_lastchecktime": "2015-04-02T07:30:20.000000"
+    },
+    "27368": {
+      "memory_options": [],
+      "tasks": [
+        {
+          "theory": "scf",
+          "title": null,
+          "alternate_directives": {},
+          "charge": 0,
+          "theory_directives": [],
+          "spin_multiplicity": null,
+          "operation": "",
+          "basis_set": {
+            "H": "6-31g",
+            "O": "6-31g"
+          }
+        }
+      ],
+      "directives": [],
+      "mol": {
+        "sites": [
+          {
+            "xyz": [
+              0,
+              0,
+              0
+            ],
+            "species": [
+              {
+                "occu": 1,
+                "element": "O"
+              }
+            ]
+          },
+          {
+            "xyz": [
+              0,
+              1.43042809,
+              -1.10715266
+            ],
+            "species": [
+              {
+                "occu": 1,
+                "element": "H"
+              }
+            ]
+          },
+          {
+            "xyz": [
+              0,
+              -1.43042809,
+              -1.10715266
+            ],
+            "species": [
+              {
+                "occu": 1,
+                "element": "H"
+              }
+            ]
+          }
+        ]
+      },
+      "symmetry_options": [],
+      "geometry_options": [
+        "units",
+        "angstroms"
+      ]
+    },
+    "27323": {
+      "is_local": false,
+      "append_text": "",
+      "remote_exec_path": "/usr/bin/nwchem",
+      "input_plugin": "nwchem.nwcpymatgen",
+      "prepend_text": ""
+    }
+  }
+}

@@ -1,34 +1,17 @@
-============
-AiiDA Backup
-============
+.. _backup:
 
 In this page you will find useful information on how to backup your database,
 how to move it to a different location and how to backup your repository.
 
 
-How to backup the databases
-+++++++++++++++++++++++++++
-
-It is strongly advised to backup the content of your database daily. Below are
-instructions to set this up for the SQLite, PostgreSQL and MySQL databases, under Ubuntu
-(tested with version 12.04).
-
-.. _backup_sqlite:
-
-SQLite backup
--------------
-
-.. note:: Perform the following operation after having set up AiiDA. Only then
-  the ``~/.aiida`` folder (and the files within) will be created.
-
-Simply make sure your database folder (typically /home/USERNAME/.aiida/ containing
-the file ``aiida.db`` and the ``repository`` directory) is properly backed up by
-your backup software (under Ubuntu, Backup -> check the "Folders" tab).
-
 .. _backup_postgresql:
 
-PostgreSQL backup
------------------
+Create database backup
+++++++++++++++++++++++
+
+It is strongly advised to backup the content of your database daily. Below are
+instructions to set this up for the PostgreSQL database, under Ubuntu
+(tested with version 12.04).
 
 .. note:: Perform the following operation after having set up AiiDA. Only then
   the ``~/.aiida`` folder (and the files within) will be created.
@@ -93,21 +76,9 @@ your backup software (under Ubuntu, Backup -> check the "Folders" tab).
   this problem you can set up an incremental backup of your repository by following
   the instructions :ref:`here<repository_backup>`.
 
-.. _backup_mysql:
 
-MySQL backup
-------------
-
-.. todo:: Back-up instructions for the MySQL database.
-
-We do not have explicit instructions on how to back-up MySQL yet, but you
-can find plenty of information on Google.
-
-How to retrieve the database from a backup
-------------------------------------------
-
-PostgreSQL backup
------------------
+Restore database backup
++++++++++++++++++++++++
 
 In order to retrieve the database from a backup, you have first to
 create a empty database following the instructions described above in
@@ -117,17 +88,15 @@ names of the backuped one, type the following command::
 
     psql -h localhost -U aiida -d aiidadb -f aiidadb-backup.psql
 
-How to move the physical location of a database
-+++++++++++++++++++++++++++++++++++++++++++++++
+
+.. _move_postgresql:
+
+Move database
++++++++++++++
 
 It might happen that you need to move the physical location of the database
 files on your hard-drive (for instance, due to the lack of space in the
 partition where it is located). Below we explain how to do it.
-
-.. _move_postgresql:
-
-PostgreSQL move
----------------
 
 First, make sure you have a backup of the full database (see instructions
 :ref:`here<backup_postgresql>`), and that the AiiDA daemon is not running.
@@ -136,10 +105,6 @@ Then, become the UNIX ``postgres`` user, typing as root::
   su - postgres
 
 (or, equivalently, type ``sudo su - postgres``, depending on your distribution).
-
-Stop the postgres database daemon::
-
-  service postgresql stop
 
 Then enter the postgres shell::
 
@@ -151,12 +116,17 @@ and look for the current location of the data directory::
 
 Typically you should get something like ``/var/lib/postgresql/9.1/main``.
 
+.. note :: In the above, ``9.1`` is replaced by the actual version number of your postgres distribution (the same applies to the remainder of the section).
+
 .. note :: If you are experiencing memory problems and cannot enter the postgres
 	shell, you can look directly into the file ``/etc/postgresql/9.1/main/postgresql.conf``
 	and check out the line defining the variable ``data_directory``.
 
-Then exit the shell with ``\q``, go to this directory and copy all the
-files to the new directory::
+Then exit the shell with ``\q``, and stop the postgres database daemon::
+
+  service postgresql stop
+
+Copy all the files and folders from the postgres data directory into the new directory::
 
   cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
 
@@ -164,10 +134,16 @@ where ``SOURCE_DIRECTORY`` is the directory you got from the
 ``SHOW data_directory;`` command, and ``DESTINATION_DIRECTORY`` is the new
 directory for the database files.
 
+.. note :: The behaviour of the ``cp -a`` command is to create a directory into ``DESTINATION_DIRECTORY``, e.g.::
+
+    cp -a OLD_DIR/main/ NEW_DIR/
+
+  will create the directory ``main`` into ``NEW_DIR``.
+
 Make sure the permissions, owner and group are the same in the old and new directory
 (including all levels above the ``DESTINATION_DIRECTORY``). The owner and group
 should be both ``postgres``, at the notable exception of some symbolic links in
-``server.crt`` and ``server.key``.
+``server.crt`` and ``server.key`` (these files might be absent, depending on your postgresql version number).
 
 .. note :: If the permissions of these links need to be changed, use the ``-h``
   option of ``chown`` to avoid changing the permissions of the destination of the
@@ -203,9 +179,10 @@ first rename it and test AiiDA with the new database location (e.g. do simple
 queries like ``verdi code list`` or create a node and store it). If
 everything went fine, you can delete the old database location.
 
+
 .. _repository_backup:
 
-How to set up an incremental backup for the repository
+Setup repository backup
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Apart from the database backup, you should also backup the AiiDA repository.
 For small repositories, this can be easily done by a simple directory copy or,
@@ -329,4 +306,3 @@ day) to backup new changes.
   
 Finally, do not forget to exclude the repository folder from the normal backup 
 of your home directory!
- 

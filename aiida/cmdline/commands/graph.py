@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import argparse
 import sys
@@ -7,10 +15,6 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.exceptions import NotExistent
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class Graph(VerdiCommandWithSubcommands):
@@ -26,8 +30,13 @@ class Graph(VerdiCommandWithSubcommands):
 
     def __init__(self):
         """
-        A dictionary with valid subcommandsa as keys and corresponding functions as values
+        A dictionary with valid subcommands as keys and corresponding functions as values
         """
+
+        # Usual boilerplate to set the environment
+        if not is_dbenv_loaded():
+            load_dbenv()
+
         self.valid_subcommands = {
             'generate': (self.graph_generate, self.complete_none)
             # TODO: add a command to find connections between two points
@@ -39,10 +48,6 @@ class Graph(VerdiCommandWithSubcommands):
         :param args: root_pk
         :return: Generate a .dot file that can be rendered by graphviz utility dot
         """
-
-        # Usual boilerplate to load certain classes and functions
-        if not is_dbenv_loaded():
-            load_dbenv()
         from aiida.orm import load_node
         from aiida.orm.calculation import Calculation
         from aiida.orm.calculation.job import JobCalculation
@@ -71,10 +76,9 @@ class Graph(VerdiCommandWithSubcommands):
             print >> sys.stderr, e.message
             sys.exit(1)
 
-        # From this point on I inherit Giovanni's script grap-generator.py.
-        # This script starts from the root_pk and goes both input-ward and output-ward via a breadth-first algorithm
+        # The algorithm starts from the root_pk and goes both input-ward and output-ward via a breadth-first algorithm
         # until the connected part of the graph that contains the root_pk is fully explored.
-        # TODO this command deserves to be radically improved, with options and further subcommands
+        # TODO this command deserves to be improved, with options and further subcommands
 
 
         def kpoints_desc(node):
@@ -198,6 +202,7 @@ class Graph(VerdiCommandWithSubcommands):
 
         # Generate name of the output file. Default
         out_file_name = "{}.dot".format(root_pk)
+        print "out_file_name ", out_file_name
         with open(out_file_name,'w') as fout:
 
             fout.write("digraph G {\n")

@@ -1,53 +1,58 @@
 # -*- coding: utf-8 -*-
-import os
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+import fastentrypoints
+from os import path
+from setuptools import setup, find_packages
+from setup_requirements import install_requires, extras_require
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from distutils.core import setup
 
-# Get the version number
-aiida_folder = os.path.split(os.path.abspath(__file__))[0]
-fname = os.path.join(aiida_folder, 'aiida', '__init__.py')
-with open(fname) as aiida_init:
-    ns = {}
-    exec (aiida_init.read(), ns)
-    aiida_version = ns['__version__']
 
-if os.path.exists('CHANGELOG_EPFL.txt'):
-    # EPFL version
-    aiida_name = 'aiida-epfl'
-    aiida_license = 'MIT and EPFL licenses, see LICENSE.txt'
-else:
-    aiida_name = 'aiida'
-    aiida_license = 'MIT license, see LICENSE.txt'
+if __name__ == '__main__':
+    # Get the version number
+    aiida_folder = path.split(path.abspath(__file__))[0]
+    fname = path.join(aiida_folder, 'aiida', '__init__.py')
+    with open(fname) as aiida_init:
+        ns = {}
+        exec(aiida_init.read(), ns)
+        aiida_version = ns['__version__']
 
-bin_folder = os.path.join(aiida_folder, 'bin')
-setup(
-    name=aiida_name,
-    url='http://www.aiida.net/',
-    license=aiida_license,
-    version=aiida_version,
-    # Abstract dependencies.  Concrete versions are listed in
-    # requirements.txt
-    # See https://caremad.io/2013/07/setup-vs-requirement/ for an explanation
-    # of the difference and
-    # http://blog.miguelgrinberg.com/post/the-package-dependency-blues
-    # for a useful dicussion
-    install_requires=[
-        'django', 'django_extensions', 'pytz', 'django-celery',
-        'celery', 'billiard', 'anyjson', 'six', 'supervisor',
-        'meld3', 'paramiko', 'ecdsa', 'pycrypto', 'numpy', 'django-tastypie',
-        'python-dateutil', 'python-mimeparse', 'plum', 'enum34', 'voluptuous',
-        'click',
-    ],
-    packages=find_packages(),
-    scripts=[os.path.join(bin_folder, f) for f in os.listdir(bin_folder)
-             if not os.path.isdir(os.path.join(bin_folder, f))],
-    long_description=open(os.path.join(aiida_folder, 'README.rst')).read(),
-)
+    bin_folder = path.join(aiida_folder, 'bin')
+    setup(
+        name='aiida-core',
+        url='http://www.aiida.net/',
+        license='MIT License',
+        author="The AiiDA team",
+        author_email='developers@aiida.net',
+        include_package_data=True, # puts non-code files into the distribution, reads list from MANIFEST.in
+        classifiers=[
+            'License :: OSI Approved :: MIT License',
+            'Programming Language :: Python',
+            'Programming Language :: Python :: 2',
+        ],
+        version=aiida_version,
+        install_requires=install_requires,
+        extras_require=extras_require,
+        packages=find_packages(),
+        entry_points={
+            'console_scripts': [
+                'verdi=aiida.cmdline.verdilib:run'
+            ],
+            # following are AiiDA plugin entry points:
+            'aiida.calculations': [],
+            'aiida.parsers': [],
+            'aiida.cmdline': [],
+            'aiida.schedulers': [],
+            'aiida.transports': [],
+            'aiida.workflows': [],
+        },
+        scripts=['bin/runaiida'],
+        long_description=open(path.join(aiida_folder, 'README.rst')).read(),
+    )

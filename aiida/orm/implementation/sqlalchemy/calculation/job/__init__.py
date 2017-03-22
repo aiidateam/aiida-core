@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import datetime
 # XXX to remove when we implements the settings/tasks using SQLA
@@ -24,10 +32,6 @@ from aiida.orm.group import Group
 
 from aiida.utils import timezone
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 class JobCalculation(AbstractJobCalculation, Calculation):
 
@@ -98,7 +102,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                 state_to_return = calc_states.NEW
             else:
                 # In the sqlalchemy model, the state
-                most_recent_state = self._dbnode.state
+                most_recent_state = self.dbnode.state
                 if most_recent_state:
                     state_to_return = most_recent_state.value
                 else:

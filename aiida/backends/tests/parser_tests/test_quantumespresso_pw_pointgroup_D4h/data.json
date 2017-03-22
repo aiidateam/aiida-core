@@ -1,0 +1,487 @@
+{
+  "node_attributes": {
+    "3603": {
+      "mesh": [
+        2,
+        2,
+        2
+      ],
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "3602": {
+      "also_bands": true
+    },
+    "3601": {
+      "CONTROL": {
+        "calculation": "scf",
+        "restart_mode": "from_scratch",
+        "tprnfor": true,
+        "wf_collect": true,
+        "tstress": true
+      },
+      "ELECTRONS": {
+        "conv_thr": 1e-10
+      },
+      "SYSTEM": {
+        "ecutwfc": 40.0,
+        "ecutrho": 320.0
+      }
+    },
+    "3600": {
+      "is_local": false,
+      "append_text": "",
+      "remote_exec_path": "/home/gibertini/svn/espresso-most-recent/bin/pw.x",
+      "input_plugin": "quantumespresso.pw",
+      "prepend_text": ""
+    },
+    "3607": {},
+    "3605": {
+      "retrieve_list": [
+        "aiida.out",
+        "./out/aiida.save/data-file.xml",
+        [
+          "./out/aiida.save/K*[0-9]/eigenval*.xml",
+          ".",
+          2
+        ],
+        "_scheduler-stdout.txt",
+        "_scheduler-stderr.txt"
+      ],
+      "last_jobinfo": "{\"job_state\": \"DONE\", \"detailedJobinfo\": \"Detailed jobinfo obtained with command 'tracejob -v '783.theospc10''\\nReturn Code: 0\\n-------------------------------------------------------------\\nstdout:\\n\\nJob: 783.theospc10\\n\\n07/28/2015 14:45:13  S    enqueuing into batch, state 1 hop 1\\n07/28/2015 14:45:13  S    Job Queued at request of gibertini@theospc10, owner = gibertini@theospc10, job name = aiida-3605, queue = batch\\n07/28/2015 14:45:13  S    Job Modified at request of Scheduler@theospc10\\n07/28/2015 14:45:13  L    Job Run\\n07/28/2015 14:45:13  S    Job Run at request of Scheduler@theospc10\\n07/28/2015 14:45:13  S    Not sending email: job requested no e-mail\\n07/28/2015 14:45:13  A    queue=batch\\n07/28/2015 14:45:13  A    user=gibertini group=gibertini jobname=aiida-3605 queue=batch ctime=1438087513 qtime=1438087513 etime=1438087513 start=1438087513 owner=gibertini@theospc10 exec_host=theospc10.epfl.ch/0 Resource_List.neednodes=1 Resource_List.nodect=1 Resource_List.nodes=1 Resource_List.select=1:mpiprocs=8 Resource_List.walltime=00:30:00 \\n07/28/2015 14:45:28  S    Not sending email: job requested no e-mail\\n07/28/2015 14:45:28  S    Exit_status=0 resources_used.cput=00:01:30 resources_used.mem=0kb resources_used.vmem=0kb resources_used.walltime=00:00:15\\n07/28/2015 14:45:28  S    dequeuing from batch, state COMPLETE\\n07/28/2015 14:45:28  M    scan_for_terminated: job 783.theospc10 task 1 terminated, sid=20652\\n07/28/2015 14:45:28  M    job was terminated\\n07/28/2015 14:45:28  M    obit sent to server\\n07/28/2015 14:45:28  A    user=gibertini group=gibertini jobname=aiida-3605 queue=batch ctime=1438087513 qtime=1438087513 etime=1438087513 start=1438087513 owner=gibertini@theospc10 exec_host=theospc10.epfl.ch/0 Resource_List.neednodes=1 Resource_List.nodect=1 Resource_List.nodes=1 Resource_List.select=1:mpiprocs=8 Resource_List.walltime=00:30:00 session=20652 end=1438087528 Exit_status=0 resources_used.cput=00:01:30 resources_used.mem=0kb resources_used.vmem=0kb resources_used.walltime=00:00:15\\n\\nstderr:\\n/var/spool/torque/server_priv/accounting/20150728: Successfully located matching job records\\n/var/spool/torque/server_logs/20150728: Successfully located matching job records\\n/var/spool/torque/mom_logs/20150728: Successfully located matching job records\\n/var/spool/torque/sched_logs/20150728: Successfully located matching job records\\n\\n\", \"job_id\": \"783.theospc10\"}",
+      "linkname_retrieved": "retrieved",
+      "parser": "quantumespresso.pw",
+      "max_wallclock_seconds": 1800,
+      "jobresource_params": {
+        "num_machines": 1,
+        "default_mpiprocs_per_machine": 8
+      },
+      "remote_workdir": "/scratch/gibertini/aiida_run/36/22/a741-c0b0-4e78-962b-946f3a010210",
+      "state": "FINISHED",
+      "scheduler_state": "DONE",
+      "retrieve_singlefile_list": [],
+      "scheduler_lastchecktime": "2015-07-28T12:45:38.369927",
+      "job_id": "783.theospc10"
+    },
+    "3604": {
+      "kinds": [
+        {
+          "symbols": [
+            "Ba"
+          ],
+          "mass": 137.327,
+          "weights": [
+            1.0
+          ],
+          "name": "Ba"
+        },
+        {
+          "symbols": [
+            "Ti"
+          ],
+          "weights": [
+            1.0
+          ],
+          "mass": 47.867,
+          "name": "Ti"
+        },
+        {
+          "symbols": [
+            "O"
+          ],
+          "weights": [
+            1.0
+          ],
+          "mass": 15.9994,
+          "name": "O"
+        }
+      ],
+      "pbc3": true,
+      "pbc2": true,
+      "pbc1": true,
+      "sites": [
+        {
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "kind_name": "Ba"
+        },
+        {
+          "position": [
+            2.0,
+            2.0,
+            2.02499908735159
+          ],
+          "kind_name": "Ti"
+        },
+        {
+          "position": [
+            2.0,
+            2.0,
+            1.02524051202248e-06
+          ],
+          "kind_name": "O"
+        },
+        {
+          "position": [
+            2.0,
+            0.0,
+            2.02500050636806
+          ],
+          "kind_name": "O"
+        },
+        {
+          "position": [
+            0.0,
+            2.0,
+            2.02500050636806
+          ],
+          "kind_name": "O"
+        }
+      ],
+      "cell": [
+        [
+          4.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          4.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          4.05
+        ]
+      ]
+    }
+  },
+  "export_data": {
+    "aiida.backends.djsite.db.models.DbComputer": {
+      "1": {
+        "name": "theospc10",
+        "scheduler_type": "pbspro",
+        "hostname": "localhost",
+        "enabled": true,
+        "uuid": "673c3278-a5a3-45da-abb7-875a4e852059",
+        "transport_type": "local",
+        "metadata": "{\"default_mpiprocs_per_machine\": 8, \"workdir\": \"/scratch/gibertini/aiida_run/\", \"append_text\": \"\", \"prepend_text\": \"\", \"mpirun_command\": [\"mpirun\", \"-np\", \"6\"]}",
+        "transport_params": "{}",
+        "description": ""
+      }
+    },
+    "aiida.backends.djsite.db.models.DbUser": {
+      "2": {
+        "first_name": "Marco",
+        "last_name": "Gibertini",
+        "institution": "EPFL, Lausanne",
+        "email": "marco.gibertini@epfl.ch"
+      }
+    },
+    "aiida.backends.djsite.db.models.DbNode": {
+      "3603": {
+        "uuid": "74d6c359-adf6-49a1-8fce-d405358e0d1f",
+        "mtime": "2015-07-28T12:45:01.881424",
+        "ctime": "2015-07-28T12:45:01.255494",
+        "label": "",
+        "user": 2,
+        "dbcomputer": null,
+        "nodeversion": 1,
+        "type": "data.array.kpoints.KpointsData.",
+        "public": false,
+        "description": ""
+      },
+      "3602": {
+        "uuid": "6934f4ea-2679-44af-89a2-e0b3440e8c04",
+        "mtime": "2015-07-28T12:45:01.862847",
+        "ctime": "2015-07-28T12:45:01.256922",
+        "label": "",
+        "user": 2,
+        "dbcomputer": null,
+        "nodeversion": 1,
+        "type": "data.parameter.ParameterData.",
+        "public": false,
+        "description": ""
+      },
+      "3601": {
+        "uuid": "1b10a4cd-d93b-4ef3-a142-91b2fc17b3d6",
+        "mtime": "2015-07-28T12:45:01.842730",
+        "ctime": "2015-07-28T12:45:01.254790",
+        "label": "",
+        "user": 2,
+        "dbcomputer": null,
+        "nodeversion": 1,
+        "type": "data.parameter.ParameterData.",
+        "public": false,
+        "description": ""
+      },
+      "3600": {
+        "uuid": "49739d35-3ebf-4220-a91a-f4a0911a7281",
+        "mtime": "2015-07-28T12:44:05.682126",
+        "ctime": "2015-07-28T12:44:05.678185",
+        "label": "pw-svn",
+        "user": 2,
+        "dbcomputer": 1,
+        "nodeversion": 1,
+        "type": "code.Code.",
+        "public": false,
+        "description": "Quantum ESPRESSO PW code on the theospc10 workstation"
+      },
+      "3607": {
+        "uuid": "2b4ce7f8-9e76-4bb4-b340-cce1cf606ceb",
+        "mtime": "2015-07-28T12:45:43.374128",
+        "ctime": "2015-07-28T12:45:43.351398",
+        "label": "",
+        "user": 2,
+        "dbcomputer": null,
+        "nodeversion": 1,
+        "type": "data.folder.FolderData.",
+        "public": false,
+        "description": ""
+      },
+      "3605": {
+        "uuid": "3622a741-c0b0-4e78-962b-946f3a010210",
+        "mtime": "2015-07-28T12:45:43.869115",
+        "ctime": "2015-07-28T12:45:01.274103",
+        "label": "Test QE pw.x",
+        "user": 2,
+        "dbcomputer": 1,
+        "nodeversion": 16,
+        "type": "calculation.job.quantumespresso.pw.PwCalculation.",
+        "public": false,
+        "description": "Test calculation with the Quantum ESPRESSO pw.x code"
+      },
+      "3604": {
+        "uuid": "d8e12fe1-eb12-4dcb-a716-5e192126ca39",
+        "mtime": "2015-07-28T12:45:01.907484",
+        "ctime": "2015-07-28T12:45:01.226832",
+        "label": "",
+        "user": 2,
+        "dbcomputer": null,
+        "nodeversion": 1,
+        "type": "data.structure.StructureData.",
+        "public": false,
+        "description": ""
+      }
+    }
+  },
+  "node_attributes_conversion": {
+    "3603": {
+      "mesh": [
+        null,
+        null,
+        null
+      ],
+      "offset": [
+        null,
+        null,
+        null
+      ]
+    },
+    "3602": {
+      "also_bands": null
+    },
+    "3601": {
+      "CONTROL": {
+        "calculation": null,
+        "restart_mode": null,
+        "tprnfor": null,
+        "wf_collect": null,
+        "tstress": null
+      },
+      "ELECTRONS": {
+        "conv_thr": null
+      },
+      "SYSTEM": {
+        "ecutwfc": null,
+        "ecutrho": null
+      }
+    },
+    "3600": {
+      "is_local": null,
+      "append_text": null,
+      "remote_exec_path": null,
+      "input_plugin": null,
+      "prepend_text": null
+    },
+    "3607": {},
+    "3605": {
+      "retrieve_list": [
+        null,
+        null,
+        [
+          null,
+          null,
+          null
+        ],
+        null,
+        null
+      ],
+      "last_jobinfo": null,
+      "linkname_retrieved": null,
+      "parser": null,
+      "max_wallclock_seconds": null,
+      "jobresource_params": {
+        "num_machines": null,
+        "default_mpiprocs_per_machine": null
+      },
+      "remote_workdir": null,
+      "state": null,
+      "scheduler_state": null,
+      "retrieve_singlefile_list": [],
+      "scheduler_lastchecktime": "date",
+      "job_id": null
+    },
+    "3604": {
+      "kinds": [
+        {
+          "symbols": [
+            null
+          ],
+          "mass": null,
+          "weights": [
+            null
+          ],
+          "name": null
+        },
+        {
+          "symbols": [
+            null
+          ],
+          "weights": [
+            null
+          ],
+          "mass": null,
+          "name": null
+        },
+        {
+          "symbols": [
+            null
+          ],
+          "weights": [
+            null
+          ],
+          "mass": null,
+          "name": null
+        }
+      ],
+      "pbc3": null,
+      "pbc2": null,
+      "pbc1": null,
+      "sites": [
+        {
+          "position": [
+            null,
+            null,
+            null
+          ],
+          "kind_name": null
+        },
+        {
+          "position": [
+            null,
+            null,
+            null
+          ],
+          "kind_name": null
+        },
+        {
+          "position": [
+            null,
+            null,
+            null
+          ],
+          "kind_name": null
+        },
+        {
+          "position": [
+            null,
+            null,
+            null
+          ],
+          "kind_name": null
+        },
+        {
+          "position": [
+            null,
+            null,
+            null
+          ],
+          "kind_name": null
+        }
+      ],
+      "cell": [
+        [
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null
+        ]
+      ]
+    }
+  },
+  "links_uuid": [
+    {
+      "output": "3622a741-c0b0-4e78-962b-946f3a010210",
+      "input": "ebdfbf18-aeb2-4e83-a244-00b6303afe0d",
+      "label": "pseudo_Ba"
+    },
+    {
+      "output": "3622a741-c0b0-4e78-962b-946f3a010210",
+      "input": "18e2cf48-c25c-4ea7-a9b3-feb77474f8d5",
+      "label": "pseudo_Ti"
+    },
+    {
+      "output": "3622a741-c0b0-4e78-962b-946f3a010210",
+      "input": "6934f4ea-2679-44af-89a2-e0b3440e8c04",
+      "label": "settings"
+    },
+    {
+      "output": "2b4ce7f8-9e76-4bb4-b340-cce1cf606ceb",
+      "input": "3622a741-c0b0-4e78-962b-946f3a010210",
+      "label": "retrieved"
+    },
+    {
+      "output": "3622a741-c0b0-4e78-962b-946f3a010210",
+      "input": "7f4d9875-00a7-4148-acda-bcddfdff4ae0",
+      "label": "pseudo_O"
+    },
+    {
+      "output": "3622a741-c0b0-4e78-962b-946f3a010210",
+      "input": "49739d35-3ebf-4220-a91a-f4a0911a7281",
+      "label": "code"
+    },
+    {
+      "output": "3622a741-c0b0-4e78-962b-946f3a010210",
+      "input": "74d6c359-adf6-49a1-8fce-d405358e0d1f",
+      "label": "kpoints"
+    },
+    {
+      "output": "3622a741-c0b0-4e78-962b-946f3a010210",
+      "input": "1b10a4cd-d93b-4ef3-a142-91b2fc17b3d6",
+      "label": "parameters"
+    },
+    {
+      "output": "3622a741-c0b0-4e78-962b-946f3a010210",
+      "input": "d8e12fe1-eb12-4dcb-a716-5e192126ca39",
+      "label": "structure"
+    }
+  ],
+  "groups_uuid": {}
+}

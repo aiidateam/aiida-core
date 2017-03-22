@@ -1,16 +1,22 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import sys
 import os
 import subprocess
-
+from datetime import timedelta
+from aiida.common import aiidalogger
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 from aiida.backends.utils import is_dbenv_loaded
+logger = aiidalogger.getChild('workflowmanager')
 
 
 def is_daemon_user():
@@ -25,6 +31,12 @@ def is_daemon_user():
 
     return daemon_user == this_user
 
+
+def _get_env_with_venv_bin():
+    pybin = os.path.dirname(sys.executable)
+    currenv = os.environ.copy()
+    currenv['PATH'] = pybin + ':' + currenv['PATH']
+    return currenv
 
 class Daemon(VerdiCommandWithSubcommands):
     """
@@ -109,14 +121,14 @@ class Daemon(VerdiCommandWithSubcommands):
             from aiida.backends.utils import load_dbenv
             load_dbenv(process='daemon')
 
+        from aiida.daemon.timestamps import get_last_daemon_timestamp,set_daemon_timestamp
+
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.backends.settings import BACKEND
-        from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
         from aiida.backends.utils import get_daemon_user
         from aiida.common.utils import get_configured_user_email
 
@@ -147,12 +159,34 @@ class Daemon(VerdiCommandWithSubcommands):
         LockManager().clear_all()
 
         print "Starting AiiDA Daemon ..."
+        currenv = _get_env_with_venv_bin()
         process = subprocess.Popen(
             "supervisord -c {}".format(self.conffile_full_path),
-            shell=True, stdout=subprocess.PIPE)
+            shell=True, stdout=subprocess.PIPE, env=currenv)
         process.wait()
+
+        # The following lines are needed for the workflow_stepper
+        # (re-initialize the timestamps used to lock the task, in case
+        # it crashed for some reason).
+        # TODO: remove them when the old workflow system will be
+        # taken away.
+        try:
+            if (get_last_daemon_timestamp('workflow',when='stop')
+                -get_last_daemon_timestamp('workflow',when='start'))<timedelta(0):
+                logger.info("Workflow stop timestamp was {}; re-initializing "
+                            "it to current time".format(
+                            get_last_daemon_timestamp('workflow',when='stop')))
+                print "Re-initializing workflow stepper stop timestamp"
+                set_daemon_timestamp(task_name='workflow', when='stop')
+        except TypeError:
+            # when some timestamps are None (i.e. not present), we make
+            # sure that at least the stop timestamp is defined
+            print "Re-initializing workflow stepper stop timestamp"
+            set_daemon_timestamp(task_name='workflow', when='stop')
+
         if (process.returncode == 0):
             print "Daemon started"
+
 
     def kill_daemon(self):
         """
@@ -193,6 +227,12 @@ class Daemon(VerdiCommandWithSubcommands):
         :return: None if ``wait_for_death`` is False. True/False if the process was
             actually dead or after all the retries it was still alive.
         """
+        if not is_dbenv_loaded():
+            from aiida.backends.utils import load_dbenv
+            load_dbenv(process='daemon')
+
+        from aiida.daemon.timestamps import get_last_daemon_timestamp,set_daemon_timestamp
+
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(
@@ -217,6 +257,24 @@ class Daemon(VerdiCommandWithSubcommands):
                 if pid is None:
                     dead = True
                     print "AiiDA Daemon shut down correctly."
+                    # The following lines are needed for the workflow_stepper
+                    # (re-initialize the timestamps used to lock the task, in case
+                    # it crashed for some reason).
+                    # TODO: remove them when the old workflow system will be
+                    # taken away.
+                    try:
+                        if (get_last_daemon_timestamp('workflow',when='stop')
+                            -get_last_daemon_timestamp('workflow',when='start'))<timedelta(0):
+                            logger.info("Workflow stop timestamp was {}; re-initializing"
+                                        " it to current time".format(
+                                        get_last_daemon_timestamp('workflow',when='stop')))
+                            print "Re-initializing workflow stepper stop timestamp"
+                            set_daemon_timestamp(task_name='workflow', when='stop')
+                    except TypeError:
+                        # when some timestamps are None (i.e. not present), we make
+                        # sure that at least the stop timestamp is defined
+                        print "Re-initializing workflow stepper stop timestamp"
+                        set_daemon_timestamp(task_name='workflow', when='stop')
                     break
                 else:
                     print "Waiting for the AiiDA Daemon to shut down..."
@@ -323,10 +381,11 @@ class Daemon(VerdiCommandWithSubcommands):
             return
 
         try:
+            currenv = _get_env_with_venv_bin()
             process = subprocess.Popen(
                 "supervisorctl -c {} tail -f aiida-daemon".format(
                     self.conffile_full_path),
-                shell=True)  # , stdout=subprocess.PIPE)
+                shell=True, env=currenv)  # , stdout=subprocess.PIPE)
             process.wait()
         except KeyboardInterrupt:
             # exit on CTRL+C

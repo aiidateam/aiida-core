@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import logging
 import os
@@ -7,10 +15,6 @@ import django
 
 from aiida.utils.logger import get_dblogger_extra
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 def load_dbenv(process=None, profile=None):
@@ -43,28 +47,6 @@ def _load_dbenv_noschemacheck(process, profile):
     # djsite.settings.settings module.
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings.settings'
     django.setup()
-
-
-class DBLogHandler(logging.Handler):
-    def emit(self, record):
-        from django.core.exceptions import ImproperlyConfigured
-
-        try:
-            from aiida.backends.djsite.db.models import DbLog
-
-            DbLog.add_from_logrecord(record)
-
-        except ImproperlyConfigured:
-            # Probably, the logger was called without the
-            # Django settings module loaded. Then,
-            # This ignore should be a no-op.
-            pass
-        except Exception:
-            # To avoid loops with the error handler, I just print.
-            # Hopefully, though, this should not happen!
-            import traceback
-
-            traceback.print_exc()
 
 
 def get_log_messages(obj):

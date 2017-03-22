@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.calculation.inline import optional_inline
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 ase_loops = {
     '_atom_site': [
@@ -42,6 +46,7 @@ symmetry_tags = [
     '_space_group_name_Hall',
 ]
 
+
 def has_pycifrw():
     """
     :return: True if the PyCifRW module can be imported, False otherwise.
@@ -53,19 +58,19 @@ def has_pycifrw():
     return True
 
 
-def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
+def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
     """
     Construct a CIF representation of symmetry operator plus translation.
     See International Tables for Crystallography Vol. A. (2002) for
     definition.
 
     :param matrix: 3x3 matrix, representing the symmetry operator
-    :param tr: translation vector of length 3 (default [0, 0, 0])
+    :param tr: translation vector of length 3 (default 0)
     :param eps: epsilon parameter for fuzzy comparison x == 0
     :return: CIF representation of symmetry operator
     """
     import re
-    axes = [ "x", "y", "z" ]
+    axes = ["x", "y", "z"]
     parts = ["", "", ""]
     for i in range(0, 3):
         for j in range(0, 3):
@@ -75,12 +80,12 @@ def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
             elif matrix[i][j] < -eps:
                 sign = "-"
             if sign:
-                parts[i] = format("{}{}{}".format(parts[i],sign,axes[j]))
+                parts[i] = format("{}{}{}".format(parts[i], sign, axes[j]))
         if tr[i] < -eps or tr[i] > eps:
             sign = "+"
             if tr[i] < -eps:
                 sign = "-"
-            parts[i] = format("{}{}{}".format(parts[i],sign,abs(tr[i])))
+            parts[i] = format("{}{}{}".format(parts[i], sign, abs(tr[i])))
         parts[i] = re.sub('^\+', '', parts[i])
     return ",".join(parts)
 
@@ -109,7 +114,7 @@ def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
 
     .. note:: requires pymatgen module.
     """
-    from pymatgen.io.cifio import CifParser
+    from pymatgen.io.cif import CifParser
     from aiida.orm.data.structure import StructureData
 
     kwargs = {}
@@ -218,7 +223,7 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
                          "datablocks: {} (names) < "
                          "{} (datablocks)".format(len(names),
                                                   len(datablocks)))
-    for i,values in enumerate(datablocks):
+    for i, values in enumerate(datablocks):
         name = str(i)
         if names:
             name = names[i]
@@ -285,13 +290,13 @@ def refine_inline(node):
     for tag in symmetry_tags:
         cif.values[name].RemoveCifItem(tag)
 
-    cif.values[name]['_symmetry_space_group_name_H-M']  = symmetry['hm']
+    cif.values[name]['_symmetry_space_group_name_H-M'] = symmetry['hm']
     cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
-    cif.values[name]['_symmetry_Int_Tables_number']     = symmetry['tables']
+    cif.values[name]['_symmetry_Int_Tables_number'] = symmetry['tables']
     cif.values[name]['_symmetry_equiv_pos_as_xyz'] = \
-        [ symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
-                                            symmetry['translations'][i])
-          for i in range(0, len(symmetry['rotations'])) ]
+        [symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
+                                           symmetry['translations'][i])
+         for i in range(0, len(symmetry['rotations']))]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \
@@ -343,6 +348,27 @@ class CifData(SinglefileData):
     _set_incompatibilities = [("ase", "file"), ("ase", "values"),
                               ("file", "values")]
 
+    @staticmethod
+    def read_cif(fileobj, index=-1, **kwargs):
+        """
+        A wrapper method that simulates the behavior of the old
+        function ase.io.cif.read_cif by using the new generic ase.io.read
+        function.
+        """
+        from ase.io import read
+
+        #the read function returns a list as a cif file might contain multiple
+        # structures
+        struct_list = read(fileobj, index=':', format='cif', **kwargs)
+
+        if index is None:
+            # If index is explicitely set to None, the list is returned as such.
+            return struct_list
+        else:
+            # otherwise return the desired structure specified by index.
+            # If no index is specified, the last structure is assumed by default
+            return struct_list[index]
+
     @classmethod
     def from_md5(cls, md5):
         """
@@ -351,8 +377,10 @@ class CifData(SinglefileData):
         .. note:: the hash has to be stored in a ``_md5`` attribute,
             otherwise the CIF file will not be found.
         """
-        queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
-        return list(queryset)
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(cls, filters={'attributes.md5': {'==': md5}})
+        return [_ for [_] in qb.all()]
 
     @classmethod
     def get_or_create(cls, filename, use_first=False, store_cif=True):
@@ -391,34 +419,13 @@ class CifData(SinglefileData):
                 if use_first:
                     return (cifs[0], False)
                 else:
-                    raise ValueError("More than one copy of a CIF file "
-                                     "with the same MD5 has been found in "
-                                     "the DB. pks={}".format(
-                        ",".join([str(i.pk) for i in cifs])))
+                    raise ValueError(
+                        "More than one copy of a CIF file "
+                        "with the same MD5 has been found in "
+                        "the DB. pks={}".format(
+                            ",".join([str(i.pk) for i in cifs])))
             else:
-                return (cifs[0], False)
-
-    def _get_aiida_structure(self, converter='ase', store=False, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.data.structure.StructureData`.
-
-        :param converter: specify the converter. Default 'ase'.
-        :param store: if True, intermediate calculation gets stored in the
-            AiiDA database for record. Default False.
-        :param primitive_cell: if True, primitive cell is returned,
-            conventional cell if False. Default False.
-        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
-        """
-        from aiida.orm.data.parameter import ParameterData
-        import cif  # This same module
-
-        param = ParameterData(dict=kwargs)
-        try:
-            conv_f = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
-        except AttributeError:
-            raise ValueError("No such converter '{}' available".format(converter))
-        ret_dict = conv_f(cif=self, parameters=param, store=store)
-        return ret_dict['structure']
+                return cifs[0], False
 
     @property
     def ase(self):
@@ -430,17 +437,6 @@ class CifData(SinglefileData):
         if self._ase is None:
             self._ase = self.get_ase()
         return self._ase
-
-    @staticmethod
-    def read_cif(fileobj, index=-1, **kwargs):
-        """
-        A wrapper method that simulates the behaviour of the older versions of
-        the read_cif. It behaves similarly with the older and newer versions
-        of ase.io.cif.read_cif.
-        """
-        import ase.io.cif
-        return list(ase.io.cif.read_cif(
-            fileobj, index=slice(None), **kwargs))[index]
 
     def get_ase(self, **kwargs):
         """
@@ -476,7 +472,10 @@ class CifData(SinglefileData):
         .. note:: requires PyCifRW module.
         """
         if self._values is None:
-            import CifFile
+            try:
+                import CifFile
+            except ImportError as e:
+                raise ImportError(str(e) + '. You need to install the PyCifRW package.')
             self._values = CifFile.ReadCif(self.get_file_abs_path())
         return self._values
 
@@ -514,8 +513,8 @@ class CifData(SinglefileData):
         super(CifData, self).set_file(filename)
         md5sum = self.generate_md5()
         if isinstance(self.source, dict) and \
-          self.source.get('source_md5', None) is not None and \
-          self.source['source_md5'] != md5sum:
+                        self.source.get('source_md5', None) is not None and \
+                        self.source['source_md5'] != md5sum:
             self.source = {}
         self._set_attr('md5', md5sum)
         self._values = None
@@ -572,11 +571,11 @@ class CifData(SinglefileData):
                     bracket = site.find('(')
                     if bracket == -1:
                         # no bracket found
-                        if abs(float(site)-1) > epsilon:
+                        if abs(float(site) - 1) > epsilon:
                             partial_occupancies = True
                     else:
                         # bracket, cut string
-                        if abs(float(site[0:bracket])-1)> epsilon:
+                        if abs(float(site[0:bracket]) - 1) > epsilon:
                             partial_occupancies = True
 
         return partial_occupancies
@@ -608,6 +607,28 @@ class CifData(SinglefileData):
 
         return aiida.common.utils.md5_file(abspath)
 
+    def _get_aiida_structure(self, converter='ase', store=False, **kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+
+        :param converter: specify the converter. Default 'ase'.
+        :param store: if True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :param primitive_cell: if True, primitive cell is returned,
+            conventional cell if False. Default False.
+        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        """
+        from aiida.orm.data.parameter import ParameterData
+        import cif  # This same module
+
+        param = ParameterData(dict=kwargs)
+        try:
+            conv_f = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
+        except AttributeError:
+            raise ValueError("No such converter '{}' available".format(converter))
+        ret_dict = conv_f(cif=self, parameters=param, store=store)
+        return ret_dict['structure']
+
     def _prepare_cif(self):
         """
         Write the given CIF file to a string of format CIF.
@@ -624,7 +645,7 @@ class CifData(SinglefileData):
         Write the given CIF to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self,**kwargs)
+        return export_cif(self, **kwargs)
 
     def _get_object_ase(self):
         """
@@ -657,5 +678,4 @@ class CifData(SinglefileData):
         md5 = self.generate_md5()
         if attr_md5 != md5:
             raise ValidationError("Attribute 'md5' says '{}' but '{}' was "
-                                  "parsed instead.".format(
-                attr_md5, md5))
+                                  "parsed instead.".format(attr_md5, md5))

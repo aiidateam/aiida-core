@@ -34,10 +34,15 @@ class KpointsDataTranslator(DataTranslator):
         """
 
         """
-        Strategy: For the time being rely on the function implemented in seekpath to calculate brillouin zone faces, and triangulate them
+        Strategy: For the time being rely on the function implemented in
+        seekpath to calculate brillouin zone faces, and triangulate them. The
+        other fielsd of the response are retrieved
+        by ordniary kpointsdata methods, except the logic to create an list
+        of explicit keypoints from the mesh and the cell vectors.
         """
 
-        # First, check whether kpoint node has an explicit list including b vectors
+        # First, check whether kpoint node has an explicit list including b
+        # vectors
         try:
             kpoints = node.get_kpoints(cartesian=True).tolist()
         except AttributeError:
@@ -45,7 +50,8 @@ class KpointsDataTranslator(DataTranslator):
         else:
             explicit_kpoints = True
 
-        # Check if it has kpoint mesh (still compatible with the explicit list of kpoints)
+        # Check if it has kpoint mesh (still compatible with the explicit
+        # list of kpoints)
         try:
             (mesh, offset) = node.get_kpoints_mesh()
         except AttributeError:
@@ -53,7 +59,8 @@ class KpointsDataTranslator(DataTranslator):
         else:
             has_mesh = True
 
-        # Then check whether it contains the cell => BZ and explicit kpoints can be plotted
+        # Then check whether it contains the cell => BZ and explicit kpoints
+        # can be plotted
         try:
             cell = node.reciprocal_cell
         except AttributeError:
@@ -63,7 +70,8 @@ class KpointsDataTranslator(DataTranslator):
 
         json_content = {}
 
-        # For kpoints objects that have an explicit list of kpoints we can construct BZ and return an explicit list of kpoint coordinates
+        # For kpoints objects that have an explicit list of kpoints we can
+        # construct BZ and return an explicit list of kpoint coordinates
         if has_cell:
             # Retrieve b1, b2, b3 and add them to the json
             (b1, b2, b3) = (cell[0], cell[1], cell[2])
@@ -74,16 +82,19 @@ class KpointsDataTranslator(DataTranslator):
 
             json_content['reciprocal_vectors_unit'] = '1/Ang.'
 
-            # Get BZ facesa and add them to the json. Fields: faces, triangles, triangle_vertices. Most probably only faces is needed.
+            # Get BZ facesa and add them to the json. Fields: faces,
+            # triangles, triangle_vertices. Most probably only faces is needed.
             from seekpath.brillouinzone.brillouinzone import get_BZ
             json_content['faces_data'] = get_BZ(b1, b2, b3)
 
             if explicit_kpoints:
-                # Retrieve explicit list of kpoints in abs coordinates and add it
+                # Retrieve explicit list of kpoints in abs coordinates and
+                # add it
                 json_content['explicit_kpoints_abs'] = kpoints
                 json_content['kpoints_unit'] = '1/Ang.'
 
-            # Calculate explicit list from mesh if needed (possible since we know the cell)
+            # Calculate explicit list from mesh if needed (possible since we
+            # know the cell)
             if has_mesh and not explicit_kpoints:
 
                 (N1, N2, N3) = tuple(mesh)
@@ -96,20 +107,22 @@ class KpointsDataTranslator(DataTranslator):
                 for i1 in range(N1):
                     for i2 in range(N2):
                         for i3 in range(N3):
-                            kpoint = b1 / N1 * i1 + b2 / N2 * i2 + b3 / N3 * i3 + offvector
+                            kpoint = b1 / N1 * i1 + b2 / N2 * i2 + b3 / N3 * \
+                                                                   i3 + \
+                                     offvector
                             kpoints.append(kpoint.tolist())
 
                 json_content['explicit_kpoints_abs'] = kpoints
                 json_content['kpoints_unit'] = '1/Ang.'
 
-
         # Add labels field
+        has_labels=False
         if explicit_kpoints:
             labels = {}
             for idx, label in node.labels:
                 labels[label] = kpoints[idx]
             json_content['kpoints'] = labels
-
+            has_labels=True
 
         if has_mesh:
             # Return a generic mesh and offset to be represented in a table
@@ -117,13 +130,19 @@ class KpointsDataTranslator(DataTranslator):
             json_content['offset'] = offset
 
         """
-        # Populate json content with booleans to make it easy to determine how to visualize the node.
+        # Populate json content with booleans to make it easy to determine
+        how to visualize the node.
 
-        plot_bz: whether to make the plot (BZ, cell vectors, and explicit kpoints)
+        plot_bz: whether to make the plot (BZ, cell vectors, and explicit
+        kpoints)
         tab_mesh: whether to include a table with the mesh and offsets
         """
-        bool_fields = dict(plot_bz=has_cell,
-             tab_mesh=has_mesh)
+        bool_fields = dict(
+            plot_bz=has_cell,
+            tab_mesh=has_mesh,
+            has_labels=has_labels
+        )
+
         json_content.update(bool_fields)
 
         # Construct json and return it

@@ -7,14 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Tests for nodes, attributes and links
-"""
+
 
 import mock
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.utils.capturing import Capturing
+from aiida.common.datastructures import calc_states
 
 computer_name_1 = "torquessh1"
 computer_setup_input_1 = [computer_name_1,
@@ -70,21 +69,63 @@ code_setup_input_2 = [code_name_2,
                       ]
 
 
-class TestVerdiCommands(AiidaTestCase):
-    """
-    Bla bla bla
-    """
+class TestVerdiCalculationCommands(AiidaTestCase):
 
-    def ttest_calculation_list(self):
+    @classmethod
+    def setUpClass(cls):
+        """
+        Create some calculations with various states
+        """
+        super(TestVerdiCalculationCommands, cls).setUpClass()
+
+        from aiida.orm import JobCalculation
+
+        # Create some calculation
+        calc1 = JobCalculation(computer=cls.computer,
+                               resources={
+                                  'num_machines': 1,
+                                  'num_mpiprocs_per_machine': 1}).store()
+        calc1._set_state(calc_states.TOSUBMIT)
+        calc2 = JobCalculation(computer=cls.computer.name,
+                               resources={
+                                   'num_machines': 1,
+                                   'num_mpiprocs_per_machine': 1}).store()
+        calc2._set_state(calc_states.COMPUTED)
+        calc3 = JobCalculation(computer=cls.computer.id,
+                               resources={
+                                   'num_machines': 1,
+                                   'num_mpiprocs_per_machine': 1}).store()
+        calc3._set_state(calc_states.FINISHED)
+
+    def test_calculation_list(self):
+        """
+        Do some calculation listing to ensure that verdi calculation list
+        works and gives at least to some extent the expected results.
+        """
         from aiida.cmdline.commands.calculation import Calculation
-        calcCmd = Calculation()
+        calc_cmd = Calculation()
 
-        with captured_output() as (out, err):
-            calcCmd.calculation_list()
+        with Capturing() as output:
+            calc_cmd.calculation_list()
 
-        output = out.getvalue().strip()
-        print "----->", output
-        # self.assertEqual(output, 'hello world!')
+        out_str = ''.join(output)
+        self.assertTrue(calc_states.TOSUBMIT in out_str,
+                        "The TOSUBMIT calculations should be part fo the "
+                        "simple calculation list.")
+        self.assertTrue(calc_states.COMPUTED in out_str,
+                        "The COMPUTED calculations should be part fo the "
+                        "simple calculation list.")
+        self.assertFalse(calc_states.FINISHED in out_str,
+                         "The FINISHED calculations should not be part fo the "
+                         "simple calculation list.")
+
+        with Capturing() as output:
+            calc_cmd.calculation_list(*['-a'])
+
+        out_str = ''.join(output)
+        self.assertTrue(calc_states.FINISHED in out_str,
+                        "The FINISHED calculations should be part fo the "
+                        "simple calculation list.")
 
 
 class TestVerdiCodeCommands(AiidaTestCase):
@@ -101,24 +142,28 @@ class TestVerdiCodeCommands(AiidaTestCase):
         cmd_comp = Computer()
         with mock.patch('__builtin__.raw_input',
                         side_effect=computer_setup_input_1):
-            cmd_comp.computer_setup()
+            with Capturing():
+                cmd_comp.computer_setup()
 
         # Setup a code for computer #1
         from aiida.cmdline.commands.code import Code
         code_cmd = Code()
         with mock.patch('__builtin__.raw_input',
                         side_effect=code_setup_input_1):
-            code_cmd.code_setup()
+            with Capturing():
+                code_cmd.code_setup()
 
         # Setup computer #2
         with mock.patch('__builtin__.raw_input',
                         side_effect=computer_setup_input_2):
-            cmd_comp.computer_setup()
+            with Capturing():
+                cmd_comp.computer_setup()
 
         # Setup a code for computer #2
         with mock.patch('__builtin__.raw_input',
                         side_effect=code_setup_input_2):
-            code_cmd.code_setup()
+            with Capturing():
+                code_cmd.code_setup()
 
     def test_code_list(self):
         """

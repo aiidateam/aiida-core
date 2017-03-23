@@ -17,7 +17,6 @@ import sys
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 
-
 def cmdline_fill(attributes, store, print_header=True):
     import inspect
     import readline
@@ -60,8 +59,8 @@ def cmdline_fill(attributes, store, print_header=True):
                 try:
                     for l in previous_value.splitlines():
                         while True:
-                            readline.set_startup_hook(lambda:
-                                                      readline.insert_text(l))
+                            # readline.set_startup_hook(lambda:
+                            #                           readline.insert_text(l))
                             input_txt = raw_input()
                             if input_txt.strip() == '?':
                                 print ["  > {}".format(descl) for descl
@@ -94,8 +93,8 @@ def cmdline_fill(attributes, store, print_header=True):
                 input_txt = "\n".join(newlines)
 
             else:  # No multiline
-                readline.set_startup_hook(lambda: readline.insert_text(
-                    previous_value))
+                # readline.set_startup_hook(lambda: readline.insert_text(
+                #     previous_value))
                 input_txt = raw_input("=> {}: ".format(name))
                 if input_txt.strip() == '?':
                     print "HELP:", desc

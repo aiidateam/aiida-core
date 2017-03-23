@@ -118,4 +118,8 @@ extras_require = {
     'notebook': [
         'jupyter',
     ]
+    # Requirements for testing
+    'testing': [
+        'mock',
+    ]
 }

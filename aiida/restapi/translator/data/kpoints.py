@@ -102,7 +102,13 @@ class KpointsDataTranslator(DataTranslator):
                 json_content['explicit_kpoints_abs'] = kpoints
                 json_content['kpoints_unit'] = '1/Ang.'
 
-                explicit_kpoints = True
+
+        # Add labels field
+        if explicit_kpoints:
+            labels = {}
+            for idx, label in node.labels:
+                labels[label] = kpoints[idx]
+            json_content['kpoints'] = labels
 
 
         if has_mesh:

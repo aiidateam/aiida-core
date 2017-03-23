@@ -11,4 +11,4 @@
 
 /venv*/
 /.idea/
-/aiida.egg-info/
+*egg-info

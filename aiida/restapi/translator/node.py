@@ -48,6 +48,21 @@ class NodeTranslator(BaseTranslator):
         else:
             self._default_projections = ['**']
 
+
+        # Inspect the subclasses of NodeTranslator, to avoid hard-coding
+        # (should resemble the following tree)
+        """
+                                          /- KpointsTranslator
+                                         /
+                         /- DataTranslator  -- SructureTranslator
+                        /                \
+                                          \- BandsTranslator
+        NodeTranslator  -- CodeTranslator
+                        \
+                         \- CalculationTranslator
+        """
+
+
         self._subclasses = self._get_subclasses()
 
     def set_query_type(self, query_type, alist=None, nalist=None, elist=None,
@@ -246,8 +261,11 @@ class NodeTranslator(BaseTranslator):
             if parent_class is None:
                 parent_class = parent
 
-        # Suppose parent is a package (directory). Check if it contains __path__
+        # Suppose parent is a package (directory containing __init__.py).
+        # Check if it contains attribute __path__
         elif inspect.ismodule(parent) and hasattr(parent, '__path__'):
+
+            # Assume path is one element list
             package_path = parent.__path__[0]
 
             # if parent is a package, parent_class cannot be None
@@ -391,9 +409,22 @@ class NodeTranslator(BaseTranslator):
 
         return statistics
 
-    def get_io_tree(self, nodeId):
+    def get_io_tree(self, id):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
+        import uuid
+
+        if type(id) == int:
+            filter =  {
+                    'id': {'==': id}
+                }
+        elif type(id) == uuid.UUID:
+            filter  = {
+                'uuid': {'==': id.__str__()}
+            }
+        else:
+            raise RestValidationError('id can only be an integer or a uuid')
+
 
         nodes = []
         edges = []
@@ -401,7 +432,7 @@ class NodeTranslator(BaseTranslator):
 
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=["id", "type"],
-                  filters={"id": {"==": nodeId}})
+                  filters=filter)
         if qb.count() > 0:
             mainNode = qb.first()
             nodes.append({
@@ -415,7 +446,7 @@ class NodeTranslator(BaseTranslator):
         # get all inputs
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=["id", "type"],
-                  filters={"id": {"==": nodeId}})
+                  filters=filter)
         qb.append(Node, tag="in", project=['id', 'type'], input_of='main')
         if qb.count() > 0:
             for input in qb.iterdict():
@@ -437,7 +468,7 @@ class NodeTranslator(BaseTranslator):
         # get all outputs
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=["id", "type"],
-                  filters={"id": {"==": nodeId}})
+                  filters=filter)
         qb.append(Node, tag="out", project=['id', 'type'], output_of='main')
         if qb.count() > 0:
             for output in qb.iterdict():

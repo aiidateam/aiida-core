@@ -39,7 +39,7 @@ class KpointsDataTranslator(DataTranslator):
 
         # First, check whether kpoint node has an explicit list including b vectors
         try:
-            kpoints = node.get_kpoints()
+            kpoints = node.get_kpoints(cartesian=True).tolist()
         except AttributeError:
             explicit_kpoints = False
         else:
@@ -47,7 +47,7 @@ class KpointsDataTranslator(DataTranslator):
 
         # Check if it has kpoint mesh (still compatible with the explicit list of kpoints)
         try:
-            kpoints_mesh = node.get_kpoint_mesh()
+            (mesh, offset) = node.get_kpoint_mesh()
         except AttributeError:
             has_mesh = False
         else:
@@ -81,13 +81,12 @@ class KpointsDataTranslator(DataTranslator):
 
             if explicit_kpoints:
                 # Retrieve explicit list of kpoints in abs coordinates and add it
-                json_content['explicit_kpoints_abs'] = node.get_kpoints(cartesian=True).tolist()
+                json_content['explicit_kpoints_abs'] = kpoints
                 json_content['kpoints_unit'] = '1/Ang.'
 
             # Calculate explicit list from mesh if needed (possible since we know the cell)
             if has_mesh and not explicit_kpoints:
 
-                (mesh, offset) = node.get_kpoints_mesh()
                 (N1, N2, N3) = tuple(mesh)
                 (off1, off2, off3) = tuple(offset)
 

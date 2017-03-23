@@ -291,8 +291,12 @@ class Process(plum.process.Process):
     @protected
     def report(self, msg, *args, **kwargs):
         """
+        Log a message to the logger, which should get saved to the
+        database through the attached DbLogHandler. The class name and function
+        name of the caller are prepended to the given message
         """
-        self.logger.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
+        message = '[{}|{}|{}]: {}'.format(self.calc.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
+        self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
 
     # @override
     # def create_input_args(self, inputs):

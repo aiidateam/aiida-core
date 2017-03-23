@@ -47,7 +47,7 @@ class KpointsDataTranslator(DataTranslator):
 
         # Check if it has kpoint mesh (still compatible with the explicit list of kpoints)
         try:
-            (mesh, offset) = node.get_kpoint_mesh()
+            (mesh, offset) = node.get_kpoints_mesh()
         except AttributeError:
             has_mesh = False
         else:
@@ -55,12 +55,11 @@ class KpointsDataTranslator(DataTranslator):
 
         # Then check whether it contains the cell => BZ and explicit kpoints can be plotted
         try:
-            cell = node.reciprocal_cell.tolist()
+            cell = node.reciprocal_cell
         except AttributeError:
             has_cell = False
         else:
             has_cell = True
-
 
         json_content = {}
 
@@ -69,9 +68,9 @@ class KpointsDataTranslator(DataTranslator):
             # Retrieve b1, b2, b3 and add them to the json
             (b1, b2, b3) = (cell[0], cell[1], cell[2])
 
-            json_content['b1'] = b1
-            json_content['b2'] = b2
-            json_content['b3'] = b3
+            json_content['b1'] = b1.tolist()
+            json_content['b2'] = b2.tolist()
+            json_content['b3'] = b3.tolist()
 
             json_content['reciprocal_vectors_unit'] = '1/Ang.'
 
@@ -105,6 +104,7 @@ class KpointsDataTranslator(DataTranslator):
 
                 explicit_kpoints = True
 
+
         if has_mesh:
             # Return a generic mesh and offset to be represented in a table
             json_content['mesh'] = mesh
@@ -116,7 +116,7 @@ class KpointsDataTranslator(DataTranslator):
         plot_bz: whether to make the plot (BZ, cell vectors, and explicit kpoints)
         tab_mesh: whether to include a table with the mesh and offsets
         """
-        bool_fields = dict(plot_bz=explicit_kpoints,
+        bool_fields = dict(plot_bz=has_cell,
              tab_mesh=has_mesh)
         json_content.update(bool_fields)
 

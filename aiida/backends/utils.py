@@ -296,6 +296,7 @@ def _get_column(colname, alias):
     try:
         return getattr(alias, colname)
     except:
+        from aiida.common.exceptions import InputValidationError
         raise InputValidationError(
             "\n{} is not a column of {}\n"
             "Valid columns are:\n"

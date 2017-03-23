@@ -10,25 +10,11 @@
 """
 Tests for nodes, attributes and links
 """
-import unittest
 
-from aiida.backends.testbase import AiidaTestCase
-from contextlib import contextmanager
-from StringIO import StringIO
-import sys
-from aiida.common import utils
-from aiida.utils.capturing import Capturing
 import mock
 
-@contextmanager
-def captured_output():
-    new_out, new_err = StringIO(), StringIO()
-    old_out, old_err = sys.stdout, sys.stderr
-    try:
-        sys.stdout, sys.stderr = new_out, new_err
-        yield sys.stdout, sys.stderr
-    finally:
-        sys.stdout, sys.stderr = old_out, old_err
+from aiida.backends.testbase import AiidaTestCase
+from aiida.utils.capturing import Capturing
 
 computer_name_1 = "torquessh1"
 computer_setup_input_1 = [computer_name_1,
@@ -59,7 +45,7 @@ computer_setup_input_2 = [computer_name_2,
                           EOFError,
                           ]
 
-code_name_1 = "doubler"
+code_name_1 = "doubler_1"
 code_setup_input_1 = [code_name_1,
                       "simple script that doubles a number "
                       "and sleeps for a given number of seconds",
@@ -71,7 +57,7 @@ code_setup_input_1 = [code_name_1,
                       EOFError,
                       ]
 
-code_name_2 = "doubler"
+code_name_2 = "doubler_2"
 code_setup_input_2 = [code_name_2,
                       "simple script that doubles a number "
                       "and sleeps for a given number of seconds",
@@ -106,7 +92,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
     @classmethod
     def setUpClass(cls):
         """
-        Create the computer and setup a code
+        Create the computers and setup a codes
         """
         super(TestVerdiCodeCommands, cls).setUpClass()
 
@@ -121,25 +107,24 @@ class TestVerdiCodeCommands(AiidaTestCase):
         from aiida.cmdline.commands.code import Code
         code_cmd = Code()
         with mock.patch('__builtin__.raw_input',
-                        side_effect=code_setup_input_2):
+                        side_effect=code_setup_input_1):
             code_cmd.code_setup()
 
         # Setup computer #2
-        from aiida.cmdline.commands.computer import Computer
-        cmd_comp = Computer()
         with mock.patch('__builtin__.raw_input',
                         side_effect=computer_setup_input_2):
             cmd_comp.computer_setup()
 
         # Setup a code for computer #2
-        from aiida.cmdline.commands.code import Code
-        code_cmd = Code()
         with mock.patch('__builtin__.raw_input',
                         side_effect=code_setup_input_2):
             code_cmd.code_setup()
 
-
     def test_code_list(self):
+        """
+        Do some code listing test to ensure the correct behaviour of
+        verdi code list
+        """
         from aiida.cmdline.commands.code import Code
         code_cmd = Code()
 

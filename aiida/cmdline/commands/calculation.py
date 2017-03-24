@@ -15,7 +15,6 @@ from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 
-
 class Calculation(VerdiCommandWithSubcommands):
     """
     Query and interact with calculations
@@ -220,7 +219,6 @@ class Calculation(VerdiCommandWithSubcommands):
             limit=parsed_args.limit,
             projections=parsed_args.project,
         )
-
 
     def calculation_res(self, *args):
         """

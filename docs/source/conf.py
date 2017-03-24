@@ -59,9 +59,9 @@ copyright = u'2016, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulat
 # built documents.
 #
 # The short X.Y version.
-version = '0.7'
+version = '0.8'
 # The full version, including alpha/beta/rc tags.
-release = '0.7.0'
+release = '0.8.0'
 
 author = "The AiiDA team."
 

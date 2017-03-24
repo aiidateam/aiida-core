@@ -297,13 +297,13 @@ class DbNode(Base):
             func.row_number().over(partition_by=DbCalcState.dbnode_id,
                                                  order_by=custom_sort_order).label('the_row_number')
         ])
-        q1 = q1.cte('recentstates')
+
+        q1 = q1.cte()
 
         subq = select([
             q1.c.dbnode_id.label('dbnode_id'),
             q1.c.state.label('state')
         ]).select_from(q1).where(q1.c.the_row_number==1).alias()
-
 
         return select([subq.c.state]).\
             where(

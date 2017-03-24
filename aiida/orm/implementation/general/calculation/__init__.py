@@ -149,6 +149,8 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         None will then automatically raise the standard AttributeError
         exception.
         """
+        if name == '_use_methods':
+            raise AttributeError("'{0}' object has no attribute '{1}'".format(type(self), name))
 
         class UseMethod(object):
             """

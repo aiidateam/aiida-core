@@ -15,58 +15,45 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.utils.capturing import Capturing
 from aiida.common.datastructures import calc_states
 
+# Common computer information
+computer_common_info = ["localhost",
+                        "",
+                        "True",
+                        "ssh",
+                        "torque",
+                        "/scratch/{username}/aiida_run",
+                        "mpirun -np {tot_num_mpiprocs}",
+                        "1",
+                        EOFError,
+                        EOFError,
+                        ]
+
+# Computer #1
 computer_name_1 = "torquessh1"
-computer_setup_input_1 = [computer_name_1,
-                          "localhost",
-                          "",
-                          "True",
-                          "ssh",
-                          "torque",
-                          "/scratch/{username}/aiida_run",
-                          "mpirun -np {tot_num_mpiprocs}",
-                          "1",
-                          EOFError,
-                          EOFError,
-                          ]
+computer_setup_input_1 = [computer_name_1] + computer_common_info
 
-
+# Computer #2
 computer_name_2 = "torquessh2"
-computer_setup_input_2 = [computer_name_2,
-                          "localhost",
-                          "",
-                          "True",
-                          "ssh",
-                          "torque",
-                          "/scratch/{username}/aiida_run",
-                          "mpirun -np {tot_num_mpiprocs}",
-                          "1",
-                          EOFError,
-                          EOFError,
-                          ]
+computer_setup_input_2 = [computer_name_2] + computer_common_info
 
+
+# Common code information
+code_common_info_1 = ["simple script",
+                      "False",
+                      "simpleplugins.templatereplacer",]
+code_common_info_2 = ["/usr/local/bin/doubler.sh",
+                      EOFError,
+                      EOFError,
+                      ]
+
+# Code #1
 code_name_1 = "doubler_1"
-code_setup_input_1 = [code_name_1,
-                      "simple script that doubles a number "
-                      "and sleeps for a given number of seconds",
-                      "False",
-                      "simpleplugins.templatereplacer",
-                      computer_name_1,
-                      "/usr/local/bin/doubler.sh",
-                      EOFError,
-                      EOFError,
-                      ]
-
+code_setup_input_1 = ([code_name_1] + code_common_info_1 +
+                      [computer_name_1] + code_common_info_2)
+# Code #2
 code_name_2 = "doubler_2"
-code_setup_input_2 = [code_name_2,
-                      "simple script that doubles a number "
-                      "and sleeps for a given number of seconds",
-                      "False",
-                      "simpleplugins.templatereplacer",
-                      computer_name_2,
-                      "/usr/local/bin/doubler.sh",
-                      EOFError,
-                      EOFError,
-                      ]
+code_setup_input_2 = ([code_name_2] + code_common_info_1 +
+                      [computer_name_2] + code_common_info_2)
 
 
 class TestVerdiCalculationCommands(AiidaTestCase):

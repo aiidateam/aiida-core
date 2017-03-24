@@ -37,10 +37,6 @@ pwd_context = CryptContext(
     # The default hashing mechanism
     default="pbkdf2_sha256",
 
-    # vary rounds parameter randomly when creating new hashes...
-    # deprecated as of 1.7
-    # all__vary_rounds=0.1,
-
     # We set the number of rounds that should be used...
     pbkdf2_sha256__default_rounds=8000,
     )

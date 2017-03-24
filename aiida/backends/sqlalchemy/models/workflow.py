@@ -69,6 +69,10 @@ class DbWorkflow(Base):
         self.nodeversion = 1
         self.lastsyncedversion = 0
 
+    @property
+    def pk(self):
+        return self.id
+
     def get_aiida_class(self):
         """
         Return the corresponding aiida instance of class aiida.worflow

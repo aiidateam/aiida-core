@@ -24,7 +24,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from sqlalchemy.sql.expression import cast
-from sqlalchemy.sql.elements import Cast
+from sqlalchemy.sql.elements import Cast, Label
 from aiida.common.exceptions import InputValidationError
 from aiida.backends.general.querybuilder_interface import QueryBuilderInterface
 from aiida.backends.utils import _get_column
@@ -102,7 +102,9 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
     def get_filter_expr_from_column(self, operator, value, column):
 
-        if not isinstance(column, (Cast, InstrumentedAttribute)):
+        # Label is used because it is what is returned for the
+        # 'state' column by the hybrid_column construct
+        if not isinstance(column, (Cast, InstrumentedAttribute, Label)):
             raise TypeError(
                 'column ({}) {} is not a valid column'.format(
                     type(column), column

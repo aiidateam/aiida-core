@@ -14,6 +14,7 @@ from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
 
 logger = aiidalogger.getChild('workflowmanager')
 
+
 def execute_steps():
     """
     This method loops on the RUNNING workflows and handled the execution of the
@@ -40,8 +41,12 @@ def execute_steps():
     logger.info("Querying the worflow DB")
     
     running_steps = get_all_running_steps()
-    
+
     for s in running_steps:
+        if s.parent.state == wf_states.FINISHED:
+            s.set_state(wf_states.FINISHED)
+            continue
+
         w = s.parent.get_aiida_class()
 
         logger.info("[{0}] Found active step: {1}".format(w.pk, s.name))
@@ -79,7 +84,6 @@ def execute_steps():
                     logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.pk, s.name, pk))
 
 
-
 def advance_workflow(w, step):
     """
     The method tries to advance a step running its next method and handling 
@@ -103,9 +107,6 @@ def advance_workflow(w, step):
     :param step: DbWorkflowStep to execute
     :return: True if the step has been executed, False otherwise
     """
-
-    from aiida.orm.workflow import Workflow
-
     if step.nextcall == wf_exit_call:
         logger.info("[{0}] Step: {1} has an exit call".format(w.pk, step.name))
         if len(w.get_steps(wf_states.RUNNING)) == 0 and len(w.get_steps(wf_states.ERROR)) == 0:
@@ -128,7 +129,7 @@ def advance_workflow(w, step):
                                       "to kick.".format(step.name))
         return True
 
-    elif not step.nextcall == None:
+    elif not step.nextcall is None:
 
         logger.info("[{0}] In advance_workflow the step {1} goes to nextcall {2}"
                     "".format(w.pk, step.name, step.nextcall))

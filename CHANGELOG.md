@@ -36,6 +36,7 @@ fields
 - Database efficiency improvements with orders of magnitude speedup for large databases  
 [added indices for daemon queries and node UUID queries]
 - Replace deprecated `commit_on_success` with atomic for Django transactions
+- Change of how SQLAlchemy internally uses the session and the engine to work also with forks (e.g. in celery)
 
 
 ### Workflows
@@ -48,7 +49,7 @@ fields
 - Improvements to `WorkChain`
     * Implemented a `return` statement for `WorkChain` specification
     * Logging to the database implemented through `WorkChain.report()` for debugging
-
+- Improved kill command for old-style workflows to avoid steps to remaing in running state
 
 ### Plugins
 - Added finer granularity for parsing PW timers in output
@@ -70,6 +71,7 @@ additional TCOD CIF tags, various bugfixes)
 - Fix for the direct scheduler on Mac OS X
 - Fix for the import of computers with name collisions
 - Generated backup scripts are now made profile specific and saved as `start_backup_<profile>.py`
+- Fix for the vary_rounds warning
 
 
 ## v0.7.1

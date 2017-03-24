@@ -17,7 +17,6 @@ import sys
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 
-
 def cmdline_fill(attributes, store, print_header=True):
     import inspect
     import readline

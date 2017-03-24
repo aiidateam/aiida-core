@@ -41,7 +41,7 @@ class DbSetting(Base):
                   subspecifier_value=None, other_attribs={},
                   stop_if_existing=False):
 
-        setting = sa.session.query(DbSetting).filter_by(key=key).first()
+        setting = sa.get_scoped_session().query(DbSetting).filter_by(key=key).first()
         if setting is not None:
             if stop_if_existing:
                 return
@@ -50,10 +50,10 @@ class DbSetting(Base):
 
         setting.key = key
         setting.val = value
+        flag_modified(setting, "val")
         setting.time = timezone.datetime.now(tz=UTC)
         if "description" in other_attribs.keys():
             setting.description = other_attribs["description"]
-        flag_modified(setting, "val")
         setting.save()
 
     def getvalue(self):
@@ -71,7 +71,7 @@ class DbSetting(Base):
 
     @classmethod
     def del_value(cls, key, only_children=False, subspecifier_value=None):
-        setting = sa.session.query(DbSetting).filter(key=key)
+        setting = sa.get_scoped_session().query(DbSetting).filter(key=key)
         setting.val = None
         setting.time = timezone.datetime.utcnow()
         flag_modified(setting, "val")

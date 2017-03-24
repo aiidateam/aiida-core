@@ -10,7 +10,7 @@
 # Requirements for core AiiDA functionalities
 install_requires = [
     'pip==9.0.1',
-    'setuptools>=33.1.0',
+    'setuptools>=18.5',
     'wheel==0.29.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',
@@ -18,15 +18,24 @@ install_requires = [
     'django_extensions==1.5',
     'tzlocal==1.3',
     'pytz==2014.10',
-    'django-celery==3.1.16',
-    'celery==3.1.17',
-    'billiard==3.3.0.19',
+    # We need for the time being to stay with an old version 
+    # of celery, including the versions of the AMQP libraries below,
+    # because the support for a SQLA broker has been dropped in later
+    # versions... Actually, this might be source or problems with 
+    # SQLA for us... probably switch to using rabbitmq?
+    # Note that however this requires a new server process.
+    'celery==3.1.25',
+    # The next two are internal dependencies of celery, but since
+    # in the past we had version mismatch problems, we freeze them
+    # as well
+    'billiard==3.3.0.23',
+    'amqp==1.4.9',
     'anyjson==0.3.3',
     'supervisor==3.1.3',
     'meld3==1.0.0',
     'numpy==1.12.0',
     'plumpy==0.7.6',
-    'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests
+    'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.31.2',
     'ujson==1.35',
     'enum34==1.1.2',
@@ -41,8 +50,7 @@ install_requires = [
     'tabulate==0.7.5',
     'ete3==3.0.0b35',
     'uritools==1.0.2',
-    'psycopg2==2.6.1',
-    'amqp==1.4.9',
+    'psycopg2==2.7.1',
     # Requirements for ssh transport
     'paramiko==1.15.2',
     'ecdsa==0.13',
@@ -112,5 +120,9 @@ extras_require = {
     # Requirements for jupyter notebook
     'notebook': [
         'jupyter',
+    ],
+    # Requirements for testing
+    'testing': [
+        'mock',
     ]
 }

@@ -8,9 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import time
+from aiida.utils import timezone
+
 from sqlalchemy.exc import SQLAlchemyError
 
-from aiida.backends.sqlalchemy import session
+from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.lock import DbLock
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      LockPresent)
@@ -20,6 +23,7 @@ from aiida.orm.implementation.general.lock import AbstractLockManager, AbstractL
 
 class LockManager(AbstractLockManager):
     def aquire(self, key, timeout=3600, owner="None"):
+        session = get_scoped_session()
         try:
             with session.begin(subtransactions=True):
                 dblock = DbLock(key=key, timeout=timeout, owner=owner)
@@ -28,7 +32,6 @@ class LockManager(AbstractLockManager):
             return Lock(dblock)
 
         except SQLAlchemyError:
-
             old_lock = DbLock.query.filter_by(key=key).first()
 
             timeout_secs = time.mktime(old_lock.creation.timetuple()) + old_lock.timeout
@@ -44,17 +47,19 @@ class LockManager(AbstractLockManager):
             raise InternalError("Something went wrong, try to keep on.")
 
     def clear_all(self):
+        session = get_scoped_session()
         with session.begin(subtransactions=True):
             DbLock.query.delete()
 
 class Lock(AbstractLock):
 
     def release(self, owner="None"):
-        if self.dblock == None:
+        session = get_scoped_session()
+        if self.dblock is None:
             raise InternalError("No dblock present.")
 
         try:
-            if (self.dblock.owner == owner):
+            if self.dblock.owner == owner:
                 session.delete(self.dblock)
                 session.commit()
                 self.dblock = None
@@ -66,7 +71,7 @@ class Lock(AbstractLock):
 
     @property
     def isexpired(self):
-        if self.dblock == None:
+        if self.dblock is None:
             return False
 
         timeout_secs = time.mktime(self.dblock.creation.timetuple()) + self.dblock.timeout
@@ -79,7 +84,7 @@ class Lock(AbstractLock):
 
     @property
     def key(self):
-        if self.dblock == None:
+        if self.dblock is None:
             return None
 
         return self.dblock.key

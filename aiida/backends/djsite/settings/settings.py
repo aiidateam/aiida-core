@@ -217,16 +217,10 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Uncomment the next line to enable the admin:
-    'django.contrib.admin',
-    # Uncomment the next line to enable admin documentation:
-    # 'django.contrib.admindocs',
     'aiida.backends.djsite.db',
-    # ~ 'djcelery',
 ]
 try:
     import kombu
-
     INSTALLED_APPS.append('kombu.transport.django')
 except ImportError:
     pass
@@ -241,53 +235,3 @@ LOGGING_CONFIG = None
 # For the time being, we support only json
 TASTYPIE_DEFAULT_FORMATS = ['json']
 
-# -------------------------
-# AiiDA-Deamon configuration
-# -------------------------
-# from celery.schedules import crontab
-# ~ from datetime import timedelta
-# ~ import djcelery
-# ~
-# ~ djcelery.setup_loader()
-# ~
-# ~ BROKER_URL = "django://"
-# ~ CELERY_RESULT_BACKEND = "database"
-# ~ # Avoid to store the results in the database, it uses a lot of resources
-# ~ # and we do not need results
-# ~ CELERY_IGNORE_RESULT = True
-# ~ #CELERY_STORE_ERRORS_EVEN_IF_IGNORED=True
-# ~ #CELERYD_HIJACK_ROOT_LOGGER = False
-# ~
-# ~ CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
-# ~
-# ~ # Used internally, in the functions that get the last daemon timestamp.
-# ~ # Key: internal name, left: actual celery name. Can be the same
-# ~ djcelery_tasks = {
-# ~ 'submitter': 'submitter',
-# ~ 'updater': 'updater',
-# ~ 'retriever': 'retriever',
-# ~ 'workflow': 'workflow_stepper',
-# ~ }
-# ~
-# ~ # Choose here how often the tasks should be run. Note that if the previous task
-# ~ # is still running, the new one does not start thanks to the DbLock feature
-# ~ # that we added.
-# ~ CELERYBEAT_SCHEDULE = {
-# ~ djcelery_tasks['submitter']: {
-# ~ 'task': 'aiida.backends.djsite.db.tasks.submitter',
-# ~ 'schedule': timedelta(seconds=30),
-# ~ },
-# ~ djcelery_tasks['updater']: {
-# ~ 'task': 'aiida.backends.djsite.db.tasks.updater',
-# ~ 'schedule': timedelta(seconds=30),
-# ~ },
-# ~ djcelery_tasks['retriever']: {
-# ~ 'task': 'aiida.backends.djsite.db.tasks.retriever',
-# ~ 'schedule': timedelta(seconds=30),
-# ~ },
-# ~ djcelery_tasks['workflow']: {
-# ~ 'task': 'aiida.backends.djsite.db.tasks.workflow_stepper',
-# ~ 'schedule': timedelta(seconds=5),
-# ~ },
-# ~ }
-# ~

@@ -31,7 +31,7 @@ class Backup(AbstractBackup):
         Query first workflow
         :return:
         """
-        res = aiida.backends.sqlalchemy.session.query(
+        res = aiida.backends.sqlalchemy.get_scoped_session().query(
             DbWorkflow).order_by(DbWorkflow.ctime).first()
 
         if res is None:
@@ -44,7 +44,7 @@ class Backup(AbstractBackup):
         Query first node
         :return:
         """
-        res = aiida.backends.sqlalchemy.session.query(
+        res = aiida.backends.sqlalchemy.get_scoped_session().query(
             DbNode).order_by(DbNode.ctime).first()
 
         if res is None:
@@ -67,11 +67,11 @@ class Backup(AbstractBackup):
         :param backup_end_for_this_round:
         :return:
         """
-        q_nodes = aiida.backends.sqlalchemy.session.query(
+        q_nodes = aiida.backends.sqlalchemy.get_scoped_session().query(
             DbNode).filter(DbNode.mtime >= start_of_backup).filter(
             DbNode.mtime <= backup_end_for_this_round)
 
-        q_workflows = aiida.backends.sqlalchemy.session.query(
+        q_workflows = aiida.backends.sqlalchemy.get_scoped_session().query(
             DbWorkflow).filter(DbWorkflow.mtime >= start_of_backup).filter(
             DbWorkflow.mtime <= backup_end_for_this_round)
 

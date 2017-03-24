@@ -48,7 +48,7 @@ install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
-    - pip install .[REST,docs,atomic_tools]
+    - pip install .[REST,docs,atomic_tools,testing]
 
 before_script:
     # Here I create the actual DB for submission

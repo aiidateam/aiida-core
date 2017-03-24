@@ -117,7 +117,7 @@ extras_require = {
     # Requirements for jupyter notebook
     'notebook': [
         'jupyter',
-    ]
+    ],
     # Requirements for testing
     'testing': [
         'mock',

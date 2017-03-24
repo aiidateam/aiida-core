@@ -8,7 +8,10 @@ defines drop-in replacement functionality to use the old filesystem based and th
 new setuptools based plugin systems in parallel.
 """
 
-import pkg_resources
+try:
+    from sparkplug import manager as epm
+except ImportError:
+    import pkg_resources as epm
 
 from aiida.common.exceptions import MissingPluginError
 
@@ -65,7 +68,7 @@ def plugin_list(category):
     group = 'aiida.{}'.format(category)
 
     return [ep.name
-            for ep in pkg_resources.iter_entry_points(group=group)]
+            for ep in epm.iter_entry_points(group=group)]
 
 
 def all_plugins(category):
@@ -96,7 +99,7 @@ def get_plugin(category, name):
     """
     group = 'aiida.{}'.format(category)
 
-    eps = [ep for ep in pkg_resources.iter_entry_points(group=group)
+    eps = [ep for ep in epm.iter_entry_points(group=group)
            if ep.name == name]
 
     if not eps:
@@ -132,7 +135,7 @@ def load_plugin(base_class, plugins_module, plugin_type):
     except MissingPluginError as e:
         full_name = plugins_module + '.' + plugin_type
         catlist = [(c, pm) for c, pm in _category_mapping.iteritems() if pm in full_name]
-        if not catlist: # find category for new style type string
+        if not catlist:  # find category for new style type string
             catlist = [(c, 'aiida.orm.' + c) for c in _category_mapping.iterkeys() if c in full_name]
         if not catlist:
             raise e
@@ -203,11 +206,10 @@ def get_class_to_entry_point_map(short_group_name=False):
     :param short_group_name: bool, if True the leading 'aiida.' is cut off group names
     :return: dictionary, keys are modules, values are (group, entrypoint-name)
     """
-    from pkg_resources import get_entry_map, iter_entry_points
-    groups = (g for g in get_entry_map('aiida').iterkeys() if g.startswith('aiida'))
+    groups = (g for g in epm.get_entry_map('aiida-core', {}).iterkeys() if g.startswith('aiida'))
     class_ep_map = {}
     for group in groups:
-        for ep in iter_entry_points(group):
+        for ep in epm.iter_entry_points(group):
             for classname in ep.attrs:
                 key = '.'.join([ep.module_name, classname])
                 if short_group_name:

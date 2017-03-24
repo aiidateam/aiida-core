@@ -67,11 +67,11 @@ Where:
 * ``--dump-aiida-database``, ``--no-dump-aiida-database`` -- turn on/off
   addition of relevant AiiDA database dump (on by default).
 
-  .. warning:: be aware that TCOD is an **open** database, thus **no
+  .. warning:: Be aware that TCOD is an **open** database, thus **no
     copyright-protected data should be deposited** unless permission is
     given by the owner of the rights.
 
-  .. note:: data, which is deposited as pre-publication material, **will
+  .. note:: Data, which is deposited as pre-publication material, **will
     be kept private on TCOD server** and will not be disclosed to anyone
     without depositor's permission.
 
@@ -103,7 +103,7 @@ Command line parameter  AiiDA property
 .. note:: ``--password`` does not accept any value; instead, the option
     will prompt the user to enter one's password in the terminal.
 
-.. note:: command line parameters can be used to override AiiDA
+.. note:: Command line parameters can be used to override AiiDA
     properties even if properties are set.
 
 Return values

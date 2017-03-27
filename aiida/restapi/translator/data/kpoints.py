@@ -41,10 +41,22 @@ class KpointsDataTranslator(DataTranslator):
         of explicit keypoints from the mesh and the cell vectors.
         """
 
-        # First, check whether kpoint node has an explicit list including b
+        import numpy as np
+
+        # First, check whether it contains the cell => BZ and explicit kpoints
+        # can be plotted
+        try:
+            cell = node.reciprocal_cell
+        except AttributeError:
+            has_cell = False
+        else:
+            has_cell = True
+
+
+        # Then, check whether kpoint node has an explicit list including b
         # vectors
         try:
-            kpoints = node.get_kpoints(cartesian=True).tolist()
+            explicit_kpoints_rel = node.get_kpoints()
         except AttributeError:
             explicit_kpoints = False
         else:
@@ -58,17 +70,17 @@ class KpointsDataTranslator(DataTranslator):
             has_mesh = False
         else:
             has_mesh = True
+            explicit_kpoints_rel = node.get_kpoints_mesh(print_list=True)
 
-        # Then check whether it contains the cell => BZ and explicit kpoints
-        # can be plotted
-        try:
-            cell = node.reciprocal_cell
-        except AttributeError:
-            has_cell = False
-        else:
-            has_cell = True
 
-        json_content = {}
+
+        # Initialize response
+        json_visualization = {}
+
+        # First dump out the kpoints in relative coordinates (which are
+        # always available)
+        json_visualization['explicit_kpoints_rel'] = \
+            explicit_kpoints_rel.tolist()
 
         # For kpoints objects that have an explicit list of kpoints we can
         # construct BZ and return an explicit list of kpoint coordinates
@@ -76,58 +88,60 @@ class KpointsDataTranslator(DataTranslator):
             # Retrieve b1, b2, b3 and add them to the json
             (b1, b2, b3) = (cell[0], cell[1], cell[2])
 
-            json_content['b1'] = b1.tolist()
-            json_content['b2'] = b2.tolist()
-            json_content['b3'] = b3.tolist()
+            json_visualization['b1'] = b1.tolist()
+            json_visualization['b2'] = b2.tolist()
+            json_visualization['b3'] = b3.tolist()
 
-            json_content['reciprocal_vectors_unit'] = '1/Ang.'
+            json_visualization['reciprocal_vectors_unit'] = u'1/\u212b'
 
             # Get BZ facesa and add them to the json. Fields: faces,
             # triangles, triangle_vertices. Most probably only faces is needed.
             from seekpath.brillouinzone.brillouinzone import get_BZ
-            json_content['faces_data'] = get_BZ(b1, b2, b3)
+            json_visualization['faces_data'] = get_BZ(b1, b2, b3)
 
-            if explicit_kpoints:
-                # Retrieve explicit list of kpoints in abs coordinates and
-                # add it
-                json_content['explicit_kpoints_abs'] = kpoints
-                json_content['kpoints_unit'] = '1/Ang.'
+            # Provide kpoints cooridnates in absolute units ...
+            explicit_kpoints_abs = np.dot(explicit_kpoints_rel, np.transpose(cell))
+            json_visualization['explicit_kpoints_abs'] = \
+                explicit_kpoints_abs.tolist()
 
-            # Calculate explicit list from mesh if needed (possible since we
-            # know the cell)
-            if has_mesh and not explicit_kpoints:
-
-                (N1, N2, N3) = tuple(mesh)
-                (off1, off2, off3) = tuple(offset)
-
-                kpoints = []
-
-                offvector = off1 * b1 + off2 * b2 + off3 * b3
-
-                for i1 in range(N1):
-                    for i2 in range(N2):
-                        for i3 in range(N3):
-                            kpoint = b1 / N1 * i1 + b2 / N2 * i2 + b3 / N3 * \
-                                                                   i3 + \
-                                     offvector
-                            kpoints.append(kpoint.tolist())
-
-                json_content['explicit_kpoints_abs'] = kpoints
-                json_content['kpoints_unit'] = '1/Ang.'
+            # ... and units!
+            json_visualization['kpoints_abs_unit'] = u'1/\u212b'
 
         # Add labels field
         has_labels=False
         if explicit_kpoints:
-            labels = {}
-            for idx, label in node.labels:
-                labels[label] = kpoints[idx]
-            json_content['kpoints'] = labels
-            has_labels=True
 
+
+            if node.labels is not None:
+
+                has_labels=True
+                high_symm_rel = {}
+                path = []
+
+                for idx, label in node.labels:
+                    high_symm_rel[label] = explicit_kpoints_rel[idx].tolist()
+
+                    if idx>0:
+                        path.append([old_label, label])
+                    old_label = label
+
+                json_visualization['kpoints_rel'] = high_symm_rel
+                json_visualization['path'] = path
+
+                # If absolute coordinates can be calculated also provide them
+                if has_cell:
+                    high_symm_abs = {}
+
+                    for idx, label in node.labels:
+                        high_symm_abs[label] = explicit_kpoints_abs[
+                            idx].tolist()
+
+                    json_visualization['kpoints'] = high_symm_abs
+
+        # Return mesh and offset lists to be represented in a table
         if has_mesh:
-            # Return a generic mesh and offset to be represented in a table
-            json_content['mesh'] = mesh
-            json_content['offset'] = offset
+            json_visualization['mesh'] = mesh
+            json_visualization['offset'] = offset
 
         """
         # Populate json content with booleans to make it easy to determine
@@ -138,12 +152,12 @@ class KpointsDataTranslator(DataTranslator):
         tab_mesh: whether to include a table with the mesh and offsets
         """
         bool_fields = dict(
-            plot_bz=has_cell,
-            tab_mesh=has_mesh,
+            has_cell=has_cell,
+            has_mesh=has_mesh,
             has_labels=has_labels
         )
 
-        json_content.update(bool_fields)
+        json_visualization.update(bool_fields)
 
         # Construct json and return it
-        return json_content
+        return json_visualization

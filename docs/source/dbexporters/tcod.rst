@@ -22,7 +22,8 @@ How to deposit a structure
 
 Best way to deposit data is to use the command line interface::
 
-    verdi data DATATYPE deposit tcod [--type {published,prepublication,personal}]
+    verdi data DATATYPE deposit --database tcod
+                                     [--type {published,prepublication,personal}]
                                      [--username USERNAME] [--password]
                                      [--user-email USER_EMAIL] [--title TITLE]
                                      [--author-name AUTHOR_NAME]

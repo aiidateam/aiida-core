@@ -48,7 +48,6 @@ class NodeTranslator(BaseTranslator):
         else:
             self._default_projections = ['**']
 
-
         # Inspect the subclasses of NodeTranslator, to avoid hard-coding
         # (should resemble the following tree)
         """
@@ -61,7 +60,6 @@ class NodeTranslator(BaseTranslator):
                         \
                          \- CalculationTranslator
         """
-
 
         self._subclasses = self._get_subclasses()
 
@@ -156,9 +154,6 @@ class NodeTranslator(BaseTranslator):
             raise InvalidOperation("query builder object has not been "
                                    "initialized.")
 
-        ## Initialization
-        data = {}
-
         ## Count the total number of rows returned by the query (if not
         # already done)
         if self._total_count is None:
@@ -166,7 +161,7 @@ class NodeTranslator(BaseTranslator):
 
         # If count==0 return
         if self._total_count == 0:
-            return data
+            return {}
 
         # otherwise ...
         n = self.qb.first()[0]
@@ -175,21 +170,21 @@ class NodeTranslator(BaseTranslator):
         if self._content_type == "attributes":
             # Get all attrs if nalist and alist are both None
             if self._alist is None and self._nalist is None:
-                data[self._content_type] = n.get_attrs()
+                data = {self._content_type: n.get_attrs()}
             # Get all attrs except those contained in nalist
             elif self._alist is None and self._nalist is not None:
                 attrs = {}
                 for key in n.get_attrs().keys():
                     if key not in self._nalist:
                         attrs[key] = n.get_attr(key)
-                data[self._content_type] = attrs
+                data = {self._content_type: attrs}
             # Get all attrs contained in alist
             elif self._alist is not None and self._nalist is None:
                 attrs = {}
                 for key in n.get_attrs().keys():
                     if key in self._alist:
                         attrs[key] = n.get_attr(key)
-                data[self._content_type] = attrs
+                data = {self._content_type: attrs}
             else:
                 raise RestValidationError("you cannot specify both alist "
                                           "and nalist")
@@ -198,7 +193,7 @@ class NodeTranslator(BaseTranslator):
 
             # Get all extras if nelist and elist are both None
             if self._elist is None and self._nelist is None:
-                data[self._content_type] = n.get_extras()
+                data = {self._content_type: n.get_extras()}
 
             # Get all extras except those contained in nelist
             elif self._elist is None and self._nelist is not None:
@@ -206,7 +201,7 @@ class NodeTranslator(BaseTranslator):
                 for key in n.get_extras().keys():
                     if key not in self._nelist:
                         extras[key] = n.get_extra(key)
-                data[self._content_type] = extras
+                data = {self._content_type: extras}
 
             # Get all extras contained in elist
             elif self._elist is not None and self._nelist is None:
@@ -214,7 +209,7 @@ class NodeTranslator(BaseTranslator):
                 for key in n.get_extras().keys():
                     if key in self._elist:
                         extras[key] = n.get_extra(key)
-                data[self._content_type] = extras
+                data = {self._content_type: extras}
 
             else:
                 raise RestValidationError("you cannot specify both elist "
@@ -225,7 +220,9 @@ class NodeTranslator(BaseTranslator):
         # TODO refactor the code so to have this option only in data and
         # derived classes
         elif self._content_type == 'visualization':
-            data[self._content_type] = self.get_visualization_data(n)
+            # In this we do not return a dictionary but just an object and
+            # the dictionary format is set by get_visualization_data
+            data = {self._content_type: self.get_visualization_data(n)}
 
         else:
             raise ValidationError("invalid content type")
@@ -272,7 +269,7 @@ class NodeTranslator(BaseTranslator):
             if parent_class is None:
                 raise TypeError('argument parent_class cannot be None')
 
-            # Recursively check the subpackages
+                # Recursively check the subpackages
         results = {}
 
         for loader, name, is_pkg in pkgutil.walk_packages([package_path]):
@@ -285,7 +282,8 @@ class NodeTranslator(BaseTranslator):
                 app_module = imp.load_package(full_path_base, full_path_base)
             else:
                 full_path = full_path_base + '.py'
-                # I could use load_module but it takes lots of arguments, then I use load_source
+                # I could use load_module but it takes lots of arguments,
+                # then I use load_source
                 app_module = imp.load_source(full_path, full_path)
 
             # Go through the content of the module
@@ -295,7 +293,8 @@ class NodeTranslator(BaseTranslator):
                         results[name] = obj
             # Look in submodules
             elif is_pkg and recursive:
-                results.update(self._get_subclasses(parent=app_module, parent_class=parent_class))
+                results.update(self._get_subclasses(parent=app_module,
+                                                    parent_class=parent_class))
 
         return results
 
@@ -324,9 +323,9 @@ class NodeTranslator(BaseTranslator):
             if subclass._aiida_type.split('.')[-1] == tclass.__name__:
                 lowtrans = subclass
 
-        # Invoke the get_visualization function connected to that node
-        return lowtrans.get_visualization_data(node)
+        visualization_data = lowtrans.get_visualization_data(node)
 
+        return visualization_data
 
     def get_results(self):
         """
@@ -339,7 +338,6 @@ class NodeTranslator(BaseTranslator):
             return self._get_content()
         else:
             return super(NodeTranslator, self).get_results()
-
 
     # TODO this works but has to be rewritten once group_by is available in
     # querybuilder
@@ -415,16 +413,15 @@ class NodeTranslator(BaseTranslator):
         import uuid
 
         if type(id) == int:
-            filter =  {
-                    'id': {'==': id}
-                }
+            filter = {
+                'id': {'==': id}
+            }
         elif type(id) == uuid.UUID:
-            filter  = {
+            filter = {
                 'uuid': {'==': id.__str__()}
             }
         else:
             raise RestValidationError('id can only be an integer or a uuid')
-
 
         nodes = []
         edges = []
@@ -436,11 +433,11 @@ class NodeTranslator(BaseTranslator):
         if qb.count() > 0:
             mainNode = qb.first()
             nodes.append({
-                             "id": nodeCount,
-                             "nodeid": mainNode[0],
-                             "nodetype": mainNode[1],
-                             "group": "mainNode"
-                             })
+                "id": nodeCount,
+                "nodeid": mainNode[0],
+                "nodetype": mainNode[1],
+                "group": "mainNode"
+            })
         nodeCount += 1
 
         # get all inputs
@@ -452,17 +449,17 @@ class NodeTranslator(BaseTranslator):
             for input in qb.iterdict():
                 print "in:", input
                 nodes.append({
-                                 "id": nodeCount,
-                                 "nodeid": input["in"]["id"],
-                                 "nodetype": input["in"]["type"],
-                                 "group": "inputs"
-                                 })
+                    "id": nodeCount,
+                    "nodeid": input["in"]["id"],
+                    "nodetype": input["in"]["type"],
+                    "group": "inputs"
+                })
                 edges.append({
-                                 "from": nodeCount,
-                                 "to": 0,
-                                 "arrows": "to",
-                                 "color": {"inherit": 'from'}
-                                 })
+                    "from": nodeCount,
+                    "to": 0,
+                    "arrows": "to",
+                    "color": {"inherit": 'from'}
+                })
                 nodeCount += 1
 
         # get all outputs
@@ -474,17 +471,17 @@ class NodeTranslator(BaseTranslator):
             for output in qb.iterdict():
                 print "in:", output
                 nodes.append({
-                                 "id": nodeCount,
-                                 "nodeid": output["out"]["id"],
-                                 "nodetype": output["out"]["type"],
-                                 "group": "outputs"
-                                 })
+                    "id": nodeCount,
+                    "nodeid": output["out"]["id"],
+                    "nodetype": output["out"]["type"],
+                    "group": "outputs"
+                })
                 edges.append({
-                                 "from": 0,
-                                 "to": nodeCount,
-                                 "arrows": "to",
-                                 "color": {"inherit": 'from'}
-                                 })
+                    "from": 0,
+                    "to": nodeCount,
+                    "arrows": "to",
+                    "color": {"inherit": 'from'}
+                })
                 nodeCount += 1
 
         return {"nodes": nodes, "edges": edges}

@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class IcsdImporterExp(Exception):
@@ -127,9 +131,9 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return self.str_exact_clause(key, \
+        return self._str_exact_clause(key, \
                                      alias, \
-                                     map(lambda f: "- " + str(f) + " -", \
+                                     map(lambda f: str(f), \
                                          values))
 
     def _str_fuzzy_clause(self, key, alias, values):
@@ -393,8 +397,10 @@ class IcsdDbImporter(DbImporter):
                         "JOIN space_group_number ON "\
                         "space_group_number.sgr_num=space_group.sgr_num "\
                         + "WHERE" + " AND ".join(sql_where_query)
-        else:
+        elif sql_where_query:
             sql_query = "WHERE" + " AND ".join(sql_where_query)
+        else:
+            sql_query = ""
 
         return IcsdSearchResults(query=sql_query, db_parameters=self.db_parameters)
 

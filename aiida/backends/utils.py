@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from __future__ import absolute_import
 
@@ -10,10 +18,6 @@ from aiida.common.exceptions import (
     )
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 
 
@@ -123,7 +127,8 @@ def get_authinfo(computer, aiidauser):
                     aiidauser.email, computer.name))
     elif settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
         from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
         try:
             authinfo = session.query(DbAuthInfo).filter_by(
@@ -291,6 +296,7 @@ def _get_column(colname, alias):
     try:
         return getattr(alias, colname)
     except:
+        from aiida.common.exceptions import InputValidationError
         raise InputValidationError(
             "\n{} is not a column of {}\n"
             "Valid columns are:\n"

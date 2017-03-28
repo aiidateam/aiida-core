@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import copy
 
@@ -18,10 +26,6 @@ from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.mixins import Sealable
 from aiida.orm.implementation.django.utils import get_db_columns
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class Node(AbstractNode):
@@ -150,14 +154,14 @@ class Node(AbstractNode):
     def _update_db_label_field(self, field_value):
         self.dbnode.label = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
         self.dbnode.description = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
 
@@ -166,7 +170,7 @@ class Node(AbstractNode):
             self._add_dblink_from(src, label, link_type)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._remove_dblink_from(label)
                 self._add_dblink_from(src, label, link_type)
 
@@ -603,7 +607,7 @@ class Node(AbstractNode):
         from aiida.common.utils import EmptyContextManager
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 
@@ -690,7 +694,7 @@ class Node(AbstractNode):
         from aiida.common.utils import EmptyContextManager
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 
@@ -741,7 +745,7 @@ class Node(AbstractNode):
         import aiida.orm.autogroup
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 

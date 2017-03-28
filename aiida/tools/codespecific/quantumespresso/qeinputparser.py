@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Tools for parsing QE PW input files and creating AiiDa Node objects based on
 them.
@@ -13,6 +21,9 @@ from aiida.parsers.plugins.quantumespresso.constants import bohr_to_ang
 from aiida.common.exceptions import ParsingError
 from aiida.orm.data.structure import StructureData, _valid_symbols
 from aiida.orm.calculation.job.quantumespresso import _uppercase_dict
+from aiida.common.constants import bohr_to_ang
+from aiida.common.exceptions import InputValidationError
+
 
 RE_FLAGS = re.M | re.X | re.I
 
@@ -729,7 +740,7 @@ def parse_atomic_species(txt):
 
 
 
-def get_cell_from_parameters(cell_parameters, system_dict, alat):
+def get_cell_from_parameters(cell_parameters, system_dict, alat, using_celldm):
     """
     A function to get the cell from cell parameters and SYSTEM card dictionary as read by 
     parse_namelists.
@@ -834,11 +845,11 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat):
     if ibrav == 1:
         # 1          cubic P (sc)
         # v1 = a(1,0,0),  v2 = a(0,1,0),  v3 = a(0,0,1)
-        cell = np.diag([a, a, a])
+        cell = np.diag([alat, alat, alat])
     elif ibrav == 2:
         #  2          cubic F (fcc)
         #  v1 = (a/2)(-1,0,1),  v2 = (a/2)(0,1,1), v3 = (a/2)(-1,1,0)
-        cell = 0.5 * a * np.array([
+        cell = 0.5 * alat * np.array([
             [-1., 0., 1.],
             [0., 1., 1.],
             [-1., 1., 0.],
@@ -846,7 +857,7 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat):
     elif ibrav == 3:
         # cubic I (bcc)
         #  v1 = (a/2)(1,1,1),  v2 = (a/2)(-1,1,1),  v3 = (a/2)(-1,-1,1)
-        cell = 0.5 * a * np.array([
+        cell = 0.5 * alat * np.array([
             [1., 1., 1.],
             [-1., 1., 1.],
             [-1., -1., 0.],
@@ -854,10 +865,10 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat):
     elif ibrav == 4:
         # 4          Hexagonal and Trigonal P        celldm(3)=c/a
         # v1 = a(1,0,0),  v2 = a(-1/2,sqrt(3)/2,0),  v3 = a(0,0,c/a)
-        cell = a * np.array([
+        cell = alat * np.array([
             [1., 0., 0.],
             [-0.5, 0.5 * np.sqrt(3.), 0.],
-            [0., 0., c / a]
+            [0., 0., c / alat]
         ])
     elif ibrav == 5:
         # 5          Trigonal R, 3fold axis c        celldm(4)=cos(alpha)
@@ -899,39 +910,39 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat):
     elif ibrav == 6:
         # 6          Tetragonal P (st)               celldm(3)=c/a
         # v1 = a(1,0,0),  v2 = a(0,1,0),  v3 = a(0,0,c/a)
-        cell = a * np.array([
+        cell = alat * np.array([
             [1., 0., 0.],
             [0., 1., 0.],
-            [0., 0., c / a]
+            [0., 0., c / alat]
         ])
     elif ibrav == 7:
         # 7          Tetragonal I (bct)              celldm(3)=c/a
         # v1=(a/2)(1,-1,c/a),  v2=(a/2)(1,1,c/a),  v3=(a/2)(-1,-1,c/a)
-        cell = 0.5 * a * np.array([
-            [1., -1., c / a],
-            [1., 1., c / a],
-            [-1., -1., c / a]
+        cell = 0.5 * alat * np.array([
+            [1., -1., c / alat],
+            [1., 1., c / alat],
+            [-1., -1., c / alat]
         ])
     elif ibrav == 8:
         # 8  Orthorhombic P       celldm(2)=b/a
         #                         celldm(3)=c/a
         #  v1 = (a,0,0),  v2 = (0,b,0), v3 = (0,0,c)
-        cell = np.diag([a, b, c])
+        cell = np.diag([alat, b, c])
     elif ibrav == 9:
         #   9   Orthorhombic base-centered(bco) celldm(2)=b/a
         #                                         celldm(3)=c/a
         #  v1 = (a/2, b/2,0),  v2 = (-a/2,b/2,0),  v3 = (0,0,c)
         cell = np.array([
-            [0.5 * a, 0.5 * b, 0.],
-            [-0.5 * a, 0.5 * b, 0.],
+            [0.5 * alat, 0.5 * b, 0.],
+            [-0.5 * alat, 0.5 * b, 0.],
             [0., 0., c]
         ])
     elif ibrav == -9:
         # -9          as 9, alternate description
         #  v1 = (a/2,-b/2,0),  v2 = (a/2,-b/2,0),  v3 = (0,0,c)
         cell = np.array([
-            [0.5 * a, 0.5 * b, 0.],
-            [0.5 * a, -0.5 * b, 0.],
+            [0.5 * alat, 0.5 * b, 0.],
+            [0.5 * alat, -0.5 * b, 0.],
             [0., 0., c]
         ])
     elif ibrav == 10:
@@ -939,8 +950,8 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat):
         #                                         celldm(3)=c/a
         #  v1 = (a/2,0,c/2),  v2 = (a/2,b/2,0),  v3 = (0,b/2,c/2)
         cell = np.array([
-            [0.5 * a, 0., 0.5 * c],
-            [0.5 * a, 0.5 * b, 0.],
+            [0.5 * alat, 0., 0.5 * c],
+            [0.5 * alat, 0.5 * b, 0.],
             [0., 0.5 * b, 0.5 * c]
         ])
     elif ibrav == 11:
@@ -948,9 +959,9 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat):
         #                                        celldm(3)=c/a
         #  v1=(a/2,b/2,c/2),  v2=(-a/2,b/2,c/2),  v3=(-a/2,-b/2,c/2)
         cell = np.array([
-            [0.5 * a, 0.5 * b, 0.5 * c],
-            [-0.5 * a, 0.5 * b, 0.5 * c],
-            [-0.5 * a, -0.5 * b, 0.5 * c]
+            [0.5 * alat, 0.5 * b, 0.5 * c],
+            [-0.5 * alat, 0.5 * b, 0.5 * c],
+            [-0.5 * alat, -0.5 * b, 0.5 * c]
         ])
     elif ibrav == 12:
         # 12      Monoclinic P, unique axis c     celldm(2)=b/a
@@ -959,7 +970,7 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat):
         #  v1=(a,0,0), v2=(b*cos(gamma),b*sin(gamma),0),  v3 = (0,0,c)
         #  where gamma is the angle between axis a and b.
         cell = np.array([
-            [a, 0., 0.],
+            [alat, 0., 0.],
             [b * cosg, b * sing, 0.],
             [0., 0., c]
         ])
@@ -970,7 +981,7 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat):
         #  v1 = (a,0,0), v2 = (0,b,0), v3 = (c*cos(beta),0,c*sin(beta))
         #  where beta is the angle between axis a and c
         cell = np.array([
-            [a, 0., 0.],
+            [alat, 0., 0.],
             [0., b, 0.],
             [c * cosb, 0., c * sinb]
         ])
@@ -983,7 +994,7 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat):
         #  v3 = (  a/2,         0,                  c/2),
         #  where gamma is the angle between axis a and b
         cell = np.array([
-            [0.5 * a, 0., -0.5 * c],
+            [0.5 * alat, 0., -0.5 * c],
             [b * cosg, b * sing, 0.],
             [0.5 * a, 0., 0.5 * c]
         ])
@@ -1002,7 +1013,7 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat):
         #     beta is the angle between axis a and c
         #    gamma is the angle between axis a and b
         cell = np.array([
-            [a, 0., -0.5 * c],
+            [alat, 0., -0.5 * c],
             [b * cosg, b * sing, 0.],
             [
                 c * cosb,
@@ -1029,8 +1040,6 @@ def get_structuredata_from_qeinput(
     with celldm(n) or A,B,C, cosAB etc.
     """
     from aiida.orm.data.structure import StructureData, Kind, Site
-    from aiida.common.constants import bohr_to_ang
-    from aiida.common.exceptions import InputValidationError
     #~ from aiida.common.utils import get_fortfloat
 
     valid_elements_regex = re.compile("""
@@ -1086,8 +1095,9 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
         using_celldm = True
     else:
         alat = None
+        using_celldm=None
 
-    cell = get_cell_from_parameters(cell_parameters, system_dict, alat)   
+    cell = get_cell_from_parameters(cell_parameters, system_dict, alat, using_celldm)   
 
     # instance and set the cell
     structuredata = StructureData()

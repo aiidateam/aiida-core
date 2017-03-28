@@ -1,10 +1,3 @@
-############
-Calculations
-############
-
-.. contents :: Contents
-    :local:
-
 AiiDA calculations can be of two kinds:
 
 * :py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`: those who need to be run on a scheduler
@@ -13,8 +6,8 @@ AiiDA calculations can be of two kinds:
 
 In the following, we will refer to the JobCalculations as a Calculation for the sake of simplicity, unless we explicitly say otherwise. In the same way, the command ``verdi calculation`` refers to JobCalculations.
 
-Checking the state of calculations
-==================================
+The calculation state
+=====================
 
 Once a calculation has been submitted to AiiDA, everything else will be managed by AiiDA:
 
@@ -25,8 +18,8 @@ Once a calculation has been submitted to AiiDA, everything else will be managed 
 
 During these phases, it is useful to be able to check and verify the state of a calculation. The possible states and the different ways to access them are described in the following.
 
-Possible calculation states
-+++++++++++++++++++++++++++
+Possible states
++++++++++++++++
 
 The calculation could be in several states.
 The most common ones are the following:
@@ -49,14 +42,19 @@ The most common ones are the following:
 
 Eventually, when the calculation has finished, you will find the computed quantities in the database, and you will be able to query the database for the results that were parsed.
 
+Determining the state
++++++++++++++++++++++
+
+There are multiple ways to determine the state a calculation is in.
+
 The ``verdi calculation`` command
-+++++++++++++++++++++++++++++++++
+---------------------------------
 The simplest way to check the state of submitted calculations is to use  the ``verdi calculation list`` command from the command line. To get help on its use and command line options, run it with the ``-h`` or ``--help`` option::
 
   verdi calculation list --help
 
 Directly within python
-++++++++++++++++++++++
+----------------------
 If you prefer, you can check the state of a calculation from within python. For this, you need to specify the ID of the calculation you are interested in::
 
     from aiida import load_dbenv
@@ -82,8 +80,7 @@ The ``verdi calculation gotocomputer`` command
 
 Sometimes it is useful to go directly to the folder where the calculation is running, for example to check if the  output file has been created.
 
-In this case, it is possible to run
-::
+In this case, it is possible to run::
 
     verdi calculation gotocomputer CALCULATIONPK
   
@@ -94,9 +91,8 @@ where ``CALCULATIONPK`` is the PK of the calculation. This will open a new conne
 
 
 
-##########################
-Set calculation properties
-##########################
+Setting calculation properties
+==============================
 
 There are various methods which specify the calculation properties.
 Here follows a brief documentation of their action. You can also find them in the  :class:`.AbstractJobCalculation` API reference.
@@ -117,13 +113,3 @@ Here follows a brief documentation of their action. You can also find them in th
 * ``c.set_import_sys_environment``: default=True. If True, the job-scheduling script will load the environment variables.
 * ``c.set_resources``: set the resources to be used by the calculation like the number of nodes, wall-time, ..., by passing a dictionary to  this method. The keys of this dictionary, i.e. the resources, depend  on the specific scheduler plugin that has to run them. Look at the  documentation of the scheduler (type is given by: ``calc.get_computer().get_scheduler_type()``).
 * ``c.set_withmpi``: True or False, if True (the default) it will  call the executable as a parallel run.
-
-
-
-
-
-
- 
-
-
-

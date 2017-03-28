@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 # Django settings for the AiiDA project.
 import sys
 import os
 
 from aiida.common.exceptions import ConfigurationError
-import aiida.optional as optional
 
 # get_property is used to read properties stored in the config json
 from aiida.common.setup import (get_config, get_secret_key, get_property,
                                 get_profile_config, parse_repository_uri)
 from aiida.backends import settings
+from aiida.utils.timezone import get_current_timezone
 
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 AIIDA_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.split(AIIDA_DIR)[0]
@@ -112,15 +116,8 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-# Local time zone for this installation. Choices can be found here:
-# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
-# although not all choices may be available on all operating systems.
-# In a Windows environment this must be set to your system time zone.
-try:
-    TIME_ZONE = profile_conf['TIMEZONE']
-except KeyError:
-    raise ConfigurationError("You did not set your timezone during the "
-                             "verdi install phase.")
+# Local time zone for this installation. Always choose the system timezone
+TIME_ZONE = get_current_timezone().zone
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -220,84 +217,17 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Uncomment the next line to enable the admin:
-    'django.contrib.admin',
-    # Uncomment the next line to enable admin documentation:
-    # 'django.contrib.admindocs',
     'aiida.backends.djsite.db',
-    # ~ 'djcelery',
 ]
-if optional.KOMBU_FOUND:
+try:
+    import kombu
     INSTALLED_APPS.append('kombu.transport.django')
+except ImportError:
+    pass
 
-# A sample logging configuration. The only tangible logging
-# performed by this configuration is to send an email to
-# the site admins on every HTTP 500 error when DEBUG=False.
-# See http://docs.djangoproject.com/en/dev/topics/logging for
-# more details on how to customize your logging configuration.
-#
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s %(process)d '
-                      '%(thread)d %(message)s',
-        },
-        'halfverbose': {
-            'format': '%(asctime)s, %(name)s: [%(levelname)s] %(message)s',
-            'datefmt': '%m/%d/%Y %I:%M:%S %p',
-        },
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
-    },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'halfverbose',
-        },
-        'dblogger': {
-            # get_property takes the property from the config json file
-            # The key used in the json, and the default value, are
-            # specified in the _property_table inside aiida.common.setup
-            # NOTE: To modify properties, use the 'verdi devel setproperty'
-            #   command and similar ones (getproperty, describeproperties, ...)
-            'level': get_property('logging.db_loglevel'),
-            'class': 'aiida.backends.djsite.utils.DBLogHandler',
-        },
-    },
-    'loggers': {
-        'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'aiida': {
-            'handlers': ['console', 'dblogger'],
-            'level': get_property('logging.aiida_loglevel'),
-            'propagate': False,
-        },
-        # ~ 'celery': {
-        # ~ 'handlers': ['console'],
-        # ~ 'level': get_property('logging.celery_loglevel'),
-        # ~ 'propagate': False,
-        # ~ },
-        'paramiko': {
-            'handlers': ['console'],
-            'level': get_property('logging.paramiko_loglevel'),
-            'propagate': False,
-        },
-    },
-}
+# Automatic logging configuration for Django is disabled here
+# and done for all backends in aiida/__init__.py
+LOGGING_CONFIG = None
 
 # -------------------------
 # Tastypie (API) settings
@@ -305,53 +235,3 @@ LOGGING = {
 # For the time being, we support only json
 TASTYPIE_DEFAULT_FORMATS = ['json']
 
-# -------------------------
-# AiiDA-Deamon configuration
-# -------------------------
-# from celery.schedules import crontab
-# ~ from datetime import timedelta
-# ~ import djcelery
-# ~
-# ~ djcelery.setup_loader()
-# ~
-# ~ BROKER_URL = "django://"
-# ~ CELERY_RESULT_BACKEND = "database"
-# ~ # Avoid to store the results in the database, it uses a lot of resources
-# ~ # and we do not need results
-# ~ CELERY_IGNORE_RESULT = True
-# ~ #CELERY_STORE_ERRORS_EVEN_IF_IGNORED=True
-# ~ #CELERYD_HIJACK_ROOT_LOGGER = False
-# ~
-# ~ CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
-# ~
-# ~ # Used internally, in the functions that get the last daemon timestamp.
-# ~ # Key: internal name, left: actual celery name. Can be the same
-# ~ djcelery_tasks = {
-# ~ 'submitter': 'submitter',
-# ~ 'updater': 'updater',
-# ~ 'retriever': 'retriever',
-# ~ 'workflow': 'workflow_stepper',
-# ~ }
-# ~
-# ~ # Choose here how often the tasks should be run. Note that if the previous task
-# ~ # is still running, the new one does not start thanks to the DbLock feature
-# ~ # that we added.
-# ~ CELERYBEAT_SCHEDULE = {
-# ~ djcelery_tasks['submitter']: {
-# ~ 'task': 'aiida.backends.djsite.db.tasks.submitter',
-# ~ 'schedule': timedelta(seconds=30),
-# ~ },
-# ~ djcelery_tasks['updater']: {
-# ~ 'task': 'aiida.backends.djsite.db.tasks.updater',
-# ~ 'schedule': timedelta(seconds=30),
-# ~ },
-# ~ djcelery_tasks['retriever']: {
-# ~ 'task': 'aiida.backends.djsite.db.tasks.retriever',
-# ~ 'schedule': timedelta(seconds=30),
-# ~ },
-# ~ djcelery_tasks['workflow']: {
-# ~ 'task': 'aiida.backends.djsite.db.tasks.workflow_stepper',
-# ~ 'schedule': timedelta(seconds=5),
-# ~ },
-# ~ }
-# ~

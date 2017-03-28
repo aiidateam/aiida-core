@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import os
 import sys
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class Calculation(VerdiCommandWithSubcommands):
@@ -203,35 +206,19 @@ class Calculation(VerdiCommandWithSubcommands):
         if parsed_args.all_states:
             parsed_args.states = None
 
-        try:
-            C._list_calculations(
-                states=parsed_args.states,
-                past_days=parsed_args.past_days,
-                pks=parsed_args.pks,
-                all_users=parsed_args.all_users,
-                group=parsed_args.group,
-                group_pk=parsed_args.group_pk,
-                relative_ctime=parsed_args.relative_ctime,
-                # with_scheduler_state=parsed_args.with_scheduler_state,
-                order_by=parsed_args.order_by,
-                limit=parsed_args.limit,
-                projections=parsed_args.project,
-            )
-        except Exception as e:
-            import traceback
-            print '1', e.__doc__
-            print '2', sys.exc_info()
-            print '3', sys.exc_info()[0]
-            print '4', sys.exc_info()[1]
-            print '5', sys.exc_info()[2],
-            print 'Sorry I mean line...',
-            print traceback.tb_lineno(sys.exc_info()[2])
-            ex_type, ex, tb = sys.exc_info()
-            print '6', traceback.print_tb(tb)
-            # ~ print >> sys.stderr, "Error ({}): {}".format(
-            # ~ e.__class__.__name__,
-            # ~ e.message
-            # ~ )
+        C._list_calculations(
+            states=parsed_args.states,
+            past_days=parsed_args.past_days,
+            pks=parsed_args.pks,
+            all_users=parsed_args.all_users,
+            group=parsed_args.group,
+            group_pk=parsed_args.group_pk,
+            relative_ctime=parsed_args.relative_ctime,
+            # with_scheduler_state=parsed_args.with_scheduler_state,
+            order_by=parsed_args.order_by,
+            limit=parsed_args.limit,
+            projections=parsed_args.project,
+        )
 
     def calculation_res(self, *args):
         """

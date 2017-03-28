@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import pytz
 
@@ -10,18 +18,12 @@ from aiida import settings
 # TODO SP: check license terms ?
 # TODO SP: docstring
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 utc = pytz.utc
 
-
-def get_default_timezone():
-    return pytz.timezone(settings.TIME_ZONE)
-
-get_current_timezone = get_default_timezone
+def get_current_timezone():
+    from tzlocal import get_localzone
+    return get_localzone()
 
 
 def now():
@@ -40,6 +42,14 @@ def is_aware(value):
 
 
 def make_aware(value, timezone=None, is_dst=None):
+    """
+
+    :param value: The datetime to make aware
+    :type value: :class:`datetime.datetime`
+    :param timezone:
+    :param is_dst:
+    :return:
+    """
     if timezone is None:
         timezone = get_current_timezone()
     if hasattr(timezone, 'localize'):

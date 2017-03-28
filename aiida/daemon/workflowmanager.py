@@ -1,14 +1,19 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from aiida.common import aiidalogger
 from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 logger = aiidalogger.getChild('workflowmanager')
+
 
 def execute_steps():
     """
@@ -36,8 +41,12 @@ def execute_steps():
     logger.info("Querying the worflow DB")
     
     running_steps = get_all_running_steps()
-    
+
     for s in running_steps:
+        if s.parent.state == wf_states.FINISHED:
+            s.set_state(wf_states.FINISHED)
+            continue
+
         w = s.parent.get_aiida_class()
 
         logger.info("[{0}] Found active step: {1}".format(w.pk, s.name))
@@ -75,7 +84,6 @@ def execute_steps():
                     logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.pk, s.name, pk))
 
 
-
 def advance_workflow(w, step):
     """
     The method tries to advance a step running its next method and handling 
@@ -99,9 +107,6 @@ def advance_workflow(w, step):
     :param step: DbWorkflowStep to execute
     :return: True if the step has been executed, False otherwise
     """
-
-    from aiida.orm.workflow import Workflow
-
     if step.nextcall == wf_exit_call:
         logger.info("[{0}] Step: {1} has an exit call".format(w.pk, step.name))
         if len(w.get_steps(wf_states.RUNNING)) == 0 and len(w.get_steps(wf_states.ERROR)) == 0:
@@ -124,7 +129,7 @@ def advance_workflow(w, step):
                                       "to kick.".format(step.name))
         return True
 
-    elif not step.nextcall == None:
+    elif not step.nextcall is None:
 
         logger.info("[{0}] In advance_workflow the step {1} goes to nextcall {2}"
                     "".format(w.pk, step.name, step.nextcall))

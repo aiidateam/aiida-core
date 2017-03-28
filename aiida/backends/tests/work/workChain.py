@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import inspect
 
@@ -7,22 +15,16 @@ from plum.engine.ticking import TickingEngine
 import plum.process_monitor
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.work.workchain import WorkChain,\
-    ToContext, _Block, _If, _While, if_, while_
+from aiida.work.workchain import WorkChain, \
+    ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
-from aiida.work.run import async, legacy_workflow
+from aiida.work.run import run, async, legacy_workflow
 from aiida.orm.data.base import Int, Str
 import aiida.work.util as util
 from aiida.common.links import LinkType
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
-
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 PwProcess = PwCalculation.process()
@@ -61,7 +63,7 @@ class Wf(WorkChain):
             [self.s1.__name__, self.s2.__name__, self.s3.__name__,
              self.s4.__name__, self.s5.__name__, self.s6.__name__,
              self.isA.__name__, self.isB.__name__, self.ltN.__name__]
-        }
+            }
 
     def s1(self):
         self._set_finished(inspect.stack()[0][3])
@@ -228,7 +230,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        finished_steps =\
+        finished_steps = \
             self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
@@ -237,7 +239,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps =\
+        finished_steps = \
             self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
@@ -246,13 +248,62 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps =\
+        finished_steps = \
             self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
+
+    def test_return(self):
+        class WcWithReturn(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(WcWithReturn, cls).define(spec)
+                spec.outline(
+                    cls.s1,
+                    if_(cls.isA)(
+                        return_
+                    ),
+                    cls.after
+                )
+
+            def s1(self):
+                pass
+
+            def isA(self):
+                return True
+
+            def after(self):
+                raise RuntimeError("Shouldn't get here")
+
+        WcWithReturn.run()
+
+    def test_tocontext_async_workchain(self):
+        class MainWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(MainWorkChain, cls).define(spec)
+                spec.outline(cls.run, cls.check)
+                spec.dynamic_output()
+
+            def run(self):
+                return ToContext(subwc=async(SubWorkChain))
+
+            def check(self):
+                assert self.ctx.subwc.out.value == Int(5)
+
+        class SubWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(SubWorkChain, cls).define(spec)
+                spec.outline(cls.run)
+
+            def run(self):
+                self.out("value", Int(5))
+
+        run(MainWorkChain)
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
         finished_steps = {}
@@ -269,7 +320,6 @@ class TestWorkchain(AiidaTestCase):
         te.shutdown()
 
         return finished_steps
-
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
@@ -318,6 +368,7 @@ class TestHelpers(AiidaTestCase):
     """
     Test the helper functions/classes used by workchains
     """
+
     def test_get_proc_outputs(self):
         c = WorkCalculation()
         a = Int(5)
@@ -333,4 +384,3 @@ class TestHelpers(AiidaTestCase):
         self.assertListEqual(outputs.keys(), [u'a', u'b'])
         self.assertEquals(outputs['a'], a)
         self.assertEquals(outputs['b'], b)
-

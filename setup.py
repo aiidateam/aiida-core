@@ -1,10 +1,17 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+import fastentrypoints
 from os import path
 from setuptools import setup, find_packages
 from setup_requirements import install_requires, extras_require
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
 
 
 
@@ -19,7 +26,7 @@ if __name__ == '__main__':
 
     bin_folder = path.join(aiida_folder, 'bin')
     setup(
-        name='aiida',
+        name='aiida-core',
         url='http://www.aiida.net/',
         license='MIT License',
         author="The AiiDA team",

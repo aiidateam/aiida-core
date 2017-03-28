@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import aiida.common
 from aiida.common.exceptions import InternalError
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
 import os, re, fnmatch, sys  # for glob commands
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. and 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Python Software Foundation. All rights reserved."
-__license__ = "MIT license, and Python license, see LICENSE.txt file"
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 magic_check = re.compile('[*?[]')
 

@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import HTMLParser
 import sys
 
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 IMPORTGROUP_TYPE = 'aiida.import'
@@ -781,7 +785,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
     from aiida.orm.querybuilder import QueryBuilder
-    # from aiida.backends.sqlalchemy import session
 
 
     # This is the export version expected by this function
@@ -941,6 +944,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # with transaction.atomic():
         # if True
         import aiida.backends.sqlalchemy
+
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         try:
             foreign_ids_reverse_mappings = {}
             new_entries = {}
@@ -1108,8 +1114,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # Store them all in once; however, the PK are not set in this way...
                 # Model.objects.bulk_create(objects_to_create)
                 if objects_to_create:
-                    # from aiida.backends.sqlalchemy import session
-                    aiida.backends.sqlalchemy.session.add_all(objects_to_create)
+                    session.add_all(objects_to_create)
                     # session.commit()
 
                 # Get back the just-saved entries
@@ -1140,8 +1145,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                             DbCalcState(dbnode_id=new_pk,
                                                state=calc_states.IMPORTED))
 
-                    # from aiida.backends.sqlalchemy import session
-                    aiida.backends.sqlalchemy.session.add_all(imported_states)
+                    session.add_all(imported_states)
                     # session.commit()
                     # models.DbCalcState.objects.bulk_create(imported_states)
 
@@ -1172,7 +1176,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
             # Needed for fast checks of existing links
             from aiida.backends.sqlalchemy.models.node import DbLink
-            existing_links_raw = aiida.backends.sqlalchemy.session.query(DbLink.input, DbLink.output, DbLink.label).all()
+            existing_links_raw = session.query(DbLink.input, DbLink.output, DbLink.label).all()
             # existing_links_raw = DbLink.objects.all().values_list(
             #     'input', 'output', 'label')
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
@@ -1224,8 +1228,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             if links_to_store:
                 if not silent:
                     print "   ({} new links...)".format(len(links_to_store))
-                # from aiida.backends.sqlalchemy import session
-                aiida.backends.sqlalchemy.session.add_all(links_to_store)
+                session.add_all(links_to_store)
                 # session.commit()
                 # models.DbLink.objects.bulk_create(links_to_store)
             else:
@@ -1239,7 +1242,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # TODO: cache these to avoid too many queries
                 from aiida.backends.sqlalchemy.models.group import DbGroup
                 from uuid import UUID
-                group = aiida.backends.sqlalchemy.session.query(DbGroup).filter(
+                group = session.query(DbGroup).filter(
                     DbGroup.uuid == UUID(groupuuid)).all()
 
                 # group = DbGroup.objects.get(uuid=groupuuid)
@@ -1279,9 +1282,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     group = Group(name=group_name,
                                   type_string=IMPORTGROUP_TYPE)
                     from aiida.backends.sqlalchemy.models.group import DbGroup
-                    if aiida.backends.sqlalchemy.session.query(DbGroup).filter(
+                    if session.query(DbGroup).filter(
                         DbGroup.name == group._dbgroup.name).count() == 0:
-                        aiida.backends.sqlalchemy.session.add(group._dbgroup)
+                        session.add(group._dbgroup)
                         created = True
                     else:
                         counter += 1
@@ -1289,7 +1292,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # Add all the nodes to the new group
                 # TODO: decide if we want to return the group name
                 from aiida.backends.sqlalchemy.models.node import DbNode
-                group.add_nodes(aiida.backends.sqlalchemy.session.query(DbNode).filter(
+                group.add_nodes(session.query(DbNode).filter(
                     DbNode.id.in_(pks_for_group)).distinct().all())
 
                 # group.add_nodes(models.DbNode.objects.filter(
@@ -1301,10 +1304,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 if not silent:
                     print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
 
-            aiida.backends.sqlalchemy.session.commit()
+            session.commit()
         except:
             print "Rolling back"
-            aiida.backends.sqlalchemy.session.rollback()
+            session.rollback()
             raise
 
     if not silent:
@@ -1596,7 +1599,7 @@ def get_all_fields_info_sqla_old():
         user_model_string: ['password', 'is_staff',
                             'is_superuser', 'is_active',
                             'last_login', 'date_joined'],
-        node_model_string: ['state_instance', 'dbstates', 'workflow_step',
+        node_model_string: ['dbstates', 'workflow_step',
                             'inputs', 'dbcomments', 'parents']
     }
 
@@ -2235,7 +2238,8 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     ## All 'parent' links (in this way, I can automatically export a node
     ## that will get automatically attached to a parent node in the end DB,
     ## if the parent node is already present in the DB)
-    from aiida.backends.sqlalchemy import session
+    from aiida.backends.sqlalchemy import get_scoped_session
+    session = get_scoped_session()
     from aiida.backends.sqlalchemy.models.node import DbLink
     # authinfo = session.query(DbLink).filter(DbLink.output_id.in_(all_nodes_pk)).all()
     linksquery = session.query(DbLink).filter(

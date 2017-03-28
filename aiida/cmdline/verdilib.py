@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Command line commands for the main executable 'verdi' of aiida
 
@@ -46,10 +54,6 @@ from aiida.cmdline.commands.shell import Shell
 from aiida.cmdline.commands.restapi import Restapi
 from aiida.cmdline import execname
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class ProfileParsingException(AiidaException):
@@ -514,8 +518,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 load_dbenv()
 
             from aiida.backends.sqlalchemy.models.base import Base
-            from aiida.backends.sqlalchemy.utils import (get_engine,
-                                                            install_tc)
+            from aiida.backends.sqlalchemy.utils import install_tc, reset_session
             from aiida.common.setup import get_profile_config
 
             # This check should be done more properly
@@ -548,7 +551,9 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 DbWorkflow, DbWorkflowData, DbWorkflowStep)
             from aiida.backends.sqlalchemy.models.settings import DbSetting
 
-            connection = get_engine(get_profile_config(gprofile))
+            reset_session(get_profile_config(gprofile))
+            from aiida.backends.sqlalchemy import get_scoped_session
+            connection = get_scoped_session().connection()
             Base.metadata.create_all(connection)
             install_tc(connection)
 
@@ -697,7 +702,7 @@ class Quicksetup(VerdiCommand):
         return dbinfo
 
     @click.command('quicksetup', context_settings=CONTEXT_SETTINGS)
-    @click.option('--email', prompt='Email Address (for publishing experiments)', type=str,
+    @click.option('--email', prompt='Email Address (will be used to identify your data when sharing)', type=str,
                   help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')
     @click.option('--first-name', prompt='First Name', type=str)
     @click.option('--last-name', prompt='Last Name', type=str)

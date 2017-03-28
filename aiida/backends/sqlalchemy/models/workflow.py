@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import json
 
@@ -17,10 +25,6 @@ from aiida.common.datastructures import (wf_states, wf_data_types,
                                          wf_data_value_types, wf_default_call)
 from aiida.utils import timezone
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 
 class DbWorkflow(Base):
@@ -64,6 +68,10 @@ class DbWorkflow(Base):
         super(DbWorkflow, self).__init__(*args, **kwargs)
         self.nodeversion = 1
         self.lastsyncedversion = 0
+
+    @property
+    def pk(self):
+        return self.id
 
     def get_aiida_class(self):
         """

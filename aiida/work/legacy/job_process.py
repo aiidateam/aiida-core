@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import plum.port as port
 import plum.process
@@ -7,10 +15,6 @@ from aiida.common.lang import override
 from aiida.work.process import Process, DictSchema
 from voluptuous import Any
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class JobProcess(Process):
@@ -122,13 +126,19 @@ class JobProcess(Process):
                 continue
 
             # Call the 'use' methods to set up the data-calc links
-            if isinstance(self.spec().get_input(name), port.InputGroupPort):
+            if self.spec().has_input(name) and \
+                isinstance(self.spec().get_input(name), port.InputGroupPort):
                 additional =\
                     self._CALC_CLASS._use_methods[name]['additional_parameter']
 
                 for k, v in input.iteritems():
-                    getattr(self._calc,
+                    try:
+                        getattr(self._calc,
                             'use_{}'.format(name))(v, **{additional: k})
+                    except AttributeError as exception:
+                        raise AttributeError("You have provided for an input the key '{}' but"
+                            "the JobCalculation has no such use_{} method".format(name, name))
+
 
             else:
                 getattr(self._calc, 'use_{}'.format(name))(input)

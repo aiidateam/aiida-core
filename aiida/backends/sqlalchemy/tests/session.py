@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Testing Session possible problems.
 """
@@ -11,10 +19,6 @@ import aiida.backends
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import get_configured_user_email
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class TestSessionSqla(AiidaTestCase):
@@ -32,18 +36,22 @@ class TestSessionSqla(AiidaTestCase):
 
     def set_connection(self, expire_on_commit=True):
         # Creating a sessionmaker with the desired parameters
+        ## Note: to check if this is still correct with the new
+        ## way of managing connections and sessions in SQLA...
+        ## For instance, we should use probably a scopedsession wrapper
         Session = sessionmaker(expire_on_commit=expire_on_commit)
-        aiida.backends.sqlalchemy.session = Session(
+        aiida.backends.sqlalchemy.sessionfactory = Session(
             bind=self._AiidaTestCase__backend_instance.connection)
 
         # Cleaning the database
         self.clean_db()
-        aiida.backends.sqlalchemy.session.expunge_all()
+        aiida.backends.sqlalchemy.get_scoped_session().expunge_all()
 
     def drop_connection(self):
-        aiida.backends.sqlalchemy.session.expunge_all()
-        aiida.backends.sqlalchemy.session.close()
-        aiida.backends.sqlalchemy.session = None
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+        session.expunge_all()
+        session.close()
+        aiida.backends.sqlalchemy.sessionfactory = None
 
     def test_session_update_and_expiration_1(self):
         """
@@ -56,9 +64,11 @@ class TestSessionSqla(AiidaTestCase):
 
         self.set_connection(expire_on_commit=True)
 
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         user = User(email=get_configured_user_email())
-        aiida.backends.sqlalchemy.session.add(user._dbuser)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(user._dbuser)
+        session.commit()
 
         defaults = dict(name='localhost',
                         hostname='localhost',
@@ -66,13 +76,13 @@ class TestSessionSqla(AiidaTestCase):
                         scheduler_type='pbspro',
                         workdir='/tmp/aiida')
         computer = Computer(**defaults)
-        aiida.backends.sqlalchemy.session.add(computer._dbcomputer)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(computer._dbcomputer)
+        session.commit()
 
         code = Code()
         code.set_remote_computer_exec((computer, '/x.x'))
-        aiida.backends.sqlalchemy.session.add(code.dbnode)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(code.dbnode)
+        session.commit()
 
         self.drop_connection()
 
@@ -86,11 +96,13 @@ class TestSessionSqla(AiidaTestCase):
         from aiida.orm.code import Code
         from aiida.orm.user import User
 
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         self.set_connection(expire_on_commit=True)
 
         user = User(email=get_configured_user_email())
-        aiida.backends.sqlalchemy.session.add(user._dbuser)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(user._dbuser)
+        session.commit()
 
         defaults = dict(name='localhost',
                         hostname='localhost',
@@ -117,9 +129,11 @@ class TestSessionSqla(AiidaTestCase):
 
         self.set_connection(expire_on_commit=False)
 
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         user = User(email=get_configured_user_email())
-        aiida.backends.sqlalchemy.session.add(user._dbuser)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(user._dbuser)
+        session.commit()
 
         defaults = dict(name='localhost',
                         hostname='localhost',
@@ -127,13 +141,13 @@ class TestSessionSqla(AiidaTestCase):
                         scheduler_type='pbspro',
                         workdir='/tmp/aiida')
         computer = Computer(**defaults)
-        aiida.backends.sqlalchemy.session.add(computer._dbcomputer)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(computer._dbcomputer)
+        session.commit()
 
         code = Code()
         code.set_remote_computer_exec((computer, '/x.x'))
-        aiida.backends.sqlalchemy.session.add(code.dbnode)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(code.dbnode)
+        session.commit()
 
         self.drop_connection()
 
@@ -148,9 +162,11 @@ class TestSessionSqla(AiidaTestCase):
         from aiida.orm.code import Code
         from aiida.orm.user import User
 
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         user = User(email=get_configured_user_email())
-        aiida.backends.sqlalchemy.session.add(user._dbuser)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(user._dbuser)
+        session.commit()
 
         defaults = dict(name='localhost',
                         hostname='localhost',

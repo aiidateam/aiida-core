@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 The dummy model encodes the model defined by django in backends.djsite
 using SQLAlchemy.
@@ -19,10 +27,11 @@ from sqlalchemy.types import (
 from sqlalchemy.orm import (
     relationship,
     backref,
-    column_property,
     sessionmaker,
     foreign, mapper, aliased
 )
+
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import Cast
 from sqlalchemy.dialects.postgresql import UUID, JSONB, INTEGER, array
@@ -30,7 +39,6 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB, INTEGER, array
 from sqlalchemy.sql.expression import FunctionElement, cast
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.ext.compiler import compiles
-
 
 # Aiida Django classes:
 #from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
@@ -48,6 +56,8 @@ from aiida.common.exceptions import DbContentError, MissingPluginError
 # MISC
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.utils import timezone
+from aiida.common.datastructures import (calc_states, _sorted_datastates,
+                                         sort_states)
 
 Base = declarative_base()
 
@@ -346,79 +356,57 @@ class DbNode(Base):
         return dbnode.get_aiida_class()
 
 
+    @hybrid_property
+    def state(self):
+        """
+        Return the most recent state from DbCalcState
+        """
+        if not self.id:
+            return None
+        all_states = DbCalcState.query.filter(DbCalcState.dbnode_id == self.id).all()
+        if all_states:
+            #return max((st.time, st.state) for st in all_states)[1]
+            return sort_states(((dbcalcstate.state, dbcalcstate.state.value)
+                                for dbcalcstate in all_states),
+                                use_key=True)[0]
+        else:
+            return None
 
+    @state.expression
+    def state(cls):
+        """
+        Return the expression to get the 'latest' state from DbCalcState,
+        to be used in queries, where 'latest' is defined using the state order
+        defined in _sorted_datastates.
+        """
+        # Sort first the latest states
+        whens = {
+            v: idx for idx, v
+            in enumerate(_sorted_datastates[::-1], start=1)}
+        custom_sort_order = case(value=DbCalcState.state,
+                                 whens=whens,
+                                 else_=100) # else: high value to put it at the bottom
 
-states = select(
-        [
+        q1 = select([
+            DbCalcState.id.label('id'),
             DbCalcState.dbnode_id.label('dbnode_id'),
-            func.max(DbCalcState.time).label('lasttime'),
-        ]
-    ).group_by(DbCalcState.dbnode_id).alias()
+            DbCalcState.state.label('state'),
+            func.row_number().over(partition_by=DbCalcState.dbnode_id,
+                                                 order_by=custom_sort_order).label('the_row_number')
+        ])
 
-recent_states = select([
-        DbCalcState.id.label('id'),
-        DbCalcState.dbnode_id.label('dbnode_id'),
-        DbCalcState.state.label('state'),
-        states.c.lasttime.label('time')
-    ]).\
-    select_from(
-        join(
-            DbCalcState,
-            states,
-            and_(
-                DbCalcState.dbnode_id == states.c.dbnode_id,
-                DbCalcState.time == states.c.lasttime,
-            )
-        )
-    ).alias() # .group_by(DbCalcState.dbnode_id, DbCalcState.time)
+        q1 = q1.cte()
 
-state_mapper = mapper(
-    DbCalcState,
-    recent_states,
-    primary_key= recent_states.c.dbnode_id,
-    non_primary=True,
-)
+        subq = select([
+            q1.c.dbnode_id.label('dbnode_id'),
+            q1.c.state.label('state')
+        ]).select_from(q1).where(q1.c.the_row_number==1).alias()
 
-DbNode.state_instance = relationship(
-    state_mapper,
-    primaryjoin = recent_states.c.dbnode_id == foreign(DbNode.id),
-    viewonly=True,
-)
-
-DbNode.state = column_property(
-    select([recent_states.c.state]).
-    where(recent_states.c.dbnode_id == foreign(DbNode.id))
-)
-
-
-
-#~ DbAttribute.value_str = column_property(
-        #~ case([
-            #~ (DbAttribute.datatype == 'txt', DbAttribute.tval),
-            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
-            #~ (DbAttribute.datatype == 'int', cast(DbAttribute.ival, String)),
-            #~ (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, String)),
-            #~ (DbAttribute.datatype == 'date', cast(DbAttribute.dval, String)),
-            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, String)),
-            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, String)),
-            #~ (DbAttribute.datatype == 'list', None),
-            #~ (DbAttribute.datatype == 'dict', None),
-        #~ ])
-    #~ )
-#~
-#~ DbAttribute.value_float = column_property(
-        #~ case([
-            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
-            #~ (DbAttribute.datatype == 'float', DbAttribute.fval),
-            #~ (DbAttribute.datatype == 'int', cast(DbAttribute.ival, Float)),
-            #~ (DbAttribute.datatype == 'bool', cast(DbAttribute.bval, Float)),
-            #~ (DbAttribute.datatype == 'date', cast(DbAttribute.dval, Float)),
-            #~ (DbAttribute.datatype == 'txt', cast(DbAttribute.tval, Float)),
-            #~ (DbAttribute.datatype == 'float', cast(DbAttribute.fval, Float)),
-            #~ (DbAttribute.datatype == 'list', None),
-            #~ (DbAttribute.datatype == 'dict', None),
-        #~ ])
-    #~ )
+        return select([subq.c.state]).\
+            where(
+                    subq.c.dbnode_id == cls.id,
+                ).\
+            label('laststate')
 
 
 

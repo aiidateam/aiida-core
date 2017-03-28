@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import collections
 
@@ -6,10 +14,6 @@ from aiida.common.utils import classproperty
 from aiida.common.links import LinkType
 from aiida.orm.mixins import SealableWithUpdatableAttributes
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 def _parse_single_arg(function_name, additional_parameter,
@@ -77,6 +81,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
     You will typically use one of its subclasses, often a JobCalculation for
     calculations run via a scheduler.
     """
+
     # A tuple with attributes that can be updated even after
     # the call of the store() method
 
@@ -126,8 +131,8 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         import logging
         from aiida.utils.logger import get_dblogger_extra
 
-        return logging.LoggerAdapter(logger=self._logger,
-                                     extra=get_dblogger_extra(self))
+        return logging.LoggerAdapter(
+            logger=self._logger, extra=get_dblogger_extra(self))
 
     def __dir__(self):
         """
@@ -144,6 +149,8 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         None will then automatically raise the standard AttributeError
         exception.
         """
+        if name == '_use_methods':
+            raise AttributeError("'{0}' object has no attribute '{1}'".format(type(self), name))
 
         class UseMethod(object):
             """

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Plugin for LSF.
 This has been tested on the CERN lxplus cluster (LSF 9.1.3)
@@ -64,10 +72,6 @@ ZOMBI   A job becomes ZOMBI if:
 
 """
 
-__copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.5.0"
-__contributors__ = "Nicolas Mounet, Giovanni Pizzi, Andrea Cepellotti"
 
 _map_status_lsf = {
     'PEND'  : job_states.QUEUED,

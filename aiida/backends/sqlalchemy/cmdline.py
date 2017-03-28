@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from aiida.utils.logger import get_dblogger_extra
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 
 def get_group_list(user, type_string, n_days_ago=None,
@@ -49,7 +53,8 @@ def get_log_messages(obj):
     Get the log messages for the object.
     """
     from aiida.backends.sqlalchemy.models.log import DbLog
-    from aiida.backends.sqlalchemy import session
+    from aiida.backends.sqlalchemy import get_scoped_session
+    session = get_scoped_session()
 
     extra = get_dblogger_extra(obj)
     log_messages = []

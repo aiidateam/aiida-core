@@ -10,6 +10,7 @@ python:
 
 services:
     - postgresql
+    - docker
 
 addons:
     postgresql: "9.4"
@@ -33,28 +34,42 @@ env:
     - TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
     - TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
 
+before_install:
+    # This is needed for the SSH tests (being able to ssh to localhost)
+    # And will also be used for the docker test
+    - ssh-keygen -t rsa -N "" -f "${HOME}/.ssh/id_rsa"
+    - cp "${HOME}/.ssh/id_rsa.pub" "${HOME}/.ssh/authorized_keys"
+    - ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
+
+    # Build the docker image if needed
+    - .travis-data/before_install.sh
+
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
-    - pip install .[REST,docs,atomic_tools]
+    - pip install .[REST,docs,atomic_tools,testing]
 
 before_script:
-    # This is needed for the SSH tests (being able to ssh to localhost)
-    - ssh-keygen -t rsa -N "" -f "${HOME}/.ssh/id_rsa"
-    - cp "${HOME}/.ssh/id_rsa.pub" "${HOME}/.ssh/authorized_keys"
-    - if [ ! -d "${HOME}/.ssh/" ] ; then mkdir "${HOME}/.ssh/" ; fi
-    - ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
-
+    # Here I create the actual DB for submission
+    - psql -c "CREATE DATABASE $TEST_AIIDA_BACKEND;" -U postgres
     # Here I create the test DB
     - psql -c "CREATE DATABASE test_$TEST_AIIDA_BACKEND;" -U postgres
 
+    # Here I setup the actual AiiDA profile, non-interactively
+    - verdi -p $TEST_AIIDA_BACKEND setup --non-interactive --backend=$TEST_AIIDA_BACKEND --email="aiida@localhost" --db_host="localhost" --db_port=5432 --db_name="$TEST_AIIDA_BACKEND" --db_user=postgres --db_pass='' --repo="/tmp/test_repository_${TEST_AIIDA_BACKEND}/" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --no-password
+  
     # Here I setup the test AiiDA profile, non-interactively
     - verdi -p test_$TEST_AIIDA_BACKEND setup --non-interactive --backend=$TEST_AIIDA_BACKEND --email="aiida@localhost" --db_host="localhost" --db_port=5432 --db_name="test_$TEST_AIIDA_BACKEND" --db_user=postgres --db_pass='' --repo="/tmp/test_repository_test_${TEST_AIIDA_BACKEND}/" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --no-password
 
+    # Maybe not needed, but set this profile to be the default one for (at least) the daemon
+    - verdi profile setdefault daemon $TEST_AIIDA_BACKEND
+    - verdi profile setdefault verdi $TEST_AIIDA_BACKEND
+
+    - .travis-data/before_script.sh
+
 script:
-    # Compile the docs (HTML format); -W to convert warnings in errors, -n to warn about all missing references
-    - if [[ "$COMPILE_DOCS" == "true" ]] ; then verdi profile setdefault verdi test_${TEST_AIIDA_BACKEND} && SPHINXOPTS="-nW" make -C docs html ; else verdi -p test_$TEST_AIIDA_BACKEND devel tests ; fi
+    - .travis-data/test_script.sh
 
 git:
   depth: 3

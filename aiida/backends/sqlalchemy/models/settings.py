@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from pytz import UTC
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
@@ -11,10 +19,6 @@ from aiida.backends.sqlalchemy.models.base import Base
 from aiida.utils import timezone
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 
 class DbSetting(Base):
@@ -37,7 +41,7 @@ class DbSetting(Base):
                   subspecifier_value=None, other_attribs={},
                   stop_if_existing=False):
 
-        setting = sa.session.query(DbSetting).filter_by(key=key).first()
+        setting = sa.get_scoped_session().query(DbSetting).filter_by(key=key).first()
         if setting is not None:
             if stop_if_existing:
                 return
@@ -46,10 +50,10 @@ class DbSetting(Base):
 
         setting.key = key
         setting.val = value
+        flag_modified(setting, "val")
         setting.time = timezone.datetime.now(tz=UTC)
         if "description" in other_attribs.keys():
             setting.description = other_attribs["description"]
-        flag_modified(setting, "val")
         setting.save()
 
     def getvalue(self):
@@ -67,7 +71,7 @@ class DbSetting(Base):
 
     @classmethod
     def del_value(cls, key, only_children=False, subspecifier_value=None):
-        setting = sa.session.query(DbSetting).filter(key=key)
+        setting = sa.get_scoped_session().query(DbSetting).filter(key=key)
         setting.val = None
         setting.time = timezone.datetime.utcnow()
         flag_modified(setting, "val")

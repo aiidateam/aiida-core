@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 import datetime
 from datetime import datetime
@@ -20,7 +24,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from sqlalchemy.sql.expression import cast
-from sqlalchemy.sql.elements import Cast
+from sqlalchemy.sql.elements import Cast, Label
 from aiida.common.exceptions import InputValidationError
 from aiida.backends.general.querybuilder_interface import QueryBuilderInterface
 from aiida.backends.utils import _get_column
@@ -98,7 +102,9 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
     def get_filter_expr_from_column(self, operator, value, column):
 
-        if not isinstance(column, (Cast, InstrumentedAttribute)):
+        # Label is used because it is what is returned for the
+        # 'state' column by the hybrid_column construct
+        if not isinstance(column, (Cast, InstrumentedAttribute, Label)):
             raise TypeError(
                 'column ({}) {} is not a valid column'.format(
                     type(column), column

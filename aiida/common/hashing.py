@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from passlib.context import CryptContext
 import random
 import hashlib
@@ -10,10 +18,6 @@ from datetime import datetime
 Here we define a single password hashing instance for the full AiiDA.
 """
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 # The prefix of the hashed using pbkdf2_sha256 algorithm in Django
 HASHING_PREFIX_DJANGO = "pbkdf2_sha256"
@@ -32,9 +36,6 @@ pwd_context = CryptContext(
     schemes=["pbkdf2_sha256", "des_crypt"],
     # The default hashing mechanism
     default="pbkdf2_sha256",
-
-    # vary rounds parameter randomly when creating new hashes...
-    all__vary_rounds=0.1,
 
     # We set the number of rounds that should be used...
     pbkdf2_sha256__default_rounds=8000,

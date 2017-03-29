@@ -1,15 +1,21 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import os
 import aiida
+import logging
+import json
 
 # The username (email) used by the default superuser, that should also run
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 DEFAULT_AIIDA_USER = "aiida@localhost"
 
@@ -271,77 +277,6 @@ def get_secret_key():
     return secret_key.strip()
 
 
-def ask_for_timezone(existing_timezone):
-    """
-    Interactively ask for the current timezone.
-
-    :param existing_timezone: the string for the already configured timezone,
-      or None if there is no previous configuration.
-    :return: a string with the timezone as chosen by the user.
-    """
-    import time
-    import pytz
-    import datetime
-
-    if existing_timezone is not None:
-        print "Configured timezone: {}".format(existing_timezone)
-        answer = raw_input("Do you want to change it? [y/N] ")
-        if answer.lower() != 'y':
-            # No configuration to do, return the existing value
-            return existing_timezone
-
-    # If we are here, either there was no configuration, or the user asked to
-    # change it.
-
-    # Try to get a set of valid timezones, as suggested in
-    # one of the answers of http://stackoverflow.com/questions/7669938
-
-    # Get some information on the local TZ and the local offset, doing the
-    # right thing it we are in DST. (time.daylight just tells whether the
-    # local timezone has DST, not the current state
-    if time.daylight and time.localtime().tm_isdst > 0:
-        local_offset = time.altzone
-        localtz = time.tzname[1]
-    else:
-        local_offset = time.timezone
-        localtz = time.tzname[0]
-
-    # convert to a datetime.timedelta object
-    local_offset = datetime.timedelta(seconds=-local_offset)
-
-    valid_zones = []
-    # Iterate over all valid TZ
-    for name in pytz.all_timezones:
-        # get the TZ obejct
-        timezone = pytz.timezone(name)
-        # skip if a TZ has no info
-        if not hasattr(timezone, '_tzinfos'):
-            continue
-        # Append to the list if the offset and the localtz match
-        for (utcoffset, daylight, tzname), _ in timezone._tzinfos.iteritems():
-            if utcoffset == local_offset and tzname == localtz:
-                valid_zones.append(name)
-
-    print "# These seem to be valid timezones for the current environment:"
-    for z in sorted(valid_zones):
-        print "* {}".format(z)
-
-    print "# Type here a valid timezone (one of the above, or if the detection "
-    print "# did not work, any other valid timezone string)"
-
-    valid_zone = False
-    while not valid_zone:
-        answer = raw_input("Insert your timezone: ")
-        if answer in pytz.all_timezones:
-            valid_zone = True
-        else:
-            print "* ERROR! Invalid timezone inserted."
-            print "*        Valid timezones can be obtainedin a python shell with"
-            print "*        the 'import pytz; print pytz.all_timezones' command"
-
-    return answer
-
-
 def create_base_dirs(config_dir=None):
     """
     Create dirs for AiiDA, and install default daemon files.
@@ -376,7 +311,7 @@ def create_base_dirs(config_dir=None):
     create_htaccess_file()
 
 
-def set_default_profile(process, profile, force_rewrite = False):
+def set_default_profile(process, profile, force_rewrite=False):
     """
     Set a default db profile to be used by a process (default for verdi,
     default for daemon, ...)
@@ -406,7 +341,7 @@ def set_default_profile(process, profile, force_rewrite = False):
         confs['default_profiles'][process] = profile
     else:
         confs['default_profiles'][process] = confs['default_profiles'].get(
-                                                                process,profile)
+            process, profile)
     backup_config()
     store_config(confs)
 
@@ -526,7 +461,6 @@ key_explanation = {
     "AIIDADB_PORT": "Database port",
     "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
     "AIIDADB_USER": "AiiDA Database user",
-    "TIMEZONE": "Timezone",
     DEFAULT_USER_CONFIG_FIELD: "Default user email"
 }
 
@@ -600,10 +534,6 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
             '{} is not a valid backend choice.'.format(
                 backend_v))
 
-    # setting timezone
-    from tzlocal import get_localzone
-    new_profile['TIMEZONE'] = get_localzone().zone
-
     # Setting email
     from validate_email import validate_email
     email_v = kwargs.pop('email')
@@ -644,6 +574,7 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
             set_default_profile('verdi', profile)
             set_default_profile('daemon', profile)
     return new_profile
+
 
 def create_configuration(profile='default'):
     """
@@ -730,11 +661,6 @@ def create_configuration(profile='default'):
                 this_new_confs['AIIDADB_BACKEND'] = backend_ans
                 aiida_backend = backend_ans
 
-        # Setting the timezone
-        timezone = ask_for_timezone(
-            existing_timezone=this_existing_confs.get('TIMEZONE', None))
-        this_new_confs['TIMEZONE'] = timezone
-
         # Setting the email
         valid_email = False
         readline.set_startup_hook(lambda: readline.insert_text(
@@ -763,7 +689,7 @@ def create_configuration(profile='default'):
             while not valid_db_engine:
                 db_engine_ans = raw_input(
                     'Database engine (available: {} - mysql is deprecated): '
-                    .format(', '.join(db_possibilities)))
+                        .format(', '.join(db_possibilities)))
                 if db_engine_ans in db_possibilities:
                     valid_db_engine = True
                 else:
@@ -875,7 +801,7 @@ def create_configuration(profile='default'):
         # it should change in the future to add the possibility of having a
         # remote repository. Atm, I act as only a local repo is possible
         existing_repo = this_existing_confs.get('AIIDADB_REPOSITORY_URI',
-            os.path.join(aiida_dir, "repository-{}/".format(profile)))
+                                                os.path.join(aiida_dir, "repository-{}/".format(profile)))
         default_protocol = 'file://'
         if existing_repo.startswith(default_protocol):
             existing_repo = existing_repo[len(default_protocol):]
@@ -940,6 +866,7 @@ def create_configuration(profile='default'):
 class _NoDefaultValue(object):
     pass
 
+
 # Only properties listed here can be changed/set with the command line.
 # These properties are stored in the aiida config file.
 # Each entry key is the name of the property used on the command line;
@@ -973,28 +900,28 @@ _property_table = {
         "and to the DbLog table for the 'aiida' logger; for the DbLog, see "
         "also the logging.db_loglevel variable to further filter messages going "
         "to the database",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+        "REPORT",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.paramiko_loglevel": (
         "logging_paramiko_log_level",
         "string",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
         "for the 'paramiko' logger",
         "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.celery_loglevel": (
         "logging_celery_log_level",
         "string",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
         "for the 'celery' logger",
         "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.db_loglevel": (
         "logging_db_log_level",
         "string",
         "Minimum level to log to the DbLog table",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+        "REPORT",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "tcod.depositor_username": (
         "tcod_depositor_username",
         "string",
@@ -1025,7 +952,7 @@ _property_table = {
         "E-mail address for TCOD depositions",
         None,
         None),
-    "warnings.showdeprecations":(
+    "warnings.showdeprecations": (
         "show_deprecations",
         "bool",
         "Boolean whether to print deprecation warnings",
@@ -1075,26 +1002,36 @@ def get_property(name, default=_NoDefaultValue()):
       no default value is given or provided in _property_table.
     """
     from aiida.common.exceptions import ConfigurationError
+    import aiida.utils.logger as logger
 
     try:
         key, _, _, table_defval, _ = _property_table[name]
     except KeyError:
         raise ValueError("{} is not a recognized property".format(name))
 
+    value = None
     try:
-        try:
-            config = get_config()
-            return config[key]
-        except ConfigurationError:
-            raise KeyError("No configuration file found")
-    except KeyError:
+        config = get_config()
+        value = config[key]
+    except (KeyError, ConfigurationError):
         if isinstance(default, _NoDefaultValue):
             if isinstance(table_defval, _NoDefaultValue):
                 raise
             else:
-                return table_defval
+                value = table_defval
         else:
-            return default
+            value = default
+
+    # This translation is necessary because the logging module can only
+    # accept numerical log levels (except for the predefined ones).
+    # A side-effect of this is that:
+    # verdi devel getproperty logging.[x]_loglevel
+    # will return the corresponding integer, even though a string is stored in
+    # the config.
+    if name.startswith('logging.') and name.endswith('loglevel'):
+        value = logger.LOG_LEVELS[value]
+
+    return value
 
 
 def del_property(name):
@@ -1155,6 +1092,8 @@ def set_property(name, value):
             actual_value = bool(value)
     elif type_string == "string":
         actual_value = unicode(value)
+    elif type_string == "int":
+        actual_value = int(value)
     else:
         # Implement here other data types
         raise NotImplementedError("Type string '{}' not implemented yet".format(
@@ -1163,7 +1102,7 @@ def set_property(name, value):
     if valid_values is not None:
         if actual_value not in valid_values:
             raise ValueError("'{}' is not among the list of accepted values "
-                             "for proprety {}".format(actual_value, name))
+                             "for property {}".format(actual_value, name))
 
     try:
         config = get_config()
@@ -1186,7 +1125,6 @@ def parse_repository_uri(repository_uri):
     """
     import uritools
     parts = uritools.urisplit(repository_uri)
-
 
     if parts.scheme != u'file':
         raise ConfigurationError("The current AiiDA version supports only a "

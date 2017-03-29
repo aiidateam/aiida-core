@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.orm.calculation.job.quantumespresso.ph import PhCalculation
 from aiida.parsers.plugins.quantumespresso.raw_parser_ph import parse_raw_ph_output
 from aiida.orm.data.parameter import ParameterData

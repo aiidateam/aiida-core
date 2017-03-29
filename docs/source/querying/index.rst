@@ -1,7 +1,3 @@
-#################
-Querying in AiiDA
-#################
-
 The advantage of storing information in a database is that questions can
 be asked on the data, and an answer can be rapidly provided.
 

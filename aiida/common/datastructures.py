@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 This module defines the main data structures used by the Calculation.
 """
 from aiida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
-
-
 class CalcState(Enumerate):
     pass
-
 
 _sorted_datastates = (
     'NEW',  # just created
@@ -33,11 +34,12 @@ _sorted_datastates = (
 )
 
 # The order of states is not random: is the order of precedence.
-# However, this is never used at the moment in the code.
+# This is used to verify that calculations always procede in the correct order.
+# calc_states, instead, has a random order
 calc_states = CalcState(_sorted_datastates)
 
 
-def sort_states(list_states):
+def sort_states(list_states, use_key=False):
     """
     Given a list of state names, return a sorted list of states (the first
     is the most recent) sorted according to their logical appearance in
@@ -48,6 +50,11 @@ def sort_states(list_states):
 
     :param list_states: a list (or tuple) of state strings.
 
+    :param use_key: if True, expects that each element is not
+        just a string, but a pair (someobject, string).
+        Only string is used to sort (should be the state string),
+        and only someobject is returned in the final list.
+
     :return: a sorted list of the given data states.
 
     :raise ValueError: if any of the given states is not a valid state.
@@ -56,8 +63,13 @@ def sort_states(list_states):
         _sorted_datastates)}
 
     try:
-        list_to_sort = [(datastates_order_dict[st], st)
-                        for st in list_states]
+        if use_key:
+            list_to_sort = [(datastates_order_dict[st[1]], st[0])
+                            for st in list_states]
+        else:
+            list_to_sort = [(datastates_order_dict[st], st)
+                            for st in list_states]
+
     except KeyError as e:
         raise ValueError("At least one of the provided states is not "
                          "valid ({})".format(e.message))

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 import os
@@ -12,10 +20,6 @@ from aiida.common.utils import combomethod
 from aiida.common.links import LinkType
 from aiida.common.pluginloader import get_query_type_string
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 _NO_DEFAULT = tuple()
@@ -77,6 +81,9 @@ class AbstractNode(object):
                     name, attrs['__module__']))
 
             return newcls
+
+    # This will be set by the metaclass call
+    _logger = None
 
     # Name to be used for the Repository section
     _section_name = 'node'
@@ -394,7 +401,7 @@ class AbstractNode(object):
         :param link_type: The type of link, must be one of the enum values
                           from :class:`~aiida.common.links.LinkType`
         """
-        assert src, "You must provide a valid Node to link"
+        assert src is not None, "You must provide a valid Node to link"
 
         # Check that the label does not already exist
 

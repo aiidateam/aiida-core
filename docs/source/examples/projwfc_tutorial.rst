@@ -1,7 +1,7 @@
 .. _my-ref-to-projwfc-tutorial:
 
-Quantum Espresso Projwfc user-tutorial
-======================================
+Projwfc
+=======
 
 .. note:: The Quantum Espresso Projwfc plugin referenced below is available in
           the EPFL version.

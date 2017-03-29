@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 This file contains tests for AiiDA.
 
@@ -16,10 +24,6 @@ from aiida.common.exceptions import InternalError
 from aiida.backends.djsite.settings import settings_profile
 from aiida.backends.tests import get_db_test_list
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 tests_to_run = settings_profile.__dict__.get('aiida_test_list', None)
 if tests_to_run is None:

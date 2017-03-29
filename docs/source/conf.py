@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 #
 # aiida documentation build configuration file, created by
 # sphinx-quickstart on Wed Oct 24 11:33:37 2012.
@@ -51,9 +59,9 @@ copyright = u'2016, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulat
 # built documents.
 #
 # The short X.Y version.
-version = '0.7'
+version = '0.8'
 # The full version, including alpha/beta/rc tags.
-release = '0.7.0'
+release = '0.8.0'
 
 author = "The AiiDA team."
 

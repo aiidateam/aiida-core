@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import os
 
@@ -10,10 +18,6 @@ from aiida.common.exceptions import NotExistent, MultipleObjectsError, InvalidOp
 from aiida.orm.implementation.general.code import AbstractCode
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 
 class Code(AbstractCode):
@@ -126,12 +130,14 @@ def delete_code(code):
             "has {} output links".format(len(existing_outputs)))
     else:
         repo_folder = code._repository_folder
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
         session.begin(subtransactions=True)
         try:
             code.dbnode.delete()
-            repo_folder.erase()
             session.commit()
         except:
             session.rollback()
             raise
+    # If all went well, erase also the folder
+    repo_folder.erase()

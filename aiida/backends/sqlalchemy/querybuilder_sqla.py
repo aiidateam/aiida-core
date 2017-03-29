@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from datetime import datetime
 import aiida.backends.sqlalchemy
@@ -12,7 +20,7 @@ from sqlalchemy.sql.expression import cast
 
 
 from sqlalchemy.orm.attributes import InstrumentedAttribute
-from sqlalchemy.sql.elements import Cast
+from sqlalchemy.sql.elements import Cast, Label
 from sqlalchemy_utils.types.choice import Choice
 
 from aiida.common.exceptions import (
@@ -141,7 +149,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         self.Path = DbPath
 
     def get_session(self):
-        return aiida.backends.sqlalchemy.session
+        return aiida.backends.sqlalchemy.get_scoped_session()
 
     def modify_expansions(self, alias, expansions):
         """
@@ -308,7 +316,9 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
 
     def _get_filter_expr_from_column(self, operator, value, column):
 
-        if not isinstance(column, (Cast, InstrumentedAttribute)):
+        # Label is used because it is what is returned for the
+        # 'state' column by the hybrid_column construct
+        if not isinstance(column, (Cast, InstrumentedAttribute, Label)):
             raise TypeError(
                 'column ({}) {} is not a valid column'.format(
                     type(column), column

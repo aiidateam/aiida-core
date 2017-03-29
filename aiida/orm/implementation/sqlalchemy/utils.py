@@ -209,50 +209,71 @@ def get_db_columns(db_class):
     # and its foreignkeys
     table = db_class.metadata.tables[db_class.__tablename__]
 
-    # Here we check both columns and column properties
+    # Here we check both columns, column properties, and hybrid properties
     from sqlalchemy.orm import class_mapper
     from sqlalchemy.orm.properties import ColumnProperty
-    column_properties = [_ for _ in class_mapper(db_class).iterate_properties
-                         if isinstance(_, ColumnProperty)]
+
+    from sqlalchemy.ext.hybrid import hybrid_property
+
+    # column_properties = [_ for _ in class_mapper(db_class).iterate_properties
+    column_properties = [_ for _ in class_mapper(db_class).all_orm_descriptors
+                         if isinstance(_, ColumnProperty)
+                         or isinstance(_, hybrid_property)]
+
+    # Filter out hybrid_properties
+    hybrid_properties = []
+    for idx, prop in enumerate(column_properties):
+        if type(prop) == hybrid_property:
+            hybrid_properties.append(column_properties.pop(idx))
+
+    # Ordinary columns
     columns = table.columns
 
+    # Determine the keys (for hybrid_properties I rely on __name__)
     column_property_keys = map(lambda x: x.key, column_properties)
+    hybrid_property_keys = map(lambda x: x.__name__, hybrid_properties)
     column_keys = map(lambda x: x.key, columns)
 
     # Check whether properties contain objects that are not columns
     property_keys = [_ for _ in column_property_keys if _ not in column_keys]
 
     column_types = map(lambda x: x.type, columns.values())
-    # Assume None for the time being for property types
+
+    # Assume None for the time being for column_property and hybrid_property
+    # types
     # TODO find a way to assess the type
-    property_types = [None] * len(property_keys)
+    column_property_types = [None] * len(property_keys)
+    hybrid_property_types = [None] * len(hybrid_property_keys)
+
 
     foreign_keys = [get_foreign_key_infos(foreign_key) for foreign_key in
                     table.foreign_keys]
 
     ## merge first column_keys and than column_property_keys
-    column_names = column_keys + property_keys
-    column_types.extend(property_types)
+    column_names = column_keys + property_keys + hybrid_property_keys
+    column_types.extend(column_property_types)
+    column_types.extend(hybrid_property_types)
 
     column_python_types = []
 
     from sqlalchemy.dialects.postgresql import UUID, JSONB
 
-    for type in column_types:
+    for column_type in column_types:
         # Treat the case where there is no natural python_type
         # counterpart to the column type (specifically because of usage
         # of sqlalchemy dialect)
-        if type is not None:
+        if column_type is not None:
             try:
-                column_python_types.append(type.python_type)
+                column_python_types.append(column_type.python_type)
             except NotImplementedError:
-                if isinstance(type, UUID):
+                if isinstance(column_type, UUID):
                     column_python_types.append(unicode)
-                elif isinstance(type, JSONB):
+                elif isinstance(column_type, JSONB):
                     column_python_types.append(dict)
                 else:
                     raise NotImplementedError("Unknown type from the "
-                                              "database schema")
+                                              "database schema: {}".format(
+                        column_type))
         else:
             column_python_types.append(None)
 

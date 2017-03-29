@@ -11,7 +11,6 @@ from sqlalchemy import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
 
-
 __all__ = ['django_filter', 'get_attr']
 
 

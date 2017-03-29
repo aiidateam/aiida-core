@@ -1,4 +1,5 @@
 from aiida.restapi.translator.data import DataTranslator
+from aiida.restapi.common.exceptions import RestValidationError
 
 class StructureDataTranslator(DataTranslator):
     """
@@ -25,7 +26,7 @@ class StructureDataTranslator(DataTranslator):
 
 
     @staticmethod
-    def get_visualization_data(node):
+    def get_visualization_data(node, supercell_factors=[1, 1, 1]):
         """
 
         Returns: data in a format required by chemdoodle to visualize a
@@ -33,14 +34,52 @@ class StructureDataTranslator(DataTranslator):
 
         """
         import numpy as np
+        from itertools import product
+
+
+        # Validate supercell factors
+        if type(supercell_factors) is not list:
+            raise RestValidationError('supercell factors have to be a list of three integers')
+
+        for fac in supercell_factors:
+            if type(fac) is not int:
+                raise RestValidationError('supercell factors have to be '
+                                          'integers')
 
         # Get cell vectors and atomic position
         lattice_vectors = np.array(node.get_attr('cell'))
-        sites = node.get_attr('sites')
+        base_sites = node.get_attr('sites')
+
+        start1 = -int(supercell_factors[0] / 2)
+        start2 = -int(supercell_factors[1] / 2)
+        start3 = -int(supercell_factors[2] / 2)
+
+        stop1 = start1 + supercell_factors[0]
+        stop2 = start2 + supercell_factors[1]
+        stop3 = start3 + supercell_factors[2]
+
+        grid1 = range(start1, stop1)
+        grid2 = range(start2, stop2)
+        grid3 = range(start3, stop3)
+
+        atoms_json = []
 
         # Manual recenter of the structure
         center = (lattice_vectors[0] + lattice_vectors[1] +
                   lattice_vectors[2])/2.
+
+        for ix, iy, iz in product(grid1, grid2, grid3):
+            for base_site in base_sites:
+
+                shift = (ix*lattice_vectors[0] + iy*lattice_vectors[1] + \
+                iz*lattice_vectors[2] - center).tolist()
+
+                atoms_json.append(
+                    {'kind_name': base_site['kind_name'],
+                     'x': base_site['position'][0] + shift[0],
+                     'y': base_site['position'][1] + shift[1],
+                     'z': base_site['position'][2] + shift[2]}
+                )
 
         cell_json = {
                 "t": "UnitCell",
@@ -59,14 +98,17 @@ class StructureDataTranslator(DataTranslator):
                         + lattice_vectors[2] - center).tolist(),
             }
 
-        atoms_json = [
-                    {"l": site['kind_name'],
-                    "x": site['position'][0]-center[0],
-                    "y": site['position'][1]-center[1],
-                    "z": site['position'][2]-center[2]
-                    }
-                    for site in sites]
-
+        # # Replicate the base to create a supercell
+        #
+        #
+        # atoms_json = [
+        #             {"l": site['kind_name'],
+        #             "x": site['position'][0]-center[0],
+        #             "y": site['position'][1]-center[1],
+        #             "z": site['position'][2]-center[2]
+        #             }
+        #             for site in sites]
+        #
         # These will be passed to ChemDoodle
         json_content = {"s": [cell_json],
                         "m": [{"a": atoms_json}]

@@ -15,7 +15,6 @@ from aiida.orm.importexport import import_data
 from aiida.backends.testbase import AiidaTestCase
 
 
-
 class TestSpecificImport(AiidaTestCase):
     def test_import(self):
         from aiida.orm.querybuilder import QueryBuilder
@@ -378,6 +377,67 @@ class TestSimple(AiidaTestCase):
             export_tree([sd.dbnode], folder=folder, silent=True,
                         forbidden_licenses=crashing_filter)
 
+    def test_5(self):
+        """
+        This test checks that nodes belonging to different users are correctly
+        exported.
+        :return:
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm import DataFactory
+        from aiida.orm import load_node
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.importexport import export
+
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            StructureData = DataFactory('structure')
+            sd = StructureData()
+            sd.store()
+
+            calc = JobCalculation()
+            calc.set_computer(self.computer)
+            calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            calc.store()
+
+            n1 = Node()
+            n2 = Node()
+            endnode = Node()
+
+            calc.add_link_from(sd)
+
+            pks = [sd.pk, calc.pk]
+
+            attrs = {}
+            for pk in pks:
+                node = load_node(pk)
+                attrs[node.uuid] = dict()
+                for k in node.attrs():
+                    attrs[node.uuid][k] = node.get_attr(k)
+
+            filename = os.path.join(temp_folder, "export.tar.gz")
+
+            export([calc.dbnode], outfile=filename, silent=True)
+
+            self.clean_db()
+
+            # NOTE: it is better to load new nodes by uuid, rather than assuming
+            # that they will have the first 3 pks. In fact, a recommended policy in
+            # databases is that pk always increment, even if you've deleted elements
+            import_data(filename, silent=True)
+            for uuid in attrs.keys():
+                node = load_node(uuid)
+                # for k in node.attrs():
+                for k in attrs[uuid].keys():
+                    self.assertEquals(attrs[uuid][k], node.get_attr(k))
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+            # print temp_folder
 
 class TestComplex(AiidaTestCase):
     def test_complex_graph_import_export(self):

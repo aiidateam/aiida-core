@@ -2080,6 +2080,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
             entries_ids_to_add[
                 "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
 
+    print "=============>", entries_ids_to_add
 
     # Initial query to fire the generation of the export data
 

@@ -89,7 +89,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
         else:
             self.user = has_user
 
-        # Reqired by the calling class
+        # Required by the calling class
         self.user_email = self.user.email
 
         # Also self.computer is required by the calling class

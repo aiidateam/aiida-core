@@ -52,7 +52,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def setUpClass_method(self):
 
-        from aiida.backends import settings
         from aiida.backends.sqlalchemy import get_scoped_session
 
         if self.test_session is None:

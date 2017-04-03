@@ -28,3 +28,5 @@ class TestJobProcess(AiidaTestCase):
     def test_class_loader(self):
         cl = ClassLoader()
         PwProcess = JobProcess.build(PwCalculation)
+
+

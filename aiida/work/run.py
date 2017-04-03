@@ -11,8 +11,7 @@
 from enum import Enum
 from collections import namedtuple
 from aiida.work import util as util
-from aiida.work.defaults import parallel_engine, serial_engine
-from aiida.work.process import Process
+from aiida.work.process import Process, FunctionProcess
 import aiida.work.persistence
 
 
@@ -75,11 +74,18 @@ def legacy_calc(pk):
 
 
 def async(process_class, *args, **kwargs):
-    if util.is_workfunction(process_class):
-        kwargs['__async'] = True
-        return process_class(*args, **kwargs)
-    elif issubclass(process_class, Process):
-        return parallel_engine.submit(process_class, inputs=kwargs)
+    """
+    Run a workfunction or workchain asynchronously.  The inputs get passed
+    on to the workchain/workchain.
+
+    :param process_class: The workchain or workfunction to run asynchronously
+    :param args:
+    :param kwargs: The keyword argument pairs
+    :return: A future that represents the execution of the task.
+    :rtype: :class:`plum.process_manager.Future`
+    """
+    p = _get_process_instance(process_class, *args, **kwargs)
+    return aiida.work.globals.get_process_manager().start(p)
 
 
 def run(process_class, *args, **inputs):
@@ -87,35 +93,33 @@ def run(process_class, *args, **inputs):
     Synchronously (i.e. blocking) run a workfunction or process.
 
     :param process_class: The process class or workfunction
-    :param _attributes: Optional attributes (only for process)
     :param args: Positional arguments for a workfunction
-    :param inputs: The list of inputs
+    :param inputs: The list of keyword inputs
     """
-    if util.is_workfunction(process_class):
-        return process_class(*args, **inputs)
-    elif issubclass(process_class, Process):
-        return_pid = inputs.pop('_return_pid', False)
-        fut = serial_engine.submit(process_class, inputs)
-        result = fut.result()
-        if return_pid:
-            return result, fut.pid
-        else:
-            return result
+    # Do this here so that it doesn't enter as an input to the process
+    return_pid = inputs.pop('_return_pid', False)
+
+    p = _get_process_instance(process_class, *args, **inputs)
+    outputs = aiida.work.globals.get_process_manager().start(p).result()
+    if return_pid:
+        return outputs, p.pid
     else:
-        raise ValueError("Unsupported type supplied for process_class.")
+        return outputs
 
 
-def restart(pid):
-    cp = aiida.work.persistence.get_default().load_checkpoint(pid)
-    return serial_engine.run_from_and_block(cp)
+def restart(pid, persistence=None):
+    if persistence is None:
+        persistence = aiida.work.persistence.get_global_persistence()
+    cp = persistence.load_checkpoint(pid)
+    return Process.load(cp).start()
 
 
 def submit(process_class, _jobs_store=None, **kwargs):
-    assert not util.is_workfunction(process_class),\
+    assert not util.is_workfunction(process_class), \
         "You cannot submit a workfunction to the daemon"
 
     if _jobs_store is None:
-        _jobs_store = aiida.work.persistence.get_default()
+        _jobs_store = aiida.work.persistence.get_global_persistence()
 
     pid = queue_up(process_class, kwargs, _jobs_store)
     return RunningInfo(RunningType.PROCESS, pid)
@@ -135,12 +139,33 @@ def queue_up(process_class, inputs, storage):
 
     # The strategy for queueing up is this:
     # 1) Create the process which will set up all the provenance info, pid, etc
-    proc = process_class.new_instance(inputs)
-    pid = proc.pid
+    proc = process_class.new(inputs)
     # 2) Save the instance state of the Process
     storage.save(proc)
-    # 3) Ask it to stop itself
-    proc.stop()
-    proc.run_until_complete()
-    del proc
-    return pid
+    return proc.pid
+
+
+def _get_process_instance(process_class, *args, **kwargs):
+    """
+    Get a Process instance for a workchain or workfunction
+
+    :param process_class: The workchain or workfunction to instantiate
+    :param args: The positional arguments (only for workfunctions)
+    :param kwargs: The keyword argument pairs
+    :return: The process instance
+    :rtype: :class:`aiida.process.Process`
+    """
+
+    if isinstance(process_class, Process):
+        # Nothing to do
+        return process_class
+    elif util.is_workfunction(process_class):
+        wf_class = FunctionProcess.build(process_class._original, **kwargs)
+        inputs = wf_class.create_inputs(*args, **kwargs)
+        return wf_class.new(inputs=inputs)
+    elif issubclass(process_class, Process):
+        # No need to consider args as a Process can't deal with positional
+        # arguments anyway
+        return process_class.new(inputs=kwargs)
+    else:
+        raise TypeError("Unknown type for process_class '{}'".format(process_class))

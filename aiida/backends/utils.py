@@ -13,11 +13,9 @@ from __future__ import absolute_import
 from aiida.backends import settings
 from aiida.backends.profile import load_profile, BACKEND_SQLA, BACKEND_DJANGO
 from aiida.common.exceptions import (
-        ConfigurationError, AuthenticationError,
-        InvalidOperation
-    )
-
-
+    ConfigurationError, AuthenticationError,
+    InvalidOperation
+)
 
 
 
@@ -53,11 +51,11 @@ def load_dbenv(process=None, profile=None, *args, **kwargs):
         # Maybe schema version should be also checked for SQLAlchemy version.
         from aiida.backends.sqlalchemy.utils \
             import load_dbenv as load_dbenv_sqlalchemy
-        return load_dbenv_sqlalchemy(
+        load_dbenv_sqlalchemy(
             process=process, profile=profile, *args, **kwargs)
     elif settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.utils import load_dbenv as load_dbenv_django
-        return load_dbenv_django(
+        load_dbenv_django(
             process=process, profile=profile, *args, **kwargs)
     else:
         raise ConfigurationError("Invalid settings.BACKEND: {}".format(
@@ -104,7 +102,6 @@ def get_log_messages(*args, **kwargs):
 
 
 def get_authinfo(computer, aiidauser):
-
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
         from django.core.exceptions import (ObjectDoesNotExist,
@@ -301,8 +298,7 @@ def _get_column(colname, alias):
             "\n{} is not a column of {}\n"
             "Valid columns are:\n"
             "{}".format(
-                    colname, alias,
-                    '\n'.join(alias._sa_class_manager.mapper.c.keys())
-                )
+                colname, alias,
+                '\n'.join(alias._sa_class_manager.mapper.c.keys())
+            )
         )
-

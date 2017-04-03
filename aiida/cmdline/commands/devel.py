@@ -369,6 +369,8 @@ class Devel(VerdiCommandWithSubcommands):
         Call all the functions that the daemon would call if running once and
         return.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.daemon.tasks import manual_tick_all
         manual_tick_all()
 

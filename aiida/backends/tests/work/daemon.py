@@ -10,10 +10,12 @@
 from aiida.backends.testbase import AiidaTestCase
 import tempfile
 from shutil import rmtree
+import unittest
 
-from plum.wait_ons import checkpoint
+from plum.wait_ons import Checkpoint
 
 from aiida.work.persistence import Persistence
+from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.base import get_true_node
 import aiida.work.daemon as daemon
 from aiida.work.process import Process
@@ -23,28 +25,34 @@ from aiida.common.lang import override
 from aiida.orm import load_node
 import aiida.work.util as util
 from aiida.work.test_utils import DummyProcess, ExceptionProcess
+import aiida.work.daemon as work_daemon
+from aiida.work.util import CalculationHeartbeat
 
 
 class ProcessEventsTester(Process):
-    EVENTS = ["create", "run", "continue_", "finish", "emitted", "stop",
-              "destroy", ]
+    EVENTS = ["create", "start", "run", "wait", "resume", "finish", "emitted",
+              "stop", "failed", ]
 
     @classmethod
     def define(cls, spec):
         super(ProcessEventsTester, cls).define(spec)
-        for label in ["create", "run", "wait", "continue_",
-                      "finish", "emitted", "stop", "destroy"]:
+        for label in ["create", "start", "run", "wait", "resume",
+                      "finish", "emitted", "stop"]:
             spec.optional_output(label)
 
-    def __init__(self):
-        super(ProcessEventsTester, self).__init__()
+    def __init__(self, inputs, pid, logger=None):
+        super(ProcessEventsTester, self).__init__(inputs, pid, logger)
         self._emitted = False
 
     @override
-    def on_create(self, pid, inputs, saved_instance_state):
-        super(ProcessEventsTester, self).on_create(
-            pid, inputs, saved_instance_state)
+    def on_create(self, saved_instance_state):
+        super(ProcessEventsTester, self).on_create(saved_instance_state)
         self.out("create", get_true_node())
+
+    @override
+    def on_start(self):
+        super(ProcessEventsTester, self).on_start()
+        self.out("start", get_true_node())
 
     @override
     def on_run(self):
@@ -52,22 +60,22 @@ class ProcessEventsTester(Process):
         self.out("run", get_true_node())
 
     @override
-    def _on_output_emitted(self, output_port, value, dynamic):
-        super(ProcessEventsTester, self)._on_output_emitted(
+    def on_output_emitted(self, output_port, value, dynamic):
+        super(ProcessEventsTester, self).on_output_emitted(
             output_port, value, dynamic)
         if not self._emitted:
             self._emitted = True
             self.out("emitted", get_true_node())
 
     @override
-    def on_wait(self, wait_on):
-        super(ProcessEventsTester, self).on_wait(wait_on)
+    def on_wait(self):
+        super(ProcessEventsTester, self).on_wait(self.get_waiting_on())
         self.out("wait", get_true_node())
 
     @override
-    def on_continue(self, wait_on):
-        super(ProcessEventsTester, self).on_continue(wait_on)
-        self.out("continue_", get_true_node())
+    def on_resume(self):
+        super(ProcessEventsTester, self).on_resume()
+        self.out("resume", get_true_node())
 
     @override
     def on_finish(self):
@@ -80,13 +88,8 @@ class ProcessEventsTester(Process):
         self.out("stop", get_true_node())
 
     @override
-    def on_destroy(self):
-        super(ProcessEventsTester, self).on_destroy()
-        self.out("destroy", get_true_node())
-
-    @override
     def _run(self):
-        return checkpoint(self.finish)
+        return Checkpoint(), self.finish
 
     def finish(self, wait_on):
         pass
@@ -99,13 +102,13 @@ class FailCreateFromSavedStateProcess(DummyProcess):
     """
 
     @override
-    def on_create(self, pid, inputs, saved_instance_state):
-        super(FailCreateFromSavedStateProcess, self).on_create(
-            pid, inputs, saved_instance_state)
+    def on_create(self, saved_instance_state):
+        super(FailCreateFromSavedStateProcess, self).on_create(saved_instance_state)
         if saved_instance_state is not None:
             raise RuntimeError()
 
 
+@unittest.skip("Moving to new daemon")
 class TestDaemon(AiidaTestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
@@ -129,7 +132,7 @@ class TestDaemon(AiidaTestCase):
         rinfo = submit(ProcessEventsTester, _jobs_store=self.storage)
         # Tick the engine a number of times or until there is no more work
         i = 0
-        while daemon.tick_workflow_engine(self.storage, print_exceptions=False):
+        while daemon.launch_pending_jobs(self.storage):
             self.assertLess(i, 10, "Engine not done after 10 ticks")
             i += 1
         self.assertTrue(registry.has_finished(rinfo.pid))
@@ -140,7 +143,7 @@ class TestDaemon(AiidaTestCase):
         submit(ExceptionProcess, _jobs_store=self.storage)
         submit(DummyProcess, _jobs_store=self.storage)
 
-        self.assertFalse(daemon.tick_workflow_engine(self.storage, print_exceptions=False))
+        self.assertFalse(daemon.launch_pending_jobs(self.storage))
 
     def test_create_fail(self):
         registry = ProcessRegistry()
@@ -150,9 +153,46 @@ class TestDaemon(AiidaTestCase):
 
         # Tick the engine a number of times or until there is no more work
         i = 0
-        while daemon.tick_workflow_engine(self.storage, print_exceptions=False):
+        while daemon.launch_pending_jobs(self.storage):
             self.assertLess(i, 10, "Engine not done after 10 ticks")
             i += 1
 
         self.assertTrue(registry.has_finished(dp_rinfo.pid))
         self.assertFalse(registry.has_finished(fail_rinfo.pid))
+
+
+class TestJobCalculationDaemon(AiidaTestCase):
+    def test_launch_pending_submitted(self):
+        num_at_start = len(work_daemon.get_all_pending_job_calculations())
+
+        # Create the calclation
+        calc_params = {
+            'computer': self.computer,
+            'resources': {'num_machines': 1,
+                          'num_mpiprocs_per_machine': 1}
+        }
+        c = JobCalculation(**calc_params)
+        c.store()
+        c.submit()
+
+        self.assertIsNone(c.get_attr(CalculationHeartbeat.HEARTBEAT_EXPIRES, None))
+        pending = work_daemon.get_all_pending_job_calculations()
+        self.assertEqual(len(pending), num_at_start + 1)
+        self.assertIn(c.pk, [p.pk for p in pending])
+
+    def test_launch_pending_expired(self):
+        num_at_start = len(work_daemon.get_all_pending_job_calculations())
+
+        calc_params = {
+            'computer': self.computer,
+            'resources': {'num_machines': 1,
+                          'num_mpiprocs_per_machine': 1}
+        }
+        c = JobCalculation(**calc_params)
+        c._set_attr(CalculationHeartbeat.HEARTBEAT_EXPIRES, 0)
+        c.store()
+        c.submit()
+
+        pending = work_daemon.get_all_pending_job_calculations()
+        self.assertEqual(len(pending), num_at_start + 1)
+        self.assertIn(c.pk, [p.pk for p in pending])

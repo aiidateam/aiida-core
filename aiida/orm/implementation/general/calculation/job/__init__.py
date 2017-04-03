@@ -632,7 +632,9 @@ class AbstractJobCalculation(object):
         Determine if the calculation is finished for whatever reason.
         This may be because it finished successfully or because of a failure.
 
-        :return: True if the job has finished running, False otherwise.
+        This is equivalent to calling return has_finished_ok() or has_failed()
+
+        :return: True if the calculation has finished running, False otherwise.
         :rtype: bool
         """
         return self.has_finished_ok() or self.has_failed()

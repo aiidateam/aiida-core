@@ -28,7 +28,6 @@ from aiida.work.workfunction import workfunction
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
 
-
 PwProcess = PwCalculation.process()
 
 
@@ -105,10 +104,10 @@ def generate_scf_input_params(structure, codename, pseudo_family):
     parameters_dict = {
         "CONTROL": {"calculation": "scf",
                     "tstress": True,  # Important that this stays to get stress
-                    "tprnfor": True,},
+                    "tprnfor": True, },
         "SYSTEM": {"ecutwfc": 30.,
-                   "ecutrho": 200.,},
-        "ELECTRONS": {"conv_thr": 1.e-6,}
+                   "ecutrho": 200., },
+        "ELECTRONS": {"conv_thr": 1.e-6, }
     }
     ParameterData = DataFactory("parameter")
     inputs.parameters = ParameterData(dict=parameters_dict)
@@ -145,7 +144,7 @@ class EquationOfState(WorkChain):
 
             # Launch the code
             pid = self.submit(PwProcess, inputs).pid
-            #print scale.value, future.pid
+            # print scale.value, future.pid
             # Store the future
             calcs["s_{}".format(scale)] = pid
             scale = scale.value + self.inputs.delta.value
@@ -197,7 +196,7 @@ class EquationOfState2(WorkChain):
         return ToContext(result=pid)
 
     def print_result(self):
-        print self.ctx.scales[self.ctx.i],\
+        print self.ctx.scales[self.ctx.i], \
             self.ctx.result['output_parameters'].dict.energy
 
 
@@ -210,7 +209,7 @@ if __name__ == "__main__":
     parser.add_argument('--range', type=str, dest='range',
                         help='The scale range of the equation of states '
                              'calculation written as [start]:[end]:[delta]',
-                             default='0.96:1.04:0.02')
+                        default='0.96:1.04:0.02')
     parser.add_argument('--pseudo', type=str, dest='pseudo',
                         help='The pseudopotential family', required=True)
     parser.add_argument('--code', type=str, dest='code',
@@ -226,5 +225,3 @@ if __name__ == "__main__":
     submit(EquationOfState, structure=load_node(args.structure_pk),
            start=Float(start), end=Float(end), delta=Float(delta),
            code=Str(args.code), pseudo_family=Str(args.pseudo))
-
-

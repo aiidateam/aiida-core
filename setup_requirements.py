@@ -34,8 +34,8 @@ install_requires = [
     'supervisor==3.1.3',
     'meld3==1.0.0',
     'numpy==1.12.0',
-    'plumpy==0.7.6',
-    'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
+    'plumpy>=0.9.0',
+    'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests
     'SQLAlchemy-Utils==0.31.2',
     'ujson==1.35',
     'enum34==1.1.2',
@@ -123,3 +123,4 @@ extras_require = {
         'mock',
     ]
 }
+

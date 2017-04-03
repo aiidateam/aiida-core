@@ -10,20 +10,20 @@
 
 from abc import ABCMeta, abstractmethod
 import inspect
-from aiida.work.defaults import registry
+from collections import namedtuple
+from plum.wait_ons import Checkpoint, WaitOnAll
+from plum.wait import WaitOn
+from plum.persistence.bundle import Bundle
+from plum.process_manager import Future
+from aiida.work.globals import REGISTRY
 from aiida.work.run import RunningType, RunningInfo
 from aiida.work.process import Process, ProcessSpec
-from aiida.work.legacy.wait_on import WaitOnWorkflow
+from aiida.work.legacy.wait_on import WaitOnProcess, WaitOnWorkflow
+from aiida.work.util import WithHeartbeat
 from aiida.common.lang import override
 from aiida.common.utils import get_class_string, get_object_string, \
     get_object_from_string
 from aiida.orm import load_node, load_workflow
-from plum.wait_ons import Checkpoint, WaitOnAll, WaitOnProcess
-from plum.wait import WaitOn
-from plum.persistence.bundle import Bundle
-from collections import namedtuple
-from plum.engine.execution_engine import Future
-
 
 
 class _WorkChainSpec(ProcessSpec):
@@ -53,7 +53,7 @@ class _WorkChainSpec(ProcessSpec):
         return self._outline
 
 
-class WorkChain(Process):
+class WorkChain(Process, WithHeartbeat):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
@@ -124,8 +124,8 @@ class WorkChain(Process):
             for k, v in self._content.iteritems():
                 out_state[k] = v
 
-    def __init__(self):
-        super(WorkChain, self).__init__()
+    def __init__(self, inputs, pid, logger=None):
+        super(WorkChain, self).__init__(inputs, pid, logger)
         self._context = None
         self._stepper = None
         self._barriers = []
@@ -198,15 +198,13 @@ class WorkChain(Process):
                     i.on_last_step_finished(self)
 
             if self._barriers:
-                return WaitOnAll(self._do_step.__name__, self._barriers)
+                return WaitOnAll(self._barriers), self._do_step
             else:
-                return Checkpoint(self._do_step.__name__)
+                return Checkpoint(), self._do_step
 
-    # Internal messages #################################
     @override
-    def on_create(self, pid, inputs, saved_instance_state):
-        super(WorkChain, self).on_create(
-            pid, inputs, saved_instance_state)
+    def on_create(self, saved_instance_state):
+        super(WorkChain, self).on_create(saved_instance_state)
 
         if saved_instance_state is None:
             self._context = self.Context()
@@ -231,7 +229,6 @@ class WorkChain(Process):
                                   b in saved_instance_state[self._BARRIERS]]
             except KeyError:
                 pass
-                #####################################################
 
 
 class Interstep(object):
@@ -286,7 +283,7 @@ class ToContext(Interstep):
         if running_info.type is RunningType.PROCESS:
             return Calc(running_info)
         elif running_info.type is RunningType.LEGACY_CALC or \
-                running_info.type is RunningType.LEGACY_WORKFLOW:
+                        running_info.type is RunningType.LEGACY_WORKFLOW:
             return Legacy(running_info)
         else:
             raise ValueError("Unknown running type '{}'".format(running_info.type))
@@ -325,13 +322,15 @@ class ToContext(Interstep):
         rinfo = action.running_info
         if rinfo.type is RunningType.LEGACY_CALC \
                 or rinfo.type is RunningType.PROCESS:
-            return WaitOnProcess(None, rinfo.pid)
+            return WaitOnProcess(rinfo.pid)
         elif rinfo.type is RunningType.LEGACY_WORKFLOW:
-            return WaitOnWorkflow(None, rinfo.pid)
+            return WaitOnWorkflow(rinfo.pid)
+        else:
+            raise ValueError("Unknown action '{}'".format(action))
 
 
 def _get_proc_outputs_from_registry(pid):
-    return registry.get_outputs(pid)
+    return REGISTRY.get_outputs(pid)
 
 
 def _get_wf_outputs(pk):
@@ -349,7 +348,7 @@ def Wf(running_info):
 
 def Legacy(object):
     if object.type == RunningType.LEGACY_CALC or \
-     object.type == RunningType.PROCESS:
+                    object.type == RunningType.PROCESS:
         return Calc(object)
     elif object.type is RunningType.LEGACY_WORKFLOW:
         return Wf(object)

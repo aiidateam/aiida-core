@@ -9,7 +9,6 @@
 ###########################################################################
 
 import collections
-
 from aiida.common.utils import classproperty
 from aiida.common.links import LinkType
 from aiida.orm.mixins import SealableWithUpdatableAttributes
@@ -216,6 +215,10 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
             raise AttributeError("'{}' object has no attribute '{}'".format(
                 self.__class__.__name__, name))
 
+    @property
+    def called(self):
+        return self.get_outputs(link_type=LinkType.CALL)
+
     def get_linkname(self, link, *args, **kwargs):
         """
         Return the linkname used for a given input link
@@ -299,6 +302,15 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         return super(AbstractCalculation, self).add_link_from(
             src, label, link_type)
 
+    def get_code(self):
+        """
+        Return the code for this calculation, or None if the code
+        was not set.
+        """
+        from aiida.orm.code import Code
+        return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
+            self._use_methods['code']['linkname'], None)
+
     def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
         """
         Replace a link.
@@ -315,12 +327,3 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
 
         return super(AbstractCalculation, self)._replace_link_from(
             src, label, link_type)
-
-    def get_code(self):
-        """
-        Return the code for this calculation, or None if the code
-        was not set.
-        """
-        from aiida.orm.code import Code
-        return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
-            self._use_methods['code']['linkname'], None)

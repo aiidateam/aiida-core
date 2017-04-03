@@ -9,7 +9,9 @@
 ###########################################################################
 
 
+from plum.wait_ons import WaitForSignal
 from aiida.work.process import Process
+from aiida.work import WorkChain
 
 
 class DummyProcess(Process):
@@ -43,3 +45,17 @@ class BadOutput(Process):
 class ExceptionProcess(Process):
     def _run(self):
         raise RuntimeError("CRASH")
+
+
+class WaitChain(Process):
+    """
+    This waits until it is asked to continue
+    """
+    def _run(self):
+        return WaitForSignal(), self.s2
+
+    def s2(self):
+        pass
+
+    def continue_(self):
+        self.get_waiting_on().continue_()

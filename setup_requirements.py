@@ -18,7 +18,7 @@ install_requires = [
     'django_extensions==1.5',
     'tzlocal==1.3',
     'pytz==2014.10',
-    'future==0.16',
+    'six==1.10',
     # We need for the time being to stay with an old version
     # of celery, including the versions of the AMQP libraries below,
     # because the support for a SQLA broker has been dropped in later

@@ -7,8 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from future.utils import raise_from
+import sys
 
+from six import reraise
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import (
@@ -1837,7 +1838,7 @@ class DbWorkflowData(m.Model):
                 self.value_type = wf_data_value_types.JSON
                 self.save()
         except Exception as exc:
-            raise_from(ValueError("Cannot set the parameter {}".format(self.name)), exc)
+            reraise(ValueError, "Cannot set the parameter {}".format(self.name), sys.exc_info()[2])
 
     def get_value(self):
         import json

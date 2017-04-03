@@ -327,6 +327,17 @@ class Process(plum.process.Process):
         # Out of options
         return None
 
+    @protected
+    def report(self, msg, *args, **kwargs):
+        """
+        Log a message to the logger, which should get saved to the
+        database through the attached DbLogHandler. The class name and function
+        name of the caller are prepended to the given message
+        """
+        message = '[{}|{}|{}]: {}'.format(self.calc.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
+        self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
+
+
     def _create_and_setup_db_record(self):
         self._calc = self.get_or_create_db_record()
         self._setup_db_record()

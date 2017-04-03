@@ -28,6 +28,7 @@ from aiida.work.run import legacy_workflow
 import aiida.work.globals
 from aiida.daemon.workflowmanager import execute_steps
 
+
 PwProcess = PwCalculation.process()
 
 
@@ -238,7 +239,8 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        finished_steps = self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
+        finished_steps = \
+            self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -246,7 +248,8 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
+        finished_steps = \
+            self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -254,7 +257,8 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
+        finished_steps = \
+            self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:

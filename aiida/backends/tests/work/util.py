@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import time
 from aiida.backends.testbase import AiidaTestCase
 
 from aiida.work.process import Process
@@ -15,7 +16,8 @@ from aiida.work.workfunction import workfunction
 from aiida.common.lang import override
 from aiida.work.run import async
 from aiida.orm.data.base import Int
-from aiida.work.util import ProcessStack
+from aiida.orm.calculation import Calculation
+from aiida.work.util import ProcessStack, CalculationHeartbeat, HeartbeatError
 
 
 
@@ -70,6 +72,43 @@ class TestProcessRegistry(AiidaTestCase):
 
         self.assertEqual(out['pid'], future.pid)
         self.assertEqual(out['node_pk'], future.pid)
+
+
+class TestCalculationHeartbeat(AiidaTestCase):
+    def setUp(self):
+        super(TestCalculationHeartbeat, self).setUp()
+        self.lock_lost = False
+
+    def test_start_stop(self):
+        c = Calculation()
+        heartbeat = CalculationHeartbeat(c)
+        heartbeat.start()
+        heartbeat.stop()
+
+    def test_acquire_locked(self):
+        c = Calculation()
+        # Start one heartbeat
+        with CalculationHeartbeat(c):
+            # Try starting another on the same calculation
+            with self.assertRaises(HeartbeatError):
+                with CalculationHeartbeat(c):
+                    pass
+
+    def test_heartbeat_lost(self):
+        c = Calculation()
+        # Start a heartbeat
+        with CalculationHeartbeat(c, 0.5, lost_callback=self._lock_lost) as heartbeat:
+            # Now steal its lock and wait for it to try and update the heartbeat
+            c._set_attr(CalculationHeartbeat.HEARTBEAT_TAG, 0)
+            time.sleep(1)
+            self.assertTrue(self.lock_lost)
+
+    def _lock_lost(self, calc):
+        self.lock_lost = True
+
+
+
+
 
 
 

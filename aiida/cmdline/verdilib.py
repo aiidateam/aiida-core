@@ -518,8 +518,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 load_dbenv()
 
             from aiida.backends.sqlalchemy.models.base import Base
-            from aiida.backends.sqlalchemy.utils import (get_engine,
-                                                            install_tc)
+            from aiida.backends.sqlalchemy.utils import install_tc, reset_session
             from aiida.common.setup import get_profile_config
 
             # This check should be done more properly
@@ -552,7 +551,9 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 DbWorkflow, DbWorkflowData, DbWorkflowStep)
             from aiida.backends.sqlalchemy.models.settings import DbSetting
 
-            connection = get_engine(get_profile_config(gprofile))
+            reset_session(get_profile_config(gprofile))
+            from aiida.backends.sqlalchemy import get_scoped_session
+            connection = get_scoped_session().connection()
             Base.metadata.create_all(connection)
             install_tc(connection)
 

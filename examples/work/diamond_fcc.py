@@ -13,12 +13,9 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-import ase
-from aiida.work.run import async
 from aiida.orm import DataFactory
 from aiida.orm.data.base import Float, Str
 from aiida.work.run import async
-from aiida.work.defaults import registry
 from aiida.work.util import ProcessStack
 from aiida.work.workfunction import workfunction
 from examples.work.common import run_scf

@@ -15,7 +15,6 @@ from aiida.common.links import LinkType
 
 
 class Sealable(object):
-
     # The name of the attribute to indicate if the node is sealed or not.
     SEALED_KEY = '_sealed'
 
@@ -65,7 +64,8 @@ class SealableWithUpdatableAttributes(Sealable):
         """
         if self.is_sealed and key not in self._updatable_attributes:
             raise ModificationNotAllowed(
-                "Cannot change the attributes of a sealed calculation.")
+                "Cannot change the attributes of a sealed calculation.\n"
+                "Attempted to set '{}'".format(key))
         super(SealableWithUpdatableAttributes, self)._set_attr(key, value)
 
     @override
@@ -79,15 +79,8 @@ class SealableWithUpdatableAttributes(Sealable):
         """
         if self.is_sealed and key not in self._updatable_attributes:
             raise ModificationNotAllowed(
-                "Cannot delete the attributes of a sealed calculation.")
-        super(SealableWithUpdatableAttributes, self)._del_attr(key)
-
-
-    @override
-    def _del_attr(self, key):
-        if self.is_sealed and key not in self._updatable_attributes:
-            raise ModificationNotAllowed(
-                "Cannot delete an attribute of a sealed calculation node")
+                "Cannot delete the attributes of a sealed calculation.\n"
+                "Attempted to delete '{}'".format(key))
         super(SealableWithUpdatableAttributes, self)._del_attr(key)
 
     def iter_updatable_attrs(self):

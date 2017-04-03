@@ -19,6 +19,10 @@ import plum.process
 from plum.process_monitor import MONITOR
 import plum.process_monitor
 
+import aiida.orm
+from aiida.orm.data import Data
+from aiida.orm import load_node
+from aiida.orm.implementation.general.calculation.work import WorkCalculation
 import voluptuous
 from abc import ABCMeta
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
@@ -26,9 +30,11 @@ import aiida.common.exceptions as exceptions
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
-from aiida.work.defaults import class_loader
+from aiida.work.globals import class_loader
 import aiida.work.util
 from aiida.work.util import PROCESS_LABEL_ATTR, get_or_create_output_group
+from aiida.work.globals import class_loader
+from aiida.work.util import ProcessStack, PROCESS_LABEL_ATTR
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
 from aiida import LOG_LEVEL_REPORT
@@ -131,7 +137,6 @@ class Process(plum.process.Process):
 
     @classmethod
     def define(cls, spec):
-        import aiida.orm
         super(Process, cls).define(spec)
 
         spec.input("_store_provenance", valid_type=bool, default=True,
@@ -147,16 +152,12 @@ class Process(plum.process.Process):
         return cls.spec().get_inputs_template()
 
     @classmethod
-    def _create_default_exec_engine(cls):
-        from aiida.work.defaults import serial_engine
-        return serial_engine
-
-    @classmethod
-    def create_db_record(cls):
+    def get_or_create_db_record(cls):
         """
         Create a database calculation node that represents what happened in
         this process.
-        :return:
+        :return: A calculation
+        :rtype: :class:`Calculation`
         """
         from aiida.orm.calculation.work import WorkCalculation
         calc = WorkCalculation()
@@ -164,8 +165,18 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self):
-        super(Process, self).__init__()
+    @classmethod
+    def load_copy(cls, bundle):
+        bundle['COPY'] = True
+        return cls.load(bundle)
+
+    @classmethod
+    def retry(cls, bundle):
+        bundle['COPY'] = True
+        return cls.restart(bundle)
+
+    def __init__(self, inputs, pid, logger=None):
+        super(Process, self).__init__(inputs, pid, logger)
         self._calc = None
         self._parent_pid = None
 
@@ -200,46 +211,73 @@ class Process(plum.process.Process):
         else:
             return super(Process, self).out(output_port, value)
 
-    # Messages #####################################################
+    # region Process messages
     @override
-    def on_create(self, pid, inputs, saved_instance_state):
-        from aiida.orm import load_node
-        super(Process, self).on_create(pid, inputs, saved_instance_state)
+    def on_create(self, saved_instance_state):
+        super(Process, self).on_create(saved_instance_state)
 
         if saved_instance_state is None:
             # Get the parent from the top of the process stack
             try:
-                self._parent_pid = aiida.work.util.ProcessStack.top().pid
+                self._parent_pid = ProcessStack.top().pid
             except IndexError:
                 pass
 
             self._pid = self._create_and_setup_db_record()
-        else:
-            if self.SaveKeys.CALC_ID.value in saved_instance_state:
-                self._calc = load_node(saved_instance_state[self.SaveKeys.CALC_ID.value])
-                self._pid = self.calc.pk
-            else:
-                self._pid = self._create_and_setup_db_record()
 
-            if self.SaveKeys.PARENT_CALC_PID.value in saved_instance_state:
-                self._parent_pid = saved_instance_state[
-                    self.SaveKeys.PARENT_CALC_PID.value]
-
-        if self._logger is None:
+        if self.logger is None:
             self.set_logger(self.calc.logger)
 
     @override
-    def on_start(self):
-        super(Process, self).on_start()
-        aiida.work.util.ProcessStack.push(self)
+    def load_instance_state(self, bundle):
+        super(Process, self).load_instance_state(bundle)
+
+        is_copy = bundle.get('COPY', False)
+
+        if self.SaveKeys.CALC_ID.value in bundle:
+            if is_copy:
+                old = load_node(bundle[self.SaveKeys.CALC_ID.value])
+                self._calc = old.copy()
+                self._calc.store()
+            else:
+                self._calc = load_node(bundle[self.SaveKeys.CALC_ID.value])
+
+            self._pid = self.calc.pk
+        else:
+            self._pid = self._create_and_setup_db_record()
+
+        if self.SaveKeys.PARENT_CALC_PID.value in bundle:
+            self._parent_pid = bundle[
+                self.SaveKeys.PARENT_CALC_PID.value]
+
+    @override
+    def on_playing(self):
+        super(Process, self).on_playing()
+        ProcessStack.push(self)
+
+    @override
+    def on_done_playing(self):
+        super(Process, self).on_done_playing()
+        ProcessStack.pop(self)
 
     @override
     def on_finish(self):
         super(Process, self).on_finish()
+        self.calc._set_attr(WorkCalculation.FINISHED_KEY, True)
+
+    @override
+    def on_stop(self):
+        super(Process, self).on_stop()
         self.calc.seal()
 
     @override
-    def _on_output_emitted(self, output_port, value, dynamic):
+    def on_fail(self):
+        super(Process, self).on_fail()
+        self.calc._set_attr(WorkCalculation.FAILED_KEY, self.get_exception().message)
+        self.calc.seal()
+
+    @override
+    def on_output_emitted(self, output_port, value, dynamic):
         """
         The process has emitted a value on the given output port.
 
@@ -248,18 +286,20 @@ class Process(plum.process.Process):
         :param dynamic: Was the output port a dynamic one (i.e. not known
         beforehand?)
         """
-        from aiida.orm import Data
-        super(Process, self)._on_output_emitted(output_port, value, dynamic)
-        assert isinstance(value, Data), \
-            "Values outputted from process must be instances of AiiDA Data" \
-            "types.  Got: {}".format(value.__class__)
+        super(Process, self).on_output_emitted(output_port, value, dynamic)
+        if not isinstance(value, Data):
+            raise TypeError(
+                "Values outputted from process must be instances of AiiDA Data" \
+                "types.  Got: {}".format(value.__class__)
+            )
 
         if not value.is_stored:
             value.add_link_from(self.calc, output_port, LinkType.CREATE)
             if self.inputs._store_provenance:
                 value.store()
         value.add_link_from(self.calc, output_port, LinkType.RETURN)
-    #################################################################
+
+    # end region
 
     @override
     def do_run(self):
@@ -269,12 +309,11 @@ class Process(plum.process.Process):
 
     @protected
     def get_parent_calc(self):
-        from aiida.orm import load_node
         # Can't get it if we don't know our parent
         if self._parent_pid is None:
             return None
 
-        # First try and get the process from the registry in case it is running
+        # First try and get the process from the monitor in case it is running
         try:
             return MONITOR.get_process(self._parent_pid).calc
         except ValueError:
@@ -299,17 +338,9 @@ class Process(plum.process.Process):
         message = '[{}|{}|{}]: {}'.format(self.calc.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
 
-    # @override
-    # def create_input_args(self, inputs):
-    #     parsed = super(Process, self).create_input_args(inputs)
-    #     # Now remove any that have a leading underscore
-    #     for name in parsed.keys():
-    #         if name.startswith('_'):
-    #             del parsed[name]
-    #     return parsed
 
     def _create_and_setup_db_record(self):
-        self._calc = self.create_db_record()
+        self._calc = self.get_or_create_db_record()
         self._setup_db_record()
         if self.inputs._store_provenance:
             self.calc.store_all()
@@ -405,7 +436,7 @@ class FunctionProcess(Process):
         :param kwargs: Optional keyword arguments that will become additional
             inputs to the process
         :return: A Process class that represents the function
-        :rtype: :class:`Process`
+        :rtype: :class:`FunctionProcess`
         """
         import inspect
         from aiida.orm.data import Data
@@ -442,6 +473,15 @@ class FunctionProcess(Process):
                      '_func_args': args})
 
     @classmethod
+    def create_inputs(cls, *args, **kwargs):
+        ins = {}
+        if kwargs:
+            ins.update(kwargs)
+        if args:
+            ins.update(cls.args_to_dict(*args))
+        return ins
+
+    @classmethod
     def args_to_dict(cls, *args):
         """
         Create an input dictionary (i.e. label: value) from supplied args.
@@ -453,8 +493,8 @@ class FunctionProcess(Process):
         return dict(zip(cls._func_args, args))
 
     @override
-    def _setup_db_record(self):
-        super(FunctionProcess, self)._setup_db_record()
+    def setup_db_record(self):
+        super(FunctionProcess, self).setup_db_record()
         add_source_info(self.calc, self._func)
         # Save the name of the function
         self.calc._set_attr(PROCESS_LABEL_ATTR, self._func.__name__)
@@ -477,32 +517,4 @@ class FunctionProcess(Process):
                 raise TypeError(
                     "Workfunction returned unsupported type '{}'\n"
                     "Must be a Data type or a Mapping of string => Data".
-                    format(outs.__class__))
-
-
-class _ProcessFinaliser(plum.process_monitor.ProcessMonitorListener):
-    """
-    Take care of finalising a process when it finishes either through successful
-    completion or because of a failure caused by an exception.
-    """
-    def __init__(self):
-        MONITOR.add_monitor_listener(self)
-
-    @override
-    def on_monitored_process_destroying(self, process):
-        aiida.work.util.ProcessStack.pop(process)
-
-    @override
-    def on_monitored_process_failed(self, pid):
-        from aiida.orm import load_node
-        try:
-            calc_node = load_node(pk=pid)
-        except ValueError:
-            pass
-        else:
-            calc_node.seal()
-        aiida.work.util.ProcessStack.pop(pid=pid)
-
-
-# Have a global singleton to take care of finalising all processes
-_finaliser = _ProcessFinaliser()
+                        format(outs.__class__))

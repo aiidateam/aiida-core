@@ -8,10 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import sys
-import click
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+import click
+import sys
 from tabulate import tabulate
+import threading
+from aiida.utils.ascii_vis import build_tree
 
 
 
@@ -20,36 +23,132 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 class Work(VerdiCommandWithSubcommands):
     """
-    Manage the AiiDA worflow2 manager
+    Manage the (new) AiiDA workflows
     """
 
     def __init__(self):
         self.valid_subcommands = {
+            self.abort.__name__: (self.abort, self.complete_none),
             self.list.__name__: (self.list, self.complete_none),
+            self.pause.__name__: (self.pause, self.complete_none),
+            self.play.__name__: (self.play, self.complete_none),
             self.report.__name__: (self.report, self.complete_none),
+            self.status.__name__: (self.status, self.complete_none),
             self.tree.__name__: (self.tree, self.complete_none),
             self.checkpoint.__name__: (self.checkpoint, self.complete_none),
+            self.watch.__name__: (self.watch, self.complete_none),
         }
 
+    def abort(self, *args):
+        ctx = do_abort.make_context('abort', sys.argv[3:])
+        with ctx:
+            do_abort.invoke(ctx)
+
     def list(self, *args):
-        ctx = do_list.make_context('list', list(args))
+        ctx = do_list.make_context('list', sys.argv[3:])
         with ctx:
             do_list.invoke(ctx)
+
+    def pause(self, *args):
+        ctx = do_pause.make_context('pause', sys.argv[3:])
+        with ctx:
+            do_pause.invoke(ctx)
+
+    def play(self, *args):
+        ctx = do_play.make_context('play', sys.argv[3:])
+        with ctx:
+            do_play.invoke(ctx)
 
     def report(self, *args):
         ctx = do_report.make_context('report', sys.argv[3:])
         with ctx:
             do_report.invoke(ctx)
 
+    def status(self, *args):
+        ctx = do_status.make_context('status', sys.argv[3:])
+        with ctx:
+            do_status.invoke(ctx)
+
     def tree(self, *args):
-        ctx = do_tree.make_context('tree', list(args))
+        ctx = do_tree.make_context('tree', sys.argv[3:])
         with ctx:
             do_tree.invoke(ctx)
 
     def checkpoint(self, *args):
-        ctx = do_checkpoint.make_context('checkpoint', list(args))
+        ctx = do_checkpoint.make_context('checkpoint', sys.argv[3:])
         with ctx:
             do_checkpoint.invoke(ctx)
+
+    def watch(self, *args):
+        ctx = do_watch.make_context('watch', sys.argv[3:])
+        with ctx:
+            do_watch.invoke(ctx)
+
+
+def _create_control_response_str(response):
+    host_info = response[plum.rmq.util.HOST_KEY]
+    return "{} (pid={}@{})".format(
+        response[plum.rmq.control.RESULT_KEY],
+        host_info['pid'], host_info['hostname'])
+
+
+def _print_control_response(pid, response):
+    if response is None:
+        msg = "Response timed out"
+    else:
+        msg = _create_control_response_str(response)
+
+    click.echo("{}: {}".format(pid, msg))
+
+
+@click.command('abort', context_settings=CONTEXT_SETTINGS)
+@click.option('-m', '--msg', type=str,
+              help="A message indicating the reason for aborting")
+@click.option('-t', '--timeout', type=float, default=1.,
+              help="Wait for this long for the abort message to be acknowledged")
+@click.argument('pids', type=str, nargs=-1)
+def do_abort(msg, timeout, pids):
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
+    from aiida.work.globals import get_rmq_control_panel
+
+    cp = get_rmq_control_panel()
+    for pid in pids:
+        response = cp.control.abort(int(pid), msg, timeout)
+        _print_control_response(pid, response)
+
+
+@click.command('pause', context_settings=CONTEXT_SETTINGS)
+@click.option('-t', '--timeout', type=float, default=1.,
+              help="Wait for this long for the pause message to be acknowledged")
+@click.argument('pids', type=str, nargs=-1)
+def do_pause(timeout, pids):
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
+    from aiida.work.globals import get_rmq_control_panel
+
+    cp = get_rmq_control_panel()
+    for pid in pids:
+        response = cp.control.pause(int(pid), timeout)
+        _print_control_response(pid, response)
+
+
+@click.command('play', context_settings=CONTEXT_SETTINGS)
+@click.option('-t', '--timeout', type=float,
+              help="Wait for this long for the play message to be acknowledged")
+@click.argument('pids', type=str, nargs=-1)
+def do_play(timeout, pids):
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
+    from aiida.work.globals import get_rmq_control_panel
+
+    cp = get_rmq_control_panel()
+    for pid in pids:
+        response = cp.control.play(int(pid), timeout)
+        _print_control_response(pid, response)
 
 
 @click.command('list', context_settings=CONTEXT_SETTINGS)
@@ -143,6 +242,61 @@ def do_report(pk, levelname, order_by):
             width_levelname=width_levelname
         )
 
+@click.command('status', context_settings=CONTEXT_SETTINGS)
+@click.option('-t', '--timeout', type=float, default=1.,
+              help="wait for this long for all responses from servers")
+def do_status(timeout):
+    """
+    Return a list of running workflows on screen
+    """
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
+    from aiida.work.globals import get_rmq_control_panel
+
+    cp = get_rmq_control_panel()
+    cp.status.request(timeout=timeout, callback=_print_status)
+
+
+_print_lock = threading.Lock()
+
+
+def _print_status(response):
+    global _print_lock
+    from plum.rmq.status import PROCS_KEY
+    from plum.rmq.util import HOST_KEY
+
+    procs = response[PROCS_KEY]
+    if not procs:
+        return
+
+    table = []
+    for pid, status in procs.iteritems():
+        table.append([
+            pid,
+            _create_time_str_from_timestamp(status['creation_time']),
+            status['state'],
+            "Yes" if status['playing'] else "No",
+            status['waiting_on']
+        ])
+
+    host_info = response[HOST_KEY]
+    with _print_lock:
+        print("{} pid={}".format(host_info['hostname'], host_info['pid']))
+        print(tabulate(table, headers=["PID", "ctime", "State", "Playing?", 'Waiting on']))
+
+
+def _create_time_str_from_timestamp(timestamp):
+    import aiida.utils.timezone as timezone
+
+    dt = timezone.make_aware(datetime.fromtimestamp(timestamp))
+    fmt = ["%H:%M:%S"]
+    today = timezone.now().date()
+    if dt.date() < today:
+        fmt.append("%Y-%m-%d")
+
+    return dt.strftime(" ".join(fmt))
+
 
 @click.command('tree', context_settings=CONTEXT_SETTINGS)
 @click.option('--node-label', default='_process_label', type=str)
@@ -150,7 +304,6 @@ def do_report(pk, levelname, order_by):
 @click.argument('pks', nargs=-1, type=int)
 def do_tree(node_label, depth, pks):
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-    from aiida.utils.ascii_vis import build_tree
     if not is_dbenv_loaded():
         load_dbenv()
 
@@ -164,14 +317,20 @@ def do_tree(node_label, depth, pks):
         print(t.get_ascii(show_internal=True))
 
 
-@click.command('checkpoint', context_settings=CONTEXT_SETTINGS)
-@click.argument('pks', nargs=-1, type=int)
-def do_checkpoint(pks):
+@click.group('checkpoint', context_settings=CONTEXT_SETTINGS)
+def do_checkpoint():
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()
+
+
+@do_checkpoint.command()
+@click.argument('pks', nargs=-1, type=int)
+def show(pks):
     import aiida.work.persistence
-    storage = aiida.work.persistence.get_default()
+    import pprint
+
+    storage = aiida.work.persistence.get_global_persistence()
 
     for pk in pks:
         try:
@@ -179,12 +338,43 @@ def do_checkpoint(pks):
                 cp = storage.load_checkpoint(pk)
             except BaseException as e:
                 print("Failed to load checkpoint {}".format(pk))
-                print("Exception: {}".format(e.message))
+                print("{}: {}".format(e.__class__.__name__, e.message))
             else:
-                print("Last checkpoint for calculation '{}'".format(pk))
-                print(str(cp))
+                print("Last checkpoint for calculation pid='{}'".format(pk))
+                pprint.pprint(cp.get_dict())
         except ValueError:
             print("Unable to show checkpoint for calculation '{}'".format(pk))
+
+
+@click.command('watch', context_settings=CONTEXT_SETTINGS)
+def do_watch():
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
+
+    from aiida.work.rmq import create_process_event_listener
+    event_listener = create_process_event_listener()
+    event_listener.add_event_callback(_print_event_msg)
+    print("Listening for events [Ctrl-C to exit]")
+    try:
+        event_listener.start()
+    except KeyboardInterrupt:
+        pass
+
+
+def _print_event_msg(evt, msg):
+    import plum.rmq.event as plum_event
+    pid, proc_evt = plum_event.split_event(evt)
+    proc_info = msg[plum_event.PROC_INFO_KEY]
+    proc_type = proc_info['type']
+    info = ["[{}] {} {}".format(pid, proc_type, proc_evt)]
+
+    try:
+        info.append(str(msg[plum_event.DETAILS_KEY]))
+    except KeyError:
+        pass
+
+    print(" ".join(info))
 
 
 def _build_query(order_by=None, limit=None, past_days=None):

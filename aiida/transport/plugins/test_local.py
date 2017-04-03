@@ -35,7 +35,7 @@ class TestBasicConnection(unittest.TestCase):
     """
 
     def test_closed_connection(self):
-        from aiida.transport import TransportInternalError
+        from aiida.transport.transport import TransportInternalError
 
         with self.assertRaises(TransportInternalError):
             t = LocalTransport()

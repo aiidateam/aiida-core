@@ -10,7 +10,6 @@
 
 import plum.process
 import plum.knowledge_provider
-import plum.in_memory_database
 import plum.process_monitor
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override

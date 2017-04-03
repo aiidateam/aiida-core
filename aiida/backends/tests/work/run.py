@@ -41,7 +41,7 @@ class TestRun(AiidaTestCase):
         # Then load the checkpoint and instantiate the class
         cp = self.storage.load_checkpoint(pid)
 
-        dp = DummyProcess.create_from(cp)
+        dp = DummyProcess.load(cp)
         self.assertIsInstance(dp, DummyProcess)
         self.assertEqual(dp.raw_inputs, inputs)
-        dp.run_until_complete()
+        dp.start()

@@ -9,13 +9,15 @@
 ###########################################################################
 from stat import S_ISDIR,S_ISREG
 import StringIO
+
+import aiida.transport.transport
 import paramiko
 import os
 import glob
 
 import aiida.transport
 from aiida.common.utils import escape_for_bash
-from aiida.transport import FileAttribute
+from aiida.transport.util import FileAttribute
 from aiida.common import aiidalogger
 
 
@@ -492,7 +494,7 @@ class SshTransport(aiida.transport.Transport):
     @property
     def sshclient(self):
         if not self._is_open:
-            raise aiida.transport.TransportInternalError(
+            raise aiida.transport.transport.TransportInternalError(
                 "Error, ssh method called for SshTransport "
                 "without opening the channel first")
         return self._client
@@ -500,7 +502,7 @@ class SshTransport(aiida.transport.Transport):
     @property
     def sftp(self):
         if not self._is_open:
-            raise aiida.transport.TransportInternalError(
+            raise aiida.transport.transport.TransportInternalError(
                 "Error, sftp method called for SshTransport "
                 "without opening the channel first")
         return self._sftp

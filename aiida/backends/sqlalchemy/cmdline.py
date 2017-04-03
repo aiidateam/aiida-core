@@ -53,7 +53,8 @@ def get_log_messages(obj):
     Get the log messages for the object.
     """
     from aiida.backends.sqlalchemy.models.log import DbLog
-    from aiida.backends.sqlalchemy import session
+    from aiida.backends.sqlalchemy import get_scoped_session
+    session = get_scoped_session()
 
     extra = get_dblogger_extra(obj)
     log_messages = []

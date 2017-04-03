@@ -76,11 +76,111 @@ class Data(Node):
 
         self._set_attr('source', source)
 
+    @property
+    def created_by(self):
+        links = self.get_inputs(link_type=LinkType.CREATE)
+        if len(links) == 1:
+            return links[0]
+        elif len(links) == 0:
+            return None
+        else:
+            raise RuntimeError(
+                "Node pk={} has more than one incoming CREATE link "
+                "'{}'".format(self.pk, links)
+            )
+
+    @property
+    def returned_by(self):
+        return self.get_inputs(also_labels=True, link_type=LinkType.RETURN)
+
     def set_source(self, source):
         """
         Sets the dictionary describing the source of Data object.
         """
         self.source = source
+
+    @override
+    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+        from aiida.orm.calculation import Calculation
+
+        if link_type is LinkType.CREATE and \
+                        len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
+            raise ValueError("At most one CREATE node can enter a data node")
+
+        if not isinstance(src, Calculation):
+            raise ValueError(
+                "Links entering a data object can only be of type calculation")
+
+        return super(Data, self).add_link_from(src, label, link_type)
+
+    @override
+    def export(self, fname, fileformat=None):
+        """
+        Save a Data object to a file.
+
+        :param fname: string with file name. Can be an absolute or relative path.
+        :param fileformat: kind of format to use for the export. If not present,
+            it will try to use the extension of the file name.
+        """
+        if fileformat is None:
+            fileformat = fname.split('.')[-1]
+        filecontent = self._exportstring(fileformat)
+        with open(fname, 'w') as f:  # writes in cwd, if fname is not absolute
+            f.write(filecontent)
+
+    def importstring(self, inputstring, fileformat, **kwargs):
+        """
+        Converts a Data object to other text format.
+
+        :param fileformat: a string (the extension) to describe the file format.
+        :returns: a string with the structure description.
+        """
+        importers = self._get_importers()
+
+        try:
+            func = importers[fileformat]
+        except KeyError:
+            if len(importers.keys()) > 0:
+                raise ValueError("The format {} is not implemented for {}. "
+                                 "Currently implemented are: {}.".format(
+                    fileformat, self.__class__.__name__,
+                    ",".join(importers.keys())))
+            else:
+                raise ValueError("The format {} is not implemented for {}. "
+                                 "No formats are implemented yet.".format(
+                    fileformat, self.__class__.__name__))
+
+        # func is bound to self by getattr in _get_importers()
+        func(inputstring, **kwargs)
+
+    def convert(self, object_format=None, *args):
+        """
+        Convert the AiiDA StructureData into another python object
+
+        :param object_format: Specify the output format
+        """
+        if object_format is None:
+            raise ValueError("object_format must be provided")
+        if not isinstance(object_format, basestring):
+            raise ValueError('object_format should be a string')
+
+        converters = self._get_converters()
+
+        try:
+            func = converters[object_format]
+        except KeyError:
+            if len(converters.keys()) > 0:
+                raise ValueError(
+                    "The format {} is not implemented for {}. "
+                    "Currently implemented are: {}.".format(
+                        object_format, self.__class__.__name__,
+                        ",".join(converters.keys())))
+            else:
+                raise ValueError("The format {} is not implemented for {}. "
+                                 "No formats are implemented yet.".format(
+                    object_format, self.__class__.__name__))
+
+        return func(*args)
 
     @override
     def _set_attr(self, key, value):
@@ -113,20 +213,6 @@ class Data(Node):
             raise ModificationNotAllowed(
                 "Cannot delete the attributes of a stored data node.")
         super(Data, self)._del_attr(key)
-
-    @override
-    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
-        from aiida.orm.calculation import Calculation
-
-        if link_type is LinkType.CREATE and \
-                        len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
-            raise ValueError("At most one CREATE node can enter a data node")
-
-        if not isinstance(src, Calculation):
-            raise ValueError(
-                "Links entering a data object can only be of type calculation")
-
-        return super(Data, self).add_link_from(src, label, link_type)
 
     @override
     def _linking_as_output(self, dest, link_type):
@@ -167,21 +253,6 @@ class Data(Node):
 
         return func(**kwargs)
 
-    @override
-    def export(self, fname, fileformat=None):
-        """
-        Save a Data object to a file.
-
-        :param fname: string with file name. Can be an absolute or relative path.
-        :param fileformat: kind of format to use for the export. If not present,
-            it will try to use the extension of the file name.
-        """
-        if fileformat is None:
-            fileformat = fname.split('.')[-1]
-        filecontent = self._exportstring(fileformat)
-        with open(fname, 'w') as f:  # writes in cwd, if fname is not absolute
-            f.write(filecontent)
-
     def _get_exporters(self):
         """
         Get all implemented export formats.
@@ -197,31 +268,6 @@ class Data(Node):
         valid_formats = {k: getattr(self, exporter_prefix + k)
                          for k in valid_format_names}
         return valid_formats
-
-    def importstring(self, inputstring, fileformat, **kwargs):
-        """
-        Converts a Data object to other text format.
-
-        :param fileformat: a string (the extension) to describe the file format.
-        :returns: a string with the structure description.
-        """
-        importers = self._get_importers()
-
-        try:
-            func = importers[fileformat]
-        except KeyError:
-            if len(importers.keys()) > 0:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(
-                    fileformat, self.__class__.__name__,
-                    ",".join(importers.keys())))
-            else:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(
-                    fileformat, self.__class__.__name__))
-
-        # func is bound to self by getattr in _get_importers()
-        func(inputstring, **kwargs)
 
     def importfile(self, fname, fileformat=None):
         """
@@ -251,35 +297,6 @@ class Data(Node):
         valid_formats = {k: getattr(self, importer_prefix + k)
                          for k in valid_format_names}
         return valid_formats
-
-    def convert(self, object_format=None, *args):
-        """
-        Convert the AiiDA StructureData into another python object
-
-        :param object_format: Specify the output format
-        """
-        if object_format is None:
-            raise ValueError("object_format must be provided")
-        if not isinstance(object_format, basestring):
-            raise ValueError('object_format should be a string')
-
-        converters = self._get_converters()
-
-        try:
-            func = converters[object_format]
-        except KeyError:
-            if len(converters.keys()) > 0:
-                raise ValueError(
-                    "The format {} is not implemented for {}. "
-                    "Currently implemented are: {}.".format(
-                        object_format, self.__class__.__name__,
-                        ",".join(converters.keys())))
-            else:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(
-                    object_format, self.__class__.__name__))
-
-        return func(*args)
 
     def _get_converters(self):
         """

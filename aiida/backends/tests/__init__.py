@@ -54,17 +54,20 @@ db_test_list = {
         'orm.log': ['aiida.backends.tests.orm.log'],
         'work.class_loader': ['aiida.backends.tests.work.class_loader'],
         'work.daemon': ['aiida.backends.tests.work.daemon'],
+        'work.event': ['aiida.backends.tests.work.event'],
         'work.persistence': ['aiida.backends.tests.work.persistence'],
         'work.process': ['aiida.backends.tests.work.process'],
         'work.processSpec': ['aiida.backends.tests.work.processSpec'],
         'work.process_registry': ['aiida.backends.tests.work.process_registry'],
+        'work.rmq': ['aiida.backends.tests.work.rmq'],
         'work.run': ['aiida.backends.tests.work.run'],
-        'work.tickingEngine': ['aiida.backends.tests.work.tickingEngine'],
         'work.util': ['aiida.backends.tests.work.util'],
         'work.workChain': ['aiida.backends.tests.work.workChain'],
         'work.workfunction': ['aiida.backends.tests.work.workfunction'],
         'work.legacy.job_process': ['aiida.backends.tests.work.legacy.job_process'],
         'pluginloader': ['aiida.backends.tests.test_plugin_loader'],
+        'daemon': ['aiida.backends.tests.daemon'],
+        'verdi_commands': ['aiida.backends.tests.verdi_commands'],
     }
 }
 

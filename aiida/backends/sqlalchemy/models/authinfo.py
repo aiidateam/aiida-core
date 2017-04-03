@@ -28,8 +28,10 @@ class DbAuthInfo(Base):
 
     id = Column(Integer, primary_key=True)
 
-    aiidauser_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
-    dbcomputer_id = Column(Integer, ForeignKey('db_dbcomputer.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+    aiidauser_id = Column(Integer,
+                          ForeignKey('db_dbuser.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+    dbcomputer_id = Column(Integer,
+                           ForeignKey('db_dbcomputer.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
 
     aiidauser = relationship('DbUser', backref='authinfos')
     dbcomputer = relationship('DbComputer', backref='authinfos')
@@ -60,7 +62,6 @@ class DbAuthInfo(Base):
         except KeyError:
             return self.dbcomputer.get_workdir()
 
-    # a method of DbAuthInfo
     def get_transport(self):
         """
         Given a computer and an aiida user (as entries of the DB) return a configured

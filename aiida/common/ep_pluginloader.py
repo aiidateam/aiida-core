@@ -9,7 +9,7 @@ new setuptools based plugin systems in parallel.
 """
 
 try:
-    from sparkplug import manager as epm
+    from reentry import manager as epm
 except ImportError:
     import pkg_resources as epm
 
@@ -206,7 +206,7 @@ def get_class_to_entry_point_map(short_group_name=False):
     :param short_group_name: bool, if True the leading 'aiida.' is cut off group names
     :return: dictionary, keys are modules, values are (group, entrypoint-name)
     """
-    groups = (g for g in epm.get_entry_map('aiida-core', {}).iterkeys() if g.startswith('aiida'))
+    groups = (g for g in epm.get_entry_map('aiida-core').iterkeys() if g.startswith('aiida'))
     class_ep_map = {}
     for group in groups:
         for ep in epm.iter_entry_points(group):

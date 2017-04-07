@@ -225,7 +225,7 @@ class Process(plum.process.Process):
 
             self._pid = self._create_and_setup_db_record()
 
-        if self.logger is None:
+        if self._logger is None:
             self.set_logger(self.calc.logger)
 
     @override

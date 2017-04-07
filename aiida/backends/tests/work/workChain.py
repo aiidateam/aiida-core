@@ -349,6 +349,33 @@ class TestWorkchain(AiidaTestCase):
 
         return wf_class.finished_steps
 
+    def test_report_dbloghandler(self):
+        """
+        Test whether the WorkChain, through its Process, has a logger
+        set for which the DbLogHandler has been attached. Because if this
+        is not the case, the 'report' method will not actually hit the
+        DbLogHandler and the message will not be stored in the database
+        """
+        class TestWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(TestWorkChain, cls).define(spec)
+                spec.outline(cls.run, cls.check)
+                spec.dynamic_output()
+
+            def run(self):
+                from aiida.orm.backend import construct
+                self._backend = construct()
+                self._backend.log.delete_many({})
+                self.report("Testing the report function")
+                return
+
+            def check(self):
+                logs = self._backend.log.find()
+                assert len(logs)==1
+
+        run(TestWorkChain)
+
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
     def test_call_old_wf(self):

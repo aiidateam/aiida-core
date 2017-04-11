@@ -471,6 +471,10 @@ def _collect_files(base, path=''):
     from aiida.common.folders import Folder
     from aiida.common.utils import md5_file,sha1_file
     import os
+
+    def get_filename(file_dict):
+        return file_dict['name']
+
     if os.path.isdir(os.path.join(base,path)):
         folder = Folder(os.path.join(base,path))
         files_now = []
@@ -482,10 +486,10 @@ def _collect_files(base, path=''):
                     'name': path,
                     'type': 'folder',
                 })
-        for f in sorted(folder.get_content_list()):
+        for f in folder.get_content_list():
             files = _collect_files(base,path=os.path.join(path,f))
             files_now.extend(files)
-        return files_now
+        return sorted(files_now,key=get_filename)
     elif path == '.aiida/calcinfo.json':
         files = []
         with open(os.path.join(base,path)) as f:

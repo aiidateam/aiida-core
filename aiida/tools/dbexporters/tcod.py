@@ -486,6 +486,30 @@ def _collect_files(base, path=''):
             files = _collect_files(base,path=os.path.join(path,f))
             files_now.extend(files)
         return files_now
+    elif path == '.aiida/calcinfo.json':
+        files = []
+        with open(os.path.join(base,path)) as f:
+            files.append({
+                'name': path,
+                'contents': f.read(),
+                'md5': md5_file(os.path.join(base,path)),
+                'sha1': sha1_file(os.path.join(base,path)),
+                'type': 'file',
+                })
+        import json
+        with open(os.path.join(base,path)) as f:
+            calcinfo = json.load(f)
+        if 'local_copy_list' in calcinfo:
+            for local_copy in calcinfo['local_copy_list']:
+                with open(local_copy[0]) as f:
+                    files.append({
+                        'name': local_copy[1],
+                        'contents': f.read(),
+                        'md5': md5_file(local_copy[0]),
+                        'sha1': sha1_file(local_copy[0]),
+                        'type': 'file',
+                        })
+        return files
     else:
         with open(os.path.join(base,path)) as f:
             return [{

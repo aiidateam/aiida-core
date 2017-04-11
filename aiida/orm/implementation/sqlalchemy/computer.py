@@ -95,7 +95,8 @@ class Computer(AbstractComputer):
 
     @classmethod
     def list_names(cls):
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
         return session.query(DbComputer.name).all()
 
     @property
@@ -148,7 +149,8 @@ class Computer(AbstractComputer):
 
     @override
     def copy(self):
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
 
         if self.to_be_stored:
             raise InvalidOperation("You can copy a computer only after having stored it")
@@ -324,8 +326,11 @@ class Util(ComputerUtil):
         """
         import aiida.backends.sqlalchemy
         try:
-            aiida.backends.sqlalchemy.session.query(DbComputer).get(pk).delete()
-            aiida.backends.sqlalchemy.session.commit()
-        except SQLAlchemyError:
-            raise InvalidOperation("Unable to delete the requested computer: there"
-                                   "is at least one node using this computer")
+            session = aiida.backends.sqlalchemy.get_scoped_session()
+            session.query(DbComputer).get(pk).delete()
+            session.commit()
+        except SQLAlchemyError as e:
+            raise InvalidOperation("Unable to delete the requested computer: it is possible that there "
+                                   "is at least one node using this computer (original message: {})".format(
+                e.message
+            ))

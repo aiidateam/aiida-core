@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     bin_folder = path.join(aiida_folder, 'bin')
     setup(
-        name='aiida',
+        name='aiida-core',
         url='http://www.aiida.net/',
         license='MIT License',
         author="The AiiDA team",

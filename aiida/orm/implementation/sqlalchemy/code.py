@@ -130,12 +130,14 @@ def delete_code(code):
             "has {} output links".format(len(existing_outputs)))
     else:
         repo_folder = code._repository_folder
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
         session.begin(subtransactions=True)
         try:
             code.dbnode.delete()
-            repo_folder.erase()
             session.commit()
         except:
             session.rollback()
             raise
+    # If all went well, erase also the folder
+    repo_folder.erase()

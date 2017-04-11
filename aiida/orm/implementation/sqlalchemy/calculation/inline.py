@@ -8,8 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from aiida.backends.sqlalchemy import session
-
 from aiida.orm.implementation.general.calculation.inline import (
     InlineCalculation)
 

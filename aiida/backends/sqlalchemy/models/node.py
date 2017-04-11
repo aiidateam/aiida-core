@@ -296,9 +296,7 @@ class DbNode(Base):
             DbCalcState.state.label('state'),
             func.row_number().over(partition_by=DbCalcState.dbnode_id,
                                                  order_by=custom_sort_order).label('the_row_number')
-        ])
-
-        q1 = q1.cte()
+        ]).alias()
 
         subq = select([
             q1.c.dbnode_id.label('dbnode_id'),

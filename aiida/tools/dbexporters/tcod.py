@@ -503,7 +503,7 @@ def _collect_files(base, path=''):
             for local_copy in calcinfo['local_copy_list']:
                 with open(local_copy[0]) as f:
                     files.append({
-                        'name': local_copy[1],
+                        'name': os.path.normpath(local_copy[1]),
                         'contents': f.read(),
                         'md5': md5_file(local_copy[0]),
                         'sha1': sha1_file(local_copy[0]),

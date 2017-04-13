@@ -1,6 +1,27 @@
 from aiida.restapi.translator.data import DataTranslator
 from aiida.restapi.common.exceptions import RestValidationError
 
+
+# def atom_kinds_to_html(atom_kind):
+#     """
+#
+#     Construct in html format
+#
+#     an alloy with 0.5 Ge, 0.4 Si and 0.1 vacancy is represented as
+#     Ge<sub>0.5</sub> + Si<sub>0.4</sub> + vacancy<sub>0.1</sub>
+#
+#     Args:
+#         atom_kind: a string with the name of the atomic kind
+#
+#     Returns:
+#         html code for rendered formula
+#     """
+#
+#
+#
+#     for
+
+
 class StructureDataTranslator(DataTranslator):
     """
     Translator relative to resource 'structures' and aiida class StructureData
@@ -75,7 +96,8 @@ class StructureDataTranslator(DataTranslator):
                 iz*lattice_vectors[2] - center).tolist()
 
                 atoms_json.append(
-                    {'kind_name': base_site['kind_name'],
+                    {'kind_name': atom_kinds_to_html(base_site[
+                                                             'kind_name']),
                      'x': base_site['position'][0] + shift[0],
                      'y': base_site['position'][1] + shift[1],
                      'z': base_site['position'][2] + shift[2]}
@@ -98,20 +120,10 @@ class StructureDataTranslator(DataTranslator):
                         + lattice_vectors[2] - center).tolist(),
             }
 
-        # # Replicate the base to create a supercell
-        #
-        #
-        # atoms_json = [
-        #             {"l": site['kind_name'],
-        #             "x": site['position'][0]-center[0],
-        #             "y": site['position'][1]-center[1],
-        #             "z": site['position'][2]-center[2]
-        #             }
-        #             for site in sites]
-        #
         # These will be passed to ChemDoodle
         json_content = {"s": [cell_json],
-                        "m": [{"a": atoms_json}]
+                        "m": [{"a": atoms_json}],
+                        "units": '&Aring;'
                         }
         return json_content
 

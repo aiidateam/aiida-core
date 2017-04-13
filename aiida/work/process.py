@@ -289,14 +289,18 @@ class Process(plum.process.Process):
         super(Process, self).on_output_emitted(output_port, value, dynamic)
         if not isinstance(value, Data):
             raise TypeError(
-                "Values outputted from process must be instances of AiiDA Data" \
+                "Values outputted from process must be instances of AiiDA Data " \
                 "types.  Got: {}".format(value.__class__)
             )
 
-        if not value.is_stored:
+        # Try making us the creator
+        try:
             value.add_link_from(self.calc, output_port, LinkType.CREATE)
-            if self.inputs._store_provenance:
-                value.store()
+        except ValueError:
+            # Must have already been created...nae dramas
+            pass
+
+        value.store()
         value.add_link_from(self.calc, output_port, LinkType.RETURN)
 
     # end region

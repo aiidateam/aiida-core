@@ -260,13 +260,12 @@ class Node(AbstractNode):
             # Needed for the check
             input_list_keys = [i[0] for i in inputs_list]
 
-            for label, v in self._inputlinks_cache.iteritems():
-                src = v[0]
-                if label in input_list_keys:
+            for link in self._inputlinks_cache.itervalues():
+                if link.label in input_list_keys:
                     raise InternalError("There exist a link with the same name "
                                         "'{}' both in the DB and in the internal "
-                                        "cache for node pk= {}!".format(label, self.pk))
-                inputs_list.append((label, src))
+                                        "cache for node pk= {}!".format(link.label, self.pk))
+                inputs_list.append((link.label, link.src))
 
         if node_type is None:
             filtered_list = inputs_list
@@ -616,9 +615,9 @@ class Node(AbstractNode):
                 "Node with pk= {} was already stored".format(self.pk))
 
         # For each parent, check that all its inputs are stored
-        for label in self._inputlinks_cache:
+        for link in self._inputlinks_cache.itervalues():
             try:
-                parent_node = self._inputlinks_cache[label][0]
+                parent_node = link.src
                 parent_node._check_are_parents_stored()
             except ModificationNotAllowed:
                 raise ModificationNotAllowed(
@@ -649,8 +648,8 @@ class Node(AbstractNode):
                 "_store_input_nodes can be called only if the node is "
                 "unstored (node {} is stored, instead)".format(self.pk))
 
-        for label in self._inputlinks_cache:
-            parent = self._inputlinks_cache[label][0]
+        for link in self._inputlinks_cache.itervalues():
+            parent = link.src
             if not parent.is_stored:
                 parent.store(with_transaction=False)
 
@@ -662,13 +661,13 @@ class Node(AbstractNode):
           stored.
         """
         # Preliminary check to verify that inputs are stored already
-        for label in self._inputlinks_cache:
-            if not self._inputlinks_cache[label][0].is_stored:
+        for link in self._inputlinks_cache.itervalues():
+            if not link.src.is_stored:
                 raise ModificationNotAllowed(
                     "Cannot store the input link '{}' because the "
                     "source node is not stored. Either store it first, "
                     "or call _store_input_links with the store_parents "
-                    "parameter set to True".format(label))
+                    "parameter set to True".format(link.label))
 
     def _store_cached_input_links(self, with_transaction=True):
         """
@@ -705,13 +704,9 @@ class Node(AbstractNode):
         with context_man:
             # This raises if there is an unstored node.
             self._check_are_parents_stored()
-            # I have to store only those links where the source is already
-            # stored
-            links_to_store = list(self._inputlinks_cache.keys())
 
-            for label in links_to_store:
-                src, link_type = self._inputlinks_cache[label]
-                self._add_dblink_from(src, label, link_type)
+            for link in self._inputlinks_cache.itervalues():
+                self._add_dblink_from(link.src, link.label, link.link_type)
             # If everything went smoothly, clear the entries from the cache.
             # I do it here because I delete them all at once if no error
             # occurred; otherwise, links will not be stored and I

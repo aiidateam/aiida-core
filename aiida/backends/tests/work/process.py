@@ -56,7 +56,7 @@ class TestProcess(AiidaTestCase):
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
-        globals.get_process_manager().reset()
+        self.assertTrue(globals.get_process_manager().abort_all(timeout=10.), "Failed to abort all processes")
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 

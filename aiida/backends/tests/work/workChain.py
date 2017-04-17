@@ -28,7 +28,6 @@ from aiida.work.run import legacy_workflow
 import aiida.work.globals
 from aiida.daemon.workflowmanager import execute_steps
 
-
 PwProcess = PwCalculation.process()
 
 
@@ -136,7 +135,7 @@ class TestWorkchain(AiidaTestCase):
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
 
-        self.procman.reset()
+        self.assertTrue(self.procman.abort_all(timeout=10.), "Failed to abort all processes")
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
         self.assertEquals(aiida.work.globals.get_event_emitter().num_listening(), 0)

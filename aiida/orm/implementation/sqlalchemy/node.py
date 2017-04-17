@@ -165,7 +165,7 @@ class Node(AbstractNode):
         session = get_scoped_session()
 
         self.dbnode.label = field_value
-        if not self._to_be_stored:
+        if not not self.is_stored:
             session.add(self._dbnode)
             self._increment_version_number_db()
 
@@ -174,7 +174,7 @@ class Node(AbstractNode):
         session = get_scoped_session()
 
         self.dbnode.description = field_value
-        if not self._to_be_stored:
+        if not not self.is_stored:
             session.add(self._dbnode)
             self._increment_version_number_db()
 
@@ -208,7 +208,7 @@ class Node(AbstractNode):
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot call the internal _add_dblink_from if the "
                 "destination node is not stored")
@@ -326,7 +326,7 @@ class Node(AbstractNode):
                 return [i[1] for i in filtered_list]
 
     def set_computer(self, computer):
-        if self._to_be_stored:
+        if not self.is_stored:
             computer = DbComputer.get_dbcomputer(computer)
             self.dbnode.dbcomputer = computer
         else:
@@ -334,14 +334,14 @@ class Node(AbstractNode):
                 "Node with uuid={} was already stored".format(self.uuid))
 
     def _set_attr(self, key, value):
-        if self._to_be_stored:
+        if not self.is_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
         else:
             self.dbnode.set_attr(key, value)
             self._increment_version_number_db()
 
     def _del_attr(self, key):
-        if self._to_be_stored:
+        if not self.is_stored:
             try:
                 del self._attrs_cache[key]
             except KeyError:
@@ -355,7 +355,7 @@ class Node(AbstractNode):
         exception = AttributeError("Attribute '{}' does not exist".format(key))
 
         has_default = default is not _NO_DEFAULT
-        if self._to_be_stored:
+        if not self.is_stored:
             try:
                 return self._attrs_cache[key]
             except KeyError:
@@ -375,7 +375,7 @@ class Node(AbstractNode):
         # TODO SP: validate key
         # TODO SP: handle exclusive (what to do in case the key already exist
         # ?)
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "The extras of a node can be set only after "
                 "storing the node")
@@ -388,7 +388,7 @@ class Node(AbstractNode):
         if type(new_extras) is not dict:
             raise ValueError("The new extras have to be a dictionary")
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "The extras of a node can be set only after "
                 "storing the node")
@@ -429,7 +429,7 @@ class Node(AbstractNode):
     def iterattrs(self):
         # TODO: check what happens if someone stores the object while
         #        the iterator is being used!
-        if self._to_be_stored:
+        if not self.is_stored:
             it_items = self._attrs_cache.iteritems()
         else:
             it_items = self.dbnode.attributes.iteritems()
@@ -441,7 +441,7 @@ class Node(AbstractNode):
         return dict(self.iterattrs())
 
     def attrs(self):
-        if self._to_be_stored:
+        if not self.is_stored:
             it = self._attrs_cache.iterkeys()
         else:
             it = self.dbnode.attributes.iterkeys()
@@ -452,7 +452,7 @@ class Node(AbstractNode):
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
@@ -570,7 +570,7 @@ class Node(AbstractNode):
           a transaction open!
         """
 
-        if not self._to_be_stored:
+        if not not self.is_stored:
             raise ModificationNotAllowed(
                 "Node with pk= {} was already stored".format(self.id))
 
@@ -607,7 +607,7 @@ class Node(AbstractNode):
         :note: this function stores all nodes without transactions; always
           call it from within a transaction!
         """
-        if not self._to_be_stored:
+        if not not self.is_stored:
             raise ModificationNotAllowed(
                 "_store_input_nodes can be called only if the node is "
                 "unstored (node {} is stored, instead)".format(self.id))
@@ -654,7 +654,7 @@ class Node(AbstractNode):
           a transaction open!
         """
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "Node with pk= {} is not stored yet".format(self.id))
 
@@ -701,7 +701,7 @@ class Node(AbstractNode):
 
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
-        if self._to_be_stored:
+        if not self.is_stored:
             self._validate()
 
             self._check_are_parents_stored()

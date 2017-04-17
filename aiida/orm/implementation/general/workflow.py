@@ -100,7 +100,7 @@ class AbstractWorkflow(object):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def __str__(self):
-        if self._to_be_stored:
+        if not self.is_stored:
             return "uuid: {} (unstored)".format(self.uuid)
         else:
             return "uuid: {} (pk: {})".format(self.uuid, self.pk)
@@ -201,7 +201,7 @@ class AbstractWorkflow(object):
 
         :return: the RepositoryFolder object.
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             return self.get_temp_folder()
         else:
             return self.repo_folder
@@ -242,7 +242,7 @@ class AbstractWorkflow(object):
 
         Can be called only before storing.
         """
-        if not self._to_be_stored:
+        if not not self.is_stored:
             raise ValueError("Cannot delete a path after storing the node")
 
         if os.path.isabs(path):
@@ -258,7 +258,7 @@ class AbstractWorkflow(object):
         src_abs: the absolute path of the file to copy.
         dst_filename: the (relative) path on which to copy.
         """
-        if not self._to_be_stored:
+        if not not self.is_stored:
             raise ValueError("Cannot insert a path after storing the node")
 
         if not os.path.isabs(src_abs):

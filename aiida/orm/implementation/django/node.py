@@ -59,7 +59,7 @@ class Node(AbstractNode):
         return node
 
     def __int__(self):
-        if self._to_be_stored:
+        if not self.is_stored:
             return None
         else:
             return self._dbnode.pk
@@ -153,14 +153,14 @@ class Node(AbstractNode):
 
     def _update_db_label_field(self, field_value):
         self.dbnode.label = field_value
-        if not self._to_be_stored:
+        if not not self.is_stored:
             with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
         self.dbnode.description = field_value
-        if not self._to_be_stored:
+        if not not self.is_stored:
             with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
@@ -184,7 +184,7 @@ class Node(AbstractNode):
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot call the internal _add_dblink_from if the "
                 "destination node is not stored")
@@ -301,7 +301,7 @@ class Node(AbstractNode):
 
     def set_computer(self, computer):
         from aiida.backends.djsite.db.models import DbComputer
-        if self._to_be_stored:
+        if not self.is_stored:
             self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
         else:
             raise ModificationNotAllowed(
@@ -311,7 +311,7 @@ class Node(AbstractNode):
         from aiida.backends.djsite.db.models import DbAttribute
         DbAttribute.validate_key(key)
 
-        if self._to_be_stored:
+        if not self.is_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
         else:
             DbAttribute.set_value_for_node(self.dbnode, key, value)
@@ -319,7 +319,7 @@ class Node(AbstractNode):
 
     def _del_attr(self, key):
         from aiida.backends.djsite.db.models import DbAttribute
-        if self._to_be_stored:
+        if not self.is_stored:
             try:
                 del self._attrs_cache[key]
             except KeyError:
@@ -335,7 +335,7 @@ class Node(AbstractNode):
     def get_attr(self, key, default=_NO_DEFAULT):
         from aiida.backends.djsite.db.models import DbAttribute
         try:
-            if self._to_be_stored:
+            if not self.is_stored:
                 try:
                     return self._attrs_cache[key]
                 except KeyError:
@@ -353,7 +353,7 @@ class Node(AbstractNode):
         from aiida.backends.djsite.db.models import DbExtra
         DbExtra.validate_key(key)
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "The extras of a node can be set only after "
                 "storing the node")
@@ -365,7 +365,7 @@ class Node(AbstractNode):
         from aiida.backends.djsite.db.models import DbExtra
         DbExtra.validate_key(key)
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "The extras of a node can be set only after "
                 "storing the node")
@@ -385,7 +385,7 @@ class Node(AbstractNode):
                              "if no extra is found.")
 
         try:
-            if self._to_be_stored:
+            if not self.is_stored:
                 raise AttributeError("DbExtra '{}' does not exist yet, the "
                                      "node is not stored".format(key))
             else:
@@ -402,7 +402,7 @@ class Node(AbstractNode):
 
     def del_extra(self, key):
         from aiida.backends.djsite.db.models import DbExtra
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "The extras of a node can be set and deleted "
                 "only after storing the node")
@@ -414,7 +414,7 @@ class Node(AbstractNode):
 
     def extras(self):
         from aiida.backends.djsite.db.models import DbExtra
-        if self._to_be_stored:
+        if not self.is_stored:
             return
         else:
             extraslist = DbExtra.list_all_node_elements(self.dbnode)
@@ -423,7 +423,7 @@ class Node(AbstractNode):
 
     def iterextras(self):
         from aiida.backends.djsite.db.models import DbExtra
-        if self._to_be_stored:
+        if not self.is_stored:
             # If it is not stored yet, there are no extras that can be
             # added (in particular, we do not even have an ID to use!)
             # Return without value, meaning that this is an empty generator
@@ -437,7 +437,7 @@ class Node(AbstractNode):
         from aiida.backends.djsite.db.models import DbAttribute
         # TODO: check what happens if someone stores the object while
         #        the iterator is being used!
-        if self._to_be_stored:
+        if not self.is_stored:
             for k, v in self._attrs_cache.iteritems():
                 yield (k, v)
         else:
@@ -453,7 +453,7 @@ class Node(AbstractNode):
         # Note: I "duplicate" the code from iterattrs, rather than
         # calling iterattrs from here, because iterattrs is slow on each call
         # since it has to call .getvalue(). To improve!
-        if self._to_be_stored:
+        if not self.is_stored:
             for k in self._attrs_cache.iterkeys():
                 yield k
         else:
@@ -463,7 +463,7 @@ class Node(AbstractNode):
 
     def add_comment(self, content, user=None):
         from aiida.backends.djsite.db.models import DbComment
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
@@ -589,7 +589,7 @@ class Node(AbstractNode):
     def dbnode(self):
         # I also update the internal _dbnode variable, if it was saved
         # from aiida.backends.djsite.db.models import DbNode
-        #        if not self._to_be_stored:
+        #        if not not self.is_stored:
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         return self._dbnode
 
@@ -610,7 +610,7 @@ class Node(AbstractNode):
         else:
             context_man = EmptyContextManager()
 
-        if not self._to_be_stored:
+        if not not self.is_stored:
             raise ModificationNotAllowed(
                 "Node with pk= {} was already stored".format(self.pk))
 
@@ -643,7 +643,7 @@ class Node(AbstractNode):
         :note: this function stores all nodes without transactions; always
           call it from within a transaction!
         """
-        if not self._to_be_stored:
+        if not not self.is_stored:
             raise ModificationNotAllowed(
                 "_store_input_nodes can be called only if the node is "
                 "unstored (node {} is stored, instead)".format(self.pk))
@@ -697,7 +697,7 @@ class Node(AbstractNode):
         else:
             context_man = EmptyContextManager()
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "Node with pk= {} is not stored yet".format(self.pk))
 
@@ -744,69 +744,70 @@ class Node(AbstractNode):
         else:
             context_man = EmptyContextManager()
 
-        if self._to_be_stored:
+        if not self.is_stored:
 
-            # As a first thing, I check if the data is valid
-            self._validate()
+            with self._state_lock:
+                # As a first thing, I check if the data is valid
+                self._validate()
 
-            # Verify that parents are already stored. Raises if this is not
-            # the case.
-            self._check_are_parents_stored()
+                # Verify that parents are already stored. Raises if this is not
+                # the case.
+                self._check_are_parents_stored()
 
-            # I save the corresponding django entry
-            # I set the folder
-            # NOTE: I first store the files, then only if this is successful,
-            # I store the DB entry. In this way,
-            # I assume that if a node exists in the DB, its folder is in place.
-            # On the other hand, periodically the user might need to run some
-            # bookkeeping utility to check for lone folders.
-            self._repository_folder.replace_with_folder(
-                self._get_temp_folder().abspath, move=True, overwrite=True)
+                # I save the corresponding django entry
+                # I set the folder
+                # NOTE: I first store the files, then only if this is successful,
+                # I store the DB entry. In this way,
+                # I assume that if a node exists in the DB, its folder is in place.
+                # On the other hand, periodically the user might need to run some
+                # bookkeeping utility to check for lone folders.
+                self._repository_folder.replace_with_folder(
+                    self._get_temp_folder().abspath, move=True, overwrite=True)
 
-            # I do the transaction only during storage on DB to avoid timeout
-            # problems, especially with SQLite
-            try:
-                with context_man:
-                    # Save the row
-                    self._dbnode.save()
-                    # Save its attributes 'manually' without incrementing
-                    # the version for each add.
-                    DbAttribute.reset_values_for_node(self.dbnode,
-                                                      attributes=self._attrs_cache,
-                                                      with_transaction=False)
-                    # This should not be used anymore: I delete it to
-                    # possibly free memory
-                    del self._attrs_cache
+                # I do the transaction only during storage on DB to avoid timeout
+                # problems, especially with SQLite
+                try:
+                    with context_man:
+                        # Save the row
+                        self._dbnode.save()
+                        # Save its attributes 'manually' without incrementing
+                        # the version for each add.
+                        DbAttribute.reset_values_for_node(self.dbnode,
+                                                          attributes=self._attrs_cache,
+                                                          with_transaction=False)
+                        # This should not be used anymore: I delete it to
+                        # possibly free memory
+                        del self._attrs_cache
 
-                    self._temp_folder = None
-                    self._to_be_stored = False
+                        self._temp_folder = None
+                        self._to_be_stored = False
 
-                    # Here, I store those links that were in the cache and
-                    # that are between stored nodes.
-                    self._store_cached_input_links()
+                        # Here, I store those links that were in the cache and
+                        # that are between stored nodes.
+                        self._store_cached_input_links()
 
-            # This is one of the few cases where it is ok to do a 'global'
-            # except, also because I am re-raising the exception
-            except:
-                # I put back the files in the sandbox folder since the
-                # transaction did not succeed
-                self._get_temp_folder().replace_with_folder(
-                    self._repository_folder.abspath, move=True, overwrite=True)
-                raise
+                # This is one of the few cases where it is ok to do a 'global'
+                # except, also because I am re-raising the exception
+                except:
+                    # I put back the files in the sandbox folder since the
+                    # transaction did not succeed
+                    self._get_temp_folder().replace_with_folder(
+                        self._repository_folder.abspath, move=True, overwrite=True)
+                    raise
 
-            # Set up autogrouping used be verdi run
-            autogroup = aiida.orm.autogroup.current_autogroup
-            grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
-            if autogroup is not None:
-                if not isinstance(autogroup, aiida.orm.autogroup.Autogroup):
-                    raise ValidationError("current_autogroup is not an AiiDA Autogroup")
-                if autogroup.is_to_be_grouped(self):
-                    group_name = autogroup.get_group_name()
-                    if group_name is not None:
-                        from aiida.orm import Group
+                # Set up autogrouping used be verdi run
+                autogroup = aiida.orm.autogroup.current_autogroup
+                grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
+                if autogroup is not None:
+                    if not isinstance(autogroup, aiida.orm.autogroup.Autogroup):
+                        raise ValidationError("current_autogroup is not an AiiDA Autogroup")
+                    if autogroup.is_to_be_grouped(self):
+                        group_name = autogroup.get_group_name()
+                        if group_name is not None:
+                            from aiida.orm import Group
 
-                        g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
-                        g.add_nodes(self)
+                            g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
+                            g.add_nodes(self)
 
         # This is useful because in this way I can do
         # n = Node().store()

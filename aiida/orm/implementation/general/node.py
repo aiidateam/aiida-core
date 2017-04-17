@@ -182,14 +182,15 @@ class AbstractNode(object):
         self._to_be_stored = True
         # Empty cache of input links in any case
         self._inputlinks_cache = {}
-        self._state_lock = threading.Lock()
+        self._state_lock = threading.RLock()
 
     @property
     def is_stored(self):
         """
         Return True if the node is stored, False otherwise.
         """
-        return not self._to_be_stored
+        with self._state_lock:
+            return not self._to_be_stored
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -973,7 +974,7 @@ class AbstractNode(object):
         """
         # I also update the internal _dbnode variable, if it was saved
         # from aiida.backends.djsite.db.models import DbNode
-        #        if not self._to_be_stored:
+        #        if not not self.is_stored:
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         pass
 

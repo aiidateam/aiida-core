@@ -974,7 +974,7 @@ class AbstractNode(object):
         """
         # I also update the internal _dbnode variable, if it was saved
         # from aiida.backends.djsite.db.models import DbNode
-        #        if not not self.is_stored:
+        #        if self.is_stored:
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         pass
 

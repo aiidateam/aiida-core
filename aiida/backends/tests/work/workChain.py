@@ -64,7 +64,7 @@ class Wf(WorkChain):
             [self.s1.__name__, self.s2.__name__, self.s3.__name__,
              self.s4.__name__, self.s5.__name__, self.s6.__name__,
              self.isA.__name__, self.isB.__name__, self.ltN.__name__]
-            }
+        }
 
     def s1(self):
         self._set_finished(inspect.stack()[0][3])
@@ -181,7 +181,7 @@ class TestWorkchain(AiidaTestCase):
         with self.assertRaises(ValueError):
             Wf.spec()
 
-    @unittest.skip("Currently trying to find the bug that cases this test to deadlock.")
+    # @unittest.skip("Currently trying to find the bug that cases this test to deadlock.")
     def test_context(self):
         A = Str("a")
         B = Str("b")
@@ -288,8 +288,7 @@ class TestWorkchain(AiidaTestCase):
 
         WcWithReturn.run()
 
-    @unittest.skip("FIXME: Deadlock on abort in this test")
-    def test_tocontext_submit_workchain(self):
+    def test_tocontext_submit_workchain_no_daemon(self):
         class MainWorkChain(WorkChain):
             @classmethod
             def define(cls, spec):
@@ -314,8 +313,8 @@ class TestWorkchain(AiidaTestCase):
 
         p = MainWorkChain.new()
         future = self.procman.start(p)
-        self.assertTrue(wait_until(p, ProcessState.WAITING, timeout=10.))
-        self.assertTrue(future.abort(timeout=2.))
+        self.assertTrue(wait_until(p, ProcessState.WAITING, timeout=2.))
+        self.assertTrue(future.abort(timeout=2.), "Failed here")
 
     def test_tocontext_async_workchain(self):
         class MainWorkChain(WorkChain):
@@ -355,6 +354,7 @@ class TestWorkchain(AiidaTestCase):
         is not the case, the 'report' method will not actually hit the
         DbLogHandler and the message will not be stored in the database
         """
+
         class TestWorkChain(WorkChain):
             @classmethod
             def define(cls, spec):
@@ -371,7 +371,7 @@ class TestWorkchain(AiidaTestCase):
 
             def check(self):
                 logs = self._backend.log.find()
-                assert len(logs)==1
+                assert len(logs) == 1
 
         run(TestWorkChain)
 

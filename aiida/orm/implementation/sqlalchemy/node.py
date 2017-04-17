@@ -165,7 +165,7 @@ class Node(AbstractNode):
         session = get_scoped_session()
 
         self.dbnode.label = field_value
-        if not not self.is_stored:
+        if self.is_stored:
             session.add(self._dbnode)
             self._increment_version_number_db()
 
@@ -174,7 +174,7 @@ class Node(AbstractNode):
         session = get_scoped_session()
 
         self.dbnode.description = field_value
-        if not not self.is_stored:
+        if self.is_stored:
             session.add(self._dbnode)
             self._increment_version_number_db()
 
@@ -570,7 +570,7 @@ class Node(AbstractNode):
           a transaction open!
         """
 
-        if not not self.is_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "Node with pk= {} was already stored".format(self.id))
 
@@ -607,7 +607,7 @@ class Node(AbstractNode):
         :note: this function stores all nodes without transactions; always
           call it from within a transaction!
         """
-        if not not self.is_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "_store_input_nodes can be called only if the node is "
                 "unstored (node {} is stored, instead)".format(self.id))

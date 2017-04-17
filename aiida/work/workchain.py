@@ -411,7 +411,6 @@ def ToContext(**kwargs):
 def _get_proc_outputs_from_registry(pid):
     from aiida.orm import load_node
     n = load_node(pid)
-    print n.get_outputs_dict()
     return REGISTRY.get_outputs(pid)
 
 

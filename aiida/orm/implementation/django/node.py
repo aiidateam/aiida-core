@@ -153,14 +153,14 @@ class Node(AbstractNode):
 
     def _update_db_label_field(self, field_value):
         self.dbnode.label = field_value
-        if not not self.is_stored:
+        if self.is_stored:
             with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
         self.dbnode.description = field_value
-        if not not self.is_stored:
+        if self.is_stored:
             with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
@@ -589,7 +589,7 @@ class Node(AbstractNode):
     def dbnode(self):
         # I also update the internal _dbnode variable, if it was saved
         # from aiida.backends.djsite.db.models import DbNode
-        #        if not not self.is_stored:
+        #        if self.is_stored:
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         return self._dbnode
 
@@ -610,7 +610,7 @@ class Node(AbstractNode):
         else:
             context_man = EmptyContextManager()
 
-        if not not self.is_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "Node with pk= {} was already stored".format(self.pk))
 
@@ -643,7 +643,7 @@ class Node(AbstractNode):
         :note: this function stores all nodes without transactions; always
           call it from within a transaction!
         """
-        if not not self.is_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "_store_input_nodes can be called only if the node is "
                 "unstored (node {} is stored, instead)".format(self.pk))

@@ -162,7 +162,7 @@ class Workflow(AbstractWorkflow):
         :return: a string
         """
         self.dbworkflowinstance.label = field_value
-        if not not self.is_stored:
+        if self.is_stored:
             self._dbworkflowinstance.save(commit=False)
             self._increment_version_number_db()
 
@@ -186,7 +186,7 @@ class Workflow(AbstractWorkflow):
         :return: a string
         """
         self.dbworkflowinstance.description = field_value
-        if not not self.is_stored:
+        if self.is_stored:
             self._dbworkflowinstance.save(commit=False)
             self._increment_version_number_db()
 

@@ -216,6 +216,16 @@ class AbstractWorkflow(object):
         return self.current_folder.get_subfolder(
             self._path_subfolder_name, reset_limit=True)
 
+    @property
+    def is_stored(self):
+        """
+        Returns True if the workflow is already stored, False otherwise
+        
+        :return: True if stored, False otherwise
+        :rtype: bool
+        """
+        return not self._to_be_stored
+
     def get_folder_list(self, subfolder='.'):
         """
         Get the the list of files/directory in the repository of the object.
@@ -242,7 +252,7 @@ class AbstractWorkflow(object):
 
         Can be called only before storing.
         """
-        if not not self.is_stored:
+        if self.is_stored:
             raise ValueError("Cannot delete a path after storing the node")
 
         if os.path.isabs(path):
@@ -258,7 +268,7 @@ class AbstractWorkflow(object):
         src_abs: the absolute path of the file to copy.
         dst_filename: the (relative) path on which to copy.
         """
-        if not not self.is_stored:
+        if self.is_stored:
             raise ValueError("Cannot insert a path after storing the node")
 
         if not os.path.isabs(src_abs):

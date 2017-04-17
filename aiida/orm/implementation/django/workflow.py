@@ -166,7 +166,7 @@ class Workflow(AbstractWorkflow):
         from django.db import transaction
 
         self.dbworkflowinstance.label = field_value
-        if not not self.is_stored:
+        if self.is_stored:
             with transaction.atomic():
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()
@@ -193,7 +193,7 @@ class Workflow(AbstractWorkflow):
         from django.db import transaction
 
         self.dbworkflowinstance.description = field_value
-        if not not self.is_stored:
+        if self.is_stored:
             with transaction.atomic():
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()

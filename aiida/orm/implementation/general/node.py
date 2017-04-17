@@ -488,7 +488,7 @@ class AbstractNode(object):
                         src.uuid, self.uuid))
             # I insert the link directly in the cache rather than calling
             # _add_cachelink_from because this latter performs an undesired check
-            self._inputlinks_cache[link_key] = LinkInfo(src, link_type)
+            self._inputlinks_cache[link_key] = LinkInfo(src, link_type, label)
 
             # self._add_cachelink_from(src, label, link_type)
 

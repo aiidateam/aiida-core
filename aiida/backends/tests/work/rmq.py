@@ -35,8 +35,13 @@ class TestProcess(AiidaTestCase):
         super(TestProcess, self).setUp()
         self.procman = ProcessManager()
         prefix = "{}.{}".format(self.__class__.__name__, uuid.uuid4())
-        aiida.work.rmq.enable_subscribers(self.procman, prefix)
+        self._subscribers = aiida.work.rmq.enable_subscribers(self.procman, prefix)
         self.control_panel = aiida.work.rmq.ProcessControlPanel(prefix)
+
+    def tearDown(self):
+        self.procman.abort_all(timeout=10)
+        self.assertEqual(self.procman.get_num_processes(), 0, "Not all processes are finished")
+        self._subscribers.stop()
 
     def test_launch_simple(self):
         # Monitor launched processes

@@ -77,7 +77,7 @@ def _create_subscribers(procman, prefix, connection):
 
         plum.rmq.ProcessLaunchSubscriber(
             connection=connection, queue=".".join([prefix, _LAUNCH_QUEUE]),
-            manager=procman
+            process_manager=procman
         ),
 
         plum.rmq.ProcessStatusSubscriber(
@@ -96,8 +96,11 @@ def enable_subscribers(procman, prefix):
     """
     from functools import partial
     create_subscribers = partial(_create_subscribers, procman, prefix)
-    SubscriberThread(_create_connection, create_subscribers,
-                     name="rmq_subscriber.{}".format(prefix)).start()
+    thread = SubscriberThread(
+        _create_connection, create_subscribers, name="rmq_subscriber.{}".format(prefix)
+    )
+    thread.start()
+    return thread
 
 
 _GLOBAL_EVENT_PUBLISHER = None

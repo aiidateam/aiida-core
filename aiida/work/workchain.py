@@ -226,8 +226,8 @@ class WorkChain(Process, WithHeartbeat):
                     raise TypeError(
                         "Invalid value returned from step '{}'".format(retval))
 
-                for interstep in self._intersteps:
-                    interstep.on_last_step_finished(self)
+            for interstep in self._intersteps:
+                interstep.on_last_step_finished(self)
 
             if self._barriers:
                 return WaitOnAll(self._barriers), self._do_step
@@ -409,6 +409,9 @@ def ToContext(**kwargs):
 
 
 def _get_proc_outputs_from_registry(pid):
+    from aiida.orm import load_node
+    n = load_node(pid)
+    print n.get_outputs_dict()
     return REGISTRY.get_outputs(pid)
 
 

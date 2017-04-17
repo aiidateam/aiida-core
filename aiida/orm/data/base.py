@@ -291,7 +291,7 @@ class List(Data, collections.MutableSequence):
             underlying sequence.  False otherwise.
         :rtype: bool
         """
-        return self._to_be_stored
+        return not self.is_stored
 
 
 def get_true_node():

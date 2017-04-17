@@ -118,7 +118,7 @@ class JobProcess(Process, WithHeartbeat):
         return self._create_wait_on('transport'), self._submit_job
 
     @override
-    def setup_db_record(self):
+    def _setup_db_record(self):
         """
         Link up all the retrospective provenance for this JobCalculation
         """

@@ -15,40 +15,34 @@ from aiida.common.lang import override
 from aiida.work.globals import get_event_emitter, class_loader, REGISTRY
 
 
-class WaitOnProcess(WaitOn):
+class WaitOnProcessTerminated(WaitOn):
     PK = "pk"
 
     @override
-    def init(self, pk, emitter=None):
-        super(WaitOnProcess, self).init()
+    def init(self, pk):
+        super(WaitOnProcessTerminated, self).init()
         self._pk = pk
-        if not self.is_done():
-            self._setup(emitter)
 
     @override
     def load_instance_state(self, bundle):
-        super(WaitOnProcess, self).load_instance_state(bundle)
+        super(WaitOnProcessTerminated, self).load_instance_state(bundle)
         self._pk = bundle[self.PK]
-        if not self.is_done():
-            self._setup()
 
     @override
     def save_instance_state(self, out_state):
-        super(WaitOnProcess, self).save_instance_state(out_state)
+        super(WaitOnProcessTerminated, self).save_instance_state(out_state)
         out_state[self.PK] = self._pk
         out_state.set_class_loader(class_loader)
 
-    def _setup(self, emitter=None):
-        assert not self.is_done()
-
+    @override
+    def wait(self, timeout=None):
         # Need to start listening first so we don't do the following:
         # 1. REGISTRY.has_finished(..) returns False
         # <- Calculation terminates
         # 2. Start listening
         # 3. Wait forever because the calculation has finished already
 
-        if emitter is None:
-            emitter = get_event_emitter()
+        emitter = get_event_emitter()
         # Start listening to all the states we care about
         for proc_type in ['calc', 'process']:
             for state in ['stopped', 'failed']:
@@ -56,52 +50,56 @@ class WaitOnProcess(WaitOn):
                 emitter.start_listening(self._calc_terminated, evt)
 
         if REGISTRY.has_finished(self._pk):
-            emitter.stop_listening(self._calc_terminated)
             try:
                 self.done()
             except AssertionError:
                 # already called
                 pass
 
+        try:
+            return super(WaitOnProcessTerminated, self).wait(timeout=timeout)
+        finally:
+            emitter.stop_listening(self._calc_terminated)
+
     def _calc_terminated(self, emitter, event, body):
-        emitter.stop_listening(self._calc_terminated)
         self.done()
 
 
 class WaitOnWorkflow(WaitOn):
     PK = "pk"
 
-    def __init__(self, pk, emitter=None):
+    def __init__(self, pk):
         super(WaitOnWorkflow, self).__init__()
         self._pk = pk
 
-        # Need to start listening first so we DONT'T do the following:
+    @override
+    def wait(self, timeout=None):
+        # Need to start listening first so we DON'T do the following:
         # 1. REGISTRY.has_finished(..) returns False
         # <- Calculation terminates
         # 2. Start listening
         # 3. Wait forever because the calculation has finished already
 
-        if emitter is None:
-            emitter = get_event_emitter()
-        self._emitter = emitter
+        emitter = get_event_emitter()
 
         emitter.start_listening(
             self._workflow_finished_handler, "legacy_workflow.{}".format(self._pk))
 
         wf = load_workflow(pk=self._pk)
         if wf.get_state() in [wf_states.FINISHED, wf_states.ERROR]:
-            self._wf_finished()
+            try:
+                self.done()
+            except AssertionError:
+                # already called
+                pass
+
+        try:
+            return super(WaitOnWorkflow, self).wait(timeout=timeout)
+        finally:
+            emitter.stop_listening(self._workflow_finished_handler)
 
     def _workflow_finished_handler(self, emitter, event, body):
-        self._wf_finished()
-
-    def _wf_finished(self):
-        self._emitter.stop_listening(self._workflow_finished_handler)
-        try:
-            self.done()
-        except AssertionError:
-            # already called
-            pass
+        self.done(True)
 
     @override
     def save_instance_state(self, out_state):

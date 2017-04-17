@@ -18,7 +18,7 @@ from plum.process_manager import Future
 from aiida.work.globals import REGISTRY
 from aiida.work.run import RunningType, RunningInfo
 from aiida.work.process import Process, ProcessSpec
-from aiida.work.legacy.wait_on import WaitOnProcess, WaitOnWorkflow
+from aiida.work.legacy.wait_on import WaitOnProcessTerminated, WaitOnWorkflow
 from aiida.work.util import WithHeartbeat
 from aiida.common.lang import override
 from aiida.common.utils import get_class_string, get_object_string, \
@@ -321,7 +321,7 @@ class UpdateContext(Interstep):
         rinfo = self._action.running_info
         if rinfo.type is RunningType.LEGACY_CALC \
                 or rinfo.type is RunningType.PROCESS:
-            return WaitOnProcess(rinfo.pid)
+            return WaitOnProcessTerminated(rinfo.pid)
         elif rinfo.type is RunningType.LEGACY_WORKFLOW:
             return WaitOnWorkflow(rinfo.pid)
 

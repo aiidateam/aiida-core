@@ -313,8 +313,8 @@ class TestWorkchain(AiidaTestCase):
 
         p = MainWorkChain.new()
         future = self.procman.start(p)
-        self.assertTrue(wait_until(p, ProcessState.WAITING, timeout=2.))
-        self.assertTrue(future.abort(timeout=2.), "Failed here")
+        self.assertTrue(wait_until(p, ProcessState.WAITING, timeout=4.))
+        self.assertTrue(future.abort(timeout=3600.), "Failed to abort process")
 
     def test_tocontext_async_workchain(self):
         class MainWorkChain(WorkChain):

@@ -40,7 +40,6 @@ from aiida.orm.data.parameter import ParameterData
 from aiida import LOG_LEVEL_REPORT
 
 
-
 class DictSchema(object):
     def __init__(self, schema):
         self._schema = voluptuous.Schema(schema)
@@ -341,7 +340,6 @@ class Process(plum.process.Process):
         """
         message = '[{}|{}|{}]: {}'.format(self.calc.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
-
 
     def _create_and_setup_db_record(self):
         self._calc = self.get_or_create_db_record()

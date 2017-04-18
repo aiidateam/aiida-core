@@ -199,7 +199,6 @@ class WorkChain(Process, WithHeartbeat):
 
         self.insert_intersteps(intersteps)
 
-
     @override
     def _run(self, **kwargs):
         self._stepper = self.spec().get_outline().create_stepper(self)
@@ -300,11 +299,13 @@ class Interstep(object):
         """
         pass
 
+
 class UpdateContext(Interstep):
     """
     Intersteps that evaluate an action and store
     the results in the context of the Process
     """
+
     def __init__(self, action):
         self._action = action
         self._key = None
@@ -333,9 +334,10 @@ class UpdateContext(Interstep):
 class Assign(UpdateContext):
     """
     """
+
     @override
     def on_next_step_starting(self, workchain):
-        fn  = get_object_from_string(self._action.fn)
+        fn = get_object_from_string(self._action.fn)
         key = self._key
         val = fn(self._action.running_info.pid)
         workchain.ctx[key] = val
@@ -344,9 +346,10 @@ class Assign(UpdateContext):
 class Append(UpdateContext):
     """
     """
+
     @override
     def on_next_step_starting(self, workchain):
-        fn  = get_object_from_string(self._action.fn)
+        fn = get_object_from_string(self._action.fn)
         key = self._key
         val = fn(self._action.running_info.pid)
 
@@ -358,14 +361,16 @@ class Append(UpdateContext):
 
 Action = namedtuple("Action", "running_info fn")
 
+
 def action_from_running_info(running_info):
     if running_info.type is RunningType.PROCESS:
         return Calc(running_info)
     elif running_info.type is RunningType.LEGACY_CALC or \
-            running_info.type is RunningType.LEGACY_WORKFLOW:
+                    running_info.type is RunningType.LEGACY_WORKFLOW:
         return Legacy(running_info)
     else:
         raise ValueError("Unknown running type '{}'".format(running_info.type))
+
 
 def assign_(value):
     if isinstance(value, Action):
@@ -376,6 +381,7 @@ def assign_(value):
         return Assign(Calc(RunningInfo(RunningType.PROCESS, value.pid)))
     else:
         return Assign(Legacy(value))
+
 
 def append_(value):
     if isinstance(value, Action):
@@ -409,9 +415,10 @@ def ToContext(**kwargs):
 
 
 def _get_proc_outputs_from_registry(pid):
-    from aiida.orm import load_node
-    n = load_node(pid)
-    return REGISTRY.get_outputs(pid)
+    calc = load_node(pid)
+    if calc.has_failed():
+        raise ValueError("Cannot return outputs, calculation '{}' has failed".format(pid))
+    return {e[0]: e[1] for e in calc.get_outputs(also_labels=True)}
 
 
 def _get_wf_outputs(pk):
@@ -428,7 +435,7 @@ def Wf(running_info):
 
 def Legacy(object):
     if object.type == RunningType.LEGACY_CALC or \
-     object.type == RunningType.PROCESS:
+                    object.type == RunningType.PROCESS:
         return Calc(object)
     elif object.type is RunningType.LEGACY_WORKFLOW:
         return Wf(object)

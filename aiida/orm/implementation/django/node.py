@@ -309,45 +309,51 @@ class Node(AbstractNode):
 
     def _set_attr(self, key, value):
         from aiida.backends.djsite.db.models import DbAttribute
-        DbAttribute.validate_key(key)
 
-        if not self.is_stored:
-            self._attrs_cache[key] = copy.deepcopy(value)
-        else:
-            DbAttribute.set_value_for_node(self.dbnode, key, value)
-            self._increment_version_number_db()
+        with self._state_lock:
+            DbAttribute.validate_key(key)
+
+            if not self.is_stored:
+                self._attrs_cache[key] = copy.deepcopy(value)
+            else:
+                DbAttribute.set_value_for_node(self.dbnode, key, value)
+                self._increment_version_number_db()
 
     def _del_attr(self, key):
         from aiida.backends.djsite.db.models import DbAttribute
-        if not self.is_stored:
-            try:
-                del self._attrs_cache[key]
-            except KeyError:
-                raise AttributeError(
-                    "DbAttribute {} does not exist".format(key))
-        else:
-            if not DbAttribute.has_key(self.dbnode, key):
-                raise AttributeError("DbAttribute {} does not exist".format(
-                    key))
-            DbAttribute.del_value_for_node(self.dbnode, key)
-            self._increment_version_number_db()
+
+        with self._state_lock:
+            if not self.is_stored:
+                try:
+                    del self._attrs_cache[key]
+                except KeyError:
+                    raise AttributeError(
+                        "DbAttribute {} does not exist".format(key))
+            else:
+                if not DbAttribute.has_key(self.dbnode, key):
+                    raise AttributeError("DbAttribute {} does not exist".format(
+                        key))
+                DbAttribute.del_value_for_node(self.dbnode, key)
+                self._increment_version_number_db()
 
     def get_attr(self, key, default=_NO_DEFAULT):
         from aiida.backends.djsite.db.models import DbAttribute
-        try:
-            if not self.is_stored:
-                try:
-                    return self._attrs_cache[key]
-                except KeyError:
-                    raise AttributeError(
-                        "DbAttribute '{}' does not exist".format(key))
-            else:
-                return DbAttribute.get_value_for_node(
-                    dbnode=self.dbnode, key=key)
-        except AttributeError:
-            if default is _NO_DEFAULT:
-                raise
-            return default
+
+        with self._state_lock:
+            try:
+                if not self.is_stored:
+                    try:
+                        return self._attrs_cache[key]
+                    except KeyError:
+                        raise AttributeError(
+                            "DbAttribute '{}' does not exist".format(key))
+                else:
+                    return DbAttribute.get_value_for_node(
+                        dbnode=self.dbnode, key=key)
+            except AttributeError:
+                if default is _NO_DEFAULT:
+                    raise
+                return default
 
     def set_extra(self, key, value, exclusive=False):
         from aiida.backends.djsite.db.models import DbExtra
@@ -379,26 +385,29 @@ class Node(AbstractNode):
 
     def get_extra(self, key, *args):
         from aiida.backends.djsite.db.models import DbExtra
-        if len(args) > 1:
-            raise ValueError("After the key name you can pass at most one"
-                             "value, that is the default value to be used "
-                             "if no extra is found.")
 
-        try:
-            if not self.is_stored:
-                raise AttributeError("DbExtra '{}' does not exist yet, the "
-                                     "node is not stored".format(key))
-            else:
-                return DbExtra.get_value_for_node(dbnode=self.dbnode,
-                                                  key=key)
-        except AttributeError as e:
+        with self._state_lock:
+            if len(args) > 1:
+                raise ValueError("After the key name you can pass at most one"
+                                 "value, that is the default value to be used "
+                                 "if no extra is found.")
+
             try:
-                return args[0]
-            except IndexError:
-                raise e
+                if not self.is_stored:
+                    raise AttributeError("DbExtra '{}' does not exist yet, the "
+                                         "node is not stored".format(key))
+                else:
+                    return DbExtra.get_value_for_node(dbnode=self.dbnode,
+                                                      key=key)
+            except AttributeError as e:
+                try:
+                    return args[0]
+                except IndexError:
+                    raise e
 
     def get_extras(self):
-        return dict(self.iterextras())
+        with self._state_lock:
+            return dict(self.iterextras())
 
     def del_extra(self, key):
         from aiida.backends.djsite.db.models import DbExtra
@@ -437,29 +446,34 @@ class Node(AbstractNode):
         from aiida.backends.djsite.db.models import DbAttribute
         # TODO: check what happens if someone stores the object while
         #        the iterator is being used!
-        if not self.is_stored:
-            for k, v in self._attrs_cache.iteritems():
-                yield (k, v)
-        else:
-            all_attrs = DbAttribute.get_all_values_for_node(self.dbnode)
-            for attr in all_attrs:
-                yield (attr, all_attrs[attr])
+
+        with self._state_lock:
+            if not self.is_stored:
+                for k, v in self._attrs_cache.iteritems():
+                    yield (k, v)
+            else:
+                all_attrs = DbAttribute.get_all_values_for_node(self.dbnode)
+                for attr in all_attrs:
+                    yield (attr, all_attrs[attr])
 
     def get_attrs(self):
-        return dict(self.iterattrs())
+        with self._state_lock:
+            return dict(self.iterattrs())
 
     def attrs(self):
         from aiida.backends.djsite.db.models import DbAttribute
         # Note: I "duplicate" the code from iterattrs, rather than
         # calling iterattrs from here, because iterattrs is slow on each call
         # since it has to call .getvalue(). To improve!
-        if not self.is_stored:
-            for k in self._attrs_cache.iterkeys():
-                yield k
-        else:
-            attrlist = DbAttribute.list_all_node_elements(self.dbnode)
-            for attr in attrlist:
-                yield attr.key
+
+        with self._state_lock:
+            if not self.is_stored:
+                for k in self._attrs_cache.iterkeys():
+                    yield k
+            else:
+                attrlist = DbAttribute.list_all_node_elements(self.dbnode)
+                for attr in attrlist:
+                    yield attr.key
 
     def add_comment(self, content, user=None):
         from aiida.backends.djsite.db.models import DbComment
@@ -744,9 +758,8 @@ class Node(AbstractNode):
         else:
             context_man = EmptyContextManager()
 
-        if not self.is_stored:
-
-            with self._state_lock:
+        with self._state_lock:
+            if not self.is_stored:
                 # As a first thing, I check if the data is valid
                 self._validate()
 

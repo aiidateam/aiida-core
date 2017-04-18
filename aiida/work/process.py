@@ -15,7 +15,7 @@ from enum import Enum
 import itertools
 
 import plum.port as port
-import plum.process
+from plum.process import load
 from plum.process_monitor import MONITOR
 import plum.process_monitor
 

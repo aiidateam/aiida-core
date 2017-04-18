@@ -7,7 +7,7 @@ from aiida.orm import load_node
 from aiida.orm.calculation.job import JobCalculation
 from aiida.work.legacy.job_process import ContinueJobCalculation
 from aiida.work.util import CalculationHeartbeat
-from aiida.work.process import Process
+from aiida.work.process import load
 import aiida.work.globals
 import aiida.work.persistence
 
@@ -29,12 +29,12 @@ def _load_all_processes(storage):
     procs = []
     for cp in storage.load_all_checkpoints():
         try:
-            procs.append(Process.load(cp))
+            procs.append(load(cp))
         except KeyboardInterrupt:
             raise
-        except BaseException:
-            # TODO: Log exception
-            pass
+        except BaseException as exception:
+            _LOGGER.warning("Failed to load process from checkpoint with "
+                            "pid '{}'\n{}: {}".format(cp['pid'], type(exception), exception))
     return procs
 
 

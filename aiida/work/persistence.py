@@ -26,6 +26,9 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         inputs = cp.get(Process.BundleKeys.INPUTS.value, None)
         if inputs:
             cp[Process.BundleKeys.INPUTS.value] = self._load_nodes_from(inputs)
+        outputs = cp.get(Process.BundleKeys.OUTPUTS.value, None)
+        if outputs:
+            cp[Process.BundleKeys.OUTPUTS.value] = self._load_nodes_from(outputs)
 
         cp.set_class_loader(class_loader)
         return cp
@@ -37,6 +40,9 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         inputs = b.get(Process.BundleKeys.INPUTS.value, None)
         if inputs:
             b[Process.BundleKeys.INPUTS.value] = self._convert_to_ids(inputs)
+        outputs = b.get(Process.BundleKeys.OUTPUTS.value, None)
+        if outputs:
+            b[Process.BundleKeys.OUTPUTS.value] = self._convert_to_ids(outputs)
 
         return b
 

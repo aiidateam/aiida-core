@@ -261,6 +261,30 @@ class WorkChain(Process, WithHeartbeat):
             except KeyError:
                 pass
 
+    def abort_nowait(self, msg=None):
+        """
+        Abort the workchain at the next state transition without waiting
+        which is achieved by passing a timeout value of zero
+
+        :param msg: The abort message
+        :type msg: str
+        """
+        self.abort(msg=msg, timeout=0)
+
+    def abort(self, msg=None, timeout=None):
+        """
+        Abort the workchain by calling the abort method of the Process and
+        also adding the abort message to the report
+
+        :param msg: The abort message
+        :type msg: str
+        :param timeout: Wait for the given time until the process has aborted
+        :type timeout: float
+        :return: True if the process is aborted at the end of the function, False otherwise
+        """
+        aborted = super(WorkChain, self).abort(msg, timeout)
+        self.report("Aborting: {}".format(msg))
+        return aborted
 
 class Interstep(object):
     """

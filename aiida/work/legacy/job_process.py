@@ -13,6 +13,7 @@ import plum.process
 import plum.util
 from aiida.common.datastructures import calc_states
 from aiida.common.lang import override
+from aiida.common.exceptions import ModificationNotAllowed
 from aiida.daemon.execmanager import submit_calc, retrieve_all, parse_results, \
     update_job_calc_from_job_info, update_job_calc_from_detailed_job_info
 from aiida.orm.calculation.job import JobCalculation
@@ -201,15 +202,18 @@ class JobProcess(Process, WithHeartbeat):
             except BaseException:
                 self.calc._set_state(calc_states.RETRIEVALFAILED)
                 raise
-
-            try:
-                parse_results(self.calc, wait_on.transport)
-            except BaseException:
-                self.calc._set_state(calc_states.PARSINGFAILED)
-                raise
         finally:
             # Make sure to always release the transport
             wait_on.release_transport()
+
+        try:
+            parse_results(self.calc)
+        except BaseException:
+            try:
+                self.calc._set_state(calc_states.PARSINGFAILED)
+            except ModificationNotAllowed:
+                pass
+            raise
 
         # Finally link up the outputs and we're done
         for label, node in self.calc.get_outputs_dict().iteritems():

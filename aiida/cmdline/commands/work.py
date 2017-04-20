@@ -7,14 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import sys
 
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-import click
 import sys
-from tabulate import tabulate
+import click
 import threading
-from aiida.utils.ascii_vis import build_tree
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 
 
@@ -162,6 +159,7 @@ def do_list(past_days, limit):
     """
     Return a list of running workflows on screen
     """
+    from tabulate import tabulate
     from aiida.common.utils import str_timedelta
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
@@ -265,6 +263,7 @@ def _print_status(response):
     global _print_lock
     from plum.rmq.status import PROCS_KEY
     from plum.rmq.util import HOST_KEY
+    from tabulate import tabulate
 
     procs = response[PROCS_KEY]
     if not procs:
@@ -303,6 +302,7 @@ def _create_time_str_from_timestamp(timestamp):
 @click.option('--depth', '-d', type=int, default=1)
 @click.argument('pks', nargs=-1, type=int)
 def do_tree(node_label, depth, pks):
+    from aiida.utils.ascii_vis import build_tree
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()

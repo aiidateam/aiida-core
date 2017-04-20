@@ -556,6 +556,14 @@ def pw_desc(node):
     """
     return '{}'.format(node.inp.parameters.dict.CONTROL['calculation'])
 
+def code_desc(node):
+    """
+    Returns a string with infos retrieved from  PwCalculation node's properties.
+    :param node:
+    :return: retsrt:
+    """
+    return '{}'.format(node.label)
+
 def get_additional_string(node):
     """
     Returns a string with infos retrieved from  PwCalculation node's properties.
@@ -573,6 +581,7 @@ def get_additional_string(node):
         "InlineCalculation": lambda x: "{}()".format(x.get_function_name()),
         "KpointsData": kpoints_desc,
         "PwCalculation": pw_desc,
+        "Code": code_desc,
     }
 
     func = func_mapping.get(class_name, None)

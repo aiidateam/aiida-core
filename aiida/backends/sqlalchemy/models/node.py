@@ -32,6 +32,8 @@ from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
 
+from aiida.backends.sqlalchemy.models.user import DbUser
+
 
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
@@ -114,6 +116,27 @@ class DbNode(Base):
         'DbUser',
         backref=backref('dbnodes', passive_deletes='all', cascade='merge',)
     )
+
+    # User email
+    @hybrid_property
+    def user_email(self):
+        """
+
+        Returns: the email of the user
+
+        """
+        return self.user.email
+
+    @user_email.expression
+    def user_email(cls):
+        """
+
+        Returns: the email of the user at a class level (i.e. in the database)
+
+        """
+        return select([DbUser.email]).where(DbUser.id == cls.user_id).label(
+            'user_email')
+
 
     # outputs via db_dblink table
     outputs_q = relationship(

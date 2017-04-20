@@ -443,7 +443,8 @@ class NodeTranslator(BaseTranslator):
 
             mainNode = qb.first()[0]
             id = mainNode.pk
-            nodetype = mainNode.dbnode.type
+            nodetype = mainNode.__class__
+            nodetype = mainNode.dbnode.type.split('.')[-1]
             description = get_additional_string(mainNode)
 
             nodes.append({
@@ -459,15 +460,16 @@ class NodeTranslator(BaseTranslator):
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['*'],
                   filters=filter)
-        qb.append(Node, tag="in", project=['*'], input_of='main')
+        qb.append(Node, tag="in", project=['*'], edge_project=['label'],
+            input_of='main')
 
         if qb.count() > 0:
             for input in qb.iterdict():
 
                 node = input['in']['*']
-                print node
+                linktype = input['main--in']['label']
                 id = node.pk
-                nodetype = node.dbnode.type
+                nodetype = node.dbnode.type.split('.')[-1]
                 description = get_additional_string(node)
 
                 nodes.append({
@@ -475,13 +477,15 @@ class NodeTranslator(BaseTranslator):
                     "nodeid": id,
                     "nodetype": nodetype,
                     "group": "inputs",
-                    "description": description
+                    "description": description,
+                    "linktype": linktype,
                 })
                 edges.append({
                     "from": nodeCount,
                     "to": 0,
                     "arrows": "to",
-                    "color": {"inherit": 'from'}
+                    "color": {"inherit": 'from'},
+                    "linktype": linktype,
                 })
                 nodeCount += 1
 
@@ -489,14 +493,15 @@ class NodeTranslator(BaseTranslator):
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['*'],
                   filters=filter)
-        qb.append(Node, tag="out", project=['*'], output_of='main')
+        qb.append(Node, tag="out", project=['*'], edge_project=['label'],
+                  output_of='main')
         if qb.count() > 0:
             for output in qb.iterdict():
 
                 node = output['out']['*']
-                print node
+                linktype = output['main--out']['label']
                 id = node.pk
-                nodetype = node.dbnode.type
+                nodetype = node.dbnode.type.split('.')[-1]
                 description = get_additional_string(node)
 
                 nodes.append({
@@ -504,13 +509,15 @@ class NodeTranslator(BaseTranslator):
                     "nodeid": id,
                     "nodetype": nodetype,
                     "group": "outputs",
-                    "description": description
+                    "description": description,
+                    "linktype": linktype,
                 })
                 edges.append({
                     "from": 0,
                     "to": nodeCount,
                     "arrows": "to",
-                    "color": {"inherit": 'from'}
+                    "color": {"inherit": 'from'},
+                    "linktype": linktype
                 })
                 nodeCount += 1
 

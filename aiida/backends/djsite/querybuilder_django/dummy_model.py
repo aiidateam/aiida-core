@@ -355,6 +355,25 @@ class DbNode(Base):
         )
         return dbnode.get_aiida_class()
 
+    @hybrid_property
+    def user_email(self):
+        """
+        
+        Returns: the email of the user
+
+        """
+        return self.user.email
+
+    @user_email.expression
+    def user_email(cls):
+        """
+        
+        Returns: the email of the user at a class level (i.e. in the database)
+
+        """
+        return select([DbUser.email]).where(DbUser.id == cls.user_id).label(
+            'user_email')
+
 
     @hybrid_property
     def state(self):

@@ -96,8 +96,7 @@ class StructureDataTranslator(DataTranslator):
                 iz*lattice_vectors[2] - center).tolist()
 
                 atoms_json.append(
-                    {'kind_name': atom_kinds_to_html(base_site[
-                                                             'kind_name']),
+                    {'l': base_site['kind_name'],
                      'x': base_site['position'][0] + shift[0],
                      'y': base_site['position'][1] + shift[1],
                      'z': base_site['position'][2] + shift[2]}

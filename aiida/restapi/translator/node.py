@@ -437,31 +437,45 @@ class NodeTranslator(BaseTranslator):
         nodeCount = 0
 
         qb = QueryBuilder()
-        qb.append(Node, tag="main", project=["id", "type"],
+        qb.append(Node, tag="main", project=["*"],
                   filters=filter)
         if qb.count() > 0:
-            mainNode = qb.first()
+
+            mainNode = qb.first()[0]
+            id = mainNode.pk
+            nodetype = mainNode.dbnode.type
+            description = get_additional_string(mainNode)
+
             nodes.append({
                 "id": nodeCount,
-                "nodeid": mainNode[0],
-                "nodetype": mainNode[1],
-                "group": "mainNode"
+                "nodeid": id,
+                "nodetype": nodetype,
+                "group": "mainNode",
+                "description": description
             })
         nodeCount += 1
 
         # get all inputs
         qb = QueryBuilder()
-        qb.append(Node, tag="main", project=["id", "type"],
+        qb.append(Node, tag="main", project=['*'],
                   filters=filter)
-        qb.append(Node, tag="in", project=['id', 'type'], input_of='main')
+        qb.append(Node, tag="in", project=['*'], input_of='main')
+
         if qb.count() > 0:
             for input in qb.iterdict():
-                print "in:", input
+
+                node = input['in']['*']
+                print node
+                id = node.pk
+                nodetype = node.dbnode.type
+                description = get_additional_string(node)
+
                 nodes.append({
                     "id": nodeCount,
-                    "nodeid": input["in"]["id"],
-                    "nodetype": input["in"]["type"],
-                    "group": "inputs"
+                    "nodeid": id,
+                    "nodetype": nodetype,
+                    "group": "inputs",
+                    "description": description
                 })
                 edges.append({
                     "from": nodeCount,
@@ -473,17 +487,24 @@ class NodeTranslator(BaseTranslator):
 
         # get all outputs
         qb = QueryBuilder()
-        qb.append(Node, tag="main", project=["id", "type"],
+        qb.append(Node, tag="main", project=['*'],
                   filters=filter)
-        qb.append(Node, tag="out", project=['id', 'type'], output_of='main')
+        qb.append(Node, tag="out", project=['*'], output_of='main')
         if qb.count() > 0:
             for output in qb.iterdict():
-                print "in:", output
+
+                node = output['out']['*']
+                print node
+                id = node.pk
+                nodetype = node.dbnode.type
+                description = get_additional_string(node)
+
                 nodes.append({
                     "id": nodeCount,
-                    "nodeid": output["out"]["id"],
-                    "nodetype": output["out"]["type"],
+                    "nodeid": id,
+                    "nodetype": nodetype,
                     "group": "outputs",
+                    "description": description
                 })
                 edges.append({
                     "from": 0,
@@ -496,7 +517,7 @@ class NodeTranslator(BaseTranslator):
         return {"nodes": nodes, "edges": edges}
 
 
-
+# TODO Put these functions in some common place so to not repeat code.
 # Auxiliary functions to provide short description of tree nodes
 def kpoints_desc(node):
     """
@@ -506,11 +527,14 @@ def kpoints_desc(node):
     """
     try:
         mesh = node.get_kpoints_mesh()
-        return "{}x{}x{} (+{:.1f},{:.1f},{:.1f})".format(
+        return "Kpoints mesh: {}x{}x{} (+{:.1f},{:.1f},{:.1f})".format(
             mesh[0][0], mesh[0][1], mesh[0][2],
             mesh[1][0], mesh[1][1], mesh[1][2])
     except AttributeError:
-        return '({} kpts)'.format(len(node.get_kpoints()))
+        try:
+            return '(Path of {} kpts)'.format(len(node.get_kpoints()))
+        except OSError:
+            return node.dbnode.type
 
 def pw_desc(node):
     """
@@ -527,6 +551,9 @@ def get_additional_string(node):
     :param node:
     :return: retstr
     """
+
+    from aiida.orm.calculation.job import JobCalculation
+
     class_name = node.__class__.__name__
 
     func_mapping = {
@@ -547,6 +574,6 @@ def get_additional_string(node):
         retstr = " ".join([retstr, node.get_state(from_attribute=True)])
 
     if retstr:
-        return "\n{}".format(retstr)
+        return "{}".format(retstr)
     else:
-        return ""
+        return node.dbnode.type

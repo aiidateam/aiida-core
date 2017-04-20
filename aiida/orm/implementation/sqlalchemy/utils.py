@@ -217,14 +217,10 @@ def get_db_columns(db_class):
 
     # column_properties = [_ for _ in class_mapper(db_class).iterate_properties
     column_properties = [_ for _ in class_mapper(db_class).all_orm_descriptors
-                         if isinstance(_, ColumnProperty)
-                         or isinstance(_, hybrid_property)]
+                         if isinstance(_, ColumnProperty)]
 
-    # Filter out hybrid_properties
-    hybrid_properties = []
-    for idx, prop in enumerate(column_properties):
-        if type(prop) == hybrid_property:
-            hybrid_properties.append(column_properties.pop(idx))
+    hybrid_properties = [_ for _ in class_mapper(db_class).all_orm_descriptors
+                         if isinstance(_, hybrid_property)]
 
     # Ordinary columns
     columns = table.columns

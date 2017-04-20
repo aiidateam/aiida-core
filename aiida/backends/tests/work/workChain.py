@@ -21,8 +21,8 @@ import aiida.work.util as util
 from aiida.common.links import LinkType
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.work.workchain import WorkChain, \
-    ToContext, _Block, _If, _While, if_, while_, return_
-from aiida.work.workchain import _WorkChainSpec, Outputs, assign_, append_
+    ToContext, _Block, _If, _While, if_, while_, return_, assign_, append_
+from aiida.work.workchain import ToContext, _WorkChainSpec, Outputs
 from aiida.work import workfunction, ProcessState, run, async, submit
 from aiida.work.run import legacy_workflow
 import aiida.work.globals
@@ -446,7 +446,7 @@ class TestWorkchain(AiidaTestCase):
             def result(self):
                 return
 
-        with self.assertRaises(KeyError):
+        with self.assertRaises(TypeError):
             run(Workchain)
 
     def test_to_context(self):
@@ -531,7 +531,7 @@ class TestHelpers(AiidaTestCase):
         for n in [a, b, c]:
             n.store()
 
-        from aiida.work.workchain import _get_proc_outputs_from_registry
+        from aiida.work.interstep import _get_proc_outputs_from_registry
         outputs = _get_proc_outputs_from_registry(c.pk)
         self.assertListEqual(outputs.keys(), [u'a', u'b'])
         self.assertEquals(outputs['a'], a)

@@ -8,22 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from abc import ABCMeta, abstractmethod
 import inspect
+from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from plum.wait_ons import Checkpoint, WaitOnAll
 from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
 from plum.process_manager import Future
-from aiida.work.globals import REGISTRY
-from aiida.work.run import RunningType, RunningInfo
 from aiida.work.process import Process, ProcessSpec
-from aiida.work.legacy.wait_on import WaitOnProcessTerminated, WaitOnWorkflow
 from aiida.work.util import WithHeartbeat
 from aiida.common.lang import override
-from aiida.common.utils import get_class_string, get_object_string, \
-    get_object_from_string
-from aiida.orm import load_node, load_workflow
+from aiida.common.utils import get_class_string
+from aiida.work.run import RunningType, RunningInfo
+from aiida.work.interstep import *
 
 
 class _WorkChainSpec(ProcessSpec):
@@ -98,8 +95,7 @@ class WorkChain(Process, WithHeartbeat):
             try:
                 return self._content[name]
             except KeyError:
-                raise AttributeError("Context does not have a variable {}"
-                                     .format(name))
+                raise AttributeError("Context does not have a variable {}".format(name))
 
         def __delattr__(self, item):
             del self._content[item]
@@ -189,12 +185,11 @@ class WorkChain(Process, WithHeartbeat):
         """
         intersteps = []
         for key, value in kwargs.iteritems():
-            if not isinstance(value, UpdateContext):
-                interstep = assign_(value)
-            else:
-                interstep = value
 
-            interstep.set_key(key)
+            if not isinstance(value, UpdateContextBuilder):
+                value = assign_(value)
+
+            interstep = value.build(key)
             intersteps.append(interstep)
 
         self.insert_intersteps(intersteps)
@@ -286,136 +281,6 @@ class WorkChain(Process, WithHeartbeat):
         self.report("Aborting: {}".format(msg))
         return aborted
 
-class Interstep(object):
-    """
-    An internstep is an action that is performed between steps of a workchain.
-    These allow the user to perform action when a step is finished and when
-    the next step (if there is one) is about the start.
-    """
-    __metaclass__ = ABCMeta
-
-    def on_last_step_finished(self, workchain):
-        """
-        Called when the last step has finished
-
-        :param workchain: The workchain this interstep belongs to
-        :type workchain: :class:`WorkChain`
-        """
-        pass
-
-    def on_next_step_starting(self, workchain):
-        """
-        Called when the next step is about to start
-
-        :param workchain: The workchain this interstep belongs to
-        :type workchain: :class:`WorkChain`
-        """
-        pass
-
-    @abstractmethod
-    def save_instance_state(self, out_state):
-        """
-        Save the state of this interstep so that it can be recreated later
-        by the factory.
-
-        :param out_state: The bundle that should be used to save the state
-          (of type plum.persistence.bundle.Bundle).
-        """
-        pass
-
-
-class UpdateContext(Interstep):
-    """
-    Intersteps that evaluate an action and store
-    the results in the context of the Process
-    """
-
-    def __init__(self, action):
-        self._action = action
-        self._key = None
-
-    def set_key(self, key):
-        self._key = key
-        return self
-
-    @override
-    def on_last_step_finished(self, workchain):
-        workchain.insert_barrier(self._create_wait_on())
-
-    def _create_wait_on(self):
-        rinfo = self._action.running_info
-        if rinfo.type is RunningType.LEGACY_CALC \
-                or rinfo.type is RunningType.PROCESS:
-            return WaitOnProcessTerminated(rinfo.pid)
-        elif rinfo.type is RunningType.LEGACY_WORKFLOW:
-            return WaitOnWorkflow(rinfo.pid)
-
-    @override
-    def save_instance_state(self, out_state):
-        pass
-
-
-class Assign(UpdateContext):
-    """
-    """
-
-    @override
-    def on_next_step_starting(self, workchain):
-        fn = get_object_from_string(self._action.fn)
-        key = self._key
-        val = fn(self._action.running_info.pid)
-        workchain.ctx[key] = val
-
-
-class Append(UpdateContext):
-    """
-    """
-
-    @override
-    def on_next_step_starting(self, workchain):
-        fn = get_object_from_string(self._action.fn)
-        key = self._key
-        val = fn(self._action.running_info.pid)
-
-        if key in workchain.ctx and not type(workchain.ctx[key]) == list:
-            raise KeyError("You are trying to append to an existing key that is not a list")
-
-        workchain.ctx.setdefault(key, []).append(val)
-
-
-Action = namedtuple("Action", "running_info fn")
-
-
-def action_from_running_info(running_info):
-    if running_info.type is RunningType.PROCESS:
-        return Calc(running_info)
-    elif running_info.type is RunningType.LEGACY_CALC or \
-                    running_info.type is RunningType.LEGACY_WORKFLOW:
-        return Legacy(running_info)
-    else:
-        raise ValueError("Unknown running type '{}'".format(running_info.type))
-
-
-def assign_(value):
-    if isinstance(value, Action):
-        return Assign(value)
-    elif isinstance(value, RunningInfo):
-        return Assign(action_from_running_info(value))
-    elif isinstance(value, Future):
-        return Assign(Calc(RunningInfo(RunningType.PROCESS, value.pid)))
-    else:
-        return Assign(Legacy(value))
-
-
-def append_(value):
-    if isinstance(value, Action):
-        return Append(value)
-    elif isinstance(value, RunningInfo):
-        return Append(action_from_running_info(value))
-    elif isinstance(value, Future):
-        return Append(Calc(RunningInfo(RunningType.PROCESS, value.pid)))
-    else:
-        return Append(Legacy(value))
 
 
 def ToContext(**kwargs):
@@ -427,56 +292,35 @@ def ToContext(**kwargs):
     """
     intersteps = []
     for key, value in kwargs.iteritems():
-        if not isinstance(value, UpdateContext):
-            interstep = assign_(value)
-        else:
-            interstep = value
 
-        interstep.set_key(key)
+        if not isinstance(value, UpdateContextBuilder):
+            value = assign_(value)
+
+        interstep = value.build(key)
         intersteps.append(interstep)
 
+        # if isinstance(value, Action):
+        #     pass
+        # elif isinstance(value, RunningInfo):
+        #     value = action_from_running_info(value)
+        # elif isinstance(value, Future):
+        #     value = Calc(RunningInfo(RunningType.PROCESS, value.pid))
+        # else:
+        #     value = Legacy(value)
+
+        # if not isinstance(value, Action):
+        #     raise ValueError("the values in the kwargs need to be of type Action")
+
+        # if key not in self.ctx:
+        #     interstep = Assign(key, value)
+        # elif isinstance(self.ctx[key], list):
+        #     interstep = Append(key, value)
+        # else:
+        #     interstep = Assign(key, value)
+
+        # intersteps.append(interstep)
+
     return intersteps
-
-
-def _get_proc_outputs_from_registry(pid):
-    calc = load_node(pid)
-    if calc.has_failed():
-        raise ValueError("Cannot return outputs, calculation '{}' has failed".format(pid))
-    return {e[0]: e[1] for e in calc.get_outputs(also_labels=True)}
-
-
-def _get_wf_outputs(pk):
-    return load_workflow(pk=pk).get_results()
-
-
-def Calc(running_info):
-    return Action(running_info, get_object_string(load_node))
-
-
-def Wf(running_info):
-    return Action(running_info, get_object_string(load_workflow))
-
-
-def Legacy(object):
-    if object.type == RunningType.LEGACY_CALC or \
-                    object.type == RunningType.PROCESS:
-        return Calc(object)
-    elif object.type is RunningType.LEGACY_WORKFLOW:
-        return Wf(object)
-
-    raise ValueError("Could not determine object to be calculation or workflow")
-
-
-def Outputs(running_info):
-    if isinstance(running_info, Future):
-        # Create the correct information from the future
-        rinfo = RunningInfo(RunningType.PROCESS, running_info.pid)
-        return Action(rinfo, get_object_string(_get_proc_outputs_from_registry))
-    elif running_info.type == RunningType.LEGACY_CALC:
-        return Action(running_info, get_object_string(_get_proc_outputs_from_registry))
-    elif running_info.type is RunningType.LEGACY_WORKFLOW:
-        return Action(running_info, get_object_string(_get_wf_outputs))
-
 
 class _InterstepFactory(object):
     def create(self, bundle):
@@ -519,7 +363,7 @@ class Stepper(object):
 
 class _Instruction(object):
     """
-    This class represents an instruction in a a workchain.  To step through the
+    This class represents an instruction in a workchain. To step through the
     step you need to get a stepper by calling ``create_stepper()`` from which
     you can call the :class:`~Stepper.step()` method.
     """

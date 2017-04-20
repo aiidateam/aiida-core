@@ -443,8 +443,7 @@ class NodeTranslator(BaseTranslator):
 
             mainNode = qb.first()[0]
             id = mainNode.pk
-            nodetype = mainNode.__class__
-            nodetype = mainNode.dbnode.type.split('.')[-1]
+            nodetype = mainNode.dbnode.type.split('.')[-2]
             description = get_additional_string(mainNode)
 
             nodes.append({
@@ -469,7 +468,7 @@ class NodeTranslator(BaseTranslator):
                 node = input['in']['*']
                 linktype = input['main--in']['label']
                 id = node.pk
-                nodetype = node.dbnode.type.split('.')[-1]
+                nodetype = node.dbnode.type.split('.')[-2]
                 description = get_additional_string(node)
 
                 nodes.append({
@@ -501,7 +500,7 @@ class NodeTranslator(BaseTranslator):
                 node = output['out']['*']
                 linktype = output['main--out']['label']
                 id = node.pk
-                nodetype = node.dbnode.type.split('.')[-1]
+                nodetype = node.dbnode.type.split('.')[-2]
                 description = get_additional_string(node)
 
                 nodes.append({
@@ -583,4 +582,4 @@ def get_additional_string(node):
     if retstr:
         return "{}".format(retstr)
     else:
-        return node.dbnode.type
+        return node.dbnode.type.split('.')[-2]

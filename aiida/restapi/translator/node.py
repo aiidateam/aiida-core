@@ -470,7 +470,7 @@ class NodeTranslator(BaseTranslator):
                 node = input['in']['*']
                 linktype = input['main--in']['label']
                 id = node.pk
-                nodetype = mainNode.dbnode.type
+                nodetype = node.dbnode.type
                 display_type = nodetype.split('.')[-2]
                 description = get_additional_string(node)
 
@@ -504,13 +504,15 @@ class NodeTranslator(BaseTranslator):
                 node = output['out']['*']
                 linktype = output['main--out']['label']
                 id = node.pk
-                nodetype = node.dbnode.type.split('.')[-2]
+                nodetype = node.dbnode.type
+                display_type = nodetype.split('.')[-2]
                 description = get_additional_string(node)
 
                 nodes.append({
                     "id": nodeCount,
                     "nodeid": id,
                     "nodetype": nodetype,
+                    "displaytype": display_type,
                     "group": "outputs",
                     "description": description,
                     "linktype": linktype,

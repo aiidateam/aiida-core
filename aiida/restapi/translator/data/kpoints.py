@@ -100,7 +100,8 @@ class KpointsDataTranslator(DataTranslator):
             json_visualization['faces_data'] = get_BZ(b1, b2, b3)
 
             # Provide kpoints cooridnates in absolute units ...
-            explicit_kpoints_abs = np.dot(explicit_kpoints_rel, np.transpose(cell))
+            explicit_kpoints_abs = np.dot(explicit_kpoints_rel,
+                                          cell)
             json_visualization['explicit_kpoints_abs'] = \
                 explicit_kpoints_abs.tolist()
 

@@ -443,13 +443,15 @@ class NodeTranslator(BaseTranslator):
 
             mainNode = qb.first()[0]
             id = mainNode.pk
-            nodetype = mainNode.dbnode.type.split('.')[-2]
+            nodetype= mainNode.dbnode.type
+            display_type = nodetype.split('.')[-2]
             description = get_additional_string(mainNode)
 
             nodes.append({
                 "id": nodeCount,
                 "nodeid": id,
                 "nodetype": nodetype,
+                "displaytype": display_type,
                 "group": "mainNode",
                 "description": description
             })
@@ -468,13 +470,15 @@ class NodeTranslator(BaseTranslator):
                 node = input['in']['*']
                 linktype = input['main--in']['label']
                 id = node.pk
-                nodetype = node.dbnode.type.split('.')[-2]
+                nodetype = mainNode.dbnode.type
+                display_type = nodetype.split('.')[-2]
                 description = get_additional_string(node)
 
                 nodes.append({
                     "id": nodeCount,
                     "nodeid": id,
                     "nodetype": nodetype,
+                    "displaytype": display_type,
                     "group": "inputs",
                     "description": description,
                     "linktype": linktype,

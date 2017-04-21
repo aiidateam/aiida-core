@@ -43,9 +43,9 @@ def registry_cache_openable():
         return False
     else:
         try:
-            with open(registry_cache_file_path):
+            with open(registry_cache_file_path()):
                 return True
-        except:
+        except Exception as e:
             return False
 
 

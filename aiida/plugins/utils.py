@@ -85,3 +85,21 @@ def load_json_from_url(url, errorhandler=None):
         else:
             raise e
     return res
+
+
+def connection_error_msg(e):
+    msg = 'There seems to be a problem with your internet connection.'
+    msg += ' The original error message reads:\n\n'
+    '''apparently ConnectionErrors can have an exception as message'''
+    while isinstance(e.message, Exception):
+        e = e.message
+    msg += e.message
+    return msg
+
+
+def value_error_msg(e):
+    msg = 'The AiiDA plugin registry seems to be temporarily unavailable.'
+    msg += ' Please try again later. If the problem persists,'
+    msg += ' look at github.com/aiidateam/aiida-registry and file an issue'
+    msg += ' if there is none yet.'
+    return msg

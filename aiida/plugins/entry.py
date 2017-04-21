@@ -176,6 +176,14 @@ class RegistryEntry(object):
     def format_info(self, **kwargs):
         """
         format and return a datastructure containing all known information about the plugin
+
+        :param format: str, one of [tabulate | dict]
+            tabulate: use tabulate to create and return a table of properties as a string
+            dict: create a dict of properties
+        :param as_str: bool
+            format='dict' and as_str=True: return a pretty printed string version of the dict
+            format='dict' and as_str=False: return a dictionary
+            format='tabulate': as_str is ignored
         """
         fmt = kwargs.pop('format', None)
         as_str = kwargs.pop('as_str', False)

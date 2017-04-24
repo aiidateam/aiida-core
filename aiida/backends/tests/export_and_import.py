@@ -11,9 +11,8 @@
 Tests for the export and import routines.
 """
 
-from aiida.orm.importexport import import_data
 from aiida.backends.testbase import AiidaTestCase
-
+from aiida.orm.importexport import import_data
 
 
 class TestSpecificImport(AiidaTestCase):
@@ -160,6 +159,14 @@ class TestSpecificImport(AiidaTestCase):
 
 
 class TestSimple(AiidaTestCase):
+
+    def setUp(self):
+        self.clean_db()
+        self.insert_data()
+
+    def tearDown(self):
+        pass
+
     def test_1(self):
         import os
         import shutil
@@ -377,6 +384,197 @@ class TestSimple(AiidaTestCase):
         with self.assertRaises(LicensingException):
             export_tree([sd.dbnode], folder=folder, silent=True,
                         forbidden_licenses=crashing_filter)
+
+    def test_5(self):
+        """
+        This test checks that nodes belonging to different users are correctly
+        exported & imported.
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm import load_node
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.importexport import export
+        from aiida.common.datastructures import calc_states
+        from aiida.common.links import LinkType
+        from aiida.orm.user import User
+        from aiida.common.utils import get_configured_user_email
+
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            # Create another user
+            new_email = "newuser@new.n"
+            user = User(email=new_email)
+            user.force_save()
+
+            # Create a structure data node that has a calculation as output
+            sd1 = StructureData()
+            sd1.dbnode.user = user._dbuser
+            sd1.label = 'sd1'
+            sd1.store()
+
+            jc1 = JobCalculation()
+            jc1.set_computer(self.computer)
+            jc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc1.dbnode.user = user._dbuser
+            jc1.label = 'jc1'
+            jc1.store()
+            jc1.add_link_from(sd1)
+            jc1._set_state(calc_states.PARSING)
+
+            # Create some nodes from a different user
+            sd2 = StructureData()
+            sd2.dbnode.user = user._dbuser
+            sd2.label = 'sd2'
+            sd2.store()
+            sd2.add_link_from(jc1, label='l1', link_type=LinkType.RETURN)
+
+            jc2 = JobCalculation()
+            jc2.set_computer(self.computer)
+            jc2.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc2.label = 'jc2'
+            jc2.store()
+            jc2.add_link_from(sd2, label='l2')
+            jc2._set_state(calc_states.PARSING)
+
+            sd3 = StructureData()
+            sd3.label = 'sd3'
+            sd3.store()
+            sd3.add_link_from(jc2, label='l3', link_type=LinkType.RETURN)
+
+            uuids_u1 = [sd1.uuid, jc1.uuid, sd2.uuid]
+            uuids_u2 = [jc2.uuid, sd3.uuid]
+
+            filename = os.path.join(temp_folder, "export.tar.gz")
+
+            export([sd3.dbnode], outfile=filename, silent=True)
+            self.clean_db()
+            import_data(filename, silent=True)
+
+            # Check that the imported nodes are correctly imported and that
+            # the user assigned to the nodes is the right one
+            for uuid in uuids_u1:
+                self.assertEquals(load_node(uuid).get_user().email, new_email)
+            for uuid in uuids_u2:
+                self.assertEquals(load_node(uuid).get_user().email,
+                                  get_configured_user_email())
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+            # print temp_folder
+
+    def test_6(self):
+        """
+        This test checks that nodes belonging to user A (which is not the
+        default user) can be correctly exported, imported, enriched with nodes
+        from the default user, re-exported & re-imported and that in the end
+        all the nodes that have been finally imported belonging to the right
+        users.
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm import load_node
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.importexport import export
+        from aiida.common.datastructures import calc_states
+        from aiida.common.links import LinkType
+        from aiida.common.utils import get_configured_user_email
+        from aiida.orm.user import User
+
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            # Create another user
+            new_email = "newuser@new.n"
+            user = User(email=new_email)
+            user.force_save()
+
+            # Create a structure data node that has a calculation as output
+            sd1 = StructureData()
+            sd1.dbnode.user = user._dbuser
+            sd1.label = 'sd1'
+            sd1.store()
+
+            jc1 = JobCalculation()
+            jc1.set_computer(self.computer)
+            jc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc1.dbnode.user = user._dbuser
+            jc1.label = 'jc1'
+            jc1.store()
+            jc1.add_link_from(sd1)
+            jc1._set_state(calc_states.PARSING)
+
+            # Create some nodes from a different user
+            sd2 = StructureData()
+            sd2.dbnode.user = user._dbuser
+            sd2.label = 'sd2'
+            sd2.store()
+            sd2.add_link_from(jc1, label='l1', link_type=LinkType.RETURN)
+
+            # Set the jc1 to FINISHED
+            jc1._set_state(calc_states.FINISHED)
+
+            # At this point we export the generated data
+            filename1 = os.path.join(temp_folder, "export1.tar.gz")
+            export([sd2.dbnode], outfile=filename1, silent=True)
+            uuids1 = [sd1.uuid, jc1.uuid, sd2.uuid]
+            self.clean_db()
+            self.insert_data()
+            import_data(filename1, silent=True)
+
+            # Check that the imported nodes are correctly imported and that
+            # the user assigned to the nodes is the right one
+            for uuid in uuids1:
+                self.assertEquals(load_node(uuid).get_user().email, new_email)
+
+            # Now we continue to generate more data based on the imported
+            # data
+            sd2_imp = load_node(sd2.uuid)
+
+            jc2 = JobCalculation()
+            jc2.set_computer(self.computer)
+            jc2.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc2.label = 'jc2'
+            jc2.store()
+            jc2.add_link_from(sd2_imp, label='l2')
+            jc2._set_state(calc_states.PARSING)
+
+            sd3 = StructureData()
+            sd3.label = 'sd3'
+            sd3.store()
+            sd3.add_link_from(jc2, label='l3', link_type=LinkType.RETURN)
+
+            # Set the jc2 to FINISHED
+            jc2._set_state(calc_states.FINISHED)
+
+            # Store the UUIDs of the nodes that should be checked
+            # if they can be imported correctly.
+            uuids2 = [jc2.uuid, sd3.uuid]
+
+            filename2 = os.path.join(temp_folder, "export2.tar.gz")
+            export([sd3.dbnode], outfile=filename2, silent=True)
+            self.clean_db()
+            self.insert_data()
+            import_data(filename2, silent=True)
+
+            # Check that the imported nodes are correctly imported and that
+            # the user assigned to the nodes is the right one
+            for uuid in uuids1:
+                self.assertEquals(load_node(uuid).get_user().email, new_email)
+            for uuid in uuids2:
+                self.assertEquals(load_node(uuid).get_user().email,
+                                  get_configured_user_email())
+
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
 
 
 class TestComplex(AiidaTestCase):

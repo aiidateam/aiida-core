@@ -67,7 +67,7 @@ tcod_loops = {
 conforming_dictionaries = [
     {
         'name': 'cif_tcod.dic',
-        'version': '0.009',
+        'version': '0.010',
         'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_tcod.dic'
     },
     {

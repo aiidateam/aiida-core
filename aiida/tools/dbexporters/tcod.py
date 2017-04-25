@@ -425,8 +425,28 @@ def _collect_calculation_data(calc):
         files_in  = _collect_files(calc._raw_input_folder.abspath)
         files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
         this_calc['env'] = calc.get_environment_variables()
-        this_calc['stdout'] = calc.get_scheduler_output()
-        this_calc['stderr'] = calc.get_scheduler_error()
+        stdout_name = '{}.out'.format(aiida_executable_name)
+        while stdout_name in list(files_in,files_out):
+            stdout_name = '_{}'.format(stdout_name)
+        stderr_name = '{}.err'.format(aiida_executable_name)
+        while stderr_name in list(files_in,files_out):
+            stderr_name = '_{}'.format(stderr_name)
+        files_out.append({
+            'name'    : stdout_name,
+            'contents': calc.get_scheduler_output(),
+            'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
+            'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
+            'type'    : 'output',
+            })
+        files_out.append({
+            'name'    : stderr_name,
+            'contents': calc.get_scheduler_error(),
+            'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
+            'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
+            'type'    : 'output',
+            })
+        this_calc['stdout'] = stdout_name
+        this_calc['stderr'] = stderr_name
     else:
         # Calculation is InlineCalculation
         import hashlib
@@ -620,20 +640,10 @@ def _collect_tags(node, calc,parameters=None,
         else:
             tags['_tcod_computation_environment'].append('')
         if 'stdout' in step and step['stdout'] is not None:
-            if cif_encode_contents(step['stdout'])[1] is not None:
-                raise ValueError("Standard output of computation step {} "
-                                 "can not be stored in a CIF file: "
-                                 "encoding is required, but not currently "
-                                 "supported".format(sn))
             tags['_tcod_computation_stdout'].append(step['stdout'])
         else:
             tags['_tcod_computation_stdout'].append('')
         if 'stderr' in step and step['stderr'] is not None:
-            if cif_encode_contents(step['stderr'])[1] is not None:
-                raise ValueError("Standard error of computation step {} "
-                                 "can not be stored in a CIF file: "
-                                 "encoding is required, but not currently "
-                                 "supported".format(sn))
             tags['_tcod_computation_stderr'].append(step['stderr'])
         else:
             tags['_tcod_computation_stderr'].append('')

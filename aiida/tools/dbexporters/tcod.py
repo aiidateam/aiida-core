@@ -437,14 +437,16 @@ def _collect_calculation_data(calc):
             'contents': calc.get_scheduler_output(),
             'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
             'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
-            'type'    : 'output',
+            'role'    : 'stdout',
+            'type'    : 'file',
             })
         files_out.append({
             'name'    : stderr_name,
             'contents': calc.get_scheduler_error(),
             'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
             'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
-            'type'    : 'output',
+            'role'    : 'stderr',
+            'type'    : 'file',
             })
         this_calc['stdout'] = stdout_name
         this_calc['stderr'] = stderr_name
@@ -477,7 +479,8 @@ def _collect_calculation_data(calc):
     for f in files_out:
         if os.path.basename(f['name']) != calc._SCHED_OUTPUT_FILE and \
            os.path.basename(f['name']) != calc._SCHED_ERROR_FILE:
-            f['role'] = 'output'
+            if 'role' not in f.keys():
+                f['role'] = 'output'
             this_calc['files'].append(f)
 
     calcs_now.append(this_calc)

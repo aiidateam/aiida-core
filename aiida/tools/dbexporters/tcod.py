@@ -630,8 +630,7 @@ def _collect_tags(node, calc,parameters=None,
 
     export_files = []
 
-    sn = 0
-    fn = 0
+    sn = 1
     for step in calc_data:
         tags['_tcod_computation_step'].append(sn)
         tags['_tcod_computation_command'].append(

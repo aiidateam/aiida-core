@@ -426,10 +426,10 @@ def _collect_calculation_data(calc):
         files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
         this_calc['env'] = calc.get_environment_variables()
         stdout_name = '{}.out'.format(aiida_executable_name)
-        while stdout_name in list(files_in,files_out):
+        while stdout_name in [files_in,files_out]:
             stdout_name = '_{}'.format(stdout_name)
         stderr_name = '{}.err'.format(aiida_executable_name)
-        while stderr_name in list(files_in,files_out):
+        while stderr_name in [files_in,files_out]:
             stderr_name = '_{}'.format(stderr_name)
         files_out.append({
             'name'    : stdout_name,

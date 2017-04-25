@@ -406,6 +406,7 @@ def _collect_calculation_data(calc):
     from aiida.orm.calculation import Calculation
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.calculation.inline import InlineCalculation
+    import hashlib
     import os
     calcs_now = []
     for d in calc.get_inputs(node_type=Data):
@@ -449,7 +450,6 @@ def _collect_calculation_data(calc):
         this_calc['stderr'] = stderr_name
     else:
         # Calculation is InlineCalculation
-        import hashlib
         python_script = _inline_to_standalone_script(calc)
         files_in.append({
             'name'    : inline_executable_name,

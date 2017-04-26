@@ -835,30 +835,10 @@ class Code(VerdiCommandWithSubcommands):
         print code.full_text_info
 
     def code_setup(self, *args):
-        from aiida.common.exceptions import ValidationError
+        """setup an aiida code"""
+        from aiida.cmdline.aiida_verdi.commands.code import setup
 
-        if len(args) != 0:
-            print >> sys.stderr, ("after 'code setup' there cannot be any "
-                                  "argument")
-            sys.exit(1)
-
-        set_params = CodeInputValidationClass()
-
-        set_params.ask()
-
-        code = set_params.create_code()
-
-        # Enforcing the code to be not hidden.
-        code._reveal()
-
-        try:
-            code.store()
-        except ValidationError as e:
-            print "Unable to store the computer: {}. Exiting...".format(e.message)
-            sys.exit(1)
-
-        print "Code '{}' successfully stored in DB.".format(code.label)
-        print "pk: {}, uuid: {}".format(code.pk, code.uuid)
+        setup.main(args=args, prog_name='verdi code setup', standalone_mode=False)
 
     def code_rename(self, *args):
         import argparse

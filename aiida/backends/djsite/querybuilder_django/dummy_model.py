@@ -387,26 +387,43 @@ class DbNode(Base):
                                  whens=whens,
                                  else_=100) # else: high value to put it at the bottom
 
-        q1 = select([
+        # Add numerical state to string, to allow to sort them
+        states_with_num = select([
             DbCalcState.id.label('id'),
             DbCalcState.dbnode_id.label('dbnode_id'),
-            DbCalcState.state.label('state'),
-            func.row_number().over(partition_by=DbCalcState.dbnode_id,
-                                                 order_by=custom_sort_order).label('the_row_number')
-        ])
+            DbCalcState.state.label('state_string'),
+            custom_sort_order.label('num_state')
+        ]).select_from(DbCalcState).alias()
 
-        q1 = q1.cte()
+        # Get the most 'recent' state (using the state ordering, and the min function) for
+        # each calc
+        calc_state_num = select([
+            states_with_num.c.dbnode_id.label('dbnode_id'),
+            func.min(states_with_num.c.num_state).label('recent_state')
+        ]).group_by(states_with_num.c.dbnode_id).alias()
 
+        # Join the most-recent-state table with the DbCalcState table
+        all_states_q = select([
+            DbCalcState.dbnode_id.label('dbnode_id'),
+            DbCalcState.state.label('state_string'),
+            calc_state_num.c.recent_state.label('recent_state'),
+            custom_sort_order.label('num_state'),
+        ]).select_from(#DbCalcState).alias().join(
+            join(DbCalcState, calc_state_num, DbCalcState.dbnode_id == calc_state_num.c.dbnode_id)).alias()
+
+        # Get the association between each calc and only its corresponding most-recent-state row
         subq = select([
-            q1.c.dbnode_id.label('dbnode_id'),
-            q1.c.state.label('state')
-        ]).select_from(q1).where(q1.c.the_row_number==1).alias()
+            all_states_q.c.dbnode_id.label('dbnode_id'),
+            all_states_q.c.state_string.label('state')
+        ]).select_from(all_states_q).where(all_states_q.c.num_state == all_states_q.c.recent_state).alias()
 
+        # Final filtering for the actual query
         return select([subq.c.state]).\
             where(
                     subq.c.dbnode_id == cls.id,
                 ).\
             label('laststate')
+
 
 
 

@@ -43,9 +43,9 @@ def registry_cache_openable():
         return False
     else:
         try:
-            with open(registry_cache_file_path):
+            with open(registry_cache_file_path()):
                 return True
-        except:
+        except Exception as e:
             return False
 
 
@@ -53,7 +53,7 @@ def registry_file_url():
     """
     return the url for the plugins.json file
     """
-    return 'https://raw.github.com/DropD/aiida-registry/master/plugins.json'
+    return 'https://raw.github.com/aiidateam/aiida-registry/master/plugins.json'
 
 
 def load_online(errorhandler=None):

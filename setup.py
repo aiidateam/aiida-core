@@ -41,6 +41,10 @@ if __name__ == '__main__':
         install_requires=install_requires,
         extras_require=extras_require,
         packages=find_packages(),
+        setup_requires=[
+            'reentry >= 0.9.1'
+        ],
+        reentry_register=True,
         entry_points={
             'console_scripts': [
                 'verdi=aiida.cmdline.verdilib:run',

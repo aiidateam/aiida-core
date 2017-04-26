@@ -131,6 +131,11 @@ def do_report(pk, levelname, order_by):
         filters['levelname'] = levelname
 
     entries    = backend.log.find(filter_by=filters, order_by=order_by)
+
+    if entries is None or len(entries) == 0:
+        print "No log messages recorded for this work calculation"
+        return
+
     object_ids = [entry.id for entry in entries]
     levelnames = [len(entry.levelname) for entry in entries]
     width_id   = len(str(max(object_ids)))

@@ -5,12 +5,12 @@ verdi computer setup command
 import click
 import sys
 
-from aiida_verdi.verdic_utils import load_dbenv_if_not_loaded
-from aiida_verdi import options
-from aiida_verdi.utils.interactive import InteractiveOption
-from aiida_verdi.utils.aiidadb import comp_not_exists
-from aiida_verdi.param_types.plugin import PluginParam
-from aiida_verdi.utils.aiidadb import aiida_dbenv
+from aiida.cmdline.aiida_verdi.verdic_utils import load_dbenv_if_not_loaded
+from aiida.cmdline.aiida_verdi import options
+from aiida.cmdline.aiida_verdi.utils.interactive import InteractiveOption
+from aiida.cmdline.aiida_verdi.utils.aiidadb import comp_not_exists
+from aiida.cmdline.aiida_verdi.param_types.plugin import PluginParam
+from aiida.cmdline.aiida_verdi.utils.aiidadb import aiida_dbenv
 
 
 @aiida_dbenv
@@ -40,14 +40,14 @@ def setup(dry_run=None, non_interactive=None, **kwargs):
     add compute resources
     """
     from aiida.common.exceptions import ValidationError
-    from aiida_verdi.utils.aiidadb import create_computer
+    from aiida.cmdline.aiida_verdi.utils.aiidadb import create_computer
     load_dbenv_if_not_loaded()
 
     pre = kwargs['prepend_text'] or ''
     post = kwargs['append_text'] or ''
     if (not non_interactive) and ((not pre) or (not post)):
         '''let the user edit the pre and post execution scripts'''
-        from aiida_verdi.utils.mlinput import edit_pre_post
+        from aiida.cmdline.aiida_verdi.utils.mlinput import edit_pre_post
         pre, post = edit_pre_post(pre, post, kwargs)
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post

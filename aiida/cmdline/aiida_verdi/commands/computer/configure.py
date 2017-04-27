@@ -5,8 +5,8 @@ verdi computer configure
 import click
 from functools import update_wrapper
 
-from aiida_verdi import options, arguments
-from aiida_verdi.param_types.user import UserParam
+from aiida.cmdline.aiida_verdi import options, arguments
+from aiida.cmdline.aiida_verdi.param_types.user import UserParam
 
 
 def _dj_auth_info(computer, user):

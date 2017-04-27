@@ -8,13 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from copy import deepcopy
 import inspect
+import uuid
 from abc import ABCMeta, abstractmethod
-from collections import namedtuple
+from collections import namedtuple, Mapping, Sequence, Set
 from plum.wait_ons import Checkpoint, WaitOnAll
 from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
 from plum.process_manager import Future
+from aiida.orm import Node
 from aiida.work.process import Process, ProcessSpec
 from aiida.work.util import WithHeartbeat
 from aiida.common.lang import override
@@ -48,6 +51,42 @@ class _WorkChainSpec(ProcessSpec):
 
     def get_outline(self):
         return self._outline
+
+
+def serialise_value(value):
+    """
+    Convert a value to a format that can be serialised.  In practice this means
+    converting Nodes to UUIDs, Mapping and Sequence values that are Nodes to UUIDs
+     
+    .. note::
+        Deepcopies are created for all values passed.
+        
+    :param value: The value to convert (if it falls into above criteria)
+    :return: A UUID, a copy of the mapping given with UUIDs as values where 
+        appropriate or similarly for a sequence.
+    """
+    if isinstance(value, Node):
+        return uuid.UUID(value.uuid)
+    elif isinstance(value, Mapping):
+        return value.__class__((k, serialise_value(v)) for k, v in value.iteritems())
+    elif isinstance(value, (Sequence, Set)):
+        return value.__class__(serialise_value(v) for v in value)
+    else:
+        return deepcopy(value)
+
+
+def deserialise_value(value):
+    if isinstance(value, uuid.UUID):
+        try:
+            return load_node(uuid=value)
+        except ValueError:
+            return deepcopy(value)
+    if isinstance(value, Mapping):
+        return value.__class__((k, deserialise_value(v)) for k, v in value.iteritems())
+    elif isinstance(value, (Sequence, Set)):
+        return value.__class__(deserialise_value(v) for v in value)
+    else:
+        return deepcopy(value)
 
 
 class WorkChain(Process, WithHeartbeat):
@@ -118,7 +157,7 @@ class WorkChain(Process, WithHeartbeat):
 
         def save_instance_state(self, out_state):
             for k, v in self._content.iteritems():
-                out_state[k] = v
+                out_state[k] = serialise_value(v)
 
     def __init__(self, inputs, pid, logger=None):
         super(WorkChain, self).__init__(inputs, pid, logger)
@@ -236,7 +275,7 @@ class WorkChain(Process, WithHeartbeat):
             self._context = self.Context()
         else:
             # Recreate the context
-            self._context = self.Context(saved_instance_state[self._CONTEXT])
+            self._context = self.Context(deserialise_value(saved_instance_state[self._CONTEXT]))
 
             # Recreate the stepper
             if self._STEPPER_STATE in saved_instance_state:

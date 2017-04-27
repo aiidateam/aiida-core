@@ -56,6 +56,8 @@ Plugin loaders
 .. automodule:: aiida.common.pluginloader
    :members:
 
+.. automodule:: aiida.common.old_pluginloader
+
 Utilities
 +++++++++
 .. automodule:: aiida.common.utils

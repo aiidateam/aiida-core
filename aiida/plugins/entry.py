@@ -131,7 +131,7 @@ class RegistryEntry(object):
         except ImportError:
             new_style = False
 
-        from aiida.common.ep_pluginloader import all_plugins
+        from aiida.common.pluginloader import all_plugins
         if iversion == self.version or not new_style:
             for cat, ep in self.entry_points.iteritems():
                 if not set(ep).issubset(set(all_plugins(cat))):

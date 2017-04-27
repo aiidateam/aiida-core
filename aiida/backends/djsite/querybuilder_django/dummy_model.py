@@ -43,7 +43,7 @@ from sqlalchemy.ext.compiler import compiles
 # Aiida Django classes:
 #from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
 
-#from aiida.common.ep_pluginloader import load_plugin
+#from aiida.common.pluginloader import load_plugin
 
 
 # SETTINGS:

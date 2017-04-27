@@ -23,7 +23,7 @@ def SchedulerFactory(module):
     :param str module: a string with the module name
     :return: the scheduler subclass contained in module 'module'
     """
-    from aiida.common.ep_pluginloader import BaseFactory
+    from aiida.common.pluginloader import BaseFactory
 
     return BaseFactory(module, Scheduler, "aiida.scheduler.plugins")
 
@@ -65,7 +65,7 @@ class Scheduler(object):
 
     @classmethod
     def get_valid_schedulers(cls):
-        from aiida.common.ep_pluginloader import existing_plugins
+        from aiida.common.pluginloader import existing_plugins
 
         return existing_plugins(Scheduler, "aiida.scheduler.plugins")
 

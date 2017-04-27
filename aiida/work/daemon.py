@@ -10,6 +10,7 @@ from aiida.work.util import CalculationHeartbeat
 from aiida.work.process import load
 import aiida.work.globals
 import aiida.work.persistence
+from plum.exceptions import LockError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,8 +22,11 @@ def launch_pending_jobs(storage=None):
 
     procman = aiida.work.globals.get_process_manager()
     for proc in _load_all_processes(storage):
-        storage.persist_process(proc)
-        procman.start(proc)
+        try:
+            storage.persist_process(proc)
+            f = procman.start(proc)
+        except LockError:
+            pass
 
 
 def _load_all_processes(storage):
@@ -33,8 +37,10 @@ def _load_all_processes(storage):
         except KeyboardInterrupt:
             raise
         except BaseException as exception:
+            import traceback
             _LOGGER.warning("Failed to load process from checkpoint with "
-                            "pid '{}'\n{}: {}".format(cp['pid'], type(exception), exception))
+                            "pid '{}'\n{}: {}".format(cp['pid'], exception.__class__.__name__, exception))
+            _LOGGER.error(traceback.format_exc())
     return procs
 
 

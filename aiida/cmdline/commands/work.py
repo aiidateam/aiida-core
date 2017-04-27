@@ -118,30 +118,61 @@ def do_report(pk, levelname, order_by):
     if not is_dbenv_loaded():
         load_dbenv()
 
+    import itertools
     from aiida.orm.backend import construct
     from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
+    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm.calculation.work import WorkCalculation
 
-    backend  = construct()
-    order_by = [OrderSpecifier(order_by, ASCENDING)]
-    filters  = {
-        'objpk' : pk,
-    }
+    def get_report_messages(pk, levelname, order_by):
+        backend = construct()
+        order_by = [OrderSpecifier(order_by, ASCENDING)]
+        filters = {
+            'objpk' : pk,
+        }
 
-    if levelname:
-        filters['levelname'] = levelname
+        if levelname:
+            filters['levelname'] = levelname
 
-    entries    = backend.log.find(filter_by=filters, order_by=order_by)
+        entries = backend.log.find(filter_by=filters, order_by=order_by)
 
-    if entries is None or len(entries) == 0:
+        if entries is None or len(entries) == 0:
+            return []
+        else:
+            return entries
+
+    qb = QueryBuilder(with_dbpath=False)
+    qb.append(
+        cls=WorkCalculation,
+        filters={'id': pk},
+        tag='workcalculation'
+    )
+    qb.append(
+        cls=WorkCalculation,
+        project=['id'],
+        descendant_of='workcalculation',
+        tag='subworkchains'
+    )
+    result = list(itertools.chain(*qb.distinct().all()))
+    result.append(pk)
+    result.sort()
+
+    reports = []
+    for pk in result:
+        entries = get_report_messages(pk, levelname, order_by)
+        reports.extend(entries)
+
+    reports.sort(key=lambda r: r.time)
+
+    if reports is None or len(reports) == 0:
         print "No log messages recorded for this work calculation"
         return
 
-    object_ids = [entry.id for entry in entries]
-    levelnames = [len(entry.levelname) for entry in entries]
-    width_id   = len(str(max(object_ids)))
+    object_ids = [entry.id for entry in reports]
+    levelnames = [len(entry.levelname) for entry in reports]
+    width_id = len(str(max(object_ids)))
     width_levelname = max(levelnames)
-
-    for entry in entries:
+    for entry in reports:
         print '{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]: {message}'.format(
             id=entry.id,
             levelname=entry.levelname,
@@ -150,7 +181,6 @@ def do_report(pk, levelname, order_by):
             width_id=width_id,
             width_levelname=width_levelname
         )
-
 
 @click.command('tree', context_settings=CONTEXT_SETTINGS)
 @click.option('--node-label', default='_process_label', type=str)

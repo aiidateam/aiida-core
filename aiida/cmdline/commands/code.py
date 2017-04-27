@@ -416,7 +416,7 @@ class CodeInputValidationClass(object):
         """
         from aiida.common.exceptions import ValidationError
         from aiida.orm import JobCalculation
-        from aiida.common.ep_pluginloader import all_plugins
+        from aiida.common.pluginloader import all_plugins
 
         if input_plugin is None:
             return

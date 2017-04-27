@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from abc import ABCMeta, abstractmethod
-from aiida.common.ep_pluginloader import BaseFactory
+from aiida.common.pluginloader import BaseFactory
 
 
 

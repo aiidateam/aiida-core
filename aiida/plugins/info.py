@@ -5,20 +5,22 @@ utilities to provide information about available plugins
 The plugin registry (in cache) is expected to be a dict where
 the keys are base entry point names of plugins (unique for registered plugins)
 
-example registry
-registry = {
-    'quantumespresso': {
-        'name': 'aiida-quantumespresso',
-        'package_name': 'aiida_quantumespresso',
-        'pip_url': 'git+https://...',
-        'other_key': 'other_value'
+example registry::
+
+    registry = {
+        'quantumespresso': {
+            'name': 'aiida-quantumespresso',
+            'package_name': 'aiida_quantumespresso',
+            'pip_url': 'git+https://...',
+            'other_key': 'other_value'
+        }
+        'vasp': {
+            'name': aiida-vasp',
+            'package_name': 'aiida_vasp',
+            '...': '...'
+        }
     }
-    'vasp': {
-        'name': aiida-vasp',
-        'package_name': 'aiida_vasp',
-        '...': '...'
-    }
-}
+
 """
 
 
@@ -46,7 +48,7 @@ def find_for_typestring(typestring):
     :return: dict with plugin keys if found, None if not found
     """
     from aiida.plugins.registry import load_cached
-    from aiida.common.ep_pluginloader import entry_point_from_tpstr
+    from aiida.common.pluginloader import entry_point_from_tpstr
     plugins = load_cached()
     entry_point = entry_point_from_tpstr(typestring)
     return plugins.get(entry_point, None)

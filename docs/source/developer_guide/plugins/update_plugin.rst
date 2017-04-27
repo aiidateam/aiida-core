@@ -12,6 +12,8 @@ First, choose a name under which your plugin will be distributed and potentially
 
 where <plugin name> should be replaced by the name you have given to the folders containing your plugin modules. The reasons for this convention is to avoid name clashes with other python package distributions, as well as making it easy to find on the PyPI
 
+It is important to ensure that the name is not taken by another plugin yet. To do so, visit the `registry`_. If you wish to secure the name you can register your plugin already at this point, just follow the instructions at :ref:`step_4` and leave all information empty that you do not have yet.
+
 Next, create inside this folder a python package, leading to this structure::
 
    aiida-<plugin name>/
@@ -122,10 +124,14 @@ new::
    
    from aiida_myplugin.tools.thistool import this_convenience_func
 
+.. _step_4:
+
 4. Get Your Plugin Listed
 -------------------------
 
-If you wish to get your plugin listed on the official registry of endorsed plugins, you will provide the following keyword arguments as key-value pairs in a setup.json or setup.yaml file alongside. It is recommended to have setup.py read the keyword arguments from that file::
+This step is important to ensure that the name by which your plugin classes are loaded stays unique and unambiguous!
+
+If you wish to get your plugin listed on the official registry for aiida plugins, you will provide the following keyword arguments as key-value pairs in a setup.json or setup.yaml file alongside. It is recommended to have setup.py read the keyword arguments from that file::
 
    aiida-myplugin/
       aiida_myplugin/

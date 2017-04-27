@@ -5,6 +5,7 @@ Modules (API documentation)
    :maxdepth: 3
 
    aiida.common <../common/dev>
+   aiida.plugins <../registrytools/dev>
    ../transport/dev
    ../scheduler/dev
    ../cmdline/dev

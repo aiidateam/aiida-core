@@ -24,7 +24,7 @@ def TransportFactory(module):
     :param str module: name of the module containing the Transport subclass
     :return: the transport subclass located in module 'module'
     """
-    from aiida.common.ep_pluginloader import BaseFactory
+    from aiida.common.pluginloader import BaseFactory
 
     return BaseFactory(module, Transport, "aiida.transport.plugins")
 
@@ -157,7 +157,7 @@ class Transport(object):
         """
         :return: a list of existing plugin names
         """
-        from aiida.common.ep_pluginloader import existing_plugins
+        from aiida.common.pluginloader import existing_plugins
 
         return existing_plugins(Transport, "aiida.transport.plugins")
 

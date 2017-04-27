@@ -248,7 +248,7 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.orm.data.array.kpoints import KpointsData
         from aiida.orm.data.parameter import ParameterData
         import numpy
-        from aiida.common.ep_pluginloader import get_plugin
+        from aiida.common.pluginloader import get_plugin
         PWT = get_plugin('tools.dbexporters.tcod_plugins', 'quantumespresso.pw')
         CPT = get_plugin('tools.dbexporters.tcod_plugins', 'quantumespresso.cp')
 
@@ -408,7 +408,7 @@ class TestTcodDbExporter(AiidaTestCase):
         #     import NwcpymatgenTcodtranslator as NPT
         from aiida.orm.data.parameter import ParameterData
         from tcodexporter import FakeObject
-        from aiida.common.ep_pluginloader import get_plugin
+        from aiida.common.pluginloader import get_plugin
         NPT = get_plugin('tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
 
         calc = FakeObject({

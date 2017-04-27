@@ -18,7 +18,7 @@ from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
 from aiida.backends.utils import get_automatic_user
-from aiida.common.pluginloader import from_type_to_pluginclassname
+from aiida.common.old_pluginloader import from_type_to_pluginclassname
 
 # TODO: set the following as properties of the Calculation
 # 'email',

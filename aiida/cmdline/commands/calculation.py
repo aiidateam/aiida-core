@@ -57,7 +57,7 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.common.ep_pluginloader import all_plugins
+        from aiida.common.pluginloader import all_plugins
 
         plugins = sorted(all_plugins('calculations'))
         # Do not return plugins that are already on the command line
@@ -349,7 +349,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         from aiida.orm import CalculationFactory
         from aiida.orm.calculation.job import JobCalculation
-        from aiida.common.ep_pluginloader import all_plugins
+        from aiida.common.pluginloader import all_plugins
         from aiida.common.exceptions import MissingPluginError
 
         if args:
@@ -408,7 +408,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.common.pluginloader import get_class_typestring
+        from aiida.common.old_pluginloader import get_class_typestring
 
         try:
             calc = load_node(parsed_args.calc)
@@ -564,7 +564,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.common.pluginloader import get_class_typestring
+        from aiida.common.old_pluginloader import get_class_typestring
 
         try:
             calc = load_node(parsed_args.calc)

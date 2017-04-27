@@ -581,8 +581,8 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 # The only valid string at this point is a string
                 # that matches exactly the _plugin_type_string
                 # of a node class
-                from aiida.common.pluginloader import from_type_to_pluginclassname
-                from aiida.common.ep_pluginloader import load_plugin
+                from aiida.common.old_pluginloader import from_type_to_pluginclassname
+                from aiida.common.pluginloader import load_plugin
                 ormclass = self.Node
                 try:
                     pluginclassname = from_type_to_pluginclassname(ormclasstype)
@@ -593,7 +593,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                     # In the future, assuming the user knows what he or she is doing
                     # we could remove that check
                     # The query_type_string we can get from
-                    # the aiida.common.pluginloader function get_query_type_string
+                    # the aiida.common.old_pluginloader function get_query_type_string
                     PluginClass = load_plugin(self.AiidaNode, 'aiida.orm', pluginclassname)
                 except (DbContentError, MissingPluginError) as e:
                     raise InputValidationError(

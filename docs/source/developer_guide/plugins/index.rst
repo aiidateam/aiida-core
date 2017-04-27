@@ -8,3 +8,4 @@ Plugin Development
    concepts
    update_plugin
    entry_points
+   contributing

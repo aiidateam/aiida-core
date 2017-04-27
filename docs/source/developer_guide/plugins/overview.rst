@@ -25,6 +25,8 @@ one or more :ref:`python packages <plugins.concepts.python_package>`. It typical
 
 It may also provide commandline or GUI applications based on AiiDA functionality.
 
+All publicly available plugins should be registered at the `registry`_ to avoid name-clashes with other plugins. Visiting the registry to see if the desired functionality is already being provided is a good idea as well.
+
 What a Plugin Can Do
 --------------------
 
@@ -85,3 +87,4 @@ If any of the above applies to only part of a planned plugin, please consider sp
 
 .. _setuptools: https://setuptools.readthedocs.io/en/latest/
 .. _aiida_core: https://github.com/aiidateam/aiida_core
+.. _registry: https://github.com/aiidateam/aiida-registry

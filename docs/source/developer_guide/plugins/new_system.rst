@@ -123,7 +123,7 @@ The chosen approach to plugins has some limitations:
 * The freedom of the plugin developer to name and rename classes ends where the information in question is stored in the database and used to map between data base nodes and corresponding classes.
 * The system is designed with the possibility of plugin versioning in mind, however this is not implemented as of now.
 * In principle, two different plugins can give the same name to an entry point, creating ambiguity when trying to load the associated objects. Plugin development guidelines in the documentation will advise on how to avoid this problem.
-* Plugins can potentially contain malicious or otherwise dangerous code. We will provide a registry containing plugins which we have tested to be trustworthy.
+* Plugins can potentially contain malicious or otherwise dangerous code. We are providing a registry containing plugins which are available / in development.
 
 .. _setuptools: http://setuptools.readthedocs.io/en/latest/setuptools.html
 .. _Extensible Applications and Frameworks: http://setuptools.readthedocs.io/en/latest/setuptools.html#extensible-applications-and-frameworks

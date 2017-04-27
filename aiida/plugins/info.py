@@ -5,20 +5,22 @@ utilities to provide information about available plugins
 The plugin registry (in cache) is expected to be a dict where
 the keys are base entry point names of plugins (unique for registered plugins)
 
-example registry
-registry = {
-    'quantumespresso': {
-        'name': 'aiida-quantumespresso',
-        'package_name': 'aiida_quantumespresso',
-        'pip_url': 'git+https://...',
-        'other_key': 'other_value'
+example registry::
+
+    registry = {
+        'quantumespresso': {
+            'name': 'aiida-quantumespresso',
+            'package_name': 'aiida_quantumespresso',
+            'pip_url': 'git+https://...',
+            'other_key': 'other_value'
+        }
+        'vasp': {
+            'name': aiida-vasp',
+            'package_name': 'aiida_vasp',
+            '...': '...'
+        }
     }
-    'vasp': {
-        'name': aiida-vasp',
-        'package_name': 'aiida_vasp',
-        '...': '...'
-    }
-}
+
 """
 
 

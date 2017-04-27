@@ -234,7 +234,7 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEquals(values['_tcod_computation_environment'],
                           ['PATH=/dev/null\nUSER=unknown'])
         self.assertEquals(values['_tcod_computation_command'],
-                          ['cd 0; ./_aiidasubmit.sh'])
+                          ['cd 1; ./_aiidasubmit.sh'])
 
     def test_pw_translation(self):
         from aiida.tools.dbexporters.tcod \

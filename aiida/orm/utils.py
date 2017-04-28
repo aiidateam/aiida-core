@@ -17,6 +17,9 @@ def CalculationFactory(module, from_abstract=False):
     Return a suitable JobCalculation subclass.
 
     :param module: a valid string recognized as a Calculation plugin
+    :param from_abstract: A boolean. If False (default), actually look only
+        to subclasses of JobCalculation, not to the base Calculation class.
+        If True, check for valid strings for plugins of the Calculation base class.
     """
 
     from aiida.orm.calculation import Calculation

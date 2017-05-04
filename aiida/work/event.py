@@ -41,16 +41,23 @@ class DbPollingEmitter(PollingEmitter, WithProcessEvents):
             Calculation,
             filters={
                 'id': {'in': pk_events.keys()},
-                'attributes.{}'.format(WorkCalculation.FINISHED_KEY): True
+                'or': [
+                    {'attributes': {'has_key': WorkCalculation.FAILED_KEY}},
+                    {'attributes.{}'.format(WorkCalculation.FINISHED_KEY): True}
+                ]
             },
             project=[
                 'id',
+                'attributes.{}'.format(WorkCalculation.FAILED_KEY),
                 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
             ]
         )
         for r in q.all():
-            self.event_occurred("calc.{}.finished".format(r[0]))
-            self.event_occurred("calc.{}.stopped".format(r[0]))
+            if r[2]:
+                self.event_occurred("calc.{}.finished".format(r[0]))
+                self.event_occurred("calc.{}.stopped".format(r[0]))
+            elif r[1] is not None:
+                self.event_occurred("calc.{}.failed".format(r[0]))
 
 
 class ProcessMonitorEmitter(plum.event.ProcessMonitorEmitter):

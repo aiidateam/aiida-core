@@ -960,6 +960,55 @@ class TestNodeBasic(AiidaTestCase):
         extras_to_set.update(new_extras)
         self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
 
+    def test_basetype_as_attr(self):
+        """
+        Test that setting a basetype as an attribute works transparently
+        """
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.data.base import Str
+        
+        # Manages to store, and value is converted to its base type
+        p = ParameterData(dict={'b': Str("sometext")})
+        p.store()
+        self.assertEqual(p.get_attr('b'), "sometext")
+        self.assertIsInstance(p.get_attr('b'),basestring)
+        
+        # Check also before storing
+        n = Node()
+        n._set_attr('a', Str("sometext2"))
+        self.assertEqual(n.get_attr('a'), "sometext2")
+        self.assertIsInstance(n.get_attr('a'),basestring)     
+        
+        # Check also deep in a dictionary/list
+        n = Node()
+        n._set_attr('a', {'b': [Str("sometext3")]})
+        self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+        n.store()
+        self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+
+    def test_basetype_as_extra(self):
+        """
+        Test that setting a basetype as an attribute works transparently
+        """
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.data.base import Str
+                
+        # Check also before storing
+        n = Node()
+        n.store()
+        n.set_extra('a', Str("sometext2"))
+        self.assertEqual(n.get_extra('a'), "sometext2")
+        self.assertIsInstance(n.get_extra('a'),basestring)     
+        
+        # Check also deep in a dictionary/list
+        n = Node()
+        n.store()
+        n.set_extra('a', {'b': [Str("sometext3")]})
+        self.assertEqual(n.get_extra('a')['b'][0], "sometext3")
+        self.assertIsInstance(n.get_extra('a')['b'][0],basestring)     
+
     def test_versioning_lowlevel(self):
         """
         Checks the versioning.

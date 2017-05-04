@@ -338,8 +338,14 @@ class Node(AbstractNode):
         if self._to_be_stored:
             self._attrs_cache[key] = copy.deepcopy(value)
         else:
-            self.dbnode.set_attr(key, value)
-            self._increment_version_number_db()
+            try:
+                self.dbnode.set_attr(key, value)
+                self._increment_version_number_db()
+            except:
+                from aiida.backends.sqlalchemy import get_scoped_session
+                session = get_scoped_session()
+                session.rollback()
+                raise
 
     def _del_attr(self, key):
         if self._to_be_stored:
@@ -349,8 +355,14 @@ class Node(AbstractNode):
                 raise AttributeError(
                     "Attribute {} does not exist".format(key))
         else:
-            self.dbnode.del_attr(key)
-            self._increment_version_number_db()
+            try:
+                self.dbnode.del_attr(key)
+                self._increment_version_number_db()
+            except:
+                from aiida.backends.sqlalchemy import get_scoped_session
+                session = get_scoped_session()
+                session.rollback()
+                raise
 
     def get_attr(self, key, default=_NO_DEFAULT):
         exception = AttributeError("Attribute '{}' does not exist".format(key))
@@ -381,8 +393,14 @@ class Node(AbstractNode):
                 "The extras of a node can be set only after "
                 "storing the node")
 
-        self.dbnode.set_extra(key, value)
-        self._increment_version_number_db()
+        try:
+            self.dbnode.set_extra(key, value)
+            self._increment_version_number_db()
+        except:
+            from aiida.backends.sqlalchemy import get_scoped_session
+            session = get_scoped_session()
+            session.rollback()
+            raise
 
     def reset_extras(self, new_extras):
 
@@ -394,8 +412,14 @@ class Node(AbstractNode):
                 "The extras of a node can be set only after "
                 "storing the node")
 
-        self.dbnode.reset_extras(new_extras)
-        self._increment_version_number_db()
+        try:
+            self.dbnode.reset_extras(new_extras)
+            self._increment_version_number_db()
+        except:
+            from aiida.backends.sqlalchemy import get_scoped_session
+            session = get_scoped_session()
+            session.rollback()
+            raise
 
     def get_extra(self, key, default=None):
         # TODO SP: in the Django implementation, if the node is not stored,
@@ -413,7 +437,14 @@ class Node(AbstractNode):
         return self.dbnode.extras
 
     def del_extra(self, key):
-        self.dbnode.del_extra(key)
+        try:
+            self.dbnode.del_extra(key)
+        except:
+            from aiida.backends.sqlalchemy import get_scoped_session
+            session = get_scoped_session()
+            session.rollback()
+            raise
+
 
     def extras(self):
         if self.dbnode.extras is None:
@@ -459,7 +490,13 @@ class Node(AbstractNode):
 
         comment = DbComment(dbnode=self._dbnode, user=user, content=content)
         session.add(comment)
-        session.commit()
+        try:
+            session.commit()
+        except:
+            from aiida.backends.sqlalchemy import get_scoped_session
+            session = get_scoped_session()
+            session.rollback()
+            raise
 
     def get_comment_obj(self, id=None, user=None):
         dbcomments_query = DbComment.query.filter_by(dbnode=self._dbnode)
@@ -521,16 +558,35 @@ class Node(AbstractNode):
                 user, comment_pk))
 
         comment.content = new_field
-        comment.save()
+        try:
+            comment.save()
+        except:
+            from aiida.backends.sqlalchemy import get_scoped_session
+            session = get_scoped_session()
+            session.rollback()
+            raise
 
     def _remove_comment(self, comment_pk, user):
         comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk).first()
         if comment:
-            comment.delete()
+            try:
+                comment.delete()
+            except:
+                from aiida.backends.sqlalchemy import get_scoped_session
+                session = get_scoped_session()
+                session.rollback()
+                raise
 
     def _increment_version_number_db(self):
         self._dbnode.nodeversion = DbNode.nodeversion + 1
-        self._dbnode.save()
+        try:
+            self._dbnode.save()
+        except:
+            from aiida.backends.sqlalchemy import get_scoped_session
+            session = get_scoped_session()
+            session.rollback()
+            raise
+
 
     def copy(self):
         newobject = self.__class__()
@@ -597,6 +653,7 @@ class Node(AbstractNode):
                 session.commit()
             except SQLAlchemyError as e:
                 session.rollback()
+                raise
 
         return self
 
@@ -683,6 +740,7 @@ class Node(AbstractNode):
                 session.commit()
             except SQLAlchemyError as e:
                 session.rollback()
+                raise
 
     def store(self, with_transaction=True):
         """
@@ -745,10 +803,10 @@ class Node(AbstractNode):
                         # aiida.backends.sqlalchemy.get_scoped_session().commit()
                         session.commit()
                     except SQLAlchemyError as e:
-                        print "Cannot store the node. Original exception: {" \
-                              "}".format(e)
+                        #print "Cannot store the node. Original exception: {" \
+                        #      "}".format(e)
                         session.rollback()
-                        # aiida.backends.sqlalchemy.get_scoped_session().rollback()
+                        raise
 
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception

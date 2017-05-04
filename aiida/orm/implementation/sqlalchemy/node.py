@@ -334,18 +334,24 @@ class Node(AbstractNode):
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
 
-    def _set_attr(self, key, value):
-        if self._to_be_stored:
-            self._attrs_cache[key] = copy.deepcopy(value)
-        else:
-            try:
-                self.dbnode.set_attr(key, value)
-                self._increment_version_number_db()
-            except:
-                from aiida.backends.sqlalchemy import get_scoped_session
-                session = get_scoped_session()
-                session.rollback()
-                raise
+    def _set_db_attr(self, key, value):
+        """
+        Set the value directly in the DB, without checking if it is stored, or
+        using the cache.
+
+        DO NOT USE DIRECTLY.
+
+        :param str key: key name
+        :param value: its value
+        """
+        try:
+            self.dbnode.set_attr(key, value)
+            self._increment_version_number_db()
+        except:
+            from aiida.backends.sqlalchemy import get_scoped_session
+            session = get_scoped_session()
+            session.rollback()
+            raise
 
     def _del_attr(self, key):
         if self._to_be_stored:

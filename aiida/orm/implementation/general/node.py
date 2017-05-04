@@ -20,7 +20,7 @@ from aiida.common.utils import combomethod
 
 from aiida.common.links import LinkType
 from aiida.common.old_pluginloader import get_query_type_string
-
+from aiida.backends.utils import validate_attribute_key
 
 
 _NO_DEFAULT = tuple()
@@ -676,7 +676,6 @@ class AbstractNode(object):
         #      check for the type
         pass
 
-    @abstractmethod
     def _set_attr(self, key, value):
         """
         Set a new attribute to the Node (in the DbAttribute table).
@@ -689,6 +688,25 @@ class AbstractNode(object):
 
         :raise ValidationError: if the key is not valid (e.g. it contains the
             separator symbol).
+        """
+        validate_attribute_key(key)
+
+        if self._to_be_stored:
+            import copy
+            self._attrs_cache[key] = copy.deepcopy(value)
+        else:
+            self._set_db_attr(key, value)
+
+    @abstractmethod
+    def _set_db_attr(self, key, value):
+        """
+        Set the value directly in the DB, without checking if it is stored, or
+        using the cache.
+
+        DO NOT USE DIRECTLY.
+
+        :param str key: key name
+        :param value: its value
         """
         pass
 

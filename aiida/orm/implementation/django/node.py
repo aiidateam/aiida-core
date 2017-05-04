@@ -308,15 +308,20 @@ class Node(AbstractNode):
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
 
-    def _set_attr(self, key, value):
-        from aiida.backends.djsite.db.models import DbAttribute
-        DbAttribute.validate_key(key)
+    def _set_db_attr(self, key, value):
+        """
+        Set the value directly in the DB, without checking if it is stored, or
+        using the cache.
 
-        if self._to_be_stored:
-            self._attrs_cache[key] = copy.deepcopy(value)
-        else:
-            DbAttribute.set_value_for_node(self.dbnode, key, value)
-            self._increment_version_number_db()
+        DO NOT USE DIRECTLY.
+
+        :param str key: key name
+        :param value: its value
+        """
+        from aiida.backends.djsite.db.models import DbAttribute
+
+        DbAttribute.set_value_for_node(self.dbnode, key, value)
+        self._increment_version_number_db()
 
     def _del_attr(self, key):
         from aiida.backends.djsite.db.models import DbAttribute

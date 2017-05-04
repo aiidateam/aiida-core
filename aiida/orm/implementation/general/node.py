@@ -1233,6 +1233,10 @@ class AbstractNode(object):
 
     @property
     def pk(self):
+        """
+        :return: the principal key (the ID) as an integer, or None if the
+           node was not stored yet
+        """
         return self.id
 
     @property

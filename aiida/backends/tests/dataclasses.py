@@ -2562,7 +2562,7 @@ class TestKpointsData(AiidaTestCase):
         mesh, offset = k.get_kpoints_mesh()
         self.assertEqual(mesh, list(input_mesh))
         self.assertEqual(offset,
-                         (0., 0., 0.))  # must be a tuple of three 0 by default
+                         [0., 0., 0.])  # must be a tuple of three 0 by default
 
         # a too long list should fail
         with self.assertRaises(ValueError):

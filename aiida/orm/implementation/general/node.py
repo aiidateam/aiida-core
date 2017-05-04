@@ -961,12 +961,30 @@ class AbstractNode(object):
             raise AttributeError("set_extras takes a dictionary as argument")
 
 
-    @abstractmethod
     def reset_extras(self, new_extras):
         """
         Deletes existing extras and creates new ones.
         :param new_extras: dictionary with new extras
         :return: nothing, an exceptions is raised in several circumnstances
+        """
+        if not isinstance(new_extras, dict):
+            raise TypeError("The new extras have to be a dictionary")
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The extras of a node can be set only after "
+                "storing the node")
+
+        self._reset_db_extras(clean_value(new_extras))
+
+    @abstractmethod
+    def _reset_db_extras(self, new_extras):
+        """
+        Resets the extras (replacing existing ones) directly in the DB
+
+        DO NOT USE DIRECTLY!
+
+        :param new_extras: dictionary with new extras
         """
         pass
 

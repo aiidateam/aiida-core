@@ -333,16 +333,7 @@ class Node(AbstractNode):
             session.rollback()
             raise
 
-    def reset_extras(self, new_extras):
-
-        if type(new_extras) is not dict:
-            raise ValueError("The new extras have to be a dictionary")
-
-        if self._to_be_stored:
-            raise ModificationNotAllowed(
-                "The extras of a node can be set only after "
-                "storing the node")
-
+    def _reset_db_extras(self, new_extras):
         try:
             self.dbnode.reset_extras(new_extras)
             self._increment_version_number_db()

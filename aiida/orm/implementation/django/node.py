@@ -297,7 +297,7 @@ class Node(AbstractNode):
                                    stop_if_existing=exclusive)
         self._increment_version_number_db()
 
-    def reset_extras(self, new_extras):
+    def _reset_db_extras(self, new_extras):
         raise NotImplementedError("Reset of extras has not been implemented"
                                   "for Django backend.")
 

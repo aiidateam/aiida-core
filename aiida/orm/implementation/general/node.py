@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from abc import ABCMeta, abstractmethod, abstractproperty
+from aiida.common.utils import abstractclassmethod
 
 import os
 import logging
@@ -118,8 +119,7 @@ class AbstractNode(object):
         """
         return self._logger
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get_subclass_from_uuid(cls, uuid):
         """
         Get a node object from the uuid, with the proper subclass of Node.
@@ -132,8 +132,7 @@ class AbstractNode(object):
         """
         pass
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get_subclass_from_pk(cls, pk):
         """
         Get a node object from the pk, with the proper subclass of Node.
@@ -222,8 +221,7 @@ class AbstractNode(object):
         """
         return {}
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def query(cls, *args, **kwargs):
         """
         Map to the aiidaobjects manager of the DbNode, that returns

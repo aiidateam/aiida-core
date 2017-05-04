@@ -27,6 +27,7 @@ import voluptuous
 from abc import ABCMeta
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
+from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
@@ -345,7 +346,11 @@ class Process(plum.process.Process):
         self._calc = self.get_or_create_db_record()
         self._setup_db_record()
         if self.inputs._store_provenance:
-            self.calc.store_all()
+            try:
+                self.calc.store_all()
+            except ModificationNotAllowed as exception:
+                # The calculation was already stored
+                pass
 
         if self.calc.pk is not None:
             return self.calc.pk

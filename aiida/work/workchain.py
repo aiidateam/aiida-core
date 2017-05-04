@@ -363,7 +363,7 @@ def Outputs(running_info):
         rinfo = RunningInfo(RunningType.PROCESS, running_info.pid)
         return ToContext.Action(
             rinfo, get_object_string(_get_proc_outputs_from_registry))
-    elif running_info.type == RunningType.LEGACY_CALC:
+    elif running_info.type == RunningType.PROCESS or running_info.type == RunningType.LEGACY_CALC:
         return ToContext.Action(
             running_info, get_object_string(_get_proc_outputs_from_registry))
     elif running_info.type is RunningType.LEGACY_WORKFLOW:

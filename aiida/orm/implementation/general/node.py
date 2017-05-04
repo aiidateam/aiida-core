@@ -18,7 +18,7 @@ from aiida.common.folders import SandboxFolder
 from aiida.common.utils import combomethod
 
 from aiida.common.links import LinkType
-from aiida.common.pluginloader import get_query_type_string
+from aiida.common.old_pluginloader import get_query_type_string
 
 
 
@@ -56,7 +56,7 @@ class AbstractNode(object):
 
             # Note: the reverse logic (from type_string to name that can
             # be passed to the plugin loader) is implemented in
-            # aiida.common.pluginloader.
+            # aiida.common.old_pluginloader.
             prefix = "aiida.orm."
             if attrs['__module__'].startswith(prefix):
                 # Strip aiida.orm.
@@ -75,11 +75,15 @@ class AbstractNode(object):
                 newcls._query_type_string = get_query_type_string(
                         newcls._plugin_type_string
                     )
+            # Experimental: type string for external plugins
             else:
-                raise InternalError("Class {} is not in a module under "
-                                    "aiida.orm. (module is {})".format(
-                    name, attrs['__module__']))
-
+                from aiida.common.pluginloader import entry_point_tpstr_from
+                classname = '.'.join([attrs['__module__'], name])
+                if entry_point_tpstr_from(classname):
+                    newcls._plugin_type_string = entry_point_tpstr_from(classname)
+                    newcls._query_type_string = get_query_type_string(
+                            newcls._plugin_type_string
+                        )
             return newcls
 
     # This will be set by the metaclass call
@@ -453,7 +457,7 @@ class AbstractNode(object):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
-        
+
         :note: In subclasses, change only this. Moreover, remember to call
            the super() method in order to properly use the caching logic!
 

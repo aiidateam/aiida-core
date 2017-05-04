@@ -197,7 +197,7 @@ class DbNode(m.Model):
         appropriate subclass.
         """
         from aiida.orm.node import Node
-        from aiida.common.pluginloader import from_type_to_pluginclassname
+        from aiida.common.old_pluginloader import from_type_to_pluginclassname
         from aiida.common.pluginloader import load_plugin
         from aiida.common import aiidalogger
 

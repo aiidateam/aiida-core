@@ -951,6 +951,17 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         agrtext = node._exportstring('agr')
         print agrtext
 
+    ## TODO: To decide how to deal with this, as this produces more than one file
+    #    #def _export_xmgrace_batch(self, node):
+    #    """
+    #    Export a .agr batch file, to be visualized with the XMGrace plotting software.
+    #    """
+    #    agrtext, otherfiles = node._exportstring('agr_batch')
+    #    print agrtext
+    #    for otherfile in otherfiles:
+    #        print "** {}".format(otherfile)
+    #        print otherfiles[otherfile]
+
     def _export_dat_multicolumn(self, node):
         """
         Export a .dat file with one line per kpoint, with multiple energy values
@@ -967,6 +978,16 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         """
         agrtext = node._exportstring('dat_2')
         print agrtext
+
+    def _export_json(self, node):
+        """
+        Export a .dat file with one line per datapoint (kpt, energy),
+        with multiple bands separated in stanzas (i.e. having at least an empty
+        newline inbetween).
+        """
+        jsontext = node._exportstring('json')
+        print jsontext
+
 
     def _show_xmgrace(self, exec_name, list_bands):
         """

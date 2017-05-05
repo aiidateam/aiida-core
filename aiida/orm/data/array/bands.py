@@ -17,7 +17,109 @@ import numpy
 from string import Template
 from aiida.common.exceptions import ValidationError
 
+def prettify_labels(labels, format=None):
+    """
+    Prettify label for typesetting in various formats
 
+    :param labels: a list of length-2 tuples, in the format(position, label)
+    :param format: a string with the format for the prettifier (e.g. 'agr',
+         'matplotlib', ...)
+    :return: the same list as labels, but with the second value possibly replaced
+         with a prettified version that typesets nicely in the selected format
+    """
+    def prettify_label_pass(label):
+        """
+        No-op prettifier, simply returns  the same label
+
+        :param label: a string to prettify
+        """
+        return label
+
+    def prettify_label_agr(label):
+        """
+        Prettifier for XMGrace
+
+        :param label: a string to prettify
+        """
+        if label == 'G':
+            return r'\xG'
+        else:
+            return label
+
+    def prettify_label_matplotlib(label):
+        """
+        Prettifier for matplotlib, using LaTeX syntax
+
+        :param label: a string to prettify
+        """
+        if label == 'G':
+            return r'$\Gamma$'
+        else:
+            return label
+
+    prettifiers = {
+        'agr': prettify_label_agr,
+        'matplotlib': prettify_label_matplotlib,
+    }
+
+    if format is None:
+        return labels
+
+    try:
+        prettifier = prettifiers[format]
+    except KeyError:
+        raise ValueError("Unknwon fileformat {} for the prettifier; "
+                         "valid formats: {}".format(format,
+            ", ".join(sorted(prettifiers.keys()))
+        ))
+
+    retlist = []
+    for label_pos, label in labels:
+        retlist.append((label_pos, prettifier(label)))
+    return retlist
+
+def join_labels(labels, join_symbol="|", threshold=1.e-6):
+    """
+    Join labels with a joining symbol when they are very close
+
+    :param labels: a list of length-2 tuples, in the format(position, label)
+    :param join_symbol: the string to use to join different paths. By default, a pipe
+    :param threshold: the threshold to decide if two float values are the same and should
+         be joined
+    :return: the same list as labels, but with the second value possibly replaced
+         with strings joined when close enough
+    """
+    if labels:
+        new_labels = [list(labels[0])]
+        # modify labels when in overlapping position
+        j = 0
+        for i in range(1, len(labels)):
+            if abs(labels[i][0] - labels[i - 1][0]) < threshold:
+                new_labels[j][1] += join_symbol + labels[i][1]
+            else:
+                new_labels.append(list(labels[i]))
+                j += 1
+    else:
+        new_labels = []
+
+    return new_labels
+
+def prepare_header_comment(uuid, plot_info, comment_char='#'):
+    from aiida import get_file_header
+
+    filetext = []
+    filetext += get_file_header(comment_char="").splitlines()
+    filetext.append("")
+    filetext.append("Dumped from BandsData UUID={}"
+                    .format(uuid))
+    filetext.append("\tpoints\tbands")
+    filetext.append("\t{}\t{}".format(*plot_info['y'].shape))
+    filetext.append("")
+    filetext.append("\tlabel\tpoint")
+    for l in plot_info['raw_labels']:
+        filetext.append("\t{}\t{:.8f}".format(l[1], l[0]))
+
+    return "\n".join("{} {}".format(comment_char, l) for l in filetext)
 
 # TODO: set and get bands could have more functionalities: how do I know the number of bands for example?
 
@@ -394,31 +496,23 @@ class BandsData(KpointsData):
         else:
             return to_return
 
-    def _exportstring(self, fileformat, path=None, comments=True, cartesian=True,
-                      **kwargs):
+    def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None):
         """
-        Export the bands to a string.
-        :param fileformat: format of the file created (e.g. 'agr').
-        :param path: absolute path of the file to be created (used for
-                additional files, and put in plot_info['filename'])
-        :param comments: if True, append some extra informations at the
-                beginning of the file.
+        Get data to plot a band structure
+
         :param cartesian: if True, distances (for the x-axis) are computed in
                 cartesian coordinates, otherwise they are computed in reciprocal
                 coordinates. cartesian=True will fail if no cell has been set.
-        :param **kwargs: additional parameters to be passed to the
-                _prepare_[fileformat] method
-
-        :note: this function will NOT produce nice plots if:
-              - there is no path of kpoints, but a set of isolated points
-              - the path is not continuous AND no labels are set
+        :param prettify_format: by default, strings are not prettified. If you want
+             to prettify them, pass a valid prettify_format string (see valid options
+             in the docstring of :py:func:prettify_label).
+        :param join_symbols: by default, strings are not joined. If you pass a string,
+             this is used to join strings that are much closer than a given threshold.
+             The most typical string is the pipe symbol: ``|``.
+        :return: a plot_info dictiorary, whose keys are ``x`` (array of distances
+           for the x axis of the plot); ``y`` (array of bands), ``labels`` (list
+           of tuples in the format (float x value of the label, label string)
         """
-        # TODO: check for None in bands
-        import os
-        from aiida import get_file_header
-
-        preparer_name = "_prepare_" + fileformat
-
         # load the x and y's of the graph
         stored_bands = self.get_bands()
         if len(stored_bands.shape) == 2:
@@ -454,56 +548,51 @@ class BandsData(KpointsData):
         x = [float(sum(distances[:i])) for i in range(len(distances) + 1)]
 
         # transform the index of the labels in the coordinates of x
-        the_labels = [(x[i[0]], i[1]) for i in labels]
+        raw_labels = [(x[i[0]], i[1]) for i in labels]
 
-        if the_labels:
-            new_labels = [list(the_labels[0])]
-            # modify labels when in overlapping position
-            j = 0
-            for i in range(1, len(the_labels)):
-                if new_labels[j][1] == 'G' and 'agr' in fileformat:
-                    new_labels[j][1] = r"\xG"
-                if the_labels[i][0] == the_labels[i - 1][0]:
-                    new_labels[j][1] += "|" + the_labels[i][1]
-                else:
-                    new_labels.append(list(the_labels[i]))
-                    j += 1
-            if new_labels[j][1] == 'G' and 'agr' in fileformat:
-                new_labels[j][1] = r"\xG"
+        the_labels = raw_labels
 
-        else:
-            new_labels = []
+        if prettify_format:
+            the_labels = prettify_labels(the_labels, format=prettify_format)
+        if join_symbol:
+            the_labels = join_labels(the_labels, join_symbol=join_symbol)
 
         plot_info = {}
         plot_info['x'] = x
         plot_info['y'] = bands
-        plot_info['labels'] = new_labels
-        if path:
-            plot_info['filename'] = path
-            if fileformat == 'agr':
-                plot_info['filename'] = os.path.splitext(path)[0] + '.dat'
+        plot_info['raw_labels'] = raw_labels
+        plot_info['labels'] = the_labels
 
-        # generic info
-        if comments:
-            filetext = []
-            # filetext.append("{}".format(get_file_header()))
-            filetext.append("# Dumped from BandsData UUID={}"
-                            .format(self.uuid))
-            filetext.append("#\tpoints\tbands")
-            filetext.append("#\t{}\t{}".format(*bands.shape))
-            filetext.append("# \tlabel\tpoint")
-            for l in new_labels:
-                filetext.append("#\t{}\t{:.8f}".format(l[1], l[0]))
-            filetext = get_file_header() + "#\n" + "\n".join(filetext) + "\n\n"
-        else:
-            filetext = ""
+        return plot_info
+
+    def _exportstring(self, fileformat, comments=True, cartesian=True,
+                      **kwargs):
+        """
+        Export the bands to a string.
+        :param fileformat: format of the file created (e.g. 'agr').
+        :param comments: if True, append some extra informations at the
+                beginning of the file (if supported by the format).
+        :param cartesian: if True, distances (for the x-axis) are computed in
+                cartesian coordinates, otherwise they are computed in reciprocal
+                coordinates. cartesian=True will fail if no cell has been set.
+        :param **kwargs: additional parameters to be passed to the
+                _prepare_[fileformat] method
+
+        :note: this function will NOT produce nice plots if:
+              - there is no path of kpoints, but a set of isolated points
+              - the path is not continuous AND no labels are set
+        """
+        # TODO: check for None in bands
+        import os
+
+        preparer_name = "_prepare_" + fileformat
 
         try:
-            newfiletext, extra_files = getattr(self, preparer_name)(plot_info, **kwargs)
-            filetext += newfiletext
+            preparer = getattr(self, preparer_name)
         except AttributeError:
-            raise
-        #            raise ValueError("Format {} is not valid".format(fileformat))
+            raise ValueError("Format {} is not valid".format(fileformat))
+
+        filetext, extra_files = preparer(comments, **kwargs)
 
         if extra_files is not None:
             return filetext, extra_files
@@ -548,15 +637,15 @@ class BandsData(KpointsData):
             if extension == 'dat':
                 fileformat = 'dat_1'
 
-        try:
-            filetext, extra_files = self._exportstring(fileformat, path=path,
-                                                       comments=comments, cartesian=cartesian,
-                                                       **kwargs)
-        except ValueError:
+        outdata = self._exportstring(fileformat, comments=comments,
+                                     cartesian=cartesian,
+                                     **kwargs)
+        if isinstance(outdata, basestring):
             extra_files = None
-            filetext = self._exportstring(fileformat, path=path,
-                                          comments=comments, cartesian=cartesian,
-                                          **kwargs)
+            filetext = outdata
+        else:
+            filetext, extra_files = outdata
+
 
         if extra_files is not None:
             # write extra files
@@ -574,13 +663,22 @@ class BandsData(KpointsData):
         names = dir(self)
         return [i.split('_prepare_')[1] for i in names if i.startswith('_prepare_')]
 
-    def _prepare_agr_batch(self, plot_info, **kwargs):
+    def _prepare_agr_batch(self, comments, dat_filename="batch.dat", **kwargs):
         """
         Prepare two files, data and batch, to be plot with xmgrace as:
         xmgrace -batch file.dat
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
+        :param filepath: the path for the .dat file
         """
         if kwargs:
             raise TypeError("_prepare_agr_batch takes no keyword arguments")
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format='agr',
+            join_symbol="|")
 
         bands = plot_info['y']
         x = plot_info['x']
@@ -605,10 +703,11 @@ class BandsData(KpointsData):
             new_block.append("")
             raw_data += "\n".join(new_block)
 
-        filexy_name = plot_info['filename']
-
         batch = []
-        batch.append('READ XY "{}"'.format(filexy_name))
+        if comments:
+            batch.append(prepare_header_comment(self.uuid, plot_info, comment_char="#"))
+
+        batch.append('READ XY "{}"'.format(dat_filename))
 
         # axis limits
         batch.append("world {}, {}, {}, {}".format(x_min_lim, y_min_lim, x_max_lim, y_max_lim))
@@ -645,23 +744,33 @@ class BandsData(KpointsData):
             batch.append("s{} linewidth 2".format(i))
 
         batch_data = "\n".join(batch) + "\n"
-        extra_files = {"batch.dat": batch_data}
+        extra_files = {dat_filename: raw_data}
 
-        return raw_data, extra_files
+        return batch_data, extra_files
 
-    def _prepare_dat_1(self, plot_info, **kwargs):
+    def _prepare_dat_1(self, comments, **kwargs):
         """
         Write an N x M matrix. First column is the distance between kpoints,
         The other columns are the bands. Header contains number of kpoints and
         the number of bands (commented).
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
         """
         if kwargs:
             raise TypeError("_prepare_dat_1 takes no keyword arguments")
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format=None,
+            join_symbol="|")
 
         bands = plot_info['y']
         x = plot_info['x']
 
         return_text = []
+        if comments:
+            return_text.append(prepare_header_comment(self.uuid, plot_info, comment_char="#"))
 
         for i in zip(x, bands):
             line = ["{:.8f}".format(i[0])] + ["{:.8f}".format(j) for j in i[1]]
@@ -669,19 +778,29 @@ class BandsData(KpointsData):
 
         return "\n".join(return_text) + '\n', None
 
-    def _prepare_dat_2(self, plot_info, **kwargs):
+    def _prepare_dat_2(self, comments, **kwargs):
         """
         Format suitable for gnuplot using blocks.
         Columns with x and y (path and band energy). Several blocks, separated
         by two empty lines, one per energy band.
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
         """
         if kwargs:
             raise TypeError("_prepare_dat_2 takes no keyword arguments")
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format=None,
+            join_symbol="|")
 
         bands = plot_info['y']
         x = plot_info['x']
 
         return_text = []
+        if comments:
+            return_text.append(prepare_header_comment(self.uuid, plot_info, comment_char="#"))
 
         the_bands = numpy.transpose(bands)
 
@@ -694,11 +813,14 @@ class BandsData(KpointsData):
 
         return "\n".join(return_text), None
 
-    def _prepare_agr(self, plot_info, setnumber_offset=0, color_number=1,
+    def _prepare_agr(self, comments, setnumber_offset=0, color_number=1,
                      legend="", title="", y_max_lim=None, y_min_lim=None,
                      y_origin=0., **kwargs):
         """
         Prepare an xmgrace agr file
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
         :param plot_info: a dictionary
         :param setnumber_offset: an offset to be applied to all set numbers
         (i.e. s0 is replaced by s[offset], s1 by s[offset+1], etc.)
@@ -717,6 +839,11 @@ class BandsData(KpointsData):
         if kwargs:
             raise TypeError("_prepare_agr got unexpected keyword argument(s) {}"
                             "".format(kwargs.keys()))
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format='agr',
+            join_symbol="|")
 
         import math
         # load the x and y of every set
@@ -790,37 +917,34 @@ class BandsData(KpointsData):
 
         s = agr_template.substitute(graphs=graphs, sets=the_sets)
 
+        if comments:
+            s = prepare_header_comment(self.uuid, plot_info, comment_char="#") + "\n" + s
+
         return s, None
 
-    def _prepare_json(self, plot_info, **kwargs):
-        """
-        Prepare a json file in a format compatible with the AiiDA band visualizer
-        :param plot_info: a dictionary
-        """
-        import json
+    def _get_band_segments(self, cartesian):
+        plot_info = self._get_bandplot_data(cartesian=cartesian,
+                                            prettify_format=None,
+                                            join_symbol=None)
 
-        if kwargs:
-            raise TypeError("_prepare_json got unexpected keyword argument(s) {}"
-                            "".format(kwargs.keys()))
-
-        json_dict = {'label': self.label}
+        out_dict = {'label': self.label}
 
         bands = plot_info['y']
         labels = self.labels
 
-        json_dict['path'] = []
-        json_dict['paths'] = []
+        out_dict['path'] = []
+        out_dict['paths'] = []
 
         try:
             _ = self.labels[1][1]
             for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
-                json_dict['path'].append([label_from, label_to])
+                out_dict['path'].append([label_from, label_to])
                 path_dict = {'length': position_to - position_from,
                              'from': label_from,
                              'to': label_to,
                              'values': bands[position_from:position_to + 1, :].transpose().tolist(),
                              }
-                json_dict['paths'].append(path_dict)
+                out_dict['paths'].append(path_dict)
         except (TypeError, IndexError):
             label_from = "0"
             label_to = "1"
@@ -829,8 +953,30 @@ class BandsData(KpointsData):
                          'to': label_to,
                          'values': bands.transpose().tolist(),
                          }
-            json_dict['paths'].append(path_dict)
-            json_dict['path'].append([label_from, label_to])
+            out_dict['paths'].append(path_dict)
+            out_dict['path'].append([label_from, label_to])
+
+        return out_dict
+
+    def _prepare_json(self, comments, **kwargs):
+        """
+        Prepare a json file in a format compatible with the AiiDA band visualizer
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
+        """
+        import json
+        from aiida import get_file_header
+
+        if kwargs:
+            raise TypeError("_prepare_json got unexpected keyword argument(s) {}"
+                            "".format(kwargs.keys()))
+
+        json_dict = self._get_band_segments(cartesian=True)
+        json_dict['original_uuid'] = self.uuid
+
+        if comments:
+            json_dict['comments'] = get_file_header(comment_char="")
 
         return json.dumps(json_dict), None
 

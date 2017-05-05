@@ -989,6 +989,15 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         print jsontext
 
 
+    def _export_matplotlib(self, node):
+        """
+        Export a .py file that would produce the plot using matplotlib
+        when run with python
+        """
+        pytext = node._exportstring('matplotlib')
+        print pytext
+
+
     def _show_xmgrace(self, exec_name, list_bands):
         """
         Plugin for show the bands with the XMGrace plotting software.

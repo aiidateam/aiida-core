@@ -496,7 +496,8 @@ class BandsData(KpointsData):
         else:
             return to_return
 
-    def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None):
+    def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None,
+                           get_segments=False):
         """
         Get data to plot a band structure
 
@@ -509,6 +510,7 @@ class BandsData(KpointsData):
         :param join_symbols: by default, strings are not joined. If you pass a string,
              this is used to join strings that are much closer than a given threshold.
              The most typical string is the pipe symbol: ``|``.
+        :param get_segments: if True, also computes the band split into segments
         :return: a plot_info dictiorary, whose keys are ``x`` (array of distances
            for the x axis of the plot); ``y`` (array of bands), ``labels`` (list
            of tuples in the format (float x value of the label, label string)
@@ -562,6 +564,32 @@ class BandsData(KpointsData):
         plot_info['y'] = bands
         plot_info['raw_labels'] = raw_labels
         plot_info['labels'] = the_labels
+
+        if get_segments:
+            plot_info['path'] = []
+            plot_info['paths'] = []
+
+            if len(labels) > 1:
+                for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
+                    plot_info['path'].append([label_from, label_to])
+                    path_dict = {'length': position_to - position_from,
+                                 'from': label_from,
+                                 'to': label_to,
+                                 'values': bands[position_from:position_to + 1, :].transpose().tolist(),
+                                 'x': x[position_from:position_to + 1],
+                                 }
+                    plot_info['paths'].append(path_dict)
+            else:
+                label_from = "0"
+                label_to = "1"
+                path_dict = {'length': bands.shape[0] - 1,
+                             'from': label_from,
+                             'to': label_to,
+                             'values': bands.transpose().tolist(),
+                             'x': x,
+                             }
+                plot_info['paths'].append(path_dict)
+                plot_info['path'].append([label_from, label_to])
 
         return plot_info
 
@@ -813,6 +841,93 @@ class BandsData(KpointsData):
 
         return "\n".join(return_text), None
 
+    def _prepare_matplotlib(self, comments, legend="", title="",
+                            y_max_lim=None, y_min_lim=None,
+                            y_origin=0., **kwargs):
+        """
+        Prepare an xmgrace agr file
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
+        :param plot_info: a dictionary
+        :param setnumber_offset: an offset to be applied to all set numbers
+        (i.e. s0 is replaced by s[offset], s1 by s[offset+1], etc.)
+        :param color_number: the color number for lines, symbols, error bars
+        and filling (should be less than the parameter max_num_agr_colors
+        defined below)
+        :param legend: the legend (applied only to the first set)
+        :param title: the title
+        :param y_max_lim: the maximum on the y axis (if None, put the
+            maximum of the bands)
+        :param y_min_lim: the minimum on the y axis (if None, put the
+            minimum of the bands)
+        :param y_origin: the new origin of the y axis -> all bands are replaced
+            by bands-y_origin
+        """
+        #import math
+        import json
+
+        # Note: I do not want to import matplotlib here, for two reasons:
+        # 1. I would like to be able to print the script for the user
+        # 2. I don't want to mess up with the user matplotlib backend
+        #    (that I should do if the user does not have a X server, but that
+        #    I do not want to do if he's e.g. in jupyter)
+        # Therefore I just create a string that can be executed as needed, e.g. with eval.
+        # I take care of sanitizing the output.
+
+        if kwargs:
+            raise TypeError("_prepare_matplotlib got unexpected keyword argument(s) {}"
+                            "".format(kwargs.keys()))
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format='matplotlib',
+            join_symbol=r"\textbar{}",
+            get_segments=True)
+
+        all_data = {}
+
+        bands = plot_info['y'] - y_origin
+        x = plot_info['x']
+        the_bands = numpy.transpose(bands)
+        labels = plot_info['labels']
+        # prepare xticks labels
+        tick_pos, tick_labels = zip(*labels)
+
+        #all_data['bands'] = the_bands.tolist()
+        all_data['paths'] = plot_info['paths']
+        #all_data['x'] = x
+
+        all_data['tick_pos'] = tick_pos
+        all_data['tick_labels'] = tick_labels
+        all_data['legend_text'] = legend
+        all_data['yaxis_label'] = "Dispersion ({})".format(self.units)
+        all_data['title'] = title
+        if comments:
+            all_data['comment'] = prepare_header_comment(
+                self.uuid, plot_info, comment_char='#')
+
+
+        # axis limits
+        if y_max_lim is None:
+            y_max_lim = the_bands.max()
+        if y_min_lim is None:
+            y_min_lim = the_bands.min()
+        x_min_lim = min(x)  # this isn't a numpy array, but a list
+        x_max_lim = max(x)
+        #ytick_spacing = 10 ** int(math.log10((y_max_lim - y_min_lim)))
+        all_data['x_min_lim'] = x_min_lim
+        all_data['x_max_lim'] = x_max_lim
+        all_data['y_min_lim'] = y_min_lim
+        all_data['y_max_lim'] = y_max_lim
+        #all_data['ytick_spacing'] = ytick_spacing
+
+        s = matplotlib_template.substitute(
+            all_data_json = json.dumps(all_data, indent=2)
+        )
+
+        return s, None
+
     def _prepare_agr(self, comments, setnumber_offset=0, color_number=1,
                      legend="", title="", y_max_lim=None, y_min_lim=None,
                      y_origin=0., **kwargs):
@@ -925,36 +1040,12 @@ class BandsData(KpointsData):
     def _get_band_segments(self, cartesian):
         plot_info = self._get_bandplot_data(cartesian=cartesian,
                                             prettify_format=None,
-                                            join_symbol=None)
+                                            join_symbol=None,get_segments=True)
 
         out_dict = {'label': self.label}
 
-        bands = plot_info['y']
-        labels = self.labels
-
-        out_dict['path'] = []
-        out_dict['paths'] = []
-
-        try:
-            _ = self.labels[1][1]
-            for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
-                out_dict['path'].append([label_from, label_to])
-                path_dict = {'length': position_to - position_from,
-                             'from': label_from,
-                             'to': label_to,
-                             'values': bands[position_from:position_to + 1, :].transpose().tolist(),
-                             }
-                out_dict['paths'].append(path_dict)
-        except (TypeError, IndexError):
-            label_from = "0"
-            label_to = "1"
-            path_dict = {'length': bands.shape[0] - 1,
-                         'from': label_from,
-                         'to': label_to,
-                         'values': bands.transpose().tolist(),
-                         }
-            out_dict['paths'].append(path_dict)
-            out_dict['path'].append([label_from, label_to])
+        out_dict['path'] = plot_info['path']
+        out_dict['paths'] = plot_info['paths']
 
         return out_dict
 
@@ -1345,3 +1436,62 @@ agr_singleset_template = Template(
     @type xy
     $xydata
     """)
+
+matplotlib_template = Template(
+    '''# -*- coding: utf-8 -*-
+
+from matplotlib import rc
+# Uncomment to change default font
+#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+rc('text', usetex=True)
+#import matplotlib.pyplot as plt
+#plt.rcParams.update({'text.latex.unicode': True})
+
+import pylab as pl
+
+# I use json to make sure the input is sanitized
+import json
+
+all_data_str = r"""$all_data_json"""
+all_data = json.loads(all_data_str)
+#x = all_data['x']
+#bands = all_data['bands']
+paths = all_data['paths']
+tick_pos = all_data['tick_pos']
+tick_labels = all_data['tick_labels']
+
+fig = pl.figure()
+p = fig.add_subplot(1,1,1)
+idx = 0
+for path in paths:
+    if path['length'] <= 1:
+        # Avoid printing empty lines
+        continue
+    x = path['x']
+    #for band in bands:
+    for band in path['values']:
+        if idx==0 and all_data['legend_text']:
+            p.plot(x, band, 'k', label=all_data['legend_text'])
+        else:
+            p.plot(x, band, 'k')
+        idx+=1
+p.set_xticks(tick_pos)
+p.set_xticklabels(tick_labels)
+p.set_xlim([all_data['x_min_lim'], all_data['x_max_lim']])
+p.set_ylim([all_data['y_min_lim'], all_data['y_max_lim']])
+p.xaxis.grid(True, which='major', color='#888888', linestyle='-')
+if all_data['title']:
+    p.set_title(all_data['title'])
+if all_data['legend_text']:
+    p.legend(loc='best')
+p.set_ylabel(all_data['yaxis_label'])
+
+try:
+    print all_data['comment']
+except KeyError:
+    pass
+
+pl.show()
+'''
+)

@@ -629,7 +629,7 @@ class CifData(SinglefileData):
         ret_dict = conv_f(cif=self, parameters=param, store=store)
         return ret_dict['structure']
 
-    def _prepare_cif(self):
+    def _prepare_cif(self, main_file_name=""):
         """
         Write the given CIF file to a string of format CIF.
         """
@@ -638,14 +638,14 @@ class CifData(SinglefileData):
         if self._values and not self.is_stored:
             self.values = self._values
         with self._get_folder_pathsubfolder.open(self.filename) as f:
-            return f.read()
+            return f.read(), {}
 
-    def _prepare_tcod(self, **kwargs):
+    def _prepare_tcod(self, main_file_name="", **kwargs):
         """
         Write the given CIF to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs)
+        return export_cif(self, **kwargs), {}
 
     def _get_object_ase(self):
         """

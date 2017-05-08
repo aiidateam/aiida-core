@@ -298,6 +298,9 @@ class BandsData(KpointsData):
     Class to handle bands data
     """
 
+    # Associate the '.dat' extension, by default, to the dat_multicolumn format
+    #_custom_export_format_replacements = {'dat': 'dat_multicolumn'}
+
     def set_kpointsdata(self, kpointsdata):
         """
         Load the kpoints from a kpoint object.
@@ -593,115 +596,25 @@ class BandsData(KpointsData):
 
         return plot_info
 
-    def _exportstring(self, fileformat, comments=True, cartesian=True,
-                      **kwargs):
-        """
-        Export the bands to a string.
-        :param fileformat: format of the file created (e.g. 'agr').
-        :param comments: if True, append some extra informations at the
-                beginning of the file (if supported by the format).
-        :param cartesian: if True, distances (for the x-axis) are computed in
-                cartesian coordinates, otherwise they are computed in reciprocal
-                coordinates. cartesian=True will fail if no cell has been set.
-        :param **kwargs: additional parameters to be passed to the
-                _prepare_[fileformat] method
-
-        :note: this function will NOT produce nice plots if:
-              - there is no path of kpoints, but a set of isolated points
-              - the path is not continuous AND no labels are set
-        """
-        # TODO: check for None in bands
-        import os
-
-        preparer_name = "_prepare_" + fileformat
-
-        try:
-            preparer = getattr(self, preparer_name)
-        except AttributeError:
-            raise ValueError("Format {} is not valid".format(fileformat))
-
-        filetext, extra_files = preparer(comments, **kwargs)
-
-        if extra_files is not None:
-            return filetext, extra_files
-        else:
-            return filetext
-
-    def export(self, path, fileformat=None, overwrite=False, comments=True,
-               cartesian=True, **kwargs):
-        """
-        Export the bands to a file.
-
-        :param path: absolute path of the file to be created
-        :param fileformat: format of the file created. If None, tries to use
-          the extension of path to understand the correct one.
-        :param overwrite: if set to True, overwrites file found at path. Default=False
-        :param comments: if True, append some extra informations at the
-          beginning of the file.
-        :param cartesian: if True, distances (for the x-axis) are computed in
-          cartesian coordinates, otherwise they are computed in reciprocal
-          coordinates. cartesian=True will fail if no cell has been set.
-        :param kwargs: additional parameters to be passed to the
-          _prepare_[fileformat] method
-
-        :note: this function will NOT produce nice plots if:
-              - there is no path of kpoints, but a set of isolated points
-              - the path is not continuous AND no labels are set
-        """
-        import os
-
-        if not path:
-            raise ValueError("Path not recognized")
-
-        if os.path.exists(path) and not overwrite:
-            raise OSError("A file was already found at {}".format(path))
-
-        if fileformat is None:
-            extension = os.path.splitext(path)[1].split('.')[1]
-            if not extension:
-                raise ValueError("Cannot recognized the fileformat from the "
-                                 "extension")
-            fileformat = extension
-            if extension == 'dat':
-                fileformat = 'dat_1'
-
-        outdata = self._exportstring(fileformat, comments=comments,
-                                     cartesian=cartesian,
-                                     **kwargs)
-        if isinstance(outdata, basestring):
-            extra_files = None
-            filetext = outdata
-        else:
-            filetext, extra_files = outdata
-
-
-        if extra_files is not None:
-            # write extra files
-            for k, v in extra_files.iteritems():
-                if os.path.exists(k) and not overwrite:
-                    raise OSError("A file was already found: {}".format(k))
-                else:
-                    with open(k, "w") as f:
-                        f.write(v)
-
-        with open(path, 'w') as f:
-            f.write(filetext)
-
-    def get_export_formats(self):
-        names = dir(self)
-        return [i.split('_prepare_')[1] for i in names if i.startswith('_prepare_')]
-
-    def _prepare_agr_batch(self, comments, dat_filename="batch.dat", **kwargs):
+    def _prepare_agr_batch(self, main_file_name="", comments=True,
+                           **kwargs):
         """
         Prepare two files, data and batch, to be plot with xmgrace as:
         xmgrace -batch file.dat
 
+        :param main_file_name: if the user asks to write the main content on a
+             file, this contains the filename. This should be used to infer a
+             good filename for the additional files.
+             In this case, we remove the extension, and add '_data.dat'
         :param comments: if True, print comments (if it makes sense for the given
             format)
         :param filepath: the path for the .dat file
         """
+        import os
         if kwargs:
             raise TypeError("_prepare_agr_batch takes no keyword arguments")
+
+        dat_filename = os.path.splitext(main_file_name)[0] + "_data.dat"
 
         plot_info = self._get_bandplot_data(
             cartesian=True,
@@ -722,14 +635,16 @@ class BandsData(KpointsData):
         x_max_lim = max(x)
 
         # first prepare the xy coordinates of the sets
-        raw_data, _ = self._prepare_dat_2(plot_info)
+        raw_data, _ = self._prepare_dat_blocks(plot_info)
 
-        # add the xy coordinates of the vertical lines
-        for l in labels:
-            new_block = ["{}\t{}".format(l[0], y_min_lim)]
-            new_block.append("{}\t{}".format(l[0], y_max_lim))
-            new_block.append("")
-            raw_data += "\n".join(new_block)
+
+        ## Manually add the xy coordinates of the vertical lines - not needed! Use gridlines
+        #new_block = []
+        #for l in labels:
+        #    new_block.append("{}\t{}".format(l[0], y_min_lim))
+        #    new_block.append("{}\t{}".format(l[0], y_max_lim))
+        #    new_block.append("")
+        #raw_data += "\n".join(new_block)
 
         batch = []
         if comments:
@@ -751,10 +666,12 @@ class BandsData(KpointsData):
         for i, l in enumerate(labels):
             batch.append("xaxis  tick major {}, {}".format(i, l[0]))
             batch.append('xaxis  ticklabel {}, "{}"'.format(i, l[1]))
+        batch.append('xaxis  tick major color 7')
+        batch.append('xaxis  tick major grid on')
 
         # minor graphical tweak
         batch.append("yaxis  tick minor ticks 3")
-        batch.append("frame linewidth 2.0")
+        batch.append("frame linewidth 1.0")
 
         # use helvetica fonts
         batch.append('map font 4 to "Helvetica", "Helvetica"')
@@ -766,17 +683,30 @@ class BandsData(KpointsData):
             batch.append("s{} line color 1".format(i))
             batch.append("s{} linewidth 1".format(i))
 
-        # set color and linewidths of bands
-        for i in range(num_bands, num_bands + num_labels):
-            batch.append("s{} line color 1".format(i))
-            batch.append("s{} linewidth 2".format(i))
+        ## set color and linewidths of label lines - not needed! use gridlines
+        #for i in range(num_bands, num_bands + num_labels):
+        #    batch.append("s{} hidden true".format(i))
 
         batch_data = "\n".join(batch) + "\n"
         extra_files = {dat_filename: raw_data}
 
         return batch_data, extra_files
 
-    def _prepare_dat_1(self, comments, **kwargs):
+    def _prepare_dat_1(self, *args, **kwargs):
+        """
+        Output data in .dat format, using multiple columns for all y values
+        associated to the same x.
+
+        .. deprecated:: 0.8.1
+            Use 'dat_multicolumn' format instead
+        """
+        import warnings
+        warnings.warn(
+            "dat_1 format is deprecated, use dat_multicolumn instead",
+            DeprecationWarning)
+        return self._prepare_dat_multicolumn(*args, **kwargs)
+
+    def _prepare_dat_multicolumn(self, main_file_name="", comments=True, **kwargs):
         """
         Write an N x M matrix. First column is the distance between kpoints,
         The other columns are the bands. Header contains number of kpoints and
@@ -786,7 +716,7 @@ class BandsData(KpointsData):
             format)
         """
         if kwargs:
-            raise TypeError("_prepare_dat_1 takes no keyword arguments")
+            raise TypeError("_prepare_dat_multicolumn takes no keyword arguments")
 
         plot_info = self._get_bandplot_data(
             cartesian=True,
@@ -804,9 +734,22 @@ class BandsData(KpointsData):
             line = ["{:.8f}".format(i[0])] + ["{:.8f}".format(j) for j in i[1]]
             return_text.append("\t".join(line))
 
-        return "\n".join(return_text) + '\n', None
+        return "\n".join(return_text) + '\n', {}
 
-    def _prepare_dat_2(self, comments, **kwargs):
+    def _prepare_dat_2(self, *args, **kwargs):
+        """
+        Output data in .dat format, using blocks.
+
+        .. deprecated:: 0.8.1
+            Use 'dat_block' format instead
+        """
+        import warnings
+        warnings.warn(
+            "dat_2 format is deprecated, use dat_blocks instead",
+            DeprecationWarning)
+        return self._prepare_dat_blocks(*args, **kwargs)
+
+    def _prepare_dat_blocks(self, main_file_name="", comments=True, **kwargs):
         """
         Format suitable for gnuplot using blocks.
         Columns with x and y (path and band energy). Several blocks, separated
@@ -816,7 +759,7 @@ class BandsData(KpointsData):
             format)
         """
         if kwargs:
-            raise TypeError("_prepare_dat_2 takes no keyword arguments")
+            raise TypeError("_prepare_dat_blocks takes no keyword arguments")
 
         plot_info = self._get_bandplot_data(
             cartesian=True,
@@ -839,13 +782,13 @@ class BandsData(KpointsData):
             return_text.append("")
             return_text.append("")
 
-        return "\n".join(return_text), None
+        return "\n".join(return_text), {}
 
-    def _prepare_matplotlib(self, comments, legend="", title="",
+    def _matplotlib_get_dict(self, main_file_name="", comments=True, legend="", title="",
                             y_max_lim=None, y_min_lim=None,
                             y_origin=0., **kwargs):
         """
-        Prepare an xmgrace agr file
+        Prepare the data to send to the python-matplotlib plotting script
 
         :param comments: if True, print comments (if it makes sense for the given
             format)
@@ -865,7 +808,6 @@ class BandsData(KpointsData):
             by bands-y_origin
         """
         #import math
-        import json
 
         # Note: I do not want to import matplotlib here, for two reasons:
         # 1. I would like to be able to print the script for the user
@@ -922,13 +864,171 @@ class BandsData(KpointsData):
         all_data['y_max_lim'] = y_max_lim
         #all_data['ytick_spacing'] = ytick_spacing
 
-        s = matplotlib_template.substitute(
-            all_data_json = json.dumps(all_data, indent=2)
+        return all_data
+
+    def _prepare_matplotlib_inline(self, *args, **kwargs):
+        """
+        Prepare an python script using matplotlib to plot the bands
+
+        For the possible parameters, see documentation of
+        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        """
+        import json
+
+        all_data = self._matplotlib_get_dict(*args, **kwargs)
+
+        s_header = matplotlib_header_template.substitute()
+        s_import = matplotlib_import_data_inline_template.substitute(
+            all_data_json = json.dumps(all_data, indent=2))
+        s_body = matplotlib_body_template.substitute()
+        s_footer = matplotlib_footer_template_show.substitute()
+
+        s = s_header + s_import + s_body + s_footer
+
+        return s, {}
+
+    def _prepare_matplotlib_json(self, main_file_name="", *args, **kwargs):
+        """
+        Prepare an python script using matplotlib to plot the bands, with the JSON
+        returned as an independent file.
+
+        For the possible parameters, see documentation of
+        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        """
+        import json
+        import os
+
+        all_data = self._matplotlib_get_dict(*args, main_file_name=main_file_name, **kwargs)
+
+        json_fname = os.path.splitext(main_file_name)[0] + "_data.json"
+        # Escape double_quotes
+        json_fname = json_fname.replace('"', '\"')
+
+        ext_files = {json_fname: json.dumps(all_data, indent=2)}
+
+        s_header = matplotlib_header_template.substitute()
+        s_import = matplotlib_import_data_fromfile_template.substitute(
+            json_fname = json_fname)
+        s_body = matplotlib_body_template.substitute()
+        s_footer = matplotlib_footer_template_show.substitute()
+
+        s = s_header + s_import + s_body + s_footer
+
+        return s, ext_files
+
+    def _prepare_matplotlib_pdf(self, main_file_name="", *args, **kwargs):
+        """
+        Prepare an python script using matplotlib to plot the bands, with the JSON
+        returned as an independent file.
+
+        For the possible parameters, see documentation of
+        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        """
+        import json
+        import os
+        import tempfile
+        import subprocess
+        import sys
+
+        all_data = self._matplotlib_get_dict(*args, **kwargs)
+
+        # Use the Agg backend
+        s_header = matplotlib_header_agg_template.substitute()
+        s_import = matplotlib_import_data_inline_template.substitute(
+            all_data_json = json.dumps(all_data, indent=2))
+        s_body = matplotlib_body_template.substitute()
+
+        # I get a temporary file name
+        handle, filename = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(filename)
+
+        escaped_fname =  filename.replace('"', '\"')
+
+        s_footer = matplotlib_footer_template_exportfile.substitute(
+            fname=escaped_fname, format="pdf"
         )
 
-        return s, None
+        s = s_header + s_import + s_body + s_footer
 
-    def _prepare_agr(self, comments, setnumber_offset=0, color_number=1,
+        # I don't exec it because I might mess up with the matplotlib backend etc.
+        # I run instead in a different process, with the same executable
+        # (so it should work properly with virtualenvs)
+        #exec s
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(s)
+            f.flush()
+
+            subprocess.check_output([sys.executable, f.name])
+
+
+        if not os.path.exists(filename):
+            raise RuntimeError("Unable to generate the PDF...")
+
+        with open(filename, 'rb') as f:
+            imgdata = f.read()
+        os.remove(filename)
+
+        return imgdata, {}
+
+
+    def _prepare_matplotlib_png(self, main_file_name="", *args, **kwargs):
+        """
+        Prepare an python script using matplotlib to plot the bands, with the JSON
+        returned as an independent file.
+
+        For the possible parameters, see documentation of
+        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        """
+        import json
+        import os
+        import tempfile
+        import subprocess
+        import sys
+
+        all_data = self._matplotlib_get_dict(*args, **kwargs)
+
+        # Use the Agg backend
+        s_header = matplotlib_header_agg_template.substitute()
+        s_import = matplotlib_import_data_inline_template.substitute(
+            all_data_json = json.dumps(all_data, indent=2))
+        s_body = matplotlib_body_template.substitute()
+
+        # I get a temporary file name
+        handle, filename = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(filename)
+
+        escaped_fname =  filename.replace('"', '\"')
+
+        s_footer = matplotlib_footer_template_exportfile_with_dpi.substitute(
+            fname=escaped_fname, format="png", dpi=300
+        )
+
+        s = s_header + s_import + s_body + s_footer
+
+        # I don't exec it because I might mess up with the matplotlib backend etc.
+        # I run instead in a different process, with the same executable
+        # (so it should work properly with virtualenvs)
+        #exec s
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(s)
+            f.flush()
+
+            subprocess.check_output([sys.executable, f.name])
+
+
+        if not os.path.exists(filename):
+            raise RuntimeError("Unable to generate the PNG...")
+
+        with open(filename, 'rb') as f:
+            imgdata = f.read()
+        os.remove(filename)
+
+        return imgdata, {}
+
+
+    def _prepare_agr(self, main_file_name="", comments=True, setnumber_offset=0, color_number=1,
                      legend="", title="", y_max_lim=None, y_min_lim=None,
                      y_origin=0., **kwargs):
         """
@@ -1035,7 +1135,7 @@ class BandsData(KpointsData):
         if comments:
             s = prepare_header_comment(self.uuid, plot_info, comment_char="#") + "\n" + s
 
-        return s, None
+        return s, {}
 
     def _get_band_segments(self, cartesian):
         plot_info = self._get_bandplot_data(cartesian=cartesian,
@@ -1049,7 +1149,7 @@ class BandsData(KpointsData):
 
         return out_dict
 
-    def _prepare_json(self, comments, **kwargs):
+    def _prepare_json(self, main_file_name="", comments=True, **kwargs):
         """
         Prepare a json file in a format compatible with the AiiDA band visualizer
 
@@ -1069,7 +1169,7 @@ class BandsData(KpointsData):
         if comments:
             json_dict['comments'] = get_file_header(comment_char="")
 
-        return json.dumps(json_dict), None
+        return json.dumps(json_dict), {}
 
 
 max_num_agr_colors = 15
@@ -1437,7 +1537,29 @@ agr_singleset_template = Template(
     $xydata
     """)
 
-matplotlib_template = Template(
+matplotlib_header_agg_template = Template(
+    '''# -*- coding: utf-8 -*-
+
+import matplotlib
+matplotlib.use('Agg')
+
+from matplotlib import rc
+# Uncomment to change default font
+#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+rc('text', usetex=True)
+#import matplotlib.pyplot as plt
+#plt.rcParams.update({'text.latex.unicode': True})
+
+import pylab as pl
+
+# I use json to make sure the input is sanitized
+import json
+
+print_comment = False
+''')
+
+matplotlib_header_template = Template(
     '''# -*- coding: utf-8 -*-
 
 from matplotlib import rc
@@ -1453,8 +1575,20 @@ import pylab as pl
 # I use json to make sure the input is sanitized
 import json
 
-all_data_str = r"""$all_data_json"""
-all_data = json.loads(all_data_str)
+print_comment = False
+''')
+
+matplotlib_import_data_inline_template = Template(
+    '''all_data_str = r"""$all_data_json"""
+''')
+
+matplotlib_import_data_fromfile_template = Template(
+    '''with open("$json_fname") as f:
+    all_data_str = f.read()
+''')
+
+matplotlib_body_template = Template(
+    '''all_data = json.loads(all_data_str)
 #x = all_data['x']
 #bands = all_data['bands']
 paths = all_data['paths']
@@ -1472,15 +1606,15 @@ for path in paths:
     #for band in bands:
     for band in path['values']:
         if idx==0 and all_data['legend_text']:
-            p.plot(x, band, 'k', label=all_data['legend_text'])
+            p.plot(x, band, 'k', label=all_data['legend_text'], linewidth=0.5)
         else:
-            p.plot(x, band, 'k')
+            p.plot(x, band, 'k', linewidth=0.5)
         idx+=1
 p.set_xticks(tick_pos)
 p.set_xticklabels(tick_labels)
 p.set_xlim([all_data['x_min_lim'], all_data['x_max_lim']])
 p.set_ylim([all_data['y_min_lim'], all_data['y_max_lim']])
-p.xaxis.grid(True, which='major', color='#888888', linestyle='-')
+p.xaxis.grid(True, which='major', color='#888888', linestyle='-', linewidth=0.5)
 if all_data['title']:
     p.set_title(all_data['title'])
 if all_data['legend_text']:
@@ -1488,10 +1622,20 @@ if all_data['legend_text']:
 p.set_ylabel(all_data['yaxis_label'])
 
 try:
-    print all_data['comment']
+    if print_comment:
+        print all_data['comment']
 except KeyError:
     pass
+''')
 
-pl.show()
+matplotlib_footer_template_show = Template('''pl.show()
+'''
+)
+
+matplotlib_footer_template_exportfile = Template('''pl.savefig("$fname", format="$format")
+'''
+)
+
+matplotlib_footer_template_exportfile_with_dpi = Template('''pl.savefig("$fname", format="$format", dpi=$dpi)
 '''
 )

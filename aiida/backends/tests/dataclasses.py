@@ -1445,7 +1445,7 @@ class TestStructureData(AiidaTestCase):
         # Exception thrown if ase can't be found
         except ImportError:
             return
-        self.assertEquals(simplify(c._prepare_cif()),
+        self.assertEquals(simplify(c._prepare_cif()[0]),
                           simplify("""#\#CIF1.1
 ##########################################################################
 #               Crystallographic Information Format file
@@ -2539,6 +2539,77 @@ class TestTrajectoryData(AiidaTestCase):
         with self.assertRaises(ValueError):
             td = TrajectoryData(structurelist=structurelist)
 
+    def test_export_to_file(self):
+        """
+        Export the band structure on a file, check if it is working
+        """
+        import numpy
+        import os
+        import tempfile
+        from aiida.orm.data.array.trajectory import TrajectoryData
+
+        n = TrajectoryData()
+
+        # I create sample data
+        stepids = numpy.array([60, 70])
+        times = stepids * 0.01
+        cells = numpy.array([
+            [[2., 0., 0., ],
+             [0., 2., 0., ],
+             [0., 0., 2., ]],
+            [[3., 0., 0., ],
+             [0., 3., 0., ],
+             [0., 0., 3., ]]])
+        symbols = numpy.array(['H', 'O', 'C'])
+        positions = numpy.array([
+            [[0., 0., 0.],
+             [0.5, 0.5, 0.5],
+             [1.5, 1.5, 1.5]],
+            [[0., 0., 0.],
+             [0.5, 0.5, 0.5],
+             [1.5, 1.5, 1.5]]])
+        velocities = numpy.array([
+            [[0., 0., 0.],
+             [0., 0., 0.],
+             [0., 0., 0.]],
+            [[0.5, 0.5, 0.5],
+             [0.5, 0.5, 0.5],
+             [-0.5, -0.5, -0.5]]])
+
+        # I set the node
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
+                         positions=positions, times=times,
+                         velocities=velocities)
+
+
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+
+
+        # It is not obvious how to check that the bands are correct.
+        # I just check, for a few formats, that the file is correctly
+        # created, at this stage
+        ## I use this to get a file. I then close it and ask the .export() function
+        ## to create it again. I have to remember to delete everything at the end.
+        handle, filename = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(filename)
+
+        for format in ['cif', 'xsf']:
+            files_created = [] # In case there is an exception
+            try:
+                files_created = n.export(filename, fileformat=format)
+                with open(filename) as f:
+                    filedata = f.read()
+            finally:
+                for file in files_created:
+                    if os.path.exists(file):
+                        os.remove(file)
+
 
 class TestKpointsData(AiidaTestCase):
     """
@@ -2802,6 +2873,56 @@ class TestBandsData(AiidaTestCase):
         b.store()
         with self.assertRaises(ModificationNotAllowed):
             b.set_bands(bands)
+
+    def test_export_to_file(self):
+        """
+        Export the band structure on a file, check if it is working
+        """
+        import numpy
+        import os
+        import tempfile
+        from aiida.orm.data.array.bands import BandsData
+        from aiida.orm.data.array.kpoints import KpointsData
+
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+
+        k = KpointsData()
+        k.set_cell(cell)
+        k.set_kpoints_path()
+
+        b = BandsData()
+        b.set_kpointsdata(k)
+
+        # 4 bands with linearly increasing energies, it does not make sense
+        # but is good for testing
+        input_bands = numpy.array([numpy.ones(4)*i for i in range(k.get_kpoints().shape[0]) ])
+
+        b.set_bands(input_bands, units='ev')
+
+        # It is not obvious how to check that the bands are correct.
+        # I just check, for a few formats, that the file is correctly
+        # created, at this stage
+        ## I use this to get a file. I then close it and ask the .export() function
+        ## to create it again. I have to remember to delete everything at the end.
+        handle, filename = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(filename)
+
+        for format in ['agr', 'agr_batch', 'json', 'matplotlib_inline']:
+            files_created = [] # In case there is an exception
+            try:
+                files_created = b.export(filename, fileformat=format)
+                with open(filename) as f:
+                    filedata = f.read()
+            finally:
+                for file in files_created:
+                    if os.path.exists(file):
+                        os.remove(file)
 
 
 # class TestData(AiidaTestCase):

@@ -308,7 +308,6 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
 
     from aiida.orm import Node, Group
     from aiida.common.exceptions import UniquenessError
-    from sqlalchemy.exc import IntegrityError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
@@ -521,6 +520,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = {}
                 dupl_counter = 0
+                imported_comp_names = set()
                 for import_entry_id, entry_data in new_entries[model_name].iteritems():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
@@ -532,7 +532,8 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                     if Model is models.DbComputer:
                         # Check if there is already a computer with the same
                         # name in the database
-                        dupl = Model.objects.filter(name=import_data['name'])
+                        dupl = (Model.objects.filter(name=import_data['name'])
+                                or import_data['name'] in imported_comp_names)
                         orig_name = import_data['name']
                         while dupl:
                             # Rename the new computer
@@ -540,8 +541,11 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                 orig_name +
                                 COMP_DUPL_SUFFIX.format(dupl_counter))
                             dupl_counter += 1
-                            dupl = Model.objects.filter(
-                                name=import_data['name'])
+                            dupl = (
+                                Model.objects.filter(name=import_data['name'])
+                                or import_data['name'] in imported_comp_names)
+
+                        imported_comp_names.add(import_data['name'])
 
                     objects_to_create.append(Model(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
@@ -779,8 +783,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.utils import timezone
 
     from aiida.orm import Node, Group
-    from aiida.common.exceptions import UniquenessError
-    from sqlalchemy.exc import IntegrityError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
@@ -984,6 +986,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         foreign_ids_reverse_mappings[model_name] = {
                             k: v.pk for k, v in relevant_db_entries.iteritems()}
                         dupl_counter = 0
+                        imported_comp_names = set()
                         for k, v in data['export_data'][model_name].iteritems():
                             if model_name == "aiida.backends.djsite.db.models.DbComputer":
                                 # Check if there is already a computer with the
@@ -992,7 +995,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 qb.append(Model,
                                           filters={'name': {"==": v["name"]}},
                                           project=["*"], tag="res")
-                                dupl = qb.count()
+                                dupl = (qb.count()
+                                        or v["name"] in imported_comp_names)
 
                                 orig_name = v["name"]
                                 while dupl:
@@ -1007,7 +1011,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                               filters={
                                                   'name': {"==": v["name"]}},
                                               project=["*"], tag="res")
-                                    dupl = qb.count()
+                                    dupl = (qb.count() or
+                                            v["name"] in imported_comp_names)
+
+                                imported_comp_names.add(v["name"])
 
                             if v[unique_identifier] in relevant_db_entries.keys():
                                 # Already in DB
@@ -2079,7 +2086,6 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
             given_nodes = list(set(given_nodes + additional_ids))
             entries_ids_to_add[
                 "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
-
 
     # Initial query to fire the generation of the export data
 

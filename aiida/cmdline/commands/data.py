@@ -454,13 +454,15 @@ class Exportable(object):
         """
         if output_fname:
             try:
-                node.export(output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
+                node.export(
+                    output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
             except OSError as e:
                 print >> sys.stderr, "** ERROR while exporting file:"
                 print >> sys.stderr, e.message
                 sys.exit(1)
         else:
-            filetext, extra_files = node._exportstring(fileformat, **other_args)
+            filetext, extra_files = node._exportstring(
+                fileformat, main_file_name=output_fname, **other_args)
             if extra_files:
                 print >> sys.stderr, "This format requires to write more than one file."
                 print >> sys.stderr, "You need to pass the -o option to specify a file name."
@@ -1337,7 +1339,7 @@ class _Structure(VerdiCommandWithSubcommands,
                 else:
                     raise
 
-    def _export_tcod(self, node, parameter_data=None, **kwargs):
+    def _export_tcod(self, node, output_fname, overwrite, parameter_data=None, **kwargs):
         """
         Plugin for TCOD
         """
@@ -1347,7 +1349,8 @@ class _Structure(VerdiCommandWithSubcommands,
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
             parameters = load_node(parameter_data, parent_class=ParameterData)
-        print node._exportstring('tcod',parameters=parameters,**kwargs)[0]
+        self.print_or_store(node, output_fname, fileformat='tcod', overwrite=overwrite,
+                            other_args=kwargs)
 
     def _export_tcod_parameters(self, parser, **kwargs):
         """
@@ -1588,7 +1591,7 @@ class _Cif(VerdiCommandWithSubcommands,
         self.print_or_store(node, output_fname, fileformat='cif', overwrite=overwrite)
 
 
-    def _export_tcod(self, node, parameter_data=None, **kwargs):
+    def _export_tcod(self, node, output_fname, overwrite, parameter_data=None, **kwargs):
         """
         Plugin for TCOD
         """
@@ -1597,7 +1600,8 @@ class _Cif(VerdiCommandWithSubcommands,
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
             parameters = load_node(parameter_data, parent_class=ParameterData)
-        print node._exportstring('tcod',parameters=parameters,**kwargs)[0]
+        self.print_or_store(node, output_fname, fileformat='tcod', overwrite=overwrite,
+                            other_args=kwargs)
 
     def _export_tcod_parameters(self,parser,**kwargs):
         """
@@ -1793,7 +1797,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
         """
         self.print_or_store(node, output_fname, fileformat='xsf', overwrite=overwrite)
 
-    def _export_tcod(self, node, parameter_data=None, **kwargs):
+    def _export_tcod(self, node, output_fname, overwrite, parameter_data=None, **kwargs):
         """
         Plugin for TCOD
         """
@@ -1803,9 +1807,8 @@ class _Trajectory(VerdiCommandWithSubcommands,
             from aiida.orm import DataFactory
             ParameterData = DataFactory('parameter')
             parameters = load_node(parameter_data, parent_class=ParameterData)
-        print node._exportstring('tcod',
-                                 parameters=parameters,
-                                 **kwargs)[0]
+        self.print_or_store(node, output_fname, fileformat='tcod', overwrite=overwrite,
+                            other_args=kwargs)
 
     def _export_tcod_parameters(self, parser, **kwargs):
         """

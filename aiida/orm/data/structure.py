@@ -889,7 +889,7 @@ class StructureData(Data):
         from aiida.orm.data.cif import CifData
 
         cif = CifData(ase=self.get_ase())
-        return cif._prepare_cif(), {}
+        return cif._prepare_cif()
 
     def _prepare_tcod(self, main_file_name="", **kwargs):
         """

@@ -41,6 +41,23 @@ def prettify_labels(labels, format=None):
 
         :param label: a string to prettify
         """
+        import re
+        newlabel = label
+
+        newlabel = newlabel.replace('GAMMA', r'\xG\f{}')
+        newlabel = newlabel.replace('DELTA', r'\xD\f{}')
+        newlabel = newlabel.replace('LAMBDA', r'\xL\f{}')
+        newlabel = newlabel.replace('SIGMA', r'\xS\f{}')
+        newlabel = re.sub('_(.{0,1})', r'\\s\1\\N', newlabel)
+
+        return newlabel
+
+    def prettify_label_agr_old(label):
+        """
+        Prettifier for XMGrace (for old label names)
+
+        :param label: a string to prettify
+        """
         if label == 'G':
             return r'\xG'
         else:
@@ -52,6 +69,25 @@ def prettify_labels(labels, format=None):
 
         :param label: a string to prettify
         """
+        import re
+        newlabel = label
+
+        newlabel = newlabel.replace('GAMMA', r'$\Gamma$')
+        newlabel = newlabel.replace('DELTA', r'$\Delta$')
+        newlabel = newlabel.replace('LAMBDA', r'$\Lambda$')
+        newlabel = newlabel.replace('SIGMA', r'$\Sigma$')
+        newlabel = re.sub('_(.{0,1})', r'$_{\1}$', newlabel)
+
+        #newlabel = newlabel + r"$_{\vphantom{0}}$"
+
+        return newlabel
+
+    def prettify_label_matplotlib_old(label):
+        """
+        Prettifier for matplotlib, using LaTeX syntax (for old label names)
+
+        :param label: a string to prettify
+        """
         if label == 'G':
             return r'$\Gamma$'
         else:
@@ -59,6 +95,8 @@ def prettify_labels(labels, format=None):
 
     prettifiers = {
         'agr': prettify_label_agr,
+        'agrold': prettify_label_agr_old,
+        'matplotlibold': prettify_label_matplotlib_old,
         'matplotlib': prettify_label_matplotlib,
     }
 
@@ -298,8 +336,12 @@ class BandsData(KpointsData):
     Class to handle bands data
     """
 
-    # Associate the '.dat' extension, by default, to the dat_multicolumn format
-    #_custom_export_format_replacements = {'dat': 'dat_multicolumn'}
+
+    # Associate file extensions to default plotting formats
+    _custom_export_format_replacements = {'dat': 'dat_multicolumn',
+                                          'png': 'matplotlib_png',
+                                          'pdf': 'matplotlib_pdf',
+                                          'py': 'matplotlib_inline'}
 
     def set_kpointsdata(self, kpointsdata):
         """
@@ -509,7 +551,7 @@ class BandsData(KpointsData):
                 coordinates. cartesian=True will fail if no cell has been set.
         :param prettify_format: by default, strings are not prettified. If you want
              to prettify them, pass a valid prettify_format string (see valid options
-             in the docstring of :py:func:prettify_label).
+             in the docstring of :py:func:prettify_labels).
         :param join_symbols: by default, strings are not joined. If you pass a string,
              this is used to join strings that are much closer than a given threshold.
              The most typical string is the pipe symbol: ``|``.
@@ -1030,7 +1072,7 @@ class BandsData(KpointsData):
 
     def _prepare_agr(self, main_file_name="", comments=True, setnumber_offset=0, color_number=1,
                      legend="", title="", y_max_lim=None, y_min_lim=None,
-                     y_origin=0., **kwargs):
+                     y_origin=0., prettify_format='agr', **kwargs):
         """
         Prepare an xmgrace agr file
 
@@ -1057,7 +1099,7 @@ class BandsData(KpointsData):
 
         plot_info = self._get_bandplot_data(
             cartesian=True,
-            prettify_format='agr',
+            prettify_format=prettify_format,
             join_symbol="|")
 
         import math
@@ -1537,6 +1579,9 @@ agr_singleset_template = Template(
     $xydata
     """)
 
+# text.latex.preview=True is needed to have a proper alignment of
+# tick marks with and without subscripts
+# see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
 matplotlib_header_agg_template = Template(
     '''# -*- coding: utf-8 -*-
 
@@ -1548,8 +1593,8 @@ from matplotlib import rc
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
 rc('text', usetex=True)
-#import matplotlib.pyplot as plt
-#plt.rcParams.update({'text.latex.unicode': True})
+import matplotlib.pyplot as plt
+plt.rcParams.update({'text.latex.preview': True})
 
 import pylab as pl
 
@@ -1559,6 +1604,9 @@ import json
 print_comment = False
 ''')
 
+# text.latex.preview=True is needed to have a proper alignment of
+# tick marks with and without subscripts
+# see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
 matplotlib_header_template = Template(
     '''# -*- coding: utf-8 -*-
 
@@ -1567,8 +1615,8 @@ from matplotlib import rc
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
 rc('text', usetex=True)
-#import matplotlib.pyplot as plt
-#plt.rcParams.update({'text.latex.unicode': True})
+import matplotlib.pyplot as plt
+plt.rcParams.update({'text.latex.preview': True})
 
 import pylab as pl
 

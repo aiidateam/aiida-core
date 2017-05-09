@@ -2902,7 +2902,7 @@ class TestBandsData(AiidaTestCase):
         # but is good for testing
         input_bands = numpy.array([numpy.ones(4)*i for i in range(k.get_kpoints().shape[0]) ])
 
-        b.set_bands(input_bands, units='ev')
+        b.set_bands(input_bands, units='eV')
 
         # It is not obvious how to check that the bands are correct.
         # I just check, for a few formats, that the file is correctly

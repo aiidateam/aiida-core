@@ -1003,6 +1003,14 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         """
         self.print_or_store(node, output_fname, fileformat='agr', overwrite=overwrite)
 
+    def _export_agr_oldlabels(self, node, output_fname, overwrite):
+        """
+        Export a .agr file, to be visualized with the XMGrace plotting software.
+        """
+        self.print_or_store(node, output_fname, fileformat='agr', overwrite=overwrite,
+                            other_args={'prettify_format': 'agrold'})
+
+
     def _export_agr_batch(self, node, output_fname, overwrite):
         """
         Export a .agr batch file, to be visualized with the XMGrace plotting software.

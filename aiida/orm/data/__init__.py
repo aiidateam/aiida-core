@@ -238,10 +238,10 @@ class Data(Node):
         for additional_fname, additional_fcontent in extra_files.iteritems():
             retlist.append(additional_fname)
             with open(additional_fname, 'w') as f:
-                f.write(additional_fcontent)
+                f.write(additional_fcontent.encode('utf-8'))
         retlist.append(path)
         with open(path, 'w') as f:
-            f.write(filetext)
+            f.write(filetext.encode('utf-8'))
 
         return retlist
 

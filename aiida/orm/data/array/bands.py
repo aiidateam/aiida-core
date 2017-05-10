@@ -16,18 +16,15 @@ from aiida.orm.data.array.kpoints import KpointsData
 import numpy
 from string import Template
 from aiida.common.exceptions import ValidationError
+from aiida.common.utils import classproperty
 
-def prettify_labels(labels, format=None):
+class Prettifier(object):
     """
-    Prettify label for typesetting in various formats
+    Class to manage prettifiers
+    """
 
-    :param labels: a list of length-2 tuples, in the format(position, label)
-    :param format: a string with the format for the prettifier (e.g. 'agr',
-         'matplotlib', ...)
-    :return: the same list as labels, but with the second value possibly replaced
-         with a prettified version that typesets nicely in the selected format
-    """
-    def prettify_label_pass(label):
+    @classmethod
+    def _prettify_label_pass(cls,label):
         """
         No-op prettifier, simply returns  the same label
 
@@ -35,7 +32,8 @@ def prettify_labels(labels, format=None):
         """
         return label
 
-    def prettify_label_agr(label):
+    @classmethod
+    def _prettify_label_agr(cls,label):
         """
         Prettifier for XMGrace
 
@@ -52,7 +50,8 @@ def prettify_labels(labels, format=None):
 
         return newlabel
 
-    def prettify_label_agr_old(label):
+    @classmethod
+    def _prettify_label_agr_simple(cls,label):
         """
         Prettifier for XMGrace (for old label names)
 
@@ -63,7 +62,43 @@ def prettify_labels(labels, format=None):
         else:
             return label
 
-    def prettify_label_matplotlib(label):
+    @classmethod
+    def _prettify_label_gnuplot(cls,label):
+        """
+        Prettifier for Gnuplot
+
+        :note: uses unicode, returns unicode strings (potentially, if needed)
+
+        :param label: a string to prettify
+        """
+        import re
+        newlabel = label
+
+        newlabel = newlabel.replace(u'GAMMA', u'Γ')
+        newlabel = newlabel.replace(u'DELTA', u'Δ')
+        newlabel = newlabel.replace(u'LAMBDA', u'Λ')
+        newlabel = newlabel.replace(u'SIGMA', u'Σ')
+        newlabel = re.sub(u'_(.{0,1})', ur'_{\1}', newlabel)
+
+        return newlabel
+
+    @classmethod
+    def _prettify_label_gnuplot_simple(cls,label):
+        """
+        Prettifier for Gnuplot (for old label names)
+
+        :note: uses unicode, returns unicode strings (potentially, if needed)
+
+        :param label: a string to prettify
+        """
+        if label == 'G':
+            return u'Γ'
+        else:
+            return label
+
+
+    @classmethod
+    def _prettify_label_latex(cls,label):
         """
         Prettifier for matplotlib, using LaTeX syntax
 
@@ -82,7 +117,8 @@ def prettify_labels(labels, format=None):
 
         return newlabel
 
-    def prettify_label_matplotlib_old(label):
+    @classmethod
+    def _prettify_label_latex_simple(cls,label):
         """
         Prettifier for matplotlib, using LaTeX syntax (for old label names)
 
@@ -93,28 +129,67 @@ def prettify_labels(labels, format=None):
         else:
             return label
 
-    prettifiers = {
-        'agr': prettify_label_agr,
-        'agrold': prettify_label_agr_old,
-        'matplotlibold': prettify_label_matplotlib_old,
-        'matplotlib': prettify_label_matplotlib,
+    @classproperty
+    def prettifiers(cls):
+        return {
+        'agr_seekpath': cls._prettify_label_agr,
+        'agr_simple': cls._prettify_label_agr_simple,
+        'latex_simple': cls._prettify_label_latex_simple,
+        'latex_seekpath': cls._prettify_label_latex,
+        'gnuplot_simple': cls._prettify_label_gnuplot_simple,
+        'gnuplot_seekpath': cls._prettify_label_gnuplot,
+        'pass': cls._prettify_label_pass,
     }
 
-    if format is None:
-        return labels
+    @classmethod
+    def get_prettifiers(cls):
+        return sorted(cls.prettifiers.keys())
 
-    try:
-        prettifier = prettifiers[format]
-    except KeyError:
-        raise ValueError("Unknwon fileformat {} for the prettifier; "
-                         "valid formats: {}".format(format,
-            ", ".join(sorted(prettifiers.keys()))
-        ))
+    def __init__(self, format):
+        """
+        Create a class to pretttify strings of a given format
+
+        :param format: a string with the format to use to prettify.
+           Valid formats are obtained from self.prettifiers
+        """
+        if format is None:
+            format = 'pass'
+        try:
+            self._prettifier_f = self.prettifiers[format]
+        except KeyError:
+            raise ValueError("Unknown prettifier format {}; "
+                             "valid formats: {}".format(
+                format,
+                ", ".join(self.get_prettifiers())
+                ))
+
+    def prettify(self, label):
+        """
+        Prettify a label using the format passed in the initializer
+
+        :param label: the string to prettify
+        :return: a prettified string
+        """
+        return self._prettifier_f(label)
+
+
+def prettify_labels(labels, format=None):
+    """
+    Prettify label for typesetting in various formats
+
+    :param labels: a list of length-2 tuples, in the format(position, label)
+    :param format: a string with the format for the prettifier (e.g. 'agr',
+         'matplotlib', ...)
+    :return: the same list as labels, but with the second value possibly replaced
+         with a prettified version that typesets nicely in the selected format
+    """
+    prettifier = Prettifier(format)
 
     retlist = []
     for label_pos, label in labels:
-        retlist.append((label_pos, prettifier(label)))
+        retlist.append((label_pos, prettifier.prettify(label)))
     return retlist
+
 
 def join_labels(labels, join_symbol="|", threshold=1.e-6):
     """
@@ -339,9 +414,9 @@ class BandsData(KpointsData):
 
     # Associate file extensions to default plotting formats
     _custom_export_format_replacements = {'dat': 'dat_multicolumn',
-                                          'png': 'matplotlib_png',
-                                          'pdf': 'matplotlib_pdf',
-                                          'py': 'matplotlib_inline'}
+                                          'png': 'mpl_png',
+                                          'pdf': 'mpl_pdf',
+                                          'py': 'mpl_singlefile'}
 
     def set_kpointsdata(self, kpointsdata):
         """
@@ -638,8 +713,7 @@ class BandsData(KpointsData):
 
         return plot_info
 
-    def _prepare_agr_batch(self, main_file_name="", comments=True,
-                           **kwargs):
+    def _prepare_agr_batch(self, main_file_name="", comments=True, prettify_format=None):
         """
         Prepare two files, data and batch, to be plot with xmgrace as:
         xmgrace -batch file.dat
@@ -650,17 +724,20 @@ class BandsData(KpointsData):
              In this case, we remove the extension, and add '_data.dat'
         :param comments: if True, print comments (if it makes sense for the given
             format)
-        :param filepath: the path for the .dat file
+        :param prettify_format: if None, use the default prettify format. Otherwise
+            specify a string with the prettifier to use.
         """
         import os
-        if kwargs:
-            raise TypeError("_prepare_agr_batch takes no keyword arguments")
 
         dat_filename = os.path.splitext(main_file_name)[0] + "_data.dat"
 
+        if prettify_format is None:
+            # Default. Specified like this to allow caller functions to pass 'None'
+            prettify_format = 'agr_seekpath'
+
         plot_info = self._get_bandplot_data(
             cartesian=True,
-            prettify_format='agr',
+            prettify_format=prettify_format,
             join_symbol="|")
 
         bands = plot_info['y']
@@ -748,7 +825,7 @@ class BandsData(KpointsData):
             DeprecationWarning)
         return self._prepare_dat_multicolumn(*args, **kwargs)
 
-    def _prepare_dat_multicolumn(self, main_file_name="", comments=True, **kwargs):
+    def _prepare_dat_multicolumn(self, main_file_name="", comments=True):
         """
         Write an N x M matrix. First column is the distance between kpoints,
         The other columns are the bands. Header contains number of kpoints and
@@ -757,9 +834,6 @@ class BandsData(KpointsData):
         :param comments: if True, print comments (if it makes sense for the given
             format)
         """
-        if kwargs:
-            raise TypeError("_prepare_dat_multicolumn takes no keyword arguments")
-
         plot_info = self._get_bandplot_data(
             cartesian=True,
             prettify_format=None,
@@ -791,7 +865,7 @@ class BandsData(KpointsData):
             DeprecationWarning)
         return self._prepare_dat_blocks(*args, **kwargs)
 
-    def _prepare_dat_blocks(self, main_file_name="", comments=True, **kwargs):
+    def _prepare_dat_blocks(self, main_file_name="", comments=True):
         """
         Format suitable for gnuplot using blocks.
         Columns with x and y (path and band energy). Several blocks, separated
@@ -800,9 +874,6 @@ class BandsData(KpointsData):
         :param comments: if True, print comments (if it makes sense for the given
             format)
         """
-        if kwargs:
-            raise TypeError("_prepare_dat_blocks takes no keyword arguments")
-
         plot_info = self._get_bandplot_data(
             cartesian=True,
             prettify_format=None,
@@ -828,7 +899,7 @@ class BandsData(KpointsData):
 
     def _matplotlib_get_dict(self, main_file_name="", comments=True, legend="", title="",
                             y_max_lim=None, y_min_lim=None,
-                            y_origin=0., **kwargs):
+                            y_origin=0., prettify_format=None):
         """
         Prepare the data to send to the python-matplotlib plotting script
 
@@ -848,6 +919,8 @@ class BandsData(KpointsData):
             minimum of the bands)
         :param y_origin: the new origin of the y axis -> all bands are replaced
             by bands-y_origin
+        :param prettify_format: if None, use the default prettify format. Otherwise
+            specify a string with the prettifier to use.
         """
         #import math
 
@@ -858,14 +931,13 @@ class BandsData(KpointsData):
         #    I do not want to do if he's e.g. in jupyter)
         # Therefore I just create a string that can be executed as needed, e.g. with eval.
         # I take care of sanitizing the output.
-
-        if kwargs:
-            raise TypeError("_prepare_matplotlib got unexpected keyword argument(s) {}"
-                            "".format(kwargs.keys()))
+        if prettify_format is None:
+            # Default. Specified like this to allow caller functions to pass 'None'
+            prettify_format = 'latex_seekpath'
 
         plot_info = self._get_bandplot_data(
             cartesian=True,
-            prettify_format='matplotlib',
+            prettify_format=prettify_format,
             join_symbol=r"\textbar{}",
             get_segments=True)
 
@@ -891,7 +963,6 @@ class BandsData(KpointsData):
             all_data['comment'] = prepare_header_comment(
                 self.uuid, plot_info, comment_char='#')
 
-
         # axis limits
         if y_max_lim is None:
             y_max_lim = the_bands.max()
@@ -908,7 +979,7 @@ class BandsData(KpointsData):
 
         return all_data
 
-    def _prepare_matplotlib_inline(self, *args, **kwargs):
+    def _prepare_mpl_singlefile(self, *args, **kwargs):
         """
         Prepare an python script using matplotlib to plot the bands
 
@@ -929,7 +1000,7 @@ class BandsData(KpointsData):
 
         return s, {}
 
-    def _prepare_matplotlib_json(self, main_file_name="", *args, **kwargs):
+    def _prepare_mpl_withjson(self, main_file_name="", *args, **kwargs):
         """
         Prepare an python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
@@ -958,7 +1029,106 @@ class BandsData(KpointsData):
 
         return s, ext_files
 
-    def _prepare_matplotlib_pdf(self, main_file_name="", *args, **kwargs):
+    def _prepare_gnuplot(self, main_file_name="",
+                         comments=True, prettify_format=None,
+                         y_max_lim=None, y_min_lim=None,
+                         y_origin=0.):
+        """
+        Prepare an gnuplot script to plot the bands, with the .dat file
+        returned as an independent file.
+
+        :param main_file_name: if the user asks to write the main content on a
+             file, this contains the filename. This should be used to infer a
+             good filename for the additional files.
+             In this case, we remove the extension, and add '_data.dat'
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
+        :param prettify_format: if None, use the default prettify format. Otherwise
+            specify a string with the prettifier to use.
+        """
+        import os
+
+        dat_filename = os.path.splitext(main_file_name)[0] + "_data.dat"
+
+        if prettify_format is None:
+            # Default. Specified like this to allow caller functions to pass 'None'
+            prettify_format = 'gnuplot_seekpath'
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format=prettify_format,
+            join_symbol="|")
+
+        bands = plot_info['y'] - y_origin
+        x = plot_info['x']
+        labels = plot_info['labels']
+
+        num_labels = len(labels)
+        num_bands = bands.shape[1]
+
+
+        # axis limits
+        if y_max_lim is None:
+            y_max_lim = bands.max()
+        if y_min_lim is None:
+            y_min_lim = bands.min()
+        x_min_lim = min(x)  # this isn't a numpy array, but a list
+        x_max_lim = max(x)
+
+        # first prepare the xy coordinates of the sets
+        raw_data, _ = self._prepare_dat_blocks(plot_info, comments=comments)
+
+        xtics_string = u", ".join(u'"{}" {}'.format(label, pos) for pos, label in
+                                 plot_info['labels'])
+
+        script = []
+        # Start with some useful comments
+
+        if comments:
+                script.append(prepare_header_comment(self.uuid, plot_info=plot_info,
+                                                     comment_char="# "))
+        script.append("")
+
+        script.append(u"""## Uncomment the next two lines to write directly to PDF
+## Note: You need to have gnuplot installed with pdfcairo support!
+#set term pdfcairo
+#set output 'out.pdf'
+
+### Uncomment one of the options below to change font
+### For the LaTeX fonts, you can download them from here:
+### https://sourceforge.net/projects/cm-unicode/
+### And then install them in your system
+## LaTeX Serif font, if installed
+#set termopt font "CMU Serif, 12"
+## LaTeX Sans Serif font, if installed
+#set termopt font "CMU Sans Serif, 12"
+## Classical Times New Roman
+#set termopt font "Times New Roman, 12"
+""")
+
+        # Actual logic
+        script.append(u'set termopt enhanced') # Properly deals with e.g. subscripts
+        script.append(u'set encoding utf8') # To deal with Greek letters
+        script.append(u'set xtics ({})'.format(xtics_string))
+        script.append(u'set grid xtics lt 1 lc rgb "#888888"')
+
+        script.append(u'unset key')
+
+        script.append(u'set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
+        script.append(u'set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
+
+        script.append(u'set ylabel "{}"'.format(u"Dispersion ({})".format(self.units)))
+
+        # Plot, escaping filename
+        script.append(u'plot "{}" with l lc rgb "#000000"'.format(
+            dat_filename.replace('"', '\"')))
+
+        script_data = u"\n".join(script) + u"\n"
+        extra_files = {dat_filename: raw_data}
+
+        return script_data, extra_files
+
+    def _prepare_mpl_pdf(self, main_file_name="", *args, **kwargs):
         """
         Prepare an python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
@@ -1014,7 +1184,7 @@ class BandsData(KpointsData):
         return imgdata, {}
 
 
-    def _prepare_matplotlib_png(self, main_file_name="", *args, **kwargs):
+    def _prepare_mpl_png(self, main_file_name="", *args, **kwargs):
         """
         Prepare an python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
@@ -1072,7 +1242,7 @@ class BandsData(KpointsData):
 
     def _prepare_agr(self, main_file_name="", comments=True, setnumber_offset=0, color_number=1,
                      legend="", title="", y_max_lim=None, y_min_lim=None,
-                     y_origin=0., prettify_format='agr', **kwargs):
+                     y_origin=0., prettify_format=None):
         """
         Prepare an xmgrace agr file
 
@@ -1092,10 +1262,13 @@ class BandsData(KpointsData):
             minimum of the bands)
         :param y_origin: the new origin of the y axis -> all bands are replaced
             by bands-y_origin
+        :param prettify_format: if None, use the default prettify format. Otherwise
+            specify a string with the prettifier to use.
         """
-        if kwargs:
-            raise TypeError("_prepare_agr got unexpected keyword argument(s) {}"
-                            "".format(kwargs.keys()))
+        if prettify_format is None:
+            # Default. Specified like this to allow caller functions to pass 'None'
+            prettify_format = 'agr_seekpath'
+
 
         plot_info = self._get_bandplot_data(
             cartesian=True,
@@ -1191,7 +1364,7 @@ class BandsData(KpointsData):
 
         return out_dict
 
-    def _prepare_json(self, main_file_name="", comments=True, **kwargs):
+    def _prepare_json(self, main_file_name="", comments=True):
         """
         Prepare a json file in a format compatible with the AiiDA band visualizer
 
@@ -1200,10 +1373,6 @@ class BandsData(KpointsData):
         """
         import json
         from aiida import get_file_header
-
-        if kwargs:
-            raise TypeError("_prepare_json got unexpected keyword argument(s) {}"
-                            "".format(kwargs.keys()))
 
         json_dict = self._get_band_segments(cartesian=True)
         json_dict['original_uuid'] = self.uuid

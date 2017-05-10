@@ -257,7 +257,7 @@ class Visualizable(object):
 
         parser.add_argument('--format', '-f', type=str, default=default_format,
                             help="Type of the visualization format/tool.",
-                            choices=self.get_show_plugins().keys())
+                            choices=sorted(self.get_show_plugins().keys()))
 
         # Augmenting the command line parameters with ones, that are used by
         # individual plugins
@@ -346,7 +346,7 @@ class Exportable(object):
         Export the data node to a given format.
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _export_xxx() method.
-        from aiida.common.exceptions import InternalError
+        from aiida.orm.data.array.bands import Prettifier
         import argparse
 
         parser = argparse.ArgumentParser(
@@ -358,6 +358,13 @@ class Exportable(object):
                                  "if more than one file needs to be created.")
         parser.add_argument('-y', '--overwrite', action='store_true',
                             help="If passed, overwrite files without checking.")
+        parser.add_argument('--prettify-format', type=str, default=None,
+                            choices=Prettifier.get_prettifiers(),
+                            help = 'The style of labels for the prettifier')
+        parser.add_argument('--y-min-lim', type=float, default=None,
+                            help = 'The minimum value for the y axis. Default: minimum of all bands')
+        parser.add_argument('--y-max-lim', type=float, default=None,
+                            help = 'The maximum value for the y axis. Default: maximum of all bands')
         parser.add_argument('data_id', type=int, default=None,
                             help="ID of the data object to be visualized.")
 
@@ -372,7 +379,7 @@ class Exportable(object):
 
         parser.add_argument('--format', '-f', type=str, default=default_format,
                             help="Type of the exported file.",
-                            choices=self.get_export_plugins().keys())
+                            choices=sorted(self.get_export_plugins().keys()))
 
         # Augmenting the command line parameters with ones, that are used by
         # individual plugins
@@ -403,7 +410,7 @@ class Exportable(object):
 
         output_fname = parsed_args.pop('output')
         if not output_fname:
-            output_fname = None
+            output_fname = ""
 
         overwrite = parsed_args.pop('overwrite')
 
@@ -452,23 +459,31 @@ class Exportable(object):
         :note: this function calls directly sys.exit(1) when an error occurs (or e.g. if
             check_overwrite is True and a file already exists).
         """
-        if output_fname:
-            try:
-                node.export(
-                    output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
-            except OSError as e:
-                print >> sys.stderr, "** ERROR while exporting file:"
-                print >> sys.stderr, e.message
-                sys.exit(1)
-        else:
-            filetext, extra_files = node._exportstring(
-                fileformat, main_file_name=output_fname, **other_args)
-            if extra_files:
-                print >> sys.stderr, "This format requires to write more than one file."
-                print >> sys.stderr, "You need to pass the -o option to specify a file name."
-                sys.exit(1)
+        try:
+            if output_fname:
+                try:
+                    node.export(
+                        output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
+                except OSError as e:
+                    print >> sys.stderr, "verdi: ERROR while exporting file:"
+                    print >> sys.stderr, e.message
+                    sys.exit(1)
             else:
-                print filetext
+                filetext, extra_files = node._exportstring(
+                    fileformat, main_file_name=output_fname, **other_args)
+                if extra_files:
+                    print >> sys.stderr, "This format requires to write more than one file."
+                    print >> sys.stderr, "You need to pass the -o option to specify a file name."
+                    sys.exit(1)
+                else:
+                    print filetext
+        except TypeError as e:
+            # This typically occurs for parameters that are passed down to the
+            # methods in, e.g., BandsData, but they are not accepted
+            print >> sys.stderr, "verdi: ERROR, probably a parameter is not supported by the specific format."
+            print >> sys.stderr, "Error message: {}".format(e.message)
+
+            sys.exit(1)
 
 
 class Importable(object):
@@ -513,7 +528,7 @@ class Importable(object):
 
         parser.add_argument('--format', '-f', type=str, default=default_format,
                             help="Type of the imported file.",
-                            choices=self.get_import_plugins().keys())
+                            choices=sorted(self.get_import_plugins().keys()))
 
         # Augmenting the command line parameters with ones, that are used by
         # individual plugins
@@ -997,82 +1012,95 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         """
         return ["ID", "formula", "ctime", "label"]
 
-    def _export_agr(self, node, output_fname, overwrite):
-        """
-        Export a .agr file, to be visualized with the XMGrace plotting software.
-        """
-        self.print_or_store(node, output_fname, fileformat='agr', overwrite=overwrite)
-
-    def _export_agr_oldlabels(self, node, output_fname, overwrite):
+    def _export_agr(self, node, output_fname, overwrite, **kwargs):
         """
         Export a .agr file, to be visualized with the XMGrace plotting software.
         """
         self.print_or_store(node, output_fname, fileformat='agr', overwrite=overwrite,
-                            other_args={'prettify_format': 'agrold'})
+                            other_args=kwargs)
 
 
-    def _export_agr_batch(self, node, output_fname, overwrite):
+    def _export_agr_batch(self, node, output_fname, overwrite, **kwargs):
         """
         Export a .agr batch file, to be visualized with the XMGrace plotting software.
         """
-        self.print_or_store(node, output_fname, fileformat='agr_batch', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='agr_batch', overwrite=overwrite,
+                            other_args=kwargs)
 
-    def _export_dat_multicolumn(self, node, output_fname, overwrite):
+    def _export_gnuplot(self, node, output_fname, overwrite, **kwargs):
+        """
+        Export a Gnuplot file, together with the corresponding .dat file,
+        to be visualized with the Gnuplot plotting software.
+
+        Run with 'gnuplot -p filename' to see the plot (and keep the window with
+        the plot open).
+        """
+        self.print_or_store(node, output_fname, fileformat='gnuplot', overwrite=overwrite,
+                            other_args=kwargs)
+
+    def _export_dat_multicolumn(self, node, output_fname, overwrite, **kwargs):
         """
         Export a .dat file with one line per kpoint, with multiple energy values
         on the same line separated by spaces.
         """
-        self.print_or_store(node, output_fname, fileformat='dat_multicolumn', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='dat_multicolumn', overwrite=overwrite,
+                            other_args=kwargs)
 
-    def _export_dat_blocks(self, node, output_fname, overwrite):
+    def _export_dat_blocks(self, node, output_fname, overwrite, **kwargs):
         """
         Export a .dat file with one line per datapoint (kpt, energy),
         with multiple bands separated in stanzas (i.e. having at least an empty
         newline inbetween).
         """
-        self.print_or_store(node, output_fname, fileformat='dat_blocks', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='dat_blocks', overwrite=overwrite,
+                            other_args=kwargs)
 
-    def _export_json(self, node, output_fname, overwrite):
+    def _export_json(self, node, output_fname, overwrite, **kwargs):
         """
         Export a .dat file with one line per datapoint (kpt, energy),
         with multiple bands separated in stanzas (i.e. having at least an empty
         newline inbetween).
         """
-        self.print_or_store(node, output_fname, fileformat='json', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='json', overwrite=overwrite,
+                            other_args=kwargs)
 
 
-    def _export_matplotlib_inline(self, node, output_fname, overwrite):
+    def _export_mpl_singlefile(self, node, output_fname, overwrite, **kwargs):
         """
         Export a .py file that would produce the plot using matplotlib
         when run with python (with data dumped within the same python file)
         """
-        self.print_or_store(node, output_fname, fileformat='matplotlib_inline', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='mpl_singlefile', overwrite=overwrite,
+                            other_args=kwargs)
 
-    def _export_matplotlib_json(self, node, output_fname, overwrite):
+    def _export_mpl_withjson(self, node, output_fname, overwrite, **kwargs):
         """
         Export a .py file that would produce the plot using matplotlib
         when run with python (with data dumped in an external json filee)
         """
-        self.print_or_store(node, output_fname, fileformat='matplotlib_json', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='mpl_withjson', overwrite=overwrite,
+                            other_args=kwargs)
 
 
-    def _export_matplotlib_png(self, node, output_fname, overwrite):
+    def _export_mpl_png(self, node, output_fname, overwrite, **kwargs):
         """
         Export a .png file generated using matplotlib
         """
         if not output_fname:
             print >> sys.stderr, "To export to PNG please always specify the filename with the -o option"
             sys.exit(1)
-        self.print_or_store(node, output_fname, fileformat='matplotlib_png', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='mpl_png', overwrite=overwrite,
+                            other_args=kwargs)
 
-    def _export_matplotlib_pdf(self, node, output_fname, overwrite):
+    def _export_mpl_pdf(self, node, output_fname, overwrite, **kwargs):
         """
         Export a .pdf file generated using matplotlib
         """
         if not output_fname:
-            print >> sys.stderr, "To export to PNG please always specify the filename with the -o option"
+            print >> sys.stderr, "To export to PDF please always specify the filename with the -o option"
             sys.exit(1)
-        self.print_or_store(node, output_fname, fileformat='matplotlib_pdf', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='mpl_pdf', overwrite=overwrite,
+                            other_args=kwargs)
 
     def _show_xmgrace(self, exec_name, list_bands):
         """
@@ -1367,23 +1395,26 @@ class _Structure(VerdiCommandWithSubcommands,
         from aiida.tools.dbexporters.tcod import extend_with_cmdline_parameters
         extend_with_cmdline_parameters(parser,self.dataclass.__name__)
 
-    def _export_xsf(self, node, output_fname, overwrite):
+    def _export_xsf(self, node, output_fname, overwrite, **kwargs):
         """
         Exporter to XSF.
         """
-        self.print_or_store(node, output_fname, fileformat='xsf', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='xsf', overwrite=overwrite,
+                            other_args=kwargs)
 
-    def _export_cif(self, node, output_fname, overwrite):
+    def _export_cif(self, node, output_fname, overwrite, **kwargs):
         """
         Exporter to CIF.
         """
-        self.print_or_store(node, output_fname, fileformat='cif', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='cif', overwrite=overwrite,
+                            other_args=kwargs)
 
-    def _export_xyz(self, node, output_fname, overwrite):
+    def _export_xyz(self, node, output_fname, overwrite, **kwargs):
         """
         Exporter to XYZ.
         """
-        self.print_or_store(node, output_fname, fileformat='xyz', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='xyz', overwrite=overwrite,
+                            other_args=kwargs)
 
     def _import_xyz_parameters(self, parser):
         """
@@ -1592,11 +1623,12 @@ class _Cif(VerdiCommandWithSubcommands,
         """
         return ["ID", "formulae", "source_uri"]
 
-    def _export_cif(self, node, output_fname, overwrite):
+    def _export_cif(self, node, output_fname, overwrite, **kwargs):
         """
         Exporter to CIF.
         """
-        self.print_or_store(node, output_fname, fileformat='cif', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='cif', overwrite=overwrite,
+                            other_args=kwargs)
 
 
     def _export_tcod(self, node, output_fname, overwrite, parameter_data=None, **kwargs):
@@ -1799,11 +1831,12 @@ class _Trajectory(VerdiCommandWithSubcommands,
             t.show_mpl_heatmap(**kwargs)
 
 
-    def _export_xsf(self, node, output_fname, overwrite):
+    def _export_xsf(self, node, output_fname, overwrite, **kwargs):
         """
         Exporter to XSF.
         """
-        self.print_or_store(node, output_fname, fileformat='xsf', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='xsf', overwrite=overwrite,
+                            other_args=kwargs)
 
     def _export_tcod(self, node, output_fname, overwrite, parameter_data=None, **kwargs):
         """
@@ -1825,11 +1858,12 @@ class _Trajectory(VerdiCommandWithSubcommands,
         from aiida.tools.dbexporters.tcod import extend_with_cmdline_parameters
         extend_with_cmdline_parameters(parser,self.dataclass.__name__)
 
-    def _export_cif(self, node, output_fname, overwrite):
+    def _export_cif(self, node, output_fname, overwrite, **kwargs):
         """
         Exporter to CIF.
         """
-        self.print_or_store(node, output_fname, fileformat='cif', overwrite=overwrite)
+        self.print_or_store(node, output_fname, fileformat='cif', overwrite=overwrite,
+                            other_args=kwargs)
 
 
     def _export_cif_parameters(self, parser, **kwargs):

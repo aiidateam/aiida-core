@@ -416,7 +416,8 @@ class BandsData(KpointsData):
     _custom_export_format_replacements = {'dat': 'dat_multicolumn',
                                           'png': 'mpl_png',
                                           'pdf': 'mpl_pdf',
-                                          'py': 'mpl_singlefile'}
+                                          'py': 'mpl_singlefile',
+                                          'gnu': 'gnuplot'}
 
     def set_kpointsdata(self, kpointsdata):
         """

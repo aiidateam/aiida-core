@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
@@ -64,7 +65,7 @@ class QueryBuilder(object):
 
         Which backend is used decided here based on backend-settings (taken from the user profile).
         This cannot be overriden so far by the user.
-        
+
 
         :param bool with_dbpath:
             Whether to use the DbPath table (if existing) to query ancestor-descendant relations.
@@ -88,11 +89,11 @@ class QueryBuilder(object):
             The filters to apply. You can specify the filters here, when appending to the query
             using :func:`QueryBuilder.append` or even later using :func:`QueryBuilder.add_filter`.
             Check latter gives API-details.
-        :param project: 
+        :param project:
             The projections to apply. You can specify the projections here, when appending to the query
             using :func:`QueryBuilder.append` or even later using :func:`QueryBuilder.add_projection`.
             Latter gives you API-details.
-        :param int limit: 
+        :param int limit:
             Limit the number of rows to this number. Check :func:`QueryBuilder.limit`
             for more information.
         :param int offset:
@@ -179,7 +180,7 @@ class QueryBuilder(object):
 
         # Setting debug levels:
         self.set_debug(kwargs.pop('debug',False))
-        
+
         # The internal _with_dbpath attributes reports whether I need to do something with the path.
         # I.e. check, loads, etc, implementation left to backend implementation.
         self.set_with_dbpath(kwargs.pop('with_dbpath', True))
@@ -455,7 +456,7 @@ class QueryBuilder(object):
 
         # Checks complete
         # This is where I start doing changes to self!
-        # Now, several things can go wrong along the way, so I need to split into  
+        # Now, several things can go wrong along the way, so I need to split into
         # atomic blocks that I can reverse if something goes wrong.
         ################ TAG MAPPING #################################
         # TODO check with duplicate classes
@@ -481,7 +482,7 @@ class QueryBuilder(object):
 
         ######################## ALIASING ##############################
         try:
-            #~ alias = 
+            #~ alias =
             #~ self._aliased_path.append(alias)
             self._tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as e:
@@ -492,7 +493,7 @@ class QueryBuilder(object):
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag, None)
             raise e
-            
+
 
 
         ################# FILTERS ######################################
@@ -523,7 +524,7 @@ class QueryBuilder(object):
 
 
         #################### PROJECTIONS ##############################
-        
+
         try:
             self._projections[tag] = []
             if project is not None:
@@ -613,7 +614,7 @@ class QueryBuilder(object):
 
         ############################# EDGES #################################
         # See if this requires a link:
-        
+
         # This variable lets me know if there is an edge (i.e. a many to many relationship)
         edge_exists = False
         if len(self._path) > 0:
@@ -688,7 +689,7 @@ class QueryBuilder(object):
         path_extension = dict(
                 type=ormclasstype, tag=tag, joining_keyword=joining_keyword,
                 joining_value=joining_value, outerjoin=outerjoin,
-            )        
+            )
         if edge_exists:
             path_extension.update(dict(edge_tag=edge_tag))
         self._path.append(path_extension)
@@ -812,7 +813,7 @@ class QueryBuilder(object):
             The specifications for the filter, has to be a dictionary
 
         Usage::
-        
+
             qb = QueryBuilder()         # Instantiating the QueryBuilder instance
             qb.append(Node, tag='node') # Appending a Node
             #let's put some filters:
@@ -1861,7 +1862,7 @@ class QueryBuilder(object):
         In this way,the queryhelp can be stored
         in the database or a json-object, retrieved or shared and used later.
         See this usage::
-        
+
             qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
             queryhelp  = qb.get_json_compatible_queryhelp()
 
@@ -2222,7 +2223,7 @@ class QueryBuilder(object):
             # append stuff!
             qb.append(...)
             qb.append(...)
-            ... 
+            ...
             qb.distinct().all() #or
             qb.distinct().dict()
 

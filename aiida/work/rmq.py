@@ -72,16 +72,16 @@ def _create_subscribers(procman, prefix, connection):
 
         plum.rmq.ProcessControlSubscriber(
             connection=connection, exchange=".".join([prefix, _CONTROL_EXCHANGE]),
-            process_manager=procman
+            process_controller=procman
         ),
 
         plum.rmq.ProcessLaunchSubscriber(
             connection=connection, queue=".".join([prefix, _LAUNCH_QUEUE]),
-            process_manager=procman
+            process_controller=procman
         ),
 
         plum.rmq.ProcessStatusSubscriber(
-            connection=connection, process_manager=procman,
+            connection=connection, process_controller=procman,
             exchange=".".join([prefix, _STATUS_REQUEST_EXCHANGE])
         ),
     ]

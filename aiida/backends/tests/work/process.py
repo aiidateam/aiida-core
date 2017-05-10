@@ -36,8 +36,8 @@ class ProcessStackTest(Process):
         pass
 
     @override
-    def on_create(self, saved_instance_state):
-        super(ProcessStackTest, self).on_create(saved_instance_state)
+    def on_create(self):
+        super(ProcessStackTest, self).on_create()
         self._thread_id = threading.current_thread().ident
 
     @override
@@ -56,7 +56,9 @@ class TestProcess(AiidaTestCase):
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
-        self.assertTrue(globals.get_process_manager().abort_all(timeout=10.), "Failed to abort all processes")
+        procman = globals.get_process_manager()
+        procman.abort_all(timeout=10.)
+        self.assertEqual(procman.get_num_processes(), 0, "Failed to abort all processes")
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
@@ -88,9 +90,9 @@ class TestProcess(AiidaTestCase):
 
     def test_none_input(self):
         # Check that if we pass no input the process runs fine
-        DummyProcess.new().start()
+        DummyProcess.new().play()
         # Check that if we explicitly pass None as the input it also runs fine
-        DummyProcess.new(inputs=None).start()
+        DummyProcess.new(inputs=None).play()
 
     def test_seal(self):
         rinfo = run(DummyProcess, _return_pid=True)[1]
@@ -106,8 +108,8 @@ class TestProcess(AiidaTestCase):
         n = load_node(pk=rinfo.pid)
         self.assertFalse(n.is_sealed)
 
-        dp = DummyProcess.load(storage.load_checkpoint(rinfo.pid))
-        dp.start()
+        dp = DummyProcess.create_from(storage.load_checkpoint(rinfo.pid))
+        dp.play()
         self.assertTrue(n.is_sealed)
         shutil.rmtree(storedir)
 
@@ -128,7 +130,7 @@ class TestProcess(AiidaTestCase):
     def test_work_calc_finish(self):
         p = DummyProcess.new()
         self.assertFalse(p.calc.has_finished_ok())
-        p.start()
+        p.play()
         self.assertTrue(p.calc.has_finished_ok())
 
     def test_calculation_input(self):

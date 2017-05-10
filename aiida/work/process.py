@@ -133,7 +133,7 @@ class Process(plum.process.Process):
         Keys used to identify things in the saved instance state bundle.
         """
         CALC_ID = 'calc_id'
-        PARENT_CALC_PID = 'parent_calc_pid'
+        PARENT_PID = 'parent_calc_pid'
 
     @classmethod
     def define(cls, spec):
@@ -175,24 +175,35 @@ class Process(plum.process.Process):
         bundle['COPY'] = True
         return cls.restart(bundle)
 
-    def __init__(self, inputs, pid, logger=None):
+    def __init__(self, inputs=None, pid=None, logger=None):
         super(Process, self).__init__(inputs, pid, logger)
+
         self._calc = None
-        self._parent_pid = None
+        # Get the parent from the top of the process stack
+        try:
+            self._parent_pid = ProcessStack.top().pid
+        except IndexError:
+            self._parent_pid = None
+
+        self._pid = self._create_and_setup_db_record()
+
+        if logger is None:
+            self.set_logger(self._calc.logger)
 
     @property
     def calc(self):
         return self._calc
 
     @override
-    def save_instance_state(self, bundle):
-        super(Process, self).save_instance_state(bundle)
+    def save_instance_state(self, out_state):
+        super(Process, self).save_instance_state(out_state)
 
         if self.inputs._store_provenance:
             assert self.calc.is_stored
 
-        bundle[self.SaveKeys.CALC_ID.value] = self.pid
-        bundle.set_class_loader(class_loader)
+        out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
+        out_state[self.SaveKeys.CALC_ID.value] = self.pid
+        out_state.set_class_loader(class_loader)
 
     def run_after_queueing(self, wait_on):
         return self._run
@@ -213,42 +224,28 @@ class Process(plum.process.Process):
 
     # region Process messages
     @override
-    def on_create(self, saved_instance_state):
-        super(Process, self).on_create(saved_instance_state)
+    def load_instance_state(self, saved_state, logger=None):
+        super(Process, self).load_instance_state(saved_state)
 
-        if saved_instance_state is None:
-            # Get the parent from the top of the process stack
-            try:
-                self._parent_pid = ProcessStack.top().pid
-            except IndexError:
-                pass
+        is_copy = saved_state.get('COPY', False)
 
-            self._pid = self._create_and_setup_db_record()
-
-        if self._logger is None:
-            self.set_logger(self.calc.logger)
-
-    @override
-    def load_instance_state(self, bundle):
-        super(Process, self).load_instance_state(bundle)
-
-        is_copy = bundle.get('COPY', False)
-
-        if self.SaveKeys.CALC_ID.value in bundle:
+        if self.SaveKeys.CALC_ID.value in saved_state:
             if is_copy:
-                old = load_node(bundle[self.SaveKeys.CALC_ID.value])
+                old = load_node(saved_state[self.SaveKeys.CALC_ID.value])
                 self._calc = old.copy()
                 self._calc.store()
             else:
-                self._calc = load_node(bundle[self.SaveKeys.CALC_ID.value])
+                self._calc = load_node(saved_state[self.SaveKeys.CALC_ID.value])
 
             self._pid = self.calc.pk
         else:
             self._pid = self._create_and_setup_db_record()
 
-        if self.SaveKeys.PARENT_CALC_PID.value in bundle:
-            self._parent_pid = bundle[
-                self.SaveKeys.PARENT_CALC_PID.value]
+        if logger is None:
+            self.set_logger(self._calc.logger)
+
+        if self.SaveKeys.PARENT_PID.value in saved_state:
+            self._parent_pid = saved_state[self.SaveKeys.PARENT_PID.value]
 
     @override
     def on_playing(self):

@@ -41,4 +41,4 @@ class TestProcess(AiidaTestCase):
         # Now check that they are equal
         self.assertEqual(b, b2)
 
-        dp.start()
+        dp.play()

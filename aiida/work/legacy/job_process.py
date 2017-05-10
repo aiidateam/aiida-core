@@ -88,9 +88,9 @@ class JobProcess(Process, WithHeartbeat):
 
     # region Process overrides
     @override
-    def on_create(self, saved_instance_state):
+    def on_create(self):
         from aiida.backends.utils import get_authinfo
-        super(JobProcess, self).on_create(saved_instance_state)
+        super(JobProcess, self).on_create()
 
         self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 

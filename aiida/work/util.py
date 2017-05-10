@@ -273,8 +273,8 @@ class WithHeartbeat(plum.process.Process):
         super(WithHeartbeat, self).on_run()
         assert self._heartbeat is not None
 
-    def on_wait(self):
-        super(WithHeartbeat, self).on_wait()
+    def on_wait(self, wait_on):
+        super(WithHeartbeat, self).on_wait(wait_on)
         assert self._heartbeat is not None
 
     def on_resume(self):

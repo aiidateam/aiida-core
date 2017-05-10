@@ -24,7 +24,7 @@ def launch_pending_jobs(storage=None):
     for proc in _load_all_processes(storage):
         try:
             storage.persist_process(proc)
-            f = procman.start(proc)
+            f = procman.play(proc)
         except LockError:
             pass
 

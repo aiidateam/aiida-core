@@ -46,7 +46,7 @@ def legacy_workflow(pk):
     >>>
     >>>     def step1(self):
     >>>         wf = OldEquationOfState()
-    >>>         wf.start()
+    >>>         wf.play()
     >>>         return ToContext(eos=legacy_workflow(wf.pk))
     >>>
     >>>     def step2(self):
@@ -85,7 +85,7 @@ def async(process_class, *args, **kwargs):
     :rtype: :class:`plum.process_manager.Future`
     """
     p = _get_process_instance(process_class, *args, **kwargs)
-    return aiida.work.globals.get_process_manager().start(p)
+    return aiida.work.globals.get_process_manager().play(p)
 
 
 def run(process_class, *args, **inputs):
@@ -100,7 +100,7 @@ def run(process_class, *args, **inputs):
     return_pid = inputs.pop('_return_pid', False)
 
     p = _get_process_instance(process_class, *args, **inputs)
-    outputs = aiida.work.globals.get_process_manager().start(p).result()
+    outputs = aiida.work.globals.get_process_manager().play(p).result()
     if return_pid:
         return outputs, p.pid
     else:
@@ -111,7 +111,7 @@ def restart(pid, persistence=None):
     if persistence is None:
         persistence = aiida.work.persistence.get_global_persistence()
     cp = persistence.load_checkpoint(pid)
-    return Process.load(cp).start()
+    return Process.create_from(cp).play()
 
 
 def submit(process_class, _jobs_store=None, **kwargs):

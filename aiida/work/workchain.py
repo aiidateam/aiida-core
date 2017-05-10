@@ -159,9 +159,9 @@ class WorkChain(Process, WithHeartbeat):
             for k, v in self._content.iteritems():
                 out_state[k] = serialise_value(v)
 
-    def __init__(self, inputs, pid, logger=None):
+    def __init__(self, inputs=None, pid=None, logger=None):
         super(WorkChain, self).__init__(inputs, pid, logger)
-        self._context = None
+        self._context = self.Context()
         self._stepper = None
         self._barriers = []
         self._intersteps = []
@@ -268,32 +268,27 @@ class WorkChain(Process, WithHeartbeat):
                 return Checkpoint(), self._do_step
 
     @override
-    def on_create(self, saved_instance_state):
-        super(WorkChain, self).on_create(saved_instance_state)
+    def load_instance_state(self, saved_state, logger=None):
+        # Recreate the context
+        self._context = self.Context(deserialise_value(saved_state[self._CONTEXT]))
 
-        if saved_instance_state is None:
-            self._context = self.Context()
-        else:
-            # Recreate the context
-            self._context = self.Context(deserialise_value(saved_instance_state[self._CONTEXT]))
+        # Recreate the stepper
+        if self._STEPPER_STATE in saved_state:
+            self._stepper = self.spec().get_outline().create_stepper(self)
+            self._stepper.load_position(
+                saved_state[self._STEPPER_STATE])
 
-            # Recreate the stepper
-            if self._STEPPER_STATE in saved_instance_state:
-                self._stepper = self.spec().get_outline().create_stepper(self)
-                self._stepper.load_position(
-                    saved_instance_state[self._STEPPER_STATE])
+        try:
+            self._intersteps = [_INTERSTEP_FACTORY.create(b) for
+                                b in saved_state[self._INTERSTEPS]]
+        except KeyError:
+            pass
 
-            try:
-                self._intersteps = [_INTERSTEP_FACTORY.create(b) for
-                                    b in saved_instance_state[self._INTERSTEPS]]
-            except KeyError:
-                pass
-
-            try:
-                self._barriers = [WaitOn.create_from(b) for
-                                  b in saved_instance_state[self._BARRIERS]]
-            except KeyError:
-                pass
+        try:
+            self._barriers = [WaitOn.create_from(b) for
+                              b in saved_state[self._BARRIERS]]
+        except KeyError:
+            pass
 
     def abort_nowait(self, msg=None):
         """
@@ -319,7 +314,6 @@ class WorkChain(Process, WithHeartbeat):
         aborted = super(WorkChain, self).abort(msg, timeout)
         self.report("Aborting: {}".format(msg))
         return aborted
-
 
 
 def ToContext(**kwargs):
@@ -360,6 +354,7 @@ def ToContext(**kwargs):
         # intersteps.append(interstep)
 
     return intersteps
+
 
 class _InterstepFactory(object):
     def create(self, bundle):

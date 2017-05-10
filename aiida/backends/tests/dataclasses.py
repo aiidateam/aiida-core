@@ -2913,7 +2913,8 @@ class TestBandsData(AiidaTestCase):
         os.close(handle)
         os.remove(filename)
 
-        for format in ['agr', 'agr_batch', 'json', 'matplotlib_inline']:
+        for format in ['agr', 'agr_batch', 'json', 'mpl_singlefile',
+                       'dat_blocks', 'dat_multicolumn']:
             files_created = [] # In case there is an exception
             try:
                 files_created = b.export(filename, fileformat=format)

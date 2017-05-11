@@ -14,7 +14,7 @@ import uuid
 from enum import Enum
 import itertools
 
-import plum.port as port
+import plum.port
 from plum.process import load
 from plum.process_monitor import MONITOR
 import plum.process_monitor
@@ -83,16 +83,18 @@ class DictSchema(object):
         return template
 
 
+class InputPort(plum.port.InputPort):
+    def __init__(self, name, calc_input=True, **kwargs):
+        super(InputPort, self).__init__(name, **kwargs)
+        self._calc_input = calc_input
+
+    @property
+    def calc_input(self):
+        return self._calc_input
+
+
 class ProcessSpec(plum.process.ProcessSpec):
-    def __init__(self):
-        super(ProcessSpec, self).__init__()
-        self._fastforwardable = False
-
-    def is_fastforwardable(self):
-        return self._fastforwardable
-
-    def fastforwardable(self):
-        self._fastforwardable = True
+    INPUT_PORT_TYPE = InputPort
 
     def get_inputs_template(self):
         """
@@ -140,9 +142,11 @@ class Process(plum.process.Process):
         super(Process, cls).define(spec)
 
         spec.input("_store_provenance", valid_type=bool, default=True,
-                   required=False)
-        spec.input("_description", valid_type=basestring, required=False)
-        spec.input("_label", valid_type=basestring, required=False)
+                   calc_input=False)
+        spec.input("_description", valid_type=basestring, required=False,
+                   calc_input=False)
+        spec.input("_label", valid_type=basestring, required=False,
+                   calc_input=False)
 
         spec.dynamic_input(valid_type=(aiida.orm.Data, aiida.orm.Calculation))
         spec.dynamic_output(valid_type=aiida.orm.Data)
@@ -368,21 +372,23 @@ class Process(plum.process.Process):
         # deal with things like input groups
         to_link = {}
         for name, input in self.inputs.iteritems():
-            # Ignore all inputs starting with a leading underscore
-            if name.startswith('_'):
-                continue
+            try:
+                port = self.spec().get_input(name)
+            except ValueError:
+                # It's not in the spec, so we better support dynamic inputs
+                assert self.spec().has_dynamic_input()
+                to_link[name] = input
+            else:
+                # Ignore any inputs that are not calculation inputs
+                if not port.calc_input:
+                    continue
 
-            if self.spec().has_input(name):
-                if isinstance(self.spec().get_input(name), port.InputGroupPort):
+                if isinstance(port, plum.port.InputGroupPort):
                     to_link.update(
                         {"{}_{}".format(name, k): v for k, v in
                          input.iteritems()})
                 else:
                     to_link[name] = input
-            else:
-                # It's not in the spec, so we better support dynamic inputs
-                assert self.spec().has_dynamic_input()
-                to_link[name] = input
 
         for name, input in to_link.iteritems():
 
@@ -408,14 +414,6 @@ class Process(plum.process.Process):
                 self.calc.description = self.raw_inputs._description
             if '_label' in self.raw_inputs:
                 self.calc.label = self.raw_inputs._label
-
-    def _can_fast_forward(self, inputs):
-        return False
-
-    def _fast_forward(self):
-        node = None  # Here we should find the old node
-        for k, v in node.get_output_dict():
-            self.out(k, v)
 
 
 class FunctionProcess(Process):

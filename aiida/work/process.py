@@ -14,7 +14,7 @@ import uuid
 from enum import Enum
 import itertools
 
-import plum.port as port
+import plum.port
 from plum.process import load
 from plum.process_monitor import MONITOR
 import plum.process_monitor
@@ -83,16 +83,18 @@ class DictSchema(object):
         return template
 
 
+class InputPort(plum.port.InputPort):
+    def __init__(self, name, calc_input=True, **kwargs):
+        super(InputPort, self).__init__(name, **kwargs)
+        self._calc_input = calc_input
+
+    @property
+    def calc_input(self):
+        return self._calc_input
+
+
 class ProcessSpec(plum.process.ProcessSpec):
-    def __init__(self):
-        super(ProcessSpec, self).__init__()
-        self._fastforwardable = False
-
-    def is_fastforwardable(self):
-        return self._fastforwardable
-
-    def fastforwardable(self):
-        self._fastforwardable = True
+    INPUT_PORT_TYPE = InputPort
 
     def get_inputs_template(self):
         """
@@ -133,16 +135,18 @@ class Process(plum.process.Process):
         Keys used to identify things in the saved instance state bundle.
         """
         CALC_ID = 'calc_id'
-        PARENT_CALC_PID = 'parent_calc_pid'
+        PARENT_PID = 'parent_calc_pid'
 
     @classmethod
     def define(cls, spec):
         super(Process, cls).define(spec)
 
         spec.input("_store_provenance", valid_type=bool, default=True,
-                   required=False)
-        spec.input("_description", valid_type=basestring, required=False)
-        spec.input("_label", valid_type=basestring, required=False)
+                   calc_input=False)
+        spec.input("_description", valid_type=basestring, required=False,
+                   calc_input=False)
+        spec.input("_label", valid_type=basestring, required=False,
+                   calc_input=False)
 
         spec.dynamic_input(valid_type=(aiida.orm.Data, aiida.orm.Calculation))
         spec.dynamic_output(valid_type=aiida.orm.Data)
@@ -175,24 +179,35 @@ class Process(plum.process.Process):
         bundle['COPY'] = True
         return cls.restart(bundle)
 
-    def __init__(self, inputs, pid, logger=None):
+    def __init__(self, inputs=None, pid=None, logger=None):
         super(Process, self).__init__(inputs, pid, logger)
+
         self._calc = None
-        self._parent_pid = None
+        # Get the parent from the top of the process stack
+        try:
+            self._parent_pid = ProcessStack.top().pid
+        except IndexError:
+            self._parent_pid = None
+
+        self._pid = self._create_and_setup_db_record()
+
+        if logger is None:
+            self.set_logger(self._calc.logger)
 
     @property
     def calc(self):
         return self._calc
 
     @override
-    def save_instance_state(self, bundle):
-        super(Process, self).save_instance_state(bundle)
+    def save_instance_state(self, out_state):
+        super(Process, self).save_instance_state(out_state)
 
         if self.inputs._store_provenance:
             assert self.calc.is_stored
 
-        bundle[self.SaveKeys.CALC_ID.value] = self.pid
-        bundle.set_class_loader(class_loader)
+        out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
+        out_state[self.SaveKeys.CALC_ID.value] = self.pid
+        out_state.set_class_loader(class_loader)
 
     def run_after_queueing(self, wait_on):
         return self._run
@@ -213,42 +228,28 @@ class Process(plum.process.Process):
 
     # region Process messages
     @override
-    def on_create(self, saved_instance_state):
-        super(Process, self).on_create(saved_instance_state)
+    def load_instance_state(self, saved_state, logger=None):
+        super(Process, self).load_instance_state(saved_state)
 
-        if saved_instance_state is None:
-            # Get the parent from the top of the process stack
-            try:
-                self._parent_pid = ProcessStack.top().pid
-            except IndexError:
-                pass
+        is_copy = saved_state.get('COPY', False)
 
-            self._pid = self._create_and_setup_db_record()
-
-        if self._logger is None:
-            self.set_logger(self.calc.logger)
-
-    @override
-    def load_instance_state(self, bundle):
-        super(Process, self).load_instance_state(bundle)
-
-        is_copy = bundle.get('COPY', False)
-
-        if self.SaveKeys.CALC_ID.value in bundle:
+        if self.SaveKeys.CALC_ID.value in saved_state:
             if is_copy:
-                old = load_node(bundle[self.SaveKeys.CALC_ID.value])
+                old = load_node(saved_state[self.SaveKeys.CALC_ID.value])
                 self._calc = old.copy()
                 self._calc.store()
             else:
-                self._calc = load_node(bundle[self.SaveKeys.CALC_ID.value])
+                self._calc = load_node(saved_state[self.SaveKeys.CALC_ID.value])
 
             self._pid = self.calc.pk
         else:
             self._pid = self._create_and_setup_db_record()
 
-        if self.SaveKeys.PARENT_CALC_PID.value in bundle:
-            self._parent_pid = bundle[
-                self.SaveKeys.PARENT_CALC_PID.value]
+        if logger is None:
+            self.set_logger(self._calc.logger)
+
+        if self.SaveKeys.PARENT_PID.value in saved_state:
+            self._parent_pid = saved_state[self.SaveKeys.PARENT_PID.value]
 
     @override
     def on_playing(self):
@@ -371,21 +372,23 @@ class Process(plum.process.Process):
         # deal with things like input groups
         to_link = {}
         for name, input in self.inputs.iteritems():
-            # Ignore all inputs starting with a leading underscore
-            if name.startswith('_'):
-                continue
+            try:
+                port = self.spec().get_input(name)
+            except ValueError:
+                # It's not in the spec, so we better support dynamic inputs
+                assert self.spec().has_dynamic_input()
+                to_link[name] = input
+            else:
+                # Ignore any inputs that are not calculation inputs
+                if not port.calc_input:
+                    continue
 
-            if self.spec().has_input(name):
-                if isinstance(self.spec().get_input(name), port.InputGroupPort):
+                if isinstance(port, plum.port.InputGroupPort):
                     to_link.update(
                         {"{}_{}".format(name, k): v for k, v in
                          input.iteritems()})
                 else:
                     to_link[name] = input
-            else:
-                # It's not in the spec, so we better support dynamic inputs
-                assert self.spec().has_dynamic_input()
-                to_link[name] = input
 
         for name, input in to_link.iteritems():
 
@@ -411,14 +414,6 @@ class Process(plum.process.Process):
                 self.calc.description = self.raw_inputs._description
             if '_label' in self.raw_inputs:
                 self.calc.label = self.raw_inputs._label
-
-    def _can_fast_forward(self, inputs):
-        return False
-
-    def _fast_forward(self):
-        node = None  # Here we should find the old node
-        for k, v in node.get_output_dict():
-            self.out(k, v)
 
 
 class FunctionProcess(Process):

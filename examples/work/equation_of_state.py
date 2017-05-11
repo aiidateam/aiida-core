@@ -121,6 +121,8 @@ def generate_scf_input_params(structure, codename, pseudo_family):
 class EquationOfState(WorkChain):
     @classmethod
     def define(cls, spec):
+        super(EquationOfState, cls).define(spec)
+
         spec.input("structure", valid_type=StructureData)
         spec.input("start", valid_type=NumericType, default=Float(0.96))
         spec.input("delta", valid_type=NumericType, default=Float(0.02))

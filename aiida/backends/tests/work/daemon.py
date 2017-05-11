@@ -45,8 +45,8 @@ class ProcessEventsTester(Process):
         self._emitted = False
 
     @override
-    def on_create(self, saved_instance_state):
-        super(ProcessEventsTester, self).on_create(saved_instance_state)
+    def on_create(self):
+        super(ProcessEventsTester, self).on_create()
         self.out("create", get_true_node())
 
     @override
@@ -68,8 +68,8 @@ class ProcessEventsTester(Process):
             self.out("emitted", get_true_node())
 
     @override
-    def on_wait(self):
-        super(ProcessEventsTester, self).on_wait(self.get_waiting_on())
+    def on_wait(self, wait_on):
+        super(ProcessEventsTester, self).on_wait(wait_on)
         self.out("wait", get_true_node())
 
     @override
@@ -102,10 +102,9 @@ class FailCreateFromSavedStateProcess(DummyProcess):
     """
 
     @override
-    def on_create(self, saved_instance_state):
-        super(FailCreateFromSavedStateProcess, self).on_create(saved_instance_state)
-        if saved_instance_state is not None:
-            raise RuntimeError()
+    def load_instance_state(self, saved_state, logger):
+        super(FailCreateFromSavedStateProcess, self).load_instance_state(saved_state)
+        raise RuntimeError()
 
 
 @unittest.skip("Moving to new daemon")

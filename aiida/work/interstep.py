@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple, MutableSequence
-from plum.process_manager import Future
+from plum.thread_executor import Future
 from aiida.orm import load_node, load_workflow
 from aiida.work.run import RunningType, RunningInfo
 from aiida.work.legacy.wait_on import WaitOnProcessTerminated, WaitOnWorkflow
@@ -8,6 +8,7 @@ from aiida.common.lang import override
 from aiida.common.utils import get_object_string, get_object_from_string
 
 Action = namedtuple("Action", "running_info fn")
+
 
 class Interstep(object):
     """
@@ -52,6 +53,7 @@ class UpdateContext(Interstep):
     Intersteps that evaluate an action and store
     the results in the context of the Process
     """
+
     def __init__(self, key, action):
         self._action = action
         self._key = key
@@ -72,9 +74,7 @@ class UpdateContext(Interstep):
         pass
 
 
-
 class UpdateContextBuilder(object):
-
     def __init__(self, value):
         if isinstance(value, Action):
             action = value
@@ -90,9 +90,11 @@ class UpdateContextBuilder(object):
     def build(self, key):
         pass
 
+
 class Assign(UpdateContext):
     """
     """
+
     class Builder(UpdateContextBuilder):
         def build(self, key):
             return Assign(key, self._action)
@@ -108,6 +110,7 @@ class Assign(UpdateContext):
 class Append(UpdateContext):
     """
     """
+
     class Builder(UpdateContextBuilder):
         def build(self, key):
             return Append(key, self._action)
@@ -123,6 +126,7 @@ class Append(UpdateContext):
 
         workchain.ctx.setdefault(key, []).append(val)
 
+
 assign_ = Assign.Builder
 append_ = Append.Builder
 
@@ -136,20 +140,25 @@ def action_from_running_info(running_info):
     else:
         raise ValueError("Unknown running type '{}'".format(running_info.type))
 
+
 def _get_proc_outputs_from_registry(pid):
     calc = load_node(pid)
     if calc.has_failed():
         raise ValueError("Cannot return outputs, calculation '{}' has failed".format(pid))
     return {e[0]: e[1] for e in calc.get_outputs(also_labels=True)}
 
+
 def _get_wf_outputs(pk):
     return load_workflow(pk=pk).get_results()
+
 
 def Calc(running_info):
     return Action(running_info, get_object_string(load_node))
 
+
 def Wf(running_info):
     return Action(running_info, get_object_string(load_workflow))
+
 
 def Legacy(object):
     if object.type == RunningType.LEGACY_CALC or object.type == RunningType.PROCESS:
@@ -158,6 +167,7 @@ def Legacy(object):
         return Wf(object)
 
     raise ValueError("Could not determine object to be calculation or workflow")
+
 
 def Outputs(running_info):
     if isinstance(running_info, Future):

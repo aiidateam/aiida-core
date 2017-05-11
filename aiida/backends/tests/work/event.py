@@ -24,7 +24,7 @@ class TestDbPollingTracker(AiidaTestCase):
         evt = "calc.{}.finished".format(dp.pid)
 
         with self.emitter.listen_scope(self._notify, evt):
-            dp.start()
+            dp.play()
             self.assertTrue(self.event_received.wait(2.), "Did not get message in time")
 
         self.assertTrue(evt in self.notified_events)
@@ -39,7 +39,7 @@ class TestDbPollingTracker(AiidaTestCase):
 
         self.emitter.start_listening(self._notify, evt)
         self.emitter.stop_listening(self._notify, evt)
-        dp.start()
+        dp.play()
         self.assertFalse(self.event_received.is_set())
 
     def _notify(self, emitter, event, body):

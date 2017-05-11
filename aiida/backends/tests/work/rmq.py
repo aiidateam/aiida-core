@@ -7,7 +7,7 @@ from aiida.backends.testbase import AiidaTestCase
 import aiida.work.globals as globals
 import aiida.work.test_utils as test_utils
 import aiida.work.rmq
-from plum.process_manager import ProcessManager
+from plum.process_controller import ProcessController
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -33,14 +33,14 @@ class TestProcess(AiidaTestCase):
 
     def setUp(self):
         super(TestProcess, self).setUp()
-        self.procman = ProcessManager()
+        self.controller = ProcessController()
         prefix = "{}.{}".format(self.__class__.__name__, uuid.uuid4())
-        self._subscribers = aiida.work.rmq.enable_subscribers(self.procman, prefix)
+        self._subscribers = aiida.work.rmq.enable_subscribers(self.controller, prefix)
         self.control_panel = aiida.work.rmq.ProcessControlPanel(prefix)
 
     def tearDown(self):
-        self.procman.abort_all(timeout=10)
-        self.assertEqual(self.procman.get_num_processes(), 0, "Not all processes are finished")
+        self.controller.remove_all(timeout=10)
+        self.assertEqual(self.controller.get_num_processes(), 0, "Not all processes are finished")
         self._subscribers.stop()
 
     def test_launch_simple(self):

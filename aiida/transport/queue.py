@@ -47,13 +47,16 @@ class TransportQueue(object):
 
     def cancel_callback(self, authinfo, callback):
         with self._entries_lock:
-            callbacks = self._entries[authinfo.id].callbacks
-            callbacks.remove(callback)
-            if len(callbacks) == 0:
-                del self._entries[authinfo.id]
-
-            if self.get_num_waiting() == 0 and self._timer is not None:
-                self._timer.cancel()
+            try:
+                callbacks = self._entries[authinfo.id].callbacks
+                callbacks.remove(callback)
+                if len(callbacks) == 0:
+                    del self._entries[authinfo.id]
+            except (KeyError, ValueError):
+                pass
+            else:
+                if self.get_num_waiting() == 0 and self._timer is not None:
+                    self._timer.cancel()
 
     def get_num_waiting(self):
         total = 0

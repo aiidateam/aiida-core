@@ -30,9 +30,9 @@ _persistence = None
 def get_process_manager():
     global _process_manager
     if _process_manager is None:
-        from plum.process_manager import ProcessManager
+        from plum.thread_executor import ThreadExecutor
 
-        _process_manager = ProcessManager()
+        _process_manager = ThreadExecutor()
     return _process_manager
 
 

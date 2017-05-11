@@ -880,7 +880,7 @@ class StructureData(Data):
             return_string += "%s " % _atomic_numbers[
                 self.get_kind(site.kind_name).symbols[0]]
             return_string += "%18.10f %18.10f %18.10f\n" % tuple(site.position)
-        return return_string, {}
+        return return_string.encode('utf-8'), {}
 
     def _prepare_cif(self, main_file_name=""):
         """
@@ -896,7 +896,7 @@ class StructureData(Data):
         Write the given structure to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs), {}
+        return export_cif(self, **kwargs).encode('utf-8'), {}
 
     def _prepare_xyz(self, main_file_name=""):
         """
@@ -924,7 +924,7 @@ class StructureData(Data):
                 site.position[0], site.position[1], site.position[2]))
 
         return_string = "\n".join(return_list)
-        return return_string, {}
+        return return_string.encode('utf-8'), {}
 
     def _parse_xyz(self, inputstring):
         """

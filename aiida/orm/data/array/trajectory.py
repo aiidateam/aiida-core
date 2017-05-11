@@ -467,7 +467,7 @@ class TrajectoryData(ArrayData):
                 except:
                     print atn, pos
                     raise
-        return return_string, {}
+        return return_string.encode('utf-8'), {}
 
     def _prepare_cif(self, trajectory_index=None, main_file_name=""):
         """
@@ -486,14 +486,14 @@ class TrajectoryData(ArrayData):
             ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
                                        ase_loops)
             cif = cif + ciffile.WriteOut()
-        return cif, {}
+        return cif.encode('utf-8'), {}
 
     def _prepare_tcod(self, main_file_name="", **kwargs):
         """
         Write the given trajectory to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self,**kwargs), {}
+        return export_cif(self,**kwargs).encode('utf-8'), {}
 
     def _get_aiida_structure(self, store=False, **kwargs):
         """

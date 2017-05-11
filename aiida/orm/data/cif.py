@@ -645,7 +645,7 @@ class CifData(SinglefileData):
         Write the given CIF to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs), {}
+        return export_cif(self, **kwargs).encode('utf-8'), {}
 
     def _get_object_ase(self):
         """

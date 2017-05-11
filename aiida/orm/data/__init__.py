@@ -237,11 +237,11 @@ class Data(Node):
 
         for additional_fname, additional_fcontent in extra_files.iteritems():
             retlist.append(additional_fname)
-            with open(additional_fname, 'w') as f:
-                f.write(additional_fcontent.encode('utf-8'))
+            with open(additional_fname, 'wb') as f:
+                f.write(additional_fcontent) #.encode('utf-8')) # This is up to each specific plugin
         retlist.append(path)
-        with open(path, 'w') as f:
-            f.write(filetext.encode('utf-8'))
+        with open(path, 'wb') as f:
+            f.write(filetext)
 
         return retlist
 
@@ -254,20 +254,23 @@ class Data(Node):
         # NOTE: To add support for a new format, write a new function called as
         # _prepare_"" with the name of the new format
         exporter_prefix = '_prepare_'
-        method_names = dir(self)  # get list of class methods names
-        valid_format_names = [i[len(exporter_prefix):] for i in method_names
-                              if i.startswith(exporter_prefix)]  # filter them
+        valid_format_names = self.get_export_formats()
         valid_formats = {k: getattr(self, exporter_prefix + k)
                          for k in valid_format_names}
         return valid_formats
 
-    def get_export_formats(self):
+    @classmethod
+    def get_export_formats(cls):
         """
         Get the list of valid export format strings
 
         :return: a list of valid formats
         """
-        return sorted(self._get_exporters().keys())
+        exporter_prefix = '_prepare_'
+        method_names = dir(cls)  # get list of class methods names
+        valid_format_names = [i[len(exporter_prefix):] for i in method_names
+                              if i.startswith(exporter_prefix)]  # filter them
+        return sorted(valid_format_names)
 
     def importstring(self, inputstring, fileformat, **kwargs):
         """

@@ -330,6 +330,16 @@ class Exportable(object):
     export_prefix = '_export_'
     export_parameters_postfix = '_parameters'
 
+    def append_export_cmdline_arguments(self, parser):
+        """
+        Function (to be overloaded in a subclass) to add custom export command
+        line arguments.
+
+        :param parser: a ArgParse parser object
+        :return: change the parser in place
+        """
+        pass
+
     def get_export_plugins(self):
         """
         Get the list of all implemented exporters for data class.
@@ -346,7 +356,6 @@ class Exportable(object):
         Export the data node to a given format.
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _export_xxx() method.
-        from aiida.orm.data.array.bands import Prettifier
         import argparse
 
         parser = argparse.ArgumentParser(
@@ -358,15 +367,10 @@ class Exportable(object):
                                  "if more than one file needs to be created.")
         parser.add_argument('-y', '--overwrite', action='store_true',
                             help="If passed, overwrite files without checking.")
-        parser.add_argument('--prettify-format', type=str, default=None,
-                            choices=Prettifier.get_prettifiers(),
-                            help = 'The style of labels for the prettifier')
-        parser.add_argument('--y-min-lim', type=float, default=None,
-                            help = 'The minimum value for the y axis. Default: minimum of all bands')
-        parser.add_argument('--y-max-lim', type=float, default=None,
-                            help = 'The maximum value for the y axis. Default: maximum of all bands')
         parser.add_argument('data_id', type=int, default=None,
                             help="ID of the data object to be visualized.")
+
+        self.append_export_cmdline_arguments(parser)
 
         default_format = None
         try:
@@ -482,6 +486,7 @@ class Exportable(object):
             # methods in, e.g., BandsData, but they are not accepted
             print >> sys.stderr, "verdi: ERROR, probably a parameter is not supported by the specific format."
             print >> sys.stderr, "Error message: {}".format(e.message)
+            raise
 
             sys.exit(1)
 
@@ -1002,6 +1007,23 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         parser.add_argument('-A', '--all-users', action='store_true', default=False,
                             help="show groups for all users, rather than only for the"
                                  "current user")
+
+    def append_export_cmdline_arguments(self, parser):
+        """
+        Additional command line arguments for the 'export' command
+
+        :param parser: instance of argparse.ArgumentParser
+        """
+        from aiida.orm.data.array.kpoints import Prettifier
+
+        parser.add_argument('--prettify-format', type=str, default=None,
+                            choices=Prettifier.get_prettifiers(),
+                            help = 'The style of labels for the prettifier')
+        parser.add_argument('--y-min-lim', type=float, default=None,
+                            help = 'The minimum value for the y axis. Default: minimum of all bands')
+        parser.add_argument('--y-max-lim', type=float, default=None,
+                            help = 'The maximum value for the y axis. Default: maximum of all bands')
+
 
     def get_column_names(self):
         """

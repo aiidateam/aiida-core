@@ -16,206 +16,7 @@ from aiida.orm.data.array.kpoints import KpointsData
 import numpy
 from string import Template
 from aiida.common.exceptions import ValidationError
-from aiida.common.utils import classproperty
 
-class Prettifier(object):
-    """
-    Class to manage prettifiers
-    """
-
-    @classmethod
-    def _prettify_label_pass(cls,label):
-        """
-        No-op prettifier, simply returns  the same label
-
-        :param label: a string to prettify
-        """
-        return label
-
-    @classmethod
-    def _prettify_label_agr(cls,label):
-        """
-        Prettifier for XMGrace
-
-        :param label: a string to prettify
-        """
-        import re
-        newlabel = label
-
-        newlabel = newlabel.replace('GAMMA', r'\xG\f{}')
-        newlabel = newlabel.replace('DELTA', r'\xD\f{}')
-        newlabel = newlabel.replace('LAMBDA', r'\xL\f{}')
-        newlabel = newlabel.replace('SIGMA', r'\xS\f{}')
-        newlabel = re.sub('_(.{0,1})', r'\\s\1\\N', newlabel)
-
-        return newlabel
-
-    @classmethod
-    def _prettify_label_agr_simple(cls,label):
-        """
-        Prettifier for XMGrace (for old label names)
-
-        :param label: a string to prettify
-        """
-        if label == 'G':
-            return r'\xG'
-        else:
-            return label
-
-    @classmethod
-    def _prettify_label_gnuplot(cls,label):
-        """
-        Prettifier for Gnuplot
-
-        :note: uses unicode, returns unicode strings (potentially, if needed)
-
-        :param label: a string to prettify
-        """
-        import re
-        newlabel = label
-
-        newlabel = newlabel.replace(u'GAMMA', u'Γ')
-        newlabel = newlabel.replace(u'DELTA', u'Δ')
-        newlabel = newlabel.replace(u'LAMBDA', u'Λ')
-        newlabel = newlabel.replace(u'SIGMA', u'Σ')
-        newlabel = re.sub(u'_(.{0,1})', ur'_{\1}', newlabel)
-
-        return newlabel
-
-    @classmethod
-    def _prettify_label_gnuplot_simple(cls,label):
-        """
-        Prettifier for Gnuplot (for old label names)
-
-        :note: uses unicode, returns unicode strings (potentially, if needed)
-
-        :param label: a string to prettify
-        """
-        if label == 'G':
-            return u'Γ'
-        else:
-            return label
-
-
-    @classmethod
-    def _prettify_label_latex(cls,label):
-        """
-        Prettifier for matplotlib, using LaTeX syntax
-
-        :param label: a string to prettify
-        """
-        import re
-        newlabel = label
-
-        newlabel = newlabel.replace('GAMMA', r'$\Gamma$')
-        newlabel = newlabel.replace('DELTA', r'$\Delta$')
-        newlabel = newlabel.replace('LAMBDA', r'$\Lambda$')
-        newlabel = newlabel.replace('SIGMA', r'$\Sigma$')
-        newlabel = re.sub('_(.{0,1})', r'$_{\1}$', newlabel)
-
-        #newlabel = newlabel + r"$_{\vphantom{0}}$"
-
-        return newlabel
-
-    @classmethod
-    def _prettify_label_latex_simple(cls,label):
-        """
-        Prettifier for matplotlib, using LaTeX syntax (for old label names)
-
-        :param label: a string to prettify
-        """
-        if label == 'G':
-            return r'$\Gamma$'
-        else:
-            return label
-
-    @classproperty
-    def prettifiers(cls):
-        return {
-        'agr_seekpath': cls._prettify_label_agr,
-        'agr_simple': cls._prettify_label_agr_simple,
-        'latex_simple': cls._prettify_label_latex_simple,
-        'latex_seekpath': cls._prettify_label_latex,
-        'gnuplot_simple': cls._prettify_label_gnuplot_simple,
-        'gnuplot_seekpath': cls._prettify_label_gnuplot,
-        'pass': cls._prettify_label_pass,
-    }
-
-    @classmethod
-    def get_prettifiers(cls):
-        return sorted(cls.prettifiers.keys())
-
-    def __init__(self, format):
-        """
-        Create a class to pretttify strings of a given format
-
-        :param format: a string with the format to use to prettify.
-           Valid formats are obtained from self.prettifiers
-        """
-        if format is None:
-            format = 'pass'
-        try:
-            self._prettifier_f = self.prettifiers[format]
-        except KeyError:
-            raise ValueError("Unknown prettifier format {}; "
-                             "valid formats: {}".format(
-                format,
-                ", ".join(self.get_prettifiers())
-                ))
-
-    def prettify(self, label):
-        """
-        Prettify a label using the format passed in the initializer
-
-        :param label: the string to prettify
-        :return: a prettified string
-        """
-        return self._prettifier_f(label)
-
-
-def prettify_labels(labels, format=None):
-    """
-    Prettify label for typesetting in various formats
-
-    :param labels: a list of length-2 tuples, in the format(position, label)
-    :param format: a string with the format for the prettifier (e.g. 'agr',
-         'matplotlib', ...)
-    :return: the same list as labels, but with the second value possibly replaced
-         with a prettified version that typesets nicely in the selected format
-    """
-    prettifier = Prettifier(format)
-
-    retlist = []
-    for label_pos, label in labels:
-        retlist.append((label_pos, prettifier.prettify(label)))
-    return retlist
-
-
-def join_labels(labels, join_symbol="|", threshold=1.e-6):
-    """
-    Join labels with a joining symbol when they are very close
-
-    :param labels: a list of length-2 tuples, in the format(position, label)
-    :param join_symbol: the string to use to join different paths. By default, a pipe
-    :param threshold: the threshold to decide if two float values are the same and should
-         be joined
-    :return: the same list as labels, but with the second value possibly replaced
-         with strings joined when close enough
-    """
-    if labels:
-        new_labels = [list(labels[0])]
-        # modify labels when in overlapping position
-        j = 0
-        for i in range(1, len(labels)):
-            if abs(labels[i][0] - labels[i - 1][0]) < threshold:
-                new_labels[j][1] += join_symbol + labels[i][1]
-            else:
-                new_labels.append(list(labels[i]))
-                j += 1
-    else:
-        new_labels = []
-
-    return new_labels
 
 def prepare_header_comment(uuid, plot_info, comment_char='#'):
     from aiida import get_file_header
@@ -636,6 +437,8 @@ class BandsData(KpointsData):
            for the x axis of the plot); ``y`` (array of bands), ``labels`` (list
            of tuples in the format (float x value of the label, label string)
         """
+        from aiida.orm.data.array.kpoints import prettify_labels, join_labels
+
         # load the x and y's of the graph
         stored_bands = self.get_bands()
         if len(stored_bands.shape) == 2:
@@ -808,9 +611,9 @@ class BandsData(KpointsData):
         #    batch.append("s{} hidden true".format(i))
 
         batch_data = "\n".join(batch) + "\n"
-        extra_files = {dat_filename: raw_data}
+        extra_files = {dat_filename: raw_data.encode('utf-8')}
 
-        return batch_data, extra_files
+        return batch_data.encode('utf-8'), extra_files
 
     def _prepare_dat_1(self, *args, **kwargs):
         """
@@ -851,7 +654,7 @@ class BandsData(KpointsData):
             line = ["{:.8f}".format(i[0])] + ["{:.8f}".format(j) for j in i[1]]
             return_text.append("\t".join(line))
 
-        return "\n".join(return_text) + '\n', {}
+        return ("\n".join(return_text) + '\n').encode('utf-8'), {}
 
     def _prepare_dat_2(self, *args, **kwargs):
         """
@@ -896,7 +699,7 @@ class BandsData(KpointsData):
             return_text.append("")
             return_text.append("")
 
-        return "\n".join(return_text), {}
+        return ("\n".join(return_text)).encode('utf-8'), {}
 
     def _matplotlib_get_dict(self, main_file_name="", comments=True, legend="", title="",
                             y_max_lim=None, y_min_lim=None,
@@ -999,7 +802,7 @@ class BandsData(KpointsData):
 
         s = s_header + s_import + s_body + s_footer
 
-        return s, {}
+        return s.encode('utf-8'), {}
 
     def _prepare_mpl_withjson(self, main_file_name="", *args, **kwargs):
         """
@@ -1018,7 +821,7 @@ class BandsData(KpointsData):
         # Escape double_quotes
         json_fname = json_fname.replace('"', '\"')
 
-        ext_files = {json_fname: json.dumps(all_data, indent=2)}
+        ext_files = {json_fname: json.dumps(all_data, indent=2).encode('utf-8')}
 
         s_header = matplotlib_header_template.substitute()
         s_import = matplotlib_import_data_fromfile_template.substitute(
@@ -1028,7 +831,7 @@ class BandsData(KpointsData):
 
         s = s_header + s_import + s_body + s_footer
 
-        return s, ext_files
+        return s.encode('utf-8'), ext_files
 
     def _prepare_gnuplot(self, main_file_name="",
                          comments=True, prettify_format=None,
@@ -1125,9 +928,9 @@ class BandsData(KpointsData):
             dat_filename.replace('"', '\"')))
 
         script_data = u"\n".join(script) + u"\n"
-        extra_files = {dat_filename: raw_data}
+        extra_files = {dat_filename: raw_data.encode('utf-8')}
 
-        return script_data, extra_files
+        return script_data.encode('utf-8'), extra_files
 
     def _prepare_mpl_pdf(self, main_file_name="", *args, **kwargs):
         """
@@ -1351,7 +1154,7 @@ class BandsData(KpointsData):
         if comments:
             s = prepare_header_comment(self.uuid, plot_info, comment_char="#") + "\n" + s
 
-        return s, {}
+        return s.encode('utf-8'), {}
 
     def _get_band_segments(self, cartesian):
         plot_info = self._get_bandplot_data(cartesian=cartesian,
@@ -1381,7 +1184,7 @@ class BandsData(KpointsData):
         if comments:
             json_dict['comments'] = get_file_header(comment_char="")
 
-        return json.dumps(json_dict), {}
+        return json.dumps(json_dict).encode('utf-8'), {}
 
 
 max_num_agr_colors = 15

@@ -16,7 +16,7 @@ from collections import namedtuple, Mapping, Sequence, Set
 from plum.wait_ons import Checkpoint, WaitOnAll
 from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
-from plum.process_manager import Future
+from plum.thread_executor import Future
 from aiida.orm import Node
 from aiida.work.process import Process, ProcessSpec
 from aiida.work.util import WithHeartbeat
@@ -24,6 +24,7 @@ from aiida.common.lang import override
 from aiida.common.utils import get_class_string
 from aiida.work.run import RunningType, RunningInfo
 from aiida.work.interstep import *
+from plum.wait import create_from as create_waiton_from
 
 
 class _WorkChainSpec(ProcessSpec):
@@ -277,18 +278,20 @@ class WorkChain(Process, WithHeartbeat):
             self._stepper = self.spec().get_outline().create_stepper(self)
             self._stepper.load_position(
                 saved_state[self._STEPPER_STATE])
+        else:
+            self._stepper = None
 
         try:
             self._intersteps = [_INTERSTEP_FACTORY.create(b) for
                                 b in saved_state[self._INTERSTEPS]]
         except KeyError:
-            pass
+            self._intersteps = []
 
         try:
-            self._barriers = [WaitOn.create_from(b) for
+            self._barriers = [create_waiton_from(b) for
                               b in saved_state[self._BARRIERS]]
         except KeyError:
-            pass
+            self._barriers = []
 
     def abort_nowait(self, msg=None):
         """

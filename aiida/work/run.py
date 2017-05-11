@@ -82,7 +82,7 @@ def async(process_class, *args, **kwargs):
     :param args:
     :param kwargs: The keyword argument pairs
     :return: A future that represents the execution of the task.
-    :rtype: :class:`plum.process_manager.Future`
+    :rtype: :class:`plum.thread_executor.Future`
     """
     p = _get_process_instance(process_class, *args, **kwargs)
     return aiida.work.globals.get_process_manager().play(p)

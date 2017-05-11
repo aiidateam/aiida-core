@@ -16,7 +16,6 @@ from aiida.work.run import async, run
 import aiida.work.util as util
 
 
-
 @workfunction
 def simple_wf():
     return {'result': get_true_node()}

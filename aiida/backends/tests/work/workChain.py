@@ -56,7 +56,7 @@ class Wf(WorkChain):
             ),
         )
 
-    def __init__(self, inputs, pid, logger=None):
+    def __init__(self, inputs=None, pid=None, logger=None):
         super(Wf, self).__init__(inputs, pid, logger)
         # Reset the finished step
         self.finished_steps = {
@@ -103,24 +103,24 @@ class Wf(WorkChain):
         self.finished_steps[function_name] = True
 
 
-# class TestContext(AiidaTestCase):
-#     def test_attributes(self):
-#         c = WorkChain.Context()
-#         c.new_attr = 5
-#         self.assertEqual(c.new_attr, 5)
-#
-#         del c.new_attr
-#         with self.assertRaises(AttributeError):
-#             c.new_attr
-#
-#     def test_dict(self):
-#         c = WorkChain.Context()
-#         c['new_attr'] = 5
-#         self.assertEqual(c['new_attr'], 5)
-#
-#         del c['new_attr']
-#         with self.assertRaises(KeyError):
-#             c['new_attr']
+class TestContext(AiidaTestCase):
+    def test_attributes(self):
+        c = WorkChain.Context()
+        c.new_attr = 5
+        self.assertEqual(c.new_attr, 5)
+
+        del c.new_attr
+        with self.assertRaises(AttributeError):
+            c.new_attr
+
+    def test_dict(self):
+        c = WorkChain.Context()
+        c['new_attr'] = 5
+        self.assertEqual(c['new_attr'], 5)
+
+        del c['new_attr']
+        with self.assertRaises(KeyError):
+            c['new_attr']
 
 
 class TestWorkchain(AiidaTestCase):
@@ -317,83 +317,83 @@ class TestWorkchain(AiidaTestCase):
         self.assertTrue(wait_until(p, ProcessState.WAITING, timeout=4.))
         self.assertTrue(future.abort(timeout=3600.), "Failed to abort process")
 
-    # def test_tocontext_async_workchain(self):
-    #     class MainWorkChain(WorkChain):
-    #         @classmethod
-    #         def define(cls, spec):
-    #             super(MainWorkChain, cls).define(spec)
-    #             spec.outline(cls.run, cls.check)
-    #             spec.dynamic_output()
-    #
-    #         def run(self):
-    #             return ToContext(subwc=async(SubWorkChain))
-    #
-    #         def check(self):
-    #             assert self.ctx.subwc.out.value == Int(5)
-    #
-    #     class SubWorkChain(WorkChain):
-    #         @classmethod
-    #         def define(cls, spec):
-    #             super(SubWorkChain, cls).define(spec)
-    #             spec.outline(cls.run)
-    #
-    #         def run(self):
-    #             self.out("value", Int(5))
-    #
-    #     run(MainWorkChain)
+    def test_tocontext_async_workchain(self):
+        class MainWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(MainWorkChain, cls).define(spec)
+                spec.outline(cls.run, cls.check)
+                spec.dynamic_output()
 
-    # def test_report_dbloghandler(self):
-    #     """
-    #     Test whether the WorkChain, through its Process, has a logger
-    #     set for which the DbLogHandler has been attached. Because if this
-    #     is not the case, the 'report' method will not actually hit the
-    #     DbLogHandler and the message will not be stored in the database
-    #     """
-    #
-    #     class TestWorkChain(WorkChain):
-    #         @classmethod
-    #         def define(cls, spec):
-    #             super(TestWorkChain, cls).define(spec)
-    #             spec.outline(cls.run, cls.check)
-    #             spec.dynamic_output()
-    #
-    #         def run(self):
-    #             from aiida.orm.backend import construct
-    #             self._backend = construct()
-    #             self._backend.log.delete_many({})
-    #             self.report("Testing the report function")
-    #             return
-    #
-    #         def check(self):
-    #             logs = self._backend.log.find()
-    #             assert len(logs) == 1
-    #
-    #     run(TestWorkChain)
+            def run(self):
+                return ToContext(subwc=async(SubWorkChain))
 
-    # def test_insert_interstep_assign(self):
-    #     val = Int(5)
-    #
-    #     @workfunction
-    #     def wf():
-    #         return val
-    #
-    #     class Workchain(WorkChain):
-    #         @classmethod
-    #         def define(cls, spec):
-    #             super(Workchain, cls).define(spec)
-    #             spec.outline(cls.run, cls.test)
-    #
-    #         def run(self):
-    #             self.insert_intersteps(ToContext(result_a=Outputs(async(wf))))
-    #             self.insert_intersteps(ToContext(result_b=assign_(Outputs(async(wf)))))
-    #             return
-    #
-    #         def test(self):
-    #             assert self.ctx.result_a['_return'] == val
-    #             assert self.ctx.result_b['_return'] == val
-    #             return
-    #
-    #     run(Workchain)
+            def check(self):
+                assert self.ctx.subwc.out.value == Int(5)
+
+        class SubWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(SubWorkChain, cls).define(spec)
+                spec.outline(cls.run)
+
+            def run(self):
+                self.out("value", Int(5))
+
+        run(MainWorkChain)
+
+    def test_report_dbloghandler(self):
+        """
+        Test whether the WorkChain, through its Process, has a logger
+        set for which the DbLogHandler has been attached. Because if this
+        is not the case, the 'report' method will not actually hit the
+        DbLogHandler and the message will not be stored in the database
+        """
+
+        class TestWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(TestWorkChain, cls).define(spec)
+                spec.outline(cls.run, cls.check)
+                spec.dynamic_output()
+
+            def run(self):
+                from aiida.orm.backend import construct
+                self._backend = construct()
+                self._backend.log.delete_many({})
+                self.report("Testing the report function")
+                return
+
+            def check(self):
+                logs = self._backend.log.find()
+                assert len(logs) == 1
+
+        run(TestWorkChain)
+
+    def test_insert_interstep_assign(self):
+        val = Int(5)
+
+        @workfunction
+        def wf():
+            return val
+
+        class Workchain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Workchain, cls).define(spec)
+                spec.outline(cls.run, cls.test)
+
+            def run(self):
+                self.insert_intersteps(ToContext(result_a=Outputs(async(wf))))
+                self.insert_intersteps(ToContext(result_b=assign_(Outputs(async(wf)))))
+                return
+
+            def test(self):
+                assert self.ctx.result_a['_return'] == val
+                assert self.ctx.result_b['_return'] == val
+                return
+
+        run(Workchain)
 
     # def test_insert_interstep_append(self):
     #     val = Int(5)
@@ -444,29 +444,29 @@ class TestWorkchain(AiidaTestCase):
     #     with self.assertRaises(TypeError):
     #         run(Workchain)
 
-    # def test_to_context(self):
-    #     val = Int(5)
-    #
-    #     @workfunction
-    #     def wf():
-    #         return val
-    #
-    #     class Workchain(WorkChain):
-    #         @classmethod
-    #         def define(cls, spec):
-    #             super(Workchain, cls).define(spec)
-    #             spec.outline(cls.run, cls.result)
-    #
-    #         def run(self):
-    #             self.to_context(result_a=Outputs(async(wf)))
-    #             return ToContext(result_b=Outputs(async(wf)))
-    #
-    #         def result(self):
-    #             assert self.ctx.result_a['_return'] == val
-    #             assert self.ctx.result_b['_return'] == val
-    #             return
-    #
-    #     run(Workchain)
+    def test_to_context(self):
+        val = Int(5)
+
+        @workfunction
+        def wf():
+            return val
+
+        class Workchain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Workchain, cls).define(spec)
+                spec.outline(cls.run, cls.result)
+
+            def run(self):
+                self.to_context(result_a=Outputs(async(wf)))
+                return ToContext(result_b=Outputs(async(wf)))
+
+            def result(self):
+                assert self.ctx.result_a['_return'] == val
+                assert self.ctx.result_b['_return'] == val
+                return
+
+        run(Workchain)
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
         wf = wf_class.new(inputs)
@@ -515,25 +515,25 @@ class TestWorkchain(AiidaTestCase):
 #                 assert set(self.ctx.res) == set(wf.get_results())
 #
 #         _TestWf.run()
-#
-#
-# class TestHelpers(AiidaTestCase):
-#     """
-#     Test the helper functions/classes used by workchains
-#     """
-#
-#     def test_get_proc_outputs(self):
-#         c = WorkCalculation()
-#         a = Int(5)
-#         b = Int(10)
-#         a.add_link_from(c, u'a', link_type=LinkType.CREATE)
-#         b.add_link_from(c, u'b', link_type=LinkType.CREATE)
-#         c.store()
-#         for n in [a, b, c]:
-#             n.store()
-#
-#         from aiida.work.interstep import _get_proc_outputs_from_registry
-#         outputs = _get_proc_outputs_from_registry(c.pk)
-#         self.assertListEqual(outputs.keys(), [u'a', u'b'])
-#         self.assertEquals(outputs['a'], a)
-#         self.assertEquals(outputs['b'], b)
+
+
+class TestHelpers(AiidaTestCase):
+    """
+    Test the helper functions/classes used by workchains
+    """
+
+    def test_get_proc_outputs(self):
+        c = WorkCalculation()
+        a = Int(5)
+        b = Int(10)
+        a.add_link_from(c, u'a', link_type=LinkType.CREATE)
+        b.add_link_from(c, u'b', link_type=LinkType.CREATE)
+        c.store()
+        for n in [a, b, c]:
+            n.store()
+
+        from aiida.work.interstep import _get_proc_outputs_from_registry
+        outputs = _get_proc_outputs_from_registry(c.pk)
+        self.assertListEqual(outputs.keys(), [u'a', u'b'])
+        self.assertEquals(outputs['a'], a)
+        self.assertEquals(outputs['b'], b)

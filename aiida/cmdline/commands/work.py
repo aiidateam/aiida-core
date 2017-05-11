@@ -53,13 +53,13 @@ class Work(VerdiCommandWithSubcommands):
 
 
 @click.command('list', context_settings=CONTEXT_SETTINGS)
-@click.option('-p', '--past-days', type=int,
+@click.option('-p', '--past-days', type=int, default=1,
               help="add a filter to show only workflows created in the past N"
                    " days")
-
+@click.option('-a', '--all', 'all_nodes', is_flag=True, help='Return all nodes. Overrides the -l flag')
 @click.option('-l', '--limit', type=int, default=None,
               help="Limit to this many results")
-def do_list(past_days, limit):
+def do_list(past_days, all_nodes, limit):
     """
     Return a list of running workflows on screen
     """
@@ -72,6 +72,9 @@ def do_list(past_days, limit):
     _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
 
     now = timezone.now()
+
+    if all_nodes:
+        past_days = None
 
     table = []
     for res in _build_query(limit=limit, past_days=past_days, order_by={'ctime': 'desc'}):

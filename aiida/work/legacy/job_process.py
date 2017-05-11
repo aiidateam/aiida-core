@@ -164,8 +164,10 @@ class JobProcess(Process, WithHeartbeat):
         :param wait_on: The WaitOnTransport we need to proceed
         :type wait_on: :class:`WaitOnTransport`
         """
-        submit_calc(self.calc, self._authinfo, wait_on.transport)
-        wait_on.release_transport()
+        try:
+            submit_calc(self.calc, self._authinfo, wait_on.transport)
+        finally:
+            wait_on.release_transport()
 
         # Wait for any event from our job
         return self._create_wait_on('scheduler_event'), self._scheduler_event_received

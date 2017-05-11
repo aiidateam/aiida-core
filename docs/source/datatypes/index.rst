@@ -86,7 +86,7 @@ ArrayData
 
 TrajectoryData
 ++++++++++++++
-* **Class**: :py:class:`~aiida.orm.data.array.TrajectoryData`
+* **Class**: :py:class:`~aiida.orm.data.array.trajectory.TrajectoryData`
 * **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``array.trajectory``
 * **Aim**: store molecular trajectories (i.e. sequences of StructureData objects, where
   then number of atomic kinds and sites does not change over time).
@@ -101,7 +101,7 @@ TrajectoryData
 KpointsData
 +++++++++++
 
-* **Class**: :py:class:`~aiida.orm.data.array.KpointsData`
+* **Class**: :py:class:`~aiida.orm.data.array.kpoints.KpointsData`
 * **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``array.kpoints``
 * **Aim**: store grids of k-points (in reciprocal space, for crystal structures), or
   explicit list of k-points (optionally with a weight associated to each one). Can also
@@ -125,7 +125,7 @@ BandsData
 XyData
 ++++++
 
-* **Class**: :py:class:`~aiida.orm.data.array.bands.XyData`
+* **Class**: :py:class:`~aiida.orm.data.array.xy.XyData`
 * **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``array.xy``
 * **Aim**: store data for a 2D (xy) plot
 * **What is stored in the database**: like ``ArrayData``

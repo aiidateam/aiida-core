@@ -12,6 +12,7 @@ import plum.port as port
 import plum.process
 import plum.util
 from aiida.common.datastructures import calc_states
+from aiida.scheduler.datastructures import job_states as scheduler_states
 from aiida.common.lang import override
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.daemon.execmanager import submit_calc, retrieve_all, parse_results, \
@@ -189,6 +190,7 @@ class JobProcess(Process, WithHeartbeat):
                 return self._create_wait_on('scheduler_event'), self._scheduler_event_received
 
         # If the job is computed or not found assume it's done
+        self.calc._set_scheduler_state(scheduler_states.DONE)
         self.calc._set_state(calc_states.COMPUTED)
 
         # Now we need the transport to be able to retrieve

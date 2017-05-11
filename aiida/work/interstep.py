@@ -164,6 +164,8 @@ def Outputs(running_info):
         # Create the correct information from the future
         rinfo = RunningInfo(RunningType.PROCESS, running_info.pid)
         return Action(rinfo, get_object_string(_get_proc_outputs_from_registry))
+    elif running_info.type == RunningType.PROCESS:
+        return Action(running_info, get_object_string(_get_proc_outputs_from_registry))
     elif running_info.type == RunningType.LEGACY_CALC:
         return Action(running_info, get_object_string(_get_proc_outputs_from_registry))
     elif running_info.type is RunningType.LEGACY_WORKFLOW:

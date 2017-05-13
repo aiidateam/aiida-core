@@ -85,7 +85,7 @@ def async(process_class, *args, **kwargs):
     :rtype: :class:`plum.thread_executor.Future`
     """
     p = _get_process_instance(process_class, *args, **kwargs)
-    return aiida.work.globals.get_process_manager().play(p)
+    return aiida.work.globals.get_thread_executor().play(p)
 
 
 def run(process_class, *args, **inputs):
@@ -100,7 +100,7 @@ def run(process_class, *args, **inputs):
     return_pid = inputs.pop('_return_pid', False)
 
     p = _get_process_instance(process_class, *args, **inputs)
-    outputs = aiida.work.globals.get_process_manager().play(p).result()
+    outputs = aiida.work.globals.get_thread_executor().play(p).result()
     if return_pid:
         return outputs, p.pid
     else:

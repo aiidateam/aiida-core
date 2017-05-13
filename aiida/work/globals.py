@@ -20,20 +20,20 @@ def _build_registry():
 
 # Have globals that can be used by all of AiiDA
 class_loader = plum.class_loader.ClassLoader(ClassLoader())
-_process_manager = None
+_thread_executor = None
 _event_emitter = None
 REGISTRY = _build_registry()
 _rmq_control_panel = None
 _persistence = None
 
 
-def get_process_manager():
-    global _process_manager
-    if _process_manager is None:
-        from plum.thread_executor import ThreadExecutor
+def get_thread_executor():
+    global _thread_executor
+    if _thread_executor is None:
+        from plum.thread_executor import SchedulingExecutor
+        _thread_executor = SchedulingExecutor(max_threads=20)
 
-        _process_manager = ThreadExecutor()
-    return _process_manager
+    return _thread_executor
 
 
 def get_event_emitter():
@@ -80,7 +80,7 @@ def enable_rmq_subscribers():
     Use this to enable RMQ support for AiiDA.
     """
     import aiida.work.rmq as rmq
-    rmq.enable_subscribers(get_process_manager(), "aiida")
+    rmq.enable_subscribers(get_thread_executor(), "aiida")
 
 
 def enable_rmq_event_publisher():

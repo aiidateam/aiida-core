@@ -308,8 +308,17 @@ class Process(plum.process.Process):
 
     @override
     def do_run(self):
-        # Exclude all private inputs
-        ins = {k: v for k, v in self.inputs.iteritems() if not k.startswith('_')}
+        # Only keep calculation inputs
+        ins = {}
+        for name, value in self.inputs.iteritems():
+            try:
+                port = self.spec().get_input(name)
+            except ValueError:
+                ins[name] = value
+            else:
+                if port.calc_input:
+                    ins[name] = value
+
         return self._run(**ins)
 
     @protected

@@ -56,7 +56,7 @@ class TestProcess(AiidaTestCase):
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
-        procman = globals.get_process_manager()
+        procman = globals.get_thread_executor()
         procman.abort_all(timeout=10.)
         self.assertEqual(procman.get_num_processes(), 0, "Failed to abort all processes")
         self.assertEquals(len(util.ProcessStack.stack()), 0)

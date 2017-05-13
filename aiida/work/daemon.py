@@ -20,7 +20,7 @@ def launch_pending_jobs(storage=None):
     if storage is None:
         storage = aiida.work.globals.get_persistence()
 
-    procman = aiida.work.globals.get_process_manager()
+    procman = aiida.work.globals.get_thread_executor()
     for proc in _load_all_processes(storage):
         try:
             storage.persist_process(proc)
@@ -48,7 +48,7 @@ def launch_all_pending_job_calculations():
     """
     Launch all JobCalculations that are not currently being processed
     """
-    process_manager = aiida.work.globals.get_process_manager()
+    process_manager = aiida.work.globals.get_thread_executor()
     for calc in get_all_pending_job_calculations():
         try:
             process_manager.launch(ContinueJobCalculation, inputs={'_calc': calc})

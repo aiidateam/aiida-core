@@ -13,7 +13,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.daemon.settings import DAEMON_INTERVALS_SUBMIT, DAEMON_INTERVALS_RETRIEVE, DAEMON_INTERVALS_UPDATE, \
     DAEMON_INTERVALS_WFSTEP, DAEMON_INTERVALS_TICK_WORKFLOWS, DAEMON_USE_NEW
 from celery import Celery
-from celery.task import task, periodic_task
+from celery.task import periodic_task
 
 from aiida.backends import settings
 from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
@@ -46,19 +46,6 @@ broker = (
 app = Celery('tasks', broker=broker)
 
 if DAEMON_USE_NEW:
-    import threading
-    from aiida.work.globals import enable_rmq_all
-
-
-    @task
-    def run_rmq():
-        print "aiida.daemon.tasks.run_rmq:  Enabling RMQ"
-        enable_rmq_all()
-        try:
-            threading.Event().wait()
-        except (SystemExit, KeyboardInterrupt):
-            print "aiida.daemon.tasks.run_rmq:  Shutting down"
-
 
     @periodic_task(
         run_every=timedelta(

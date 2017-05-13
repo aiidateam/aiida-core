@@ -1,6 +1,5 @@
 from collections import namedtuple
 import threading
-from aiida.transport.plugins.local import LocalTransport
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -32,8 +31,8 @@ class TransportQueue(object):
             if authinfo_entry is None:
                 authinfo_entry = self._create_entry(authinfo)
 
-                # Make an exception for local transport and immediately call
-                if isinstance(authinfo_entry.transport, LocalTransport):
+                # Check if the transport is happy to be opened with any frequency
+                if authinfo_entry.transport.get_safe_open_interval() == 0.:
                     authinfo_entry.callbacks.append(callback)
                     self._executor.submit(self._do_callback, authinfo_entry)
                     return

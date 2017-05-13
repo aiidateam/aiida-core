@@ -25,7 +25,6 @@ import glob
 from aiida.common import aiidalogger
 
 
-
 class LocalTransport(Transport):
     """
     Support copy and command execution on the same host on which AiiDA is running via direct file copy and execution commands.
@@ -49,6 +48,9 @@ class LocalTransport(Transport):
         if kwargs:
             raise ValueError("Input parameters to LocalTransport"
                              " are not recognized")
+
+    def get_safe_open_interval(self):
+        return 0.
 
     def open(self):
         """

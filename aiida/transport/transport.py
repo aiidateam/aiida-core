@@ -1,3 +1,5 @@
+
+from abc import ABCMeta, abstractmethod
 import os
 import re
 import fnmatch
@@ -16,6 +18,8 @@ class Transport(object):
     Abstract class for a generic transport (ssh, local, ...)
     Contains the set of minimal methods
     """
+    __metaclass__ = ABCMeta
+
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
     _valid_auth_params = None
@@ -150,6 +154,22 @@ class Transport(object):
                 return self._logger
         except AttributeError:
             raise InternalError("No self._logger configured for {}!")
+
+    @abstractmethod
+    def get_safe_open_interval(self):
+        """
+        Get an interval (in seconds) that suggests how long the user should wait
+        between consecutive calls to open the transport.  This can be used as
+        a way to get the user to not swamp a limited number of connections, etc.
+        However it is just advisory.
+
+        If returns 0. it is taken that there are no reasons to limit the
+        frequency of open calls.
+
+        :return: The safe interval between calling open
+        :rtype: float
+        """
+        pass
 
     def chdir(self, path):
         """

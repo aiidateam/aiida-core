@@ -121,12 +121,12 @@ def get_pymatgen_version():
     return pymatgen.__version__
 
 
-def has_pyspglib():
+def has_spglib():
     """
-    :return: True if the pyspglib module can be imported, False otherwise.
+    :return: True if the spglib module can be imported, False otherwise.
     """
     try:
-        import pyspglib
+        import spglib
     except ImportError:
         return False
     return True
@@ -652,11 +652,11 @@ def ase_refine_cell(aseatoms, **kwargs):
     refine unit cell.
 
     :param aseatoms: an ase.atoms.Atoms instance
-    :param symprec: symmetry precision, used by pyspglib
+    :param symprec: symmetry precision, used by spglib
     :return newase: refined cell with reduced set of atoms
     :return symmetry: a dictionary describing the symmetry space group
     """
-    from pyspglib.spglib import refine_cell, get_symmetry_dataset
+    from spglib import refine_cell, get_symmetry_dataset
     from ase.atoms import Atoms
     cell, positions, numbers = refine_cell(aseatoms, **kwargs)
 

@@ -121,7 +121,7 @@ class TestCifData(AiidaTestCase):
     Tests for CifData class.
     """
     from aiida.orm.data.cif import has_pycifrw
-    from aiida.orm.data.structure import has_ase, has_pymatgen, has_pyspglib, \
+    from aiida.orm.data.structure import has_ase, has_pymatgen, has_spglib, \
         get_pymatgen_version
     from distutils.version import StrictVersion
 
@@ -556,7 +556,7 @@ _publ_section_title                     'Test CIF'
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     def test_refine(self):
         """
         Test case for refinement (space group determination) for a
@@ -621,7 +621,7 @@ _publ_section_title                     'Test CIF'
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     def test_parse_formula(self):
         from aiida.orm.data.cif import parse_formula
 
@@ -1018,7 +1018,7 @@ class TestStructureData(AiidaTestCase):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
-    from aiida.orm.data.structure import has_ase, has_pyspglib
+    from aiida.orm.data.structure import has_ase, has_spglib
 
     def test_cell_ok_and_atoms(self):
         """
@@ -1292,7 +1292,7 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     def test_kind_8(self):
         """
         Test the ase_refine_cell() function

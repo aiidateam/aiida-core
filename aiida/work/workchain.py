@@ -270,6 +270,7 @@ class WorkChain(Process, WithHeartbeat):
 
     @override
     def load_instance_state(self, saved_state, logger=None):
+        super(WorkChain, self).load_instance_state(saved_state, logger)
         # Recreate the context
         self._context = self.Context(deserialise_value(saved_state[self._CONTEXT]))
 

@@ -85,11 +85,18 @@ class JobProcess(Process, WithHeartbeat):
         from aiida.backends.utils import get_authinfo
 
         super(JobProcess, self).__init__(inputs, pid, logger)
+
         # Everything below here doesn't need to be saved
         self.__waiting_on = None
         self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     # region Process overrides
+    @override
+    def load_instance_state(self, saved_state, logger=None):
+        from aiida.backends.utils import get_authinfo
+
+        super(JobProcess, self).load_instance_state(saved_state, logger)
+        self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     @override
     def on_output_emitted(self, output_port, value, dynamic):
@@ -103,11 +110,23 @@ class JobProcess(Process, WithHeartbeat):
 
     @override
     def save_wait_on_state(self, wait_on, callback):
-        return Bundle({'waiting_on': self.__waiting_on})
+        bundle = Bundle({'waiting_on': self.__waiting_on})
+        bundle['calc_pk'] = self.calc.pk
+        return bundle
 
     @override
     def create_wait_on(self, saved_state, callback):
-        return self._create_wait_on(saved_state['waiting_on'])
+        if saved_state['waiting_on'] == 'transport':
+            from aiida.backends.utils import get_authinfo
+            from aiida.orm import load_node
+
+            calc = load_node(pk=saved_state['calc_pk'])
+            return WaitForTransport(get_authinfo(calc.get_computer(), calc.get_user()))
+        elif saved_state['waiting_on'] == 'scheduler_event':
+            all_events = "job.{}.*".format(saved_state['calc_pk'])
+            return WaitOnEvent(get_event_emitter(), all_events)
+        else:
+            raise ValueError("Unrecognised wait on '{}'".format(saved_state['waiting_on']))
 
     @override
     def _run(self, **kwargs):

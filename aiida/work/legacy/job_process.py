@@ -239,7 +239,7 @@ class ContinueJobCalculation(JobProcess):
     @classmethod
     def define(cls, spec):
         super(ContinueJobCalculation, cls).define(spec)
-        spec.input("_calc", valid_type=JobCalculation, required=True, calc_input=False)
+        spec.input("_calc", valid_type=JobCalculation, required=True, non_db=False)
 
     def _run(self, **kwargs):
         state = self.calc.get_state()

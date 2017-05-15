@@ -13,7 +13,6 @@ from aiida.common.lang import override
 from aiida.common.links import LinkType
 
 
-
 class Sealable(object):
     # The name of the attribute to indicate if the node is sealed or not.
     SEALED_KEY = '_sealed'

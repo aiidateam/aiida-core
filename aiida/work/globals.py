@@ -34,6 +34,12 @@ def get_thread_executor():
     return _thread_executor
 
 
+def get_heartbeat_pool():
+    import threading
+    global _heartbeat_pool
+
+
+
 def get_event_emitter():
     global _event_emitter
     if _event_emitter is None:

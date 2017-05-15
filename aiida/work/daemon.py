@@ -4,6 +4,7 @@ import time
 
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm import load_node
+from aiida.orm.mixins import Sealable
 from aiida.orm.calculation.job import JobCalculation
 from aiida.work.legacy.job_process import ContinueJobCalculation
 from aiida.work.util import CalculationHeartbeat
@@ -13,7 +14,6 @@ import aiida.work.persistence
 from plum.exceptions import LockError
 
 _LOGGER = logging.getLogger(__name__)
-
 
 
 def launch_pending_jobs(storage=None):
@@ -69,6 +69,7 @@ def get_all_pending_job_calculations():
         JobCalculation,
         filters={
             'state': {'in': ContinueJobCalculation.ACTIVE_CALC_STATES},
+            'attributes': {'!has_key': Sealable.SEALED_KEY},
             'or': [
                 {'attributes': {'!has_key': CalculationHeartbeat.HEARTBEAT_EXPIRES}},
                 {'attributes.{}'.format(CalculationHeartbeat.HEARTBEAT_EXPIRES): {'<': time.time()}}

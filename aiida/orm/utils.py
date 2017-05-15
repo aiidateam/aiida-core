@@ -9,7 +9,7 @@
 ###########################################################################
 from abc import ABCMeta, abstractmethod
 from aiida.common.pluginloader import BaseFactory
-
+from aiida.common.utils import abstractclassmethod
 
 
 def CalculationFactory(module, from_abstract=False):
@@ -164,8 +164,7 @@ class BackendDelegateWithDefault(object):
 
     _DEFAULT = None
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def create_default(cls):
         raise NotImplementedError("The subclass should implement this")
 

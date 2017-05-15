@@ -2631,9 +2631,9 @@ class TestKpointsData(AiidaTestCase):
         input_mesh = [4, 4, 4]
         k.set_kpoints_mesh(input_mesh)
         mesh, offset = k.get_kpoints_mesh()
-        self.assertEqual(mesh, tuple(input_mesh))
+        self.assertEqual(mesh, list(input_mesh))
         self.assertEqual(offset,
-                         (0., 0., 0.))  # must be a tuple of three 0 by default
+                         [0., 0., 0.])  # must be a tuple of three 0 by default
 
         # a too long list should fail
         with self.assertRaises(ValueError):
@@ -2643,13 +2643,13 @@ class TestKpointsData(AiidaTestCase):
         input_offset = [0.5, 0.5, 0.5]
         k.set_kpoints_mesh(input_mesh, input_offset)
         mesh, offset = k.get_kpoints_mesh()
-        self.assertEqual(mesh, tuple(input_mesh))
-        self.assertEqual(offset, tuple(input_offset))
+        self.assertEqual(mesh, list(input_mesh))
+        self.assertEqual(offset, list(input_offset))
 
         # verify the same but after storing
         k.store()
-        self.assertEqual(mesh, tuple(input_mesh))
-        self.assertEqual(offset, tuple(input_offset))
+        self.assertEqual(mesh, list(input_mesh))
+        self.assertEqual(offset, list(input_offset))
 
         # cannot modify it after storage
         with self.assertRaises(ModificationNotAllowed):

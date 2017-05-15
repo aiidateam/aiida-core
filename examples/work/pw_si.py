@@ -9,14 +9,15 @@
 ###########################################################################
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-#if not is_dbenv_loaded():
-#    load_dbenv()
+if not is_dbenv_loaded():
+    load_dbenv()
 
+import click
+import logging
 from aiida.orm import DataFactory
 from aiida.orm.code import Code
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.work.run import submit
-
+from aiida.work.run import submit, run
 
 
 def get_pseudos(structure, family_name):
@@ -54,11 +55,23 @@ def get_pseudos(structure, family_name):
     return pseudos
 
 
-def run_si_scf(codename, pseudo_family):
-    JobCalc = PwCalculation.process()
-    inputs = JobCalc.get_inputs_template()
+@click.command()
+@click.option('--pseudo', type=str, required=True, help='The pseudopotential family')
+@click.option('--code', type=str, required=True, help='The codename to use')
+@click.option('-v', '--verbose', count=True)
+def run_si_scf(code, pseudo, verbose):
+    if verbose is not None:
+        if verbose == 1:
+            level = logging.INFO
+        else:
+            level = logging.DEBUG
+        FORMAT = "[%(filename)s:%(lineno)s - %(funcName)s()] %(message)s"
+        logging.basicConfig(level=level, format=FORMAT)
 
-    inputs.code = Code.get_from_string(codename)
+    pw_calc = PwCalculation.process()
+    inputs = pw_calc.get_inputs_template()
+
+    inputs.code = Code.get_from_string(code)
     # calc.label = "PW test"
     # calc.description = "My first AiiDA calculation of Silicon with Quantum ESPRESSO"
     inputs._options.resources = {"num_machines": 1}
@@ -71,8 +84,7 @@ def run_si_scf(codename, pseudo_family):
     StructureData = DataFactory("structure")
     structure = StructureData(cell=the_cell)
     structure.append_atom(position=(0., 0., 0.), symbols="Si")
-    structure.append_atom(position=(alat / 4., alat / 4., alat / 4.),
-                          symbols="Si")
+    structure.append_atom(position=(alat / 4., alat / 4., alat / 4.), symbols="Si")
     inputs.structure = structure
 
     # Kpoints
@@ -86,30 +98,22 @@ def run_si_scf(codename, pseudo_family):
     parameters_dict = {
         "CONTROL": {"calculation": "scf",
                     "tstress": True,
-                    "tprnfor": True,},
+                    "tprnfor": True, },
         "SYSTEM": {"ecutwfc": 30.,
-                   "ecutrho": 200.,},
-        "ELECTRONS": {"conv_thr": 1.e-6,}
+                   "ecutrho": 200., },
+        "ELECTRONS": {"conv_thr": 1.e-6, }
     }
     ParameterData = DataFactory("parameter")
     inputs.parameters = ParameterData(dict=parameters_dict)
 
     # Pseudopotentials
-    inputs.pseudo = get_pseudos(structure, pseudo_family)
+    inputs.pseudo = get_pseudos(structure, pseudo)
 
     # calc.set_extra("element", "Si")
     # calc.submit()
-    submit(JobCalc, **inputs)
+    # submit(JobCalc, **inputs)
+    run(pw_calc, **inputs)
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Equation of states example.')
-    parser.add_argument('--pseudo', type=str, dest='pseudo', required=True,
-                        help='The pseudopotential family')
-    parser.add_argument('--code', type=str, dest='code', required=True,
-                        help='The codename to use')
-
-    args = parser.parse_args()
-    run_si_scf(args.code, args.pseudo)
+    run_si_scf()

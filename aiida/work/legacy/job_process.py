@@ -27,7 +27,6 @@ from plum.persistence import Bundle
 from voluptuous import Any
 
 
-
 class JobProcess(Process, WithHeartbeat):
     CALC_NODE_LABEL = 'calc_node'
     OPTIONS_INPUT_LABEL = '_options'
@@ -72,8 +71,9 @@ class JobProcess(Process, WithHeartbeat):
             # Outputs
             spec.dynamic_output(valid_type=Data)
 
-        class_name = "{}_{}".format(
-            cls.__name__, plum.util.fullname(calc_class))
+        class_name = "{}_{}".format(cls.__name__, plum.util.fullname(calc_class))
+
+        # Dynamically create the type for this Process
         return type(class_name, (cls,),
                     {
                         Process.define.__name__: classmethod(define),
@@ -81,18 +81,14 @@ class JobProcess(Process, WithHeartbeat):
                     })
 
     def __init__(self, inputs, pid, logger=None):
+        from aiida.backends.utils import get_authinfo
+
         super(JobProcess, self).__init__(inputs, pid, logger)
         # Everything below here doesn't need to be saved
         self.__waiting_on = None
-        self._authinfo = None
+        self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     # region Process overrides
-    @override
-    def on_create(self):
-        from aiida.backends.utils import get_authinfo
-        super(JobProcess, self).on_create()
-
-        self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     @override
     def on_output_emitted(self, output_port, value, dynamic):
@@ -105,12 +101,12 @@ class JobProcess(Process, WithHeartbeat):
         return self._CALC_CLASS()
 
     @override
-    def save_wait_on_state(self):
+    def save_wait_on_state(self, wait_on, callback):
         return Bundle({'waiting_on': self.__waiting_on})
 
     @override
-    def create_wait_on(self, bundle):
-        return self._create_wait_on(bundle['waiting_on'])
+    def create_wait_on(self, saved_state, callback):
+        return self._create_wait_on(saved_state['waiting_on'])
 
     @override
     def _run(self, **kwargs):

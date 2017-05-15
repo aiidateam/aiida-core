@@ -4,8 +4,6 @@ from aiida.work.class_loader import ClassLoader
 from aiida.work.process_registry import ProcessRegistry
 
 import plum.class_loader
-import plum.knowledge_base
-import plum.rmq
 from plum.event import EmitterAggregator
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."

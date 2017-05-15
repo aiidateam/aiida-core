@@ -1,6 +1,9 @@
 from collections import namedtuple
+import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class TransportQueue(object):
@@ -27,6 +30,8 @@ class TransportQueue(object):
 
     def call_me_with_transport(self, authinfo, callback):
         with self._entries_lock:
+            _LOGGER.debug("Got request for transport with callback '{}'".format(callback))
+
             authinfo_entry = self._entries.get(authinfo.id)
             if authinfo_entry is None:
                 authinfo_entry = self._create_entry(authinfo)
@@ -40,9 +45,10 @@ class TransportQueue(object):
                 self._entries[authinfo.id] = authinfo_entry
             authinfo_entry.callbacks.append(callback)
 
-        if self._timer is None:
-            self._timer = threading.Timer(self._interval, self._do_callbacks)
-            self._timer.start()
+            if self._timer is None:
+                _LOGGER.debug("Starting callback timer {}".format(self._interval))
+                self._timer = threading.Timer(self._interval, self._do_callbacks)
+                self._timer.start()
 
     def cancel_callback(self, authinfo, callback):
         with self._entries_lock:
@@ -55,7 +61,9 @@ class TransportQueue(object):
                 pass
             else:
                 if self.get_num_waiting() == 0 and self._timer is not None:
+                    _LOGGER.debug("Stopping callback timer")
                     self._timer.cancel()
+                    self._timer = None
 
     def get_num_waiting(self):
         total = 0
@@ -77,4 +85,6 @@ class TransportQueue(object):
     def _do_callback(self, entry):
         with entry.transport:
             for fn in entry.callbacks:
+                _LOGGER.debug("Passing transport to {}...".format(fn))
                 fn(entry.authinfo, entry.transport)
+                _LOGGER.debug("...callback finished")

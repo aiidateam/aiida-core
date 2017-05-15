@@ -100,7 +100,7 @@ def run(process_class, *args, **inputs):
     return_pid = inputs.pop('_return_pid', False)
 
     p = _get_process_instance(process_class, *args, **inputs)
-    outputs = aiida.work.globals.get_thread_executor().play(p).result()
+    outputs = p.play()
     if return_pid:
         return outputs, p.pid
     else:

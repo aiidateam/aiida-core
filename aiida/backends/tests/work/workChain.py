@@ -127,7 +127,7 @@ class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
 
-        self.procman = aiida.work.globals.get_process_manager()
+        self.procman = aiida.work.globals.get_thread_executor()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
         self.assertEquals(aiida.work.globals.get_event_emitter().num_listening(), 0)

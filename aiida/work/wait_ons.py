@@ -1,6 +1,6 @@
 import threading
 
-from plum.wait import WaitOnEvent, Unsavable
+from plum.wait import WaitOnEvent, Unsavable, Interrupted
 from aiida.common.lang import override
 from aiida.transport import get_transport_queue
 
@@ -20,10 +20,13 @@ class WaitForTransport(WaitOnEvent, Unsavable):
         super(WaitForTransport, self).__init__()
         self._authinfo = authinfo
         self._transport = None
+        # Used to block the transport until the user calls release_transport
         self._transport_lock = threading.Event()
         if transport_queue is None:
             transport_queue = get_transport_queue()
         self._transport_queue = transport_queue
+        self._transfer_lock = threading.Lock()
+        self._transport_wait = threading.Lock()
 
     def __str__(self):
         return "transport {} on {}".format(
@@ -35,15 +38,28 @@ class WaitForTransport(WaitOnEvent, Unsavable):
     def wait(self, timeout=None):
         assert self.transport is None, "Forgot to call release_transport() before waiting again"
 
-        succeeded = False
+        interrupted = False
+        self.release_transport()
         try:
-            self._transport_lock.clear()
-            self._transport_queue.call_me_with_transport(self._authinfo, self._got_transport)
-            succeeded = super(WaitForTransport, self).wait(timeout)
+
+            with self._transport_wait:
+                self._transport_queue.call_me_with_transport(self._authinfo, self._got_transport)
+                try:
+                    super(WaitForTransport, self).wait(timeout)
+                except Interrupted:
+                    interrupted = True
+
         finally:
-            if not succeeded:
-                self._transport_queue.cancel_callback(self._authinfo, self._got_transport)
-                self.release_transport()
+            with self._transfer_lock:
+                if self._transport is not None:
+                    return True
+                else:
+                    self._transport_queue.cancel_callback(self._authinfo, self._got_transport)
+                    self.release_transport()
+                    if interrupted:
+                        raise Interrupted()
+                    else:
+                        return False
 
     @property
     def transport(self):
@@ -53,7 +69,22 @@ class WaitForTransport(WaitOnEvent, Unsavable):
         self._transport_lock.set()
 
     def _got_transport(self, authinfo, transport):
-        self._transport = transport
-        self.set()
-        self._transport_lock.wait()
-        self._transport = None
+        with self._transfer_lock:
+            if self._waiting_for_transport():
+                # Hand over the transport
+                self._transport = transport
+                self._transport_lock.clear()
+                self.set()
+
+        # Check if we needed the transport after all
+        if self._transport is not None:
+            self._transport_lock.wait()
+            self._transport = None
+
+    def _waiting_for_transport(self):
+        if self._transport_wait.acquire(False):
+            # We managed to acquire, so not waiting
+            self._transport_wait.release()
+            return False
+        else:
+            return True

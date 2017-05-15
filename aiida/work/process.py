@@ -83,18 +83,41 @@ class DictSchema(object):
         return template
 
 
-class InputPort(plum.port.InputPort):
-    def __init__(self, name, calc_input=True, **kwargs):
-        super(InputPort, self).__init__(name, **kwargs)
-        self._calc_input = calc_input
+class _WithNonDb(object):
+    """
+    A mixin that adds support to a port to flag a that should not be stored
+    in the database using the non_db=True flag.
+
+    The mixins have to go before the main port class in the superclass order
+    to make sure the mixin has the chance to strip out the non_db keyword.
+    """
+
+    def __init__(self, *args, **kwargs):
+        non_db = kwargs.pop('non_db', False)
+        super(_WithNonDb, self).__init__(*args, **kwargs)
+        self._non_db = non_db
 
     @property
-    def calc_input(self):
-        return self._calc_input
+    def non_db(self):
+        return self._non_db
+
+
+class InputPort(_WithNonDb, plum.port.InputPort):
+    pass
+
+
+class DynamicInputPort(_WithNonDb, plum.port.DynamicInputPort):
+    pass
+
+
+class InputGroupPort(_WithNonDb, plum.port.InputGroupPort):
+    pass
 
 
 class ProcessSpec(plum.process.ProcessSpec):
     INPUT_PORT_TYPE = InputPort
+    DYNAMIC_INPUT_PORT_TYPE = DynamicInputPort
+    INPUT_GROUP_PORT_TYPE = InputGroupPort
 
     def get_inputs_template(self):
         """
@@ -142,11 +165,11 @@ class Process(plum.process.Process):
         super(Process, cls).define(spec)
 
         spec.input("_store_provenance", valid_type=bool, default=True,
-                   calc_input=False)
+                   non_db=True)
         spec.input("_description", valid_type=basestring, required=False,
-                   calc_input=False)
+                   non_db=True)
         spec.input("_label", valid_type=basestring, required=False,
-                   calc_input=False)
+                   non_db=True)
 
         spec.dynamic_input(valid_type=(aiida.orm.Data, aiida.orm.Calculation))
         spec.dynamic_output(valid_type=aiida.orm.Data)
@@ -308,8 +331,17 @@ class Process(plum.process.Process):
 
     @override
     def do_run(self):
-        # Exclude all private inputs
-        ins = {k: v for k, v in self.inputs.iteritems() if not k.startswith('_')}
+        # Only keep calculation inputs
+        ins = {}
+        for name, value in self.inputs.iteritems():
+            try:
+                port = self.spec().get_input(name)
+            except ValueError:
+                ins[name] = value
+            else:
+                if not port.non_db:
+                    ins[name] = value
+
         return self._run(**ins)
 
     @protected
@@ -379,8 +411,8 @@ class Process(plum.process.Process):
                 assert self.spec().has_dynamic_input()
                 to_link[name] = input
             else:
-                # Ignore any inputs that are not calculation inputs
-                if not port.calc_input:
+                # Ignore any inputs that should not be saved
+                if port.non_db:
                     continue
 
                 if isinstance(port, plum.port.InputGroupPort):

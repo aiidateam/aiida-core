@@ -23,20 +23,40 @@ _event_emitter = None
 REGISTRY = _build_registry()
 _rmq_control_panel = None
 _persistence = None
+_heartbeat_pool = None
+_max_parallel_processes = None
+
+
+def _get_max_parallel_processes():
+    global _max_parallel_processes
+    if _max_parallel_processes is None:
+        from aiida.backends import settings
+        from aiida.common.setup import get_profile_config
+        from aiida.daemon.settings import DAEMON_MAX_PARALLEL_PROCESSES
+
+        config = get_profile_config(settings.AIIDADB_PROFILE)
+        _max_parallel_processes = config.get("DAEMON_MAX_PARALLEL_PROCESSES",
+                                             DAEMON_MAX_PARALLEL_PROCESSES)
+
+    return _max_parallel_processes
 
 
 def get_thread_executor():
     global _thread_executor
     if _thread_executor is None:
         from plum.thread_executor import SchedulingExecutor
-        _thread_executor = SchedulingExecutor(max_threads=20)
+        _thread_executor = SchedulingExecutor(max_threads=_get_max_parallel_processes())
 
     return _thread_executor
 
 
 def get_heartbeat_pool():
-    import threading
     global _heartbeat_pool
+    if _heartbeat_pool is None:
+        from concurrent.futures import ThreadPoolExecutor
+        _heartbeat_pool = ThreadPoolExecutor(max_workers=_get_max_parallel_processes())
+
+    return _heartbeat_pool
 
 
 

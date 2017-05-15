@@ -162,9 +162,6 @@ class CalculationHeartbeat(object):
         self._finished = threading.Event()
         self._heartbeat_expires = None
         self._heartbeat_tag = random.randint(0, 2147483647)
-        self._thread = threading.Thread(
-            target=self.run, name="calc.{}.heartbeat".format(calc.pk))
-        self._thread.daemon = True
 
     def __enter__(self):
         self.start()
@@ -175,8 +172,12 @@ class CalculationHeartbeat(object):
 
     @override
     def start(self):
+        from aiida.work.globals import get_heartbeat_pool
+
         self._acquire_heartbeat()
-        self._thread.start()
+        future = get_heartbeat_pool().submit(self.run)
+        while not future.running():
+            pass
 
     @override
     def run(self):
@@ -194,7 +195,6 @@ class CalculationHeartbeat(object):
         # Check if we've started
         if self._heartbeat_expires is not None:
             self._finished.set()
-            self._thread.join()
             # Try to clean up after ourselves
             try:
                 self._calc._del_attr(self.HEARTBEAT_EXPIRES)

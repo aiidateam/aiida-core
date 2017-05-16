@@ -296,7 +296,13 @@ class Process(plum.process.Process):
 
     @override
     def on_fail(self):
+        import traceback
         super(Process, self).on_fail()
+
+        exc_info = self.get_exc_info()
+        self.logger.error("{} failed:\n{}".format(
+            self.pid, traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])))
+
         self.calc._set_attr(WorkCalculation.FAILED_KEY, self.get_exception().message)
         self.calc.seal()
 

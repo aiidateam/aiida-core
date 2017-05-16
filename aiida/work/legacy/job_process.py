@@ -12,6 +12,7 @@ import plum.port as port
 import plum.process
 import plum.util
 from aiida.common.datastructures import calc_states
+from aiida.scheduler.datastructures import job_states as scheduler_states
 from aiida.common.lang import override
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.daemon.execmanager import submit_calc, retrieve_all, parse_results, \
@@ -84,11 +85,18 @@ class JobProcess(Process, WithHeartbeat):
         from aiida.backends.utils import get_authinfo
 
         super(JobProcess, self).__init__(inputs, pid, logger)
+
         # Everything below here doesn't need to be saved
         self.__waiting_on = None
         self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     # region Process overrides
+    @override
+    def load_instance_state(self, saved_state, logger=None):
+        from aiida.backends.utils import get_authinfo
+
+        super(JobProcess, self).load_instance_state(saved_state, logger)
+        self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     @override
     def on_output_emitted(self, output_port, value, dynamic):
@@ -102,11 +110,23 @@ class JobProcess(Process, WithHeartbeat):
 
     @override
     def save_wait_on_state(self, wait_on, callback):
-        return Bundle({'waiting_on': self.__waiting_on})
+        bundle = Bundle({'waiting_on': self.__waiting_on})
+        bundle['calc_pk'] = self.calc.pk
+        return bundle
 
     @override
     def create_wait_on(self, saved_state, callback):
-        return self._create_wait_on(saved_state['waiting_on'])
+        if saved_state['waiting_on'] == 'transport':
+            from aiida.backends.utils import get_authinfo
+            from aiida.orm import load_node
+
+            calc = load_node(pk=saved_state['calc_pk'])
+            return WaitForTransport(get_authinfo(calc.get_computer(), calc.get_user()))
+        elif saved_state['waiting_on'] == 'scheduler_event':
+            all_events = "job.{}.*".format(saved_state['calc_pk'])
+            return WaitOnEvent(get_event_emitter(), all_events)
+        else:
+            raise ValueError("Unrecognised wait on '{}'".format(saved_state['waiting_on']))
 
     @override
     def _run(self, **kwargs):
@@ -160,8 +180,10 @@ class JobProcess(Process, WithHeartbeat):
         :param wait_on: The WaitOnTransport we need to proceed
         :type wait_on: :class:`WaitOnTransport`
         """
-        submit_calc(self.calc, self._authinfo, wait_on.transport)
-        wait_on.release_transport()
+        try:
+            submit_calc(self.calc, self._authinfo, wait_on.transport)
+        finally:
+            wait_on.release_transport()
 
         # Wait for any event from our job
         return self._create_wait_on('scheduler_event'), self._scheduler_event_received
@@ -183,6 +205,7 @@ class JobProcess(Process, WithHeartbeat):
                 return self._create_wait_on('scheduler_event'), self._scheduler_event_received
 
         # If the job is computed or not found assume it's done
+        self.calc._set_scheduler_state(scheduler_states.DONE)
         self.calc._set_state(calc_states.COMPUTED)
 
         # Now we need the transport to be able to retrieve
@@ -235,7 +258,7 @@ class ContinueJobCalculation(JobProcess):
     @classmethod
     def define(cls, spec):
         super(ContinueJobCalculation, cls).define(spec)
-        spec.input("_calc", valid_type=JobCalculation, required=True, calc_input=False)
+        spec.input("_calc", valid_type=JobCalculation, required=True, non_db=False)
 
     def _run(self, **kwargs):
         state = self.calc.get_state()

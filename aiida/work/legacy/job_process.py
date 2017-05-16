@@ -25,6 +25,7 @@ from aiida.work.wait_ons import WaitForTransport
 from aiida.work.util import WithHeartbeat
 from plum.event import WaitOnEvent
 from plum.persistence import Bundle
+from plum.process_states import Waiting
 from voluptuous import Any
 
 
@@ -81,7 +82,7 @@ class JobProcess(Process, WithHeartbeat):
                         '_CALC_CLASS': calc_class
                     })
 
-    def __init__(self, inputs, pid, logger=None):
+    def __init__(self, inputs, pid=None, logger=None):
         from aiida.backends.utils import get_authinfo
 
         super(JobProcess, self).__init__(inputs, pid, logger)
@@ -96,6 +97,11 @@ class JobProcess(Process, WithHeartbeat):
         from aiida.backends.utils import get_authinfo
 
         super(JobProcess, self).load_instance_state(saved_state, logger)
+
+        if Waiting.WAIT_ON in saved_state:
+            self.__waiting_on = saved_state[Waiting.WAIT_ON]['waiting_on']
+        else:
+            self.__waiting_on = None
         self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     @override
@@ -110,8 +116,10 @@ class JobProcess(Process, WithHeartbeat):
 
     @override
     def save_wait_on_state(self, wait_on, callback):
-        bundle = Bundle({'waiting_on': self.__waiting_on})
-        bundle['calc_pk'] = self.calc.pk
+        bundle = Bundle({
+            'waiting_on': self.__waiting_on,
+            'calc_pk': self.calc.pk
+        })
         return bundle
 
     @override

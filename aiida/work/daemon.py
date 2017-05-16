@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import time
+import traceback
 
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm import load_node
@@ -20,13 +21,20 @@ def launch_pending_jobs(storage=None):
     if storage is None:
         storage = aiida.work.globals.get_persistence()
 
-    procman = aiida.work.globals.get_thread_executor()
+    executor = aiida.work.globals.get_thread_executor()
     for proc in _load_all_processes(storage):
+        if executor.has_process(proc.pid):
+            # If already playing, skip
+            continue
+
         try:
             storage.persist_process(proc)
-            f = procman.play(proc)
+            f = executor.play(proc)
         except LockError:
             pass
+        except BaseException:
+            _LOGGER.error("Failed to play process '{}':\n{}".format(
+                proc.pid, traceback.format_exc()))
 
 
 def _load_all_processes(storage):
@@ -48,13 +56,21 @@ def launch_all_pending_job_calculations():
     """
     Launch all JobCalculations that are not currently being processed
     """
-    process_manager = aiida.work.globals.get_thread_executor()
+
+    storage = aiida.work.globals.get_persistence()
+    executor = aiida.work.globals.get_thread_executor()
     for calc in get_all_pending_job_calculations():
         try:
-            process_manager.launch(ContinueJobCalculation, inputs={'_calc': calc})
-        except BaseException as e:
-            _LOGGER.error("Failed to launch job '{}'\n{}: {}".format(
-                calc, e.__class__.__name__, e.message))
+            if executor.has_process(calc.pk):
+                # If already playing, skip
+                continue
+
+            proc = ContinueJobCalculation(inputs={'_calc': calc})
+            storage.persist_process(proc)
+            f = executor.play(proc)
+        except BaseException:
+            _LOGGER.error("Failed to launch job '{}'\n{}".format(
+                calc.pk, traceback.format_exc()))
 
 
 def get_all_pending_job_calculations():

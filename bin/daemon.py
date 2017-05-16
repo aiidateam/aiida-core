@@ -26,7 +26,7 @@ def run_daemon(verbose):
     while True:
         work_daemon.launch_all_pending_job_calculations()
         launch_pending_jobs()
-        time.sleep(30)
+        time.sleep(10)
 
 
 if __name__ == "__main__":

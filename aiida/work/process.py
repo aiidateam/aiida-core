@@ -300,8 +300,9 @@ class Process(plum.process.Process):
         super(Process, self).on_fail()
 
         exc_info = self.get_exc_info()
+        exc = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
         self.logger.error("{} failed:\n{}".format(
-            self.pid, traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])))
+            self.pid, "".join(exc)))
 
         self.calc._set_attr(WorkCalculation.FAILED_KEY, self.get_exception().message)
         self.calc.seal()

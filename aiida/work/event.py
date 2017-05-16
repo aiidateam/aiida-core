@@ -80,6 +80,46 @@ class ProcessMonitorEmitter(plum.event.ProcessMonitorEmitter):
         self.event_occurred("calc.{}.{}".format(pk, evt))
 
 
+class _PeriodicTimer(threading.Thread):
+    def __init__(self, interval, fn):
+        super(_PeriodicTimer, self).__init__()
+        self.daemon = True
+
+        self._interval = interval
+        self._timeout = interval
+        self._fn = fn
+        self._interrupt = threading.Condition()
+        self._shutdown = False
+
+    def run(self):
+        with self._interrupt:
+            while True:
+                if self._timeout is not None:
+                    self._fn()
+                self._interrupt.wait(self._timeout)
+                if self._shutdown:
+                    break
+
+    def pause(self):
+        assert not self._shutdown, "Timer has been shut down"
+
+        self._timeout = None
+
+    def play(self):
+        assert not self._shutdown, "Timer has been shut down"
+
+        with self._interrupt:
+            self._timeout = self._interval
+            self._interrupt.notify_all()
+
+    def shutdown(self):
+        assert not self._shutdown, "Timer has been shut down"
+
+        with self._interrupt:
+            self._shutdown = True
+            self._interrupt.notify_all()
+
+
 class SchedulerEmitter(EventEmitter):
     JOB_NOT_FOUND = "NOT_FOUND"
     DEFAULT_POLL_INTERVAL = 30  # seconds
@@ -95,8 +135,7 @@ class SchedulerEmitter(EventEmitter):
         super(SchedulerEmitter, self).__init__()
         self._pending_calcs = set()
         self._entries = {}
-        self._poll_interval = poll_interval
-        self._poll_timer = None
+        self._poll_timer = _PeriodicTimer(poll_interval, self._poll)
 
     def start_listening(self, listener, event='*'):
         pk_string = self._extract_pk_string(event)
@@ -192,7 +231,7 @@ class SchedulerEmitter(EventEmitter):
             job_id for job_id, job_data in
             entry.jobs.iteritems() if
             job_data.current_state != job_states.DONE
-            ]
+        ]
 
     def _get_scheduler_jobs(self, scheduler, job_ids):
         if len(job_ids) == 0:
@@ -229,11 +268,12 @@ class SchedulerEmitter(EventEmitter):
         if len(self._pending_calcs) > 0:
             self._ensure_polling()
         else:
-            self._poll_timer = None
+            self._poll_timer.pause()
 
     def _ensure_polling(self):
-        if self._poll_timer is not None:
-            self._poll_timer = threading.Timer(self._poll_interval, self._poll)
+        if self._poll_timer.is_alive():
+            self._poll_timer.play()
+        else:
             self._poll_timer.start()
 
     def _add_calc(self, calc):

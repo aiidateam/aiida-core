@@ -17,8 +17,26 @@ from aiida.common.exceptions import (
         InvalidOperation
     )
 
+AIIDA_ATTRIBUTE_SEP = '.'
 
+def validate_attribute_key(key):
+    """
+    Validate the key string to check if it is valid (e.g., if it does not
+    contain the separator symbol.).
 
+    :return: None if the key is valid
+    :raise ValidationError: if the key is not valid
+    """
+    from aiida.common.exceptions import ValidationError
+
+    if not isinstance(key, basestring):
+        raise ValidationError("The key must be a string.")
+    if not key:
+        raise ValidationError("The key cannot be an empty string.")
+    if AIIDA_ATTRIBUTE_SEP in key:
+        raise ValidationError("The separator symbol '{}' cannot be present "
+                              "in the key of attributes, extras, etc.".format(
+            AIIDA_ATTRIBUTE_SEP))
 
 
 def QueryFactory():
@@ -305,4 +323,5 @@ def _get_column(colname, alias):
                     '\n'.join(alias._sa_class_manager.mapper.c.keys())
                 )
         )
+
 

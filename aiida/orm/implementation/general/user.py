@@ -10,7 +10,7 @@
 import logging
 from abc import abstractmethod, abstractproperty, ABCMeta
 from aiida.common.hashing import is_password_usable
-
+from aiida.common.utils import abstractclassmethod
 
 
 class AbstractUser(object):
@@ -151,8 +151,7 @@ class AbstractUser(object):
     def get_all_users(cls):
         return cls.search_for_users()
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def search_for_users(cls, **kwargs):
         """
         Search for a user the passed keys.

@@ -8,21 +8,61 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from abc import ABCMeta, abstractmethod, abstractproperty
+from aiida.common.utils import abstractclassmethod
 
-import os
-import logging
 import collections
+import logging
+import os
+import types
+
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
 from aiida.common.folders import SandboxFolder
 from aiida.common.utils import combomethod
 
 from aiida.common.links import LinkType
+from aiida.common.lang import override
 from aiida.common.old_pluginloader import get_query_type_string
-
-
+from aiida.backends.utils import validate_attribute_key
 
 _NO_DEFAULT = tuple()
+
+
+def clean_value(value):
+    """
+    Get value from input and (recursively) replace, if needed, all occurrences
+    of BaseType AiiDA data nodes with their value, and List with a standard list.
+
+    It also makes a deep copy of everything.
+
+    Note however that there is no logic to avoid infinite loops when the
+    user passes some perverse recursive dictionary or list.
+    In any case, however, this would not be storable by AiiDA...
+
+    :param value: A value to be set as an attribute or an extra
+    :return: a "cleaned" value, potentially identical to value, but with
+        values replaced where needed.
+    """
+    # Must be imported in here to avoid recursive imports
+    from aiida.orm.data import base as basedatatypes
+
+    if isinstance(value, basedatatypes.BaseType):
+        return value.value
+    elif isinstance(value, dict):
+        # Check dictionary before iterables
+        return {k: clean_value(v) for k, v in value.iteritems()}
+    elif (isinstance(value, collections.Iterable) and
+            not isinstance(value, types.StringTypes)):
+        # list, tuple, ... but not a string
+        # This should also properly take care of dealing with the
+        # basedatatypes.List object
+        return [clean_value(v) for v in value]
+    else:
+        # If I don't know what to do I just return the value
+        # itself - it's not super robust, but relies on duck typing
+        # (e.g. if there is something that behaves like an integer
+        # but is not an integer, I still accept it)
+        return value
 
 
 class AbstractNode(object):
@@ -118,8 +158,7 @@ class AbstractNode(object):
         """
         return self._logger
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get_subclass_from_uuid(cls, uuid):
         """
         Get a node object from the uuid, with the proper subclass of Node.
@@ -132,8 +171,7 @@ class AbstractNode(object):
         """
         pass
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get_subclass_from_pk(cls, pk):
         """
         Get a node object from the pk, with the proper subclass of Node.
@@ -161,16 +199,11 @@ class AbstractNode(object):
         """
         return self.dbnode.mtime
 
-    @abstractmethod
     def __int__(self):
-        """
-        Convert the class to an integer. This is needed to allow querying
-        with Django. Be careful, though, not to pass it to a wrong field!
-        This only returns the local DB principal key (pk) value.
-
-        :return: the integer pk of the node or None if not stored.
-        """
-        pass
+        if self._to_be_stored:
+            return None
+        else:
+            return self.id
 
     @abstractmethod
     def __init__(self, **kwargs):
@@ -222,8 +255,7 @@ class AbstractNode(object):
         """
         return {}
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def query(cls, *args, **kwargs):
         """
         Map to the aiidaobjects manager of the DbNode, that returns
@@ -596,6 +628,9 @@ class AbstractNode(object):
 
         :return: a dictionary {linkname:object}
         """
+        if link_type is not None and not isinstance(link_type, LinkType):
+            raise TypeError("link_type should be a LinkType object")
+
         all_outputs = self.get_outputs(also_labels=True, link_type=link_type)
 
         all_linknames = [i[0] for i in all_outputs]
@@ -617,7 +652,6 @@ class AbstractNode(object):
 
         return new_outputs
 
-    @abstractmethod
     def get_inputs(self, node_type=None, also_labels=False, only_in_db=False,
                    link_type=None):
         """
@@ -635,9 +669,45 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
                 returns all inputs of all link types.
         """
+        if link_type is not None and not isinstance(link_type, LinkType):
+            raise TypeError("link_type should be a LinkType object")
+
+        inputs_list = self._get_db_input_links(link_type=link_type)
+
+        if not only_in_db:
+            # Needed for the check
+            input_list_keys = [i[0] for i in inputs_list]
+
+            for label, v in self._inputlinks_cache.iteritems():
+                src = v[0]
+                if label in input_list_keys:
+                    raise InternalError("There exist a link with the same name "
+                                        "'{}' both in the DB and in the internal "
+                                        "cache for node pk= {}!".format(label, self.pk))
+                inputs_list.append((label, src))
+
+        if node_type is None:
+            filtered_list = inputs_list
+        else:
+            filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
+
+        if also_labels:
+            return list(filtered_list)
+        else:
+            return [i[1] for i in filtered_list]
+
+    @abstractclassmethod
+    def _get_db_input_links(self, link_type):
+        """
+        Return a list of tuples (label, aiida_class) for each input link,
+        possibly filtering only by those of a given type.
+
+        :param link_type: if not None, a link type to filter results
+        :return:  a list of tuples (label, aiida_class)
+        """
         pass
 
-    @abstractmethod
+    @override
     def get_outputs(self, type=None, also_labels=False, link_type=None):
         """
         Return a list of nodes that exit (directly) from this node
@@ -649,6 +719,29 @@ class AbstractNode(object):
                 following format: ('label', Node), with 'label' the link label,
                 and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
+        """
+        outputs_list = self._get_db_output_links(link_type=link_type)
+
+        if type is None:
+            if also_labels:
+                return list(outputs_list)
+            else:
+                return [i[1] for i in outputs_list]
+        else:
+            filtered_list = (i for i in outputs_list if isinstance(i[1], type))
+            if also_labels:
+                return list(filtered_list)
+            else:
+                return [i[1] for i in filtered_list]
+
+    @abstractmethod
+    def _get_db_output_links(self, link_type):
+        """
+        Return a list of tuples (label, aiida_class) for each output link,
+        possibly filtering only by those of a given type.
+
+        :param link_type: if not None, a link type to filter results
+        :return:  a list of tuples (label, aiida_class)
         """
         pass
 
@@ -664,7 +757,6 @@ class AbstractNode(object):
         else:
             return Computer(dbcomputer=self.dbnode.dbcomputer)
 
-    @abstractmethod
     def set_computer(self, computer):
         """
         Set the computer to be used by the node.
@@ -674,11 +766,23 @@ class AbstractNode(object):
 
         :param computer: the computer object
         """
-        # TODO: probably this method should be in the base class, and
-        #      check for the type
-        pass
+        if self._to_be_stored:
+            self._set_db_computer(computer)
+        else:
+            raise ModificationNotAllowed(
+                "Node with uuid={} was already stored".format(self.uuid))
 
     @abstractmethod
+    def _set_db_computer(self, computer):
+        """
+        Set the computer directly inside the dbnode member, in the DB.
+
+        DO NOT USE DIRECTLY.
+
+        :param computer: the computer object
+        """
+        pass
+
     def _set_attr(self, key, value):
         """
         Set a new attribute to the Node (in the DbAttribute table).
@@ -692,9 +796,27 @@ class AbstractNode(object):
         :raise ValidationError: if the key is not valid (e.g. it contains the
             separator symbol).
         """
-        pass
+        validate_attribute_key(key)
+
+        if self._to_be_stored:
+            import copy
+            self._attrs_cache[key] = clean_value(value)
+        else:
+            self._set_db_attr(key, clean_value(value))
 
     @abstractmethod
+    def _set_db_attr(self, key, value):
+        """
+        Set the value directly in the DB, without checking if it is stored, or
+        using the cache.
+
+        DO NOT USE DIRECTLY.
+
+        :param str key: key name
+        :param value: its value
+        """
+        pass
+
     def _del_attr(self, key):
         """
         Delete an attribute.
@@ -702,6 +824,24 @@ class AbstractNode(object):
         :param key: attribute to delete.
         :raise AttributeError: if key does not exist.
         :raise ModificationNotAllowed: if the Node was already stored.
+        """
+        if self._to_be_stored:
+            try:
+                del self._attrs_cache[key]
+            except KeyError:
+                raise AttributeError(
+                    "DbAttribute {} does not exist".format(key))
+        else:
+            self._del_db_attr(key)
+
+    @abstractmethod
+    def _del_db_attr(self, key):
+        """
+        Delete an attribute directly from the DB
+
+        DO NOT USE DIRECTLY.
+
+        :param key: The key of the attribute to delete
         """
         pass
 
@@ -716,7 +856,6 @@ class AbstractNode(object):
         for attr_name in list(self.attrs()):
             self._del_attr(attr_name)
 
-    @abstractmethod
     def get_attr(self, key, default=_NO_DEFAULT):
         """
         Get the attribute.
@@ -728,12 +867,36 @@ class AbstractNode(object):
 
         :raise AttributeError: If no attribute is found and there is no default
         """
-        pass
+        try:
+            if self._to_be_stored:
+                try:
+                    return self._attrs_cache[key]
+                except KeyError:
+                    raise AttributeError(
+                        "DbAttribute '{}' does not exist".format(key))
+            else:
+                return self._get_db_attr(key)
+        except AttributeError:
+            if default is _NO_DEFAULT:
+                raise
+            return default
 
     @abstractmethod
+    def _get_db_attr(self, key):
+        """
+        Return the attribute value, directly from the DB.
+
+        DO NOT USE DIRECTLY.
+
+        :param key: the attribute key
+        :return: the attribute value
+        :raise AttributeError: if the attribute does not exist.
+        """
+        pass
+
     def set_extra(self, key, value, exclusive=False):
         """
-        Immediately sets an extra of a calculation, in the DB!
+        Sets an extra of a calculation.
         No .store() to be called. Can be used *only* after saving.
 
         :param key: key name
@@ -744,6 +907,41 @@ class AbstractNode(object):
             node and avoid to run multiple times the same computation on it).
 
         :raise UniquenessError: if extra already exists and exclusive is True.
+        """
+        validate_attribute_key(key)
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The extras of a node can be set only after "
+                "storing the node")
+        self._set_db_extra(key, clean_value(value), exclusive)
+
+
+    def set_extra_exclusive(self, key, value):
+        """
+        Set an extra in exclusive mode (stops if the attribute
+        is already there).
+        Deprecated, use set_extra() with exclusive=False
+
+        :param key: key name
+        :param value: key value
+        """
+        self.set_extra(key, value, exclusive=True)
+
+
+    @abstractmethod
+    def _set_db_extra(self, key, value, exclusive):
+        """
+        Store extra directly in the DB, without checks.
+
+        DO NOT USE DIRECTLY.
+
+        :param key: key name
+        :param value: key value
+        :param exclusive: (default=False).
+            If exclusive is True, it raises a UniquenessError if an Extra with
+            the same name already exists in the DB (useful e.g. to "lock" a
+            node and avoid to run multiple times the same computation on it).
         """
         pass
 
@@ -763,16 +961,33 @@ class AbstractNode(object):
             raise AttributeError("set_extras takes a dictionary as argument")
 
 
-    @abstractmethod
     def reset_extras(self, new_extras):
         """
         Deletes existing extras and creates new ones.
         :param new_extras: dictionary with new extras
         :return: nothing, an exceptions is raised in several circumnstances
         """
-        pass
+        if not isinstance(new_extras, dict):
+            raise TypeError("The new extras have to be a dictionary")
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The extras of a node can be set only after "
+                "storing the node")
+
+        self._reset_db_extras(clean_value(new_extras))
 
     @abstractmethod
+    def _reset_db_extras(self, new_extras):
+        """
+        Resets the extras (replacing existing ones) directly in the DB
+
+        DO NOT USE DIRECTLY!
+
+        :param new_extras: dictionary with new extras
+        """
+        pass
+
     def get_extra(self, key, *args):
         """
         Get the value of a extras, reading directly from the DB!
@@ -786,9 +1001,36 @@ class AbstractNode(object):
 
         :raise ValueError: If more than two arguments are passed to get_extra
         """
-        pass
+        if len(args) > 1:
+            raise ValueError("After the key name you can pass at most one"
+                             "value, that is the default value to be used "
+                             "if no extra is found.")
+
+        try:
+            if self._to_be_stored:
+                raise AttributeError("DbExtra '{}' does not exist yet, the "
+                                     "node is not stored".format(key))
+            else:
+                return self._get_db_extra(key)
+        except AttributeError as e:
+            try:
+                return args[0]
+            except IndexError:
+                raise e
 
     @abstractmethod
+    def _get_db_extra(self, key):
+        """
+        Get an extra, directly from the DB.
+
+        DO NOT USE DIRECTLY.
+
+        :param str key: key name
+        :return: the key value
+        :raise AttributeError: if the key does not exist
+        """
+        pass
+
     def get_extras(self):
         """
         Get the value of extras, reading directly from the DB!
@@ -797,10 +1039,9 @@ class AbstractNode(object):
 
         :return: the dictionary of extras ({} if no extras)
         """
+        return dict(self.iterextras())
 
-        pass
 
-    @abstractmethod
     def del_extra(self, key):
         """
         Delete a extra, acting directly on the DB!
@@ -812,58 +1053,100 @@ class AbstractNode(object):
         :raise: AttributeError: if key starts with underscore
         :raise: ModificationNotAllowed: if the node is not stored yet
         """
-        pass
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The extras of a node can be set and deleted "
+                "only after storing the node")
+        self._del_db_extra(key)
 
     @abstractmethod
+    def _del_db_extra(self, key):
+        """
+        Delete an extra, directly on the DB.
+
+        DO NOT USE DIRECTLY.
+
+        :param str key: key name
+        """
+        pass
+
     def extras(self):
         """
         Get the keys of the extras.
 
         :return: a list of strings
         """
-        pass
+        for k, v in self.iterextras():
+            yield k
 
-    @abstractmethod
     def iterextras(self):
         """
         Iterator over the extras, returning tuples (key, value)
 
         :todo: verify that I am not creating a list internally
         """
-        pass
+        if self._to_be_stored:
+            # If it is not stored yet, there are no extras that can be
+            # added (in particular, we do not even have an ID to use!)
+            # Return without value, meaning that this is an empty generator
+            return
+            yield # Needed after return to convert it to a generator
+        for _ in self._db_iterextras():
+            yield _
 
-    @abstractmethod
+
     def iterattrs(self):
         """
         Iterator over the attributes, returning tuples (key, value)
+        """
+        # TODO: check what happens if someone stores the object while
+        #        the iterator is being used!
+        if self._to_be_stored:
+            for k, v in self._attrs_cache.iteritems():
+                yield (k, v)
+        else:
+            for k, v in self._db_iterattrs():
+                yield k, v
 
-        :todo: optimize! At the moment, the call is very slow because it is
-            also calling attr.getvalue() for each attribute, that has to
-            perform complicated queries to rebuild the object.
+    def attrs(self):
+        """
+        Returns the keys of the attributes as a generator.
 
-        :param bool also_updatable: if False, does not iterate over
-            attributes that are updatable
+        :return: a generator of a strings
+        """
+        # Note: this calls a different function _db_attrs
+        # because often it's faster not to retrieve the values from the DB
+        if self._to_be_stored:
+            for k in self._attrs_cache.iterkeys():
+                yield k
+        else:
+            for k in self._db_attrs():
+                yield k
+
+    @abstractmethod
+    def _db_attrs(self):
+        """
+        Returns the keys of the attributes as a generator,
+        directly from the DB.
+
+        DO NOT USE DIRECTLY.
         """
         pass
 
     @abstractmethod
+    def _db_iterattrs(self):
+        """
+        Iterator over the attributes (directly in the DB!)
+
+        DO NOT USE DIRECTLY.
+        """
+        pass
+
     def get_attrs(self):
         """
         Return a dictionary with all attributes of this node.
         """
-        pass
-
-    @abstractmethod
-    def attrs(self):
-        """
-        Returns the keys of the attributes.
-
-        :return: a list of strings
-        """
-        # Note: I "duplicate" the code from iterattrs, rather than
-        # calling iterattrs from here, because iterattrs is slow on each call
-        # since it has to call .getvalue(). To improve!
-        pass
+        return dict(self.iterattrs())
 
     @abstractmethod
     def add_comment(self, content, user=None):
@@ -949,13 +1232,12 @@ class AbstractNode(object):
         pass
 
     @property
-    @abstractmethod
     def pk(self):
         """
         :return: the principal key (the ID) as an integer, or None if the
            node was not stored yet
         """
-        pass
+        return self.id
 
     @property
     @abstractmethod
@@ -1109,7 +1391,7 @@ class AbstractNode(object):
         """
         pass
 
-    @abstractmethod
+
     def _store_input_nodes(self):
         """
         Find all input nodes, and store them, checking that they do not
@@ -1118,9 +1400,16 @@ class AbstractNode(object):
         :note: this function stores all nodes without transactions; always
           call it from within a transaction!
         """
-        pass
+        if not self._to_be_stored:
+            raise ModificationNotAllowed(
+                "_store_input_nodes can be called only if the node is "
+                "unstored (node {} is stored, instead)".format(self.pk))
 
-    @abstractmethod
+        for label in self._inputlinks_cache:
+            parent = self._inputlinks_cache[label][0]
+            if not parent.is_stored:
+                parent.store(with_transaction=False)
+
     def _check_are_parents_stored(self):
         """
         Check if all parents are already stored, otherwise raise.
@@ -1129,7 +1418,13 @@ class AbstractNode(object):
           stored.
         """
         # Preliminary check to verify that inputs are stored already
-        pass
+        for label in self._inputlinks_cache:
+            if not self._inputlinks_cache[label][0].is_stored:
+                raise ModificationNotAllowed(
+                    "Cannot store the input link '{}' because the "
+                    "source node is not stored. Either store it first, "
+                    "or call _store_input_links with the store_parents "
+                    "parameter set to True".format(label))
 
     @abstractmethod
     def _store_cached_input_links(self, with_transaction=True):

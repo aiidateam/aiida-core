@@ -13,6 +13,7 @@ from aiida.orm.implementation import Node
 from aiida.common.exceptions import (ValidationError, MissingPluginError)
 from aiida.common.links import LinkType
 from aiida.orm.mixins import SealableWithUpdatableAttributes
+from aiida.common.utils import abstractclassmethod
 
 
 
@@ -128,8 +129,7 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
         else:
             return qb.first()[0]
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get(cls, pk=None, label=None, machinename=None):
         """
         Get a Computer object with given identifier string, that can either be
@@ -165,8 +165,7 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
             raise InputValidationError("Pass either pk or code label (and machinename)")
 
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get_from_string(cls, code_string):
         """
         Get a Computer object with given identifier string in the format
@@ -202,8 +201,7 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
             return cls.get_code_helper(label, machinename)
 
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def list_for_plugin(cls, plugin, labels=True):
         """
         Return a list of valid code strings for a given plugin.

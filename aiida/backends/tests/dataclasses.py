@@ -121,7 +121,7 @@ class TestCifData(AiidaTestCase):
     Tests for CifData class.
     """
     from aiida.orm.data.cif import has_pycifrw
-    from aiida.orm.data.structure import has_ase, has_pymatgen, has_pyspglib, \
+    from aiida.orm.data.structure import has_ase, has_pymatgen, has_spglib, \
         get_pymatgen_version
     from distutils.version import StrictVersion
 
@@ -556,7 +556,7 @@ _publ_section_title                     'Test CIF'
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     def test_refine(self):
         """
         Test case for refinement (space group determination) for a
@@ -621,7 +621,7 @@ _publ_section_title                     'Test CIF'
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     def test_parse_formula(self):
         from aiida.orm.data.cif import parse_formula
 
@@ -1018,7 +1018,7 @@ class TestStructureData(AiidaTestCase):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
-    from aiida.orm.data.structure import has_ase, has_pyspglib
+    from aiida.orm.data.structure import has_ase, has_spglib
 
     def test_cell_ok_and_atoms(self):
         """
@@ -1292,7 +1292,7 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     def test_kind_8(self):
         """
         Test the ase_refine_cell() function
@@ -2560,9 +2560,9 @@ class TestKpointsData(AiidaTestCase):
         input_mesh = [4, 4, 4]
         k.set_kpoints_mesh(input_mesh)
         mesh, offset = k.get_kpoints_mesh()
-        self.assertEqual(mesh, tuple(input_mesh))
+        self.assertEqual(mesh, list(input_mesh))
         self.assertEqual(offset,
-                         (0., 0., 0.))  # must be a tuple of three 0 by default
+                         [0., 0., 0.])  # must be a tuple of three 0 by default
 
         # a too long list should fail
         with self.assertRaises(ValueError):
@@ -2572,13 +2572,13 @@ class TestKpointsData(AiidaTestCase):
         input_offset = [0.5, 0.5, 0.5]
         k.set_kpoints_mesh(input_mesh, input_offset)
         mesh, offset = k.get_kpoints_mesh()
-        self.assertEqual(mesh, tuple(input_mesh))
-        self.assertEqual(offset, tuple(input_offset))
+        self.assertEqual(mesh, list(input_mesh))
+        self.assertEqual(offset, list(input_offset))
 
         # verify the same but after storing
         k.store()
-        self.assertEqual(mesh, tuple(input_mesh))
-        self.assertEqual(offset, tuple(input_offset))
+        self.assertEqual(mesh, list(input_mesh))
+        self.assertEqual(offset, list(input_offset))
 
         # cannot modify it after storage
         with self.assertRaises(ModificationNotAllowed):

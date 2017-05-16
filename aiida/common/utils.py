@@ -37,6 +37,34 @@ class classproperty(object):
         return self.getter(owner)
 
 
+class abstractclassmethod(classmethod):
+    """
+    A decorator indicating abstract classmethods.
+
+    Backported from python3.
+    """
+    __isabstractmethod__ = True
+
+    def __init__(self, callable):
+        callable.__isabstractmethod__ = True
+        super(abstractclassmethod, self).__init__(callable)
+
+
+class abstractstaticmethod(staticmethod):
+    """
+    A decorator indicating abstract staticmethods.
+
+    Similar to abstractmethod.
+    Backported from python3.
+    """
+
+    __isabstractmethod__ = True
+
+    def __init__(self, callable):
+        callable.__isabstractmethod__ = True
+        super(abstractstaticmethod, self).__init__(callable)
+
+
 def get_configured_user_email():
     """
     Return the email (that is used as the username) configured during the

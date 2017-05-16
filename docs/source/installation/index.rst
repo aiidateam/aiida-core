@@ -133,17 +133,17 @@ Optional configuration
 Verdi tab-completion
 ++++++++++++++++++++
 The ``verdi`` command line tool has many commands and options.
-To simplify its usage there is a way to enable tab-completion for it to your bash shell.
+To simplify its usage, there is a way to enable tab-completion for it in your bash shell.
 To do so, simply run the following command::
 
     $ verdi completioncommand
 
-and add the result to your bash config, e.g. ``.bashrc``, or if you are using a virtual environment, simply append it to the activation script.
-Alternatively, for both cases you can accomplish the same by simply by adding the following line to the ``.bashrc`` or activation script::
+and append the result to the activation script of your virtual environment (or to your bash config, e.g. ``.bashrc``).
+Alternatively, you can accomplish the same by simply adding the following line to the activation script::
 
-    eval "$(verdi completioncommand)
+    eval "$(verdi completioncommand)"
 
-For the changes to apply to your current shell, make sure to source the ``.bashrc`` or activation script.
+For the changes to apply to your current shell, make sure to source the activation script or ``.bashrc`` (depending the approach you chose).
 
 Adding AiiDA to the PATH
 ++++++++++++++++++++++++

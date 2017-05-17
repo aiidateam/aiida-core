@@ -106,7 +106,8 @@ class Data(Node):
         with self._state_lock:
             if link_type is LinkType.CREATE and \
                             len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
-                raise ValueError("At most one CREATE node can enter a data node")
+                raise ValueError("At most one CREATE node can enter a data node,"
+                                 " trying to add '{} as creator".format(src.pk))
 
             if not isinstance(src, Calculation):
                 raise ValueError(

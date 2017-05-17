@@ -24,8 +24,8 @@ def run_daemon(verbose):
         logging.basicConfig(level=level, format=FORMAT)
 
     while True:
-        work_daemon.launch_all_pending_job_calculations()
         launch_pending_jobs()
+        #work_daemon.launch_all_pending_job_calculations()
         time.sleep(10)
 
 

@@ -334,3 +334,43 @@ def get_or_create_output_group(calculation):
     d.update(calculation.get_outputs_dict(link_type=LinkType.RETURN))
 
     return FrozenDict(dict=d)
+
+
+class PeriodicTimer(threading.Thread):
+    def __init__(self, interval, fn):
+        super(PeriodicTimer, self).__init__()
+        self.daemon = True
+
+        self._interval = interval
+        self._timeout = interval
+        self._fn = fn
+        self._interrupt = threading.Condition()
+        self._shutdown = False
+
+    def run(self):
+        with self._interrupt:
+            while True:
+                if self._timeout is not None:
+                    self._fn()
+                self._interrupt.wait(self._timeout)
+                if self._shutdown:
+                    break
+
+    def pause(self):
+        assert not self._shutdown, "Timer has been shut down"
+
+        self._timeout = None
+
+    def play(self):
+        assert not self._shutdown, "Timer has been shut down"
+
+        with self._interrupt:
+            self._timeout = self._interval
+            self._interrupt.notify_all()
+
+    def shutdown(self):
+        assert not self._shutdown, "Timer has been shut down"
+
+        with self._interrupt:
+            self._shutdown = True
+            self._interrupt.notify_all()

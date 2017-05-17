@@ -12,6 +12,7 @@ import collections
 import uritools
 import os.path
 
+from plum.persistence import Bundle
 import plum.persistence.pickle_persistence
 from plum.process import Process
 from aiida.common.lang import override
@@ -49,7 +50,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     def _convert_to_ids(self, nodes):
         from aiida.orm import Node
 
-        input_ids = {}
+        input_ids = Bundle()
         for label, node in nodes.iteritems():
             if node is None:
                 continue
@@ -69,7 +70,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     def _load_nodes_from(self, pks_mapping):
         """
         Take a dictionary of of {label: pk} or nested dictionary i.e.
-        {label: {label: pk}} and convert to the equivalent dictionary but
+        {label: {label: pk}} and convert to the equivalent Bundle but
         with nodes instead of the ids.
 
         :param pks_mapping: The dictionary of node pks.
@@ -78,7 +79,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         """
         from aiida.orm import load_node
 
-        nodes = {}
+        nodes = Bundle()
         for label, pk in pks_mapping.iteritems():
             if isinstance(pk, collections.Mapping):
                 nodes[label] = self._load_nodes_from(pk)

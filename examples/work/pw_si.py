@@ -111,8 +111,8 @@ def run_si_scf(code, pseudo, verbose):
 
     # calc.set_extra("element", "Si")
     # calc.submit()
-    # submit(JobCalc, **inputs)
-    run(pw_calc, **inputs)
+    # run(pw_calc, **inputs)
+    submit(pw_calc, **inputs)
 
 
 if __name__ == "__main__":

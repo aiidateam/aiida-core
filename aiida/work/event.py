@@ -1,18 +1,20 @@
 import re
 from collections import namedtuple
 import threading
+
 import plum.event
-from plum.event import EventEmitter, WithProcessEvents, PollingEmitter
-from aiida.common.lang import override
+from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
+from aiida.common.lang import override
 from aiida.orm import load_node
-from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.calculation import Calculation
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.work import WorkCalculation
-from aiida.backends.utils import get_authinfo
+from aiida.orm.querybuilder import QueryBuilder
 from aiida.scheduler.datastructures import job_states
 from aiida.transport import get_transport_queue
+from aiida.work.util import PeriodicTimer
+from plum.event import EventEmitter, WithProcessEvents, PollingEmitter
 
 
 class DbPollingEmitter(PollingEmitter, WithProcessEvents):
@@ -80,46 +82,6 @@ class ProcessMonitorEmitter(plum.event.ProcessMonitorEmitter):
         self.event_occurred("calc.{}.{}".format(pk, evt))
 
 
-class _PeriodicTimer(threading.Thread):
-    def __init__(self, interval, fn):
-        super(_PeriodicTimer, self).__init__()
-        self.daemon = True
-
-        self._interval = interval
-        self._timeout = interval
-        self._fn = fn
-        self._interrupt = threading.Condition()
-        self._shutdown = False
-
-    def run(self):
-        with self._interrupt:
-            while True:
-                if self._timeout is not None:
-                    self._fn()
-                self._interrupt.wait(self._timeout)
-                if self._shutdown:
-                    break
-
-    def pause(self):
-        assert not self._shutdown, "Timer has been shut down"
-
-        self._timeout = None
-
-    def play(self):
-        assert not self._shutdown, "Timer has been shut down"
-
-        with self._interrupt:
-            self._timeout = self._interval
-            self._interrupt.notify_all()
-
-    def shutdown(self):
-        assert not self._shutdown, "Timer has been shut down"
-
-        with self._interrupt:
-            self._shutdown = True
-            self._interrupt.notify_all()
-
-
 class SchedulerEmitter(EventEmitter):
     JOB_NOT_FOUND = "NOT_FOUND"
     DEFAULT_POLL_INTERVAL = 30  # seconds
@@ -135,7 +97,8 @@ class SchedulerEmitter(EventEmitter):
         super(SchedulerEmitter, self).__init__()
         self._pending_calcs = set()
         self._entries = {}
-        self._poll_timer = _PeriodicTimer(poll_interval, self._poll)
+        self._entries_lock = threading.Lock()
+        self._poll_timer = PeriodicTimer(poll_interval, self._poll)
 
     def start_listening(self, listener, event='*'):
         pk_string = self._extract_pk_string(event)
@@ -229,7 +192,7 @@ class SchedulerEmitter(EventEmitter):
         entry = self._entries[auth_id]
         return [
             job_id for job_id, job_data in
-            entry.jobs.iteritems() if
+            entry.jobs.items() if
             job_data.current_state != job_states.DONE
         ]
 
@@ -285,19 +248,22 @@ class SchedulerEmitter(EventEmitter):
         user = calc.get_user()
         authinfo = get_authinfo(computer, user)
 
-        entry = self._entries.get(authinfo.id, None)
-        if entry is None:
-            entry = self.Entry(computer.get_scheduler(), {})
-            self._entries[authinfo.id] = entry
-        entry.jobs[job_id] = self.JobData(calc.pk, None)
+        with self._entries_lock:
+            entry = self._entries.get(authinfo.id, None)
+            if entry is None:
+                entry = self.Entry(computer.get_scheduler(), {})
+                self._entries[authinfo.id] = entry
+            entry.jobs[job_id] = self.JobData(calc.pk, None)
 
-        if len(self._get_active_job_ids(authinfo.id)) > 0:
-            get_transport_queue().call_me_with_transport(
-                authinfo, self._do_update_for_scheduler)
+            if len(self._get_active_job_ids(authinfo.id)) > 0:
+                get_transport_queue().call_me_with_transport(
+                    authinfo, self._do_update_for_scheduler)
+
         return entry
 
     def _remove_job(self, auth_id, job_id):
-        entry = self._entries[auth_id]
-        del entry.jobs[job_id]
-        if len(entry.jobs) == 0:
-            del self._entries[auth_id]
+        with self._entries_lock:
+            entry = self._entries[auth_id]
+            del entry.jobs[job_id]
+            if len(entry.jobs) == 0:
+                del self._entries[auth_id]

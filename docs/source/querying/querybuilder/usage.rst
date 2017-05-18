@@ -1,3 +1,5 @@
+.. _UsingQueryBuilder:
+
 Using the QueryBuilder
 ----------------------
 

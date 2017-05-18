@@ -107,12 +107,25 @@ def get_version():
     return __version__
 
 
-def get_file_header():
+def _get_raw_file_header():
     """
-    Get a string to be put as header of files created with AiiDA
+    Get a string to be put as header of files created with AiiDA; no
+    comment character is put in front
+
+    :return: a (multiline) string
     """
-    return """# This file has been created with AiiDA v. {}
-#
-# If you use AiiDA for publication purposes, please cite:
-# {}
+    return """This file has been created with AiiDA v. {}
+If you use AiiDA for publication purposes, please cite:
+{}
 """.format(__version__, __paper__)
+
+def get_file_header(comment_char="# "):
+    """
+    Get a string to be put as header of files created with AiiDA; 
+    put in front a comment character as specified in the parameter
+
+    :param comment_char: string put in front of each line
+    :return: a (multiline) string
+    """
+    lines = _get_raw_file_header().splitlines()
+    return "\n".join("{}{}".format(comment_char, line) for line in lines)

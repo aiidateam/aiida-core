@@ -265,6 +265,7 @@ class WorkChain(Process):
         :param msg: The abort message
         :type msg: str
         """
+        self.report("Aborting: {}".format(msg))
         self._aborted = True
 
     def abort(self, msg=None, timeout=None):
@@ -278,6 +279,7 @@ class WorkChain(Process):
         :type timeout: float
         :return: True if the process is aborted at the end of the function, False otherwise
         """
+        self.report("Aborting: {}".format(msg))
         self._aborted = True
 
 

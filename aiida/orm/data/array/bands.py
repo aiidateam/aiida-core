@@ -837,7 +837,7 @@ class BandsData(KpointsData):
 
     def _prepare_mpl_singlefile(self, *args, **kwargs):
         """
-        Prepare an python script using matplotlib to plot the bands
+        Prepare a python script using matplotlib to plot the bands
 
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
@@ -858,7 +858,7 @@ class BandsData(KpointsData):
 
     def _prepare_mpl_withjson(self, main_file_name="", *args, **kwargs):
         """
-        Prepare an python script using matplotlib to plot the bands, with the JSON
+        Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
 
         For the possible parameters, see documentation of
@@ -987,7 +987,7 @@ class BandsData(KpointsData):
 
     def _prepare_mpl_pdf(self, main_file_name="", *args, **kwargs):
         """
-        Prepare an python script using matplotlib to plot the bands, with the JSON
+        Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
 
         For the possible parameters, see documentation of
@@ -1043,7 +1043,7 @@ class BandsData(KpointsData):
 
     def _prepare_mpl_png(self, main_file_name="", *args, **kwargs):
         """
-        Prepare an python script using matplotlib to plot the bands, with the JSON
+        Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
 
         For the possible parameters, see documentation of

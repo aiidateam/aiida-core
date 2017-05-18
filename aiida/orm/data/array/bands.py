@@ -1672,6 +1672,8 @@ from matplotlib import rc
 # Uncomment to change default font
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Times New Roman']})
+# To use proper font for, e.g., Gamma if usetex is set to False
+rc('mathtext', fontset='cm')
 
 rc('text', usetex=True)
 import matplotlib.pyplot as plt

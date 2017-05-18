@@ -26,7 +26,6 @@ from collections import namedtuple
 from plum.engine.execution_engine import Future
 
 
-
 class _WorkChainSpec(ProcessSpec):
     def __init__(self):
         super(_WorkChainSpec, self).__init__()
@@ -63,6 +62,7 @@ class WorkChain(Process):
     _STEPPER_STATE = 'stepper_state'
     _BARRIERS = 'barriers'
     _INTERSTEPS = 'intersteps'
+    _ABORTED = 'aborted'
 
     @classmethod
     def define(cls, spec):
@@ -131,6 +131,7 @@ class WorkChain(Process):
         self._stepper = None
         self._barriers = []
         self._intersteps = ()
+        self._aborted = False
 
     @property
     def ctx(self):
@@ -163,6 +164,8 @@ class WorkChain(Process):
             self._stepper.save_position(bundle)
             out_state[self._STEPPER_STATE] = bundle
 
+        out_state[self._ABORTED] = self._aborted
+
     def insert_barrier(self, wait_on):
         """
         Insert a barrier that will cause the workchain to wait until the wait
@@ -188,6 +191,9 @@ class WorkChain(Process):
         return self._do_step()
 
     def _do_step(self, wait_on=None):
+        if self._aborted:
+            return
+
         if self._intersteps:
             for i in self._intersteps:
                 i.on_next_step_starting(self)
@@ -198,6 +204,10 @@ class WorkChain(Process):
             finished, retval = self._stepper.step()
         except _PropagateReturn:
             finished, retval = True, None
+
+        # Could have aborted during the step
+        if self._aborted:
+            return
 
         if not finished:
             if retval is not None:
@@ -217,33 +227,35 @@ class WorkChain(Process):
                 return Checkpoint(self._do_step.__name__)
 
     @override
-    def on_create(self, pid, inputs, saved_instance_state):
+    def on_create(self, pid, inputs, saved_state):
         super(WorkChain, self).on_create(
-            pid, inputs, saved_instance_state)
+            pid, inputs, saved_state)
 
-        if saved_instance_state is None:
+        if saved_state is None:
             self._context = self.Context()
         else:
             # Recreate the context
-            self._context = self.Context(saved_instance_state[self._CONTEXT])
+            self._context = self.Context(saved_state[self._CONTEXT])
 
             # Recreate the stepper
-            if self._STEPPER_STATE in saved_instance_state:
+            if self._STEPPER_STATE in saved_state:
                 self._stepper = self.spec().get_outline().create_stepper(self)
                 self._stepper.load_position(
-                    saved_instance_state[self._STEPPER_STATE])
+                    saved_state[self._STEPPER_STATE])
 
             try:
                 self._intersteps = tuple([Interstep.create_from(b) for
-                                    b in saved_instance_state[self._INTERSTEPS]])
+                                          b in saved_state[self._INTERSTEPS]])
             except KeyError:
                 pass
 
             try:
                 self._barriers = [WaitOn.create_from(b) for
-                                  b in saved_instance_state[self._BARRIERS]]
+                                  b in saved_state[self._BARRIERS]]
             except KeyError:
                 pass
+
+            self._aborted = saved_state[self._ABORTED]
 
     def abort_nowait(self, msg=None):
         """
@@ -253,7 +265,7 @@ class WorkChain(Process):
         :param msg: The abort message
         :type msg: str
         """
-        self.abort(msg=msg, timeout=0)
+        self._aborted = True
 
     def abort(self, msg=None, timeout=None):
         """
@@ -266,9 +278,8 @@ class WorkChain(Process):
         :type timeout: float
         :return: True if the process is aborted at the end of the function, False otherwise
         """
-        aborted = super(WorkChain, self).abort(msg, timeout)
-        self.report("Aborting: {}".format(msg))
-        return aborted
+        self._aborted = True
+
 
 class Interstep(object):
     """
@@ -329,6 +340,7 @@ class Interstep(object):
 
 _Action = namedtuple("_Action", "running_info fn")
 
+
 class ToContext(Interstep):
     """
     Class to wrap future objects and return them in a WorkChain step.
@@ -341,7 +353,7 @@ class ToContext(Interstep):
         if running_info.type is RunningType.PROCESS:
             return Calc(running_info)
         elif running_info.type is RunningType.LEGACY_CALC or \
-                running_info.type is RunningType.LEGACY_WORKFLOW:
+                        running_info.type is RunningType.LEGACY_WORKFLOW:
             return Legacy(running_info)
         else:
             raise ValueError("Unknown running type '{}'".format(running_info.type))
@@ -410,7 +422,7 @@ def Wf(running_info):
 
 def Legacy(object):
     if object.type == RunningType.LEGACY_CALC or \
-     object.type == RunningType.PROCESS:
+                    object.type == RunningType.PROCESS:
         return Calc(object)
     elif object.type is RunningType.LEGACY_WORKFLOW:
         return Wf(object)

@@ -778,7 +778,8 @@ class BandsData(KpointsData):
             # Default. Specified like this to allow caller functions to pass 'None'
             prettify_format = 'latex_seekpath'
 
-        join_symbol = r"\textbar{}" if kwargs.get('use_latex', True) else "|"
+        # The default for use_latex is False
+        join_symbol = r"\textbar{}" if kwargs.get('use_latex', False) else "|"
 
         plot_info = self._get_bandplot_data(
             cartesian=True,

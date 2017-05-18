@@ -419,7 +419,7 @@ class BandsData(KpointsData):
             return to_return
 
     def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None,
-                           get_segments=False):
+                           get_segments=False, y_origin=0.):
         """
         Get data to plot a band structure
 
@@ -433,9 +433,15 @@ class BandsData(KpointsData):
              this is used to join strings that are much closer than a given threshold.
              The most typical string is the pipe symbol: ``|``.
         :param get_segments: if True, also computes the band split into segments
+        :param y_origin: if present, shift bands so to set the value specified at ``y=0``
         :return: a plot_info dictiorary, whose keys are ``x`` (array of distances
            for the x axis of the plot); ``y`` (array of bands), ``labels`` (list
-           of tuples in the format (float x value of the label, label string)
+           of tuples in the format (float x value of the label, label string),
+           ``band_type_idx`` (array containing an index for each band: if there is only
+           one spin, then it's an array of zeros, of length equal to the number of bands
+           at each point; if there are two spins, then it's an array of zeros or ones
+           depending on the type of spin; the length is always equalt to the total
+           number of bands per kpoint).
         """
         from aiida.orm.data.array.kpoints import prettify_labels, join_labels
 
@@ -443,10 +449,14 @@ class BandsData(KpointsData):
         stored_bands = self.get_bands()
         if len(stored_bands.shape) == 2:
             bands = stored_bands
+            band_type_idx = numpy.array([0]*stored_bands.shape[1])
         elif len(stored_bands.shape) == 3:
             bands = numpy.concatenate([_ for _ in stored_bands], axis=1)
+            band_type_idx = numpy.array([0] * stored_bands.shape[2] + [1] * stored_bands.shape[2])
         else:
             raise ValueError("Unexpected shape of bands")
+
+        bands -= y_origin
 
         # here I build the x distances on the graph (in cartesian coordinates
         # if cartesian==True AND if the cell was set, otherwise in reciprocal
@@ -486,6 +496,7 @@ class BandsData(KpointsData):
         plot_info = {}
         plot_info['x'] = x
         plot_info['y'] = bands
+        plot_info['band_type_idx'] = band_type_idx
         plot_info['raw_labels'] = raw_labels
         plot_info['labels'] = the_labels
 
@@ -701,9 +712,9 @@ class BandsData(KpointsData):
 
         return ("\n".join(return_text)).encode('utf-8'), {}
 
-    def _matplotlib_get_dict(self, main_file_name="", comments=True, legend="", title="",
+    def _matplotlib_get_dict(self, main_file_name="", comments=True, title="", legend=None, legend2=None,
                             y_max_lim=None, y_min_lim=None,
-                            y_origin=0., prettify_format=None):
+                            y_origin=0., prettify_format=None, **kwargs):
         """
         Prepare the data to send to the python-matplotlib plotting script
 
@@ -715,8 +726,9 @@ class BandsData(KpointsData):
         :param color_number: the color number for lines, symbols, error bars
         and filling (should be less than the parameter max_num_agr_colors
         defined below)
-        :param legend: the legend (applied only to the first set)
         :param title: the title
+        :param legend: the legend (applied only to the first of the set)
+        :param legend2: the legend for second-type spins (applied only to the first of the set)
         :param y_max_lim: the maximum on the y axis (if None, put the
             maximum of the bands)
         :param y_min_lim: the minimum on the y axis (if None, put the
@@ -725,8 +737,37 @@ class BandsData(KpointsData):
             by bands-y_origin
         :param prettify_format: if None, use the default prettify format. Otherwise
             specify a string with the prettifier to use.
+        :param kwargs: additional customization variables; only a subset is
+            accepted, see internal variable 'valid_additional_keywords
         """
         #import math
+
+        # Only these keywords are accepted in kwargs, and then set into the json
+        valid_additional_keywords = [
+            "bands_color", # Color of band lines
+            "bands_linewidth",  # linewidth of bands
+            "bands_linestyle", # linestyle of bands
+            "bands_marker", # marker for bands
+            "bands_markersize",  # size of the marker of bands
+            "bands_markeredgecolor",  # marker edge color for bands
+            "bands_markeredgewidth",  # marker edge width for bands
+            "bands_markerfacecolor",  # marker face color for bands
+
+            "bands_color2",  # Color of band lines (for other spin, if present)
+            "bands_linewidth2",  # linewidth of bands (for other spin, if present)
+            "bands_linestyle2",  # linestyle of bands (for other spin, if present)
+            "bands_marker2",  # marker for bands (for other spin, if present)
+            "bands_markersize2",  # size of the marker of bands (for other spin, if present)
+            "bands_markeredgecolor2",  # marker edge color for bands (for other spin, if present)
+            "bands_markeredgewidth2",  # marker edge width for bands (for other spin, if present)
+            "bands_markerfacecolor2",  # marker face color for bands (for other spin, if present)
+
+            "plot_zero_axis", # If true, plot an axis at y=0
+            "zero_axis_color",  # Color of the axis at y=0
+            "zero_axis_linestyle",  # linestyle of the axis at y=0
+            "zero_axis_linewidth",  # linewidth of the axis at y=0
+            "use_latex", # If true, use latex to render captions
+        ]
 
         # Note: I do not want to import matplotlib here, for two reasons:
         # 1. I would like to be able to print the script for the user
@@ -739,15 +780,17 @@ class BandsData(KpointsData):
             # Default. Specified like this to allow caller functions to pass 'None'
             prettify_format = 'latex_seekpath'
 
+        join_symbol = r"\textbar{}" if kwargs.get('use_latex', True) else "|"
+
         plot_info = self._get_bandplot_data(
             cartesian=True,
             prettify_format=prettify_format,
-            join_symbol=r"\textbar{}",
-            get_segments=True)
+            join_symbol=join_symbol,
+            get_segments=True, y_origin=y_origin)
 
         all_data = {}
 
-        bands = plot_info['y'] - y_origin
+        bands = plot_info['y']
         x = plot_info['x']
         the_bands = numpy.transpose(bands)
         labels = plot_info['labels']
@@ -756,11 +799,13 @@ class BandsData(KpointsData):
 
         #all_data['bands'] = the_bands.tolist()
         all_data['paths'] = plot_info['paths']
+        all_data['band_type_idx'] = plot_info['band_type_idx'].tolist()
         #all_data['x'] = x
 
         all_data['tick_pos'] = tick_pos
         all_data['tick_labels'] = tick_labels
         all_data['legend_text'] = legend
+        all_data['legend_text2'] = legend2
         all_data['yaxis_label'] = "Dispersion ({})".format(self.units)
         all_data['title'] = title
         if comments:
@@ -769,9 +814,9 @@ class BandsData(KpointsData):
 
         # axis limits
         if y_max_lim is None:
-            y_max_lim = the_bands.max()
+            y_max_lim = numpy.array(bands).max()
         if y_min_lim is None:
-            y_min_lim = the_bands.min()
+            y_min_lim = numpy.array(bands).min()
         x_min_lim = min(x)  # this isn't a numpy array, but a list
         x_max_lim = max(x)
         #ytick_spacing = 10 ** int(math.log10((y_max_lim - y_min_lim)))
@@ -780,6 +825,13 @@ class BandsData(KpointsData):
         all_data['y_min_lim'] = y_min_lim
         all_data['y_max_lim'] = y_max_lim
         #all_data['ytick_spacing'] = ytick_spacing
+
+        for k, v in kwargs.iteritems():
+            if k not in valid_additional_keywords:
+                raise TypeError("_matplotlib_get_dict() got an unexpected keyword argument '{}'".format(
+                    k
+                ))
+            all_data[k] = v
 
         return all_data
 
@@ -861,9 +913,10 @@ class BandsData(KpointsData):
         plot_info = self._get_bandplot_data(
             cartesian=True,
             prettify_format=prettify_format,
-            join_symbol="|")
+            join_symbol="|",
+            y_origin=y_origin)
 
-        bands = plot_info['y'] - y_origin
+        bands = plot_info['y']
         x = plot_info['x']
         labels = plot_info['labels']
 
@@ -1043,9 +1096,20 @@ class BandsData(KpointsData):
 
         return imgdata, {}
 
+    def show_mpl(self, **kwargs):
+        """
+        Call a show() command for the band structure using matplotlib.
+        This uses internally the 'mpl_singlefile' format, with empty
+        main_file_name.
+        
+        Other kwargs are passed to self._exportstring.
+        """
+        exec self._exportstring(fileformat='mpl_singlefile', main_file_name='',
+                                **kwargs)
+        
 
     def _prepare_agr(self, main_file_name="", comments=True, setnumber_offset=0, color_number=1,
-                     legend="", title="", y_max_lim=None, y_min_lim=None,
+                     color_number2=2, legend="", title="", y_max_lim=None, y_min_lim=None,
                      y_origin=0., prettify_format=None):
         """
         Prepare an xmgrace agr file
@@ -1058,12 +1122,17 @@ class BandsData(KpointsData):
         :param color_number: the color number for lines, symbols, error bars
         and filling (should be less than the parameter max_num_agr_colors
         defined below)
+        :param color_number2: the color number for lines, symbols, error bars
+        and filling for the second-type spins (should be less than the parameter max_num_agr_colors
+        defined below)
         :param legend: the legend (applied only to the first set)
         :param title: the title
         :param y_max_lim: the maximum on the y axis (if None, put the
-            maximum of the bands)
+            maximum of the bands); applied *after* shifting the origin
+            by ``y_origin``
         :param y_min_lim: the minimum on the y axis (if None, put the
-            minimum of the bands)
+            minimum of the bands); applied *after* shifting the origin
+            by ``y_origin``
         :param y_origin: the new origin of the y axis -> all bands are replaced
             by bands-y_origin
         :param prettify_format: if None, use the default prettify format. Otherwise
@@ -1077,15 +1146,19 @@ class BandsData(KpointsData):
         plot_info = self._get_bandplot_data(
             cartesian=True,
             prettify_format=prettify_format,
-            join_symbol="|")
+            join_symbol="|",
+            y_origin=y_origin)
 
         import math
         # load the x and y of every set
         if color_number > max_num_agr_colors:
             raise ValueError("Color number is too high (should be less than {})"
                              "".format(max_num_agr_colors))
+        if color_number2 > max_num_agr_colors:
+            raise ValueError("Color number 2 is too high (should be less than {})"
+                             "".format(max_num_agr_colors))
 
-        bands = plot_info['y'] - y_origin
+        bands = plot_info['y']
         x = plot_info['x']
         the_bands = numpy.transpose(bands)
         labels = plot_info['labels']
@@ -1121,12 +1194,16 @@ class BandsData(KpointsData):
             all_sets.append(this_set)
 
         set_descriptions = ""
-        for i, this_set in enumerate(all_sets):
+        for i, (this_set, band_type) in enumerate(zip(all_sets, plot_info['band_type_idx'])):
+            if band_type % 2 == 0:
+                linecolor = color_number
+            else:
+                linecolor = color_number2
             width = str(2.0)
             set_descriptions += agr_set_description_template.substitute(
                 set_number=i + setnumber_offset,
                 linewidth=width,
-                color_number=color_number,
+                color_number=linecolor,
                 legend=legend if i == 0 else ""
             )
 
@@ -1564,7 +1641,10 @@ matplotlib.use('Agg')
 from matplotlib import rc
 # Uncomment to change default font
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Times New Roman']})
+# To use proper font for, e.g., Gamma if usetex is set to False
+rc('mathtext', fontset='cm')
+
 rc('text', usetex=True)
 import matplotlib.pyplot as plt
 plt.rcParams.update({'text.latex.preview': True})
@@ -1586,7 +1666,8 @@ matplotlib_header_template = Template(
 from matplotlib import rc
 # Uncomment to change default font
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Times New Roman']})
+
 rc('text', usetex=True)
 import matplotlib.pyplot as plt
 plt.rcParams.update({'text.latex.preview': True})
@@ -1610,32 +1691,100 @@ matplotlib_import_data_fromfile_template = Template(
 
 matplotlib_body_template = Template(
     '''all_data = json.loads(all_data_str)
+
+if not all_data.get('use_latex', False):
+    rc('text', usetex=False)
+
 #x = all_data['x']
 #bands = all_data['bands']
 paths = all_data['paths']
 tick_pos = all_data['tick_pos']
 tick_labels = all_data['tick_labels']
 
+# Option for bands (all, or those of type 1 if there are two spins)
+further_plot_options1 = {}
+further_plot_options1['color'] = all_data.get('bands_color', 'k')
+further_plot_options1['linewidth'] = all_data.get('bands_linewidth', 0.5)
+further_plot_options1['linestyle'] = all_data.get('bands_linestyle', None)
+further_plot_options1['marker'] = all_data.get('bands_marker', None)
+further_plot_options1['markersize'] = all_data.get('bands_markersize', None)
+further_plot_options1['markeredgecolor'] = all_data.get('bands_markeredgecolor', None)
+further_plot_options1['markeredgewidth'] = all_data.get('bands_markeredgewidth', None)
+further_plot_options1['markerfacecolor'] = all_data.get('bands_markerfacecolor', None)
+
+# Options for second-type of bands if present (e.g. spin up vs. spin down)
+further_plot_options2 = {}
+further_plot_options2['color'] = all_data.get('bands_color2', 'r')
+# Use the values of further_plot_options1 by default
+further_plot_options2['linewidth'] = all_data.get('bands_linewidth2',
+    further_plot_options1['linewidth']
+    )
+further_plot_options2['linestyle'] = all_data.get('bands_linestyle2',
+    further_plot_options1['linestyle']
+    )
+further_plot_options2['marker'] = all_data.get('bands_marker2',
+    further_plot_options1['marker']
+    )
+further_plot_options2['markersize'] = all_data.get('bands_markersize2',
+    further_plot_options1['markersize']
+    )
+further_plot_options2['markeredgecolor'] = all_data.get('bands_markeredgecolor2',
+    further_plot_options1['markeredgecolor']
+    )
+further_plot_options2['markeredgewidth'] = all_data.get('bands_markeredgewidth2',
+    further_plot_options1['markeredgewidth']
+    )
+further_plot_options2['markerfacecolor'] = all_data.get('bands_markerfacecolor2',
+    further_plot_options1['markerfacecolor']
+    )
+
 fig = pl.figure()
 p = fig.add_subplot(1,1,1)
-idx = 0
+
+first_band_1 = True
+first_band_2 = True
+
 for path in paths:
     if path['length'] <= 1:
         # Avoid printing empty lines
         continue
     x = path['x']
     #for band in bands:
-    for band in path['values']:
-        if idx==0 and all_data['legend_text']:
-            p.plot(x, band, 'k', label=all_data['legend_text'], linewidth=0.5)
+    for band, band_type in zip(path['values'], all_data['band_type_idx']):
+
+        # For now we support only two colors
+        if band_type % 2 == 0:
+            further_plot_options = further_plot_options1
         else:
-            p.plot(x, band, 'k', linewidth=0.5)
-        idx+=1
+            further_plot_options = further_plot_options2
+
+        # Put the legend text only once
+        label = None
+        if first_band_1 and band_type % 2 == 0:
+            first_band_1 = False
+            label = all_data.get('legend_text', None)
+        elif first_band_2 and band_type % 2 == 1:
+            first_band_2 = False
+            label = all_data.get('legend_text2', None)
+
+        p.plot(x, band, label=label,
+               **further_plot_options
+        )
+
+
 p.set_xticks(tick_pos)
 p.set_xticklabels(tick_labels)
 p.set_xlim([all_data['x_min_lim'], all_data['x_max_lim']])
 p.set_ylim([all_data['y_min_lim'], all_data['y_max_lim']])
 p.xaxis.grid(True, which='major', color='#888888', linestyle='-', linewidth=0.5)
+
+if all_data.get('plot_zero_axis', False):
+    p.axhline(
+        0.,
+        color=all_data.get('zero_axis_color', '#888888'),
+        linestyle=all_data.get('zero_axis_linestyle', '--'),
+        linewidth=all_data.get('zero_axis_linewidth', 0.5),
+        )
 if all_data['title']:
     p.set_title(all_data['title'])
 if all_data['legend_text']:

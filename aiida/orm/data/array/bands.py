@@ -16,7 +16,7 @@ from aiida.orm.data.array.kpoints import KpointsData
 import numpy
 from string import Template
 from aiida.common.exceptions import ValidationError
-
+from aiida.common.utils import prettify_labels, join_labels
 
 def prepare_header_comment(uuid, plot_info, comment_char='#'):
     from aiida import get_file_header
@@ -443,8 +443,6 @@ class BandsData(KpointsData):
            depending on the type of spin; the length is always equalt to the total
            number of bands per kpoint).
         """
-        from aiida.orm.data.array.kpoints import prettify_labels, join_labels
-
         # load the x and y's of the graph
         stored_bands = self.get_bands()
         if len(stored_bands.shape) == 2:
@@ -886,6 +884,7 @@ class BandsData(KpointsData):
         return s.encode('utf-8'), ext_files
 
     def _prepare_gnuplot(self, main_file_name="",
+                         title="",
                          comments=True, prettify_format=None,
                          y_max_lim=None, y_min_lim=None,
                          y_origin=0.):
@@ -897,6 +896,7 @@ class BandsData(KpointsData):
              file, this contains the filename. This should be used to infer a
              good filename for the additional files.
              In this case, we remove the extension, and add '_data.dat'
+        :param title: if specified, add a title to the plot
         :param comments: if True, print comments (if it makes sense for the given
             format)
         :param prettify_format: if None, use the default prettify format. Otherwise
@@ -976,9 +976,13 @@ class BandsData(KpointsData):
 
         script.append(u'set ylabel "{}"'.format(u"Dispersion ({})".format(self.units)))
 
+        if title:
+            script.append(u'set title "{}"'.format(
+                title.replace('"', '\"')))
+
         # Plot, escaping filename
         script.append(u'plot "{}" with l lc rgb "#000000"'.format(
-            dat_filename.replace('"', '\"')))
+            os.path.basename(dat_filename).replace('"', '\"')))
 
         script_data = u"\n".join(script) + u"\n"
         extra_files = {dat_filename: raw_data.encode('utf-8')}

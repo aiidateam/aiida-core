@@ -1014,7 +1014,7 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
 
         :param parser: instance of argparse.ArgumentParser
         """
-        from aiida.orm.data.array.kpoints import Prettifier
+        from aiida.common.utils import Prettifier
 
         parser.add_argument('--prettify-format', type=str, default=None,
                             choices=Prettifier.get_prettifiers(),

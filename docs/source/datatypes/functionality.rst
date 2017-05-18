@@ -126,9 +126,9 @@ This makes sense for some output formats (e.g. Xmgrace, Gnuplot,
 matplotlib).
 
 The prettifier functions are defined as methods of the
-:py:class:`~aiida.orm.data.array.kpoints.Prettifier` class.
+:py:class:`~aiida.common.utils.Prettifier` class.
 and can be obtained calling
-:py:meth:`Prettifier.get_prettifiers()<aiida.orm.data.array.kpoints.Prettifier.get_prettifiers>`.
+:py:meth:`Prettifier.get_prettifiers()<aiida.common.utils.Prettifier.get_prettifiers>`.
 
 The prettifiers should be chosen depending on two aspects:
 

@@ -35,7 +35,7 @@ install_requires = [
     'supervisor==3.1.3',
     'meld3==1.0.0',
     'numpy==1.12.0',
-    'plumpy==0.7.6',
+    'plumpy==0.7.8',
     'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.31.2',
     'ujson==1.35',
@@ -103,6 +103,7 @@ extras_require = {
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
         'PyCifRW==3.6.2.1',
+        'seekpath>=1.4.0',
         # support for the AiiDA CifData class. Update to version 4 ddoes
         # break tests
     ],

@@ -10,6 +10,7 @@
 
 from abc import ABCMeta, abstractmethod
 import inspect
+from enum import Enum
 from aiida.work.defaults import registry
 from aiida.work.run import RunningType, RunningInfo
 from aiida.work.process import Process, ProcessSpec
@@ -23,7 +24,6 @@ from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
 from collections import namedtuple
 from plum.engine.execution_engine import Future
-
 
 
 class _WorkChainSpec(ProcessSpec):
@@ -62,6 +62,7 @@ class WorkChain(Process):
     _STEPPER_STATE = 'stepper_state'
     _BARRIERS = 'barriers'
     _INTERSTEPS = 'intersteps'
+    _ABORTED = 'aborted'
 
     @classmethod
     def define(cls, spec):
@@ -129,7 +130,8 @@ class WorkChain(Process):
         self._context = None
         self._stepper = None
         self._barriers = []
-        self._intersteps = None
+        self._intersteps = ()
+        self._aborted = False
 
     @property
     def ctx(self):
@@ -138,16 +140,31 @@ class WorkChain(Process):
     @override
     def save_instance_state(self, out_state):
         super(WorkChain, self).save_instance_state(out_state)
+
         # Ask the context to save itself
-        context_state = Bundle()
-        self.ctx.save_instance_state(context_state)
-        out_state[self._CONTEXT] = context_state
+        bundle = Bundle()
+        self.ctx.save_instance_state(bundle)
+        out_state[self._CONTEXT] = bundle
+
+        # Save intersteps
+        for interstep in self._intersteps:
+            bundle = Bundle()
+            interstep.save_instance_state(bundle)
+            out_state.setdefault(self._INTERSTEPS, []).append(bundle)
+
+        # Save barriers
+        for barrier in self._barriers:
+            bundle = Bundle()
+            barrier.save_instance_state(bundle)
+            out_state.setdefault(self._BARRIERS, []).append(bundle)
 
         # Ask the stepper to save itself
         if self._stepper is not None:
-            stepper_state = Bundle()
-            self._stepper.save_position(stepper_state)
-            out_state[self._STEPPER_STATE] = stepper_state
+            bundle = Bundle()
+            self._stepper.save_position(bundle)
+            out_state[self._STEPPER_STATE] = bundle
+
+        out_state[self._ABORTED] = self._aborted
 
     def insert_barrier(self, wait_on):
         """
@@ -174,16 +191,23 @@ class WorkChain(Process):
         return self._do_step()
 
     def _do_step(self, wait_on=None):
+        if self._aborted:
+            return
+
         if self._intersteps:
             for i in self._intersteps:
                 i.on_next_step_starting(self)
-            self._intersteps = None
+            self._intersteps = ()
         self._barriers = []
 
         try:
             finished, retval = self._stepper.step()
         except _PropagateReturn:
             finished, retval = True, None
+
+        # Could have aborted during the step
+        if self._aborted:
+            return
 
         if not finished:
             if retval is not None:
@@ -202,36 +226,61 @@ class WorkChain(Process):
             else:
                 return Checkpoint(self._do_step.__name__)
 
-    # Internal messages #################################
     @override
-    def on_create(self, pid, inputs, saved_instance_state):
+    def on_create(self, pid, inputs, saved_state):
         super(WorkChain, self).on_create(
-            pid, inputs, saved_instance_state)
+            pid, inputs, saved_state)
 
-        if saved_instance_state is None:
+        if saved_state is None:
             self._context = self.Context()
         else:
             # Recreate the context
-            self._context = self.Context(saved_instance_state[self._CONTEXT])
+            self._context = self.Context(saved_state[self._CONTEXT])
 
             # Recreate the stepper
-            if self._STEPPER_STATE in saved_instance_state:
+            if self._STEPPER_STATE in saved_state:
                 self._stepper = self.spec().get_outline().create_stepper(self)
                 self._stepper.load_position(
-                    saved_instance_state[self._STEPPER_STATE])
+                    saved_state[self._STEPPER_STATE])
 
             try:
-                self._intersteps = [_INTERSTEP_FACTORY.create(b) for
-                                    b in saved_instance_state[self._INTERSTEPS]]
+                self._intersteps = tuple([Interstep.create_from(b) for
+                                          b in saved_state[self._INTERSTEPS]])
             except KeyError:
                 pass
 
             try:
                 self._barriers = [WaitOn.create_from(b) for
-                                  b in saved_instance_state[self._BARRIERS]]
+                                  b in saved_state[self._BARRIERS]]
             except KeyError:
                 pass
-                #####################################################
+
+            self._aborted = saved_state[self._ABORTED]
+
+    def abort_nowait(self, msg=None):
+        """
+        Abort the workchain at the next state transition without waiting
+        which is achieved by passing a timeout value of zero
+
+        :param msg: The abort message
+        :type msg: str
+        """
+        self.report("Aborting: {}".format(msg))
+        self._aborted = True
+
+    def abort(self, msg=None, timeout=None):
+        """
+        Abort the workchain by calling the abort method of the Process and
+        also adding the abort message to the report
+
+        :param msg: The abort message
+        :type msg: str
+        :param timeout: Wait for the given time until the process has aborted
+        :type timeout: float
+        :return: True if the process is aborted at the end of the function, False otherwise
+        """
+        self.report("Aborting: {}".format(msg))
+        self._aborted = True
 
 
 class Interstep(object):
@@ -241,6 +290,9 @@ class Interstep(object):
     the next step (if there is one) is about the start.
     """
     __metaclass__ = ABCMeta
+
+    class BundleKeys(Enum):
+        CLASS_NAME = "class_name"
 
     def on_last_step_finished(self, workchain):
         """
@@ -269,7 +321,26 @@ class Interstep(object):
         :param out_state: The bundle that should be used to save the state
           (of type plum.persistence.bundle.Bundle).
         """
-        pass
+        out_state[self.BundleKeys.CLASS_NAME.value] = get_class_string(self)
+
+    @classmethod
+    def create_from(cls, bundle):
+        """
+        Recreate an instance of the interstep from a bundle containing
+        the saved instance state
+
+        :param bundle: The bundle that contains the saved instance state
+          (of type plum.persistence.bundle.Bundle).
+        """
+        assert cls.BundleKeys.CLASS_NAME.value in bundle
+
+        class_name = bundle[cls.BundleKeys.CLASS_NAME.value]
+        InterstepClass = bundle.get_class_loader().load_class(class_name)
+
+        return InterstepClass.create_from(bundle)
+
+
+_Action = namedtuple("_Action", "running_info fn")
 
 
 class ToContext(Interstep):
@@ -279,14 +350,12 @@ class ToContext(Interstep):
     TO_ASSIGN = 'to_assign'
     WAITING_ON = 'waiting_on'
 
-    Action = namedtuple("Action", "running_info fn")
-
     @classmethod
     def action_from_running_info(cls, running_info):
         if running_info.type is RunningType.PROCESS:
             return Calc(running_info)
         elif running_info.type is RunningType.LEGACY_CALC or \
-                running_info.type is RunningType.LEGACY_WORKFLOW:
+                        running_info.type is RunningType.LEGACY_WORKFLOW:
             return Legacy(running_info)
         else:
             raise ValueError("Unknown running type '{}'".format(running_info.type))
@@ -294,7 +363,7 @@ class ToContext(Interstep):
     def __init__(self, **kwargs):
         self._to_assign = {}
         for key, val in kwargs.iteritems():
-            if isinstance(val, self.Action):
+            if isinstance(val, _Action):
                 self._to_assign[key] = val
             elif isinstance(val, RunningInfo):
                 self._to_assign[key] = self.action_from_running_info(val)
@@ -318,8 +387,14 @@ class ToContext(Interstep):
 
     @override
     def save_instance_state(self, out_state):
-        out_state['class'] = get_class_string(ToContext)
+        super(ToContext, self).save_instance_state(out_state)
         out_state[self.TO_ASSIGN] = self._to_assign
+
+    @classmethod
+    def create_from(cls, bundle):
+        instance = cls.__new__(cls)
+        instance._to_assign = bundle[cls.TO_ASSIGN]
+        return instance
 
     def _create_wait_on(self, action):
         rinfo = action.running_info
@@ -339,17 +414,17 @@ def _get_wf_outputs(pk):
 
 
 def Calc(running_info):
-    return ToContext.Action(running_info, get_object_string(load_node))
+    return _Action(running_info, get_object_string(load_node))
 
 
 def Wf(running_info):
-    return ToContext.Action(
+    return _Action(
         running_info, get_object_string(load_workflow))
 
 
 def Legacy(object):
     if object.type == RunningType.LEGACY_CALC or \
-     object.type == RunningType.PROCESS:
+                    object.type == RunningType.PROCESS:
         return Calc(object)
     elif object.type is RunningType.LEGACY_WORKFLOW:
         return Wf(object)
@@ -361,27 +436,14 @@ def Outputs(running_info):
     if isinstance(running_info, Future):
         # Create the correct information from the future
         rinfo = RunningInfo(RunningType.PROCESS, running_info.pid)
-        return ToContext.Action(
+        return _Action(
             rinfo, get_object_string(_get_proc_outputs_from_registry))
     elif running_info.type == RunningType.PROCESS or running_info.type == RunningType.LEGACY_CALC:
-        return ToContext.Action(
+        return _Action(
             running_info, get_object_string(_get_proc_outputs_from_registry))
     elif running_info.type is RunningType.LEGACY_WORKFLOW:
-        return ToContext.Action(
+        return _Action(
             running_info, get_object_string(_get_wf_outputs))
-
-
-class _InterstepFactory(object):
-    def create(self, bundle):
-        class_string = bundle[Bundle.CLASS]
-        if class_string == get_class_string(ToContext):
-            return ToContext(**bundle[ToContext.TO_ASSIGN])
-        else:
-            raise ValueError(
-                "Unknown interstep class type '{}'".format(class_string))
-
-
-_INTERSTEP_FACTORY = _InterstepFactory()
 
 
 class Stepper(object):

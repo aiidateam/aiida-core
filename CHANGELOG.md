@@ -1,3 +1,40 @@
+## v0.9.0rc1
+
+### Data export functionality
+- A number of new functionalities have been added to export band structures to a number of formats, including: gnuplot, matplotlib (both to export a python file, and directly PNG or PDF; both with support of LaTeX typesetting and not); JSON; improved agr (xmgrace) output. Also support for two-color bands for collinear magnetic systems. Added also possibility to specify export-format-specific parameters.
+- Added method get_export_formats() to know available export formats for a given data subclass
+- Added label prettifiers to properly typeset high-symmetry k-point labels for different formats (simple/old format, seekpath, ...) into a number of plotting codes (xmgrace, gnuplot, latex, ...)
+- Improvement of command-line export functionality (more options, possibility to write directly to file, possibility to pass custom options to exporter)
+
+### Workchains
+- Crucial bug fix: workchains can now be run through the daemon, i.e. by using `aiida.work.submit`
+- Enhancement: added an `abort` and `abort_nowait` method to `WorkChain` which allows to abort the workchain at the earliest possible moment
+- Enhancement: added the `report` method to `WorkChain`, which allows a workchain developer to log messages to the database
+- Enhancement: added command `verdi work report` which for a given `pk` returns the messages logged for a `WorkChain` through the `report` method
+- Enhancement: workchain inputs ports with a valid default specified no longer require to explicitly set `required=False` but is overriden automatically
+
+### New plugin system
+- New plugin system implemented, allowing to load aiida entrypoints, and working in parallel with old system (still experimental, though - command line entry points are not fully implemented yet)
+- Support for the plugin registry 
+
+### Code refactoring
+- Refactoring of `Node` to move as much as possible of the caching code into the abstract class
+- Refactoring of `Data` nodes to have the export code in the topmost class, and to make it more general also for formats exporting more than one file
+- Refactoring of a number of `Data` subclasses to support the new export API
+- Refactoring of `BandsData` to have export code not specific to xmgrace or a given format, and to make it more general
+
+### Documentation
+- General improvements to documentation
+- Added documentation of new plugin system and tutorial
+- Added more in-depth documentation on how to export data nodes to various formats
+- Added explanation on how to export band structures and available formats
+
+### Miscellaneous
+- Replacing dependency from old unmantained `pyspglib` to new `spglib`
+- Accept BaseTypes as attributes/extras, and convert them automatically to their value. In this way, for instance, it is now possible to pass a `Int`, `Float`, `Str`, ... as value of a dictionary, and store all into a `ParameterData`.
+- Switch from `pkg_resources` to reentry to allow for much faster loading of modules when possible, and therefore allowing for good speed for bash completion
+
+
 ## v0.8.1
 
 ### Exporters

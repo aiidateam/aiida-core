@@ -14,15 +14,17 @@ from aiida.common.setup import get_property
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.8.1"
+__version__ = "0.9.0rc1"
 __authors__ = "The AiiDA team."
 __paper__ = """G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky, "AiiDA: automated interactive infrastructure and database for computational science", Comp. Mat. Sci 111, 218-230 (2016); http://dx.doi.org/10.1016/j.commatsci.2015.09.013 - http://www.aiida.net."""
 __paper_short__ = """G. Pizzi et al., Comp. Mat. Sci 111, 218 (2016)."""
 
 
 # Custom logging level, intended specifically for informative log messages
-# reported during WorkChains and Workflows.
-LOG_LEVEL_REPORT = 25
+# reported during WorkChains and Workflows. We want the level between INFO(20)
+# and WARNING(30) such that it will be logged for the default loglevel, however
+# the value 25 is already reserved for SUBWARNING by the multiprocessing module.
+LOG_LEVEL_REPORT = 23
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
 
 # A sample logging configuration. The only tangible logging

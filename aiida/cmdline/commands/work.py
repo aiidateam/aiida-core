@@ -100,6 +100,7 @@ def do_list(past_days, all_nodes, limit):
 
 @click.command('report', context_settings=CONTEXT_SETTINGS)
 @click.argument('pk', nargs=1, type=int)
+@click.option('-i', '--indent-size', type=int, default=2)
 @click.option('-l', '--levelname',
     type=click.Choice(['DEBUG', 'INFO', 'REPORT', 'WARNING', 'ERROR', 'CRITICAL']),
     default=None,
@@ -110,7 +111,7 @@ def do_list(past_days, all_nodes, limit):
     default='time',
     help='Order the results by column'
 )
-def do_report(pk, levelname, order_by):
+def do_report(pk, levelname, order_by, indent_size):
     """
     Return a list of recorded log messages for the WorkChain with pk=PK
     """
@@ -124,9 +125,8 @@ def do_report(pk, levelname, order_by):
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
 
-    def get_report_messages(pk, levelname, order_by):
+    def get_report_messages(pk, depth, levelname):
         backend = construct()
-        order_by = [OrderSpecifier(order_by, ASCENDING)]
         filters = {
             'objpk' : pk,
         }
@@ -134,53 +134,66 @@ def do_report(pk, levelname, order_by):
         if levelname:
             filters['levelname'] = levelname
 
-        entries = backend.log.find(filter_by=filters, order_by=order_by)
+        entries = backend.log.find(filter_by=filters)
 
         if entries is None or len(entries) == 0:
             return []
         else:
-            return entries
+            return [(_, depth) for _ in entries]
 
-    qb = QueryBuilder(with_dbpath=False)
-    qb.append(
-        cls=WorkCalculation,
-        filters={'id': pk},
-        tag='workcalculation'
-    )
-    qb.append(
-        cls=WorkCalculation,
-        project=['id'],
-        descendant_of='workcalculation',
-        tag='subworkchains'
-    )
-    result = list(itertools.chain(*qb.distinct().all()))
-    result.append(pk)
-    result.sort()
+    def get_subtree(pk, level=0):
+        qb = QueryBuilder(with_dbpath=False)
+        qb.append(
+            cls=WorkCalculation,
+            filters={'id': pk},
+            tag='workcalculation'
+        )
+        qb.append(
+            cls=WorkCalculation,
+            project=['id'],
+            # In the future, we should specify here the type of link
+            # for now, CALL links are the only ones allowing calc-calc
+            # (we here really want instead to follow CALL links)
+            output_of='workcalculation',
+            tag='subworkchains'
+        )
+        result = list(itertools.chain(*qb.distinct().all()))
 
-    reports = []
-    for pk in result:
-        entries = get_report_messages(pk, levelname, order_by)
-        reports.extend(entries)
+        # This will return a single flat list of tuples, where the first element
+        # corresponds to the WorkChain pk and the second element is an integer
+        # that represents its level of nesting within the chain
+        return [(pk, level)] + list(itertools.chain(*[get_subtree(subpk, level=level+1) for subpk in result]))
 
-    reports.sort(key=lambda r: r.time)
+    def print_subtree(tree, prepend=""):
+        print "{}{}".format(prepend, tree[0])
+        for subtree in tree[1]:
+            print_subtree(subtree, prepend = prepend+"  ")
+
+    workchain_tree = get_subtree(pk)
+
+    reports = list(itertools.chain(*[get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree]))
+    reports.sort(key=lambda r: r[0].time)
 
     if reports is None or len(reports) == 0:
         print "No log messages recorded for this work calculation"
         return
 
-    object_ids = [entry.id for entry in reports]
-    levelnames = [len(entry.levelname) for entry in reports]
+    object_ids = [entry[0].id for entry in reports]
+    levelnames = [len(entry[0].levelname) for entry in reports]
     width_id = len(str(max(object_ids)))
     width_levelname = max(levelnames)
-    for entry in reports:
-        print '{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]: {message}'.format(
+    for entry, depth in reports:
+        print '{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]:{indent} {message}'.format(
             id=entry.id,
             levelname=entry.levelname,
             message=entry.message,
             time=entry.time,
             width_id=width_id,
-            width_levelname=width_levelname
+            width_levelname=width_levelname,
+            indent=' '*(depth * indent_size)
         )
+
+    return
 
 @click.command('tree', context_settings=CONTEXT_SETTINGS)
 @click.option('--node-label', default='_process_label', type=str)

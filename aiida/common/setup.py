@@ -52,6 +52,10 @@ TEMP_TEST_REPO = None
 TEST_KEYWORD = "test_"
 
 
+def get_aiida_dir():
+    return os.path.expanduser(AIIDA_CONFIG_FOLDER)
+
+
 def backup_config():
     """
     Backup the previous configuration file.

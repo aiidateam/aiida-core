@@ -83,12 +83,12 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
     def AiidaNode(self):
         import aiida.orm.implementation.django.node
         return aiida.orm.implementation.django.node.Node
-        
+
     @property
     def AiidaGroup(self):
         import aiida.orm.implementation.django.group
         return aiida.orm.implementation.django.group.Group
-        
+
     @property
     def AiidaUser(self):
         import aiida.orm.implementation.django.user
@@ -594,10 +594,8 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                 # The only valid string at this point is a string
                 # that matches exactly the _plugin_type_string
                 # of a node class
-                from aiida.common.pluginloader import (
-                        from_type_to_pluginclassname,
-                        load_plugin
-                    )
+                from aiida.common.old_pluginloader import from_type_to_pluginclassname
+                from aiida.common.pluginloader import load_plugin
                 ormclass = self.Node
                 try:
                     pluginclassname = from_type_to_pluginclassname(ormclasstype)
@@ -608,7 +606,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                     # In the future, assuming the user knows what he or she is doing
                     # we could remove that check
                     # The query_type_string we can get from
-                    # the aiida.common.pluginloader function get_query_type_string
+                    # the aiida.common.old_pluginloader function get_query_type_string
                     PluginClass = load_plugin(self.AiidaNode, 'aiida.orm', pluginclassname)
                 except (DbContentError, MissingPluginError) as e:
                     raise InputValidationError(

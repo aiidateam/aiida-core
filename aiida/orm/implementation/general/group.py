@@ -11,7 +11,7 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from aiida.common.exceptions import UniquenessError, NotExistent, MultipleObjectsError
-
+from aiida.common.utils import abstractclassmethod, abstractstaticmethod
 
 
 def get_group_type_mapping():
@@ -124,8 +124,7 @@ class AbstractGroup(object):
         """
         pass
 
-    @staticmethod
-    @abstractmethod
+    @abstractstaticmethod
     def get_db_columns():
         """
         This method returns a list with the column names and types of the table
@@ -215,8 +214,7 @@ class AbstractGroup(object):
         """
         pass
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
               user=None, node_attributes=None, past_days=None, **kwargs):
         """

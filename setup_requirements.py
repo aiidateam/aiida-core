@@ -96,7 +96,7 @@ extras_require = {
     # Requirements for non-core funciontalities that rely on external atomic
     # manipulation/processing software
     'atomic_tools': [
-        'pyspglib',
+        'spglib>=1.9',
         # support for symmetry detection in aiida.orm.data.structure. Has no
         # easily accessible version number
         'pymatgen==4.5.3',  # support for NWChem I/O

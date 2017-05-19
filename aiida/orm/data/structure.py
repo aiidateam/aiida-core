@@ -121,12 +121,12 @@ def get_pymatgen_version():
     return pymatgen.__version__
 
 
-def has_pyspglib():
+def has_spglib():
     """
-    :return: True if the pyspglib module can be imported, False otherwise.
+    :return: True if the spglib module can be imported, False otherwise.
     """
     try:
-        import pyspglib
+        import spglib
     except ImportError:
         return False
     return True
@@ -652,11 +652,11 @@ def ase_refine_cell(aseatoms, **kwargs):
     refine unit cell.
 
     :param aseatoms: an ase.atoms.Atoms instance
-    :param symprec: symmetry precision, used by pyspglib
+    :param symprec: symmetry precision, used by spglib
     :return newase: refined cell with reduced set of atoms
     :return symmetry: a dictionary describing the symmetry space group
     """
-    from pyspglib.spglib import refine_cell, get_symmetry_dataset
+    from spglib import refine_cell, get_symmetry_dataset
     from ase.atoms import Atoms
     cell, positions, numbers = refine_cell(aseatoms, **kwargs)
 
@@ -858,7 +858,7 @@ class StructureData(Data):
                                   "are no sites with that kind: {}".format(
                 list(kinds_without_sites)))
 
-    def _prepare_xsf(self):
+    def _prepare_xsf(self, main_file_name=""):
         """
         Write the given structure to a string of format XSF (for XCrySDen).
         """
@@ -880,9 +880,9 @@ class StructureData(Data):
             return_string += "%s " % _atomic_numbers[
                 self.get_kind(site.kind_name).symbols[0]]
             return_string += "%18.10f %18.10f %18.10f\n" % tuple(site.position)
-        return return_string
+        return return_string.encode('utf-8'), {}
 
-    def _prepare_cif(self):
+    def _prepare_cif(self, main_file_name=""):
         """
         Write the given structure to a string of format CIF.
         """
@@ -891,24 +891,40 @@ class StructureData(Data):
         cif = CifData(ase=self.get_ase())
         return cif._prepare_cif()
 
-    def _prepare_tcod(self, **kwargs):
+    def _prepare_tcod(self, main_file_name="", **kwargs):
         """
         Write the given structure to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs)
+        return export_cif(self, **kwargs).encode('utf-8'), {}
 
-    def _prepare_xyz(self):
+    def _prepare_xyz(self, main_file_name=""):
         """
         Write the given structure to a string of format XYZ.
         """
-        from ase.io import write
-        import tempfile
+        if self.is_alloy() or self.has_vacancies():
+            raise NotImplementedError("XYZ for alloys or systems with "
+                                      "vacancies not implemented.")
 
-        with tempfile.NamedTemporaryFile() as f:
-            write(f.name, self.get_ase(), format="xyz")
-            f.flush()
-            return f.read()
+        sites = self.sites
+        cell = self.cell
+
+        return_list = ["{}".format(len(sites))]
+        return_list.append('Lattice="{} {} {} {} {} {} {} {} {}" pbc="{} {} {}"'.format(
+            cell[0][0], cell[0][1], cell[0][2],
+            cell[0][0], cell[0][1], cell[0][2],
+            cell[0][0], cell[0][1], cell[0][2],
+            self.pbc[0], self.pbc[1], self.pbc[2]
+        ))
+        for site in sites:
+            # I checked above that it is not an alloy, therefore I take the
+            # first symbol
+            return_list.append("{:6s} {:18.10f} {:18.10f} {:18.10f}".format(
+                self.get_kind(site.kind_name).symbols[0],
+                site.position[0], site.position[1], site.position[2]))
+
+        return_string = "\n".join(return_list)
+        return return_string.encode('utf-8'), {}
 
     def _parse_xyz(self, inputstring):
         """

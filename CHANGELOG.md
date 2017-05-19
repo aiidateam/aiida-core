@@ -1,3 +1,11 @@
+## v0.8.1
+
+### Exporters
+- Upgraded the TCODExporter to produce CIF files, conforming to the newest (as of 2017-04-26) version of cif_tcod.dic.
+
+## General
+- Added dependency on six to properly re-raise exceptions
+
 ## v0.8.0
 
 ### Installation and setup

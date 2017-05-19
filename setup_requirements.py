@@ -103,6 +103,7 @@ extras_require = {
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
         'PyCifRW==3.6.2.1',
+        'seekpath>=1.4.0',
         # support for the AiiDA CifData class. Update to version 4 ddoes
         # break tests
     ],

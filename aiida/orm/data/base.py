@@ -216,6 +216,9 @@ class Bool(BaseType):
     def __int__(self):
         return 0 if not self.value else 1
 
+    def __bool__(self):
+        return self.value
+
 
 class List(Data, collections.MutableSequence):
     """

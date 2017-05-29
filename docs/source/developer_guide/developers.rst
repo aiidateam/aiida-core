@@ -154,6 +154,11 @@ tests on the database, run::
 
   verdi devel tests aiida.transport db.generic
 
+Test profile
+------------
+
+To run the tests involving the database, you need to have a special testing profile. A profile is considered a testing profile if the **profile name** and the **database name** both start with ``test_``, and the repository path contains ``test_``.
+
 The test-first approach
 -----------------------
 
@@ -202,8 +207,8 @@ For each of the above types of tests, a different testing approach is followed
 2. In this case, we use the `testing functionality of
    Django <https://docs.djangoproject.com/en/dev/topics/testing/>`_,
    adapted to run smoothly with AiiDA.
-   
-   To create a new group of tests, create a new python file under 
+
+   To create a new group of tests, create a new python file under
    ``aiida.backends.djsite.db.substests``, and instead of inheriting each class directly
    from ``unittest``, inherit from ``aiida.backends.djsite.db.testbase.AiidaTestCase``.
    In this way:
@@ -224,7 +229,7 @@ For each of the above types of tests, a different testing approach is followed
      data. (In the codes there are some checks to avoid that these classes
      are run without the correct environment being prepared by ``verdi
      devel tests``.)
-   
+
    Once you create a new file in ``aiida.backends.djsite.db.substests``, you have to
    add a new entry to the ``db_test_list`` inside ``aiida.backends.djsite.db.testbase``
    module in order for ``verdi devel tests`` to find it. In particular,
@@ -243,7 +248,7 @@ For each of the above types of tests, a different testing approach is followed
 
    you will be able to run all all tests inside
    ``aiida.backends.djsite.db.subtests.mynewtestsmodule`` with the command::
-   
+
      verdi devel tests db.newtests
 
    .. note:: If in the list of parameters to ``verdi devel tests`` you add
@@ -336,9 +341,9 @@ In case a method is renamed or removed, this is the procedure to follow:
    Moreover, at the beginning of the function, add something like::
 
      import warnings
-        
+
      warnings.warn(
-         "OLDMETHODNAME is deprecated, use NEWMETHODNAME instead", 
+         "OLDMETHODNAME is deprecated, use NEWMETHODNAME instead",
          DeprecationWarning)
 
    (of course, replace ``OLDMETHODNAME`` and ``NEWMETHODNAME`` with the

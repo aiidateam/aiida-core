@@ -177,5 +177,65 @@ class TestFunctionProcess(AiidaTestCase):
         outs = FP.run(**inputs)
         self.assertEqual(outs, inputs)
 
+class TestProcessInheritedInputs(AiidaTestCase):
+    def setUp(self):
+        super(TestProcessInheritedInputs, self).setUp()
+        class SimpleProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SimpleProcess, cls).define(spec)
+                spec.input('a', required=True)
+                spec.input('b', required=False)
 
+            @override
+            def _run(self, **kwargs):
+                pass
 
+        class InputInheritingProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(InputInheritingProcess, cls).define(spec)
+                spec.inherit_inputs(SimpleProcess)
+                spec.input('c', required=True)
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(**self.inherited_inputs(SimpleProcess))
+
+        self.SimpleProcess = SimpleProcess
+        self.InputInheritingProcess = InputInheritingProcess
+
+    def test_valid_input(self):
+        self.InputInheritingProcess.run(a=Int(1), b=Int(2), c=Int(3))
+        self.InputInheritingProcess.run(a=Int(1), c=Int(3))
+
+    def test_missing_input(self):
+        self.assertRaises(ValueError, self.InputInheritingProcess.run, c=Int(2))
+
+    def test_exclude_valid(self):
+        SimpleProcess = self.SimpleProcess
+        class ValidExcludeInheritProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ValidExcludeInheritProcess, cls).define(spec)
+                spec.inherit_inputs(SimpleProcess, exclude=['b'])
+                spec.input('c', required=True)
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(**self.inherited_inputs(SimpleProcess))
+        ValidExcludeInheritProcess.run(a=Int(1), c=Int(1))
+
+    def test_exclude_invalid(self):
+        SimpleProcess = self.SimpleProcess
+        class InvalidExcludeInheritProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(InvalidExcludeInheritProcess, cls).define(spec)
+                spec.inherit_inputs(SimpleProcess, exclude=['a'])
+                spec.input('c', required=True)
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(**self.inherited_inputs(SimpleProcess))
+        self.assertRaises(ValueError, InvalidExcludeInheritProcess.run, b=Int(1), c=Int(1))

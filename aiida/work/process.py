@@ -13,14 +13,15 @@ import collections
 import uuid
 from enum import Enum
 import itertools
+from abc import ABCMeta
 
+from six import viewkeys
 import plum.port as port
 import plum.process
 from plum.process_monitor import MONITOR
 import plum.process_monitor
-
 import voluptuous
-from abc import ABCMeta
+
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override, protected
@@ -43,7 +44,7 @@ class DictSchema(object):
         """
         Call this to validate the value against the schema.
 
-        :param value: a regular dictionary or a ParameterData instance 
+        :param value: a regular dictionary or a ParameterData instance
         :return: tuple (success, msg).  success is True if the value is valid
             and False otherwise, in which case msg will contain information about
             the validation failure.
@@ -81,12 +82,41 @@ class ProcessSpec(plum.process.ProcessSpec):
     def __init__(self):
         super(ProcessSpec, self).__init__()
         self._fastforwardable = False
+        self._inherited_input_keys = {}
 
     def is_fastforwardable(self):
         return self._fastforwardable
 
     def fastforwardable(self):
         self._fastforwardable = True
+
+    def inherit_inputs(self, process, exclude=()):
+        """
+        Inherit input parameters from another process.
+
+        :param process: Process whose input parameters are inherited.
+        :type process: aiida.work.process.Process
+
+        :param exclude: Input parameters which are not inherited.
+        :type exclude: List[str]
+        """
+        inputs = {
+            name: port for name, port in process.spec().inputs.items()
+            if name not in exclude
+        }
+        self._inputs.update(inputs)
+        self._inherited_input_keys[process] = viewkeys(inputs)
+
+    def inherited_input_keys(self, process):
+        """
+        Get the input parameters which are inherited from a given process.
+
+        :param process: Process from which the parameters were inherited.
+        :type process: aiida.work.process.Process
+
+        :returns: List[str]
+        """
+        return self._inherited_input_keys[process]
 
     def get_inputs_template(self):
         """
@@ -381,6 +411,22 @@ class Process(plum.process.Process):
         node = None  # Here we should find the old node
         for k, v in node.get_output_dict():
             self.out(k, v)
+
+    def inherited_inputs(self, process):
+        """
+        Returns a dict containing the inputs which were inherited from the given
+        process.
+
+        :param process: Process from which the inputs were inherited.
+        :type process: aiida.work.process.Process
+
+        :returns: Dict[str, aiida.orm.data.Data]
+        """
+        inherited_keys = self.spec().inherited_input_keys(process)
+        return {
+            key: self.inputs[key] for key in
+            inherited_keys & set(self.inputs.keys())
+        }
 
 
 class FunctionProcess(Process):

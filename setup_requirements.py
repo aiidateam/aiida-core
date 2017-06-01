@@ -50,7 +50,7 @@ install_requires = [
     'uritools==1.0.2',
     'psycopg2==2.7.1',
     # Requirements for ssh transport
-    'paramiko==1.15.2',
+    'paramiko==2.1.2',
     'ecdsa==0.13',
     'pycrypto==2.6.1',
     # Requirements for verdi shell (version of ipython non enforced, because

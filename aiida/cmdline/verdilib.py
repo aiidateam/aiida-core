@@ -518,7 +518,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 load_dbenv()
 
             from aiida.backends.sqlalchemy.models.base import Base
-            from aiida.backends.sqlalchemy.utils import install_tc, reset_session
+            from aiida.backends.sqlalchemy.utils import reset_session #, install_tc
             from aiida.common.setup import get_profile_config
 
             # This check should be done more properly
@@ -555,7 +555,6 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             from aiida.backends.sqlalchemy import get_scoped_session
             connection = get_scoped_session().connection()
             Base.metadata.create_all(connection)
-            install_tc(connection)
 
             set_backend_type(BACKEND_SQLA)
 

@@ -171,7 +171,7 @@ class Node(AbstractNode):
         DbLink.objects.filter(output=self.dbnode, label=label).delete()
 
     def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
-        from aiida.backends.djsite.db.models import DbPath
+        from aiida.orm.querybuilder import QueryBuilder
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
         if self.uuid == src.uuid:
@@ -193,7 +193,10 @@ class Node(AbstractNode):
             #
             # I am linking src->self; a loop would be created if a DbPath exists already
             # in the TC table from self to src
-            if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode)) > 0:
+            if QueryBuilder().append(
+                    Node, filters={'id':self.pk}, tag='parent').append(
+                    Node, filters={'id':src.pk}, tag='child', descendant_of='parent').count() > 0:
+            #~ if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode)) > 0:
                 raise ValueError(
                     "The link you are attempting to create would generate a loop")
 

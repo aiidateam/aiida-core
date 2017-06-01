@@ -154,10 +154,39 @@ tests on the database, run::
 
   verdi devel tests aiida.transport db.generic
 
+Furthermore, you need to set up a few things on your local machine to successfully run the tests:
+
 Test profile
-------------
+~~~~~~~~~~~~
 
 To run the tests involving the database, you need to have a special testing profile. A profile is considered a testing profile if the **profile name** and the **database name** both start with ``test_``, and the repository path contains ``test_``.
+
+SSH to localhost
+~~~~~~~~~~~~~~~~
+
+For the transport tests, you need to be able to ssh into your local machine (``localhost``). Here is how this is done for different operating systems:
+
+Linux (Ubuntu)
+==============
+
+    * Install ``openssh-server``
+    * Create an ssh key (if you don't have one already), and add it to ``~/.ssh/authorized_keys``
+    * For **security** reasons, you might want to disallow ssh connections from outside your local machine. To do this, change ``#ListenAddress 0.0.0.0`` to ``ListenAddress 127.0.0.1`` (note the missing ``#``) in ``/etc/ssh/sshd_config``.
+    * Now you should be able to type ``ssh localhost`` and get a successful connection.
+
+If your OS was not listed above but you managed to get the ssh connection running, please add the description above.
+
+Install extras
+~~~~~~~~~~~~~~
+
+In case you did not install all extras, it is possible that some tests fail due to missing packages. If you installed AiiDA with ``pip``, you can use the following command to get the necessary extras:
+
+.. code :: bash
+
+    pip install -e .[testing]
+
+Where the ``-e`` flag means that the code is just linked to the appropriate folder, and the package will update when you change the code.
+
 
 The test-first approach
 -----------------------

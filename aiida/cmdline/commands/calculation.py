@@ -190,7 +190,7 @@ class Calculation(VerdiCommandWithSubcommands):
                                     'mtime', 'user'
                                 ),
                             nargs='+',
-                            default=('pk', 'state', 'ctime', 'sched', 'computer', 'type'),
+                            default=('pk', 'ctime', 'state', 'sched', 'computer', 'type', 'label'),
                             help="Define the list of properties to show"
                         )
 

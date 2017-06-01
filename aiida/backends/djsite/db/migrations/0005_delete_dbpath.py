@@ -19,7 +19,9 @@ SCHEMA_VERSION = "1.0.5"
 
 
 class Migration(migrations.Migration):
-    dependencies = []
+    dependencies = [
+        ('db', '0004_add_daemon_and_uuid_indices'),
+    ]
 
     operations = [
         # Create the index that speeds up the daemon queries

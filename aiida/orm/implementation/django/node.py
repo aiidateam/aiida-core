@@ -557,7 +557,7 @@ class Node(AbstractNode):
             # would have been raised, and the following lines are not executed)
             self._inputlinks_cache.clear()
 
-    def store(self, with_transaction=True):
+    def store(self, with_transaction=True, find_same=False):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -573,6 +573,8 @@ class Node(AbstractNode):
         :parameter with_transaction: if False, no transaction is used. This
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
+
+        :param bool find_same: Whether I attempt to find an equal node in the DB.
         """
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
@@ -586,6 +588,7 @@ class Node(AbstractNode):
             context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
+
 
         if self._to_be_stored:
 
@@ -603,6 +606,18 @@ class Node(AbstractNode):
             # I assume that if a node exists in the DB, its folder is in place.
             # On the other hand, periodically the user might need to run some
             # bookkeeping utility to check for lone folders.
+
+
+            # For node hashing, if find_same is true:
+            if find_same:
+                same_node = self.get_same_node()
+                if same_node is not None:
+                    #~ pass
+                    self._dbnode = same_node.dbnode
+                    self._to_be_stored = False
+                    self._repo_folder = same_node._repo_folder
+                    return self
+
             self._repository_folder.replace_with_folder(
                 self._get_temp_folder().abspath, move=True, overwrite=True)
 
@@ -653,6 +668,9 @@ class Node(AbstractNode):
 
         # This is useful because in this way I can do
         # n = Node().store()
+        from aiida.backends.djsite.db.models import DbExtra
+        # I store the hash without cleaning and without incrementing the nodeversion number
+        DbExtra.set_value_for_node(self.dbnode, 'hash', self.get_hash())
         return self
 
     @property

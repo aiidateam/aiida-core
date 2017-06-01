@@ -1509,6 +1509,7 @@ class AbstractNode(object):
         :return: a boolean
         """
         from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
         first_desc = QueryBuilder().append(
             Node, filters={'id':self.pk}, tag='self').append(
             Node, descendant_of='self', project='id').first()
@@ -1522,6 +1523,7 @@ class AbstractNode(object):
         :return: a boolean
         """
         from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
         first_ancestor = QueryBuilder().append(
             Node, filters={'id':self.pk}, tag='self').append(
             Node, ancestor_of='self', project='id').first()

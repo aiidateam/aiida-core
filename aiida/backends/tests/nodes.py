@@ -20,6 +20,35 @@ from aiida.orm.node import Node
 from aiida.orm.utils import load_node
 
 
+class TestNodeHashing(AiidaTestCase):
+    """
+    Tests the functionality of hashing a node
+    """
+    def test_hashing_of_node_1(self):
+
+        n1 = Node()
+        n1._set_attr('a',1.0)
+        n1._set_attr('b',1.1)
+        n1._set_attr('c',1.2)
+        n1.store()
+
+
+        n2 = Node()
+        n2._set_attr('a',1.0)
+        n2._set_attr('b',1.1)
+        n2._set_attr('c',1.2)
+        n2.store(find_same=True)
+
+        self.assertEqual(n1.uuid, n2.uuid)
+        self.assertEqual(n1.folder.get_abs_path('.'), n2.folder.get_abs_path('.'))
+
+
+        n3 = Node()
+        n3._set_attr('a',2.0)
+        n3._set_attr('b',1.1)
+        n3._set_attr('c',1.2)
+        n3.store(find_same=True)
+        self.assertNotEquals(n2.uuid, n3.uuid)
 
 class TestDataNode(AiidaTestCase):
     """

@@ -657,14 +657,3 @@ class Node(AbstractNode):
         # n = Node().store()
         return self
 
-    @property
-    def has_children(self):
-        from aiida.backends.djsite.db.models import DbPath
-        childrens = DbPath.objects.filter(parent=self.pk)
-        return False if not childrens else True
-
-    @property
-    def has_parents(self):
-        from aiida.backends.djsite.db.models import DbPath
-        parents = DbPath.objects.filter(child=self.pk)
-        return False if not parents else True

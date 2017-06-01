@@ -694,43 +694,43 @@ class QueryBuilderPath(AiidaTestCase):
         n8.add_link_from(n7)
 
 
-        for with_dbpath in (True, False):
-
-            # Yet, no links from 1 to 8
-            self.assertEquals(
-                    QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 0)
 
 
-            self.assertEquals(
-                    QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 0)
+        # Yet, no links from 1 to 8
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 0)
+
+
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 0)
 
 
         n6.add_link_from(n5)
         # Yet, now 2 links from 1 to 8
 
 
-        for with_dbpath in (True, False):
 
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 2
-                )
 
-            self.assertEquals(
-                    QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 2)
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
 
-        qb = QueryBuilder(with_dbpath=False,expand_path=True).append(
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 2)
+
+        qb = QueryBuilder(expand_path=True).append(
                 Node, filters={'id':n8.pk}, tag='desc',
             ).append(Node, ancestor_of='desc', edge_project='path', filters={'id':n1.pk})
         queried_path_set = set([frozenset(p) for p, in qb.all()])
@@ -742,7 +742,7 @@ class QueryBuilderPath(AiidaTestCase):
 
         self.assertTrue(queried_path_set == paths_there_should_be)
 
-        qb = QueryBuilder(with_dbpath=False, expand_path=True).append(
+        qb = QueryBuilder(expand_path=True).append(
                 Node, filters={'id':n1.pk}, tag='anc'
             ).append(
                 Node, descendant_of='anc',  filters={'id':n8.pk}, edge_project='path'

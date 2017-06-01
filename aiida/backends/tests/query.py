@@ -758,45 +758,43 @@ class QueryBuilderPath(AiidaTestCase):
         n7.add_link_from(n9)
         # Still two links...
 
-        for with_dbpath in (True, False):
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 2
-                )
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
 
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 2)
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 2)
         n9.add_link_from(n6)
         # And now there should be 4 nodes
-        for with_dbpath in (True, False):
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 4)
 
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 4)
-
-
-        for with_dbpath in (True, False):
-            qb = QueryBuilder(with_dbpath=True).append(
+        self.assertEquals(
+            QueryBuilder().append(
                     Node, filters={'id':n1.pk}, tag='anc'
-                ).append(
-                    Node, descendant_of='anc',  filters={'id':n8.pk}, edge_tag='edge'
-                )
-            qb.add_projection('edge', 'depth')
-            self.assertTrue(set(zip(*qb.all())[0]), set([5,6]))
-            qb.add_filter('edge', {'depth':6})
-            self.assertTrue(set(zip(*qb.all())[0]), set([6]))
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 4)
+
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 4)
+
+
+        qb = QueryBuilder().append(
+                Node, filters={'id':n1.pk}, tag='anc'
+            ).append(
+                Node, descendant_of='anc',  filters={'id':n8.pk}, edge_tag='edge'
+            )
+        qb.add_projection('edge', 'depth')
+        self.assertTrue(set(zip(*qb.all())[0]), set([5,6]))
+        qb.add_filter('edge', {'depth':6})
+        self.assertTrue(set(zip(*qb.all())[0]), set([6]))
 
 
 

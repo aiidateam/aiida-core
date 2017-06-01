@@ -133,25 +133,6 @@ class DbNode(Base):
     def inputs(self):
         return self.inputs_q.all()
 
-    # children via db_dbpath
-    # suggest change name to descendants
-    children_q = relationship(
-        "DbNode", secondary="db_dbpath",
-        primaryjoin="DbNode.id == DbPath.parent_id",
-        secondaryjoin="DbNode.id == DbPath.child_id",
-        backref=backref("parents_q", passive_deletes=True, lazy='dynamic'),
-        lazy='dynamic',
-        passive_deletes=True
-    )
-
-    @property
-    def children(self):
-        return self.children_q.all()
-
-    @property
-    def parents(self):
-        return self.parents_q.all()
-
     def __init__(self, *args, **kwargs):
         super(DbNode, self).__init__(*args, **kwargs)
 
@@ -375,57 +356,4 @@ class DbLink(Base):
             self.output.get_simple_name(invalid_result="Unknown node"),
             self.output.pk
         )
-
-
-class DbPath(Base):
-    __tablename__ = "db_dbpath"
-
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(
-        Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-    )
-    child_id = Column(
-        Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-    )
-
-    parent = relationship(
-        "DbNode",
-        primaryjoin="DbPath.parent_id == DbNode.id",
-        backref="child_paths"
-    )
-    child = relationship(
-        "DbNode",
-        primaryjoin="DbPath.child_id == DbNode.id",
-        backref="parent_paths"
-    )
-
-    depth = Column(Integer)
-
-    entry_edge_id = Column(Integer)
-    direct_edge_id = Column(Integer)
-    exit_edge_id = Column(Integer)
-
-    def expand(self):
-        """
-        Method to expand a DbPath (recursive function), i.e., to get a list
-        of all dbnodes that are traversed in the given path.
-
-        :return: list of DbNode objects representing the expanded DbPath
-        """
-
-        if self.depth == 0:
-            return [self.parent_id, self.child_id]
-        else:
-            path_entry = []
-            path_direct = DbPath.query.filter_by(id=self.direct_edge_id).first().expand()
-            path_exit = []
-            # we prevent DbNode repetitions
-            if self.entry_edge_id != self.direct_edge_id:
-                path_entry = DbPath.query.filter_by(id=self.entry_edge_id).first().expand()[:-1]
-            if self.exit_edge_id != self.direct_edge_id:
-                path_exit = DbPath.query.filter_by(id=self.exit_edge_id).first().expand()[1:]
-
-            return path_entry + path_direct + path_exit
 

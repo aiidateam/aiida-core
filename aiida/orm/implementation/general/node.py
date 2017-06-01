@@ -1092,6 +1092,8 @@ class AbstractNode(object):
             return
             yield # Needed after return to convert it to a generator
         for _ in self._db_iterextras():
+            if _[0] == 'hash':
+                continue
             yield _
 
 
@@ -1471,6 +1473,7 @@ class AbstractNode(object):
         # for storing data and its attributes.
         pass
 
+
     def __del__(self):
         """
         Called only upon real object destruction from memory
@@ -1479,6 +1482,26 @@ class AbstractNode(object):
         """
         if getattr(self, '_temp_folder', None) is not None:
             self._temp_folder.erase()
+
+
+    def get_hash(self):
+        """
+        Making a hash based on my attributes
+        """
+        from aiida.common.hashing import make_hash
+        return make_hash(self.get_attrs())
+
+
+    def get_same_node(self):
+        from aiida.orm.querybuilder import QueryBuilder
+
+        qb = QueryBuilder()
+        qb.append(self.__class__, filters={'extras.hash':self.get_hash()}, project='*', subclassing=False)
+        same_node = qb.first()
+        if same_node:
+            return same_node[0]
+        else:
+            return None
 
     @property
     def out(self):

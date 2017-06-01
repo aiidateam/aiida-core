@@ -143,11 +143,6 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         import aiida.orm.implementation.sqlalchemy.computer
         return aiida.orm.implementation.sqlalchemy.computer.Computer
 
-
-    def prepare_with_dbpath(self):
-        from aiida.backends.sqlalchemy.models.node import DbPath
-        self.Path = DbPath
-
     def get_session(self):
         return aiida.backends.sqlalchemy.get_scoped_session()
 

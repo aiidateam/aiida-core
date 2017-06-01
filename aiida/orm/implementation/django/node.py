@@ -196,7 +196,6 @@ class Node(AbstractNode):
             if QueryBuilder().append(
                     Node, filters={'id':self.pk}, tag='parent').append(
                     Node, filters={'id':src.pk}, tag='child', descendant_of='parent').count() > 0:
-            #~ if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode)) > 0:
                 raise ValueError(
                     "The link you are attempting to create would generate a loop")
 

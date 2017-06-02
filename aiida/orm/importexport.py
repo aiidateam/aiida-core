@@ -2002,9 +2002,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str):
         fill_in_query(partial_query, current_entity_str, ref_model_name)
 
 
-def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
-                allowed_licenses=None, forbidden_licenses=None,
-                silent=False):
+def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
+                allowed_licenses=None, forbidden_licenses=None, silent=False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
 
@@ -2064,10 +2063,12 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
             "aiida.backends.sqlalchemy.models.node.DbNode"]
         if given_nodes:
             # Also add the parents (to any level) to the query
+            # This is done via the ancestor relationship.
+            # No explicit need for the DbPath table here
             qb = QueryBuilder()
             qb.append(Node, tag='low_node', filters={'id': {'in': given_nodes}})
             qb.append(Node, ancestor_of='low_node', project=['id'])
-            additional_ids = [_ for [_] in qb.all()]
+            additional_ids = [_ for [_] in qb.all()] # Good way, since that works also when qb.all() returns []
             given_nodes = list(set(given_nodes + additional_ids))
             entries_ids_to_add[
                 "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
@@ -2080,37 +2081,27 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
              # selected
             qb = QueryBuilder()
             qb.append(Calculation, tag='high_node',
-                      filters={'id': {'in': given_nodes}})
-            qb.append(Node, output_of='high_node', project=['id'])
+                      filters={'id': {'in': given_nodes}}) # Only looking at calculations and subclasses
+            qb.append(Node, output_of='high_node', project=['id']) # and the outputs
             additional_ids = [_ for [_] in qb.all()]
-            given_nodes = list(set(given_nodes + additional_ids))
+            given_nodes = list(set(given_nodes + additional_ids)) # What if given_nodes is a set from the start?
             entries_ids_to_add[
                 "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
-
-    # Initial query to fire the generation of the export data
-
-    # print entries_ids_to_add
-    # for k, v in entries_ids_to_add.iteritems():
-    #     print k, v
-
-    from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm.node import Node
-
-
-    # The following is done for the nodes but we should also do it for the
-    # other type of input given data
 
 
     # Here we get all the columns that we plan to project
     model_name = get_class_string(models.node.DbNode)
     project_cols = ["id"]
+    # The following gets a list of fields that we need, e.g. user, mtime, uuid, computer
     entity_prop = all_fields_info[sqla_to_django_schema[model_name]].keys()
+
     # Here we do the necessary renaming of
     for prop in entity_prop:
         nprop = (django_fields_to_sqla[model_name][prop]
                 if django_fields_to_sqla[model_name].has_key(prop)
                 else prop)
         project_cols.append(nprop)
+    # project_cols contains the strings we can use to project, i.e. user_id, mtime, uuid, dbcomputer_id
 
     entries_to_add = dict()
     for k, v in entries_ids_to_add.iteritems():
@@ -2244,24 +2235,21 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     ## All 'parent' links (in this way, I can automatically export a node
     ## that will get automatically attached to a parent node in the end DB,
     ## if the parent node is already present in the DB)
-    from aiida.backends.sqlalchemy import get_scoped_session
-    session = get_scoped_session()
-    from aiida.backends.sqlalchemy.models.node import DbLink
-    # authinfo = session.query(DbLink).filter(DbLink.output_id.in_(all_nodes_pk)).all()
-    linksquery = session.query(DbLink).filter(
-        DbLink.output_id.in_(all_nodes_pk)).distinct()
 
-    # print "================="
-    #
-    # print linksquery.all()
-
-    # I have to find a way to project only specific columns -
-    # To be seen with Leo
+    links_qb =  QueryBuilder()
+    links_qb.append(Node, project=['uuid'], tag='input')
+    links_qb.append(Node,
+            project=['uuid'], tag='output', filters={'id':{'in':all_nodes_pk}},
+            edge_project=['label'], output_of='input')
     links_uuid = list()
-    for link in linksquery.all():
-        links_uuid.append({"input": str(link.input.uuid),
-                           "output": str(link.output.uuid),
-                           "label": str(link.label)})
+
+    for input_uuid, output_uuid, link_label in links_qb.iterall():
+        links_uuid.append({
+            'input':str(input_uuid),
+            'output':str(output_uuid),
+            'label':str(link_label)
+        })
+
 
     # The following has to be written more properly
     if not silent:

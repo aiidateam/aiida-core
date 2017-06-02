@@ -23,17 +23,16 @@ from aiida.common import aiidalogger
 def parse_sshconfig(computername):
     config = paramiko.SSHConfig()
     try:
-        with open(os.path.expanduser('~/.ssh/config')) as f:
-            config.parse(f)
+        config.parse(open(os.path.expanduser('~/.ssh/config')))
     except IOError:
         # No file found, so empty configuration
         pass
-
+    
     return config.lookup(computername)
 
 def convert_to_bool(string):
     upstring = str(string).upper()
-
+    
     if upstring in ['Y', 'YES', 'T', 'TRUE']:
         return True
     elif upstring in ['N', 'NO', 'F', 'FALSE']:
@@ -48,20 +47,20 @@ class SshTransport(aiida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.
-    _valid_connect_params = ['username', 'port', 'look_for_keys',
+    _valid_connect_params = ['username', 'port', 'look_for_keys', 
                              'key_filename', 'timeout', 'allow_agent',
                              'proxy_command', # Managed 'manually' in connect
                              'compress',
                              'gss_auth','gss_kex','gss_deleg_creds','gss_host', # for Kerberos support through python-gssapi
                              ]
-
+    
     # Valid parameters for the ssh transport
     # For each param, a class method with name
     # _convert_PARAMNAME_fromstring
     # should be defined, that returns the value converted from a string to
-    # a correct type, or raise a ValidationError
+    # a correct type, or raise a ValidationError 
     #
-    # moreover, if you want to help in the default configuration, you can
+    # moreover, if you want to help in the default configuration, you can 
     # define a _get_PARAMNAME_suggestion_string
     # to return a suggestion; it must accept only one parameter, being a Computer
     # instance
@@ -69,7 +68,7 @@ class SshTransport(aiida.transport.Transport):
         'load_system_host_keys',
         'key_policy',
         ]
-
+    
     @classmethod
     def _convert_username_fromstring(cls, string):
         """
@@ -83,11 +82,11 @@ class SshTransport(aiida.transport.Transport):
         Return a suggestion for the specific field.
         """
         import getpass
-
+        
         config = parse_sshconfig(computer.hostname)
         # Either the configured user in the .ssh/config, or the current username
-        return str(config.get('user',getpass.getuser()))
-
+        return str(config.get('user',getpass.getuser())) 
+    
 
     @classmethod
     def _convert_port_fromstring(cls, string):
@@ -95,7 +94,7 @@ class SshTransport(aiida.transport.Transport):
         Convert the port from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         try:
             return int(string)
         except ValueError:
@@ -116,9 +115,9 @@ class SshTransport(aiida.transport.Transport):
         Convert the port from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         path = os.path.expanduser(string)
-
+        
         if not os.path.isabs(path):
             raise ValidationError("The key filename must be an absolute path")
 
@@ -126,14 +125,14 @@ class SshTransport(aiida.transport.Transport):
             raise ValidationError("The key filename must exist")
 
         return path
-
+    
     @classmethod
-    def _get_key_filename_suggestion_string(cls, computer):
+    def _get_key_filename_suggestion_string(cls, computer):        
         """
         Return a suggestion for the specific field.
         """
         config = parse_sshconfig(computer.hostname)
-
+        
         try:
             identities = config['identityfile']
             # In paramiko > 0.10, identity file is a list of strings.
@@ -148,13 +147,13 @@ class SshTransport(aiida.transport.Transport):
                 identity = identities[0]
             else:
                 # If the parser provides an unknown type, just skip to
-                # the 'except KeyError' section, as if no identityfile
+                # the 'except KeyError' section, as if no identityfile 
                 # were provided (hopefully, this should never happen)
                 raise KeyError
         except KeyError:
             # No IdentityFile defined: return an empty string
             return ""
-
+        
         return os.path.expanduser(identity)
 
     @classmethod
@@ -163,7 +162,7 @@ class SshTransport(aiida.transport.Transport):
         Convert the port from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         try:
             return int(string)
         except ValueError:
@@ -173,7 +172,7 @@ class SshTransport(aiida.transport.Transport):
     def _get_timeout_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
-
+        
         Provide 60s as a default timeout for connections.
         """
         config = parse_sshconfig(computer.hostname)
@@ -185,7 +184,7 @@ class SshTransport(aiida.transport.Transport):
         Convert the port from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         try:
             return convert_to_bool(string)
         except ValueError:
@@ -204,7 +203,7 @@ class SshTransport(aiida.transport.Transport):
         Convert the port from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         try:
             return convert_to_bool(string)
         except ValueError:
@@ -223,7 +222,7 @@ class SshTransport(aiida.transport.Transport):
         Convert the proxy command from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         if str(string).strip():
             return str(string)
         else:
@@ -237,9 +236,9 @@ class SshTransport(aiida.transport.Transport):
         config = parse_sshconfig(computer.hostname)
         # Either the configured user in the .ssh/config, or the default SSH port
         raw_string = str(config.get('proxycommand',''))
-        # Note: %h and %p get already automatically substituted with
+        # Note: %h and %p get already automatically substituted with 
         # hostname and port by the config parser!
-
+        
         pieces = raw_string.split()
         new_pieces = []
         for piece in pieces:
@@ -257,7 +256,7 @@ class SshTransport(aiida.transport.Transport):
         Convert the port from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         try:
             return convert_to_bool(string)
         except ValueError:
@@ -269,14 +268,14 @@ class SshTransport(aiida.transport.Transport):
         Return a suggestion for the specific field.
         """
         return "True"
-
+    
     @classmethod
     def _convert_load_system_host_keys_fromstring(cls, string):
         """
         Convert the port from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         try:
             return convert_to_bool(string)
         except ValueError:
@@ -288,28 +287,28 @@ class SshTransport(aiida.transport.Transport):
         Return a suggestion for the specific field.
         """
         return "True"
-
+    
     @classmethod
     def _convert_key_policy_fromstring(cls, string):
         """
         Convert the port from string.
         """
         return string
-
+    
     @classmethod
     def _get_key_policy_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
         """
         return "RejectPolicy"
-
+    
     @classmethod
     def _convert_gss_auth_fromstring(cls, string):
         """
         Convert the gss auth. command from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         try:
             return convert_to_bool(string)
         except ValueError:
@@ -329,7 +328,7 @@ class SshTransport(aiida.transport.Transport):
         Convert the gss key exchange command from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         try:
             return convert_to_bool(string)
         except ValueError:
@@ -349,7 +348,7 @@ class SshTransport(aiida.transport.Transport):
         Convert the gss auth. command from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         try:
             return convert_to_bool(string)
         except ValueError:
@@ -369,7 +368,7 @@ class SshTransport(aiida.transport.Transport):
         Convert the gss auth. command from string.
         """
         from aiida.common.exceptions import ValidationError
-
+        
         return str(string)
 
     @classmethod
@@ -384,13 +383,13 @@ class SshTransport(aiida.transport.Transport):
     def __init__(self, machine, **kwargs):
         """
         Initialize the SshTransport class.
-
+        
         :param machine: the machine to connect to
         :param load_system_host_keys: (optional, default False): if False, do not
                 load the system host keys
         :param key_policy: (optional, default = paramiko.RejectPolicy()): the
                 policy to use for unknown keys
-        Other parameters valid for the ssh connect function (see the
+        Other parameters valid for the ssh connect function (see the 
         self._valid_connect_params list) are passed to the connect
         function (as port, username, password, ...); taken from the
         accepted paramiko.SSHClient.connect() params)
@@ -399,7 +398,7 @@ class SshTransport(aiida.transport.Transport):
 
         self._is_open = False
         self._sftp = None
-
+        
         self._machine = machine
 
         self._client = paramiko.SSHClient()
@@ -435,15 +434,15 @@ class SshTransport(aiida.transport.Transport):
     def open(self):
         """
         Open a SSHClient to the machine possibly using the parameters given
-        in the __init__.
-
+        in the __init__. 
+        
         Also opens a sftp channel, ready to be used.
         The current working directory is set explicitly, so it is not None.
-
+        
         :raise InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
-
+        
         if self._is_open:
             raise InvalidOperation("Cannot open the transport twice")
         # Open a SSHClient
@@ -452,7 +451,7 @@ class SshTransport(aiida.transport.Transport):
         if proxystring is not None:
             proxy = paramiko.ProxyCommand(proxystring)
             connection_arguments['sock'] = proxy
-
+            
         try:
             self._client.connect(self._machine,**connection_arguments)
         except Exception as e:
@@ -469,19 +468,19 @@ class SshTransport(aiida.transport.Transport):
         self._sftp.chdir(self._sftp.normalize('.'))
 
         self._is_open = True
-
+        
         return self
-
+        
     def close(self):
         """
         Close the SFTP channel, and the SSHClient.
-
+        
         :todo: correctly manage exceptions
-
+        
         :raise InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
-
+        
         if not self._is_open:
             raise InvalidOperation("Cannot close the transport: "
                                          "it is already closed")
@@ -522,14 +521,14 @@ class SshTransport(aiida.transport.Transport):
         except KeyError:
         # No port explicitly defined: ignore
             pass
-
+            
         return "{} [{}]".format("OPEN" if self._is_open else "CLOSED",
                                 conn_info)
 
     def chdir(self, path):
         """
         Change directory of the SFTP session. Emulated internally by
-        paramiko.
+        paramiko. 
 
         Differently from paramiko, if you pass None to chdir, nothing
         happens and the cwd is unchanged.
@@ -537,12 +536,12 @@ class SshTransport(aiida.transport.Transport):
         old_path = self.sftp.getcwd()
         if path is not None:
             self.sftp.chdir(path)
-
+        
         # Paramiko already checked that path is a folder, otherwise I would
         # have gotten an exception. Now, I want to check that I have read
         # permissions in this folder (nothing is said on write permissions,
         # though).
-        # Otherwise, if I do _exec_command_internal, that as a first operation
+        # Otherwise, if I do _exec_command_internal, that as a first operation 
         # cd's in a folder, I get a wrong retval, that is an unwanted behavior.
         #
         # Note: I don't store the result of the function; if I have no
@@ -560,7 +559,7 @@ class SshTransport(aiida.transport.Transport):
         Returns the normalized path (removing double slashes, etc...)
         """
         return self.sftp.normalize(path)
-
+        
     def getcwd(self):
         """
         Return the current working directory for this SFTP session, as
@@ -589,14 +588,14 @@ class SshTransport(aiida.transport.Transport):
         """
         # check to avoid creation of empty dirs
         path = os.path.normpath(path)
-
+        
         if path.startswith('/'):
             to_create = path.strip().split('/')[1:]
             this_dir='/'
         else:
             to_create = path.strip().split('/')
             this_dir = ''
-
+            
         for count,element in enumerate(to_create):
             if count>0:
                 this_dir += '/'
@@ -609,7 +608,7 @@ class SshTransport(aiida.transport.Transport):
                 self.mkdir(this_dir)
 
 
-
+    
     def mkdir(self,path,ignore_existing=False):
         """
         Create a folder (directory) named path.
@@ -622,7 +621,7 @@ class SshTransport(aiida.transport.Transport):
         """
         if ignore_existing and self.isdir(path):
             return
-
+        
         try:
             self.sftp.mkdir(path)
         except IOError as e:
@@ -650,22 +649,22 @@ class SshTransport(aiida.transport.Transport):
         :raise IOError: if the rm execution failed.
         """
         # Assuming linux rm command!
-
+        
         # TODO : do we need to avoid the aliases when calling rm_exe='rm'? Call directly /bin/rm?
-
+                
         rm_exe = 'rm'
         rm_flags = '-r -f'
         # if in input I give an invalid object raise ValueError
         if not path:
             raise ValueError('Input to rmtree() must be a non empty string. ' +
                              'Found instead %s as path' % path)
-
+        
         command = '{} {} {}'.format(rm_exe,
                                        rm_flags,
                                        escape_for_bash(path))
 
         retval,stdout,stderr = self.exec_command_wait(command)
-
+        
         if retval == 0:
             if stderr.strip():
                 self.logger.warning("There was nonempty stderr in the rm "
@@ -676,7 +675,7 @@ class SshTransport(aiida.transport.Transport):
                               "stderr: '{}'".format(retval, stdout, stderr))
             raise IOError("Error while executing rm. Exit code: {}".format(retval) )
 
-
+    
     def rmdir(self, path):
         """
         Remove the folder named 'path' if empty.
@@ -731,7 +730,7 @@ class SshTransport(aiida.transport.Transport):
             path = newpath
         parts.reverse()
         return parts
-
+            
 
     def put(self,localpath,remotepath,callback=None,dereference=True,overwrite=True,
             ignore_nonexisting=False):
@@ -766,7 +765,7 @@ class SshTransport(aiida.transport.Transport):
 
             # use the imported glob to analyze the path locally
             to_copy_list = glob.glob(localpath)
-
+            
             rename_remote = False
             if len(to_copy_list)>1:
                 # I can't scp more than one file on a single file
@@ -780,11 +779,11 @@ class SshTransport(aiida.transport.Transport):
 
             for s in to_copy_list:
                 if os.path.isfile(s):
-                    if rename_remote: # copying more than one file in one directory
+                    if rename_remote: # copying more than one file in one directory 
                         # here is the case isfile and more than one file
                         r = os.path.join(remotepath,os.path.split(s)[1])
                         self.putfile(s,r,callback,dereference,overwrite )
-
+                        
                     elif self.isdir(remotepath): # one file to copy in '.'
                         r = os.path.join(remotepath,os.path.split(s)[1])
                         self.putfile(s,r,callback,dereference,overwrite )
@@ -828,13 +827,13 @@ class SshTransport(aiida.transport.Transport):
             raise NotImplementedError
 
         # TODO : check what happens if I give in input a directory
-
+        
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
 
         if self.isfile(remotepath) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
-
+        
         return self.sftp.put(localpath,remotepath,callback=callback)
 
 
@@ -862,7 +861,7 @@ class SshTransport(aiida.transport.Transport):
 
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
-
+        
         if not os.path.exists(localpath):
             raise OSError("The localpath does not exists")
 
@@ -876,20 +875,20 @@ class SshTransport(aiida.transport.Transport):
             raise OSError("Can't overwrite existing files")
         if self.isfile(remotepath):
             raise OSError("Cannot copy a directory into a file")
-
+        
         if not self.isdir(remotepath):  # in this case copy things in the remotepath directly
             self.mkdir(remotepath) # and make a directory at its place
         else: # remotepath exists already: copy the folder inside of it!
             remotepath = os.path.join(remotepath,os.path.split(localpath)[1])
             self.mkdir(remotepath) # create a nested folder
-
+        
         # TODO, NOTE: we are not using 'onerror' because we checked above that
         # the folder exists, but it would be better to use it
         for this_source in os.walk(localpath):
             # Get the relative path
             this_basename = os.path.relpath(path=this_source[0],
                                             start=localpath)
-
+            
             try:
                 self.sftp.stat( os.path.join(remotepath,this_basename) )
             except IOError as e:
@@ -898,9 +897,9 @@ class SshTransport(aiida.transport.Transport):
                     self.mkdir( os.path.join(remotepath,this_basename) )
                 else:
                     raise
-
+                
             for this_file in this_source[2]:
-                this_local_file = os.path.join(localpath,this_basename,this_file)
+                this_local_file = os.path.join(localpath,this_basename,this_file)        
                 this_remote_file = os.path.join(remotepath,this_basename,this_file)
                 self.putfile(this_local_file,this_remote_file)
 
@@ -914,7 +913,7 @@ class SshTransport(aiida.transport.Transport):
         :param remotepath: a remote path
         :param localpath: an (absolute) local path
         :param dereference: follow symbolic links.
-            Default = True (default behaviour in paramiko).
+            Default = True (default behaviour in paramiko). 
             False is not implemented.
         :param overwrite: if True overwrites files and folders.
             Default = False
@@ -935,7 +934,7 @@ class SshTransport(aiida.transport.Transport):
                                  "destination")
             # use the self glob to analyze the path remotely
             to_copy_list = self.glob(remotepath)
-
+            
             rename_local = False
             if len(to_copy_list)>1:
                 # I can't scp more than one file on a single file
@@ -946,10 +945,10 @@ class SshTransport(aiida.transport.Transport):
                     raise OSError("Remote directory does not exist")
                 else: # the remote path is a directory
                     rename_local=True
-
+      
             for s in to_copy_list:
                 if self.isfile(s):
-                    if rename_local: # copying more than one file in one directory
+                    if rename_local: # copying more than one file in one directory 
                         # here is the case isfile and more than one file
                         r = os.path.join(localpath,os.path.split(s)[1])
                         self.getfile(s,r,callback,dereference,overwrite )
@@ -991,23 +990,31 @@ class SshTransport(aiida.transport.Transport):
         if not os.path.isabs(localpath):
             raise ValueError("localpath must be an absolute path")
 
-        if os.path.isfile(localpath) and not overwrite:
+        if os.path.isfile(localpath) and not overwrite:            
             raise OSError('Destination already exists: not overwriting it')
 
         if not dereference:
             raise NotImplementedError
-
-        return self.sftp.get(remotepath,localpath,callback)
-
-
+            
+        # Workaround for bug #724 in paramiko -- remove localpath on IOError
+        try:
+            return self.sftp.get(remotepath,localpath,callback)
+        except IOError as e:
+            try:
+                os.remove(localpath)
+            except OSError:
+                pass
+            raise e
+        
+        
     def gettree(self,remotepath,localpath,callback=None,dereference=True,overwrite=True):
         """
         Get a folder recursively from remote to local.
 
         :param remotepath: a remote path
         :param localpath: an (absolute) local path
-        :param dereference: follow symbolic links.
-            Default = True (default behaviour in paramiko).
+        :param dereference: follow symbolic links. 
+            Default = True (default behaviour in paramiko). 
             False is not implemented.
         :param  overwrite: if True overwrites files and folders.
             Default = False
@@ -1035,13 +1042,13 @@ class SshTransport(aiida.transport.Transport):
             raise OSError("Can't overwrite existing files")
         if os.path.isfile(localpath):
             raise OSError("Cannot copy a directory into a file")
-
+        
         if not os.path.isdir(localpath):  # in this case copy things in the remotepath directly
             os.mkdir(localpath) # and make a directory at its place
         else: # localpath exists already: copy the folder inside of it!
             localpath = os.path.join(localpath,os.path.split(remotepath)[1])
             os.mkdir(localpath) # create a nested folder
-
+        
         item_list = self.listdir(remotepath)
         dest = str(localpath)
 
@@ -1073,8 +1080,8 @@ class SshTransport(aiida.transport.Transport):
         """
         Copy a file from remote source to remote destination
         Redirects to copy().
-
-        :param remotesource:
+        
+        :param remotesource: 
         :param remotedestination:
         :param dereference:
         :param pattern:
@@ -1113,16 +1120,16 @@ class SshTransport(aiida.transport.Transport):
         .. note:: setting dereference equal to True could cause infinite loops.
         """
         # In the majority of cases, we should deal with linux cp commands
-
+        
         # TODO : do we need to avoid the aliases when calling cp_exe='cp'? Call directly /bin/cp?
-
+        
         # TODO: verify that it does not re
-
+        
         # For the moment, these are hardcoded. They may become parameters
         # as soon as we see the need.
         cp_flags='-r -f'
         cp_exe='cp'
-
+        
         ## To evaluate if we also want -p: preserves mode,ownership and timestamp
         if dereference:
             # use -L; --dereference is not supported on mac
@@ -1136,19 +1143,19 @@ class SshTransport(aiida.transport.Transport):
         if not remotedestination:
             raise ValueError('Input to copy() must be a non empty string. ' +
                              'Found instead %s as remotedestination' % remotedestination)
-
+        
         if self.has_magic(remotedestination):
             raise ValueError("Pathname patterns are not allowed in the "
                              "destination")
 
         if self.has_magic(remotesource):
             to_copy_list = self.glob(remotesource)
-
+            
             if len(to_copy_list)>1:
-                if not self.path_exists(remotedestination) or self.isfile(remotedestination):
+                if not self.path_exists(remotedestination) or self.isfile(remotedestination): 
                     raise OSError("Can't copy more than one file in the same "
                                   "destination file")
-
+            
             for s in to_copy_list:
                 self._exec_cp(cp_exe,cp_flags,s,remotedestination)
 
@@ -1162,9 +1169,9 @@ class SshTransport(aiida.transport.Transport):
                                        escape_for_bash(dst))
 
         retval,stdout,stderr = self.exec_command_wait(command)
-
+        
         # TODO : check and fix below
-
+            
         if retval == 0:
             if stderr.strip():
                 self.logger.warning("There was nonempty stderr in the cp "
@@ -1178,7 +1185,7 @@ class SshTransport(aiida.transport.Transport):
                           "command: '{}'".format(retval, stdout, stderr,
                                                  command) )
 
-
+                
     def _local_listdir(self,path,pattern=None):
         """
         Acts on the local folder, for the rest, same as listdir
@@ -1249,7 +1256,7 @@ class SshTransport(aiida.transport.Transport):
                 raise IOError("Destination {} does not exist".format(dst))
 
         return self.sftp.rename(src,dst)
-
+    
     def isfile(self,path):
         """
         Return True if the given path is a file, False otherwise.
@@ -1287,10 +1294,10 @@ class SshTransport(aiida.transport.Transport):
                 stderr on the same buffer (i.e., stdout).
                 Note: If combine_stderr is True, stderr will always be empty.
         :param bufsize: same meaning of the one used by paramiko.
-
+        
         :return: a tuple with (stdin, stdout, stderr, channel),
             where stdin, stdout and stderr behave as file-like objects,
-            plus the methods provided by paramiko, and channel is a
+            plus the methods provided by paramiko, and channel is a 
             paramiko.Channel object.
         """
         channel = self.sshclient.get_transport().open_session()
@@ -1309,10 +1316,10 @@ class SshTransport(aiida.transport.Transport):
                 command_to_execute))
 
         channel.exec_command(command_to_execute)
-
-        stdin = channel.makefile('wb',bufsize)
-        stdout = channel.makefile('rb',bufsize)
-        stderr = channel.makefile_stderr('rb',bufsize)
+        
+        stdin = channel.makefile('wb',bufsize) 
+        stdout = channel.makefile('rb',bufsize) 
+        stderr = channel.makefile_stderr('rb',bufsize) 
 
         return stdin, stdout, stderr, channel
 
@@ -1320,7 +1327,7 @@ class SshTransport(aiida.transport.Transport):
                           bufsize=-1):
         """
         Executes the specified command and waits for it to finish.
-
+        
         :param command: the command to execute
         :param stdin: (optional,default=None) can be a string or a
                    file-like object.
@@ -1332,10 +1339,10 @@ class SshTransport(aiida.transport.Transport):
             are strings.
         """
         #TODO: To see if like this it works or hangs because of buffer problems.
-
+        
         ssh_stdin, stdout, stderr, channel = self._exec_command_internal(
             command, combine_stderr,bufsize=bufsize)
-
+        
         if stdin is not None:
             if isinstance(stdin, basestring):
                 filelike_stdin = StringIO.StringIO(stdin)
@@ -1355,7 +1362,7 @@ class SshTransport(aiida.transport.Transport):
         ssh_stdin.channel.shutdown_write()
 
         output_text = stdout.read()
-
+        
         # I get the return code (blocking, but in principle I waited above)
         retval = channel.recv_exit_status()
 
@@ -1368,21 +1375,21 @@ class SshTransport(aiida.transport.Transport):
         Specific gotocomputer string to connect to a given remote computer via
         ssh and directly go to the calculation folder.
         """
-
+        
         #TODO: add also ProxyCommand and Timeout support
 
         further_params = []
         if 'username' in self._connect_args:
             further_params.append("-l {}".format(escape_for_bash(
                 self._connect_args['username'])))
-
+        
         if 'port' in self._connect_args:
             further_params.append("-p {}".format(self._connect_args['port']))
 
         if 'key_filename' in self._connect_args:
             further_params.append("-i {}".format(escape_for_bash(
                 self._connect_args['key_filename'])))
-
+        
         further_params_str = " ".join(further_params)
         connect_string = """ssh -t {machine} {further_params} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -l ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
             further_params=further_params_str,
@@ -1392,28 +1399,28 @@ class SshTransport(aiida.transport.Transport):
 
         # print connect_string
         return connect_string
-
+        
         #return """ssh -Y -t {machine} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -c "{bash_call_escaped}" ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
         #    machine=self._machine, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir,
         #    bash_call_escaped=escape_for_bash("""bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="\[\033[01;31m\][AiiDA]\033[00m\]$PS1"')"""))
-
+        
     def symlink(self,remotesource,remotedestination):
         """
-        Create a symbolic link between the remote source and the remote
+        Create a symbolic link between the remote source and the remote 
         destination.
-
-        :param remotesource: remote source. Can contain a pattern.
+        
+        :param remotesource: remote source. Can contain a pattern. 
         :param remotedestination: remote destination
         """
         # paramiko gives some errors if path is starting with '.'
         s = os.path.normpath(remotesource)
         d = os.path.normpath(remotedestination)
-
+        
         if self.has_magic(s):
             if self.has_magic(d):
                 # if there are patterns in dest, I don't know which name to assign
                 raise ValueError("Remotedestination cannot have patterns")
-
+            
             # find all files matching pattern
             for this_s in self.glob(s):
                 # create the name of the link: take the last part of the path
@@ -1422,7 +1429,7 @@ class SshTransport(aiida.transport.Transport):
                 self.sftp.symlink(this_s, this_d)
         else:
             self.sftp.symlink(s,d)
-
+    
     def path_exists(self,path):
         """
         Check if path exists
@@ -1436,3 +1443,4 @@ class SshTransport(aiida.transport.Transport):
             raise
         else:
             return True
+    

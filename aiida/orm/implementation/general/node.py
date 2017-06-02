@@ -1489,15 +1489,23 @@ class AbstractNode(object):
         Making a hash based on my attributes
         """
         from aiida.common.hashing import make_hash
-        return make_hash(self.get_attrs())
+        try:
+            return make_hash(self.get_attrs())
+        except:
+            return None
 
 
     def get_same_node(self):
         from aiida.orm.querybuilder import QueryBuilder
 
-        qb = QueryBuilder()
-        qb.append(self.__class__, filters={'extras.hash':self.get_hash()}, project='*', subclassing=False)
-        same_node = qb.first()
+        hash_ = self.get_hash()
+        if hash_:
+            qb = QueryBuilder()
+            qb.append(self.__class__, filters={'extras.hash':hash_}, project='*', subclassing=False)
+            same_node = qb.first()
+        else:
+            same_node = None
+
         if same_node:
             return same_node[0]
         else:

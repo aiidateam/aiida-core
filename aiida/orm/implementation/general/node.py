@@ -1092,6 +1092,7 @@ class AbstractNode(object):
             return
             yield # Needed after return to convert it to a generator
         for _ in self._db_iterextras():
+            # Don't return if key == hash
             if _[0] == 'hash':
                 continue
             yield _

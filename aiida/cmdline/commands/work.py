@@ -8,12 +8,28 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
-from aiida.cmdline.commands import work, verdi
-
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from tabulate import tabulate
+from aiida.cmdline.commands import work, verdi
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
+class Work(VerdiCommandWithSubcommands):
+    """
+    Manage the AiiDA worflow manager
+    """
+
+    def __init__(self):
+        self.valid_subcommands = {
+            'list': (self.cli, self.complete_none),
+            'report': (self.cli, self.complete_none),
+            'tree': (self.cli, self.complete_none),
+            'checkpoint': (self.cli, self.complete_none),
+        }
+
+    def cli(self, *args):
+        verdi()
 
 
 @work.command(context_settings=CONTEXT_SETTINGS)
@@ -244,20 +260,3 @@ def _build_query(order_by=None, limit=None, past_days=None):
         qb.limit(limit)
 
     return qb.iterdict()
-
-
-class Work(VerdiCommandWithSubcommands):
-    """
-    Manage the AiiDA worflow2 manager
-    """
-
-    def __init__(self):
-        self.valid_subcommands = {
-            'list': (self.cli, self.complete_none),
-            'report': (self.cli, self.complete_none),
-            'tree': (self.cli, self.complete_none),
-            'checkpoint': (self.cli, self.complete_none),
-        }
-
-    def cli(self, *args):
-        verdi()

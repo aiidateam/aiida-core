@@ -125,3 +125,5 @@ extras_require = {
         'mock',
     ]
 }
+
+extras_require['testing'] += extras_require['REST'] + extras_require['atomic_tools']

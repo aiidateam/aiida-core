@@ -393,3 +393,13 @@ class TestDbExtras(AiidaTestCase):
     def test_replacement(self):
         pass
 
+class TestBool(AiidaTestCase):
+    def test_bool_conversion(self):
+        from aiida.orm.data.base import Bool
+        for val in [True, False]:
+            self.assertEqual(val, bool(Bool(val)))
+
+    def test_int_conversion(self):
+        from aiida.orm.data.base import Bool
+        for val in [True, False]:
+            self.assertEqual(int(val), int(Bool(val)))

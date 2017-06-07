@@ -14,7 +14,7 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 class Workflow(VerdiCommandWithSubcommands):
     """
-    Manage the AiiDA worflow manager
+    Manage the AiiDA legacy worflow manager
 
     Valid subcommands are:
     * list: list the running workflows running and their state. Pass a -h

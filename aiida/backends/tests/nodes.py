@@ -1114,7 +1114,7 @@ class TestNodeBasic(AiidaTestCase):
         Checks that the method Code.get_from_string works correctly.
         """
         from aiida.orm.code import Code
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError,InputValidationError
 
         # Create some code nodes
         code1 = Code()
@@ -1143,8 +1143,7 @@ class TestNodeBasic(AiidaTestCase):
                           code2.get_remote_exec_path())
 
 
-        # Test that the code1 can be loaded correctly with its id/pk
-        from aiida.common.exceptions import InputValidationError
+        # Calling get_from_string for a non string type raises exception
         with self.assertRaises(InputValidationError):
             Code.get_from_string(code1.id)
 
@@ -1268,6 +1267,22 @@ class TestNodeBasic(AiidaTestCase):
         # Query with the common label
         with self.assertRaises(MultipleObjectsError):
             Code.get(label=code3.label)
+
+        # Add another code whose label is equal to pk of another code
+        pk_label_duplicate = code1.pk
+        code4 = Code()
+        code4.set_remote_computer_exec((self.computer, '/bin/true'))
+        code4.label = pk_label_duplicate
+        code4.store()
+
+        # Since the label of code4 is identical to the pk of code1, calling
+        # Code.get(pk_label_duplicate) should return code1, as the pk takes
+        # precedence
+        q_code_4 = Code.get(code4.label)
+        self.assertEquals(q_code_4.id, code1.id)
+        self.assertEquals(q_code_4.label, code1.label)
+        self.assertEquals(q_code_4.get_remote_exec_path(),
+                          code1.get_remote_exec_path())
 
     def test_list_for_plugin(self):
         """

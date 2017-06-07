@@ -7,59 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import sys
 import click
+from aiida.cmdline.commands import work, verdi
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from tabulate import tabulate
 
-
-
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
-class Work(VerdiCommandWithSubcommands):
-    """
-    Manage the AiiDA worflow2 manager
-    """
-
-    def __init__(self):
-        self.valid_subcommands = {
-            self.list.__name__: (self.list, self.complete_none),
-            self.report.__name__: (self.report, self.complete_none),
-            self.tree.__name__: (self.tree, self.complete_none),
-            self.checkpoint.__name__: (self.checkpoint, self.complete_none),
-        }
-
-    def list(self, *args):
-        ctx = do_list.make_context('list', list(args))
-        with ctx:
-            do_list.invoke(ctx)
-
-    def report(self, *args):
-        ctx = do_report.make_context('report', sys.argv[3:])
-        with ctx:
-            do_report.invoke(ctx)
-
-    def tree(self, *args):
-        ctx = do_tree.make_context('tree', list(args))
-        with ctx:
-            do_tree.invoke(ctx)
-
-    def checkpoint(self, *args):
-        ctx = do_checkpoint.make_context('checkpoint', list(args))
-        with ctx:
-            do_checkpoint.invoke(ctx)
-
-
-@click.command('list', context_settings=CONTEXT_SETTINGS)
+@work.command(context_settings=CONTEXT_SETTINGS)
 @click.option('-p', '--past-days', type=int, default=1,
               help="add a filter to show only workflows created in the past N"
                    " days")
 @click.option('-a', '--all', 'all_nodes', is_flag=True, help='Return all nodes. Overrides the -l flag')
 @click.option('-l', '--limit', type=int, default=None,
               help="Limit to this many results")
-def do_list(past_days, all_nodes, limit):
+def list(past_days, all_nodes, limit):
     """
     Return a list of running workflows on screen
     """
@@ -98,20 +62,21 @@ def do_list(past_days, all_nodes, limit):
     print(tabulate(table, headers=["PID", "Creation time", "ProcessLabel", "Sealed"]))
 
 
-@click.command('report', context_settings=CONTEXT_SETTINGS)
+# @work.command('report', context_settings=CONTEXT_SETTINGS)
+@work.command()
 @click.argument('pk', nargs=1, type=int)
 @click.option('-i', '--indent-size', type=int, default=2)
 @click.option('-l', '--levelname',
-    type=click.Choice(['DEBUG', 'INFO', 'REPORT', 'WARNING', 'ERROR', 'CRITICAL']),
-    default=None,
-    help='Filter the results by name of the log level'
-)
+              type=click.Choice(['DEBUG', 'INFO', 'REPORT', 'WARNING', 'ERROR', 'CRITICAL']),
+              default=None,
+              help='Filter the results by name of the log level'
+              )
 @click.option('-o', '--order-by',
-    type=click.Choice(['id', 'time', 'levelname']),
-    default='time',
-    help='Order the results by column'
-)
-def do_report(pk, levelname, order_by, indent_size):
+              type=click.Choice(['id', 'time', 'levelname']),
+              default='time',
+              help='Order the results by column'
+              )
+def report(pk, levelname, order_by, indent_size):
     """
     Return a list of recorded log messages for the WorkChain with pk=PK
     """
@@ -128,7 +93,7 @@ def do_report(pk, levelname, order_by, indent_size):
     def get_report_messages(pk, depth, levelname):
         backend = construct()
         filters = {
-            'objpk' : pk,
+            'objpk': pk,
         }
 
         if levelname:
@@ -162,12 +127,12 @@ def do_report(pk, levelname, order_by, indent_size):
         # This will return a single flat list of tuples, where the first element
         # corresponds to the WorkChain pk and the second element is an integer
         # that represents its level of nesting within the chain
-        return [(pk, level)] + list(itertools.chain(*[get_subtree(subpk, level=level+1) for subpk in result]))
+        return [(pk, level)] + list(itertools.chain(*[get_subtree(subpk, level=level + 1) for subpk in result]))
 
     def print_subtree(tree, prepend=""):
         print "{}{}".format(prepend, tree[0])
         for subtree in tree[1]:
-            print_subtree(subtree, prepend = prepend+"  ")
+            print_subtree(subtree, prepend=prepend + "  ")
 
     workchain_tree = get_subtree(pk)
 
@@ -190,12 +155,13 @@ def do_report(pk, levelname, order_by, indent_size):
             time=entry.time,
             width_id=width_id,
             width_levelname=width_levelname,
-            indent=' '*(depth * indent_size)
+            indent=' ' * (depth * indent_size)
         )
 
     return
 
-@click.command('tree', context_settings=CONTEXT_SETTINGS)
+
+@work.command('tree', context_settings=CONTEXT_SETTINGS)
 @click.option('--node-label', default='_process_label', type=str)
 @click.option('--depth', '-d', type=int, default=1)
 @click.argument('pks', nargs=-1, type=int)
@@ -215,7 +181,7 @@ def do_tree(node_label, depth, pks):
         print(t.get_ascii(show_internal=True))
 
 
-@click.command('checkpoint', context_settings=CONTEXT_SETTINGS)
+@work.command('checkpoint', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
 def do_checkpoint(pks):
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -278,3 +244,20 @@ def _build_query(order_by=None, limit=None, past_days=None):
         qb.limit(limit)
 
     return qb.iterdict()
+
+
+class Work(VerdiCommandWithSubcommands):
+    """
+    Manage the AiiDA worflow2 manager
+    """
+
+    def __init__(self):
+        self.valid_subcommands = {
+            'list': (self.cli, self.complete_none),
+            'report': (self.cli, self.complete_none),
+            'tree': (self.cli, self.complete_none),
+            'checkpoint': (self.cli, self.complete_none),
+        }
+
+    def cli(self, *args):
+        verdi()

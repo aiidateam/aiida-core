@@ -214,7 +214,15 @@ class Bool(BaseType):
     _type = bool
 
     def __int__(self):
-        return 0 if not self.value else 1
+        return int(bool(self))
+
+    # Python 2
+    def __nonzero__(self):
+        return self.__bool__()
+
+    # Python 3
+    def __bool__(self):
+        return self.value
 
 
 class List(Data, collections.MutableSequence):

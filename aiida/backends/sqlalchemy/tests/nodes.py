@@ -163,7 +163,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         Test for load_node() function.
         """
         from aiida.orm import load_node
-        from aiida.common.exceptions import NotExistent
+        from aiida.common.exceptions import NotExistent, InputValidationError
         import aiida.backends.sqlalchemy
         from aiida.backends.sqlalchemy import get_scoped_session
 
@@ -179,35 +179,35 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         try:
             session.begin_nested()
-            with self.assertRaises(ValueError):
+            with self.assertRaises(InputValidationError):
                 load_node(node_id=a.pk, pk=a.pk)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
-            with self.assertRaises(ValueError):
+            with self.assertRaises(InputValidationError):
                 load_node(pk=a.pk, uuid=a.uuid)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
-            with self.assertRaises(ValueError):
+            with self.assertRaises(TypeError):
                 load_node(pk=a.uuid)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
-            with self.assertRaises(ValueError):
+            with self.assertRaises(TypeError):
                 load_node(uuid=a.pk)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
-            with self.assertRaises(ValueError):
+            with self.assertRaises(InputValidationError):
                 load_node()
         finally:
             session.rollback()

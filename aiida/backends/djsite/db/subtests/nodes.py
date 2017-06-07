@@ -283,22 +283,22 @@ class TestNodeBasicDjango(AiidaTestCase):
         """
         """
         from aiida.orm import load_node
-        from aiida.common.exceptions import NotExistent
+        from aiida.common.exceptions import NotExistent, InputValidationError
 
         a = Node()
         a.store()
         self.assertEquals(a.pk, load_node(pk=a.pk).pk)
         self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InputValidationError):
             load_node(node_id=a.pk, pk=a.pk)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InputValidationError):
             load_node(pk=a.pk, uuid=a.uuid)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             load_node(pk=a.uuid)
-        with self.assertRaises(NotExistent):
+        with self.assertRaises(TypeError):
             load_node(uuid=a.pk)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InputValidationError):
             load_node()
 
 

@@ -35,7 +35,7 @@ install_requires = [
     'supervisor==3.1.3',
     'meld3==1.0.0',
     'numpy==1.12.0',
-    'plumpy==0.7.8',
+    'plumpy==0.7.9',
     'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.31.2',
     'ujson==1.35',
@@ -50,7 +50,7 @@ install_requires = [
     'uritools==1.0.2',
     'psycopg2==2.7.1',
     # Requirements for ssh transport
-    'paramiko==1.15.2',
+    'paramiko==2.1.2',
     'ecdsa==0.13',
     'pycrypto==2.6.1',
     # Requirements for verdi shell (version of ipython non enforced, because
@@ -111,10 +111,6 @@ extras_require = {
     # N.B. requires vtk to be installed
     'advanced_plotting': [
         'mayavi==4.5.0',
-    ],
-    # Requirements for sqlite (anyway, do not use sqlite for production)
-    'sqlite': [
-        'pysqlite==2.6.3',
     ],
     # Requirements for jupyter notebook
     'notebook': [

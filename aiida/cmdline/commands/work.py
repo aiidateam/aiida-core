@@ -32,14 +32,14 @@ class Work(VerdiCommandWithSubcommands):
         verdi()
 
 
-@work.command(context_settings=CONTEXT_SETTINGS)
+@work.command('list', context_settings=CONTEXT_SETTINGS)
 @click.option('-p', '--past-days', type=int, default=1,
               help="add a filter to show only workflows created in the past N"
                    " days")
 @click.option('-a', '--all', 'all_nodes', is_flag=True, help='Return all nodes. Overrides the -l flag')
 @click.option('-l', '--limit', type=int, default=None,
               help="Limit to this many results")
-def list(past_days, all_nodes, limit):
+def do_list(past_days, all_nodes, limit):
     """
     Return a list of running workflows on screen
     """
@@ -78,8 +78,7 @@ def list(past_days, all_nodes, limit):
     print(tabulate(table, headers=["PID", "Creation time", "ProcessLabel", "Sealed"]))
 
 
-# @work.command('report', context_settings=CONTEXT_SETTINGS)
-@work.command()
+@work.command('report', context_settings=CONTEXT_SETTINGS)
 @click.argument('pk', nargs=1, type=int)
 @click.option('-i', '--indent-size', type=int, default=2)
 @click.option('-l', '--levelname',
@@ -181,7 +180,7 @@ def report(pk, levelname, order_by, indent_size):
 @click.option('--node-label', default='_process_label', type=str)
 @click.option('--depth', '-d', type=int, default=1)
 @click.argument('pks', nargs=-1, type=int)
-def do_tree(node_label, depth, pks):
+def tree(node_label, depth, pks):
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     from aiida.utils.ascii_vis import build_tree
     if not is_dbenv_loaded():
@@ -199,7 +198,7 @@ def do_tree(node_label, depth, pks):
 
 @work.command('checkpoint', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
-def do_checkpoint(pks):
+def checkpoint(pks):
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()

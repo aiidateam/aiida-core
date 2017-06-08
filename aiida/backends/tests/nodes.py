@@ -1300,12 +1300,10 @@ class TestNodeBasic(AiidaTestCase):
         code.store()
 
         q_code1 = Code.get(label=code.label)
-        self.assertEquals(code.description, q_code1.description)
-        print "============>", q_code1.description
+        self.assertEquals(code.description, str(q_code1.description))
 
         q_code2 = Code.get(code.id)
-        self.assertEquals(code.description, q_code2.description)
-        print "============>", q_code2.description
+        self.assertEquals(code.description, str(q_code2.description))
 
     def test_list_for_plugin(self):
         """

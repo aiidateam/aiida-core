@@ -24,20 +24,20 @@ The following software is required to continue with the installation:
 * `git`_ (To download the ``aiida`` package)
 * `python-2.7.x`_ (The programming language used for AiiDA)
 * `python-pip`_ (Python package manager)
-* `python-virtualenv`_ (Software to create a virtual environment to install AiiDA in)
+* `virtualenv`_ (Software to create a virtual python environment to install AiiDA in)
 * `postgresql`_ (Database software version 9.4 or higher)
 
 .. _git: https://git-scm.com/downloads
 .. _python-2.7.x: https://www.python.org/downloads
 .. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
-.. _python-virtualenv: https://virtualenv.pypa.io/en/stable/
+.. _virtualenv: https://packages.ubuntu.com/xenial/virtualenv
 .. _postgresql: https://www.postgresql.org/downloads
 
 
 Installation instructions will depend on your system.
 For Ubuntu and any other Debian derived distributions you can use::
 
-    $ sudo apt-get install git python-pip python2.7-dev postgresql postgresql-server-dev-all postgresql-client
+    $ sudo apt-get install git python2.7-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client
 
 For MacOS X using `Homebrew`_ as the package manager::
 
@@ -45,11 +45,6 @@ For MacOS X using `Homebrew`_ as the package manager::
     $ pg_ctl -D /usr/local/var/postgres start
 
 .. _Homebrew: http://brew.sh/index_de.html
-
-Then use the python package manager ``pip`` to install ``virtualenv``::
-
-    $ pip install --user -U setuptools pip wheel virtualenv
-
 
 For a more detailed description of database requirements and usage see section `database`_.
 
@@ -87,6 +82,7 @@ There are additional optional packages that you may want to install, which are g
     * ``docs``: tools to build the documentation
     * ``advanced_plotting``: tools for advanced plotting
     * ``notebook``: jupyter notebook - to allow it to import AiiDA modules
+    * ``testing``: python modules required to run the automatic unit tests
 
 In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command::
 
@@ -445,8 +441,24 @@ AiiDA should run on:
 Troubleshooting
 ===============
 
-* if the ``pip install`` command gives you an error that
-  resembles the one
+* On a clean Ubuntu 16.04 install the pip install command ``pip install -e aiida_core``
+  may fail due to a problem with dependencies on the ``numpy`` package. In this case
+  you may be presented with a message like the following:
+
+    from numpy.distutils.misc_util import get_numpy_include_dirs
+    ImportError: No module named numpy.distutils.misc_util
+
+  To fix this, simply install ``numpy`` individually through pip in your virtual env, i.e.
+
+    pip install numpy
+
+  followed by executing the original install command once more
+
+    pip install -e .
+
+  This should fix the dependency error.
+
+* If the ``pip install`` command gives you an error that resembles the one
   shown below, you might need to downgrade to an older version of pip::
 
     Cannot fetch index base URL https://pypi.python.org/simple/

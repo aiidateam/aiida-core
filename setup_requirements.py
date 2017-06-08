@@ -112,10 +112,6 @@ extras_require = {
     'advanced_plotting': [
         'mayavi==4.5.0',
     ],
-    # Requirements for sqlite (anyway, do not use sqlite for production)
-    'sqlite': [
-        'pysqlite==2.6.3',
-    ],
     # Requirements for jupyter notebook
     'notebook': [
         'jupyter',

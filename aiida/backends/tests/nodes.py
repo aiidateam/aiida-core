@@ -1284,6 +1284,29 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(q_code_4.get_remote_exec_path(),
                           code1.get_remote_exec_path())
 
+    def test_code_description(self):
+        """
+        This test checks that the code description is retrieved correctly
+        when the code is searched with its id and label.
+        :return: 
+        """
+        from aiida.orm.code import Code
+
+        # Create a code node
+        code = Code()
+        code.set_remote_computer_exec((self.computer, '/bin/true'))
+        code.label = 'test_code_label'
+        code.description = 'test code description'
+        code.store()
+
+        q_code1 = Code.get(label=code.label)
+        self.assertEquals(code.description, q_code1.description)
+        print "============>", q_code1.description
+
+        q_code2 = Code.get(code.id)
+        self.assertEquals(code.description, q_code2.description)
+        print "============>", q_code2.description
+
     def test_list_for_plugin(self):
         """
         This test checks the Code.list_for_plugin()

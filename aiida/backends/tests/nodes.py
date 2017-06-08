@@ -1288,7 +1288,6 @@ class TestNodeBasic(AiidaTestCase):
         """
         This test checks that the code description is retrieved correctly
         when the code is searched with its id and label.
-        :return: 
         """
         from aiida.orm.code import Code
 

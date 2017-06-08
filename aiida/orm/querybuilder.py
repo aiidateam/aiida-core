@@ -257,9 +257,7 @@ class QueryBuilder(object):
 
         engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
 
-        if engine == "sqlite3":
-            from sqlalchemy.dialects import sqlite as mydialect
-        elif engine.startswith("mysql"):
+        if engine.startswith("mysql"):
             from sqlalchemy.dialects import mysql as mydialect
         elif engine.startswith("postgre"):
             from sqlalchemy.dialects import postgresql as mydialect

@@ -107,15 +107,16 @@ The following export formats are available:
 * ``gnuplot``: export a gnuplot file, together with a .dat file
 * ``json``: export a json file with the bands divided into segments
 * ``mpl_singlefile``: export a python file that when executed shows a plot using the
-  matplotlib module. All data is included in the same python file as a multiline string
+  ``matplotlib`` module. All data is included in the same python file as a multiline string
   containing the data in json format.
 * ``mpl_withjson``: As above, but the json data is stored separately in a different file
 * ``mpl_pdf``: As above, but after creating the .py file it runs it to export the
   band structure in a PDF file (vectorial). **NOTE**: it requires that you have the python
-  ``matplotlib`` module installed, as well as LaTeX to typeset the labels.
+  ``matplotlib`` module installed. If ``use_latex`` is true, it requires that you have
+  LaTeX installed on your system to typeset the labels, as well as the ``dvipng`` binary.
 * ``mpl_png``: As above, but after creating the .py file it runs it to export the
-  band structure in a PDF file (vectorial). **NOTE**: it requires that you have the python
-  ``matplotlib`` module installed, as well as LaTeX to typeset the labels.
+  band structure in a PDF file (vectorial). **NOTE**: this format has the same dependencies as
+  the ``mpl_pdf`` format above.
 
 Label prettifiers
 .................

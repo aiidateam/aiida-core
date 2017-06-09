@@ -1328,6 +1328,47 @@ class TestNodeBasic(AiidaTestCase):
         retrieved_labels = set(Code.list_for_plugin('plugin_name', labels=True))
         self.assertEqual(retrieved_labels, set([code1.label, code2.label]))
 
+    def test_load_node(self):
+        """
+        Tests the load node functionality
+        """
+        from aiida.orm.data.array import ArrayData
+        from aiida.orm import Node, load_node
+        from aiida.common.exceptions import NotExistent
+
+        # I only need one node to test
+        node = Node().store()
+        uuid_stored = node.uuid # convenience to store the uuid
+        # Simple test to see whether I load correctly from the pk:
+        self.assertEqual(uuid_stored, load_node(node.pk).uuid)
+        # Testing the loading with the uuid:
+        self.assertEqual(uuid_stored, load_node(uuid_stored).uuid)
+
+        # Here I'm testing whether loading the node with the beginnings of a uuid works
+        for i in range(10, len(uuid_stored), 2):
+            start_uuid = uuid_stored[:i]
+            self.assertEqual(uuid_stored, load_node(start_uuid).uuid)
+
+        # Testing whether loading the node with part of UUID works, removing the dashes
+        for i in range(10, len(uuid_stored), 2):
+            start_uuid = uuid_stored[:i].replace('-', '')
+            self.assertEqual(uuid_stored, load_node(start_uuid).uuid)
+            # If I don't allow load_node to fix the dashes, this has to raise:
+            with self.assertRaises(NotExistent):
+                load_node(start_uuid, query_with_dashes=False)
+
+        # Now I am reverting the order of the uuid, this will raise a NotExistent error:
+        with self.assertRaises(NotExistent):
+            load_node(uuid_stored[::-1])
+
+        # I am giving a non-sensical pk, this should also raise
+        with self.assertRaises(NotExistent):
+            load_node(-1)
+
+        # Last check, when asking for specific subclass, this should raise:
+        for spec in (node.pk, uuid_stored):
+            with self.assertRaises(NotExistent):
+                load_node(spec, parent_class=ArrayData)
 
 class TestSubNodesAndLinks(AiidaTestCase):
     def test_cachelink(self):

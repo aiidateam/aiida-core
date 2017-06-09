@@ -177,7 +177,7 @@ After updating your ``PATH`` you can check if it worked in the following way:
 Using AiiDA in Jupyter
 ++++++++++++++++++++++
 
-`Jupyter <http://jupyter.org>`_ is an open-source web application that allows you to create in-browser notebooks that contain live code, visualizations and formatted text.
+`Jupyter <http://jupyter.org>`_ is an open-source web application that allows you to create in-browser notebooks containing live code, visualizations and formatted text.
 
 Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels.
 

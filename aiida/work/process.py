@@ -31,6 +31,7 @@ import aiida.work.util
 from aiida.work.util import PROCESS_LABEL_ATTR, get_or_create_output_group
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
+from aiida.orm.calculation.work import WorkCalculation
 from aiida import LOG_LEVEL_REPORT
 
 
@@ -236,6 +237,7 @@ class Process(plum.process.Process):
     @override
     def on_finish(self):
         super(Process, self).on_finish()
+        self.calc._set_attr(WorkCalculation.FINISHED_KEY, True)
         self.calc.seal()
 
     @override

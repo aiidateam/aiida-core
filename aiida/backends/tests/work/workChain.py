@@ -379,7 +379,7 @@ class TestHelpers(AiidaTestCase):
         for n in [a, b, c]:
             n.store()
 
-        from aiida.work.workchain import _get_proc_outputs_from_registry
+        from aiida.work.interstep import _get_proc_outputs_from_registry
         outputs = _get_proc_outputs_from_registry(c.pk)
         self.assertListEqual(outputs.keys(), [u'a', u'b'])
         self.assertEquals(outputs['a'], a)

@@ -24,20 +24,20 @@ The following software is required to continue with the installation:
 * `git`_ (To download the ``aiida`` package)
 * `python-2.7.x`_ (The programming language used for AiiDA)
 * `python-pip`_ (Python package manager)
-* `python-virtualenv`_ (Software to create a virtual environment to install AiiDA in)
+* `virtualenv`_ (Software to create a virtual python environment to install AiiDA in)
 * `postgresql`_ (Database software version 9.4 or higher)
 
 .. _git: https://git-scm.com/downloads
 .. _python-2.7.x: https://www.python.org/downloads
 .. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
-.. _python-virtualenv: https://virtualenv.pypa.io/en/stable/
+.. _virtualenv: https://packages.ubuntu.com/xenial/virtualenv
 .. _postgresql: https://www.postgresql.org/downloads
 
 
 Installation instructions will depend on your system.
 For Ubuntu and any other Debian derived distributions you can use::
 
-    $ sudo apt-get install git python-pip python2.7-dev postgresql postgresql-server-dev-all postgresql-client
+    $ sudo apt-get install git python2.7-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client
 
 For MacOS X using `Homebrew`_ as the package manager::
 
@@ -45,11 +45,6 @@ For MacOS X using `Homebrew`_ as the package manager::
     $ pg_ctl -D /usr/local/var/postgres start
 
 .. _Homebrew: http://brew.sh/index_de.html
-
-Then use the python package manager ``pip`` to install ``virtualenv``::
-
-    $ pip install --user -U setuptools pip wheel virtualenv
-
 
 For a more detailed description of database requirements and usage see section `database`_.
 
@@ -87,6 +82,7 @@ There are additional optional packages that you may want to install, which are g
     * ``docs``: tools to build the documentation
     * ``advanced_plotting``: tools for advanced plotting
     * ``notebook``: jupyter notebook - to allow it to import AiiDA modules
+    * ``testing``: python modules required to run the automatic unit tests
 
 In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command::
 
@@ -176,6 +172,37 @@ After updating your ``PATH`` you can check if it worked in the following way:
   environment variable in your ``.bashrc``::
   
     export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
+
+
+Using AiiDA in Jupyter
+++++++++++++++++++++++
+
+`Jupyter <http://jupyter.org>`_ is an open-source web application that allows you to create in-browser notebooks containing live code, visualizations and formatted text.
+
+Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels.
+
+If you didn't already install AiiDA with the ``[notebook]`` option (during ``pip install``), run ``pip install jupyter`` **inside** the virtualenv, and then run **from within the virtualenv**::
+
+    $ jupyter notebook
+
+This will open a tab in your browser. Click on ``New -> Python 2`` and type::
+
+    import aiida
+
+followed by ``Shit-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
+
+If you want to set the same environment as in a ``verdi shell``, add the following code in ``<your.home.folder>/.ipython/profile_default/ipython_config.py``::
+
+  c = get_config()
+  c.InteractiveShellApp.extensions = [
+          'aiida.common.ipython.ipython_magics'
+  ]
+
+then open a Jupyter notebook as explained above and type in a cell:
+
+    %aiida
+
+followed by ``Shift-Enter``. You should receive the message "Loaded AiiDA DB environment."
  
 
 .. _virtual-environment:
@@ -445,8 +472,24 @@ AiiDA should run on:
 Troubleshooting
 ===============
 
-* if the ``pip install`` command gives you an error that
-  resembles the one
+* On a clean Ubuntu 16.04 install the pip install command ``pip install -e aiida_core``
+  may fail due to a problem with dependencies on the ``numpy`` package. In this case
+  you may be presented with a message like the following:
+
+    from numpy.distutils.misc_util import get_numpy_include_dirs
+    ImportError: No module named numpy.distutils.misc_util
+
+  To fix this, simply install ``numpy`` individually through pip in your virtual env, i.e.
+
+    pip install numpy
+
+  followed by executing the original install command once more
+
+    pip install -e .
+
+  This should fix the dependency error.
+
+* If the ``pip install`` command gives you an error that resembles the one
   shown below, you might need to downgrade to an older version of pip::
 
     Cannot fetch index base URL https://pypi.python.org/simple/
@@ -454,6 +497,30 @@ Troubleshooting
   To downgrade pip, use the following command::
 
     sudo easy_install pip==1.2.1
+
+* In order to use the AiiDA objects and functions in Jupyter, this latter has to be instructed to use the iPython kernel installed in the AiiDA virtual environment. This happens by default if you install AiiDA with ``pip`` including the ``notebook`` option and run Jupyter from the AiiDA virtual environment.
+
+  If, for any reason, you do not want to install Jupyter in the virtual environment, you might consider to install it out of the virtual environment, if not already done::
+
+      $ pip install jupyter
+
+  Then, activate the AiiDA virtual environment::
+
+      $ source ~/<aiida.virtualenv>/bin/activate
+
+  and setup the AiiDA iPython kernel::
+
+      $ pip install ipykernel
+      $ python -m ipykernel install --user --name=<aiida.kernel.name>
+
+  where you have chosen a meaningful name for the new kernel.
+
+  Finally, start a Jupyter server::
+
+      $ jupyter notebook
+
+  and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
+
 
 * Several users reported the need to install also ``libpq-dev`` (header files for libpq5 - PostgreSQL library)::
 
@@ -497,10 +564,8 @@ Troubleshooting
 
 * For some reasons, on some machines (notably often on Mac OS X) there is no
   default locale defined, and when you run ``verdi setup`` for the first
-  time it fails (see also `this issue`_ of django).  To solve the problem, first
-  remove the sqlite database that was created.
-
-  Then, run in your terminal (or maybe even better, add to your ``.bashrc``, but
+  time it fails (see also `this issue`_ of django).
+  Run in your terminal (or maybe even better, add to your ``.bashrc``, but
   then remember to open a new shell window!)::
 
      export LANG="en_US.UTF-8"

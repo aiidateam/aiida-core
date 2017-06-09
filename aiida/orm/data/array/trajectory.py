@@ -696,7 +696,16 @@ class TrajectoryData(ArrayData):
     def show_mpl_heatmap(self, **kwargs):
         import numpy as np
         from scipy import stats
-        from mayavi import mlab
+        try:
+            from mayavi import mlab
+        except ImportError:
+            raise ImportError(
+                "Unable to import the mayavi package, that is required to"
+                "use the plotting feature you requested. "
+                "Please install it first and then call this command again "
+                "(note that the installation of mayavi is quite complicated "
+                "and requires that you already installed the python numpy "
+                "package, as well as the vtk package")
         from ase.data.colors import jmol_colors
         from ase.data import covalent_radii, atomic_numbers
         from aiida.common.exceptions import InputValidationError

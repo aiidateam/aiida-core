@@ -10,10 +10,9 @@
 """
 This allows to setup and configure a user from command line.
 """
-import click
 import sys
+import click
 from aiida.cmdline.commands import user, verdi
-
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
@@ -33,11 +32,11 @@ class User(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called.
         """
         self.valid_subcommands = {
-            'configure': (self._cli, self.complete_emails),
-            'list': (self._cli, self.complete_none),
+            'configure': (self.cli, self.complete_emails),
+            'list': (self.cli, self.complete_none),
         }
 
-    def _cli(self, *args):
+    def cli(self, *args):
         verdi()
 
     def complete_emails(self, subargs_idx, subargs):

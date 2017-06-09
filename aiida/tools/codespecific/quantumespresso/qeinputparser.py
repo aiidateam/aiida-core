@@ -787,28 +787,37 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat, using_celldm):
                     c = alat * system_dict['celldm(3)']
                 else:
                     c = system_dict['c']
-            if ibrav in (12, 13, 14):
+            if ibrav in (5, 12, 13):
                 if using_celldm:
                     cosg = system_dict['celldm(4)']
                 else:
                     cosg = system_dict['cosab']
                 sing = np.sqrt(1. - cosg ** 2)
+            if ibrav in (5,):
+                # They are the same in trigonal R
+                cosa = cosg
+                sina = sing
             if ibrav in (-12, 14):
                 if using_celldm:
                     cosb = system_dict['celldm(5)']
                 else:
                     cosb = system_dict['cosac']
                 sinb = np.sqrt(1. - cosb ** 2)
-            if ibrav in (5, 14):
+            if ibrav in (14,):
                 if using_celldm:
-                    cosa = system_dict['celldm(6)']
+                    cosa = system_dict['celldm(4)']
                 else:
                     cosa = system_dict['cosbc']
+            if ibrav in (14,):
+                if using_celldm:
+                    cosg = system_dict['celldm(6)']
+                else:
+                    cosg = system_dict['cosab']
         except Exception as e:
             raise InputValidationError(
                 '\nException {} raised when searching for\n'
                 'key {} in qeinput, necessary when ibrav = {}'.format(
-                    e, keys_in_qeinput[i], ibrav
+                    e, e.message, ibrav
                 )
             )
     # Calculating the cell according to ibrav.
@@ -881,7 +890,7 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat, using_celldm):
         tx = np.sqrt((1. - cosa) / 2.)
         ty = np.sqrt((1. - cosa) / 6.)
         tz = np.sqrt((1. + 2. * cosa) / 3.)
-        cell = a * np.array([
+        cell = alat * np.array([
             [tx, -ty, tz],
             [0., 2 * ty, tz],
             [-tx, -ty, tz]
@@ -1013,7 +1022,7 @@ def get_cell_from_parameters(cell_parameters, system_dict, alat, using_celldm):
         #     beta is the angle between axis a and c
         #    gamma is the angle between axis a and b
         cell = np.array([
-            [alat, 0., -0.5 * c],
+            [alat, 0., 0.],
             [b * cosg, b * sing, 0.],
             [
                 c * cosb,

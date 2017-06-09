@@ -12,8 +12,8 @@ from datetime import datetime
 import aiida.backends.sqlalchemy
 
 from sqlalchemy import and_, or_, not_
-from sqlalchemy.types import Integer, Float, Boolean, DateTime
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import cast, ColumnClause
@@ -331,9 +331,11 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         elif operator == '<=':
             expr = database_entity <= value
         elif operator == 'like':
-            expr = database_entity.like(value)
+            # This operator can only exist for strings, so I cast to avoid problems
+            # as they occured for the UUID, which does not support the like operator
+            expr = database_entity.cast(String).like(value)
         elif operator == 'ilike':
-            expr = database_entity.ilike(value)
+            expr = database_entity.cast(String).ilike(value)
         elif operator == 'in':
             expr = database_entity.in_(value)
         else:

@@ -316,8 +316,9 @@ class DbNode(Base):
         dbnode = DjangoSchemaDbNode(
                 id=self.id, type=self.type, uuid=self.uuid, ctime=self.ctime,
                 mtime=self.mtime, label=self.label,
-                dbcomputer_id=self.dbcomputer_id, user_id=self.user_id,
-                public=self.public, nodeversion=self.nodeversion
+                description=self.description, dbcomputer_id=self.dbcomputer_id,
+                user_id=self.user_id, public=self.public,
+                nodeversion=self.nodeversion
         )
         return dbnode.get_aiida_class()
 

@@ -132,11 +132,9 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None, query_with_da
     try:
         return qb.one()[0]
     except MultipleObjectsError:
-        raise MultipleObjectsError("More than one found with UUID starting by '{}'".format(
-                start_uuid))
+        raise MultipleObjectsError("More than one node found")
     except NotExistent:
-        raise NotExistent("No node found with UUID starting by '{}'".format(
-                start_uuid))
+        raise NotExistent("No node was found")
 
 
 def load_workflow(wf_id=None, pk=None, uuid=None):

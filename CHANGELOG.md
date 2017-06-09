@@ -1,3 +1,36 @@
+## v0.9.0
+
+### Documentation
+- General improvements to documentation
+- Added documentation to upgrade AiiDA from v0.8.0 to v0.9.0
+- Added documentation on how to run tests in developer's guide
+- Documented Latex requirements
+- Updated WorkChain documentation for `WaitingEquationOfState` example
+- Updated AiiDA installation documentation for installing virtual environment
+- Updated documentation for new plugin system
+- Updated documentation to use Jupyter
+
+### Enhancements
+- Speedups the travis builds process by caching pip files between runs
+- Improved Db import/export functionality by removing its DbPath dependency
+- Node can be loaded by passing the start of its UUID
+- Handled invalid verdi command line arguments; added help texts for same
+- upgraded `Paramiko` to 2.1.2 and avoided to create empty file when remote connection is failed
+- `verdi calculation kill` command is now available for `SGE plugin`
+- Updated `Plum` from 0.7.8 to 0.7.9 to create a workchain inputs that had default value and evaluated to false
+- Now QueryBuilder will be imported by default for all verdi commands
+
+### Bug Fixes
+- Bug fixes in QE input parser
+- Code.get() method accepts the pk in integer or string format whereas Code.get_from_string() method accepts pk only in string format
+- `verdi code show` command now shows the description of the code
+- Bug fix to check if computer is properly configured before submitting the calculation
+
+### Miscellaneous
+- Removed obsolete code for Sqlite
+- Removed `mayavi2` package from dependencies
+
+
 ## v0.9.0rc1
 
 ### Data export functionality

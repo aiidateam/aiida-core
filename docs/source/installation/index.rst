@@ -181,7 +181,7 @@ Using AiiDA in Jupyter
 
 Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels.
 
-To test Jupyter, make sure you are have installed AiiDA with the ``notebook`` option, activate the AiiDA virtual environment and run::
+If you didn't already install AiiDA with the ``[notebook]`` option (during ``pip install``), run ``pip install jupyter`` **inside** the virtualenv, and then run **from within the virtualenv**::
 
     $ jupyter notebook
 

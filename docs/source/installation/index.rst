@@ -66,11 +66,16 @@ To create a new virtual environment and activate it, run the following commands:
 
 This will create a directory in your home directory named ``aiidapy`` where all the packages will be installed.
 After activation, your prompt now should have ``(aiidapy)`` in front of it, indicating that you are working in the virtual environment.
+
 Finally, to install AiiDA, run the following command from the directory where you cloned the repository::
 
    (aiidapy) $ pip install -e aiida_core
 
 (In this example the AiiDA directory is in ``aiida_core``)
+
+.. note:: You may need to install ``pip`` and ``setuptools`` in your virtual environment in case the system or user version of these tools is old::
+
+    $ pip install -U setuptools pip
 
 .. _install_optional_dependencies:
 
@@ -642,6 +647,25 @@ To use the new version in production:
 * run ``verdi setup``
   This updates your daemon profile and related files. It should not be done when another version of aiida is wished to be used productively on the same machine/user.
 
+Updating from 0.8.* Django to 0.9.0 Django
+++++++++++++++++++++++++++++++++++++++++++
+
+* In a virtual environment, clone and install the code from github with::
+
+    virtualenv ~/aiidapy
+    source ~/aiidapy/bin/activate
+    cd <where_you_want_the_aiida_sourcecode>
+    git clone git@github.com:aiidateam/aiida_core.git
+    pip install -e aiida_core[<EXTRAS>]
+
+  where <EXTRAS> is a comma separated list of the optional features
+  you wish to install (see the :ref:`optional dependencies<install_optional_dependencies>`).
+  The two first steps above can be removed if you do not want to install AiiDA
+  into a virtual environment (reminder: this is *not* recommended).
+
+  In case you have an older version of pip or setuptools, try to upgrade them::
+
+    pip install -U setuptools pip
 
 Updating from 0.7.0 Django to 0.8.0 Django
 ++++++++++++++++++++++++++++++++++++++++++

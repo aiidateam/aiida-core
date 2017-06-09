@@ -18,7 +18,7 @@ The goals of the plugin system are the following
 Sharing of workflows and extensions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A workflow or extension is written as a python package, distributed as a zip source archive, python "egg" or PyPI package. There is extensive documentation available for how to distribute python packages `here <https://packaging.python.org/>`_.
+A workflow or extension is written as a python package, distributed as a zip source archive, python ``egg`` or PyPI package. There is extensive documentation available for how to distribute python packages `here <https://packaging.python.org/>`_.
 
 Ease of use
 ^^^^^^^^^^^
@@ -43,14 +43,14 @@ Plugin developers can write their extensions the same way they would write any p
 Automatic AiiDA setup and testing of plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Installation of complete python environments consisting of many packages can be automated, provided all packages use setuptools as a distribution tool. This enables use of AiiDA in a service-based way using, e.g., docker images. At the same it becomes possible to create automated tests for any combination of plugins, as long as the plugins provide test entry points.
+Installation of complete python environments consisting of many packages can be automated, provided all packages use ``setuptools`` as a distribution tool. This enables use of AiiDA in a service-based way using, e.g., docker images. At the same it becomes possible to create automated tests for any combination of plugins, as long as the plugins provide test entry points.
 
 Mechanism overview
 ------------------
 
 .. We use Entry points
 
-The new plugin system (introduced in AiiDA 0.9) takes advantage of the already well established entry points mechanism within `setuptools`_, documented in the section "`Extensible Applications and Frameworks`_" in the setuptools documentation. (Previously, plugins had to install python modules directly into specific source folders of AiiDA).
+The new plugin system (introduced in AiiDA 0.9) takes advantage of the already well established entry points mechanism within `setuptools`_, documented in the section "`Extensible Applications and Frameworks`_" in the ``setuptools`` documentation. (Previously, plugins had to install python modules directly into specific source folders of AiiDA).
 
 .. explain entry points: groups, names, object
 
@@ -61,7 +61,7 @@ Example
 
 .. highlight:: python
 
-The following is not complete code but only picks the most relevant code lines to give an impression. We will look only at one type of plugin, calculations, for simplicity.
+In the following snippet only the most relevant code lines are picked to give an idea of the functioning. We will look only at one type of plugin, calculations, for simplicity.
 
 First of all, AiiDA defines groups of of entry points in ``aiida_core/setup.py``::
 

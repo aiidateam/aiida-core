@@ -88,7 +88,7 @@ Will lead to usage::
 ``aiida.parsers``
 -----------------
 
-Aiida expects a subclass of ``Parser``. Replaces placing a parser module under ``aiida/parsers/plugins``.
+Aiida expects a subclass of ``Parser``. Replaces the previous approach consisting in placing a parser module under ``aiida/parsers/plugins``.
 
 Example spec::
 

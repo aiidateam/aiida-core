@@ -28,9 +28,9 @@ What a Plugin Can Do
 
 A plugin can do any of the following:
 
-* depend on the AiiDA distribution (and it normally will);
+* depend on the AiiDA distribution (and it normally will).
 * depend on any amount of other plugins;
-* depend on any number of other python distributions: however the required versions must not clash with AiiDA's requirements;
+* depend on any number of other python distributions. However, the required versions must not clash with AiiDA's requirements;
 * Provide classes that can be used together with AiiDA's through a unified interface, including:
 
   - calculations;
@@ -55,11 +55,11 @@ It is important to keep in mind that, even though there is very little that is i
 
 Failure to comply with the points below will probably mean that your plugin will not be able to be listed as an officially endorsed plugin.
 
-A plugin may/should not:
+A plugin cannot (should not):
 
 * change the database schema AiiDA uses;
 * monkey patch anything within the ``aiida`` namespace or the namespace itself;
-* in general, use functionality of AiiDA or its classes which is marked as implementation detail: examples include functions, methods and classes starting with an underscore symbol: `_`.
+* in general, use a functionality of AiiDA or its classes which is marked as implementation detail: examples include functions, methods and classes starting with an underscore symbol: `_`.
 * circumvent data provenance.
 
 Should you find yourself tempted to do any of the above, you should post your usecase and reasoning as an issue on the `AiiDA repository <aiida_core>`_. If your change is actually more appropriate as a change to ``aiida_core`` itself, you should then fork the repository, implement your changes and then create a pull request. You may also choose to ask on the AiiDA users mailing list for advice on how to proceed.

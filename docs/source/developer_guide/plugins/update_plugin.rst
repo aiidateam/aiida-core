@@ -1,7 +1,7 @@
 Updating an Existing Plugin (or creating a new one)
 ===================================================
 
-This section will walk you through the steps needed to create a python package containing your plugin, which can then be easily developed, version controlled distributed and updated separately from AiiDA.
+This section will walk you through the steps needed to create a python package containing your plugin, which can then be easily developed, distributed via a version control system (e.g., GIT) and updated separately from AiiDA.
 
 1. Create a Distribution
 ------------------------

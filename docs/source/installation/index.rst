@@ -179,28 +179,17 @@ Using AiiDA in Jupyter
 
 `Jupyter <http://jupyter.org>`_ is an open-source web application that allows you to create in-browser notebooks that contain live code, visualizations and formatted text.
 
-Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels. If you haven't installed it yet, we suggest to do it through ``pip`` outside of the AiiDA virtual environment::
+Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels.
 
-    $ pip install jupyter
-
-In fact, in order to use the AiiDA objects and functions in Jupyter, this latter has to be instructed to use the iPython kernel installed in the AiiDA virtual environment.
-
-First, activate the AiiDA virtual environment::
-
-    $ source ~/<aiida.virtualenv>/bin/activate
-
-Then, setup an AiiDA iPython kernel::
-
-    $ pip install ipykernel
-    $ python -m ipykernel install --user --name=<aiida.virtualenv>
-
-To test Jupyter, make sure you are in the AiiDA virtual environment and run::
+To test Jupyter, **make sure you are in the AiiDA virtual environment** and run::
 
     $ jupyter notebook
 
-Run any instruction that requires AiiDA objects, e.g.::
+This will open a tab in your browser. Click on ``New -> Python 2`` and type::
 
     import aiida
+
+followed by ``Shit-Enter``.
 
 If you want to set the same environment as in a ``verdi shell``, add the following code in ``<your.home.folder>/.ipython/profile_default/ipython_config.py``::
 
@@ -508,6 +497,30 @@ Troubleshooting
   To downgrade pip, use the following command::
 
     sudo easy_install pip==1.2.1
+
+* In order to use the AiiDA objects and functions in Jupyter, this latter has to be instructed to use the iPython kernel installed in the AiiDA virtual environment. This happens by default if you install AiiDA with ``pip`` including the ``notebook`` option and run Jupyter from the AiiDA virtual environment.
+
+  If, for any reason, you do not want to install Jupyter in the virtual environment, you might consider to install it out of the virtual environment, if not already done::
+
+      $ pip install jupyter
+
+  Then, activate the AiiDA virtual environment::
+
+      $ source ~/<aiida.virtualenv>/bin/activate
+
+  and setup the AiiDA iPython kernel::
+
+      $ pip install ipykernel
+      $ python -m ipykernel install --user --name=<aiida.kernel.name>
+
+  where you have chosen a meaningful name for the new kernel.
+
+  Finally, start a Jupyter server::
+
+      $ jupyter notebook
+
+  and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
+
 
 * Several users reported the need to install also ``libpq-dev`` (header files for libpq5 - PostgreSQL library)::
 

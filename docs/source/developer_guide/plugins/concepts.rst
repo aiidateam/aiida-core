@@ -52,16 +52,16 @@ Installing a Package
 
 What happens when ``pip`` is used to install a package is explained in detail in `the python packaging user guide <packaging>`_. However it is worth summarizing some points here.
 
-* the dependencies on other python packages as specified in ``setup.py`` are automatically resolved and installed
-* a folder ``<distribution-name>.egg-info/`` is created, containing metadata about the distribution
-* if the '-e' option is given, a symbolic link is put into the python package search path, pointing to the distribution top level directory. This is where the ``.egg-info`` folder gets created. Changes to the source code will be picked up by python without reinstalling, however changes to the distribution metadate will not.
+* the dependencies on other python packages as specified in ``setup.py`` are automatically resolved and installed;
+* a folder ``<distribution-name>.egg-info/`` is created, containing metadata about the distribution;
+* if the ``-e`` option is given, a symbolic link is put into the python package search path, pointing to the distribution top level directory. This is where the ``.egg-info`` folder gets created. Changes to the source code will be picked up by python without reinstalling, however changes to the distribution metadata will not.
 
 Entry Points
 ------------
 
-The ``setuptools`` package to which ``pip`` is a frontend has a feature called `entry points`_. When a distribution which registers entry points is installed, the entry point specifications are written to a file inside the distribution's ``.egg-info`` folder. ``setuptools`` provides a package ``pkg_resources`` which can find these entry points by distribution, group and / or name and load the data structure to which it points. This is the way aiida finds and loads classes provided by plugins.
+The ``setuptools`` package to which ``pip`` is a frontend has a feature called `entry points`_. When a distribution which registers entry points is installed, the entry point specifications are written to a file inside the distribution's ``.egg-info`` folder. ``setuptools`` provides a package ``pkg_resources`` which can find these entry points by distribution, group and/or name and load the data structure to which it points. This is the way AiiDA finds and loads classes provided by plugins.
 
-There is a list of entry point groups used by AiiDA in :ref:`plugins.entry_points`
+There is a list of entry point groups defined by AiiDA on the page :ref:`plugins.entry_points`.
 
 .. _packages: https://docs.python.org/2/tutorial/modules.html?highlight=package#packages
 .. _PyPI: https://pypi.python.org/pypi

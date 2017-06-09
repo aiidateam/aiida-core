@@ -154,6 +154,40 @@ tests on the database, run::
 
   verdi devel tests aiida.transport db.generic
 
+Furthermore, you need to set up a few things on your local machine to successfully run the tests:
+
+Test profile
+~~~~~~~~~~~~
+
+To run the tests involving the database, you need to have a special testing profile. A profile is considered a testing profile if the **profile name** and the **database name** both start with ``test_``, and the repository path contains ``test_``.
+
+SSH to localhost
+~~~~~~~~~~~~~~~~
+
+For the transport tests, you need to be able to ssh into your local machine (``localhost``). Here is how this is done for different operating systems:
+
+Linux (Ubuntu)
+==============
+
+    * Install ``openssh-server``
+    * Create an ssh key (if you don't have one already), and add it to ``~/.ssh/authorized_keys``
+    * For **security** reasons, you might want to disallow ssh connections from outside your local machine. To do this, change ``#ListenAddress 0.0.0.0`` to ``ListenAddress 127.0.0.1`` (note the missing ``#``) in ``/etc/ssh/sshd_config``.
+    * Now you should be able to type ``ssh localhost`` and get a successful connection.
+
+If your OS was not listed above but you managed to get the ssh connection running, please add the description above.
+
+Install extras
+~~~~~~~~~~~~~~
+
+In case you did not install all extras, it is possible that some tests fail due to missing packages. If you installed AiiDA with ``pip``, you can use the following command to get the necessary extras:
+
+.. code :: bash
+
+    pip install -e .[testing]
+
+Where the ``-e`` flag means that the code is just linked to the appropriate folder, and the package will update when you change the code.
+
+
 The test-first approach
 -----------------------
 
@@ -202,8 +236,8 @@ For each of the above types of tests, a different testing approach is followed
 2. In this case, we use the `testing functionality of
    Django <https://docs.djangoproject.com/en/dev/topics/testing/>`_,
    adapted to run smoothly with AiiDA.
-   
-   To create a new group of tests, create a new python file under 
+
+   To create a new group of tests, create a new python file under
    ``aiida.backends.djsite.db.substests``, and instead of inheriting each class directly
    from ``unittest``, inherit from ``aiida.backends.djsite.db.testbase.AiidaTestCase``.
    In this way:
@@ -224,7 +258,7 @@ For each of the above types of tests, a different testing approach is followed
      data. (In the codes there are some checks to avoid that these classes
      are run without the correct environment being prepared by ``verdi
      devel tests``.)
-   
+
    Once you create a new file in ``aiida.backends.djsite.db.substests``, you have to
    add a new entry to the ``db_test_list`` inside ``aiida.backends.djsite.db.testbase``
    module in order for ``verdi devel tests`` to find it. In particular,
@@ -243,22 +277,13 @@ For each of the above types of tests, a different testing approach is followed
 
    you will be able to run all all tests inside
    ``aiida.backends.djsite.db.subtests.mynewtestsmodule`` with the command::
-   
+
      verdi devel tests db.newtests
 
    .. note:: If in the list of parameters to ``verdi devel tests`` you add
      also a ``db`` parameter, then all database-related tests will be run, i.e.,
      all tests that start with ``db.`` (or, if you want, all tests in the
      ``db_test_list`` described above).
-
-   .. note:: By default, the test database is created using an in-memory SQLite
-     database, which is much faster than creating from scratch a new test
-     database with PostgreSQL or SQLite. However, if you want to test
-     database-specific settings and you want to use the same type of database
-     you are using with AiiDA, set the ``tests.use_sqlite`` global property to
-     ``False``::
-
-       verdi devel setproperty tests.use_sqlite false
 
 
 3. These tests require an external engine to submit the calculations and then
@@ -336,9 +361,9 @@ In case a method is renamed or removed, this is the procedure to follow:
    Moreover, at the beginning of the function, add something like::
 
      import warnings
-        
+
      warnings.warn(
-         "OLDMETHODNAME is deprecated, use NEWMETHODNAME instead", 
+         "OLDMETHODNAME is deprecated, use NEWMETHODNAME instead",
          DeprecationWarning)
 
    (of course, replace ``OLDMETHODNAME`` and ``NEWMETHODNAME`` with the

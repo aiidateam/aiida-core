@@ -181,7 +181,7 @@ Using AiiDA in Jupyter
 
 Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels.
 
-To test Jupyter, **make sure you are in the AiiDA virtual environment** and run::
+To test Jupyter, make sure you are have installed AiiDA with the ``notebook`` option, activate the AiiDA virtual environment and run::
 
     $ jupyter notebook
 
@@ -189,7 +189,7 @@ This will open a tab in your browser. Click on ``New -> Python 2`` and type::
 
     import aiida
 
-followed by ``Shit-Enter``.
+followed by ``Shit-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
 
 If you want to set the same environment as in a ``verdi shell``, add the following code in ``<your.home.folder>/.ipython/profile_default/ipython_config.py``::
 

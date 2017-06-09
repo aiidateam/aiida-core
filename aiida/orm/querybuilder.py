@@ -2266,6 +2266,21 @@ class QueryBuilder(object):
         return returnval
 
 
+    def one(self):
+        """
+        Executes the query asking for exactly one results. Will raise an exception if this is not the case
+        :raises: MultipleObjectsError if more then one row can be returned
+        :raises: NotExistent if no result was found
+        """
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
+        self.limit(2)
+        res = self.all()
+        if len(res) > 1:
+            raise MultipleObjectsError("More than one result was found")
+        elif len(res) == 0:
+            raise NotExistent("No result was found")
+        return res[0]
+
 
     def count(self):
         """
@@ -2391,6 +2406,7 @@ class QueryBuilder(object):
 
         """
         return list(self.iterdict(batch_size=batch_size))
+
 
 
     def get_results_dict(self):

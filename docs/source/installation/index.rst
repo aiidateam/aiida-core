@@ -509,10 +509,8 @@ Troubleshooting
 
 * For some reasons, on some machines (notably often on Mac OS X) there is no
   default locale defined, and when you run ``verdi setup`` for the first
-  time it fails (see also `this issue`_ of django).  To solve the problem, first
-  remove the sqlite database that was created.
-
-  Then, run in your terminal (or maybe even better, add to your ``.bashrc``, but
+  time it fails (see also `this issue`_ of django).
+  Run in your terminal (or maybe even better, add to your ``.bashrc``, but
   then remember to open a new shell window!)::
 
      export LANG="en_US.UTF-8"

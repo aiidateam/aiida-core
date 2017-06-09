@@ -285,15 +285,6 @@ For each of the above types of tests, a different testing approach is followed
      all tests that start with ``db.`` (or, if you want, all tests in the
      ``db_test_list`` described above).
 
-   .. note:: By default, the test database is created using an in-memory SQLite
-     database, which is much faster than creating from scratch a new test
-     database with PostgreSQL or SQLite. However, if you want to test
-     database-specific settings and you want to use the same type of database
-     you are using with AiiDA, set the ``tests.use_sqlite`` global property to
-     ``False``::
-
-       verdi devel setproperty tests.use_sqlite false
-
 
 3. These tests require an external engine to submit the calculations and then
    check the results at job completion. We use for this a continuous integration

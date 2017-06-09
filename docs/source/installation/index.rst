@@ -177,39 +177,39 @@ After updating your ``PATH`` you can check if it worked in the following way:
 Using AiiDA in Jupyter
 -----------------------
 
-`Jupyter`_.
+`Jupyter <http://jupyter.org>`_ is an open-source web application that allows you to create in-browser notebooks that contain live code, visualizations and formatted text.
 
-.. _Jupyter: http://jupyter.org// is an open-source web application that allows you to create in-browser notebooks that contain live code, visualizations and formatted text. Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels. If you havan't installed it yet, we suggest to do it through ``pip`` outside of the AiiDA virtualenvironment::
+Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels. If you havan't installed it yet, we suggest to do it through ``pip`` outside of the AiiDA virtualenvironment::
 
-    pip install jupyter
+    $ pip install jupyter
 
 In fact, in order to use the AiiDA objects and functions in Jupyter, this latter has to be instructed to use the iPython kernel installed in the AiiDA virtual environment
 
 First, activate the AiiDA virtual environment::
 
-    workon <aiida.virtualenv>
+    $ source ~/aiidapy/bin/activate
 
 Then, setup an AiiDA iPython kernel::
 
-    pip install ipykernel
-    python -m ipykernel install --user --name=<aiida.virtualenv>
+    $ pip install ipykernel
+    $ python -m ipykernel install --user --name=<aiida.virtualenv>
 
 To test Jupyter, make sure you are in the AiiDA virtual environment and run::
 
-    jupyter notebook --no-browser
+    $ jupyter notebook --no-browser
 
-Type any code that requires AiiDA-specific functions, e.g.::
+Run any instruction that requires AiiDA-specific functions, e.g.::
 
     import aiida
 
-If you want to set the same environment as in a ``verdi shell``, add the following code in <your.home.folder>/.ipython/profile_default/ipython_config.py``::
+If you want to set the same environment as in a ``verdi shell``, add the following code in <your.home.folder>/.ipython/profile_default/ipython_config.py::
 
   c = get_config()
   c.InteractiveShellApp.extensions = [
           'aiida.common.ipython.ipython_magics'
   ]
 
-then open a jupyter notebook as explained above and type in a cell:
+then open a Jupyter notebook as explained above and type in a cell:
 
     %aiida
 

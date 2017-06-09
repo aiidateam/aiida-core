@@ -179,7 +179,7 @@ Using AiiDA in Jupyter
 
 `Jupyter <http://jupyter.org>`_ is an open-source web application that allows you to create in-browser notebooks that contain live code, visualizations and formatted text.
 
-Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels. If you havan't installed it yet, we suggest to do it through ``pip`` outside of the AiiDA virtual environment::
+Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels. If you haven't installed it yet, we suggest to do it through ``pip`` outside of the AiiDA virtual environment::
 
     $ pip install jupyter
 
@@ -196,9 +196,9 @@ Then, setup an AiiDA iPython kernel::
 
 To test Jupyter, make sure you are in the AiiDA virtual environment and run::
 
-    $ jupyter notebook --no-browser
+    $ jupyter notebook
 
-Run any instruction that requires AiiDA-specific objects, e.g.::
+Run any instruction that requires AiiDA objects, e.g.::
 
     import aiida
 

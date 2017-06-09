@@ -65,6 +65,10 @@ class User(AbstractUser):
     def id(self):
         return self._dbuser.pk
 
+    def __int__(self):
+        # Needed to pass this object to raw django queries
+        return self.id
+
     @property
     def to_be_stored(self):
         return self._dbuser.pk is None

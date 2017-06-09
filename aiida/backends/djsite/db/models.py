@@ -7,6 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import sys
+
+from six import reraise
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import (
@@ -22,7 +25,7 @@ from aiida.common.exceptions import (
 from aiida.backends.settings import AIIDANODES_UUID_VERSION
 from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
 import aiida.backends.djsite.db.migrations as migrations
-
+from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
 
 # This variable identifies the schema version of this file.
 # Every time you change the schema below in *ANY* way, REMEMBER TO CHANGE
@@ -194,7 +197,7 @@ class DbNode(m.Model):
         appropriate subclass.
         """
         from aiida.orm.node import Node
-        from aiida.common.pluginloader import from_type_to_pluginclassname
+        from aiida.common.old_pluginloader import from_type_to_pluginclassname
         from aiida.common.pluginloader import load_plugin
         from aiida.common import aiidalogger
 
@@ -646,7 +649,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
     dval = m.DateTimeField(default=None, null=True)
 
     # separator for subfields
-    _sep = "."
+    _sep = AIIDA_ATTRIBUTE_SEP
 
     class Meta:
         abstract = True
@@ -689,16 +692,8 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         :return: None if the key is valid
         :raise ValidationError: if the key is not valid
         """
-        from aiida.common.exceptions import ValidationError
-
-        if not isinstance(key, basestring):
-            raise ValidationError("The key must be a string.")
-        if not key:
-            raise ValidationError("The key cannot be an empty string.")
-        if cls._sep in key:
-            raise ValidationError("The separator symbol '{}' cannot be present "
-                                  "in the key of a {}.".format(
-                cls._sep, cls.__name__))
+        from aiida.backends.utils import validate_attribute_key
+        return validate_attribute_key(key)
 
     @classmethod
     def set_value(cls, key, value, with_transaction=True,
@@ -1834,8 +1829,8 @@ class DbWorkflowData(m.Model):
                 self.json_value = json.dumps(arg)
                 self.value_type = wf_data_value_types.JSON
                 self.save()
-        except:
-            raise ValueError("Cannot set the parameter {}".format(self.name))
+        except Exception as exc:
+            reraise(ValueError, "Cannot set the parameter {}".format(self.name), sys.exc_info()[2])
 
     def get_value(self):
         import json

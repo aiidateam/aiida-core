@@ -50,6 +50,7 @@ ORM documentation: Data
 
 .. automodule:: aiida.orm.data
    :members:
+   :private-members: _exportstring
 
 .. _my-ref-to-structure:
 
@@ -128,6 +129,11 @@ XyData
 .. automodule:: aiida.orm.data.array.xy
    :members:
 
+Base data types
++++++++++++++++
+.. automodule:: aiida.orm.data.base
+   :members:
+
 
 ORM documentation: Calculations
 ===============================
@@ -192,3 +198,4 @@ TemplateReplacer
 ++++++++++++++++
 .. automodule:: aiida.orm.calculation.job.simpleplugins.templatereplacer
    :members:
+

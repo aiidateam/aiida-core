@@ -1,3 +1,5 @@
+.. _DevelopDataPluginTutorialFloat:
+
 Developer data plugin tutorial  - Float summation
 =================================================
 

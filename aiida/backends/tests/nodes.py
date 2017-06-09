@@ -761,6 +761,19 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.boolval, a.get_attr('bool'))
         self.assertEquals(a_string, a.get_extra('bool'))
 
+        self.assertEquals(a.get_extras(), {'bool': a_string})
+
+    def test_get_extras_with_default(self):
+        a = Node()
+        a.store()
+        a.set_extra('a', 'b')
+        
+        self.assertEquals(a.get_extra('a'), 'b')
+        with self.assertRaises(AttributeError):
+            a.get_extra('c')
+
+        self.assertEquals(a.get_extra('c', 'def'), 'def')
+
     def test_attr_and_extras_multikey(self):
         """
         Multiple nodes with the same key. This should not be a problem
@@ -960,6 +973,83 @@ class TestNodeBasic(AiidaTestCase):
         extras_to_set.update(new_extras)
         self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
 
+    def test_basetype_as_attr(self):
+        """
+        Test that setting a basetype as an attribute works transparently
+        """
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.data.base import Str, List
+
+        # This one is unstored
+        l1 = List()
+        l1._set_list(['b', [1,2]])
+
+        # This one is stored
+        l2 = List()
+        l2._set_list(['f', True, {'gg': None}])
+        l2.store()
+
+        # Manages to store, and value is converted to its base type
+        p = ParameterData(dict={'b': Str("sometext"), 'c': l1})
+        p.store()
+        self.assertEqual(p.get_attr('b'), "sometext")
+        self.assertIsInstance(p.get_attr('b'),basestring)
+        self.assertEqual(p.get_attr('c'), ['b', [1,2]])
+        self.assertIsInstance(p.get_attr('c'), (list, tuple))
+        
+        # Check also before storing
+        n = Node()
+        n._set_attr('a', Str("sometext2"))
+        n._set_attr('b', l2)
+        self.assertEqual(n.get_attr('a'), "sometext2")
+        self.assertIsInstance(n.get_attr('a'),basestring)
+        self.assertEqual(n.get_attr('b'), ['f', True, {'gg': None}])
+        self.assertIsInstance(n.get_attr('b'), (list, tuple))
+        
+        # Check also deep in a dictionary/list
+        n = Node()
+        n._set_attr('a', {'b': [Str("sometext3")]})
+        self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+        n.store()
+        self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+
+    def test_basetype_as_extra(self):
+        """
+        Test that setting a basetype as an attribute works transparently
+        """
+        from aiida.orm.data.base import Str, List
+
+        # This one is unstored
+        l1 = List()
+        l1._set_list(['b', [1,2]])
+
+        # This one is stored
+        l2 = List()
+        l2._set_list(['f', True, {'gg': None}])
+        l2.store()
+
+        # Check also before storing
+        n = Node()
+        n.store()
+        n.set_extra('a', Str("sometext2"))
+        n.set_extra('c', l1)
+        n.set_extra('d', l2)
+        self.assertEqual(n.get_extra('a'), "sometext2")
+        self.assertIsInstance(n.get_extra('a'),basestring)
+        self.assertEqual(n.get_extra('c'), ['b', [1, 2]])
+        self.assertIsInstance(n.get_extra('c'), (list, tuple))
+        self.assertEqual(n.get_extra('d'), ['f', True, {'gg': None}])
+        self.assertIsInstance(n.get_extra('d'), (list, tuple))
+
+        # Check also deep in a dictionary/list
+        n = Node()
+        n.store()
+        n.set_extra('a', {'b': [Str("sometext3")]})
+        self.assertEqual(n.get_extra('a')['b'][0], "sometext3")
+        self.assertIsInstance(n.get_extra('a')['b'][0],basestring)     
+
     def test_versioning_lowlevel(self):
         """
         Checks the versioning.
@@ -1024,7 +1114,7 @@ class TestNodeBasic(AiidaTestCase):
         Checks that the method Code.get_from_string works correctly.
         """
         from aiida.orm.code import Code
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError,InputValidationError
 
         # Create some code nodes
         code1 = Code()
@@ -1053,8 +1143,7 @@ class TestNodeBasic(AiidaTestCase):
                           code2.get_remote_exec_path())
 
 
-        # Test that the code1 can be loaded correctly with its id/pk
-        from aiida.common.exceptions import InputValidationError
+        # Calling get_from_string for a non string type raises exception
         with self.assertRaises(InputValidationError):
             Code.get_from_string(code1.id)
 
@@ -1178,6 +1267,22 @@ class TestNodeBasic(AiidaTestCase):
         # Query with the common label
         with self.assertRaises(MultipleObjectsError):
             Code.get(label=code3.label)
+
+        # Add another code whose label is equal to pk of another code
+        pk_label_duplicate = code1.pk
+        code4 = Code()
+        code4.set_remote_computer_exec((self.computer, '/bin/true'))
+        code4.label = pk_label_duplicate
+        code4.store()
+
+        # Since the label of code4 is identical to the pk of code1, calling
+        # Code.get(pk_label_duplicate) should return code1, as the pk takes
+        # precedence
+        q_code_4 = Code.get(code4.label)
+        self.assertEquals(q_code_4.id, code1.id)
+        self.assertEquals(q_code_4.label, code1.label)
+        self.assertEquals(q_code_4.get_remote_exec_path(),
+                          code1.get_remote_exec_path())
 
     def test_list_for_plugin(self):
         """

@@ -18,10 +18,11 @@ install_requires = [
     'django_extensions==1.5',
     'tzlocal==1.3',
     'pytz==2014.10',
-    # We need for the time being to stay with an old version 
+    'six==1.10',
+    # We need for the time being to stay with an old version
     # of celery, including the versions of the AMQP libraries below,
     # because the support for a SQLA broker has been dropped in later
-    # versions... Actually, this might be source or problems with 
+    # versions... Actually, this might be source or problems with
     # SQLA for us... probably switch to using rabbitmq?
     # Note that however this requires a new server process.
     'celery==3.1.25',
@@ -34,7 +35,7 @@ install_requires = [
     'supervisor==3.1.3',
     'meld3==1.0.0',
     'numpy==1.12.0',
-    'plumpy==0.7.6',
+    'plumpy==0.7.8',
     'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.31.2',
     'ujson==1.35',
@@ -95,13 +96,14 @@ extras_require = {
     # Requirements for non-core funciontalities that rely on external atomic
     # manipulation/processing software
     'atomic_tools': [
-        'pyspglib',
+        'spglib>=1.9',
         # support for symmetry detection in aiida.orm.data.structure. Has no
         # easily accessible version number
         'pymatgen==4.5.3',  # support for NWChem I/O
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
         'PyCifRW==3.6.2.1',
+        'seekpath>=1.4.0',
         # support for the AiiDA CifData class. Update to version 4 ddoes
         # break tests
     ],

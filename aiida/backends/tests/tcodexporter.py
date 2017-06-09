@@ -39,7 +39,7 @@ class TestTcodDbExporter(AiidaTestCase):
     """
     Tests for TcodDbExporter class.
     """
-    from aiida.orm.data.structure import has_ase, has_pyspglib
+    from aiida.orm.data.structure import has_ase, has_spglib
     from aiida.orm.data.cif import has_pycifrw
 
     def test_contents_encoding_1(self):
@@ -134,7 +134,7 @@ class TestTcodDbExporter(AiidaTestCase):
              {'name': 'save/2/', 'type': 'folder'}])
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
@@ -234,20 +234,23 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEquals(values['_tcod_computation_environment'],
                           ['PATH=/dev/null\nUSER=unknown'])
         self.assertEquals(values['_tcod_computation_command'],
-                          ['cd 0; ./_aiidasubmit.sh'])
+                          ['cd 1; ./_aiidasubmit.sh'])
 
     def test_pw_translation(self):
         from aiida.tools.dbexporters.tcod \
             import translate_calculation_specific_values
-        from aiida.tools.dbexporters.tcod_plugins.pw \
-            import PwTcodtranslator as PWT
-        from aiida.tools.dbexporters.tcod_plugins.cp \
-            import CpTcodtranslator as CPT
+        # from aiida.tools.dbexporters.tcod_plugins.pw \
+        #     import PwTcodtranslator as PWT
+        # from aiida.tools.dbexporters.tcod_plugins.cp \
+        #     import CpTcodtranslator as CPT
         from aiida.orm.code import Code
         from aiida.orm.data.array import ArrayData
         from aiida.orm.data.array.kpoints import KpointsData
         from aiida.orm.data.parameter import ParameterData
         import numpy
+        from aiida.common.pluginloader import get_plugin
+        PWT = get_plugin('tools.dbexporters.tcod_plugins', 'quantumespresso.pw')
+        CPT = get_plugin('tools.dbexporters.tcod_plugins', 'quantumespresso.cp')
 
         code = Code()
         code._set_attr('remote_exec_path', '/test')
@@ -401,10 +404,12 @@ class TestTcodDbExporter(AiidaTestCase):
     def test_nwcpymatgen_translation(self):
         from aiida.tools.dbexporters.tcod \
             import translate_calculation_specific_values
-        from aiida.tools.dbexporters.tcod_plugins.nwcpymatgen \
-            import NwcpymatgenTcodtranslator as NPT
+        # from aiida.tools.dbexporters.tcod_plugins.nwcpymatgen \
+        #     import NwcpymatgenTcodtranslator as NPT
         from aiida.orm.data.parameter import ParameterData
         from tcodexporter import FakeObject
+        from aiida.common.pluginloader import get_plugin
+        NPT = get_plugin('tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
 
         calc = FakeObject({
             "out": {"output":
@@ -469,7 +474,7 @@ class TestTcodDbExporter(AiidaTestCase):
         })
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_inline_export(self):
         from aiida.orm.data.cif import CifData
@@ -503,7 +508,7 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertNotEqual(script.find(function), script.rfind(function))
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_symmetry_reduction(self):
         from aiida.orm.data.structure import StructureData
@@ -557,7 +562,7 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEqual(options, {})
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_export_trajectory(self):
         from aiida.orm.data.structure import StructureData

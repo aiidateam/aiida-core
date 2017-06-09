@@ -71,10 +71,9 @@ class DjangoTests(AiidaTestImplementation):
         self.computer.store()
 
     def clean_db(self):
-        from aiida.backends.djsite.db.models import DbComputer
-
-        # I first delete the workflows
-        from aiida.backends.djsite.db.models import DbWorkflow, DbWorkflowStep, DbWorkflowData
+        from aiida.backends.djsite.db.models import (
+            DbComputer, DbUser, DbWorkflow, DbWorkflowStep, DbWorkflowData)
+        from aiida.common.utils import get_configured_user_email
 
         # Complicated way to make sure we 'unwind' all the relationships
         # between workflows and their children.
@@ -102,11 +101,9 @@ class DjangoTests(AiidaTestImplementation):
 
         DbNode.objects.all().delete()
 
-        ## I do not delete it, see discussion in setUpClass
-        # try:
-        #    DbUser.objects.get(email=get_configured_user_email()).delete()
-        # except ObjectDoesNotExist:
-        #    pass
+        # I delete all the users except the default user.
+        # See discussion in setUpClass
+        DbUser.objects.exclude(email=get_configured_user_email()).delete()
 
         DbComputer.objects.all().delete()
 

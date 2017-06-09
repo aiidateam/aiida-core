@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import pluginloader as pl
+from aiida.common import old_pluginloader as pl
 import unittest
 
 

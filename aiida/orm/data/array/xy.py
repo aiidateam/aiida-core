@@ -155,9 +155,6 @@ class XyData(ArrayData):
             raise NotExistent("Could not retrieve array associated with y array"
                               " {}".format(y_names[i]))
         return zip(y_names,y_arrays,y_units)
-    
-    def _exportstring(self):
-        raise NotImplementedError
 
     # def plot_dosdata(self, dosdata_type, spin='',path='', fmt='pdf'):
     #     """

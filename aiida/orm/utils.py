@@ -9,7 +9,7 @@
 ###########################################################################
 from abc import ABCMeta, abstractmethod
 from aiida.common.pluginloader import BaseFactory
-
+from aiida.common.utils import abstractclassmethod
 
 
 def CalculationFactory(module, from_abstract=False):
@@ -18,9 +18,10 @@ def CalculationFactory(module, from_abstract=False):
 
     :param module: a valid string recognized as a Calculation plugin
     :param from_abstract: A boolean. If False (default), actually look only
-      to subclasses to JobCalculation, not to the base Calculation class.
-      If True, check for valid strings for plugins of the Calculation base class.
+        to subclasses of JobCalculation, not to the base Calculation class.
+        If True, check for valid strings for plugins of the Calculation base class.
     """
+
     from aiida.orm.calculation import Calculation
     from aiida.orm.calculation.job import JobCalculation
 
@@ -69,7 +70,6 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None):
     # must have been already loaded. If you put it at the module level,
     # the implementation is frozen to the default one at import time.
     from aiida.orm.implementation import Node
-
 
     if int(node_id is None) + int(pk is None) + int(uuid is None) == 3:
         raise ValueError("one of the parameters 'node_id', 'pk' and 'uuid' "
@@ -164,8 +164,7 @@ class BackendDelegateWithDefault(object):
 
     _DEFAULT = None
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def create_default(cls):
         raise NotImplementedError("The subclass should implement this")
 

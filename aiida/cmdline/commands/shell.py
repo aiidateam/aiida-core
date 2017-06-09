@@ -30,6 +30,7 @@ default_modules_list = [
     ("aiida.orm.group", "Group", "Group"),
     ("aiida.orm.workflow", "Workflow", "Workflow"),
     ("aiida.orm", "load_workflow", "load_workflow"),
+    ("aiida.orm.querybuilder", "QueryBuilder", "QueryBuilder"),
     # ("aiida.backends.djsite.db", "models", "models"),
     # ("aiida.backends.sqlalchemy", "models", "models"),
 ]

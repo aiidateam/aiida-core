@@ -108,11 +108,6 @@ extras_require = {
         # support for the AiiDA CifData class. Update to version 4 ddoes
         # break tests
     ],
-    # Requirements for advanced plotting features
-    # N.B. requires vtk to be installed
-    'advanced_plotting': [
-        'mayavi==4.5.0',
-    ],
     # Requirements for jupyter notebook
     'notebook': [
         'jupyter',
@@ -122,5 +117,18 @@ extras_require = {
         'mock',
     ]
 }
+
+# There are a number of optional dependencies that are not 
+# listed even as optional dependencies as they are quite 
+# cumbersome to install and there is a risk that a user, wanting
+# to install all dependencies (including optional ones) 
+# does not manage and thinks it's an AiiDA problem.
+# 
+# These include:
+#  - mayavi==4.5.0
+#    plotting package, requires to have the vtk code installed first;
+#    moreover requires to have numpy installed before, but it is not in
+#    the requirements (and there is no easy way on our side to fix a specific
+#    installation order of dependencies)
 
 extras_require['testing'] += extras_require['REST'] + extras_require['atomic_tools']

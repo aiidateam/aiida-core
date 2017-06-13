@@ -9,7 +9,6 @@
 ###########################################################################
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-
 if not is_dbenv_loaded():
     load_dbenv()
 
@@ -21,30 +20,36 @@ from aiida.work.db_types import to_db_type
 
 
 class Add(Process):
-    @staticmethod
-    def define(spec):
+    @classmethod
+    def define(cls, spec):
+        super(Add, cls).define(spec)
+
         spec.input('a', default=0)
         spec.input('b', default=0)
         spec.output('value')
 
     def _run(self, a, b):
-        self._out('value', to_db_type(a.value + b.value))
+        self.out('value', to_db_type(a.value + b.value))
 
 
 class Mul(Process):
-    @staticmethod
-    def define(spec):
+    @classmethod
+    def define(cls, spec):
+        super(Add, cls).define(spec)
+
         spec.input('a', default=1)
         spec.input('b', default=1)
         spec.output('value')
 
     def _run(self, a, b):
-        self._out('value', to_db_type(a.value * b.value))
+        self.out('value', to_db_type(a.value * b.value))
 
 
 class MulAdd(Workflow):
-    @staticmethod
-    def define(spec):
+    @classmethod
+    def define(cls, spec):
+        super(Add, cls).define(spec)
+
         spec.process(Mul)
         spec.process(Add)
 
@@ -54,6 +59,7 @@ class MulAdd(Workflow):
 
         spec.link(':c', 'Mul:a')
         spec.link('Add:value', 'Mul:b')
+
 
 if __name__ == '__main__':
     # ee = TrackingExecutionEngine()

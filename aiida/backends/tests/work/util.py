@@ -36,7 +36,7 @@ def registry_tester():
     assert future.pid == out['node_pk']
 
     # Call a Process
-    StackTester.run()
+    StackTester.launch()
 
     return {'pid': Int(ProcessStack.get_active_process_id()),
             'node_pk': Int(ProcessStack.get_active_process_calc_node().pk)}
@@ -62,7 +62,7 @@ class TestProcessRegistry(AiidaTestCase):
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_process_pid_and_calc(self):
-        StackTester.run()
+        StackTester.launch()
 
     def test_wf_pid_and_calc(self):
         future = async(registry_tester)

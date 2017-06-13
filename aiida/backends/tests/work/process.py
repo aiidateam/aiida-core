@@ -60,11 +60,11 @@ class TestProcess(AiidaTestCase):
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_process_stack(self):
-        ProcessStackTest.run()
+        ProcessStackTest.launch()
 
     def test_inputs(self):
         with self.assertRaises(AssertionError):
-            BadOutput.run()
+            BadOutput.launch()
 
     def test_pid_is_uuid(self):
         p = DummyProcess.new_instance(inputs={'_store_provenance': False})
@@ -150,7 +150,7 @@ class TestFunctionProcess(AiidaTestCase):
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
         FP = FunctionProcess.build(wf)
-        self.assertEqual(FP.run(**inputs), inputs)
+        self.assertEqual(FP.launch(**inputs), inputs)
 
     def test_kwargs(self):
         def wf_with_kwargs(**kwargs):
@@ -166,15 +166,15 @@ class TestFunctionProcess(AiidaTestCase):
         inputs = {'a': a}
 
         FP = FunctionProcess.build(wf_with_kwargs)
-        outs = FP.run(**inputs)
+        outs = FP.launch(**inputs)
         self.assertEqual(outs, inputs)
 
         FP = FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
-            FP.run(**inputs)
+            FP.launch(**inputs)
 
         FP = FunctionProcess.build(wf_fixed_args)
-        outs = FP.run(**inputs)
+        outs = FP.launch(**inputs)
         self.assertEqual(outs, inputs)
 
 

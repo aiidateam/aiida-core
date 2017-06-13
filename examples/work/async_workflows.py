@@ -9,7 +9,6 @@
 ###########################################################################
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-
 if not is_dbenv_loaded():
     load_dbenv()
 
@@ -44,30 +43,30 @@ def add_multiply_wf(a, b, c):
 
 
 class Add(Process):
-    @staticmethod
-    def define(spec):
+    @classmethod
+    def define(cls, spec):
         spec.input('a', default=0)
         spec.input('b', default=0)
         spec.output('value')
 
     def _run(self, a, b):
-        self._out('value', to_db_type(a.value + b.value))
+        self.out('value', to_db_type(a.value + b.value))
 
 
 class Mul(Process):
-    @staticmethod
-    def define(spec):
+    @classmethod
+    def define(cls, spec):
         spec.input('a', default=1)
         spec.input('b', default=1)
         spec.output('value')
 
     def _run(self, a, b):
-        self._out('value', to_db_type(a.value * b.value))
+        self.out('value', to_db_type(a.value * b.value))
 
 
 class MulAdd(Workflow):
-    @staticmethod
-    def define(spec):
+    @classmethod
+    def define(cls, spec):
         spec.process(Mul)
         spec.process(Add)
 
@@ -90,6 +89,6 @@ if __name__ == '__main__':
     print "output value:", simpledata.value
 
     print "PROCESS:"
-    simpledata = MulAdd.run(inputs={'a': two, 'b': three, 'c': four})['value']
+    simpledata = MulAdd.launch(inputs={'a': two, 'b': three, 'c': four})['value']
     print "output pk:", simpledata.pk
     print "output value:", simpledata.value

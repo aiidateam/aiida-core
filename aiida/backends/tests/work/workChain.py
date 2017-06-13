@@ -140,7 +140,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        Wf.run(value=A, n=three)
+        Wf.launch(value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -148,7 +148,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = Wf.run(value=B, n=three)
+        finished_steps = Wf.launch(value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -156,7 +156,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = Wf.run(value=C, n=three)
+        finished_steps = Wf.launch(value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -206,7 +206,7 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.r1['_return'] == B
                 assert self.ctx.r2['_return'] == B
 
-        Wf.run()
+        Wf.launch()
 
     def test_str(self):
         self.assertIsInstance(str(Wf.spec()), basestring)
@@ -278,17 +278,17 @@ class TestWorkchain(AiidaTestCase):
             def after(self):
                 raise RuntimeError("Shouldn't get here")
 
-        WcWithReturn.run()
+        WcWithReturn.launch()
 
     def test_tocontext_async_workchain(self):
         class MainWorkChain(WorkChain):
             @classmethod
             def define(cls, spec):
                 super(MainWorkChain, cls).define(spec)
-                spec.outline(cls.run, cls.check)
+                spec.outline(cls.step1, cls.check)
                 spec.dynamic_output()
 
-            def run(self):
+            def step1(self):
                 return ToContext(subwc=async(SubWorkChain))
 
             def check(self):
@@ -298,9 +298,9 @@ class TestWorkchain(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super(SubWorkChain, cls).define(spec)
-                spec.outline(cls.run)
+                spec.outline(cls.step1)
 
-            def run(self):
+            def step1(self):
                 self.out("value", Int(5))
 
         run(MainWorkChain)

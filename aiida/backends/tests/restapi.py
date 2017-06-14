@@ -201,7 +201,7 @@ class RESTApiTestCase(AiidaTestCase):
         self.assertEqual(response["method"], "GET")
         self.assertEqual(response["resource_type"], node_type)
         self.assertEqual(response["path"], path)
-        self.assertEqual(response["pk"], pk)
+        self.assertEqual(response["id"], pk)
         self.assertEqual(response["query_string"], query_string)
         self.assertEqual(response["url"], "http://localhost" + url)
         self.assertEqual(response["url_root"], "http://localhost/")

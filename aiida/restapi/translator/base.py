@@ -36,7 +36,7 @@ class BaseTranslator(object):
 
     _default = _default_projections = []
     _is_qb_initialized = False
-    _is_pk_query = None
+    _is_id_query = None
     _total_count = None
 
     def __init__(self, Class=None, **kwargs):
@@ -65,8 +65,12 @@ class BaseTranslator(object):
         self._default = Class._default
         self._default_projections = Class._default_projections
         self._is_qb_initialized = Class._is_qb_initialized
-        self._is_pk_query = Class._is_pk_query
+        self._is_id_query = Class._is_id_query
         self._total_count = Class._total_count
+
+        # Basic filter (dict) to set the identity to an id (int, uuid). None if
+        #  no specific node is requested
+        self._id_filter = None
 
         # basic query_help object
         self._query_help = {
@@ -110,19 +114,53 @@ class BaseTranslator(object):
         # Construct the json object to be returned
         basic_schema = orm_class.get_db_columns()
 
+        """
+        Determine the API schema (spartially overlapping with the ORM/database one).
+        When the ORM is based on django, however, attributes and extras are not colums of the database but are nevertheless         valid projections. We add them by hand into the API schema.
+        """
+        # TODO change the get_db_columns method to include also relationships such as attributes, extras, input, and outputs        in order to have a more complete definition of the schema.
+
         if self._default_projections == ['**']:
             schema = basic_schema  # No custom schema, take the basic one
         else:
-            schema = dict([(k, basic_schema[k]) for k in
-                           self._default_projections
-                           if k in basic_schema.keys()])
 
-        # Convert the related_tablevalues to the RESTAPI resources
-        # (orm class/db table ==> RESTapi resource)
+            # Non-schema possible projections (only for nodes when django is backend)
+            non_schema_projs = ('attributes', 'extras')
+            # Sub-projections of JSON fields (applies to both SQLA and Django)
+            non_schema_proj_prefix = ('attributes.', 'extras.')
+
+            schema_key = []
+            schema_values = []
+
+            for k in self._default_projections:
+                if k in basic_schema.keys():
+                    schema_key.append(k)
+                    schema_values.append(basic_schema[k])
+                elif k in non_schema_projs:
+                    # Catches 'attributes' and 'extras'
+                    schema_key.append(k)
+                    value = dict(type=dict, is_foreign_key=False)
+                    schema_values.append(value)
+                elif k.startswith(non_schema_proj_prefix):
+                    # Catches 'attributes.<key>' and 'extras.<key>'
+                    schema_key.append(k)
+                    value = dict(type=None, is_foreign_key=False)
+                    schema_values.append(value)
+
+            schema = dict(zip(schema_key, schema_values))
+
+
         def table2resource(table_name):
+            """
+            Convert the related_tablevalues to the RESTAPI resources
+            (orm class/db table ==> RESTapi resource)
+
+            :param table_name (str): name of the table (in SQLA is __tablename__)
+            :return: resource_name (str): name of the API resource
+            """
             # TODO Consider ways to make this function backend independent (one
             # idea would be to go from table name to aiida class name which is
-            # univoque)
+            # unique)
             if BACKEND == BACKEND_DJANGO:
                 (spam, resource_name) = issingular(table_name[2:].lower())
             elif BACKEND == BACKEND_SQLA:
@@ -152,7 +190,14 @@ class BaseTranslator(object):
                 schema[k]['related_resource'] = table2resource(
                     schema[k].pop('related_table'))
 
-        return dict(columns=schema)
+        # TODO Construct the ordering (all these things have to be moved in matcloud_backend)
+        if self._default_projections != ['**']:
+            ordering = self._default_projections
+        else:
+            # random ordering if not set explicitely in
+            ordering = schema.keys()
+
+        return dict(fields=schema, ordering=ordering)
 
     def init_qb(self):
         """
@@ -301,33 +346,34 @@ class BaseTranslator(object):
         for tag, columns in orders.iteritems():
             self._query_help['order_by'][tag] = def_order(columns)
 
-    def set_query(self, filters=None, orders=None, projections=None, pk=None):
+    def set_query(self, filters=None, orders=None, projections=None, id=None):
         """
         Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
 
         :param filters: dictionary with the filters
         :param orders: dictionary with the order for each tag
-        :param pk (integer): pk of a specific node
+        :param orders: dictionary with the projections
+        :param id (integer): id of a specific node
         """
 
         tagged_filters = {}
 
         ## Check if filters are well defined and construct an ad-hoc filter
-        # for pk_query
-        if pk is not None:
-            self._is_pk_query = True
+        # for id_query
+        if id is not None:
+            self._is_id_query = True
             if self._result_type == self.__label__ and len(filters) > 0:
-                raise RestInputValidationError("selecting a specific pk does "
+                raise RestInputValidationError("selecting a specific id does "
                                                "not "
                                                "allow to specify filters")
-            elif not self._check_pk_validity(pk):
+            elif not self._check_id_validity(id):
                 raise RestValidationError(
-                    "either the selected pk does not exist "
+                    "either the selected id does not exist "
                     "or the corresponding object is not of "
                     "type aiida.orm.{}".format(self._aiida_type))
             else:
-                tagged_filters[self.__label__] = {'id': {'==': pk}}
+                tagged_filters[self.__label__] = self._id_filter
                 if self._result_type is not self.__label__:
                     tagged_filters[self._result_type] = filters
         else:
@@ -447,18 +493,34 @@ class BaseTranslator(object):
         data = self.get_formatted_result(self._result_type)
         return data
 
-    def _check_pk_validity(self, pk):
+    def _check_id_validity(self, id):
         """
-        Checks whether a pk corresponds to an object of the expected type,
+        Checks whether a id corresponds to an object of the expected type,
         whenever type is a valid column of the database (ex. for nodes,
-        but not for users)_
-        :param pk: (integer) ok to check
-        :return: True or False
+        but not for users)
+        :param id: (integer) ok to check
+        :return: (True/False) if id valid (invalid). If True sets the
+        id filter attribute correctly
         """
         # The logic could be to load the node or to use querybuilder. Let's
         # do with qb for consistency, although it would be easier to do it
         # with load_node
 
+        import uuid
+
+        # Distinguish id and uuid case
+        if type(id) == int:
+            filter =  {
+                    'id': {'==': id}
+                }
+        elif type(id) == uuid.UUID:
+            filter  = {
+                'uuid': {'==': id.__str__()}
+            }
+        else:
+            raise RestValidationError('id can only be an integer or a uuid')
+
+        # Build the query_help
         query_help_base = {
             'path': [
                 {
@@ -467,12 +529,15 @@ class BaseTranslator(object):
                 },
             ],
             'filters': {
-                self.__label__:
-                    {
-                        'id': {'==': pk}
-                    }
+                self.__label__: filter
             }
         }
 
+        # Run the query and build response
         qb_base = QueryBuilder(**query_help_base)
-        return qb_base.count() == 1
+
+        if (qb_base.count() == 1):
+            self._id_filter = filter
+            return True
+        else:
+            return False

@@ -30,7 +30,7 @@ class BaseResource(Resource):
                             kwargs}
         self.utils = Utils(**self.utils_confs)
 
-    def get(self, pk=None, page=None):
+    def get(self, id=None, page=None):
         """
         Get method for the Computer resource
         :return:
@@ -43,7 +43,7 @@ class BaseResource(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, pk, query_type) = self.utils.parse_path(path)
+        (resource_type, page, id, query_type) = self.utils.parse_path(path)
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
          nelist) = self.utils.parse_query_string(query_string)
 
@@ -62,7 +62,7 @@ class BaseResource(Resource):
 
         else:
             ## Set the query, and initialize qb object
-            self.trans.set_query(filters=filters, orders=orderby, pk=pk)
+            self.trans.set_query(filters=filters, orders=orderby, id=id)
 
             ## Count results
             total_count = self.trans.get_total_count()
@@ -88,7 +88,7 @@ class BaseResource(Resource):
                     url=url,
                     url_root=url_root,
                     path=request.path,
-                    pk=pk,
+                    id=id,
                     query_string=request.query_string,
                     resource_type=resource_type,
                     data=results)
@@ -113,7 +113,7 @@ class Node(Resource):
                             kwargs}
         self.utils = Utils(**self.utils_confs)
 
-    def get(self, pk=None, page=None):
+    def get(self, id=None, page=None):
         """
         Get method for the Node resource.
         :return:
@@ -126,7 +126,7 @@ class Node(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, pk, query_type) = self.utils.parse_path(path)
+        (resource_type, page, id, query_type) = self.utils.parse_path(path)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
          nelist) = self.utils.parse_query_string(query_string)
@@ -145,6 +145,8 @@ class Node(Resource):
             ## Build response and return it
             headers = self.utils.build_headers(url=request.url, total_count=1)
 
+        ## Treat the statistics (TODO: recoded when group_by will be
+        # available, it should pass by the tranlsator)
         elif query_type == "statistics":
             (limit, offset, perpage, orderby, filters, alist, nalist, elist,
              nelist) = self.utils.parse_query_string(query_string)
@@ -155,18 +157,15 @@ class Node(Resource):
                 usr = []
             results = self.trans.get_statistics(self.tclass, usr)
 
+        # TODO Might need to be improved
         elif query_type == "tree":
-            if len(filters) > 0:
-                depth = filters["depth"]["=="]
-            else:
-                depth = None
-            results = self.trans.get_io_tree(pk, depth)
             headers = self.utils.build_headers(url=request.url, total_count=0)
+            results = self.trans.get_io_tree(id)
 
         else:
-            ## Instantiate a translator and initialize it
+            ## Initialize the translator
             self.trans.set_query(filters=filters, orders=orderby,
-                                 query_type=query_type, pk=pk, alist=alist,
+                                 query_type=query_type, id=id, alist=alist,
                                  nalist=nalist, elist=elist, nelist=nelist)
 
             ## Count results
@@ -193,7 +192,7 @@ class Node(Resource):
                     url=url,
                     url_root=url_root,
                     path=path,
-                    pk=pk,
+                    id=id,
                     query_string=query_string,
                     resource_type=resource_type,
                     data=results)
@@ -253,3 +252,32 @@ class Data(Node):
         self.trans = DataTranslator(**kwargs)
         from aiida.orm import Data as DataTclass
         self.tclass = DataTclass
+
+class StructureData(Data):
+    def __init__(self, **kwargs):
+        super(StructureData, self).__init__(**kwargs)
+
+        from aiida.restapi.translator.data.structure import \
+            StructureDataTranslator
+        self.trans = StructureDataTranslator(**kwargs)
+        from aiida.orm.data.structure import StructureData as StructureDataTclass
+        self.tclass = StructureDataTclass
+
+class KpointsData(Data):
+    def __init__(self, **kwargs):
+        super(KpointsData, self).__init__(**kwargs)
+
+        from aiida.restapi.translator.data.kpoints import KpointsDataTranslator
+        self.trans = KpointsDataTranslator(**kwargs)
+        from aiida.orm.data.array.kpoints import KpointsData as KpointsDataTclass
+        self.tclass = KpointsDataTclass
+
+class BandsData(Data):
+    def __init__(self, **kwargs):
+        super(BandsData, self).__init__(**kwargs)
+
+        from aiida.restapi.translator.data.bands import \
+            BandsDataTranslator
+        self.trans = BandsDataTranslator(**kwargs)
+        from aiida.orm.data.array.bands import BandsData as BandsDataTclass
+        self.tclass = BandsDataTclass

@@ -19,7 +19,7 @@ from aiida.common.lang import override
 from aiida.orm.implementation.general.computer import AbstractComputer, Util as ComputerUtil
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
-from aiida.orm.implementation.django.utils import get_db_columns
+from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
 
 
 
@@ -81,7 +81,8 @@ class Computer(AbstractComputer):
 
     @staticmethod
     def get_db_columns():
-        from aiida.backends.djsite.db.models import DbComputer
+        # from aiida.backends.djsite.db.models import DbComputer
+        from aiida.backends.djsite.querybuilder_django.dummy_model import DbComputer
         return get_db_columns(DbComputer)
 
     @classmethod

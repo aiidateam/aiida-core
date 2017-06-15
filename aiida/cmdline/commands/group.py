@@ -146,7 +146,7 @@ class Group(VerdiCommandWithSubcommands):
         from aiida.orm import Group as G
         from aiida.common.utils import str_timedelta
         from aiida.utils import timezone
-        from aiida.common.pluginloader import from_type_to_pluginclassname
+        from aiida.common.old_pluginloader import from_type_to_pluginclassname
         from tabulate import tabulate
 
         parser = argparse.ArgumentParser(

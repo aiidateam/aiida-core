@@ -168,7 +168,7 @@ class DbNode(Base):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.common.pluginloader import from_type_to_pluginclassname
+        from aiida.common.old_pluginloader import from_type_to_pluginclassname
         from aiida.orm.node import Node
 
         try:
@@ -210,23 +210,28 @@ class DbNode(Base):
     def set_attr(self, key, value):
         DbNode._set_attr(self.attributes, key, value)
         flag_modified(self, "attributes")
+        self.save()
 
     def set_extra(self, key, value):
         DbNode._set_attr(self.extras, key, value)
         flag_modified(self, "extras")
+        self.save()
 
     def reset_extras(self, new_extras):
         self.extras.clear()
         self.extras.update(new_extras)
         flag_modified(self, "extras")
+        self.save()
 
     def del_attr(self, key):
         DbNode._del_attr(self.attributes, key)
         flag_modified(self, "attributes")
+        self.save()
 
     def del_extra(self, key):
         DbNode._del_attr(self.extras, key)
         flag_modified(self, "extras")
+        self.save()
 
     @staticmethod
     def _set_attr(d, key, value):

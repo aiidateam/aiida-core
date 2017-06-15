@@ -14,11 +14,10 @@ in a Brillouin zone, and how to operate on them.
 
 from aiida.orm.data.array import ArrayData
 import numpy
-
+from aiida.common.utils import classproperty
 
 _default_epsilon_length = 1e-5
 _default_epsilon_angle = 1e-5
-
 
 class KpointsData(ArrayData):
     """

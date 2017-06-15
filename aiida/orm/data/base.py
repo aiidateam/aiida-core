@@ -14,6 +14,11 @@ from aiida.orm import Data
 
 
 class BaseType(Data):
+    """
+    Store a base python type as a AiiDA node in the DB.
+
+    Provide the .value property to get the actual value.
+    """
     __metaclass__ = ABCMeta
 
     def __init__(self, *args, **kwargs):
@@ -86,6 +91,10 @@ class BaseType(Data):
 
 
 class NumericType(BaseType):
+    """
+    Specific subclass of :py:class:`BaseType` to store numbers,
+    overloading common operators (``+``, ``*``, ...)
+    """
     def __add__(self, other):
         if isinstance(other, NumericType):
             return self.new(self.value + other.value)
@@ -178,25 +187,48 @@ class NumericType(BaseType):
 
 
 class Float(NumericType):
+    """
+    Class to store float numbers as AiiDA nodes
+    """
     _type = float
 
 
 class Int(NumericType):
+    """
+    Class to store integer numbers as AiiDA nodes
+    """
     _type = int
 
 
 class Str(BaseType):
+    """
+    Class to store strings as AiiDA nodes
+    """
     _type = str
 
 
 class Bool(BaseType):
+    """
+    Class to store booleans as AiiDA nodes
+    """
     _type = bool
 
     def __int__(self):
-        return 0 if not self.value else 1
+        return int(bool(self))
+
+    # Python 2
+    def __nonzero__(self):
+        return self.__bool__()
+
+    # Python 3
+    def __bool__(self):
+        return self.value
 
 
 class List(Data, collections.MutableSequence):
+    """
+    Class to store python lists as AiiDA nodes
+    """
     _LIST_KEY = 'list'
 
     def __getitem__(self, item):

@@ -996,7 +996,15 @@ class SshTransport(aiida.transport.Transport):
         if not dereference:
             raise NotImplementedError
             
-        return self.sftp.get(remotepath,localpath,callback)
+        # Workaround for bug #724 in paramiko -- remove localpath on IOError
+        try:
+            return self.sftp.get(remotepath,localpath,callback)
+        except IOError as e:
+            try:
+                os.remove(localpath)
+            except OSError:
+                pass
+            raise e
         
         
     def gettree(self,remotepath,localpath,callback=None,dereference=True,overwrite=True):

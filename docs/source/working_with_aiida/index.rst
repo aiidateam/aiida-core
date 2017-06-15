@@ -104,6 +104,15 @@ Calculations
     ../state/calculation_state
     ../orm/resultmanager
 
+==========
+Data types
+==========
+
+.. toctree::
+    :maxdepth: 4
+
+    ../datatypes/index
+    ../datatypes/functionality
 
 ==========
 Schedulers

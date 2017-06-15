@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
@@ -8,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 """
 The QueryBuilder: A class that allows you to query the AiiDA database, independent from backend.
 Note that the backend implementation is enforced and handled with a composition model!

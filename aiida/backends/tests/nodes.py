@@ -12,10 +12,13 @@ Tests for nodes, attributes and links
 """
 import unittest
 
+import numpy as np
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
 from aiida.orm.data import Data
+from aiida.orm.data.array import ArrayData
 from aiida.orm.node import Node
 from aiida.orm.utils import load_node
 
@@ -24,31 +27,55 @@ class TestNodeHashing(AiidaTestCase):
     """
     Tests the functionality of hashing a node
     """
-    def test_hashing_of_node_1(self):
+    @staticmethod
+    def create_simple_node(a, b=0, c=0):
+        n = Node()
+        n._set_attr('a', a)
+        n._set_attr('b', b)
+        n._set_attr('c', c)
+        return n
 
-        n1 = Node()
-        n1._set_attr('a',1.0)
-        n1._set_attr('b',1.1)
-        n1._set_attr('c',1.2)
-        n1.store()
+    def test_simple_equal_nodes(self):
+        attributes = [
+            (1.0, 1.1, 1.2),
+            ({'a': 'b', 'c': 'd'}, [1, 2, 3], {4, 1, 2})
+        ]
+        for attr in attributes:
+            n1 = self.create_simple_node(*attr)
+            n2 = self.create_simple_node(*attr)
+            n1.store()
+            n2.store(find_same=True)
+            self.assertEqual(n1.uuid, n2.uuid)
+            self.assertEqual(n1.folder.get_abs_path('.'), n2.folder.get_abs_path('.'))
 
+    def test_simple_unequal_nodes(self):
+        attributes = [
+            [(1.0, 1.1, 1.2), (2.0, 1.1, 1.2)],
+            [(1e-14,), (2e-14,)],
+        ]
+        for attr1, attr2 in attributes:
+            n1 = self.create_simple_node(*attr1)
+            n2 = self.create_simple_node(*attr2)
+            n1.store()
+            n2.store(find_same=True)
+            self.assertNotEquals(n1.uuid, n2.uuid)
 
-        n2 = Node()
-        n2._set_attr('a',1.0)
-        n2._set_attr('b',1.1)
-        n2._set_attr('c',1.2)
-        n2.store(find_same=True)
+    def test_unequal_arrays(self):
+        arrays = [
+            (np.zeros(1001), np.zeros(1005)),
+            (np.array([1, 2, 3]), np.array([2, 3, 4]))
+        ]
+        def create_arraydata(arr):
+            a = ArrayData()
+            a.set_array('a', arr)
+            return a
 
-        self.assertEqual(n1.uuid, n2.uuid)
-        self.assertEqual(n1.folder.get_abs_path('.'), n2.folder.get_abs_path('.'))
-
-
-        n3 = Node()
-        n3._set_attr('a',2.0)
-        n3._set_attr('b',1.1)
-        n3._set_attr('c',1.2)
-        n3.store(find_same=True)
-        self.assertNotEquals(n2.uuid, n3.uuid)
+        for arr1, arr2 in arrays:
+            a1 = create_arraydata(arr1)
+            a1.store()
+            a2 = create_arraydata(arr2)
+            a2.store(find_same=True)
+            self.assertNotEquals(a1.uuid, a2.uuid)
 
 class TestDataNode(AiidaTestCase):
     """
@@ -796,7 +823,7 @@ class TestNodeBasic(AiidaTestCase):
         a = Node()
         a.store()
         a.set_extra('a', 'b')
-        
+
         self.assertEquals(a.get_extra('a'), 'b')
         with self.assertRaises(AttributeError):
             a.get_extra('c')
@@ -1025,7 +1052,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertIsInstance(p.get_attr('b'),basestring)
         self.assertEqual(p.get_attr('c'), ['b', [1,2]])
         self.assertIsInstance(p.get_attr('c'), (list, tuple))
-        
+
         # Check also before storing
         n = Node()
         n._set_attr('a', Str("sometext2"))
@@ -1034,15 +1061,15 @@ class TestNodeBasic(AiidaTestCase):
         self.assertIsInstance(n.get_attr('a'),basestring)
         self.assertEqual(n.get_attr('b'), ['f', True, {'gg': None}])
         self.assertIsInstance(n.get_attr('b'), (list, tuple))
-        
+
         # Check also deep in a dictionary/list
         n = Node()
         n._set_attr('a', {'b': [Str("sometext3")]})
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)
         n.store()
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)
 
     def test_basetype_as_extra(self):
         """
@@ -1077,7 +1104,7 @@ class TestNodeBasic(AiidaTestCase):
         n.store()
         n.set_extra('a', {'b': [Str("sometext3")]})
         self.assertEqual(n.get_extra('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_extra('a')['b'][0],basestring)     
+        self.assertIsInstance(n.get_extra('a')['b'][0],basestring)
 
     def test_versioning_lowlevel(self):
         """

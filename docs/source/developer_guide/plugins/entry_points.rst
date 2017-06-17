@@ -1,13 +1,9 @@
-.. note:: intended for aiida >= 0.9
-
-   This information applies to `github.com/DropD/aiida_core/tree/ricoh-plugins`
-
 .. _plugins.entry_points:
 
 AiiDA Entry Points
 ==================
 
-This document contains a list of entry point groups AiiDA uses, with an example usage for each. For the examples we assume the following plugin structure for a plugin that supports a code (example: 'mycode'):
+This document contains a list of entry point groups AiiDA uses, with an example usage for each. For the examples we assume the following plugin structure for a plugin that supports a code (example: ``mycode``):
 
 .. code-block:: bash
 
@@ -61,7 +57,9 @@ A specification in turn is given as a string and consists of two parts, a name a
    "mycode.mydat = aiida_mycode.data.mydat:MyData"
 
 We *strongly* suggest to start the name of each entry point with the name of the plugin, ommitting the leading 'aiida-'. In our example this leads to entry specifications like ``"mycode.<any.you.want> = <module.path:class>"``, just like the above example.
-Exceptions to this rule are schedulers, transports and potentially data ones. Further exceptions can be tolerated in order to provide backwards compatibility if the plugin was in use before aiida-0.9 and it's modules were installed in locations which make adhering to this rule impossible.
+Exceptions to this rule are schedulers, transports and potentially data ones. Further exceptions can be tolerated in order to provide backwards compatibility if the plugin was in use before aiida-0.9 and its modules were installed in locations which does not make it possible to follow this rule.
+
+Below, a list of valid entry points recognized by AiiDA follows.
 
 ``aiida.calculations``
 ----------------------
@@ -90,7 +88,7 @@ Will lead to usage::
 ``aiida.parsers``
 -----------------
 
-Aiida expects a subclass of ``Parser``. Replaces placing a parser module under ``aiida/parsers/plugins``
+Aiida expects a subclass of ``Parser``. Replaces the previous approach consisting in placing a parser module under ``aiida/parsers/plugins``.
 
 Example spec::
 
@@ -166,7 +164,7 @@ For subcommands to verdi commands like ``verdi data mydata``. This was previousl
 
 Plugin support for commands is possible due to using `click`_.
 
-.. note:: Prior to aiida-0.9, the subcommand in question will require `aiida-verdi`_ to be installed.The command will then be called ``verdi-plug data mydata`` instead.
+.. note:: In aiida-0.9, the subcommand in question is not yet exposed to ``verdi``. There is a `aiida-verdi`_ package that is being developed to implement such functionality (experimental yet). The command will then be called ``verdi-exp data mydata`` instead.
 
 Spec::
 
@@ -242,7 +240,7 @@ Spec::
 ``aiida.schedulers``
 --------------------
 
-For scheduler plugins. Note that the entry point name is not prefixed by the plugin name. This is because typically a scheduler should be distributed in a plugin of it's own, and only one plugin per scheduler should be necessary.
+For scheduler plugins. Note that the entry point name is not prefixed by the plugin name. This is because typically a scheduler should be distributed in a plugin on its own, and only one plugin per scheduler should be necessary.
 
 Spec::
 
@@ -263,7 +261,7 @@ Usage: The scheduler is used in the familiar way by entering 'myscheduler' as th
 ``aiida.transports``
 --------------------
 
-Much like for schedulers, transports are supposed to be distributed in their separate plugin. Therefore we will again omit the plugin's name in the entry point name.
+Like schedulers, transports are supposed to be distributed in a separate plugin. Therefore we will again omit the plugin's name in the entry point name.
 
 Spec::
 
@@ -284,7 +282,7 @@ Usage::
    from aiida.transport import TransportFactory
    transport = TransportFactory('mytransport')
 
-Jus like one would expect, when a computer is setup, 'mytransport' can be given as the transport option.
+Jus like one would expect, when a computer is setup, ``mytransport`` can be given as the transport option.
 
 .. _click: https://click.pocoo.org/6/
 .. _aiida-verdi: https://github.com/DropD/aiida-verdi

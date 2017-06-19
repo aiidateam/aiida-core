@@ -335,6 +335,9 @@ def get_false_node():
 
 @singledispatch
 def to_aiida_type(value):
+    """
+    Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types.
+    """
     raise TypeError("Cannot convert value of type {} to AiiDA type.".format(type(value)))
 
 @to_aiida_type.register(basestring)

@@ -1660,6 +1660,7 @@ class TestStructureDataReload(AiidaTestCase):
         for i in range(3):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
 
+
     def test_copy(self):
         """
         Start from a StructureData object, copy it and see if it is preserved

@@ -264,7 +264,7 @@ waiting for something to complete.  In the meantime the workchain can be suspend
 
 .. code-block:: python
     :linenos:
-    :emphasize-lines: 22, 25
+    :emphasize-lines: 19, 22
 
     class WaitingEquationOfState(EquationOfState):
         @classmethod
@@ -293,14 +293,14 @@ waiting for something to complete.  In the meantime the workchain can be suspend
                     self.out(Float(scale), outputs['output_parameters'].dict)
 
 
-Here, on line 22 we use a so called *interstep* command.  These are objects you return from a step that can perform
+Here, on line 19 we use a so called *interstep* command.  These are objects you return from a step that can perform
 actions at the end fo the step and just before the beginning of the next.  In this case we use
 :class:`~aiida.work.workchain.ToContext`, the constructor takes keyword arguments of `[name]=[pid]`, it will then take
 insert barriers into the workchain to make sure it does not continue until all of the specified processes have finished.
 Then, before the next step, it will place the corresponding :class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` nodes in the
 specified `[name]` variables in the context.
 
-On line 25 we iterate the context looking for those entries that start with `s_` and emit the results from these
+On lines 22-25, we iterate the context looking for those entries that start with `s_` and emit the results from these
 calculations.
 
 

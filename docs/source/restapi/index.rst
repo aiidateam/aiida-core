@@ -1,3 +1,5 @@
+.. _rest_api:
+
 ===================
 REST API for AiiDA
 ===================
@@ -24,9 +26,9 @@ of *localhost*, connecting to the AiiDA default profile and assuming the default
     $ verdi restapi --help
 
 
-As all the ``verdi`` commands the AiiDA profile can be changed by putting the option ``-p PROFILE`` right after ``verdi``. The base url for your REST API will then be:
+As all the ``verdi`` commands the AiiDA profile can be changed by putting the option ``-p PROFILE`` right after ``verdi``.
 
-    ::
+The base url for your REST API is be::
 
         http://localhost:5000/api/v2
 
@@ -107,7 +109,7 @@ Example::
 How to build the path
 ---------------------
 
-There are two type of paths: those that request the list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: ``users``, ``computers``, ``groups``, ``nodes``, ``codes``, ``calculations``, and ``data``. If no specific endpoint is appended to the name of the resource, the Api will return the full list of objects of that resource (the Api default limit applies nevertheless to the number of results).
+There are two type of paths: those that request the list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: ``users``, ``computers``, ``groups``, ``nodes``, ``codes``, ``calculations``, and ``data``, ``structures``, ``kpoints``, ``bands``. If no specific endpoint is appended to the name of the resource, the Api will return the full list of objects of that resource (the Api default limit applies nevertheless to the number of results).
 Appending the endpoint ``schema`` to a resource will give the list of fields that are normally returned by the Api for an object of a specific resource, whereas the endpoint ``statistics`` returns a list of statistical facts concerning a resource.
 Here are few examples of valid URIs::
 
@@ -116,9 +118,10 @@ Here are few examples of valid URIs::
     http://localhost:5000/api/v2/nodes/statistics
 
 
-If you request informations of a specific object you have to append its pk to the path (note that the pk is also called id). Here is an example::
+If you request informations of a specific object you have to append its *pk* or *uuid* to the path (note that the *pk* is also called *id*). Example are::
 
     http://localhost:5000/api/v2/nodes/345
+    http://localhost:5000/api/v2/nodes/338357f4-f236-4f9c-8fbe-cd550dc6b858
 
 When you ask for a single object (and only in that case) you can construct more complex requests, namely, you can ask for its inputs/outputs or for its attributes/extras. In the first case you have to append to the path the string ``/io/inputs`` or ``io/outputs`` depending on the desired relation between the nodes, whereas in the second case you have to append ``content/attributes`` or ``content/extras`` depending on the kind of content you want to access. Here are some examples::
 
@@ -127,7 +130,7 @@ When you ask for a single object (and only in that case) you can construct more 
     http://localhost:5000/api/v2/data/385/content/attributes
     http://localhost:5000/api/v2/nodes/385/content/extras
 
-.. note:: As you can see from the last examples, a *Node* object can be accessed requesting either a generic ``nodes`` resource or requesting the resource corresponding to its specific type (``data``, ``codes``, ``calculations``). This is because in AiiDA  the classes *Data*, *Code*, and *Calculation* are derived from the class *Node*.
+.. note:: As you can see from the last examples, a *Node* object can be accessed requesting either a generic ``nodes`` resource or requesting the resource corresponding to its specific type (``data``, ``codes``, ``calculations``, ``kpoints``, ... ). This is because in AiiDA  the classes *Data*, *Code*, and *Calculation* are derived from the class *Node*. In turn, *Data* is the baseclass of a number of built-in and custom classes, e.g. ``KpointsData``, ``StructureData``, ``BandsData``, ...
 
 How to build the query string
 -----------------------------
@@ -347,9 +350,22 @@ The header is a standard HTTP response header with the additional custom field `
 The JSON object mainly contains the list of the results returned by the API. This list is assigned to the key ``data``. Additionally, the JSON object contains several informations about the request (keys ``method``, ``url``, ``url_root``, ``path``, ``query_string``, ``resource_type``, and ``pk``).
 
 
+.. _restapi_apache:
+
+How to run the RESTapi through Apache
++++++++++++++++++++++++++++++++++++++
+By default ``verdi restapi`` hooks up the RESTapi through the Python Default HTTP server (Werkzeug). However, to deploy real web applications the server of choice is mostly Apache (add link). One can instruct Apache to run Python applications by employing the WSGI module (add link).
+
+Tell that (and why) multiple apps can be run
+
+Tell where are the wsgi files. The path is immaterial but should be written in the Apache conf
+
+Tell where to copy conf files (and minimal changes)
+
 
 Examples
 ++++++++
+
 
 Computers
 ---------

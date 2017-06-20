@@ -15,7 +15,6 @@ import os
 
 from flask_cors import CORS
 
-import aiida  # Mainly needed to locate the correct aiida path
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
 
@@ -24,7 +23,7 @@ def run_api(App, Api, *args, **kwargs):
     Takes a flask.Flask instance and runs it. Parses
     command-line flags to configure the app.
 
-    App: Class inheriting from Flask app class
+    App: Class inheriting from Flask app class  
     Api = flask_restful API class to be used to wrap the app
 
     *args: required by argparse
@@ -42,6 +41,8 @@ def run_api(App, Api, *args, **kwargs):
     All other passed parameters are ignored.
 
     """
+
+    import aiida  # Mainly needed to locate the correct aiida path
 
     # Unpack parameters and assign defaults if needed
     prog_name = kwargs['prog_name'] if 'prog_name' in kwargs else ""
@@ -61,7 +62,7 @@ def run_api(App, Api, *args, **kwargs):
         'parse_aiida_profile' in kwargs else False
 
     catch_internal_server = kwargs['catch_internal_server'] if\
-        'catch_intenral_server' in kwargs else False
+        'catch_internal_server' in kwargs else False
 
     hookup = kwargs['hookup'] if 'hookup' in kwargs else False
 
@@ -173,17 +174,15 @@ def run_api(App, Api, *args, **kwargs):
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app,
                                           restrictions=[30])
 
-    # Instantiate an Api associating its app
+    # Instantiate an Api by associating its app
     api_kwargs = dict(PREFIX=confs.PREFIX,
                       PERPAGE_DEFAULT=confs.PERPAGE_DEFAULT,
                       LIMIT_DEFAULT=confs.LIMIT_DEFAULT,
                       custom_schema=confs.custom_schema)
-
     api = Api(app, **api_kwargs)
 
     # Check if the app has to be hooked-up or just returned
     if hookup:
-        # Hook up the app
         api.app.run(
             debug=parsed_args.debug,
             host=parsed_args.host,

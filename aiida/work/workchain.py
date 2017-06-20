@@ -332,6 +332,10 @@ def ToContext(**kwargs):
 
 
 class _InterstepFactory(object):
+    """
+    Factory to create the appropriate Interstep instance based
+    on the class string that was written to the bundle
+    """
     def create(self, bundle):
         class_string = bundle[Bundle.CLASS]
         if class_string == get_class_string(ToContext):

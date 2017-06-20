@@ -35,7 +35,7 @@ class Savable(object):
 
 class Interstep(Savable):
     """
-    An internstep is an action that is performed between steps of a workchain.
+    An interstep is an action that is performed between steps of a workchain.
     These allow the user to perform action when a step is finished and when
     the next step (if there is one) is about the start.
     """
@@ -63,6 +63,10 @@ class Interstep(Savable):
 
     def save_instance_state(self, out_state):
         """
+        Store the information of the instance in a bundle that is required
+        at a minimum to allow it to be reconstructed
+
+        :param out_state: a bundle in which to store the information
         """
         out_state[self.CLASS_NAME] = get_class_string(self)
 
@@ -80,6 +84,10 @@ class UpdateContext(Interstep):
         return (self._action == other._action and self._key == other._key)
 
     def _create_wait_on(self):
+        """
+        Creates the waiton based on the running info stored in the action
+        that will instruct the workchain what to wait for
+        """
         rinfo = self._action.running_info
         if rinfo.type is RunningType.PROCESS:
             return WaitOnProcess(self._action.fn, rinfo.pid)
@@ -90,6 +98,9 @@ class UpdateContext(Interstep):
 
     @override
     def on_last_step_finished(self, workchain):
+        """
+        Insert the barrier into the workchain by creating the Interstep's waiton
+        """
         workchain.insert_barrier(self._create_wait_on())
 
     @override
@@ -105,6 +116,13 @@ class UpdateContext(Interstep):
 
 
 class UpdateContextBuilder(object):
+    """
+    A builder of an UpdateContext instance. The key components of an UpdateContext Interstep
+    are the key and the action, which will not be available at the same time of construction
+    within the workchain. This builder class serves as an intermediate step, registering
+    the value of the Interstep. Calling the build method will then construct a fully defined
+    UpdateContext interstep instance
+    """
     def __init__(self, value):
         if isinstance(value, Action):
             action = value
@@ -123,6 +141,8 @@ class UpdateContextBuilder(object):
 
 class Assign(UpdateContext):
     """
+    This interstep will assign the value returned by the registered action
+    to a specific key in the context 
     """
 
     class Builder(UpdateContextBuilder):
@@ -131,6 +151,11 @@ class Assign(UpdateContext):
 
     @override
     def on_next_step_starting(self, workchain):
+        """
+        Assigns the result stored in the action in the key of the workchain context
+
+        :param workchain: instance of WorkChain whose context should be updated
+        """
         fn = get_object_from_string(self._action.fn)
         key = self._key
         val = fn(self._action.running_info.pid)
@@ -139,6 +164,8 @@ class Assign(UpdateContext):
 
 class Append(UpdateContext):
     """
+    This interstep will append the value returned by the registered action
+    to a specific key in the context 
     """
 
     class Builder(UpdateContextBuilder):
@@ -147,6 +174,11 @@ class Append(UpdateContext):
 
     @override
     def on_next_step_starting(self, workchain):
+        """
+        Appends the result stored in the action in the key of the workchain context
+
+        :param workchain: instance of WorkChain whose context should be updated
+        """
         fn = get_object_from_string(self._action.fn)
         key = self._key
         val = fn(self._action.running_info.pid)
@@ -162,6 +194,12 @@ append_ = Append.Builder
 
 
 def action_from_running_info(running_info):
+    """
+    Creates an Action tuple based on a RunningInfo tuple
+
+    :param running_info: RunningInfo tuple
+    :returns: Action tuple
+    """
     if running_info.type is RunningType.PROCESS:
         return Calc(running_info)
     elif running_info.type is RunningType.LEGACY_CALC or \
@@ -170,36 +208,57 @@ def action_from_running_info(running_info):
     else:
         raise ValueError("Unknown running type '{}'".format(running_info.type))
 
+def Legacy(running_info):
+    """
+    Creates an Action tuple based on a RunningInfo tuple for a legacy calculation or workflow node
+
+    :param running_info: RunningInfo tuple
+    :returns: Action tuple
+    """
+    if running_info.type == RunningType.LEGACY_CALC or running_info.type == RunningType.PROCESS:
+        return Calc(running_info)
+    elif running_info.type is RunningType.LEGACY_WORKFLOW:
+        return Wf(running_info)
+
+    raise ValueError("Could not determine object to be calculation or workflow")
+
+def Calc(running_info):
+    """
+    Creates an Action tuple based on a RunningInfo tuple for a legacy calculation node
+
+    :param running_info: RunningInfo tuple
+    :returns: Action tuple
+    """
+    return Action(running_info, get_object_string(load_node))
+
+def Wf(running_info):
+    """
+    Creates an Action tuple based on a RunningInfo tuple for a legacy Workflow node
+
+    :param running_info: RunningInfo tuple
+    :returns: Action tuple
+    """
+    return Action(running_info, get_object_string(load_workflow))
 
 def _get_proc_outputs_from_registry(pid):
+    """
+    Return a dictionary of outputs for a calculation identified by pid
+    """
     calc = load_node(pid)
     if calc.has_failed():
         raise ValueError("Cannot return outputs, calculation '{}' has failed".format(pid))
     return {e[0]: e[1] for e in calc.get_outputs(also_labels=True)}
 
-
 def _get_wf_outputs(pk):
+    """
+    Return the results dictionary of a legacy workflow
+    """
     return load_workflow(pk=pk).get_results()
 
-
-def Calc(running_info):
-    return Action(running_info, get_object_string(load_node))
-
-
-def Wf(running_info):
-    return Action(running_info, get_object_string(load_workflow))
-
-
-def Legacy(object):
-    if object.type == RunningType.LEGACY_CALC or object.type == RunningType.PROCESS:
-        return Calc(object)
-    elif object.type is RunningType.LEGACY_WORKFLOW:
-        return Wf(object)
-
-    raise ValueError("Could not determine object to be calculation or workflow")
-
-
 def Outputs(running_info):
+    """
+    Convenience proxy function to allow returning the outputs generated by a process
+    """
     if isinstance(running_info, Future):
         # Create the correct information from the future
         rinfo = RunningInfo(RunningType.PROCESS, running_info.pid)

@@ -236,6 +236,10 @@ class Process(plum.process.Process):
 
     @override
     def on_finish(self):
+        """
+        Called when a Process enters the FINISHED state at which point
+        we set the corresponding attribute of the workcalculation node
+        """
         super(Process, self).on_finish()
         self.calc._set_attr(WorkCalculation.FINISHED_KEY, True)
         self.calc.seal()

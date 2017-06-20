@@ -379,6 +379,8 @@ def get_calculator_impstr(calculator_name):
     """
     if calculator_name.lower() == "gpaw" or calculator_name is None:
         return "from gpaw import GPAW as custom_calculator"
+    elif calculator_name.lower() == "espresso":
+        return "from espresso import espresso as custom_calculator"
     else:
         possibilities = {"abinit":"abinit.Abinit",
                          "aims":"aims.Aims",

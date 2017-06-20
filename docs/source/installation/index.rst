@@ -66,6 +66,11 @@ To create a new virtual environment and activate it, run the following commands:
 
 This will create a directory in your home directory named ``aiidapy`` where all the packages will be installed.
 After activation, your prompt now should have ``(aiidapy)`` in front of it, indicating that you are working in the virtual environment.
+
+.. note:: You may need to install ``pip`` and ``setuptools`` in your virtual environment in case the system or user version of these tools is old::
+
+    $ pip install -U setuptools pip
+
 Finally, to install AiiDA, run the following command from the directory where you cloned the repository::
 
    (aiidapy) $ pip install -e aiida_core
@@ -172,6 +177,37 @@ After updating your ``PATH`` you can check if it worked in the following way:
   environment variable in your ``.bashrc``::
   
     export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
+
+
+Using AiiDA in Jupyter
+++++++++++++++++++++++
+
+`Jupyter <http://jupyter.org>`_ is an open-source web application that allows you to create in-browser notebooks containing live code, visualizations and formatted text.
+
+Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels.
+
+If you didn't already install AiiDA with the ``[notebook]`` option (during ``pip install``), run ``pip install jupyter`` **inside** the virtualenv, and then run **from within the virtualenv**::
+
+    $ jupyter notebook
+
+This will open a tab in your browser. Click on ``New -> Python 2`` and type::
+
+    import aiida
+
+followed by ``Shit-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
+
+If you want to set the same environment as in a ``verdi shell``, add the following code in ``<your.home.folder>/.ipython/profile_default/ipython_config.py``::
+
+  c = get_config()
+  c.InteractiveShellApp.extensions = [
+          'aiida.common.ipython.ipython_magics'
+  ]
+
+then open a Jupyter notebook as explained above and type in a cell:
+
+    %aiida
+
+followed by ``Shift-Enter``. You should receive the message "Loaded AiiDA DB environment."
  
 
 .. _virtual-environment:
@@ -467,6 +503,30 @@ Troubleshooting
 
     sudo easy_install pip==1.2.1
 
+* In order to use the AiiDA objects and functions in Jupyter, this latter has to be instructed to use the iPython kernel installed in the AiiDA virtual environment. This happens by default if you install AiiDA with ``pip`` including the ``notebook`` option and run Jupyter from the AiiDA virtual environment.
+
+  If, for any reason, you do not want to install Jupyter in the virtual environment, you might consider to install it out of the virtual environment, if not already done::
+
+      $ pip install jupyter
+
+  Then, activate the AiiDA virtual environment::
+
+      $ source ~/<aiida.virtualenv>/bin/activate
+
+  and setup the AiiDA iPython kernel::
+
+      $ pip install ipykernel
+      $ python -m ipykernel install --user --name=<aiida.kernel.name>
+
+  where you have chosen a meaningful name for the new kernel.
+
+  Finally, start a Jupyter server::
+
+      $ jupyter notebook
+
+  and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
+
+
 * Several users reported the need to install also ``libpq-dev`` (header files for libpq5 - PostgreSQL library)::
 
     apt-get install libpq-dev
@@ -586,6 +646,36 @@ To use the new version in production:
 
 * run ``verdi setup``
   This updates your daemon profile and related files. It should not be done when another version of aiida is wished to be used productively on the same machine/user.
+
+Updating from 0.8.* Django to 0.9.0 Django
+++++++++++++++++++++++++++++++++++++++++++
+
+* Enable your virtual environment::
+
+    virtualenv ~/aiidapy
+    source ~/aiidapy/bin/activate
+
+* Go to the directory where you want to place your code and clone the latest
+  version from Github::
+
+    cd <where_you_want_the_aiida_sourcecode>
+    git clone git@github.com:aiidateam/aiida_core.git
+
+.. note::
+    * If you have cloned in the past the code, you can just checkout the latest version
+
+    * In case you have an older version of pip or setuptools, try to upgrade them::
+
+        pip install -U setuptools pip
+
+* Install the new version of AiiDA by typing::
+
+    pip install -e aiida_core[<EXTRAS>]
+
+  where <EXTRAS> is a comma separated list of the optional features
+  you wish to install (see the :ref:`optional dependencies<install_optional_dependencies>`).
+  The two first steps above can be removed if you do not want to install AiiDA
+  into a virtual environment (reminder: this is *not* recommended).
 
 
 Updating from 0.7.0 Django to 0.8.0 Django

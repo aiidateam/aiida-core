@@ -54,9 +54,6 @@ if __name__ == '__main__':
             # following are AiiDA plugin entry points:
             'aiida.calculations': [
                 'simpleplugins.templatereplacer = aiida.orm.calculation.job.simpleplugins.templatereplacer:TemplatereplacerCalculation',
-                'quantumespresso.pw = aiida.orm.calculation.job.quantumespresso.pw:PwCalculation',
-                'quantumespresso.cp = aiida.orm.calculation.job.quantumespresso.cp:CpCalculation',
-                'quantumespresso.pwimmigrant = aiida.orm.calculation.job.quantumespresso.pwimmigrant:PwimmigrantCalculation',
                 'nwchem.basic = aiida.orm.calculation.job.nwchem.basic:BasicCalculation',
                 'nwchem.pymatgen = aiida.orm.calculation.job.nwchem.nwcpymatgen:NwcpymatgenCalculation',
                 'codtools.ciffilter = aiida.orm.calculation.job.codtools.ciffilter:CiffilterCalculation',
@@ -92,9 +89,6 @@ if __name__ == '__main__':
                 'nwchem.basic = aiida.parsers.plugins.nwchem.basic:BasicParser',
                 'nwchem.basenwc = aiida.parsers.plugins.nwchem.__init__:BasenwcParser',
                 'nwchem.pymatgen = aiida.parsers.plugins.nwchem.nwcpymatgen:NwcpymatgenParser',
-                'quantumespresso.basicpw = aiida.parsers.plugins.quantumespresso.basicpw:BasicpwParser',
-                'quantumespresso.cp = aiida.parsers.plugins.quantumespresso.cp:CpParser',
-                'quantumespresso.pw = aiida.parsers.plugins.quantumespresso.pw:PwParser',
             ],
             'aiida.cmdline': [],
             'aiida.schedulers': [
@@ -109,9 +103,7 @@ if __name__ == '__main__':
             ],
             'aiida.workflows': [],
             'aiida.tools.dbexporters.tcod_plugins': [
-                'quantumespresso.cp = aiida.tools.dbexporters.tcod_plugins.cp:CpTcodtranslator',
                 'nwchem.nwcpymatgen = aiida.tools.dbexporters.tcod_plugins.nwcpymatgen:NwcpymatgenTcodtranslator',
-                'quantumespresso.pw = aiida.tools.dbexporters.tcod_plugins.pw:PwTcodtranslator'
             ],
             'aiida.tools.dbexporters': [
                 'tcod = aiida.tools.dbexporters.tcod'

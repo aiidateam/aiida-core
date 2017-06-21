@@ -614,9 +614,11 @@ class Quicksetup(VerdiCommand):
     '''
     Quick setup for the most common usecase (1 user, 1 machine).
 
-    Uses click for options. Creates a database user 'aiida_qs_<username>' with random password if it doesn't exist.
-    Creates a 'aiidadb_qs_<username>' database (prompts to use or change the name if already exists).
-    Makes sure not to overwrite existing databases or profiles without prompting for confirmation.
+    Creates a database user 'aiida_qs_<login-name>' with random password (if it
+    doesn't exist). Creates a database '<profile>_<username>' (if it exists,
+    prompts user to use or change the name).
+
+    For complete command line options do "verdi quicksetup --help"
     '''
     from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
@@ -723,7 +725,7 @@ class Quicksetup(VerdiCommand):
     @click.pass_obj
     def _quicksetup_cmd(self, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
                         profile, repo):
-        '''setup a sane aiida configuration with as little interaction as possible.'''
+        '''Set up a sane aiida configuration with as little interaction as possible.'''
         from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
         create_base_dirs()
 
@@ -738,9 +740,10 @@ class Quicksetup(VerdiCommand):
         import getpass
         osuser = getpass.getuser()
         dbname = db_name or profile + osuser
-        dbuser = db_user or profile + osuser
 
-        # generate random password
+        # default database user name is aiida_qs_<login-name>
+        # default password is random
+        dbuser = db_user or 'aiida_qs' + osuser
         from aiida.common.setup import generate_random_secret_key
         dbpass = db_user_pw or generate_random_secret_key()
 

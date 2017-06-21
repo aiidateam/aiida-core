@@ -20,6 +20,8 @@ install_requires = [
     'tzlocal==1.3',
     'pytz==2014.10',
     'six==1.10',
+    'future',
+    'singledispatch >= 3.4.0.0',
     # We need for the time being to stay with an old version
     # of celery, including the versions of the AMQP libraries below,
     # because the support for a SQLA broker has been dropped in later
@@ -118,12 +120,12 @@ extras_require = {
     ]
 }
 
-# There are a number of optional dependencies that are not 
-# listed even as optional dependencies as they are quite 
+# There are a number of optional dependencies that are not
+# listed even as optional dependencies as they are quite
 # cumbersome to install and there is a risk that a user, wanting
-# to install all dependencies (including optional ones) 
+# to install all dependencies (including optional ones)
 # does not manage and thinks it's an AiiDA problem.
-# 
+#
 # These include:
 #  - mayavi==4.5.0
 #    plotting package, requires to have the vtk code installed first;

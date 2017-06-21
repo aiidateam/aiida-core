@@ -8,10 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from abc import ABCMeta
+import numbers
 import collections
+
+try:
+    from functools import singledispatch
+except ImportError:
+    from singledispatch import singledispatch
+from past.builtins import basestring
+import numpy as np
+
 from aiida.orm import Data
-
-
 
 class BaseType(Data):
     """
@@ -89,95 +96,70 @@ class BaseType(Data):
 
         return kwargs
 
+def _left_operator(func):
+    def inner(self, other):
+        l = self.value
+        if isinstance(other, NumericType):
+            r = other.value
+        else:
+            r = other
+        return to_aiida_type(func(l, r))
+    return inner
+
+def _right_operator(func):
+    def inner(self, other):
+        assert not isinstance(other, NumericType)
+        return to_aiida_type(func(self.value, other))
+    return inner
 
 class NumericType(BaseType):
     """
     Specific subclass of :py:class:`BaseType` to store numbers,
     overloading common operators (``+``, ``*``, ...)
     """
+    @_left_operator
     def __add__(self, other):
-        if isinstance(other, NumericType):
-            return self.new(self.value + other.value)
-        else:
-            return self.new(self.value + other)
+        return self + other
 
-    def __iadd__(self, other):
-        assert not self.is_stored
-        if isinstance(other, NumericType):
-            self.value += other.value
-        else:
-            self.value += other
-        return self
-
+    @_right_operator
     def __radd__(self, other):
-        assert not isinstance(other, NumericType)
-        return self.new(other + self.value)
+        return other + self
 
+    @_left_operator
     def __sub__(self, other):
-        if isinstance(other, NumericType):
-            return self.new(self.value - other.value)
-        else:
-            return self.new(self.value - other)
+        return self - other
 
-    def __isub__(self, other):
-        assert not self.is_stored
-        if isinstance(other, NumericType):
-            self.value -= other.value
-        else:
-            self.value -= other
-        return self
-
+    @_right_operator
     def __rsub__(self, other):
-        assert not isinstance(other, NumericType)
-        return self.new(other - self.value)
+        return other - self
 
+    @_left_operator
     def __mul__(self, other):
-        if isinstance(other, NumericType):
-            return self.new(self.value * other.value)
-        else:
-            return self.new(self.value * other)
+        return self * other
 
-    def __imul__(self, other):
-        assert not self.is_stored
-        if isinstance(other, NumericType):
-            self.value *= other.value
-        else:
-            self.value *= other
-        return self
-
+    @_right_operator
     def __rmul__(self, other):
-        assert not isinstance(other, NumericType)
-        return self.new(other * self.value)
+        return other * self
 
-    def __pow__(self, power, modulo=None):
-        if isinstance(power, NumericType):
-            return self.new(self.value ** power.value)
-        else:
-            return self.new(self.value ** power)
+    @_left_operator
+    def __pow__(self, power):
+        return self ** power
 
+    @_left_operator
     def __lt__(self, other):
-        if isinstance(other, NumericType):
-            return self.value < other.value
-        else:
-            return self.value < other
+        return self < other
 
+    @_left_operator
     def __le__(self, other):
-        if isinstance(other, NumericType):
-            return self.value <= other.value
-        else:
-            return self.value <= other
+        return self <= other
 
+    @_left_operator
     def __gt__(self, other):
-        if isinstance(other, NumericType):
-            return self.value > other.value
-        else:
-            return self.value > other
+        return self > other
 
+    @_left_operator
     def __ge__(self, other):
-        if isinstance(other, NumericType):
-            return self.value >= other.value
-        else:
-            return self.value >= other
+        return self >= other
 
     def __float__(self):
         return float(self.value)
@@ -350,3 +332,27 @@ def get_false_node():
     """
     FALSE = Bool(typevalue=(bool, False))
     return FALSE
+
+@singledispatch
+def to_aiida_type(value):
+    """
+    Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types.
+    """
+    raise TypeError("Cannot convert value of type {} to AiiDA type.".format(type(value)))
+
+@to_aiida_type.register(basestring)
+def _(value):
+    return Str(value)
+
+@to_aiida_type.register(numbers.Integral)
+def _(value):
+    return Int(value)
+
+@to_aiida_type.register(numbers.Real)
+def _(value):
+    return Float(value)
+
+@to_aiida_type.register(bool)
+@to_aiida_type.register(np.bool_)
+def _(value):
+    return Bool(value)

@@ -706,8 +706,10 @@ class Quicksetup(VerdiCommand):
                         click.echo('Unable to connect to postgres, please try again')
         return dbinfo
 
+
     @click.command('quicksetup', context_settings=CONTEXT_SETTINGS)
-    @click.option('--email', prompt='Email Address (will be used to identify your data when sharing)', type=str,
+    @click.option('--profile', prompt='Profile name', type=str, default='quicksetup')
+    @click.option('--email', prompt='Email Address (identifies your data when sharing)', type=str,
                   help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')
     @click.option('--first-name', prompt='First Name', type=str)
     @click.option('--last-name', prompt='Last Name', type=str)
@@ -717,7 +719,6 @@ class Quicksetup(VerdiCommand):
     @click.option('--db-user', type=str)
     @click.option('--db-user-pw', type=str)
     @click.option('--db-name', type=str)
-    @click.option('--profile', type=str)
     @click.option('--repo', type=str)
     @click.pass_obj
     def _quicksetup_cmd(self, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
@@ -733,15 +734,15 @@ class Quicksetup(VerdiCommand):
         pg_execute = pg_info['method']
         dbinfo = pg_info['dbinfo']
 
-        # check if a database setup already exists
-        # otherwise setup the database user aiida
-        # setup the database aiida_qs_<username>
-        from getpass import getuser
+        # default database name is <profile>_<login-name>
+        import getpass
+        osuser = getpass.getuser()
+        dbname = db_name or profile + osuser
+        dbuser = db_user or profile + osuser
+
+        # generate random password
         from aiida.common.setup import generate_random_secret_key
-        osuser = getuser()
-        dbuser = db_user or 'aiida_qs_' + osuser
         dbpass = db_user_pw or generate_random_secret_key()
-        dbname = db_name or 'aiidadb_qs_' + osuser
 
         # check if there is a profile that contains the db user already
         # and if yes, take the db user password from there

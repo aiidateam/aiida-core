@@ -236,7 +236,7 @@ How does the method ``_prepare_for_submission`` work in practice?
 2. create an input file (or more if needed). In the Namelist plugin is
    done like::
 
-    input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
+    input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
     with open(input_filename,'w') as infile:
         # Here write the information of a ParameterData inside this
         # file
@@ -295,8 +295,8 @@ How does the method ``_prepare_for_submission`` work in practice?
         ### Modify here and put a name for standard input/output files
         codeinfo = CodeInfo()
         codeinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
-        codeinfo.stdin_name = self.INPUT_FILE_NAME
-        codeinfo.stdout_name = self.OUTPUT_FILE_NAME
+        codeinfo.stdin_name = self._DEFAULT_INPUT_FILE
+        codeinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
         codeinfo.withmpi = self.get_withmpi()
         codeinfo.code_pk = code.pk
 
@@ -504,11 +504,11 @@ A kind of template for writing such parser for the calculation class
                 # check what is inside the folder
                 list_of_files = out_folder.get_folder_list()
                 # at least the stdout should exist
-                if not calc.OUTPUT_FILE_NAME in list_of_files:
+                if not calc._DEFAULT_OUTPUT_FILE in list_of_files:
                     raise QEOutputParsingError("Standard output not found")
                 # get the path to the standard output
                 out_file = os.path.join( out_folder.get_abs_path('.'), 
-                                         calc.OUTPUT_FILE_NAME )
+                                         calc._DEFAULT_OUTPUT_FILE )
 
 
             # read the file

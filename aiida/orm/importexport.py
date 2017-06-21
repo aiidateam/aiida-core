@@ -308,7 +308,6 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
 
     from aiida.orm import Node, Group
     from aiida.common.exceptions import UniquenessError
-    from sqlalchemy.exc import IntegrityError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
@@ -521,6 +520,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = {}
                 dupl_counter = 0
+                imported_comp_names = set()
                 for import_entry_id, entry_data in new_entries[model_name].iteritems():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
@@ -532,7 +532,8 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                     if Model is models.DbComputer:
                         # Check if there is already a computer with the same
                         # name in the database
-                        dupl = Model.objects.filter(name=import_data['name'])
+                        dupl = (Model.objects.filter(name=import_data['name'])
+                                or import_data['name'] in imported_comp_names)
                         orig_name = import_data['name']
                         while dupl:
                             # Rename the new computer
@@ -540,8 +541,11 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                 orig_name +
                                 COMP_DUPL_SUFFIX.format(dupl_counter))
                             dupl_counter += 1
-                            dupl = Model.objects.filter(
-                                name=import_data['name'])
+                            dupl = (
+                                Model.objects.filter(name=import_data['name'])
+                                or import_data['name'] in imported_comp_names)
+
+                        imported_comp_names.add(import_data['name'])
 
                     objects_to_create.append(Model(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
@@ -779,8 +783,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.utils import timezone
 
     from aiida.orm import Node, Group
-    from aiida.common.exceptions import UniquenessError
-    from sqlalchemy.exc import IntegrityError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
@@ -984,6 +986,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         foreign_ids_reverse_mappings[model_name] = {
                             k: v.pk for k, v in relevant_db_entries.iteritems()}
                         dupl_counter = 0
+                        imported_comp_names = set()
                         for k, v in data['export_data'][model_name].iteritems():
                             if model_name == "aiida.backends.djsite.db.models.DbComputer":
                                 # Check if there is already a computer with the
@@ -992,7 +995,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 qb.append(Model,
                                           filters={'name': {"==": v["name"]}},
                                           project=["*"], tag="res")
-                                dupl = qb.count()
+                                dupl = (qb.count()
+                                        or v["name"] in imported_comp_names)
 
                                 orig_name = v["name"]
                                 while dupl:
@@ -1007,7 +1011,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                               filters={
                                                   'name': {"==": v["name"]}},
                                               project=["*"], tag="res")
-                                    dupl = qb.count()
+                                    dupl = (qb.count() or
+                                            v["name"] in imported_comp_names)
+
+                                imported_comp_names.add(v["name"])
 
                             if v[unique_identifier] in relevant_db_entries.keys():
                                 # Already in DB
@@ -1995,9 +2002,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str):
         fill_in_query(partial_query, current_entity_str, ref_model_name)
 
 
-def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
-                allowed_licenses=None, forbidden_licenses=None,
-                silent=False):
+def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
+                allowed_licenses=None, forbidden_licenses=None, silent=False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
 
@@ -2006,8 +2012,7 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     :param what: a list of Django database entries; they can belong to different
       models.
     :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
-    :param also_parents: if True, also all the parents are stored (from th
-      DbPath transitive closure table)
+    :param also_parents: if True, also all the parents are stored (from the transitive closure)
     :param also_calc_outputs: if True, any output of a calculation is also exported
     :param allowed_licenses: a list or a function. If a list, then checks
       whether all licenses of Data nodes are in the list. If a function,
@@ -2057,10 +2062,11 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
             "aiida.backends.sqlalchemy.models.node.DbNode"]
         if given_nodes:
             # Also add the parents (to any level) to the query
+            # This is done via the ancestor relationship.
             qb = QueryBuilder()
             qb.append(Node, tag='low_node', filters={'id': {'in': given_nodes}})
             qb.append(Node, ancestor_of='low_node', project=['id'])
-            additional_ids = [_ for [_] in qb.all()]
+            additional_ids = [_ for [_] in qb.all()] # Good way, since that works also when qb.all() returns []
             given_nodes = list(set(given_nodes + additional_ids))
             entries_ids_to_add[
                 "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
@@ -2073,38 +2079,27 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
              # selected
             qb = QueryBuilder()
             qb.append(Calculation, tag='high_node',
-                      filters={'id': {'in': given_nodes}})
-            qb.append(Node, output_of='high_node', project=['id'])
+                      filters={'id': {'in': given_nodes}}) # Only looking at calculations and subclasses
+            qb.append(Node, output_of='high_node', project=['id']) # and the outputs
             additional_ids = [_ for [_] in qb.all()]
-            given_nodes = list(set(given_nodes + additional_ids))
+            given_nodes = list(set(given_nodes + additional_ids)) # What if given_nodes is a set from the start?
             entries_ids_to_add[
                 "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
-
-
-    # Initial query to fire the generation of the export data
-
-    # print entries_ids_to_add
-    # for k, v in entries_ids_to_add.iteritems():
-    #     print k, v
-
-    from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm.node import Node
-
-
-    # The following is done for the nodes but we should also do it for the
-    # other type of input given data
 
 
     # Here we get all the columns that we plan to project
     model_name = get_class_string(models.node.DbNode)
     project_cols = ["id"]
+    # The following gets a list of fields that we need, e.g. user, mtime, uuid, computer
     entity_prop = all_fields_info[sqla_to_django_schema[model_name]].keys()
+
     # Here we do the necessary renaming of
     for prop in entity_prop:
         nprop = (django_fields_to_sqla[model_name][prop]
                 if django_fields_to_sqla[model_name].has_key(prop)
                 else prop)
         project_cols.append(nprop)
+    # project_cols contains the strings we can use to project, i.e. user_id, mtime, uuid, dbcomputer_id
 
     entries_to_add = dict()
     for k, v in entries_ids_to_add.iteritems():
@@ -2238,24 +2233,21 @@ def export_tree_sqla(what, folder, also_parents = True, also_calc_outputs=True,
     ## All 'parent' links (in this way, I can automatically export a node
     ## that will get automatically attached to a parent node in the end DB,
     ## if the parent node is already present in the DB)
-    from aiida.backends.sqlalchemy import get_scoped_session
-    session = get_scoped_session()
-    from aiida.backends.sqlalchemy.models.node import DbLink
-    # authinfo = session.query(DbLink).filter(DbLink.output_id.in_(all_nodes_pk)).all()
-    linksquery = session.query(DbLink).filter(
-        DbLink.output_id.in_(all_nodes_pk)).distinct()
 
-    # print "================="
-    #
-    # print linksquery.all()
-
-    # I have to find a way to project only specific columns -
-    # To be seen with Leo
+    links_qb =  QueryBuilder()
+    links_qb.append(Node, project=['uuid'], tag='input')
+    links_qb.append(Node,
+            project=['uuid'], tag='output', filters={'id':{'in':all_nodes_pk}},
+            edge_project=['label'], output_of='input')
     links_uuid = list()
-    for link in linksquery.all():
-        links_uuid.append({"input": str(link.input.uuid),
-                           "output": str(link.output.uuid),
-                           "label": str(link.label)})
+
+    for input_uuid, output_uuid, link_label in links_qb.iterall():
+        links_uuid.append({
+            'input':str(input_uuid),
+            'output':str(output_uuid),
+            'label':str(link_label)
+        })
+
 
     # The following has to be written more properly
     if not silent:
@@ -2394,6 +2386,28 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
             BACKEND))
 
 
+def get_all_parents_dj(node_pks):
+    """
+    Get all the parents of given nodes
+    :param node_pks: one node pk or an iterable of node pks
+    :return: a list of aiida objects with all the parents of the nodes
+    """
+    from aiida.backends.djsite.db import models
+    
+    try:
+        the_node_pks = list(node_pks)
+    except TypeError:
+        the_node_pks = [node_pks]
+        
+    parents = models.DbNode.objects.none()
+    q_inputs = models.DbNode.aiidaobjects.filter(outputs__pk__in=the_node_pks).distinct()
+    while q_inputs.count() > 0:
+        inputs = list(q_inputs)
+        parents = q_inputs | parents.all()
+        q_inputs = models.DbNode.aiidaobjects.filter(outputs__in=inputs).distinct()        
+    return parents
+
+
 def export_tree_dj(what, folder, also_parents = True, also_calc_outputs=True,
                 allowed_licenses=None, forbidden_licenses=None,
                 silent=False):
@@ -2405,8 +2419,7 @@ def export_tree_dj(what, folder, also_parents = True, also_calc_outputs=True,
     :param what: a list of Django database entries; they can belong to different
       models.
     :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
-    :param also_parents: if True, also all the parents are stored (from th
-      DbPath transitive closure table)
+    :param also_parents: if True, also all the parents are stored
     :param also_calc_outputs: if True, any output of a calculation is also exported
     :param allowed_licenses: a list or a function. If a list, then checks
       whether all licenses of Data nodes are in the list. If a function,
@@ -2456,9 +2469,9 @@ def export_tree_dj(what, folder, also_parents = True, also_calc_outputs=True,
         if given_nodes:
             # Also add the parents (to any level) to the query
             given_nodes = list(set(given_nodes +
-                                   list(models.DbNode.objects.filter(
-                                       children__in=given_nodes).values_list('pk', flat=True))))
+                                   list(get_all_parents_dj(given_nodes).values_list('pk', flat=True))))
             entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
+
 
     if also_calc_outputs:
         given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
@@ -2858,8 +2871,7 @@ def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
 
     :param what: a list of Django database entries; they can belong to different
       models.
-    :param also_parents: if True, also all the parents are stored (from th
-      DbPath transitive closure table)
+    :param also_parents: if True, also all the parents are stored (from the transitive closure)
     :param also_calc_outputs: if True, any output of a calculation is also exported
     :param outfile: the filename of the file on which to export
     :param overwrite: if True, overwrite the output file without asking.

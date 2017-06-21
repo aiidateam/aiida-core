@@ -34,6 +34,15 @@ class Data(Node):
     _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version',
                           'extras', 'source_md5', 'description', 'license']
 
+    # Replace this with a dictionary in each subclass that, given a file
+    # extension, returns the corresponding fileformat string.
+    #
+    # This is used in the self.export() method.
+    # By default, if not found here,
+    # The fileformat string is assumed to match the extension.
+    # Example: {'dat': 'dat_multicolumn'}
+    _custom_export_format_replacements = {}
+
     @property
     def source(self):
         """
@@ -143,12 +152,22 @@ class Data(Node):
         return super(Data, self)._linking_as_output(dest, link_type)
 
     @override
-    def _exportstring(self, fileformat, **kwargs):
+    def _exportstring(self, fileformat, main_file_name="", **kwargs):
         """
         Converts a Data object to other text format.
 
         :param fileformat: a string (the extension) to describe the file format.
-        :returns: a string with the structure description.
+        :param main_file_name: empty by default, contains the (full) path and filename
+             of the main file, if any. This is not used directly, but is used to
+             infer useful unique names for the additional files, if any. For instance,
+             if the main file for gnuplot is '../myplot.gnu', the plugin could decide
+             to store the dat file under '../myplot_data.dat'. It is up to the plugin
+             to properly deal with this filename (or ignore it, if not relevant, e.g.
+             if no additional files need to be created)
+        :param kwargs: any other parameter is passed down to the specific plugin
+        :returns: a tuple of length 2. The first element is the content of the
+            otuput file. The second is a dictionary (possibly empty) in the format
+            {filename: filecontent} for any additional file that should be produced.
         """
         exporters = self._get_exporters()
 
@@ -165,38 +184,93 @@ class Data(Node):
                                  "No formats are implemented yet.".format(
                     fileformat, self.__class__.__name__))
 
-        return func(**kwargs)
+        return func(main_file_name=main_file_name, **kwargs)
 
     @override
-    def export(self, fname, fileformat=None):
+    def export(self, path, fileformat=None, overwrite=False, **kwargs):
         """
         Save a Data object to a file.
 
         :param fname: string with file name. Can be an absolute or relative path.
         :param fileformat: kind of format to use for the export. If not present,
             it will try to use the extension of the file name.
+        :param overwrite: if set to True, overwrites file found at path. Default=False
+        :param kwargs: additional parameters to be passed to the
+            _exportstring method
+        :return: the list of files created
         """
+        import os
+
+        if not path:
+            raise ValueError("Path not recognized")
+
+        if os.path.exists(path) and not overwrite:
+            raise OSError("A file was already found at {}".format(path))
+
         if fileformat is None:
-            fileformat = fname.split('.')[-1]
-        filecontent = self._exportstring(fileformat)
-        with open(fname, 'w') as f:  # writes in cwd, if fname is not absolute
-            f.write(filecontent)
+            extension = os.path.splitext(path)[1]
+            if extension.startswith(os.path.extsep):
+                extension = extension[len(os.path.extsep):]
+            if not extension:
+                raise ValueError("Cannot recognized the fileformat from the "
+                                 "extension")
+
+            # Replace the fileformat using the replacements specified in the
+            # _custom_export_format_replacements dictionary. If not found there,
+            # by default assume the fileformat string is identical to the extension
+            fileformat = self._custom_export_format_replacements.get(extension, extension)
+
+        retlist = []
+
+        filetext, extra_files = self._exportstring(
+            fileformat, main_file_name=path, **kwargs)
+
+        if not overwrite:
+            for fname in extra_files:
+                if os.path.exists(fname):
+                    raise OSError("The file {} already exists, stopping.".format(
+                        fname))
+
+            if os.path.exists(path):
+                raise OSError("The file {} already exists, stopping.".format(
+                    path))
+
+        for additional_fname, additional_fcontent in extra_files.iteritems():
+            retlist.append(additional_fname)
+            with open(additional_fname, 'wb') as f:
+                f.write(additional_fcontent) #.encode('utf-8')) # This is up to each specific plugin
+        retlist.append(path)
+        with open(path, 'wb') as f:
+            f.write(filetext)
+
+        return retlist
 
     def _get_exporters(self):
         """
         Get all implemented export formats.
         The convention is to find all _prepare_... methods.
-        Returns a list of strings.
+        Returns a dictionary of method_name: method_function
         """
         # NOTE: To add support for a new format, write a new function called as
         # _prepare_"" with the name of the new format
         exporter_prefix = '_prepare_'
-        method_names = dir(self)  # get list of class methods names
-        valid_format_names = [i[len(exporter_prefix):] for i in method_names
-                              if i.startswith(exporter_prefix)]  # filter them
+        valid_format_names = self.get_export_formats()
         valid_formats = {k: getattr(self, exporter_prefix + k)
                          for k in valid_format_names}
         return valid_formats
+
+    @classmethod
+    def get_export_formats(cls):
+        """
+        Get the list of valid export format strings
+
+        :return: a list of valid formats
+        """
+        exporter_prefix = '_prepare_'
+        method_names = dir(cls)  # get list of class methods names
+        valid_format_names = [i[len(exporter_prefix):] for i in method_names
+                              if i.startswith(exporter_prefix)]  # filter them
+        return sorted(valid_format_names)
 
     def importstring(self, inputstring, fileformat, **kwargs):
         """

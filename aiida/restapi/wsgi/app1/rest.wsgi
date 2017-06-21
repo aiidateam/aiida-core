@@ -16,4 +16,4 @@ config_file_path = os.path.dirname(os.path.abspath(__file__))
 (application, api) = run_api(App, AiidaApi,
                              '--config-dir', config_file_path,
                              hookup=False,
-                             catch_internal_server=True)
+                             catch_internal_server=False)

@@ -21,12 +21,12 @@ If you need to include additional endpoints besides those built in the AiiDA RES
     - (Optional) Extend ``App`` into a user-defined class for finer customization.
 
 
-Let us provide a minimal example where we add the endpoint ``/new-endpoint`` supporting two HTTP methods:
+Let's provide a minimal example through which we add the endpoint ``/new-endpoint`` supporting two HTTP methods:
 
     - *GET*: retrieves the latest created ParameterData object and returns its ``id``, ``ctime`` in ISO 8601 format, and ``attributes``.
     - *POST*: creates a ParameterData object with placeholder attributes, stores it, and returns its ``id``.
 
-Let's assume you've put the code ``example.py``, reading:
+Let's assume you've put the code in the file ``example.py``, reading:
 
 .. code-block:: python
 

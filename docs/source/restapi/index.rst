@@ -43,7 +43,7 @@ An alternative way to hook up the Api is to run the script ``run_api.py`` from f
 
 This script has the same options as the ``verdi command`` (they actually invoke the same function) with the addition of ``--aiida-profile=AIIDA_PROFILE`` to set the AiiDA profile to which the Api should connect.
 
-The default configuration file is  ``config.py`` `and by default is looked for in the folder `aiida/restapi``. The default folder can be overwritten by the the option ``--config-dir=CONFIG_DIR`` . All the available configuration options of the REST Api are documented therein.
+The default configuration file is  ``config.py``, which by default is looked for in the folder `aiida/restapi``. The path of ``config.py`` can be overwritten by the the option ``--config-dir=CONFIG_DIR`` . All the available configuration options of the REST Api are documented therein.
 
 In order to send requests to the REST API you can simply type the url of the request in the address bar of your browser or you can use command line tools such as ``curl`` or ``wget``.
 
@@ -352,13 +352,16 @@ The JSON object mainly contains the list of the results returned by the API. Thi
 
 .. _restapi_apache:
 
-How to run the RESTapi through Apache
+How to run the REST API through Apache
 +++++++++++++++++++++++++++++++++++++
-By default ``verdi restapi`` hooks up the RESTapi through the Python Default HTTP server (Werkzeug). However, to deploy real web applications the server of choice is mostly Apache (add link). One can instruct Apache to run Python applications by employing the WSGI module (add link).
+By default ``verdi restapi`` hooks up the REST API through the HTTP server (Werkzeug) that is  usually bundled with Python distributions. However, to deploy real web applications the server of choice is in many cases `Apache <https://httpd.apache.org/>`_. in fact, you can instruct Apache to run Python applications by employing the `WSGI <modwsgi.readthedocs.io/>`_ module and the AiiDA REST API is inherently structured so that you can easily build the pipeline ``AiiDA->WSGI->Apache``.
+Moreover, one single Apache virtualserver can support multiple apps so that you can, for instance, hook up multiple APIs using as many different configuration sets. For examples, one might have several apps connecting to different AiiDA profiles. We'll go through two examples to explain how to do it.
 
-Tell that (and why) multiple apps can be run
+The goal of the example is to hookup ``app1`` and ``app2`` pointing to two AiiDA profiles, ``django`` and ``sqlalchemy``. All the relevant files are enclosed under the path ``<aiida.source.code.path>/aiida/restapi/wsgi/``. In each of the folders ``app1/`` and ``app2/``, there is a file ``rest.wsgi`` containing a Pytyhon script that instantiates and configures a python web app that, according to the rules of ``mod_wsgi`` has to be named ``application``. For how the script is done, the object ``application`` is configured through the file ``config.py`` contained in the same folder. Indeed, in ``app1/config.py`` the variable ``aiida-profile`` is set to ``"django"``, whereas in ``app2/config.py`` its value is ``"sqlalchemy"``.
 
-Tell where are the wsgi files. The path is immaterial but should be written in the Apache conf
+Anyway, the path where you put the ``.wsgi`` file as well as its name are irrilevant as long as they are correctly referred to in the Apache configuration file. Similarly, you can place ``config.py`` in a custom path, provided you change accordingly the variable ``config_file_path`` in the ``wsgi file``.
+
+Among the
 
 Tell where to copy conf files (and minimal changes)
 

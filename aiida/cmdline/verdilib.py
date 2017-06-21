@@ -737,13 +737,15 @@ class Quicksetup(VerdiCommand):
         dbinfo = pg_info['dbinfo']
 
         # default database name is <profile>_<login-name>
+        # this ensures that for profiles named test_... the database will also
+        # be named test_...
         import getpass
         osuser = getpass.getuser()
-        dbname = db_name or profile + osuser
+        dbname = db_name or profile + '_' + osuser
 
         # default database user name is aiida_qs_<login-name>
         # default password is random
-        dbuser = db_user or 'aiida_qs' + osuser
+        dbuser = db_user or 'aiida_qs_' + osuser
         from aiida.common.setup import generate_random_secret_key
         dbpass = db_user_pw or generate_random_secret_key()
 

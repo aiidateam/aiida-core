@@ -18,5 +18,4 @@
 # version and the DB schema version are the same. (The DB schema version
 # is stored in the DbSetting table and the check is done in the
 # load_dbenv() function).
-SCHEMA_VERSION = 0.1
-
+SCHEMA_VERSION = migrations.current_schema_version()

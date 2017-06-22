@@ -7,6 +7,11 @@ from logging.config import fileConfig
 # access to the values within the .ini file in use.
 config = context.config
 
+# this will overwrite the ini-file sqlalchemy.url path
+# with the path given in the config of the main code
+# import config as ems_config
+# config.set_main_option('sqlalchemy.url', ems_config.config.get('sql', 'database'))
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)

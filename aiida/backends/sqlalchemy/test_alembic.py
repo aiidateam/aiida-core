@@ -1,104 +1,28 @@
 from alembic.config import Config
 from alembic import command
 import os
-# from script import ScriptDirectory
 from alembic.script import ScriptDirectory
 from alembic.runtime.environment import EnvironmentContext
-from alembic import util
 
 
-def get_curr_version_orig(config):
+def get_migration_head(config):
     script = ScriptDirectory.from_config(config)
-
-    head_only = False
-    verbose = False
-
-    if head_only:
-        util.warn("--head-only is deprecated")
-
-    def display_version(rev, context):
-        if verbose:
-            config.print_stdout(
-                "Current revision(s) for %s:",
-                util.obfuscate_url_pw(context.connection.engine.url)
-            )
-        for rev in script.get_all_current(rev):
-            config.print_stdout(rev.cmd_format(verbose))
-
-        return []
-
-    with EnvironmentContext(
-        config,
-        script,
-        fn=display_version
-    ):
-        script.run_env()
-
-
-def get_curr_version(config):
-    script = ScriptDirectory.from_config(config)
-
-    head_only = False
-    verbose = False
-
-    def display_version(rev, context):
-        revs_to_return = list()
-
-        for rev in script.get_all_current(rev):
-            config.print_stdout(rev.cmd_format(verbose))
-
-        # return "bla"
-
-    with EnvironmentContext(
-        config,
-        script,
-        fn=display_version
-    ):
-        script.run_env()
-
-
-def print_current_head(config):
-    script = ScriptDirectory.from_config(config)
-
     return script.get_current_head()
 
 
-def print_curr_revision_wc(config):
+def get_migration_base(config):
     script = ScriptDirectory.from_config(config)
-
-    # return script.get_current_head()
-
-    with EnvironmentContext(
-        config,
-        script
-    ):
-        return script.get_current_head()
-
-
-def print_curr_base(config):
-    script = ScriptDirectory.from_config(config)
-
     return script.get_base()
 
 
-def get_current_db_version(config):
+def get_db_version(config):
     script = ScriptDirectory.from_config(config)
 
-    head_only = False
-    verbose = False
-    my_rev = None
-
-    if head_only:
-        util.warn("--head-only is deprecated")
-
-    def get_db_version(rev, context):
-        if verbose:
-            config.print_stdout(
-                "Current revision(s) for %s:",
-                util.obfuscate_url_pw(context.connection.engine.url)
-            )
-
-        config.attributes['rev'] = rev
+    def get_db_version(rev, _):
+        if isinstance(rev, tuple) and len(rev) > 0:
+            config.attributes['rev'] = rev[0]
+        else:
+            config.attributes['rev'] = None
 
         return []
 
@@ -108,7 +32,6 @@ def get_current_db_version(config):
         fn=get_db_version
     ):
         script.run_env()
-        print "WWWWWWW =====> ", config.attributes
         return config.attributes['rev']
 
 
@@ -124,16 +47,14 @@ command.history(alembic_cfg)
 print "Current"
 command.current(alembic_cfg)
 
-print "Spyros get_curr_version_orig"
-get_curr_version_orig(alembic_cfg)
+print "Spyros get_migration_head"
+get_migration_head(alembic_cfg)
 
-print "Spyros print_current_head"
-print print_current_head(alembic_cfg)
+print "Spyros get_migration_base"
+print get_migration_base(alembic_cfg)
 
-print "Spyros print_curr_base"
-print print_curr_base(alembic_cfg)
+print "Spyros get_db_version"
+print get_db_version(alembic_cfg)
 
-print "Spyros get_current_db_version"
-print get_current_db_version(alembic_cfg)
 
 

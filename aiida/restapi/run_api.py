@@ -204,7 +204,7 @@ if __name__ == '__main__':
     """
     I run the app via a wrapper that accepts arguments such as host and port
     e.g. python api.py --host=127.0.0.2 --port=6000 --config-dir=~/.restapi
-    Default address is 127.0.01:5000, default config directory is
+    Default address is 127.0.0.1:5000, default config directory is
     <aiida_path>/aiida/restapi/common
 
     Start the app by sliding the argvs to flaskrun, choose to take as an

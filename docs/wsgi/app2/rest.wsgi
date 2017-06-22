@@ -7,7 +7,7 @@ AIIDA_DIR = os.path.join(
     os.path.dirname(
         os.path.abspath(__file__)
     ),
-    '../../../')
+    '../../../aiida/')
 
 sys.path = [AIIDA_DIR] + sys.path
 

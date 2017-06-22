@@ -16,7 +16,6 @@ from aiida.backends.testbase import AiidaTestCase
 from plum.engine.ticking import TickingEngine
 import plum.process_monitor
 from aiida.orm.calculation.work import WorkCalculation
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
@@ -27,9 +26,6 @@ import aiida.work.util as util
 from aiida.common.links import LinkType
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
-
-
-PwProcess = PwCalculation.process()
 
 
 class Wf(WorkChain):

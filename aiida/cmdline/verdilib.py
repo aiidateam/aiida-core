@@ -344,9 +344,13 @@ class Setup(VerdiCommand):
     """
 
     def run(self, *args):
-        ctx = _setup_cmd.make_context('setup', list(args))
+        ctx = self._ctx(args)
         with ctx:
             _setup_cmd.invoke(ctx)
+
+    @staticmethod
+    def _ctx(args, info_name='verdi setup', **kwargs):
+        return _setup_cmd.make_context(info_name, list(args), **kwargs)
 
     def complete(self, subargs_idx, subargs):
         """
@@ -362,22 +366,23 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('profile', default='', type=str)
 @click.option('--only-config', is_flag=True)
 @click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
-@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']),
-              help='ignored unless --non-interactive is given')
-@click.option('--email', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_host', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_port', type=int, help='ignored unless --non-interactive is given')
-@click.option('--db_name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_user', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_pass', type=str, help='ignored unless --non-interactive is given')
-@click.option('--first-name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--last-name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--institution', type=str, help='ignored unless --non-interactive is given')
-@click.option('--no-password', is_flag=True, help='ignored unless --non-interactive is given')
-@click.option('--repo', type=str, help='ignored unless --non-interactive is given')
+@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']),)
+@click.option('--email', type=str)
+@click.option('--db_host', type=str)
+@click.option('--db_port', type=int)
+@click.option('--db_name', type=str)
+@click.option('--db_user', type=str)
+@click.option('--db_pass', type=str)
+@click.option('--first-name', type=str)
+@click.option('--last-name', type=str)
+@click.option('--institution', type=str)
+@click.option('--no-password', is_flag=True)
+@click.option('--repo', type=str)
 def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass,
                first_name, last_name, institution, no_password, repo):
-    '''verdi setup command, forward cmdline arguments to the setup function.'''
+    '''verdi setup command, forward cmdline arguments to the setup function.
+    
+    Note: command line options are IGNORED unless --non-interactive is given.'''
     setup(profile=profile,
           only_config=only_config,
           non_interactive=non_interactive,
@@ -617,8 +622,6 @@ class Quicksetup(VerdiCommand):
     Creates a database user 'aiida_qs_<login-name>' with random password (if it
     doesn't exist). Creates a database '<profile>_<username>' (if it exists,
     prompts user to use or change the name).
-
-    For complete command line options do "verdi quicksetup --help"
     '''
     from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
@@ -628,10 +631,14 @@ class Quicksetup(VerdiCommand):
     _get_users_command = "SELECT usename FROM pg_user WHERE usename='{}'"
 
     def run(self, *args):
-        ctx = self._quicksetup_cmd.make_context('quicksetup', list(args))
+        ctx = self._ctx(args)
         with ctx:
             ctx.obj = self
             self._quicksetup_cmd.invoke(ctx)
+
+    @staticmethod
+    def _ctx(args, info_name='verdi quicksetup', **kwargs):
+        return Quicksetup._quicksetup_cmd.make_context(info_name, list(args), **kwargs)
 
     def _get_pg_access(self):
         '''
@@ -965,6 +972,8 @@ class Quicksetup(VerdiCommand):
         return dbname, create
 
 
+
+
 class Run(VerdiCommand):
     """
     Execute an AiiDA script
@@ -1161,9 +1170,27 @@ def exec_from_cmdline(argv):
 
     short_doc = {}
     long_doc = {}
-    for k, v in raw_docstrings.iteritems():
+    for k, cmd in list_commands.iteritems():
         if k in hidden_commands:
             continue
+
+        # assemble help string
+        # first from python docstring
+        if cmd.__doc__:
+            v = cmd.__doc__
+        else:
+            v = ""
+
+        # if command has parser written with the 'click' module
+        # we also add a dynamic help string documenting the options
+        # Note: to enable this for a command, simply add a static 
+        # _ctx method (see e.g. Quicksetup)
+        if hasattr(cmd, '_ctx'):
+            v += "\n"
+            # resilient_parsing suppresses interactive prompts
+            v += cmd._ctx(args=[], resilient_parsing=True).get_help()
+            v = v.split('\n')  # need list of lines
+
         lines = [l.strip() for l in v]
         empty_lines = [bool(l) for l in lines]
         try:
@@ -1175,6 +1202,7 @@ def exec_from_cmdline(argv):
             continue
         short_doc[k] = lines[first_idx]
         long_doc[k] = os.linesep.join(lines[first_idx + 1:])
+
 
     execname = os.path.basename(argv[0])
 

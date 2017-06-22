@@ -36,6 +36,12 @@ from aiida.common.setup import (get_profile_config, DEFAULT_USER_CONFIG_FIELD)
 
 from aiida.backends import sqlalchemy as sa, settings
 
+from alembic.config import Config
+from alembic import command
+import os
+from alembic.script import ScriptDirectory
+from alembic.runtime.environment import EnvironmentContext
+
 from aiida.backends.profile import (is_profile_loaded,
                                     load_profile)
 
@@ -418,22 +424,34 @@ def check_schema_version():
     """
     from aiida.common.exceptions import ConfigurationError
     from sqlalchemy.engine import reflection
-    from aiida.backends.sqlalchemy.models import SCHEMA_VERSION
     from aiida.backends.utils import (
-        get_db_schema_version, set_db_schema_version,get_current_profile)
+            set_db_schema_version,get_current_profile)
 
     # Do not do anything if the table does not exist yet
     inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
     if 'db_dbsetting' not in inspector.get_table_names():
         return
 
-    code_schema_version = SCHEMA_VERSION
-    db_schema_version = get_db_schema_version()
+    alembic_cfg = Config(
+        "/home/aiida/aiida-code/aiida_core/aiida/backends/sqlalchemy/alembic.ini")
+    #
+    # print "Spyros get_migration_head"
+    # get_migration_head(alembic_cfg)
+    #
+    # print "Spyros get_migration_base"
+    # print get_migration_base(alembic_cfg)
+    #
+    # print "Spyros get_db_version"
+    # print get_db_version(alembic_cfg)
+
+    code_schema_version = get_migration_head(alembic_cfg)
+    db_schema_version = get_db_schema_version(alembic_cfg)
 
     if db_schema_version is None:
+        raise ConfigurationError("No code schema defined yet")
         # No code schema defined yet, I set it to the code version
-        set_db_schema_version(code_schema_version)
-        db_schema_version = get_db_schema_version()
+        # set_db_schema_version(code_schema_version)
+        # db_schema_version = get_db_schema_version()
 
     if code_schema_version != db_schema_version:
         raise ConfigurationError(
@@ -441,3 +459,33 @@ def check_schema_version():
             "database (DbSetting table) is {}, stopping.\n".
             format(code_schema_version, db_schema_version)
         )
+
+
+def get_migration_head(config):
+    script = ScriptDirectory.from_config(config)
+    return script.get_current_head()
+
+
+def get_migration_base(config):
+    script = ScriptDirectory.from_config(config)
+    return script.get_base()
+
+
+def get_db_schema_version(config):
+    script = ScriptDirectory.from_config(config)
+
+    def get_db_version(rev, _):
+        if isinstance(rev, tuple) and len(rev) > 0:
+            config.attributes['rev'] = rev[0]
+        else:
+            config.attributes['rev'] = None
+
+        return []
+
+    with EnvironmentContext(
+        config,
+        script,
+        fn=get_db_version
+    ):
+        script.run_env()
+        return config.attributes['rev']

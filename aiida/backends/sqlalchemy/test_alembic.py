@@ -81,28 +81,35 @@ def print_curr_base(config):
     return script.get_base()
 
 
-def get_curr_version_spyros(config):
+def get_current_db_version(config):
     script = ScriptDirectory.from_config(config)
 
     head_only = False
     verbose = False
     my_rev = None
 
-    def display_version(rev, context):
-        revs_to_return = list()
+    if head_only:
+        util.warn("--head-only is deprecated")
 
-        for rev in script.get_all_current(rev):
-            config.print_stdout(rev.cmd_format(verbose))
+    def get_db_version(rev, context):
+        if verbose:
+            config.print_stdout(
+                "Current revision(s) for %s:",
+                util.obfuscate_url_pw(context.connection.engine.url)
+            )
 
-        # return "bla"
+        config.attributes['rev'] = rev
+
+        return []
 
     with EnvironmentContext(
         config,
         script,
-        fn=display_version
+        fn=get_db_version
     ):
         script.run_env()
-
+        print "WWWWWWW =====> ", config.attributes
+        return config.attributes['rev']
 
 
 print "curr_dir: ", os.path.dirname(os.path.realpath(__file__))
@@ -125,5 +132,8 @@ print print_current_head(alembic_cfg)
 
 print "Spyros print_curr_base"
 print print_curr_base(alembic_cfg)
+
+print "Spyros get_current_db_version"
+print get_current_db_version(alembic_cfg)
 
 

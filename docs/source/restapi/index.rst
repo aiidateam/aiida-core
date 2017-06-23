@@ -118,17 +118,20 @@ Here are few examples of valid URIs::
     http://localhost:5000/api/v2/nodes/statistics
 
 
-If you request informations of a specific object you have to append its *pk* or *uuid* to the path (note that the *pk* is also called *id*). Example are::
+If you request informations of a specific object you have to append its entire *uuid* or the starting pattern of its *uuid* to the path. Here are two examples that should return the same object::
 
-    http://localhost:5000/api/v2/nodes/345
     http://localhost:5000/api/v2/nodes/338357f4-f236-4f9c-8fbe-cd550dc6b858
+    http://localhost:5000/api/v2/nodes/338357f4-f2
+
+In the first URL, we have specified the full *uuid*, whereas in the second only a chunk of its first characters that is sufficiently long to match only one *uuid* in the database.
+Il the *uuid* pattern is not long enough to identify a unique object, the API will raise an exception.
 
 When you ask for a single object (and only in that case) you can construct more complex requests, namely, you can ask for its inputs/outputs or for its attributes/extras. In the first case you have to append to the path the string ``/io/inputs`` or ``io/outputs`` depending on the desired relation between the nodes, whereas in the second case you have to append ``content/attributes`` or ``content/extras`` depending on the kind of content you want to access. Here are some examples::
 
-    http://localhost:5000/api/v2/calculations/345/io/inputs
-    http://localhost:5000/api/v2/nodes/345/io/inputs
-    http://localhost:5000/api/v2/data/385/content/attributes
-    http://localhost:5000/api/v2/nodes/385/content/extras
+    http://localhost:5000/api/v2/calculations/338357f4-f2/io/inputs
+    http://localhost:5000/api/v2/nodes/338357f4-f2/io/inputs
+    http://localhost:5000/api/v2/data/338357f4-f2/content/attributes
+    http://localhost:5000/api/v2/nodes/338357f4-f2/content/extras
 
 .. note:: As you can see from the last examples, a *Node* object can be accessed requesting either a generic ``nodes`` resource or requesting the resource corresponding to its specific type (``data``, ``codes``, ``calculations``, ``kpoints``, ... ). This is because in AiiDA  the classes *Data*, *Code*, and *Calculation* are derived from the class *Node*. In turn, *Data* is the baseclass of a number of built-in and custom classes, e.g. ``KpointsData``, ``StructureData``, ``BandsData``, ...
 
@@ -162,7 +165,7 @@ There are several special keys that can be specified only once in a query string
 
         ::
 
-            http://localhost:5000/api/v2/codes/1822/content/attributes?
+            http://localhost:5000/api/v2/codes/4fb10ef1-1a/content/attributes?
                                         alist=append_text,prepend_text 
 
 
@@ -198,7 +201,8 @@ All the other fields composing a query string are filters, that is, conditions t
 
     :bool: It can be either true or false (lower case).
 
-The following table reports what is the value type and the supported resources associated to each key. 
+The following table reports what is the value type and the supported resources associated to each key.
+.. note:: In the following *id* is a synonym for *pk* (often used in other sections of the documentation).
 
 +----------------+----------+----------------------------------------------------------+
 |key             |value type|resources                                                 |
@@ -328,10 +332,10 @@ Examples:
 
         ::
 
-            http://localhost:5000/api/v2/nodes/6/io/outputs/?
+            http://localhost:5000/api/v2/nodes/a67fba41-8a/io/outputs/?
                               type="data.folder.FolderData."
 
-    would first search for the outputs of the node with *pk* =6 and then select only those objects of type *FolderData*.
+    would first search for the outputs of the node with *uuid* starting with "a67fba41-8a" and then select only those objects of type *FolderData*.
 
        
 
@@ -481,11 +485,11 @@ Computers
 
     REST url::
 
-        http://localhost:5000/api/v2/computers/4
+        http://localhost:5000/api/v2/computers/5d490d77-638d
 
     Description:
 
-        returns the details of the *Computer* object with ``pk=4``.
+        returns the details of the *Computer* object ``uuid="5d490d77-638d..."``.
 
     Response::
 
@@ -506,11 +510,11 @@ Computers
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/computers/4", 
+          "path": "/api/v2/computers/5d490d77-638d",
           "pk": 4, 
           "query_string": "", 
           "resource_type": "computers", 
-          "url": "http://localhost:5000/api/v2/computers/4", 
+          "url": "http://localhost:5000/api/v2/computers/5d490d77-638d",
           "url_root": "http://localhost:5000/"
         }
         
@@ -568,11 +572,11 @@ Nodes
 
     REST url::
 
-        http://localhost:5000/api/v2/nodes/1
+        http://localhost:5000/api/v2/nodes/e30da7cc
 
     Description:
 
-        returns the details of the *Node* object with ``pk=1``.
+        returns the details of the *Node* object with ``uuid="e30da7cc..."``.
 
     Response::
 
@@ -591,11 +595,11 @@ Nodes
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/nodes/1", 
+          "path": "/api/v2/nodes/e30da7cc",
           "pk": 1, 
           "query_string": "", 
           "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes/1", 
+          "url": "http://localhost:5000/api/v2/nodes/e30da7cc",
           "url_root": "http://localhost:5000/"
         }
            
@@ -603,11 +607,11 @@ Nodes
 
     REST url:: 
     
-        http://localhost:5000/api/v2/nodes/6/io/inputs?limit=2
+        http://localhost:5000/api/v2/nodes/de83b1/io/inputs?limit=2
 
     Description:
     
-        returns the list of the first two input nodes (``limit=2``) of the *Node* object with ``pk=6``.
+        returns the list of the first two input nodes (``limit=2``) of the *Node* object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -635,11 +639,11 @@ Nodes
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/nodes/6/io/inputs", 
+          "path": "/api/v2/nodes/de83b1/io/inputs",
           "pk": 6, 
           "query_string": "limit=2", 
           "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes/6/io/inputs?limit=2", 
+          "url": "http://localhost:5000/api/v2/nodes/de83b1/io/inputs?limit=2",
           "url_root": "http://localhost:5000/"
         }
         
@@ -648,12 +652,12 @@ Nodes
 
     REST url:: 
     
-        http://localhost:5000/api/v2/nodes/6/io/inputs?type="data.array.kpoints.KpointsData."
+        http://localhost:5000/api/v2/nodes/de83b1/io/inputs?type="data.array.kpoints.KpointsData."
 
     Description:
     
         returns the list of the `*KpointsData* input nodes of
-        the *Node* object with ``pk=6``.
+        the *Node* object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -672,21 +676,21 @@ Nodes
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/nodes/6/io/inputs", 
+          "path": "/api/v2/nodes/de83b1/io/inputs",
           "pk": 6, 
           "query_string": "type=\"data.array.kpoints.KpointsData.\"", 
           "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes/6/io/inputs?type=\"data.array.kpoints.KpointsData.\"", 
+          "url": "http://localhost:5000/api/v2/nodes/de83b1/io/inputs?type=\"data.array.kpoints.KpointsData.\"",
           "url_root": "http://localhost:5000/"
         }
         
     REST url::
     
-        http://localhost:5000/api/v2/nodes/6/io/outputs?type="data.remote.RemoteData."
+        http://localhost:5000/api/v2/nodes/de83b1/io/outputs?type="data.remote.RemoteData."
     
     Description:
     
-        returns the list of the *RemoteData* output nodes of the *Node* object with ``pk=6``.
+        returns the list of the *RemoteData* output nodes of the *Node* object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -705,11 +709,11 @@ Nodes
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/nodes/6/io/outputs", 
+          "path": "/api/v2/nodes/de83b1/io/outputs",
           "pk": 6, 
           "query_string": "type=\"data.remote.RemoteData.\"", 
           "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes/6/io/outputs?type=\"data.remote.RemoteData.\"", 
+          "url": "http://localhost:5000/api/v2/nodes/de83b1/io/outputs?type=\"data.remote.RemoteData.\"",
           "url_root": "http://localhost:5000/"
         }
             
@@ -719,11 +723,11 @@ Nodes
 
     REST url::
     
-        http://localhost:5000/api/v2/nodes/1822/content/attributes
+        http://localhost:5000/api/v2/nodes/ffe11/content/attributes
 
     Description:
     
-        returns the list of all attributes of the *Node* object with ``pk=1822``.
+        returns the list of all attributes of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -738,11 +742,11 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/nodes/1822/content/attributes", 
+          "path": "/api/v2/nodes/ffe11/content/attributes",
           "pk": 1822, 
           "query_string": "", 
           "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes/1822/content/attributes", 
+          "url": "http://localhost:5000/api/v2/nodes/ffe11/content/attributes",
           "url_root": "http://localhost:5000/"
         }
       
@@ -750,11 +754,11 @@ Nodes
 
     REST url::
 
-        http://localhost:5000/api/v2/nodes/1822/content/extras
+        http://localhost:5000/api/v2/nodes/ffe11/content/extras
 
     Description:
     
-        returns the list of all the extras of the *Node* object with ``pk=1822``.
+        returns the list of all the extras of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -768,11 +772,11 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/codes/1822/content/extras", 
+          "path": "/api/v2/codes/ffe11/content/extras",
           "pk": 1822, 
           "query_string": "", 
           "resource_type": "codes", 
-          "url": "http://localhost:5000/api/v2/codes/1822/content/extras", 
+          "url": "http://localhost:5000/api/v2/codes/ffe11/content/extras",
           "url_root": "http://localhost:5000/"
         }
      
@@ -781,11 +785,11 @@ Nodes
 
     REST url::
     
-         http://localhost:5000/api/v2/codes/1822/content/attributes?alist=append_text,is_local
+         http://localhost:5000/api/v2/codes/ffe11/content/attributes?alist=append_text,is_local
 
     Description:
     
-        returns a list of the attributes ``append_text`` and ``is_local`` of the *Node* object with ``pk=1822``.
+        returns a list of the attributes ``append_text`` and ``is_local`` of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -797,11 +801,11 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/codes/1822/content/attributes", 
+          "path": "/api/v2/codes/ffe11/content/attributes",
           "pk": 1822, 
           "query_string": "alist=append_text,is_local", 
           "resource_type": "codes", 
-          "url": "http://localhost:5000/api/v2/codes/1822/content/attributes?alist=append_text,is_local", 
+          "url": "http://localhost:5000/api/v2/codes/ffe11/content/attributes?alist=append_text,is_local",
           "url_root": "http://localhost:5000/"
         }
         
@@ -809,11 +813,11 @@ Nodes
 
     REST url::
     
-        http://localhost:5000/api/v2/codes/1822/content/extras?elist=trialBool,trialInt
+        http://localhost:5000/api/v2/codes/ffe11/content/extras?elist=trialBool,trialInt
 
     Description:
     
-        returns a list of the extras ``trialBool`` and ``trialInt`` of the *Node* object with ``pk=1822``.
+        returns a list of the extras ``trialBool`` and ``trialInt`` of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -825,11 +829,11 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/codes/1822/content/extras", 
+          "path": "/api/v2/codes/ffe11/content/extras",
           "pk": 1822, 
           "query_string": "elist=trialBool,trialInt", 
           "resource_type": "codes", 
-          "url": "http://localhost:5000/api/v2/codes/1822/content/extras?elist=trialBool,trialInt", 
+          "url": "http://localhost:5000/api/v2/codes/ffe11/content/extras?elist=trialBool,trialInt",
           "url_root": "http://localhost:5000/"
         }
 
@@ -838,11 +842,11 @@ Nodes
 
     REST url::
 
-        http://localhost:5000/api/v2/codes/1822/content/attributes?nalist=append_text,is_local    
+        http://localhost:5000/api/v2/codes/ffe11/content/attributes?nalist=append_text,is_local
 
     Description:
     
-        returns all the attributes of the *Node* object with ``pk=1822`` except ``append_text`` and ``is_local``.
+        returns all the attributes of the *Node* object with ``uuid="ffe11..."`` except ``append_text`` and ``is_local``.
 
     Response::
 
@@ -855,22 +859,22 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/codes/1822/content/attributes", 
+          "path": "/api/v2/codes/ffe11/content/attributes",
           "pk": 1822, 
           "query_string": "nalist=append_text,is_local", 
           "resource_type": "codes", 
-          "url": "http://localhost:5000/api/v2/codes/1822/content/attributes?nalist=append_text,is_local", 
+          "url": "http://localhost:5000/api/v2/codes/ffe11/content/attributes?nalist=append_text,is_local",
           "url_root": "http://localhost:5000/"
         }
 
 
     REST url::
 
-        http://localhost:5000/api/v2/codes/1822/content/extras?nelist=trialBool,trialInt
+        http://localhost:5000/api/v2/codes/ffe11/content/extras?nelist=trialBool,trialInt
 
     Description:
     
-        returns all the extras of the *Node* object with ``pk=1822`` except ``trialBool`` and ``trialInt``.
+        returns all the extras of the *Node* object with ``uuid="ffe11..."`` except ``trialBool`` and ``trialInt``.
 
     Response::
 
@@ -882,11 +886,11 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/codes/1822/content/extras", 
+          "path": "/api/v2/codes/ffe11/content/extras",
           "pk": 1822, 
           "query_string": "nelist=trialBool,trialInt", 
           "resource_type": "codes", 
-          "url": "http://localhost:5000/api/v2/codes/1822/content/extras?nelist=trialBool,trialInt", 
+          "url": "http://localhost:5000/api/v2/codes/ffe11/content/extras?nelist=trialBool,trialInt",
           "url_root": "http://localhost:5000/"
         }
 
@@ -1033,11 +1037,11 @@ Groups
 
     REST url::
 
-        http://localhost:5000/api/v2/groups/23
+        http://localhost:5000/api/v2/groups/a6e5b
 
     Description:
     
-        returns the details of the *Group* object with ``pk=23``.
+        returns the details of the *Group* object with ``uuid="a6e5b..."``.
 
     Response::
 
@@ -1055,11 +1059,11 @@ Groups
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/groups/23", 
+          "path": "/api/v2/groups/a6e5b",
           "pk": 23, 
           "query_string": "", 
           "resource_type": "groups", 
-          "url": "http://localhost:5000/api/v2/groups/23", 
+          "url": "http://localhost:5000/api/v2/groups/a6e5b",
           "url_root": "http://localhost:5000/"
         }
                 

@@ -71,7 +71,7 @@ class BaseTranslator(object):
         self._is_id_query = Class._is_id_query
         self._total_count = Class._total_count
 
-        # Basic filter (dict) to set the identity to an id (int, uuid). None if
+        # Basic filter (dict) to set the identity of the uuid. None if
         #  no specific node is requested
         self._id_filter = None
 
@@ -495,14 +495,14 @@ class BaseTranslator(object):
         data = self.get_formatted_result(self._result_type)
         return data
 
-    def _check_id_validity(self, id):
+    def _check_id_validity(self, uuid):
         """
-        Checks whether a id (pk, uuid or uuid starting pattern)corresponds to
+        Checks whether a id full uuid or uuid starting pattern) corresponds to
          an object of the expected type,
         whenever type is a valid column of the database (ex. for nodes,
         but not for users)
         
-        :param id: integer, uuid, or uuid starting pattern
+        :param id: uuid, or uuid starting pattern
         
         :return: True if id valid (invalid). If True, sets the
             id filter attribute correctly
@@ -514,7 +514,7 @@ class BaseTranslator(object):
 
         from aiida.orm.utils import create_node_id_qb
 
-        qb = create_node_id_qb(pk=id, parent_class=self._aiida_class)
+        qb = create_node_id_qb(uuid=uuid, parent_class=self._aiida_class)
 
         # project only the pk
         qb.add_projection('node', ['id'])
@@ -528,10 +528,10 @@ class BaseTranslator(object):
                                       " Provide longer starting pattern"
                                       " for uuid.")
         except NotExistent:
-            raise RestValidationError("either the selected id does not exist"
-                                       " or the corresponding object is not"
-                                       " of type aiida.orm.{}"
-                                       "".format(self._aiida_type))
+            raise RestValidationError("either no object's uuid starts"
+                                      " with '{}' or the corresponding object"
+                                      " is not of type aiida.orm.{}"
+                                      .format(uuid, self._aiida_type))
         else:
             # create a permanent filter
             self._id_filter = {'id': {'==': pk}}

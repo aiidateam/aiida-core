@@ -97,7 +97,7 @@ class BaseResource(Resource):
 
 class Node(Resource):
     ##Differs from BaseResource in trans.set_query() mostly because it takes
-    # query_type as an input
+    # query_type as an input and the presence of "tree" result type
     def __init__(self, **kwargs):
 
         # Set translator

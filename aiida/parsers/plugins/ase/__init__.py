@@ -47,7 +47,7 @@ class AseParser(Parser):
         """
         from aiida.common.exceptions import InvalidOperation
         from aiida.common import aiidalogger
-        from aiida.djsite.utils import get_dblogger_extra
+        from aiida.backends.djsite.utils import get_dblogger_extra
 
         import ase, ase.io
 

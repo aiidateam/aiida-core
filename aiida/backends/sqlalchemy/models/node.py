@@ -32,6 +32,9 @@ from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
 
+from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.sqlalchemy.models.computer import DbComputer
+
 
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
@@ -168,7 +171,7 @@ class DbNode(Base):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.common.pluginloader import from_type_to_pluginclassname
+        from aiida.common.old_pluginloader import from_type_to_pluginclassname
         from aiida.orm.node import Node
 
         try:
@@ -210,23 +213,28 @@ class DbNode(Base):
     def set_attr(self, key, value):
         DbNode._set_attr(self.attributes, key, value)
         flag_modified(self, "attributes")
+        self.save()
 
     def set_extra(self, key, value):
         DbNode._set_attr(self.extras, key, value)
         flag_modified(self, "extras")
+        self.save()
 
     def reset_extras(self, new_extras):
         self.extras.clear()
         self.extras.update(new_extras)
         flag_modified(self, "extras")
+        self.save()
 
     def del_attr(self, key):
         DbNode._del_attr(self.attributes, key)
         flag_modified(self, "attributes")
+        self.save()
 
     def del_extra(self, key):
         DbNode._del_attr(self.extras, key)
         flag_modified(self, "extras")
+        self.save()
 
     @staticmethod
     def _set_attr(d, key, value):
@@ -257,6 +265,40 @@ class DbNode(Base):
             return "{} node [{}]: {}".format(simplename, self.pk, self.label)
         else:
             return "{} node [{}]".format(simplename, self.pk)
+
+    # User email
+    @hybrid_property
+    def user_email(self):
+        """
+        Returns: the email of the user
+        """
+        return self.user.email
+
+    @user_email.expression
+    def user_email(cls):
+        """
+        Returns: the email of the user at a class level (i.e. in the database)
+        """
+        return select([DbUser.email]).where(DbUser.id == cls.user_id).label(
+            'user_email')
+
+    # Computer name
+    @hybrid_property
+    def computer_name(self):
+        """
+        Returns: the of the computer
+        """
+        return self.dbcomputer.name
+
+    @computer_name.expression
+    def computer_name(cls):
+        """
+        Returns: the name of the computer at a class level (i.e. in the 
+        database)
+        """
+        return select([DbComputer.name]).where(DbComputer.id ==
+                                                 cls.dbcomputer_id).label(
+            'computer_name')
 
 
     @hybrid_property
@@ -290,21 +332,37 @@ class DbNode(Base):
                                  whens=whens,
                                  else_=100) # else: high value to put it at the bottom
 
-        q1 = select([
+        # Add numerical state to string, to allow to sort them
+        states_with_num = select([
             DbCalcState.id.label('id'),
             DbCalcState.dbnode_id.label('dbnode_id'),
-            DbCalcState.state.label('state'),
-            func.row_number().over(partition_by=DbCalcState.dbnode_id,
-                                                 order_by=custom_sort_order).label('the_row_number')
-        ])
+            DbCalcState.state.label('state_string'),
+            custom_sort_order.label('num_state')
+        ]).select_from(DbCalcState).alias()
 
-        q1 = q1.cte()
+        # Get the most 'recent' state (using the state ordering, and the min function) for
+        # each calc
+        calc_state_num = select([
+            states_with_num.c.dbnode_id.label('dbnode_id'),
+            func.min(states_with_num.c.num_state).label('recent_state')
+        ]).group_by(states_with_num.c.dbnode_id).alias()
 
+        # Join the most-recent-state table with the DbCalcState table
+        all_states_q = select([
+            DbCalcState.dbnode_id.label('dbnode_id'),
+            DbCalcState.state.label('state_string'),
+            calc_state_num.c.recent_state.label('recent_state'),
+            custom_sort_order.label('num_state'),
+        ]).select_from(#DbCalcState).alias().join(
+            join(DbCalcState, calc_state_num, DbCalcState.dbnode_id == calc_state_num.c.dbnode_id)).alias()
+
+        # Get the association between each calc and only its corresponding most-recent-state row
         subq = select([
-            q1.c.dbnode_id.label('dbnode_id'),
-            q1.c.state.label('state')
-        ]).select_from(q1).where(q1.c.the_row_number==1).alias()
+            all_states_q.c.dbnode_id.label('dbnode_id'),
+            all_states_q.c.state_string.label('state')
+        ]).select_from(all_states_q).where(all_states_q.c.num_state == all_states_q.c.recent_state).alias()
 
+        # Final filtering for the actual query
         return select([subq.c.state]).\
             where(
                     subq.c.dbnode_id == cls.id,

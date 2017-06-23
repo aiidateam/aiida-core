@@ -27,7 +27,7 @@ from aiida.backends.utils import get_automatic_user
 
 from aiida.utils import timezone
 from aiida.utils.logger import get_dblogger_extra
-
+from aiida.common.utils import abstractclassmethod
 
 logger = aiidalogger.getChild('Workflow')
 
@@ -278,8 +278,7 @@ class AbstractWorkflow(object):
             raise ValueError("The path in get_abs_path must be relative")
         return self.current_folder.get_subfolder(section, reset_limit=True).get_abs_path(path, check_existence=True)
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def query(cls, *args, **kwargs):
         """
         Map to the aiidaobjects manager of the DbWorkflow, that returns
@@ -886,8 +885,7 @@ class AbstractWorkflow(object):
         """
         pass
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get_subclass_from_dbnode(cls, wf_db):
         """
         Loads the workflow object and reaoads the python script in memory with the importlib library, the
@@ -897,8 +895,7 @@ class AbstractWorkflow(object):
         """
         pass
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get_subclass_from_pk(cls, pk):
         """
         Calls the ``get_subclass_from_dbnode`` selecting the DbWorkflowNode from
@@ -908,8 +905,7 @@ class AbstractWorkflow(object):
         """
         pass
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get_subclass_from_uuid(cls, uuid):
         """
         Calls the ``get_subclass_from_dbnode`` selecting the DbWorkflowNode from

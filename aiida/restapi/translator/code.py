@@ -75,8 +75,10 @@ class CodeTranslator(NodeTranslator):
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "codes"
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    from aiida.orm.code import Code
+    _aiida_class = Code
+    # The string name of the AiiDA class
     _aiida_type = "code.Code"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'

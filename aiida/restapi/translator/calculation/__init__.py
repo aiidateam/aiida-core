@@ -77,8 +77,10 @@ class CalculationTranslator(NodeTranslator):
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "calculations"
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    from aiida.orm.calculation import Calculation
+    _aiida_class = Calculation
+    # The string name of the AiiDA class
     _aiida_type = "calculation.Calculation"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'

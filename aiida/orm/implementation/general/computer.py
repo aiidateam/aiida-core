@@ -20,7 +20,7 @@ from aiida.common.exceptions import (
     MissingPluginError, ValidationError)
 
 from aiida.common.utils import classproperty
-
+from aiida.common.utils import abstractclassmethod, abstractstaticmethod
 
 
 class AbstractComputer(object):
@@ -179,8 +179,7 @@ class AbstractComputer(object):
     def set(self, **kwargs):
         pass
 
-    @staticmethod
-    @abstractmethod
+    @abstractstaticmethod
     def get_db_columns():
         """
         This method returns a list with the column names and types of the
@@ -190,8 +189,7 @@ class AbstractComputer(object):
         """
         pass
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def list_names(cls):
         """
         Return a list with all the names of the computers in the DB.
@@ -210,8 +208,7 @@ class AbstractComputer(object):
     def to_be_stored(self):
         pass
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get(cls, computer):
         """
         Return a computer from its name (or from another Computer or DbComputer instance)

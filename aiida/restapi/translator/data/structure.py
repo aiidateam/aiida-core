@@ -1,6 +1,48 @@
 from aiida.restapi.translator.data import DataTranslator
 from aiida.restapi.common.exceptions import RestValidationError
 
+def atom_kinds_to_html(atom_kind):
+    """
+
+    Construct in html format
+
+    an alloy with 0.5 Ge, 0.4 Si and 0.1 vacancy is represented as
+    Ge<sub>0.5</sub> + Si<sub>0.4</sub> + vacancy<sub>0.1</sub>
+
+    Args:
+        atom_kind: a string with the name of the atomic kind, as printed by 
+        kind.get_symbols_string(), e.g. Ba0.80Ca0.10X0.10
+
+    Returns:
+        html code for rendered formula
+    """
+
+    # Parse the formula (TODO can be made more robust though never fails if
+    # it takes strings generated with kind.get_symbols_string())
+    import re
+    elements = re.findall(r'([A-Z][a-z]*)([0-1][.[0-9]*]?)?', atom_kind)
+
+    # Compose the html string
+    html_formula_pieces = []
+
+    for element in elements:
+
+        # replace element X by 'vacancy'
+        species = element[0] if element[0] != 'X' else 'vacancy'
+        weight = element[1] if element[1] != '' else None
+
+        if weight is not None:
+            html_formula_pieces.append(species + '<sub>' + weight +
+                                   '</sub>')
+        else:
+            html_formula_pieces.append(species)
+
+    html_formula = ' + '.join(html_formula_pieces)
+
+    return html_formula
+
+
+
 class StructureDataTranslator(DataTranslator):
     """
     Translator relative to resource 'structures' and aiida class StructureData
@@ -8,8 +50,10 @@ class StructureDataTranslator(DataTranslator):
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "structures"
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    from aiida.orm.data.structure import StructureData
+    _aiida_class = StructureData
+    # The string name of the AiiDA class
     _aiida_type = "data.structure.StructureData"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
@@ -74,12 +118,17 @@ class StructureDataTranslator(DataTranslator):
                 shift = (ix*lattice_vectors[0] + iy*lattice_vectors[1] + \
                 iz*lattice_vectors[2] - center).tolist()
 
+                kind_name = base_site['kind_name']
+                kind_string = node.get_kind(kind_name).get_symbols_string()
+
                 atoms_json.append(
-                    {'l': base_site['kind_name'],
+                    {'l': kind_name,
                      'x': base_site['position'][0] + shift[0],
                      'y': base_site['position'][1] + shift[1],
-                     'z': base_site['position'][2] + shift[2]}
-                )
+                     'z': base_site['position'][2] + shift[2],
+                     # 'atomic_elments_html': kind_string
+                     'atomic_elments_html': atom_kinds_to_html(kind_string)
+                    })
 
         cell_json = {
                 "t": "UnitCell",
@@ -100,7 +149,8 @@ class StructureDataTranslator(DataTranslator):
 
         # These will be passed to ChemDoodle
         json_content = {"s": [cell_json],
-                        "m": [{"a": atoms_json}]
+                        "m": [{"a": atoms_json}],
+                        "units": '&Aring;'
                         }
         return json_content
 

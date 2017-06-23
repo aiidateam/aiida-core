@@ -427,7 +427,7 @@ class TrajectoryData(ArrayData):
 
         return struc
 
-    def _prepare_xsf(self,index=None):
+    def _prepare_xsf(self, index=None, main_file_name=""):
         """
         Write the given trajectory to a string of format XSF (for XCrySDen).
         """
@@ -465,11 +465,11 @@ class TrajectoryData(ArrayData):
                 try:
                     return_string += "{} {:18.10f} {:18.10f} {:18.10f}\n".format(atn, pos[0], pos[1], pos[2] )
                 except:
-                    print sym, pos
+                    print atn, pos
                     raise
-        return return_string
+        return return_string.encode('utf-8'), {}
 
-    def _prepare_cif(self, trajectory_index=None):
+    def _prepare_cif(self, trajectory_index=None, main_file_name=""):
         """
         Write the given trajectory to a string of format CIF.
         """
@@ -486,14 +486,14 @@ class TrajectoryData(ArrayData):
             ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
                                        ase_loops)
             cif = cif + ciffile.WriteOut()
-        return cif
+        return cif.encode('utf-8'), {}
 
-    def _prepare_tcod(self, **kwargs):
+    def _prepare_tcod(self, main_file_name="", **kwargs):
         """
         Write the given trajectory to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self,**kwargs)
+        return export_cif(self,**kwargs).encode('utf-8'), {}
 
     def _get_aiida_structure(self, store=False, **kwargs):
         """
@@ -696,7 +696,16 @@ class TrajectoryData(ArrayData):
     def show_mpl_heatmap(self, **kwargs):
         import numpy as np
         from scipy import stats
-        from mayavi import mlab
+        try:
+            from mayavi import mlab
+        except ImportError:
+            raise ImportError(
+                "Unable to import the mayavi package, that is required to"
+                "use the plotting feature you requested. "
+                "Please install it first and then call this command again "
+                "(note that the installation of mayavi is quite complicated "
+                "and requires that you already installed the python numpy "
+                "package, as well as the vtk package")
         from ase.data.colors import jmol_colors
         from ase.data import covalent_radii, atomic_numbers
         from aiida.common.exceptions import InputValidationError

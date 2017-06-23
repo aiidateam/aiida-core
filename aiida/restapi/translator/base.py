@@ -26,9 +26,11 @@ class BaseTranslator(object):
 
     # A label associated to the present class
     __label__ = None
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    _aiida_class = None
+    # The string name of the AiiDA class
     _aiida_type = None
+
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = None
 
@@ -58,6 +60,7 @@ class BaseTranslator(object):
 
         # Assign class parameters to the object
         self.__label__ = Class.__label__
+        self._aiida_class = Class._aiida_class
         self._aiida_type = Class._aiida_type
         self._qb_type = Class._qb_type
         self._result_type = Class.__label__
@@ -68,7 +71,7 @@ class BaseTranslator(object):
         self._is_id_query = Class._is_id_query
         self._total_count = Class._total_count
 
-        # Basic filter (dict) to set the identity to an id (int, uuid). None if
+        # Basic filter (dict) to set the identity of the uuid. None if
         #  no specific node is requested
         self._id_filter = None
 
@@ -254,7 +257,6 @@ class BaseTranslator(object):
                   }
         :return: query_help dict including filters if any.
         """
-
         if isinstance(filters, dict):
             if len(filters) > 0:
                 for tag, tag_filters in filters.iteritems():
@@ -367,11 +369,11 @@ class BaseTranslator(object):
                 raise RestInputValidationError("selecting a specific id does "
                                                "not "
                                                "allow to specify filters")
-            elif not self._check_id_validity(id):
-                raise RestValidationError(
-                    "either the selected id does not exist "
-                    "or the corresponding object is not of "
-                    "type aiida.orm.{}".format(self._aiida_type))
+
+            try:
+                self._check_id_validity(id)
+            except RestValidationError as e:
+                raise RestValidationError(e.message)
             else:
                 tagged_filters[self.__label__] = self._id_filter
                 if self._result_type is not self.__label__:
@@ -493,51 +495,46 @@ class BaseTranslator(object):
         data = self.get_formatted_result(self._result_type)
         return data
 
-    def _check_id_validity(self, id):
+    def _check_id_validity(self, uuid):
         """
-        Checks whether a id corresponds to an object of the expected type,
+        Checks whether a id full uuid or uuid starting pattern) corresponds to
+         an object of the expected type,
         whenever type is a valid column of the database (ex. for nodes,
         but not for users)
-        :param id: (integer) ok to check
-        :return: (True/False) if id valid (invalid). If True sets the
-        id filter attribute correctly
+        
+        :param id: uuid, or uuid starting pattern
+        
+        :return: True if id valid (invalid). If True, sets the
+            id filter attribute correctly
+            
+        :raise: RestValidationError if No node is found or uuid pattern does 
+        not identify a unique node
         """
-        # The logic could be to load the node or to use querybuilder. Let's
-        # do with qb for consistency, although it would be easier to do it
-        # with load_node
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
-        import uuid
+        from aiida.orm.utils import create_node_id_qb
 
-        # Distinguish id and uuid case
-        if type(id) == int:
-            filter =  {
-                    'id': {'==': id}
-                }
-        elif type(id) == uuid.UUID:
-            filter  = {
-                'uuid': {'==': id.__str__()}
-            }
+        qb = create_node_id_qb(uuid=uuid, parent_class=self._aiida_class)
+
+        # project only the pk
+        qb.add_projection('node', ['id'])
+        # for efficiency i don;t go further than two results
+        qb.limit(2)
+
+        try:
+            pk = qb.one()[0]
+        except MultipleObjectsError:
+            raise RestValidationError("More than one node found."
+                                      " Provide longer starting pattern"
+                                      " for uuid.")
+        except NotExistent:
+            raise RestValidationError("either no object's uuid starts"
+                                      " with '{}' or the corresponding object"
+                                      " is not of type aiida.orm.{}"
+                                      .format(uuid, self._aiida_type))
         else:
-            raise RestValidationError('id can only be an integer or a uuid')
-
-        # Build the query_help
-        query_help_base = {
-            'path': [
-                {
-                    'type': self._qb_type,
-                    'label': self.__label__,
-                },
-            ],
-            'filters': {
-                self.__label__: filter
-            }
-        }
-
-        # Run the query and build response
-        qb_base = QueryBuilder(**query_help_base)
-
-        if (qb_base.count() == 1):
-            self._id_filter = filter
+            # create a permanent filter
+            self._id_filter = {'id': {'==': pk}}
             return True
-        else:
-            return False
+
+

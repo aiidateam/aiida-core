@@ -90,7 +90,7 @@ class AiidaApi(Api):
 
         super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'])
 
-        ## Add resources to the api
+        ## Add resources and endpoints to the api
         self.add_resource(Computer,
                           # supported urls
                           '/computers/',

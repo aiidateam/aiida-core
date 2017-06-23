@@ -18,6 +18,8 @@ from aiida.restapi.common.exceptions import RestValidationError, \
 
 # Important to match querybuilder keys
 pk_dbsynonym = 'id'
+# Example uuid (version 4)
+uuid_ref = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 
 ########################## Classes #####################
@@ -146,10 +148,9 @@ class Utils(object):
         :param path_string: the path string
         :return:resource_type (string)
                 page (integer)
-                id (integer or uuid)
+                id (string: uuid starting pattern)
                 result_type (string))
         """
-        import uuid
 
         ## Initialization
         page = None
@@ -166,21 +167,21 @@ class Utils(object):
         if not path:
             return (resource_type, page, id, query_type)
 
-        # Node id
+        # Validate uuid or starting pattern of uuid.
+        # Technique: - take our uuid_ref and replace the first characters the
+        #  string to be validated as uuid.
+        #            - validate instead the newly built string
+        import uuid
         raw_id = path[0]
+        maybe_uuid = raw_id + uuid_ref[len(raw_id):]
         try:
-            id = int(raw_id)
+            _ = uuid.UUID(maybe_uuid, version=4)
         except ValueError:
-            try:
-                id = uuid.UUID(raw_id, version=4)
-            except ValueError:
-                # assume that it cannot be an id and go to the next check
-                pass
-            else:
-                # It is an id so pop out the path element
-                path.pop(0)
+            # assume that it cannot be an id and go to the next check
+            pass
         else:
             # It is an id so pop out the path element
+            id = raw_id
             path.pop(0)
 
         if not path:

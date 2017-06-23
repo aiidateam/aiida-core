@@ -52,7 +52,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def setUpClass_method(self):
 
-        from aiida.backends import settings
         from aiida.backends.sqlalchemy import get_scoped_session
 
         if self.test_session is None:
@@ -89,7 +88,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
         else:
             self.user = has_user
 
-        # Reqired by the calling class
+        # Required by the calling class
         self.user_email = self.user.email
 
         # Also self.computer is required by the calling class

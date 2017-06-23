@@ -350,12 +350,47 @@ class DbNode(Base):
         dbnode = DjangoSchemaDbNode(
                 id=self.id, type=self.type, uuid=self.uuid, ctime=self.ctime,
                 mtime=self.mtime, label=self.label,
-                dbcomputer_id=self.dbcomputer_id, user_id=self.user_id,
-                public=self.public, nodeversion=self.nodeversion
+                description=self.description, dbcomputer_id=self.dbcomputer_id,
+                user_id=self.user_id, public=self.public,
+                nodeversion=self.nodeversion
         )
         return dbnode.get_aiida_class()
 
+    @hybrid_property
+    def user_email(self):
+        """
+        Returns: the email of the user
+        """
+        return self.user.email
 
+    @user_email.expression
+    def user_email(cls):
+        """
+        Returns: the email of the user at a class level (i.e. in the database)
+        """
+        return select([DbUser.email]).where(DbUser.id == cls.user_id).label(
+            'user_email')
+
+
+    # Computer name
+    @hybrid_property
+    def computer_name(self):
+        """
+        Returns: the of the computer
+        """
+        return self.dbcomputer.name
+
+    @computer_name.expression
+    def computer_name(cls):
+        """
+        Returns: the name of the computer at a class level (i.e. in the 
+        database)
+        """
+        return select([DbComputer.name]).where(DbComputer.id ==
+                                                 cls.dbcomputer_id).label(
+            'computer_name')
+
+    # State
     @hybrid_property
     def state(self):
         """
@@ -387,26 +422,43 @@ class DbNode(Base):
                                  whens=whens,
                                  else_=100) # else: high value to put it at the bottom
 
-        q1 = select([
+        # Add numerical state to string, to allow to sort them
+        states_with_num = select([
             DbCalcState.id.label('id'),
             DbCalcState.dbnode_id.label('dbnode_id'),
-            DbCalcState.state.label('state'),
-            func.row_number().over(partition_by=DbCalcState.dbnode_id,
-                                                 order_by=custom_sort_order).label('the_row_number')
-        ])
+            DbCalcState.state.label('state_string'),
+            custom_sort_order.label('num_state')
+        ]).select_from(DbCalcState).alias()
 
-        q1 = q1.cte()
+        # Get the most 'recent' state (using the state ordering, and the min function) for
+        # each calc
+        calc_state_num = select([
+            states_with_num.c.dbnode_id.label('dbnode_id'),
+            func.min(states_with_num.c.num_state).label('recent_state')
+        ]).group_by(states_with_num.c.dbnode_id).alias()
 
+        # Join the most-recent-state table with the DbCalcState table
+        all_states_q = select([
+            DbCalcState.dbnode_id.label('dbnode_id'),
+            DbCalcState.state.label('state_string'),
+            calc_state_num.c.recent_state.label('recent_state'),
+            custom_sort_order.label('num_state'),
+        ]).select_from(#DbCalcState).alias().join(
+            join(DbCalcState, calc_state_num, DbCalcState.dbnode_id == calc_state_num.c.dbnode_id)).alias()
+
+        # Get the association between each calc and only its corresponding most-recent-state row
         subq = select([
-            q1.c.dbnode_id.label('dbnode_id'),
-            q1.c.state.label('state')
-        ]).select_from(q1).where(q1.c.the_row_number==1).alias()
+            all_states_q.c.dbnode_id.label('dbnode_id'),
+            all_states_q.c.state_string.label('state')
+        ]).select_from(all_states_q).where(all_states_q.c.num_state == all_states_q.c.recent_state).alias()
 
+        # Final filtering for the actual query
         return select([subq.c.state]).\
             where(
                     subq.c.dbnode_id == cls.id,
                 ).\
             label('laststate')
+
 
 
 

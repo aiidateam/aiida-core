@@ -24,11 +24,11 @@ from aiida.common.setup import get_profile_config
 from aiida.common.exceptions import ConfigurationError
 from aiida.daemon.timestamps import set_daemon_timestamp,get_last_daemon_timestamp
 
-DAEMON_INTERVALS_SUBMIT = 30
-DAEMON_INTERVALS_RETRIEVE = 30
+DAEMON_INTERVALS_SUBMIT = 10
+DAEMON_INTERVALS_RETRIEVE = 10
 DAEMON_INTERVALS_UPDATE = 30
 DAEMON_INTERVALS_WFSTEP = 30
-DAEMON_INTERVALS_TICK_WORKFLOWS = 30
+DAEMON_INTERVALS_TICK_WORKFLOWS = 5
 
 config = get_profile_config(settings.AIIDADB_PROFILE)
 

@@ -1,6 +1,5 @@
 from aiida.restapi.translator.data import DataTranslator
 
-
 class KpointsDataTranslator(DataTranslator):
     """
     Translator relative to resource 'kpoints' and aiida class KpointsData
@@ -8,8 +7,10 @@ class KpointsDataTranslator(DataTranslator):
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "kpoints"
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    from aiida.orm.data.array.kpoints import KpointsData
+    _aiida_class = KpointsData
+    # The string name of the AiiDA class
     _aiida_type = "data.array.kpoints.KpointsData"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
@@ -100,7 +101,8 @@ class KpointsDataTranslator(DataTranslator):
             json_visualization['faces_data'] = get_BZ(b1, b2, b3)
 
             # Provide kpoints cooridnates in absolute units ...
-            explicit_kpoints_abs = np.dot(explicit_kpoints_rel, np.transpose(cell))
+            explicit_kpoints_abs = np.dot(explicit_kpoints_rel,
+                                          cell)
             json_visualization['explicit_kpoints_abs'] = \
                 explicit_kpoints_abs.tolist()
 

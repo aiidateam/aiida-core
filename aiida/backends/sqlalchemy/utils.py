@@ -422,8 +422,11 @@ def check_schema_version():
     :raise ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
+    import sys
     from aiida.common.exceptions import ConfigurationError
     from sqlalchemy.engine import reflection
+    from aiida.common.utils import ask_question
+    from aiida.common.utils import query_yes_no
     from aiida.backends.utils import (
             set_db_schema_version,get_current_profile)
 
@@ -454,9 +457,20 @@ def check_schema_version():
         # db_schema_version = get_db_schema_version()
 
     if code_schema_version != db_schema_version:
+        print("The code schema version is {}, but the version stored in the "
+              "database (DbSetting table) is {}."
+              .format(code_schema_version, db_schema_version))
+        if query_yes_no("Would you like to migrate to the latest version?",
+                        "yes"):
+            print("Migrating to the last version")
+        else:
+            print("No migration is performed. Exiting since database is out of"
+                  "sync with the code.")
+            sys.exit(1)
+
         raise ConfigurationError(
             "The code schema version is {}, but the version stored in the"
-            "database (DbSetting table) is {}, stopping.\n".
+            "database (DbSetting table) is {}.\n".
             format(code_schema_version, db_schema_version)
         )
 

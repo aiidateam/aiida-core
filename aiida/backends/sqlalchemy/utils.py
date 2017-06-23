@@ -23,28 +23,23 @@ except ImportError:
     json_loads = json.loads
 
 import datetime
-from dateutil import parser
 
 import re
-
+from alembic import command
+from alembic.config import Config
+from alembic.runtime.environment import EnvironmentContext
+from alembic.script import ScriptDirectory
+from dateutil import parser
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import scoped_session
-
-from aiida.common.exceptions import InvalidOperation, ConfigurationError
-from aiida.common.setup import (get_profile_config, DEFAULT_USER_CONFIG_FIELD)
+from sqlalchemy.orm import sessionmaker
 
 from aiida.backends import sqlalchemy as sa, settings
+from aiida.common.exceptions import ConfigurationError
+from aiida.common.setup import (get_profile_config)
 
-from alembic.config import Config
-from alembic import command
-import os
-from alembic.script import ScriptDirectory
-from alembic.runtime.environment import EnvironmentContext
-
-from aiida.backends.profile import (is_profile_loaded,
-                                    load_profile)
-
+ALEMBIC_FILENAME = "alembic.ini"
+ALEMBIC_REL_PATH = "alembic"
 
 # def is_dbenv_loaded():
 #     """
@@ -109,7 +104,6 @@ _aiida_autouser_cache = None
 
 
 def get_automatic_user():
-    from aiida.common.utils import get_configured_user_email
     # global _aiida_autouser_cache
 
     # if _aiida_autouser_cache is not None:
@@ -422,34 +416,29 @@ def check_schema_version():
     :raise ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
-    import sys
-    from aiida.common.exceptions import ConfigurationError
-    from sqlalchemy.engine import reflection
-    from aiida.common.utils import ask_question
+    import sys, os
     from aiida.common.utils import query_yes_no
-    from aiida.backends.utils import (
-            set_db_schema_version,get_current_profile)
     from aiida.backends import sqlalchemy as sa
 
-    # Do not do anything if the table does not exist yet
-    inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
-    if 'db_dbsetting' not in inspector.get_table_names():
-        return
+    # Constructing the alembic full path & getting the configuration
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    alembic_fpath = os.path.join(dir_path, ALEMBIC_FILENAME)
+    alembic_cfg = Config(alembic_fpath)
 
-    alembic_cfg = Config(
-        "/home/aiida/aiida-code/aiida_core/aiida/backends/sqlalchemy/alembic.ini")
-    #
-    # print "Spyros get_migration_head"
-    # get_migration_head(alembic_cfg)
-    #
-    # print "Spyros get_migration_base"
-    # print get_migration_base(alembic_cfg)
-    #
-    # print "Spyros get_db_version"
-    # print get_db_version(alembic_cfg)
+    # Set the alembic script directory location
+    alembic_dpath = os.path.join(dir_path, ALEMBIC_REL_PATH)
+    alembic_cfg.set_main_option('script_location', alembic_dpath)
 
-    code_schema_version = get_migration_head(alembic_cfg)
-    db_schema_version = get_db_schema_version(alembic_cfg)
+    # Getting the version of the code and the database
+    # Reusing the existing engine (initialized by AiiDA)
+    with sa.engine.begin() as connection:
+        alembic_cfg.attributes['connection'] = connection
+        code_schema_version = get_migration_head(alembic_cfg)
+        db_schema_version = get_db_schema_version(alembic_cfg)
+
+
+    print "code_schema_version: ", code_schema_version
+    print "db_schema_version: ", db_schema_version
 
     if code_schema_version != db_schema_version:
         if db_schema_version is None:
@@ -461,27 +450,19 @@ def check_schema_version():
         if query_yes_no("Would you like to migrate to the latest version?",
                         "yes"):
             print("Migrating to the last version")
-            migrate_to_head(sa.engine, alembic_cfg)
+            # Reusing the existing engine (initialized by AiiDA)
+            with sa.engine.begin() as connection:
+                alembic_cfg.attributes['connection'] = connection
+                command.upgrade(alembic_cfg, "head")
         else:
-            print("No migration is performed. Exiting since database is out of"
-                  "sync with the code.")
+            print("No migration is performed. Exiting since database is out "
+                  "of sync with the code.")
             sys.exit(1)
-
-
-def migrate_to_head(engine, config):
-    with engine.begin() as connection:
-        config.attributes['connection'] = connection
-        command.upgrade(config, "head")
 
 
 def get_migration_head(config):
     script = ScriptDirectory.from_config(config)
     return script.get_current_head()
-
-
-def get_migration_base(config):
-    script = ScriptDirectory.from_config(config)
-    return script.get_base()
 
 
 def get_db_schema_version(config):

@@ -1,7 +1,6 @@
 from aiida.restapi.translator.data import DataTranslator
 from aiida.restapi.common.exceptions import RestValidationError
 
-
 def atom_kinds_to_html(atom_kind):
     """
 
@@ -18,7 +17,7 @@ def atom_kinds_to_html(atom_kind):
         html code for rendered formula
     """
 
-    # Parse the formula (TODO can be made, more rebust though never fails if
+    # Parse the formula (TODO can be made more robust though never fails if
     # it takes strings generated with kind.get_symbols_string())
     import re
     elements = re.findall(r'([A-Z][a-z]*)([0-1][.[0-9]*]?)?', atom_kind)
@@ -51,8 +50,10 @@ class StructureDataTranslator(DataTranslator):
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "structures"
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    from aiida.orm.data.structure import StructureData
+    _aiida_class = StructureData
+    # The string name of the AiiDA class
     _aiida_type = "data.structure.StructureData"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'

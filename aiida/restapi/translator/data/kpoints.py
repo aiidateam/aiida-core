@@ -1,6 +1,5 @@
 from aiida.restapi.translator.data import DataTranslator
 
-
 class KpointsDataTranslator(DataTranslator):
     """
     Translator relative to resource 'kpoints' and aiida class KpointsData
@@ -8,8 +7,10 @@ class KpointsDataTranslator(DataTranslator):
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "kpoints"
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    from aiida.orm.data.array.kpoints import KpointsData
+    _aiida_class = KpointsData
+    # The string name of the AiiDA class
     _aiida_type = "data.array.kpoints.KpointsData"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'

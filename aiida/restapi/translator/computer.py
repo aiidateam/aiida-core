@@ -52,8 +52,10 @@ class ComputerTranslator(BaseTranslator):
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "computers"
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    from aiida.orm.computer import Computer
+    _aiida_class = Computer
+    # The string name of the AiiDA class
     _aiida_type = "computer.Computer"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = 'computer'

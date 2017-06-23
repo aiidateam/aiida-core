@@ -11,6 +11,7 @@
 
 
 from aiida.restapi.translator.node import NodeTranslator
+import aiida
 
 class DataTranslator(NodeTranslator):
     """
@@ -77,8 +78,9 @@ class DataTranslator(NodeTranslator):
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "data"
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    _aiida_class = aiida.orm.data.Data
+    # The string name of the AiiDA class
     _aiida_type = "data.Data"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'

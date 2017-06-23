@@ -12,7 +12,6 @@ from aiida.common.exceptions import InputValidationError, ValidationError, \
 from aiida.restapi.common.exceptions import RestValidationError
 from aiida.restapi.translator.base import BaseTranslator
 
-
 class NodeTranslator(BaseTranslator):
     """
     TODO add docstring
@@ -21,8 +20,10 @@ class NodeTranslator(BaseTranslator):
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "nodes"
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    from aiida.orm.node import Node
+    _aiida_class = Node
+    # The string name of the AiiDA class
     _aiida_type = "node.Node"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
@@ -325,7 +326,7 @@ class NodeTranslator(BaseTranslator):
         subclass
         """
 
-        # Look for the translator associated to class of which node is instance
+        # Look for the translator associated to the class of which this node is instance
         tclass = type(node)
 
         for subclass in self._subclasses.values():

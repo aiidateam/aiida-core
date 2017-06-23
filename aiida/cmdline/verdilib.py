@@ -519,8 +519,19 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
         elif backend_choice == BACKEND_SQLA:
             print("...for SQLAlchemy backend")
             from aiida import is_dbenv_loaded, load_dbenv
+            from aiida.backends import settings
+            from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck
+            from aiida.backends.profile import load_profile
+
+            # Performing manually the steps of load_dbenv to avoid the database
+            # schema check that will create a database migration. This will be
+            # called manually at the end of the setup.
             if not is_dbenv_loaded():
-                load_dbenv()
+                settings.LOAD_DBENV_CALLED = True
+                # This is going to set global variables in settings, including
+                # settings.BACKEND
+                load_profile()
+                _load_dbenv_noschemacheck()
 
             from aiida.backends.sqlalchemy.models.base import Base
             from aiida.backends.sqlalchemy.utils import install_tc, reset_session
@@ -563,6 +574,9 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             install_tc(connection)
 
             set_backend_type(BACKEND_SQLA)
+            # Perform the needed migration
+            from aiida.backends.sqlalchemy.utils import check_schema_version
+            check_schema_version(force_migration=True)
 
         else:
             raise InvalidOperation("Not supported backend selected.")

@@ -400,7 +400,7 @@ CREATE TRIGGER autoupdate_tc
                             closure_table_child_field=closure_table_child_field)
 
 
-def check_schema_version():
+def check_schema_version(force_migration=False):
     """
     Check if the version stored in the database is the same of the version
     of the code.
@@ -416,7 +416,8 @@ def check_schema_version():
     :raise ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
-    import sys, os
+    import sys
+    import os
     from aiida.common.utils import query_yes_no
     from aiida.backends import sqlalchemy as sa
 
@@ -436,10 +437,6 @@ def check_schema_version():
         code_schema_version = get_migration_head(alembic_cfg)
         db_schema_version = get_db_schema_version(alembic_cfg)
 
-
-    print "code_schema_version: ", code_schema_version
-    print "db_schema_version: ", db_schema_version
-
     if code_schema_version != db_schema_version:
         if db_schema_version is None:
             print("It is time to perform your first SQLAlchemy migration.")
@@ -447,8 +444,8 @@ def check_schema_version():
             print("The code schema version is {}, but the version stored in "
                   "the database (DbSetting table) is {}."
                   .format(code_schema_version, db_schema_version))
-        if query_yes_no("Would you like to migrate to the latest version?",
-                        "yes"):
+        if force_migration or query_yes_no("Would you like to migrate to the "
+                                           "latest version?", "yes"):
             print("Migrating to the last version")
             # Reusing the existing engine (initialized by AiiDA)
             with sa.engine.begin() as connection:

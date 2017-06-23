@@ -429,6 +429,7 @@ def check_schema_version():
     from aiida.common.utils import query_yes_no
     from aiida.backends.utils import (
             set_db_schema_version,get_current_profile)
+    from aiida.backends import sqlalchemy as sa
 
     # Do not do anything if the table does not exist yet
     inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
@@ -450,29 +451,27 @@ def check_schema_version():
     code_schema_version = get_migration_head(alembic_cfg)
     db_schema_version = get_db_schema_version(alembic_cfg)
 
-    if db_schema_version is None:
-        raise ConfigurationError("No code schema defined yet")
-        # No code schema defined yet, I set it to the code version
-        # set_db_schema_version(code_schema_version)
-        # db_schema_version = get_db_schema_version()
-
     if code_schema_version != db_schema_version:
-        print("The code schema version is {}, but the version stored in the "
-              "database (DbSetting table) is {}."
-              .format(code_schema_version, db_schema_version))
+        if db_schema_version is None:
+            print("It is time to perform your first SQLAlchemy migration.")
+        else:
+            print("The code schema version is {}, but the version stored in "
+                  "the database (DbSetting table) is {}."
+                  .format(code_schema_version, db_schema_version))
         if query_yes_no("Would you like to migrate to the latest version?",
                         "yes"):
             print("Migrating to the last version")
+            migrate_to_head(sa.engine, alembic_cfg)
         else:
             print("No migration is performed. Exiting since database is out of"
                   "sync with the code.")
             sys.exit(1)
 
-        raise ConfigurationError(
-            "The code schema version is {}, but the version stored in the"
-            "database (DbSetting table) is {}.\n".
-            format(code_schema_version, db_schema_version)
-        )
+
+def migrate_to_head(engine, config):
+    with engine.begin() as connection:
+        config.attributes['connection'] = connection
+        command.upgrade(config, "head")
 
 
 def get_migration_head(config):

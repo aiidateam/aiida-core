@@ -98,17 +98,6 @@ class StructureDataTranslator(DataTranslator):
                         + lattice_vectors[2] - center).tolist(),
             }
 
-        # # Replicate the base to create a supercell
-        #
-        #
-        # atoms_json = [
-        #             {"l": site['kind_name'],
-        #             "x": site['position'][0]-center[0],
-        #             "y": site['position'][1]-center[1],
-        #             "z": site['position'][2]-center[2]
-        #             }
-        #             for site in sites]
-        #
         # These will be passed to ChemDoodle
         json_content = {"s": [cell_json],
                         "m": [{"a": atoms_json}]

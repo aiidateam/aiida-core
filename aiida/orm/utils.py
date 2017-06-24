@@ -148,11 +148,9 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None, query_with_da
     :param bool query_with_dashes: Specific if uuid is passed, allows to put the uuid in the correct form.
         Default=True
     :param bool return_node: lets the function return the AiiDA node referred by the input. 
-    Default=False
-    
+        Default=False
     :return: the required AiiDA node if existing, unique, and (sub)instance 
-    of parent_class
-    
+        of parent_class
     :raise InputValidationError: if none or more than one of parameters is supplied
     :raise TypeError: I the wrong types are provided
     :raise NotExistent: if no matching Node is found.

@@ -132,29 +132,37 @@ class RESTApiTestCase(AiidaTestCase):
                                            "transport_type", "scheduler_type"]
         computers = expected_data = QueryBuilder().append(
             Computer, tag="comp", project=computer_projects).order_by(
-            {'comp': [{'name': {'order': 'asc'}}]}).all()
+            {'comp': [{'name': {'order': 'asc'}}]}).dict()
+
+        # Cast UUID into a string (e.g. in sqlalchemy it comes as a UUID object)
+        computers = [_['comp'] for _ in computers]
+        for comp in computers:
+            if comp['uuid'] is not None:
+                comp['uuid'] = str(comp['uuid'])
+
 
         calculation_projects = ["id", "uuid", "user_id", "type"]
         calculations = QueryBuilder().append(Calculation, tag="calc",
                                              project=calculation_projects).order_by(
-            {'calc': [{'id': {'order': 'desc'}}]}).all()
+            {'calc': [{'id': {'order': 'desc'}}]}).dict()
+
+        calculations = [_['calc'] for _ in calculations]
+        for calc in calculations:
+            if calc['uuid'] is not None:
+                calc['uuid'] = str(calc['uuid'])
 
         data_projects = ["id", "uuid", "user_id", "type"]
         data = QueryBuilder().append(Data, tag="data", project=data_projects).order_by(
-            {'data': [{'id': {'order': 'desc'}}]}).all()
+            {'data': [{'id': {'order': 'desc'}}]}).dict()
+        data = [_['data'] for _ in data]
+        for datum in data:
+            if datum['uuid'] is not None:
+                datum['uuid'] = str(datum['uuid'])
 
-        cls._dummy_data["computers"] = []
-        for c in computers:
-            cls._dummy_data["computers"].append(dict(zip(computer_projects, c)))
+        cls._dummy_data["computers"] = computers
+        cls._dummy_data["calculations"] = calculations
+        cls._dummy_data["data"] = data
 
-        cls._dummy_data["calculations"] = []
-        for c in calculations:
-            cls._dummy_data["calculations"].append(
-                dict(zip(calculation_projects, c)))
-
-        cls._dummy_data["data"] = []
-        for c in data:
-            cls._dummy_data["data"].append(dict(zip(calculation_projects, c)))
 
     def split_path(self, url):
         """
@@ -245,6 +253,7 @@ class RESTApiTestCase(AiidaTestCase):
                 for expected_node, response_node in zip(expected_data,
                                                         response["data"][
                                                             result_name]):
+
                     self.assertTrue(all(item in response_node.items()
                                         for item in expected_node.items()))
 

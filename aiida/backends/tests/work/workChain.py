@@ -9,6 +9,8 @@
 ###########################################################################
 
 import inspect
+import unittest
+import aiida.backends.settings as settings
 
 from aiida.backends.testbase import AiidaTestCase
 from plum.engine.ticking import TickingEngine
@@ -280,6 +282,7 @@ class TestWorkchain(AiidaTestCase):
 
         WcWithReturn.run()
 
+    @unittest.skipIf(settings.BACKEND == u'sqlalchemy', "SQLA async functionality is in development")
     def test_tocontext_async_workchain(self):
         class MainWorkChain(WorkChain):
             @classmethod
@@ -379,7 +382,7 @@ class TestHelpers(AiidaTestCase):
         for n in [a, b, c]:
             n.store()
 
-        from aiida.work.workchain import _get_proc_outputs_from_registry
+        from aiida.work.interstep import _get_proc_outputs_from_registry
         outputs = _get_proc_outputs_from_registry(c.pk)
         self.assertListEqual(outputs.keys(), [u'a', u'b'])
         self.assertEquals(outputs['a'], a)

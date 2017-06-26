@@ -28,6 +28,9 @@ class NodeTranslator(BaseTranslator):
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
 
+    # If True (False) the corresponding AiiDA class has (no) uuid property
+    _has_uuid = True
+
     _result_type = __label__
 
     _content_type = None

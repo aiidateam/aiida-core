@@ -15,7 +15,7 @@ import os
 
 from flask_cors import CORS
 
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.backends.utils import load_dbenv
 
 
 def run_api(App, Api, *args, **kwargs):

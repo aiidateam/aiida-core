@@ -34,6 +34,9 @@ class BaseTranslator(object):
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = None
 
+    # If True (False) the corresponding AiiDA class has (no) uuid property
+    _has_uuid = None
+
     _result_type = __label__
 
     _default = _default_projections = []
@@ -119,9 +122,11 @@ class BaseTranslator(object):
 
         """
         Determine the API schema (spartially overlapping with the ORM/database one).
-        When the ORM is based on django, however, attributes and extras are not colums of the database but are nevertheless         valid projections. We add them by hand into the API schema.
+        When the ORM is based on django, however, attributes and extras are not colums of the database but are
+        nevertheless         valid projections. We add them by hand into the API schema.
         """
-        # TODO change the get_db_columns method to include also relationships such as attributes, extras, input, and outputs        in order to have a more complete definition of the schema.
+        # TODO change the get_db_columns method to include also relationships such as attributes, extras, input,
+        # and outputs        in order to have a more complete definition of the schema.
 
         if self._default_projections == ['**']:
             schema = basic_schema  # No custom schema, take the basic one
@@ -151,7 +156,6 @@ class BaseTranslator(object):
                     schema_values.append(value)
 
             schema = dict(zip(schema_key, schema_values))
-
 
         def table2resource(table_name):
             """
@@ -495,26 +499,39 @@ class BaseTranslator(object):
         data = self.get_formatted_result(self._result_type)
         return data
 
-    def _check_id_validity(self, uuid):
+    def _check_id_validity(self, id):
         """
-        Checks whether a id full uuid or uuid starting pattern) corresponds to
+        Checks whether a id full id or id starting pattern) corresponds to
          an object of the expected type,
         whenever type is a valid column of the database (ex. for nodes,
         but not for users)
         
-        :param id: uuid, or uuid starting pattern
+        :param id: id, or id starting pattern
         
         :return: True if id valid (invalid). If True, sets the
             id filter attribute correctly
             
-        :raise: RestValidationError if No node is found or uuid pattern does 
+        :raise: RestValidationError if No node is found or id pattern does
         not identify a unique node
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         from aiida.orm.utils import create_node_id_qb
 
-        qb = create_node_id_qb(uuid=uuid, parent_class=self._aiida_class)
+        if self._has_uuid:
+
+            # For consistency check that tid is a string
+            if not isinstance(id, (str, unicode)):
+                raise RestValidationError('parameter id has to be an string')
+
+            qb = create_node_id_qb(uuid=id, parent_class=self._aiida_class)
+        else:
+
+            # Similarly, check that id is an integer
+            if not isinstance(id, int):
+                raise RestValidationError('parameter id has to be an integer')
+
+            qb = create_node_id_qb(pk=id, parent_class=self._aiida_class)
 
         # project only the pk
         qb.add_projection('node', ['id'])
@@ -526,15 +543,13 @@ class BaseTranslator(object):
         except MultipleObjectsError:
             raise RestValidationError("More than one node found."
                                       " Provide longer starting pattern"
-                                      " for uuid.")
+                                      " for id.")
         except NotExistent:
-            raise RestValidationError("either no object's uuid starts"
+            raise RestValidationError("either no object's id starts"
                                       " with '{}' or the corresponding object"
                                       " is not of type aiida.orm.{}"
-                                      .format(uuid, self._aiida_type))
+                                      .format(id, self._aiida_type))
         else:
             # create a permanent filter
             self._id_filter = {'id': {'==': pk}}
             return True
-
-

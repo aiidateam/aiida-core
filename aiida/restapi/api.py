@@ -40,6 +40,7 @@ class App(Flask):
             RestValidationError
 
         if catch_internal_server:
+
             @self.errorhandler(Exception)
             def error_handler(error):
 

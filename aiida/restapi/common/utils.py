@@ -173,11 +173,11 @@ class Utils(object):
         #  string to be validated as uuid.
         #            - validate instead the newly built string
         if parse_pk_uuid == 'pk':
-            raw_id = path(0)
+            raw_id = path[0]
             try:
                 # Check whether it can be an integer
                 id = int(raw_id)
-            except TypeError:
+            except ValueError:
                 pass
             else:
                 path.pop(0)

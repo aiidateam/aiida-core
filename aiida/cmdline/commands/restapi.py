@@ -50,7 +50,8 @@ class Restapi(VerdiCommand):
             default_host=self.default_host,
             default_port=self.default_port,
             default_config=self.default_config_dir,
-            parse_aiida_profile=self.parse_aiida_profile)
+            parse_aiida_profile=self.parse_aiida_profile,
+            catch_internal_server=True)
 
         # Invoke the runner
         run_api(App, AiidaApi, *args, **kwargs)

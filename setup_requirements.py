@@ -11,6 +11,7 @@
 install_requires = [
     'pip==9.0.1',
     'setuptools>=18.5',
+    'reentry >= 1.0.2',
     'wheel==0.29.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',
@@ -19,6 +20,8 @@ install_requires = [
     'tzlocal==1.3',
     'pytz==2014.10',
     'six==1.10',
+    'future',
+    'singledispatch >= 3.4.0.0',
     # We need for the time being to stay with an old version
     # of celery, including the versions of the AMQP libraries below,
     # because the support for a SQLA broker has been dropped in later
@@ -35,7 +38,7 @@ install_requires = [
     'supervisor==3.1.3',
     'meld3==1.0.0',
     'numpy==1.12.0',
-    'plumpy==0.7.8',
+    'plumpy==0.7.9',
     'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.31.2',
     'ujson==1.35',
@@ -50,7 +53,7 @@ install_requires = [
     'uritools==1.0.2',
     'psycopg2==2.7.1',
     # Requirements for ssh transport
-    'paramiko==1.15.2',
+    'paramiko==2.1.2',
     'ecdsa==0.13',
     'pycrypto==2.6.1',
     # Requirements for verdi shell (version of ipython non enforced, because
@@ -107,15 +110,6 @@ extras_require = {
         # support for the AiiDA CifData class. Update to version 4 ddoes
         # break tests
     ],
-    # Requirements for advanced plotting features
-    # N.B. requires vtk to be installed
-    'advanced_plotting': [
-        'mayavi==4.5.0',
-    ],
-    # Requirements for sqlite (anyway, do not use sqlite for production)
-    'sqlite': [
-        'pysqlite==2.6.3',
-    ],
     # Requirements for jupyter notebook
     'notebook': [
         'jupyter',
@@ -125,3 +119,18 @@ extras_require = {
         'mock',
     ]
 }
+
+# There are a number of optional dependencies that are not
+# listed even as optional dependencies as they are quite
+# cumbersome to install and there is a risk that a user, wanting
+# to install all dependencies (including optional ones)
+# does not manage and thinks it's an AiiDA problem.
+#
+# These include:
+#  - mayavi==4.5.0
+#    plotting package, requires to have the vtk code installed first;
+#    moreover requires to have numpy installed before, but it is not in
+#    the requirements (and there is no easy way on our side to fix a specific
+#    installation order of dependencies)
+
+extras_require['testing'] += extras_require['REST'] + extras_require['atomic_tools']

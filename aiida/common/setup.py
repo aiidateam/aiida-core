@@ -36,7 +36,7 @@ DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 DEFAULT_PROCESS = 'verdi'
 
 # The default umask for file creation under AIIDA_CONFIG_FOLDER
-DEFAULT_UMASK = 0077
+DEFAULT_UMASK = 0o0077
 
 # Profile keys
 aiidadb_backend_key = "AIIDADB_BACKEND"
@@ -402,20 +402,12 @@ def get_profile_config(profile, conf_dict=None, set_test_location=True):
 
     test_string = ""
     # is_test = False
-    # use_sqlite_for_tests = False
     # test_prefix = "test_"
-    # sqlitetest_prefix = "testsqlite_"
     # if profile.startswith(test_prefix):
     #     # Use the same profile
     #     profile = profile[len(test_prefix):]
     #     is_test = True
     #     test_string = "(test) "
-    # elif profile.startswith(sqlitetest_prefix):
-    #     # Use the same profile
-    #     profile = profile[len(sqlitetest_prefix):]
-    #     is_test = True
-    #     use_sqlite_for_tests = True
-    #     test_string = "(sqlite-test) "
 
     try:
         profile_info = confs['profiles'][profile]
@@ -448,10 +440,6 @@ def get_profile_config(profile, conf_dict=None, set_test_location=True):
     #         raise ConfigurationError("Config file has not been found, run "
     #                                  "verdi install first")
     #     profile_info['AIIDADB_REPOSITORY_URI'] = 'file://' + TEMP_TEST_REPO
-    #
-    #     if use_sqlite_for_tests:
-    #         profile_info['AIIDADB_ENGINE'] = 'sqlite3'
-    #         profile_info['AIIDADB_NAME'] = ":memory:"
 
     return profile_info
 
@@ -681,7 +669,7 @@ def create_configuration(profile='default'):
         # Setting the database engine
         db_possibilities = []
         if aiida_backend == 'django':
-            db_possibilities.extend(['postgresql_psycopg2', 'sqlite', 'mysql'])
+            db_possibilities.extend(['postgresql_psycopg2', 'mysql'])
         elif aiida_backend == 'sqlalchemy':
             db_possibilities.extend(['postgresql_psycopg2'])
         if len(db_possibilities) > 0:
@@ -702,17 +690,7 @@ def create_configuration(profile='default'):
                            .format(', '.join(db_possibilities)))
             this_new_confs['AIIDADB_ENGINE'] = db_engine_ans
 
-        if 'sqlite' in this_new_confs['AIIDADB_ENGINE']:
-            this_new_confs['AIIDADB_ENGINE'] = 'sqlite3'
-            readline.set_startup_hook(lambda: readline.insert_text(
-                this_existing_confs.get('AIIDADB_NAME', os.path.join(aiida_dir, "aiida.db"))))
-            this_new_confs['AIIDADB_NAME'] = raw_input('AiiDA Database location: ')
-            this_new_confs['AIIDADB_HOST'] = ""
-            this_new_confs['AIIDADB_PORT'] = ""
-            this_new_confs['AIIDADB_USER'] = ""
-            this_new_confs['AIIDADB_PASS'] = ""
-
-        elif 'postgresql_psycopg2' in this_new_confs['AIIDADB_ENGINE']:
+        if 'postgresql_psycopg2' in this_new_confs['AIIDADB_ENGINE']:
             this_new_confs['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
 
             old_host = this_existing_confs.get('AIIDADB_HOST', 'localhost')
@@ -799,7 +777,7 @@ def create_configuration(profile='default'):
             this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
         else:
             raise ValueError("You have to specify a valid database "
-                             "(valid choices are 'sqlite', 'mysql', 'postgres')")
+                             "(valid choices are 'mysql', 'postgres')")
 
         # This part for the time being is a bit oddly written
         # it should change in the future to add the possibility of having a
@@ -890,12 +868,6 @@ _property_table = {
         " function or class, separated by colons, e.g. "
         "'aiida.backends.djsite.db.models:aiida.orm.querytool.Querytool'",
         "",
-        None),
-    "tests.use_sqlite": (
-        "use_inmemory_sqlite_for_tests",
-        "bool",
-        "Whether to use an in-memory SQLite DB for tests",
-        True,
         None),
     "logging.aiida_loglevel": (
         "logging_aiida_log_level",

@@ -63,8 +63,7 @@ def _load_all_processes(storage):
         except KeyboardInterrupt:
             raise
         except BaseException:
-            # TODO: Log exception
-            pass
+            traceback.print_exc()
     return procs
 
 

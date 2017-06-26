@@ -434,16 +434,16 @@ class NodeTranslator(BaseTranslator):
 
         if qb.count() > 0:
             mainNode = qb.first()[0]
-            uuid_pattern = mainNode.pk
-            uuid_pattern = mainNode.uuid
+            pk = mainNode.pk
+            uuid = mainNode.uuid
             nodetype = mainNode.dbnode.type
             display_type = nodetype.split('.')[-2]
             description = mainNode.get_desc()
 
             nodes.append({
                 "uuid_pattern": nodeCount,
-                "nodeid": uuid_pattern,
-                "nodeuuid": uuid_pattern,
+                "nodeid": pk,
+                "nodeuuid": uuid,
                 "nodetype": nodetype,
                 "displaytype": display_type,
                 "group": "mainNode",
@@ -462,16 +462,16 @@ class NodeTranslator(BaseTranslator):
             for input in qb.iterdict():
                 node = input['in']['*']
                 linktype = input['main--in']['label']
-                uuid_pattern = node.pk
-                uuid_pattern = node.uuid
+                pk = node.pk
+                uuid = node.uuid
                 nodetype = node.dbnode.type
                 display_type = nodetype.split('.')[-2]
                 description = node.get_desc()
 
                 nodes.append({
                     "uuid_pattern": nodeCount,
-                    "nodeid": uuid_pattern,
-                    "nodeuuid": uuid_pattern,
+                    "nodeid": pk,
+                    "nodeuuid": uuid,
                     "nodetype": nodetype,
                     "displaytype": display_type,
                     "group": "inputs",
@@ -497,16 +497,16 @@ class NodeTranslator(BaseTranslator):
             for output in qb.iterdict():
                 node = output['out']['*']
                 linktype = output['main--out']['label']
-                uuid_pattern = node.pk
-                uuid_pattern = node.uuid
+                pk = node.pk
+                uuid = node.uuid
                 nodetype = node.dbnode.type
                 display_type = nodetype.split('.')[-2]
                 description = node.get_desc()
 
                 nodes.append({
                     "uuid_pattern": nodeCount,
-                    "nodeid": uuid_pattern,
-                    "nodeuuid": uuid_pattern,
+                    "nodeid": pk,
+                    "nodeuuid": uuid,
                     "nodetype": nodetype,
                     "displaytype": display_type,
                     "group": "outputs",

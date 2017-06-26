@@ -14,8 +14,7 @@ from aiida.restapi.translator.base import BaseTranslator
 
 class NodeTranslator(BaseTranslator):
     """
-    TODO add docstring
-
+    Rest Api Resource mapping the AiiDA class Node    
     """
 
     # A label associated to the present class (coincides with the resource name)

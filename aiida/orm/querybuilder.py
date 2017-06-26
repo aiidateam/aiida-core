@@ -181,7 +181,8 @@ class QueryBuilder(object):
 
         # The internal _with_dbpath attributes reports whether I need to do something with the path.
         # I.e. check, loads, etc, implementation left to backend implementation.
-        self.set_with_dbpath(kwargs.pop('with_dbpath', True))
+        kwargs.pop('with_dbpath', False)
+        self.set_with_dbpath(False)
         # Whether expanding the path when using recursive functionality
         self.set_expand_path(kwargs.pop('expand_path',False))
 
@@ -1090,8 +1091,8 @@ class QueryBuilder(object):
         if not isinstance(l_with_dbpath, bool):
             raise InputValidationError("I expect a boolean")
         self._with_dbpath = l_with_dbpath
-        if self._with_dbpath:
-            self._impl.prepare_with_dbpath()
+        #~ if self._with_dbpath:
+            #~ self._impl.prepare_with_dbpath()
         return self
 
     def set_expand_path(self, l_expand_path):

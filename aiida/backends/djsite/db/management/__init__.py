@@ -7,6 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+<<<<<<< HEAD
+    
+=======
 from django.contrib.auth import models as auth_models
 from django.conf import settings
 
@@ -455,3 +458,4 @@ from django.apps import apps
 post_migrate.connect(install_tc,
                      sender=apps.get_app_config('db'),
                      dispatch_uid="transitive_closure_post_migrate")
+>>>>>>> develop

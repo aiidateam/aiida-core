@@ -82,33 +82,6 @@ class DbLink(Base):
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
     label = Column(String(255), index=True, nullable=False)
 
-
-class DbPath(Base):
-    __tablename__ = "db_dbpath"
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(
-        Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-    )
-    child_id = Column(
-        Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-    )
-    parent = relationship(
-        "DbNode",
-        primaryjoin="DbPath.parent_id == DbNode.id",
-        backref="child_paths"
-    )
-    child = relationship(
-        "DbNode",
-        primaryjoin="DbPath.child_id == DbNode.id",
-        backref="parent_paths"
-    )
-    depth = Column(Integer)
-    entry_edge_id = Column(Integer)
-    direct_edge_id = Column(Integer)
-    exit_edge_id = Column(Integer)
-
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
     id = Column(Integer, primary_key=True)
@@ -320,13 +293,6 @@ class DbNode(Base):
         passive_deletes =   True
     )
 
-    children = relationship(
-        "DbNode",
-        secondary       =   "db_dbpath",
-        primaryjoin     =   "DbNode.id == DbPath.parent_id",
-        secondaryjoin   =   "DbNode.id == DbPath.child_id",
-        backref         =   "parents"
-    )
     def get_aiida_class(self):
         """
         Return the corresponding instance of

@@ -96,7 +96,8 @@ class TestDataNodeDjango(AiidaTestCase):
 class TestTransitiveClosureDeletionDjango(AiidaTestCase):
     def test_creation_and_deletion(self):
         from aiida.backends.djsite.db.models import DbLink  # Direct links
-        from aiida.backends.djsite.db.models import DbPath  # The transitive closure table
+        from aiida.orm.querybuilder import QueryBuilder
+
 
         n1 = Node().store()
         n2 = Node().store()
@@ -122,63 +123,107 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
 
         # Yet, no links from 1 to 8
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 0)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 0
+            )
 
         n6.add_link_from(n5)
+
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 2)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
+
 
         n7.add_link_from(n9)
         # Still two links...
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 2)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
+
 
         n9.add_link_from(n6)
         # And now there should be 4 nodes
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 4)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 4
+            )
 
         ### I start deleting now
 
         # I cut one branch below: I should loose 2 links
         DbLink.objects.filter(input=n6, output=n9).delete()
+
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 2)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
 
-        # print "\n".join([str((i.pk, i.input.pk, i.output.pk))
-        #                 for i in DbLink.objects.filter()])
-        # print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
-        #                      i.entry_edge_id, i.direct_edge_id,
-        #                      i.exit_edge_id)) for i in DbPath.objects.filter()])
-
-        # I cut another branch above: I should loose one more link
         DbLink.objects.filter(input=n2, output=n4).delete()
-        # print "\n".join([str((i.pk, i.input.pk, i.output.pk))
-        #                 for i in DbLink.objects.filter()])
-        # print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
-        #                      i.entry_edge_id, i.direct_edge_id,
-        #                      i.exit_edge_id)) for i in DbPath.objects.filter()])
+
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 1
+            )
+        #~ self.assertEquals(
+            #~ len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
 
         # Another cut should delete all links
         DbLink.objects.filter(input=n3, output=n5).delete()
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 0)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 0
+            )
+        #~ self.assertEquals(
+            #~ len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 0)
 
         # But I did not delete everything! For instance, I can check
         # the following links
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n4, child=n8).distinct()), 1)
+            QueryBuilder().append(
+                    Node, filters={'id':n4.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 1
+            )
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n5, child=n7).distinct()), 1)
+            QueryBuilder().append(
+                    Node, filters={'id':n5.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n7.pk}
+                ).count(), 1
+            )
+        #~ self.assertEquals(
+            #~ len(DbPath.objects.filter(parent=n4, child=n8).distinct()), 1)
+        #~ self.assertEquals(
+            #~ len(DbPath.objects.filter(parent=n5, child=n7).distinct()), 1)
 
         # Finally, I reconnect in a different way the two graphs and
         # check that 1 and 8 are again connected
         n4.add_link_from(n3)
+
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 1
+            )
+        #~ self.assertEquals(
+            #~ len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
 
 class TestNodeBasicDjango(AiidaTestCase):
     def test_replace_extras_2(self):

@@ -15,7 +15,7 @@ from aiida.restapi.translator.base import BaseTranslator
 
 class NodeTranslator(BaseTranslator):
     """
-    Rest Api Resource mapping the AiiDA class Node    
+    Translator relative to resource 'nodes' and aiida class Node
     """
 
     # A label associated to the present class (coincides with the resource name)

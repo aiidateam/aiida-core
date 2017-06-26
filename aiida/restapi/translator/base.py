@@ -20,8 +20,8 @@ from aiida.restapi.common.utils import pk_dbsynonym
 
 class BaseTranslator(object):
     """
-    Generic class for translator. It also contains all methods
-    required to build QueryBuilder object
+    Generic class for translator. It contains the methods
+    required to build a related QueryBuilder object
     """
 
     # A label associated to the present class

@@ -13,7 +13,7 @@ from aiida.restapi.common.config import custom_schema
 
 class GroupTranslator(BaseTranslator):
     """
-    TODO add docs
+    Translator relative to resource 'groups' and aiida class Group
     """
 
     # A label associated to the present class (coincides with the resource name)

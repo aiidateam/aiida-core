@@ -12,7 +12,7 @@ from aiida.restapi.common.config import custom_schema
 
 class UserTranslator(BaseTranslator):
     """
-    TODO add docs
+    Translator relative to resource 'users' and aiida class User
     """
 
     # A label associated to the present class (coincides with the resource name)

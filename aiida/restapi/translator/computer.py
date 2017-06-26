@@ -12,7 +12,8 @@ from aiida.restapi.common.config import custom_schema
 
 class ComputerTranslator(BaseTranslator):
     """
-    TODO add docds    """
+    Translator relative to resource 'computers' and aiida class Computer
+    """
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "computers"

@@ -126,7 +126,7 @@ If you request informations of a specific object, in general you have to append 
 
 In the first URL, we have specified the full *uuid*, whereas in the second only a chunk of its first characters that is sufficiently long to match only one *uuid* in the database.
 Il the *uuid* pattern is not long enough to identify a unique object, the API will raise an exception.
- The only exception to this rule is the resource *users* since the corresponding AiiDA ``User`` class has no *uuid* attribute. In this case, you have to specify the *pk* (integer) of the object. Here is an example::
+The only exception to this rule is the resource *users* since the corresponding AiiDA``User`` class has no *uuid* attribute. In this case, you have to specify the *pk* (integer) of the object. Here is an example::
 
     http://localhost:5000/api/v2/users/2
 

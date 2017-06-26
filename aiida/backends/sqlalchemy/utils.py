@@ -39,7 +39,7 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.common.setup import (get_profile_config)
 
 ALEMBIC_FILENAME = "alembic.ini"
-ALEMBIC_REL_PATH = "alembic"
+ALEMBIC_REL_PATH = "migrations"
 
 # def is_dbenv_loaded():
 #     """

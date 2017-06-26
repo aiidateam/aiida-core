@@ -110,7 +110,7 @@ def get_foreign_key_infos(foreign_key):
     :param foreign_key: a sqlalchemy ForeignKey object
     :return: a tuple of strings
     """
-    column_name = foreign_key.column.name
+    referent_column_name = foreign_key.parent.name
     (referred_table_name, referred_field_name) = tuple(
         foreign_key.target_fullname.split('.'))
-    return (column_name, referred_table_name, referred_field_name)
+    return (referent_column_name, referred_table_name, referred_field_name)

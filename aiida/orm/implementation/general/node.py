@@ -144,9 +144,13 @@ class AbstractNode(object):
         """
         Returns a string with infos retrieved from a node's 
         properties.
+        This method is actually overwritten by the inheriting classes
+        
         :return: a description string     
         """
-        return self.dbnode.type.split('.')[-2]
+        return ""
+
+
 
     @staticmethod
     def get_db_columns():

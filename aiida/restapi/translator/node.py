@@ -439,6 +439,8 @@ class NodeTranslator(BaseTranslator):
             nodetype = mainNode.dbnode.type
             display_type = nodetype.split('.')[-2]
             description = mainNode.get_desc()
+            if description == '':
+                description = mainNode.dbnode.type.split('.')[-2]
 
             nodes.append({
                 "uuid_pattern": nodeCount,
@@ -467,6 +469,8 @@ class NodeTranslator(BaseTranslator):
                 nodetype = node.dbnode.type
                 display_type = nodetype.split('.')[-2]
                 description = node.get_desc()
+                if description == '':
+                    description = node.dbnode.type.split('.')[-2]
 
                 nodes.append({
                     "uuid_pattern": nodeCount,
@@ -502,6 +506,8 @@ class NodeTranslator(BaseTranslator):
                 nodetype = node.dbnode.type
                 display_type = nodetype.split('.')[-2]
                 description = node.get_desc()
+                if description == '':
+                    description = node.dbnode.type.split('.')[-2]
 
                 nodes.append({
                     "uuid_pattern": nodeCount,

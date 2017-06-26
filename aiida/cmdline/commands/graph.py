@@ -99,10 +99,11 @@ class Graph(VerdiCommandWithSubcommands):
                     ",".join('{}="{}"'.format(k, v) for k, v in kwargs.iteritems()))
             else:
                 additional_params = ""
-            additional_string = node.get_desc()
             if node.label:
                 label_string = "\n'{}'".format(node.label)
+                additional_string = ""
             else:
+                additional_string = "\n {}".format(node.get_desc())
                 label_string = ""
             labelstring = 'label="{} ({}){}{}"'.format(
                 node.__class__.__name__, node.pk, label_string,

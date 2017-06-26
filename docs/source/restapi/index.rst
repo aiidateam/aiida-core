@@ -118,13 +118,17 @@ Here are few examples of valid URIs::
     http://localhost:5000/api/v2/nodes/statistics
 
 
-If you request informations of a specific object you have to append its entire *uuid* or the starting pattern of its *uuid* to the path. Here are two examples that should return the same object::
+If you request informations of a specific object, in general you have to append its entire *uuid* or the starting pattern of its *uuid* to the path.
+ Here are two examples that should return the same object::
 
     http://localhost:5000/api/v2/nodes/338357f4-f236-4f9c-8fbe-cd550dc6b858
     http://localhost:5000/api/v2/nodes/338357f4-f2
 
 In the first URL, we have specified the full *uuid*, whereas in the second only a chunk of its first characters that is sufficiently long to match only one *uuid* in the database.
 Il the *uuid* pattern is not long enough to identify a unique object, the API will raise an exception.
+ The only exception to this rule is the resource *users* since the corresponding AiiDA ``User`` class has no *uuid* attribute. In this case, you have to specify the *pk* (integer) of the object. Here is an example::
+
+    http://localhost:5000/api/v2/users/2
 
 When you ask for a single object (and only in that case) you can construct more complex requests, namely, you can ask for its inputs/outputs or for its attributes/extras. In the first case you have to append to the path the string ``/io/inputs`` or ``io/outputs`` depending on the desired relation between the nodes, whereas in the second case you have to append ``content/attributes`` or ``content/extras`` depending on the kind of content you want to access. Here are some examples::
 
@@ -203,6 +207,8 @@ All the other fields composing a query string are filters, that is, conditions t
 
 The following table reports what is the value type and the supported resources associated to each key.
 .. note:: In the following *id* is a synonym for *pk* (often used in other sections of the documentation).
+
+.. note:: If a key is present in the resource *data*, it will be also in the derived resources: *kpoints*, *structures*, *bands*
 
 +----------------+----------+----------------------------------------------------------+
 |key             |value type|resources                                                 |

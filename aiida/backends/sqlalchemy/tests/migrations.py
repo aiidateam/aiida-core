@@ -39,10 +39,11 @@ class TestMigrationsSQLA(AiidaTestCase):
 
     """
     migr_method_dir_path = None
+    alembic_dpath = None
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        migr_method_dir_path = os.path.dirname(
+        cls.migr_method_dir_path = os.path.dirname(
             os.path.realpath(utils.__file__))
 
     def setUp(self):
@@ -54,9 +55,9 @@ class TestMigrationsSQLA(AiidaTestCase):
         alembic_cfg = self.get_conf_from_alembic_file()
 
         # Set the alembic script directory location
-        alembic_dpath = os.path.join(self.migr_method_dir_path,
+        self.alembic_dpath = os.path.join(self.migr_method_dir_path,
                                      utils.ALEMBIC_REL_PATH)
-        alembic_cfg.set_main_option('script_location', alembic_dpath)
+        alembic_cfg.set_main_option('script_location', self.alembic_dpath)
 
         # Undo all previous migrations
         with sa.engine.begin() as connection:
@@ -76,7 +77,7 @@ class TestMigrationsSQLA(AiidaTestCase):
                                      utils.ALEMBIC_FILENAME)
         return Config(alembic_fpath)
 
-    def test_migrations_forward_1(self):
+    def test_migrations_forward_backward(self):
         """
         This test checks that the outputs_q, children_q relationship and the
         corresponding properties work as expected.
@@ -84,21 +85,49 @@ class TestMigrationsSQLA(AiidaTestCase):
         from aiida.backends.sqlalchemy.utils import get_migration_head
         from aiida.backends.sqlalchemy.utils import check_schema_version
 
-        # Getting the alembic configuration
-        alembic_cfg = self.get_conf_from_alembic_file()
+        try:
+            # Getting the alembic configuration
+            alembic_cfg = self.get_conf_from_alembic_file()
 
-        # Change the script location to the test script location to
-        # perform the needed tests.
-        alembic_dpath = os.path.join(self.migr_method_dir_path,
-                                     TEST_ALEMBIC_REL_PATH)
-        alembic_cfg.set_main_option('script_location', alembic_dpath)
+            # Change the script location to the test script location to
+            # perform the needed tests.
+            # alembic_dpath = os.path.join(os.path.dirname(
+            #     os.path.realpath(__file__)),
+            #     TEST_ALEMBIC_REL_PATH)
 
-        with sa.engine.begin() as connection:
-            alembic_cfg.attributes['connection'] = connection
+            from aiida.backends.sqlalchemy.tests.migration_test import versions
+            versions_dpath = os.path.join(
+                os.path.dirname(versions.__file__))
 
-            print get_db_schema_version(alembic_cfg)
-            command.upgrade(alembic_cfg, "head")
-            print get_db_schema_version(alembic_cfg)
+            alembic_cfg.set_main_option('script_location', self.alembic_dpath)
+            alembic_cfg.set_main_option('version_locations', versions_dpath)
+
+            print "WWWWWWW", alembic_cfg.get_main_option('version_locations')
+            print "WWWWWWW", alembic_cfg.get_main_option('script_location')
+            # alembic_cfg.set_main_option('script_location', alembic_dpath)
+
+            with sa.engine.begin() as connection:
+                alembic_cfg.attributes['connection'] = connection
+
+                print get_db_schema_version(alembic_cfg)
+                command.upgrade(alembic_cfg, "head")
+                print get_db_schema_version(alembic_cfg)
+                command.downgrade(alembic_cfg, "base")
+                print get_db_schema_version(alembic_cfg)
+
+            raise Exception("Lalalala")
+
+        except:
+            tables_to_drop = ['account', 'alembic_version']
+            for table in tables_to_drop:
+                from psycopg2 import ProgrammingError
+                import sqlalchemy
+                from sqlalchemy.orm import sessionmaker, scoped_session
+                try:
+                    s = sa.get_scoped_session()
+                    s.execute('DROP TABLE {}'.format(table))
+                except ProgrammingError as e:
+                    print e.message
 
         # check_schema_version(force_migration=True)
 

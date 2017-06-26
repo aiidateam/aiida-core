@@ -20,6 +20,5 @@ class JobCalculation(_JC):
         """
         Returns a string with infos retrieved from a JobCalculation node's 
         properties.
-        :return: description string
         """
         return self.get_state(from_attribute=True)

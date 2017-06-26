@@ -105,7 +105,7 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
         :return: retsrt:
         """
 
-        retstr = super(PwCalculation, self).get_desc(self)
+        retstr = super(PwCalculation, self).get_desc()
 
         return " ".join(['{}'.format(self.inp.parameters.dict.CONTROL[
                                      'calculation']), retstr])

@@ -983,6 +983,15 @@ class StructureData(Data):
         newcell = np.diag(minimal_orthorhombic_cell_dimensions)
         self.set_cell(newcell.tolist())
 
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from StructureData node's 
+        properties
+        :param self: the StructureData node
+        :return: retsrt: the description string
+        """
+        return self.get_formula(mode='hill_compact')
+
     def get_symbols_set(self):
         """
         Return a set containing the names of all elements involved in

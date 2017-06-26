@@ -145,9 +145,10 @@ def run_api(App, Api, *args, **kwargs):
     else:
         pass  # This way the default of .aiida/config.json will be used
 
-    # Set the AiiDA environment, if not already done
-    if not is_dbenv_loaded():
-        load_dbenv()
+    # Set the AiiDA environment. If already loaded, load_dbenv will raise an
+    # exception
+    # if not is_dbenv_loaded():
+    load_dbenv()
 
     # Instantiate an app
     app_kwargs = dict(catch_internal_server=catch_internal_server)

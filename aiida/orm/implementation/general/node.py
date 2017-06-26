@@ -140,6 +140,14 @@ class AbstractNode(object):
     # See documentation in the set() method.
     _set_incompatibilities = []
 
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from a node's 
+        properties.
+        :return: a description string     
+        """
+        return self.dbnode.type.split('.')[-2]
+
     @staticmethod
     def get_db_columns():
         """

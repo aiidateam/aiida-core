@@ -12,6 +12,7 @@ from aiida.common.exceptions import InputValidationError, ValidationError, \
 from aiida.restapi.common.exceptions import RestValidationError
 from aiida.restapi.translator.base import BaseTranslator
 
+
 class NodeTranslator(BaseTranslator):
     """
     Rest Api Resource mapping the AiiDA class Node    
@@ -240,10 +241,10 @@ class NodeTranslator(BaseTranslator):
 
     def _get_subclasses(self, parent=None, parent_class=None, recursive=True):
         """
-         Import all submodules of the package containing the present class,
-         including subpackages recursively, if specified.
+        Import all submodules of the package containing the present class,
+        including subpackages recursively, if specified.
         :parent: package/class. If package look for the classes in submodules.
-          If class, it first looks for the package where it is contained
+            If class, it first looks for the package where it is contained
         :parent_class: class of which to look for subclasses
         :recursive: True/False (go recursively into submodules)
         """
@@ -282,8 +283,7 @@ class NodeTranslator(BaseTranslator):
         results = {}
 
         for loader, name, is_pkg in pkgutil.walk_packages([package_path]):
-            # N.B. pkgutil.walk_package requires a LIST of paths. (all'anema
-            # e chi t'e mmuort)
+            # N.B. pkgutil.walk_package requires a LIST of paths.
 
             full_path_base = os.path.join(package_path, name)
 
@@ -325,7 +325,8 @@ class NodeTranslator(BaseTranslator):
         subclass
         """
 
-        # Look for the translator associated to the class of which this node is instance
+        # Look for the translator associated to the class of which this node
+        # is instance
         tclass = type(node)
 
         for subclass in self._subclasses.values():
@@ -416,40 +417,33 @@ class NodeTranslator(BaseTranslator):
 
         return statistics
 
-    def get_io_tree(self, id):
+    def get_io_tree(self, uuid_pattern):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
-        import uuid
 
-        if type(id) == int:
-            filter = {
-                'id': {'==': id}
-            }
-        elif type(id) == uuid.UUID:
-            filter = {
-                'uuid': {'==': id.__str__()}
-            }
-        else:
-            raise RestValidationError('id can only be an integer or a uuid')
+        # Check whether uuid_pattern identifies a unique node
+        self._check_id_validity(uuid_pattern)
+
+        qb = QueryBuilder()
+        qb.append(Node, tag="main", project=["*"],
+                  filters=self._id_filter)
 
         nodes = []
         edges = []
         nodeCount = 0
 
-        qb = QueryBuilder()
-        qb.append(Node, tag="main", project=["*"],
-                  filters=filter)
         if qb.count() > 0:
-
             mainNode = qb.first()[0]
-            id = mainNode.pk
-            nodetype= mainNode.dbnode.type
+            uuid_pattern = mainNode.pk
+            uuid_pattern = mainNode.uuid
+            nodetype = mainNode.dbnode.type
             display_type = nodetype.split('.')[-2]
-            description = get_additional_string(mainNode)
+            description = mainNode.get_desc()
 
             nodes.append({
-                "id": nodeCount,
-                "nodeid": id,
+                "uuid_pattern": nodeCount,
+                "nodeid": uuid_pattern,
+                "nodeuuid": uuid_pattern,
                 "nodetype": nodetype,
                 "displaytype": display_type,
                 "group": "mainNode",
@@ -460,23 +454,24 @@ class NodeTranslator(BaseTranslator):
         # get all inputs
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['*'],
-                  filters=filter)
+                  filters=self._id_filter)
         qb.append(Node, tag="in", project=['*'], edge_project=['label'],
-            input_of='main')
+                  input_of='main')
 
         if qb.count() > 0:
             for input in qb.iterdict():
-
                 node = input['in']['*']
                 linktype = input['main--in']['label']
-                id = node.pk
+                uuid_pattern = node.pk
+                uuid_pattern = node.uuid
                 nodetype = node.dbnode.type
                 display_type = nodetype.split('.')[-2]
-                description = get_additional_string(node)
+                description = node.get_desc()
 
                 nodes.append({
-                    "id": nodeCount,
-                    "nodeid": id,
+                    "uuid_pattern": nodeCount,
+                    "nodeid": uuid_pattern,
+                    "nodeuuid": uuid_pattern,
                     "nodetype": nodetype,
                     "displaytype": display_type,
                     "group": "inputs",
@@ -495,22 +490,23 @@ class NodeTranslator(BaseTranslator):
         # get all outputs
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['*'],
-                  filters=filter)
+                  filters=self._id_filter)
         qb.append(Node, tag="out", project=['*'], edge_project=['label'],
                   output_of='main')
         if qb.count() > 0:
             for output in qb.iterdict():
-
                 node = output['out']['*']
                 linktype = output['main--out']['label']
-                id = node.pk
+                uuid_pattern = node.pk
+                uuid_pattern = node.uuid
                 nodetype = node.dbnode.type
                 display_type = nodetype.split('.')[-2]
-                description = get_additional_string(node)
+                description = node.get_desc()
 
                 nodes.append({
-                    "id": nodeCount,
-                    "nodeid": id,
+                    "uuid_pattern": nodeCount,
+                    "nodeid": uuid_pattern,
+                    "nodeuuid": uuid_pattern,
                     "nodetype": nodetype,
                     "displaytype": display_type,
                     "group": "outputs",
@@ -527,74 +523,3 @@ class NodeTranslator(BaseTranslator):
                 nodeCount += 1
 
         return {"nodes": nodes, "edges": edges}
-
-
-# TODO Put these functions in some common place so to not repeat code.
-# Auxiliary functions to provide short description of tree nodes
-def kpoints_desc(node):
-    """
-    Returns a string with infos retrieved from  kpoints node's properties.
-    :param node:
-    :return: retstr
-    """
-    try:
-        mesh = node.get_kpoints_mesh()
-        return "Kpoints mesh: {}x{}x{} (+{:.1f},{:.1f},{:.1f})".format(
-            mesh[0][0], mesh[0][1], mesh[0][2],
-            mesh[1][0], mesh[1][1], mesh[1][2])
-    except AttributeError:
-        try:
-            return '(Path of {} kpts)'.format(len(node.get_kpoints()))
-        except OSError:
-            return node.dbnode.type
-
-def pw_desc(node):
-    """
-    Returns a string with infos retrieved from  PwCalculation node's properties.
-    :param node:
-    :return: retsrt:
-    """
-    return '{}'.format(node.inp.parameters.dict.CONTROL['calculation'])
-
-def code_desc(node):
-    """
-    Returns a string with infos retrieved from  PwCalculation node's properties.
-    :param node:
-    :return: retsrt:
-    """
-    return '{}'.format(node.label)
-
-def get_additional_string(node):
-    """
-    Returns a string with infos retrieved from  PwCalculation node's properties.
-    The actual returned string depends on the node class
-    :param node:
-    :return: retstr
-    """
-
-    from aiida.orm.calculation.job import JobCalculation
-
-    class_name = node.__class__.__name__
-
-    func_mapping = {
-        "StructureData": lambda x: x.get_formula(mode='hill_compact'),
-        "InlineCalculation": lambda x: "{}()".format(x.get_function_name()),
-        "KpointsData": kpoints_desc,
-        "PwCalculation": pw_desc,
-        "Code": code_desc,
-    }
-
-    func = func_mapping.get(class_name, None)
-    if func is None:
-        retstr = ""
-
-    else:
-        retstr = "{}".format(func(node))
-
-    if isinstance(node, JobCalculation):
-        retstr = " ".join([retstr, node.get_state(from_attribute=True)])
-
-    if retstr:
-        return "{}".format(retstr)
-    else:
-        return node.dbnode.type.split('.')[-2]

@@ -137,19 +137,20 @@ class Utils(object):
         # type: (string) -> (list_of_strings).
         return filter(None, path.split('/'))
 
-    def parse_path(self, path_string):
+    def parse_path(self, path_string, parse_pk_uuid=None):
         """
         Takes the path and parse it checking its validity. Does not parse "io",
         "content" fields. I do not check the validity of the path, since I
         assume
         that this is done by the Flask routing methods.
-        It assunme
-
+  
         :param path_string: the path string
+        :param parse_id_uuid: if 'pk' ('uuid') expects an integer (uuid 
+        starting pattern) 
         :return:resource_type (string)
                 page (integer)
-                id (string: uuid starting pattern)
-                result_type (string))
+                id (string: uuid starting pattern, int: pk)
+                query_type (string))
         """
 
         ## Initialization
@@ -171,18 +172,28 @@ class Utils(object):
         # Technique: - take our uuid_ref and replace the first characters the
         #  string to be validated as uuid.
         #            - validate instead the newly built string
-        import uuid
-        raw_id = path[0]
-        maybe_uuid = raw_id + uuid_ref[len(raw_id):]
-        try:
-            _ = uuid.UUID(maybe_uuid, version=4)
-        except ValueError:
-            # assume that it cannot be an id and go to the next check
-            pass
-        else:
-            # It is an id so pop out the path element
-            id = raw_id
-            path.pop(0)
+        if parse_pk_uuid == 'pk':
+            raw_id = path(0)
+            try:
+                # Check whether it can be an integer
+                id = int(raw_id)
+            except TypeError:
+                pass
+            else:
+                path.pop(0)
+        elif parse_pk_uuid == 'uuid':
+            import uuid
+            raw_id = path[0]
+            maybe_uuid = raw_id + uuid_ref[len(raw_id):]
+            try:
+                _ = uuid.UUID(maybe_uuid, version=4)
+            except ValueError:
+                # assume that it cannot be an id and go to the next check
+                pass
+            else:
+                # It is an id so pop out the path element
+                id = raw_id
+                path.pop(0)
 
         if not path:
             return (resource_type, page, id, query_type)

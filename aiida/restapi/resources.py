@@ -24,6 +24,9 @@ class BaseResource(Resource):
 
         self.trans = None
 
+        # Flag to tell the path parser whether to expect a pk or a uuid pattern
+        self.parse_pk_uuid = None
+
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
         self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in
@@ -43,7 +46,7 @@ class BaseResource(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, id, query_type) = self.utils.parse_path(path)
+        (resource_type, page, id, query_type) = self.utils.parse_path(path,                                    parse_pk_uuid=self.parse_pk_uuid)
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
          nelist) = self.utils.parse_query_string(query_string)
 
@@ -107,6 +110,9 @@ class Node(Resource):
         from aiida.orm import Node
         self.tclass = Node
 
+        # Parse a uuid pattern in the URL path (not a pk)
+        self.parse_pk_uuid = 'uuid'
+
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
         self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in
@@ -126,7 +132,7 @@ class Node(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, id, query_type) = self.utils.parse_path(path)
+        (resource_type, page, id, query_type) = self.utils.parse_path(path,                                    parse_pk_uuid=self.parse_pk_uuid)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
          nelist) = self.utils.parse_query_string(query_string)
@@ -207,6 +213,10 @@ class Computer(BaseResource):
         from aiida.restapi.translator.computer import ComputerTranslator
         self.trans = ComputerTranslator(**kwargs)
 
+        # Set wheteher to expect a pk (integer) or a uuid pattern (string) in
+        # the URL path
+        self.parse_pk_uuid = "uuid"
+
 
 class Group(BaseResource):
     def __init__(self, **kwargs):
@@ -215,6 +225,7 @@ class Group(BaseResource):
         from aiida.restapi.translator.group import GroupTranslator
         self.trans = GroupTranslator(**kwargs)
 
+        self.parse_pk_uuid = 'uuid'
 
 class User(BaseResource):
     def __init__(self, **kwargs):
@@ -223,6 +234,7 @@ class User(BaseResource):
         from aiida.restapi.translator.user import UserTranslator
         self.trans = UserTranslator(**kwargs)
 
+        self.parse_pk_uuid = 'pk'
 
 class Calculation(Node):
     def __init__(self, **kwargs):
@@ -232,6 +244,8 @@ class Calculation(Node):
         self.trans = CalculationTranslator(**kwargs)
         from aiida.orm import Calculation as CalculationTclass
         self.tclass = CalculationTclass
+
+        self.parse_pk_uuid = 'uuid'
 
 
 class Code(Node):
@@ -243,6 +257,8 @@ class Code(Node):
         from aiida.orm import Code as CodeTclass
         self.tclass = CodeTclass
 
+        self.parse_pk_uuid = 'uuid'
+
 
 class Data(Node):
     def __init__(self, **kwargs):
@@ -252,6 +268,9 @@ class Data(Node):
         self.trans = DataTranslator(**kwargs)
         from aiida.orm import Data as DataTclass
         self.tclass = DataTclass
+
+        self.parse_pk_uuid = 'uuid'
+
 
 class StructureData(Data):
     def __init__(self, **kwargs):
@@ -263,6 +282,9 @@ class StructureData(Data):
         from aiida.orm.data.structure import StructureData as StructureDataTclass
         self.tclass = StructureDataTclass
 
+        self.parse_pk_uuid = 'uuid'
+
+
 class KpointsData(Data):
     def __init__(self, **kwargs):
         super(KpointsData, self).__init__(**kwargs)
@@ -271,6 +293,9 @@ class KpointsData(Data):
         self.trans = KpointsDataTranslator(**kwargs)
         from aiida.orm.data.array.kpoints import KpointsData as KpointsDataTclass
         self.tclass = KpointsDataTclass
+
+        self.parse_pk_uuid = 'uuid'
+
 
 class BandsData(Data):
     def __init__(self, **kwargs):
@@ -281,3 +306,5 @@ class BandsData(Data):
         self.trans = BandsDataTranslator(**kwargs)
         from aiida.orm.data.array.bands import BandsData as BandsDataTclass
         self.tclass = BandsDataTclass
+
+        self.parse_pk_uuid = 'uuid'

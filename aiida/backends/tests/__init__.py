@@ -26,6 +26,7 @@ db_test_list = {
         'query': ['aiida.backends.sqlalchemy.tests.query'],
         'session': ['aiida.backends.sqlalchemy.tests.session'],
         'schema': ['aiida.backends.sqlalchemy.tests.schema'],
+        'migrations': ['aiida.backends.sqlalchemy.tests.migrations'],
     },
     # Must be always defined (in the worst case, an empty dict)
     'common': {

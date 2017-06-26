@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
@@ -8,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 """
 The QueryBuilder: A class that allows you to query the AiiDA database, independent from backend.
 Note that the backend implementation is enforced and handled with a composition model!
@@ -257,9 +255,7 @@ class QueryBuilder(object):
 
         engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
 
-        if engine == "sqlite3":
-            from sqlalchemy.dialects import sqlite as mydialect
-        elif engine.startswith("mysql"):
+        if engine.startswith("mysql"):
             from sqlalchemy.dialects import mysql as mydialect
         elif engine.startswith("postgre"):
             from sqlalchemy.dialects import postgresql as mydialect
@@ -2266,6 +2262,21 @@ class QueryBuilder(object):
         return returnval
 
 
+    def one(self):
+        """
+        Executes the query asking for exactly one results. Will raise an exception if this is not the case
+        :raises: MultipleObjectsError if more then one row can be returned
+        :raises: NotExistent if no result was found
+        """
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
+        self.limit(2)
+        res = self.all()
+        if len(res) > 1:
+            raise MultipleObjectsError("More than one result was found")
+        elif len(res) == 0:
+            raise NotExistent("No result was found")
+        return res[0]
+
 
     def count(self):
         """
@@ -2391,6 +2402,7 @@ class QueryBuilder(object):
 
         """
         return list(self.iterdict(batch_size=batch_size))
+
 
 
     def get_results_dict(self):

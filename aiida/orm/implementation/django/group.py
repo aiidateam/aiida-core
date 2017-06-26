@@ -24,9 +24,7 @@ from django.db import transaction, IntegrityError
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
-
-
+from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class Group(AbstractGroup):

@@ -181,7 +181,7 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None, query_with_da
     # For efficiency I do not go further than 2 results.
     qb.limit(2)
 
-    # ... and check the existence and unicity of the node
+    # FInally, I check the existence and unicity of the node
     try:
         return qb.one()[0]
     except MultipleObjectsError:

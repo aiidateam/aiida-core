@@ -24,8 +24,7 @@ from aiida.common.utils import get_new_uuid
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.mixins import Sealable
 # from aiida.orm.implementation.django.utils import get_db_columns
-from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
-
+from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class Node(AbstractNode):

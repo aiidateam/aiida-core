@@ -9,7 +9,7 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.settings import DbSetting
 
 # revision identifiers, used by Alembic.
-revision = '470e57bc0936'
+revision = '470e57bc0826'
 down_revision = None
 branch_labels = None
 depends_on = None

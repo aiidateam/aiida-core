@@ -128,45 +128,41 @@ class RESTApiTestCase(AiidaTestCase):
         This functions prepare atomic chunks of typical responses from the
         RESTapi and puts them into class attributes
         """
-        computers = expected_data = QueryBuilder().append(Computer, tag="comp",
-                                                          project=["id", "name",
-                                                                   "hostname",
-                                                                   "transport_type",
-                                                                   "scheduler_type"]).order_by(
-            {'comp': [{'name': {'order': 'asc'}}]}).all()
+        computer_projects = ["id", "uuid", "name", "hostname",
+                                           "transport_type", "scheduler_type"]
+        computers = expected_data = QueryBuilder().append(
+            Computer, tag="comp", project=computer_projects).order_by(
+            {'comp': [{'name': {'order': 'asc'}}]}).dict()
+
+        # Cast UUID into a string (e.g. in sqlalchemy it comes as a UUID object)
+        computers = [_['comp'] for _ in computers]
+        for comp in computers:
+            if comp['uuid'] is not None:
+                comp['uuid'] = str(comp['uuid'])
+
+
+        calculation_projects = ["id", "uuid", "user_id", "type"]
         calculations = QueryBuilder().append(Calculation, tag="calc",
-                                             project=["id", "user_id",
-                                                      "type"]).order_by(
-            {'calc': [{'id': {'order': 'desc'}}]}).all()
-        data = QueryBuilder().append(Data, tag="data", project=["id", "user_id",
-                                                                "type"]).order_by(
-            {'data': [{'id': {'order': 'desc'}}]}).all()
+                                             project=calculation_projects).order_by(
+            {'calc': [{'id': {'order': 'desc'}}]}).dict()
 
-        cls._dummy_data["computers"] = []
-        for c in computers:
-            cls._dummy_data["computers"].append({
-                "id": c[0],
-                "name": c[1],
-                "hostname": c[2],
-                "transport_type": c[3],
-                "scheduler_type": c[4]
-            })
+        calculations = [_['calc'] for _ in calculations]
+        for calc in calculations:
+            if calc['uuid'] is not None:
+                calc['uuid'] = str(calc['uuid'])
 
-        cls._dummy_data["calculations"] = []
-        for c in calculations:
-            cls._dummy_data["calculations"].append({
-                "id": c[0],
-                "user_id": c[1],
-                "type": c[2]
-            })
+        data_projects = ["id", "uuid", "user_id", "type"]
+        data = QueryBuilder().append(Data, tag="data", project=data_projects).order_by(
+            {'data': [{'id': {'order': 'desc'}}]}).dict()
+        data = [_['data'] for _ in data]
+        for datum in data:
+            if datum['uuid'] is not None:
+                datum['uuid'] = str(datum['uuid'])
 
-        cls._dummy_data["data"] = []
-        for c in data:
-            cls._dummy_data["data"].append({
-                "id": c[0],
-                "user_id": c[1],
-                "type": c[2]
-            })
+        cls._dummy_data["computers"] = computers
+        cls._dummy_data["calculations"] = calculations
+        cls._dummy_data["data"] = data
+
 
     def split_path(self, url):
         """
@@ -184,7 +180,7 @@ class RESTApiTestCase(AiidaTestCase):
 
         return path, query_string
 
-    def compare_extra_response_data(self, node_type, url, response, pk=None):
+    def compare_extra_response_data(self, node_type, url, response, uuid=None):
         """
         In url response, we pass some extra information/data along with the node
         results. e.g. url method, node_type, path, pk, query_string, url,
@@ -194,14 +190,14 @@ class RESTApiTestCase(AiidaTestCase):
         :param node_type: url requested fot the type of the node
         :param url: web url
         :param response: url response
-        :param pk: url requested for the node pk
+        :param uuid: url requested for the node pk
         """
         path, query_string = self.split_path(url)
 
         self.assertEqual(response["method"], "GET")
         self.assertEqual(response["resource_type"], node_type)
         self.assertEqual(response["path"], path)
-        self.assertEqual(response["pk"], pk)
+        self.assertEqual(response["id"], uuid)
         self.assertEqual(response["query_string"], query_string)
         self.assertEqual(response["url"], "http://localhost" + url)
         self.assertEqual(response["url_root"], "http://localhost/")
@@ -209,7 +205,7 @@ class RESTApiTestCase(AiidaTestCase):
     ###### node details and list with limit, offset, page, perpage ####
     def process_test(self, node_type, url, full_list=False, empty_list=False,
                      expected_list_ids=[], expected_range=[],
-                     expected_errormsg=None, pk=None, result_node_type=None,
+                     expected_errormsg=None, uuid=None, result_node_type=None,
                      result_name=None):
         """
         Get the full list of nodes from database
@@ -220,7 +216,7 @@ class RESTApiTestCase(AiidaTestCase):
         :param expected_list_ids: list of expected ids from data
         :param expected_range: [start, stop] range of expected ids from data
         :param expected_errormsg: expected error message in response
-        :param pk: url requested for the node pk
+        :param uuid: url requested for the node pk
         :param result_node_type: node type in response data
         :param result_name: result name in response e.g. inputs, outputs
         """
@@ -257,10 +253,11 @@ class RESTApiTestCase(AiidaTestCase):
                 for expected_node, response_node in zip(expected_data,
                                                         response["data"][
                                                             result_name]):
+
                     self.assertTrue(all(item in response_node.items()
                                         for item in expected_node.items()))
 
-                self.compare_extra_response_data(node_type, url, response, pk)
+                self.compare_extra_response_data(node_type, url, response, uuid)
 
     ######## check exception #########
     def node_exception(self, url, exception_type):
@@ -282,10 +279,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Requests the details of single computer
         """
-        node_pk = self.get_dummy_data()["computers"][0]["id"]
+        node_uuid = self.get_dummy_data()["computers"][0]["uuid"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers/" + str(node_pk),
-                                     expected_list_ids=[0], pk=node_pk)
+                                     "/computers/" + str(node_uuid),
+                                     expected_list_ids=[0], uuid=node_uuid)
 
     ############### full list with limit, offset, page, perpage #############
     def test_computers_list(self):
@@ -656,10 +653,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Requests the details of single calculation
         """
-        node_pk = self.get_dummy_data()["calculations"][0]["id"]
+        node_uuid = self.get_dummy_data()["calculations"][0]["uuid"]
         RESTApiTestCase.process_test(self, "calculations",
-                                     "/calculations/" + str(node_pk),
-                                     expected_list_ids=[0], pk=node_pk)
+                                     "/calculations/" + str(node_uuid),
+                                     expected_list_ids=[0], uuid=node_uuid)
 
     ############### full list with limit, offset, page, perpage #############
     def test_calculations_list(self):
@@ -686,10 +683,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Get the list of give calculation inputs
         """
-        node_pk = self.get_dummy_data()["calculations"][1]["id"]
+        node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         self.process_test("calculations", "/calculations/" + str(
-            node_pk) + "/io/inputs?orderby=id",
-                          expected_list_ids=[3, 2], pk=node_pk,
+            node_uuid) + "/io/inputs?orderby=id",
+                          expected_list_ids=[3, 2], uuid=node_uuid,
                           result_node_type="data",
                           result_name="inputs")
 
@@ -697,10 +694,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Get filtered inputs list for given calculations
         """
-        node_pk = self.get_dummy_data()["calculations"][1]["id"]
+        node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         self.process_test("calculations", '/calculations/' + str(
-            node_pk) + '/io/inputs?type="data.parameter.ParameterData."',
-                          expected_list_ids=[2], pk=node_pk,
+            node_uuid) + '/io/inputs?type="data.parameter.ParameterData."',
+                          expected_list_ids=[2], uuid=node_uuid,
                           result_node_type="data",
                           result_name="inputs")
 
@@ -709,9 +706,9 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Get list of calculation attributes
         """
-        node_pk = self.get_dummy_data()["calculations"][1]["id"]
+        node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         url = self.get_url_prefix() + "/calculations/" + str(
-            node_pk) + "/content/attributes"
+            node_uuid) + "/content/attributes"
         self.app.config['TESTING'] = True
         with self.app.test_client() as client:
             rv = client.get(url)
@@ -720,15 +717,15 @@ class RESTApiTestSuite(RESTApiTestCase):
                              {'attr2': 'OK', 'attr1': 'OK'})
             RESTApiTestCase.compare_extra_response_data(self, "calculations",
                                                         url,
-                                                        response, pk=node_pk)
+                                                        response, uuid=node_uuid)
 
     def test_calculation_attributes_nalist_filter(self):
         """
         Get list of calculation attributes with filter nalist
         """
-        node_pk = self.get_dummy_data()["calculations"][1]["id"]
+        node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         url = self.get_url_prefix() + '/calculations/' + str(
-            node_pk) + '/content/attributes?nalist="attr1"'
+            node_uuid) + '/content/attributes?nalist="attr1"'
         self.app.config['TESTING'] = True
         with self.app.test_client() as client:
             rv = client.get(url)
@@ -736,15 +733,15 @@ class RESTApiTestSuite(RESTApiTestCase):
             self.assertEqual(response["data"]["attributes"], {'attr2': 'OK'})
             RESTApiTestCase.compare_extra_response_data(self, "calculations",
                                                         url,
-                                                        response, pk=node_pk)
+                                                        response, uuid=node_uuid)
 
     def test_calculation_attributes_alist_filter(self):
         """
         Get list of calculation attributes with filter alist
         """
-        node_pk = self.get_dummy_data()["calculations"][1]["id"]
+        node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         url = self.get_url_prefix() + '/calculations/' + str(
-            node_pk) + '/content/attributes?alist="attr1"'
+            node_uuid) + '/content/attributes?alist="attr1"'
         self.app.config['TESTING'] = True
         with self.app.test_client() as client:
             rv = client.get(url)
@@ -752,4 +749,4 @@ class RESTApiTestSuite(RESTApiTestCase):
             self.assertEqual(response["data"]["attributes"], {'attr1': 'OK'})
             RESTApiTestCase.compare_extra_response_data(self, "calculations",
                                                         url,
-                                                        response, pk=node_pk)
+                                                        response, uuid=node_uuid)

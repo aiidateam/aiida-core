@@ -1,3 +1,5 @@
+.. _rest_api:
+
 ===================
 REST API for AiiDA
 ===================
@@ -24,9 +26,9 @@ of *localhost*, connecting to the AiiDA default profile and assuming the default
     $ verdi restapi --help
 
 
-As all the ``verdi`` commands the AiiDA profile can be changed by putting the option ``-p PROFILE`` right after ``verdi``. The base url for your REST API will then be:
+As all the ``verdi`` commands the AiiDA profile can be changed by putting the option ``-p PROFILE`` right after ``verdi``.
 
-    ::
+The base url for your REST API is be::
 
         http://localhost:5000/api/v2
 
@@ -41,7 +43,7 @@ An alternative way to hook up the Api is to run the script ``run_api.py`` from f
 
 This script has the same options as the ``verdi command`` (they actually invoke the same function) with the addition of ``--aiida-profile=AIIDA_PROFILE`` to set the AiiDA profile to which the Api should connect.
 
-The default configuration file is  ``config.py`` `and by default is looked for in the folder `aiida/restapi``. The default folder can be overwritten by the the option ``--config-dir=CONFIG_DIR`` . All the available configuration options of the REST Api are documented therein.
+The default configuration file is  ``config.py``, which by default is looked for in the folder `aiida/restapi``. The path of ``config.py`` can be overwritten by the the option ``--config-dir=CONFIG_DIR`` . All the available configuration options of the REST Api are documented therein.
 
 In order to send requests to the REST API you can simply type the url of the request in the address bar of your browser or you can use command line tools such as ``curl`` or ``wget``.
 
@@ -107,7 +109,7 @@ Example::
 How to build the path
 ---------------------
 
-There are two type of paths: those that request the list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: ``users``, ``computers``, ``groups``, ``nodes``, ``codes``, ``calculations``, and ``data``. If no specific endpoint is appended to the name of the resource, the Api will return the full list of objects of that resource (the Api default limit applies nevertheless to the number of results).
+There are two type of paths: those that request the list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: ``users``, ``computers``, ``groups``, ``nodes``, ``codes``, ``calculations``, and ``data``, ``structures``, ``kpoints``, ``bands``. If no specific endpoint is appended to the name of the resource, the Api will return the full list of objects of that resource (the Api default limit applies nevertheless to the number of results).
 Appending the endpoint ``schema`` to a resource will give the list of fields that are normally returned by the Api for an object of a specific resource, whereas the endpoint ``statistics`` returns a list of statistical facts concerning a resource.
 Here are few examples of valid URIs::
 
@@ -116,18 +118,26 @@ Here are few examples of valid URIs::
     http://localhost:5000/api/v2/nodes/statistics
 
 
-If you request informations of a specific object you have to append its pk to the path (note that the pk is also called id). Here is an example::
+If you request informations of a specific object, in general you have to append its entire *uuid* or the starting pattern of its *uuid* to the path.
+ Here are two examples that should return the same object::
 
-    http://localhost:5000/api/v2/nodes/345
+    http://localhost:5000/api/v2/nodes/338357f4-f236-4f9c-8fbe-cd550dc6b858
+    http://localhost:5000/api/v2/nodes/338357f4-f2
+
+In the first URL, we have specified the full *uuid*, whereas in the second only a chunk of its first characters that is sufficiently long to match only one *uuid* in the database.
+Il the *uuid* pattern is not long enough to identify a unique object, the API will raise an exception.
+The only exception to this rule is the resource *users* since the corresponding AiiDA``User`` class has no *uuid* attribute. In this case, you have to specify the *pk* (integer) of the object. Here is an example::
+
+    http://localhost:5000/api/v2/users/2
 
 When you ask for a single object (and only in that case) you can construct more complex requests, namely, you can ask for its inputs/outputs or for its attributes/extras. In the first case you have to append to the path the string ``/io/inputs`` or ``io/outputs`` depending on the desired relation between the nodes, whereas in the second case you have to append ``content/attributes`` or ``content/extras`` depending on the kind of content you want to access. Here are some examples::
 
-    http://localhost:5000/api/v2/calculations/345/io/inputs
-    http://localhost:5000/api/v2/nodes/345/io/inputs
-    http://localhost:5000/api/v2/data/385/content/attributes
-    http://localhost:5000/api/v2/nodes/385/content/extras
+    http://localhost:5000/api/v2/calculations/338357f4-f2/io/inputs
+    http://localhost:5000/api/v2/nodes/338357f4-f2/io/inputs
+    http://localhost:5000/api/v2/data/338357f4-f2/content/attributes
+    http://localhost:5000/api/v2/nodes/338357f4-f2/content/extras
 
-.. note:: As you can see from the last examples, a *Node* object can be accessed requesting either a generic ``nodes`` resource or requesting the resource corresponding to its specific type (``data``, ``codes``, ``calculations``). This is because in AiiDA  the classes *Data*, *Code*, and *Calculation* are derived from the class *Node*.
+.. note:: As you can see from the last examples, a *Node* object can be accessed requesting either a generic ``nodes`` resource or requesting the resource corresponding to its specific type (``data``, ``codes``, ``calculations``, ``kpoints``, ... ). This is because in AiiDA  the classes *Data*, *Code*, and *Calculation* are derived from the class *Node*. In turn, *Data* is the baseclass of a number of built-in and custom classes, e.g. ``KpointsData``, ``StructureData``, ``BandsData``, ...
 
 How to build the query string
 -----------------------------
@@ -159,7 +169,7 @@ There are several special keys that can be specified only once in a query string
 
         ::
 
-            http://localhost:5000/api/v2/codes/1822/content/attributes?
+            http://localhost:5000/api/v2/codes/4fb10ef1-1a/content/attributes?
                                         alist=append_text,prepend_text 
 
 
@@ -195,7 +205,10 @@ All the other fields composing a query string are filters, that is, conditions t
 
     :bool: It can be either true or false (lower case).
 
-The following table reports what is the value type and the supported resources associated to each key. 
+The following table reports what is the value type and the supported resources associated to each key.
+.. note:: In the following *id* is a synonym for *pk* (often used in other sections of the documentation).
+
+.. note:: If a key is present in the resource *data*, it will be also in the derived resources: *kpoints*, *structures*, *bands*
 
 +----------------+----------+----------------------------------------------------------+
 |key             |value type|resources                                                 |
@@ -325,10 +338,10 @@ Examples:
 
         ::
 
-            http://localhost:5000/api/v2/nodes/6/io/outputs/?
+            http://localhost:5000/api/v2/nodes/a67fba41-8a/io/outputs/?
                               type="data.folder.FolderData."
 
-    would first search for the outputs of the node with *pk* =6 and then select only those objects of type *FolderData*.
+    would first search for the outputs of the node with *uuid* starting with "a67fba41-8a" and then select only those objects of type *FolderData*.
 
        
 
@@ -347,9 +360,66 @@ The header is a standard HTTP response header with the additional custom field `
 The JSON object mainly contains the list of the results returned by the API. This list is assigned to the key ``data``. Additionally, the JSON object contains several informations about the request (keys ``method``, ``url``, ``url_root``, ``path``, ``query_string``, ``resource_type``, and ``pk``).
 
 
+.. _restapi_apache:
+
+How to run the REST API through Apache
+++++++++++++++++++++++++++++++++++++++
+By default ``verdi restapi`` hooks up the REST API through the HTTP server (Werkzeug) that is  usually bundled with Python distributions. However, to deploy real web applications the server of choice is in most cases `Apache <https://httpd.apache.org/>`_. in fact, you can instruct Apache to run Python applications by employing the `WSGI <modwsgi.readthedocs.io/>`_ module and the AiiDA REST API is inherently structured so that you can easily realize the pipeline ``AiiDA->WSGI->Apache``.
+Moreover, one single Apache service can support multiple apps so that you can, for instance, hook up multiple APIs using as many different sets of configurations. For example, one might have several apps connecting to different AiiDA profiles. We'll go through an example to explain how to achieve this result.
+
+We assume you have a working installation of Apache that includes ``mod_wsgi``.
+
+The goal of the example is to hookup the APIs ``django`` and ``sqlalchemy`` pointing to two AiiDA profiles, called for simplicity ``django`` and ``sqlalchemy``.
+
+All the relevant files are enclosed under the path ``<aiida.source.code.path>/docs/wsgi/``. In each of the folders ``app1/`` and ``app2/``, there is a file named ``rest.wsgi`` containing a Pytyhon script that instantiates and configures a python web app called ``application``, according to the rules of ``mod_wsgi``. For how the script is written, the object ``application`` is configured through the file ``config.py`` contained in the same folder. Indeed, in ``app1/config.py`` the variable ``aiida-profile`` is set to ``"django"``, whereas in ``app2/config.py`` its value is ``"sqlalchemy"``.
+
+Anyway, the path where you put the ``.wsgi`` file as well as its name are irrelevant as long as they are correctly referred to in the Apache configuration file, as shown later on. Similarly, you can place ``config.py`` in a custom path, provided you change the variable ``config_file_path`` in the ``wsgi file`` accordingly.
+
+In ``rest.wsgi`` probably the only options you might want to change is ``catch_internal_server``. When set to ``True``, it lets the exceptions thrown during the execution of the app propagate all the way through until they reach the logger of Apache. Especially when the app is not entirely stable yet, one would like to read the full python error traceback in the Apache error log.
+
+Finally, you need to setup the Apache site through a proper configuration file. We provide two template files: ``one.conf`` or ``many.conf``. The first file tells Apache to bundle both apps in a unique Apache daemon process. Apache usually creates multiple process dynamically and with this configuration each process will handle both apps.
+
+The script ``many.conf``, instead, defines two different process groups, one for each app. So the processes created dynamically by Apache will always be handling one app each. The minimal number of Apache daemon processes equals the number of apps, contrarily to the first architecture, where one process is enough to handle two or even a larger number of apps.
+
+Let us call the two apps for this example ``django`` and ``sqlalchemy``. In both ``one.conf`` and ``many.conf``, the important directives that should be updated if one changes the paths or names of the apps are:
+
+    - ``WSGIProcessGroup`` to define the process groups for later reference. In ``one.conf`` this directive appears only once to define the generic group ``profiles``, as there is only one kind of process handling both apps. In ``many.conf`` this directive appears once per app and is embedded into a "Location" tag, e.g.::
+
+        <Location /django>
+            WSGIProcessGroup sqlalchemy
+        <Location/>
+
+    - ``WSGIDaemonProcess`` to define the path to the AiiDA virtual environment. This appears once per app in both configurations.
+
+    - ``WSGIScriptAlias`` to define the absolute path of the ``.wsgi`` file of each app.
+
+    - The ``<Directory>`` tag mainly used to grant Apache access to the files used by each app, e.g.::
+
+        <Directory "<aiida.source.code.path>/aiida/restapi/wsgi/app1">
+                Require all granted
+        </Directory>
+
+The latest step is to move either ``one.conf`` or ``many.conf`` into the Apache configuration folder and restart the Apache server. In Ubuntu, this is usually done with the commands:
+
+.. code-block:: bash
+
+    $ cp <conf_file>.conf /etc/apache2/sites-enabled/000-default.conf
+    $ sudo service apache2 restart
+
+We believe the two basic architectures we have just explained can be successfully applied in many different deployment scenarios. Nevertheless, we suggest users who need finer tuning of the deployment setup to look into to the official documentation of `Apache <https://httpd.apache.org/>`_ and, more importantly,  `WSGI <modwsgi.readthedocs.io/>`_.
+
+The URLs of the requests handled by Apache must start with one of the paths specified in the directives ``WSGIScriptAlias``. These paths identify uniquely each app and allow Apache to route the requests to their correct apps. Examples of well-formed URLs are:
+
+.. code-block:: bash
+
+    $ curl http://localhost/django/api/v2/computers -X GET
+    $ curl http://localhost/sqlalchemy/api/v2/computers -X GET
+
+The first (second)request will be handled by the app ``django`` (``sqlalchemy``), namely will serve results fetched from the profile ``django`` (``sqlalchemy``). Notice that we haven't specified any port in the URLs since Apache listens conventionally to port 80, where any request lacking the port is automatically redirected.
 
 Examples
 ++++++++
+
 
 Computers
 ---------
@@ -421,11 +491,11 @@ Computers
 
     REST url::
 
-        http://localhost:5000/api/v2/computers/4
+        http://localhost:5000/api/v2/computers/5d490d77-638d
 
     Description:
 
-        returns the details of the *Computer* object with ``pk=4``.
+        returns the details of the *Computer* object ``uuid="5d490d77-638d..."``.
 
     Response::
 
@@ -446,11 +516,11 @@ Computers
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/computers/4", 
+          "path": "/api/v2/computers/5d490d77-638d",
           "pk": 4, 
           "query_string": "", 
           "resource_type": "computers", 
-          "url": "http://localhost:5000/api/v2/computers/4", 
+          "url": "http://localhost:5000/api/v2/computers/5d490d77-638d",
           "url_root": "http://localhost:5000/"
         }
         
@@ -508,11 +578,11 @@ Nodes
 
     REST url::
 
-        http://localhost:5000/api/v2/nodes/1
+        http://localhost:5000/api/v2/nodes/e30da7cc
 
     Description:
 
-        returns the details of the *Node* object with ``pk=1``.
+        returns the details of the *Node* object with ``uuid="e30da7cc..."``.
 
     Response::
 
@@ -531,11 +601,11 @@ Nodes
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/nodes/1", 
+          "path": "/api/v2/nodes/e30da7cc",
           "pk": 1, 
           "query_string": "", 
           "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes/1", 
+          "url": "http://localhost:5000/api/v2/nodes/e30da7cc",
           "url_root": "http://localhost:5000/"
         }
            
@@ -543,11 +613,11 @@ Nodes
 
     REST url:: 
     
-        http://localhost:5000/api/v2/nodes/6/io/inputs?limit=2
+        http://localhost:5000/api/v2/nodes/de83b1/io/inputs?limit=2
 
     Description:
     
-        returns the list of the first two input nodes (``limit=2``) of the *Node* object with ``pk=6``.
+        returns the list of the first two input nodes (``limit=2``) of the *Node* object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -575,11 +645,11 @@ Nodes
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/nodes/6/io/inputs", 
+          "path": "/api/v2/nodes/de83b1/io/inputs",
           "pk": 6, 
           "query_string": "limit=2", 
           "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes/6/io/inputs?limit=2", 
+          "url": "http://localhost:5000/api/v2/nodes/de83b1/io/inputs?limit=2",
           "url_root": "http://localhost:5000/"
         }
         
@@ -588,12 +658,12 @@ Nodes
 
     REST url:: 
     
-        http://localhost:5000/api/v2/nodes/6/io/inputs?type="data.array.kpoints.KpointsData."
+        http://localhost:5000/api/v2/nodes/de83b1/io/inputs?type="data.array.kpoints.KpointsData."
 
     Description:
     
         returns the list of the `*KpointsData* input nodes of
-        the *Node* object with ``pk=6``.
+        the *Node* object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -612,21 +682,21 @@ Nodes
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/nodes/6/io/inputs", 
+          "path": "/api/v2/nodes/de83b1/io/inputs",
           "pk": 6, 
           "query_string": "type=\"data.array.kpoints.KpointsData.\"", 
           "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes/6/io/inputs?type=\"data.array.kpoints.KpointsData.\"", 
+          "url": "http://localhost:5000/api/v2/nodes/de83b1/io/inputs?type=\"data.array.kpoints.KpointsData.\"",
           "url_root": "http://localhost:5000/"
         }
         
     REST url::
     
-        http://localhost:5000/api/v2/nodes/6/io/outputs?type="data.remote.RemoteData."
+        http://localhost:5000/api/v2/nodes/de83b1/io/outputs?type="data.remote.RemoteData."
     
     Description:
     
-        returns the list of the *RemoteData* output nodes of the *Node* object with ``pk=6``.
+        returns the list of the *RemoteData* output nodes of the *Node* object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -645,11 +715,11 @@ Nodes
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/nodes/6/io/outputs", 
+          "path": "/api/v2/nodes/de83b1/io/outputs",
           "pk": 6, 
           "query_string": "type=\"data.remote.RemoteData.\"", 
           "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes/6/io/outputs?type=\"data.remote.RemoteData.\"", 
+          "url": "http://localhost:5000/api/v2/nodes/de83b1/io/outputs?type=\"data.remote.RemoteData.\"",
           "url_root": "http://localhost:5000/"
         }
             
@@ -659,11 +729,11 @@ Nodes
 
     REST url::
     
-        http://localhost:5000/api/v2/nodes/1822/content/attributes
+        http://localhost:5000/api/v2/nodes/ffe11/content/attributes
 
     Description:
     
-        returns the list of all attributes of the *Node* object with ``pk=1822``.
+        returns the list of all attributes of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -678,11 +748,11 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/nodes/1822/content/attributes", 
+          "path": "/api/v2/nodes/ffe11/content/attributes",
           "pk": 1822, 
           "query_string": "", 
           "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes/1822/content/attributes", 
+          "url": "http://localhost:5000/api/v2/nodes/ffe11/content/attributes",
           "url_root": "http://localhost:5000/"
         }
       
@@ -690,11 +760,11 @@ Nodes
 
     REST url::
 
-        http://localhost:5000/api/v2/nodes/1822/content/extras
+        http://localhost:5000/api/v2/nodes/ffe11/content/extras
 
     Description:
     
-        returns the list of all the extras of the *Node* object with ``pk=1822``.
+        returns the list of all the extras of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -708,11 +778,11 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/codes/1822/content/extras", 
+          "path": "/api/v2/codes/ffe11/content/extras",
           "pk": 1822, 
           "query_string": "", 
           "resource_type": "codes", 
-          "url": "http://localhost:5000/api/v2/codes/1822/content/extras", 
+          "url": "http://localhost:5000/api/v2/codes/ffe11/content/extras",
           "url_root": "http://localhost:5000/"
         }
      
@@ -721,11 +791,11 @@ Nodes
 
     REST url::
     
-         http://localhost:5000/api/v2/codes/1822/content/attributes?alist=append_text,is_local
+         http://localhost:5000/api/v2/codes/ffe11/content/attributes?alist=append_text,is_local
 
     Description:
     
-        returns a list of the attributes ``append_text`` and ``is_local`` of the *Node* object with ``pk=1822``.
+        returns a list of the attributes ``append_text`` and ``is_local`` of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -737,11 +807,11 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/codes/1822/content/attributes", 
+          "path": "/api/v2/codes/ffe11/content/attributes",
           "pk": 1822, 
           "query_string": "alist=append_text,is_local", 
           "resource_type": "codes", 
-          "url": "http://localhost:5000/api/v2/codes/1822/content/attributes?alist=append_text,is_local", 
+          "url": "http://localhost:5000/api/v2/codes/ffe11/content/attributes?alist=append_text,is_local",
           "url_root": "http://localhost:5000/"
         }
         
@@ -749,11 +819,11 @@ Nodes
 
     REST url::
     
-        http://localhost:5000/api/v2/codes/1822/content/extras?elist=trialBool,trialInt
+        http://localhost:5000/api/v2/codes/ffe11/content/extras?elist=trialBool,trialInt
 
     Description:
     
-        returns a list of the extras ``trialBool`` and ``trialInt`` of the *Node* object with ``pk=1822``.
+        returns a list of the extras ``trialBool`` and ``trialInt`` of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -765,11 +835,11 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/codes/1822/content/extras", 
+          "path": "/api/v2/codes/ffe11/content/extras",
           "pk": 1822, 
           "query_string": "elist=trialBool,trialInt", 
           "resource_type": "codes", 
-          "url": "http://localhost:5000/api/v2/codes/1822/content/extras?elist=trialBool,trialInt", 
+          "url": "http://localhost:5000/api/v2/codes/ffe11/content/extras?elist=trialBool,trialInt",
           "url_root": "http://localhost:5000/"
         }
 
@@ -778,11 +848,11 @@ Nodes
 
     REST url::
 
-        http://localhost:5000/api/v2/codes/1822/content/attributes?nalist=append_text,is_local    
+        http://localhost:5000/api/v2/codes/ffe11/content/attributes?nalist=append_text,is_local
 
     Description:
     
-        returns all the attributes of the *Node* object with ``pk=1822`` except ``append_text`` and ``is_local``.
+        returns all the attributes of the *Node* object with ``uuid="ffe11..."`` except ``append_text`` and ``is_local``.
 
     Response::
 
@@ -795,22 +865,22 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/codes/1822/content/attributes", 
+          "path": "/api/v2/codes/ffe11/content/attributes",
           "pk": 1822, 
           "query_string": "nalist=append_text,is_local", 
           "resource_type": "codes", 
-          "url": "http://localhost:5000/api/v2/codes/1822/content/attributes?nalist=append_text,is_local", 
+          "url": "http://localhost:5000/api/v2/codes/ffe11/content/attributes?nalist=append_text,is_local",
           "url_root": "http://localhost:5000/"
         }
 
 
     REST url::
 
-        http://localhost:5000/api/v2/codes/1822/content/extras?nelist=trialBool,trialInt
+        http://localhost:5000/api/v2/codes/ffe11/content/extras?nelist=trialBool,trialInt
 
     Description:
     
-        returns all the extras of the *Node* object with ``pk=1822`` except ``trialBool`` and ``trialInt``.
+        returns all the extras of the *Node* object with ``uuid="ffe11..."`` except ``trialBool`` and ``trialInt``.
 
     Response::
 
@@ -822,11 +892,11 @@ Nodes
             }
           }, 
           "method": "GET", 
-          "path": "/api/v2/codes/1822/content/extras", 
+          "path": "/api/v2/codes/ffe11/content/extras",
           "pk": 1822, 
           "query_string": "nelist=trialBool,trialInt", 
           "resource_type": "codes", 
-          "url": "http://localhost:5000/api/v2/codes/1822/content/extras?nelist=trialBool,trialInt", 
+          "url": "http://localhost:5000/api/v2/codes/ffe11/content/extras?nelist=trialBool,trialInt",
           "url_root": "http://localhost:5000/"
         }
 
@@ -973,11 +1043,11 @@ Groups
 
     REST url::
 
-        http://localhost:5000/api/v2/groups/23
+        http://localhost:5000/api/v2/groups/a6e5b
 
     Description:
     
-        returns the details of the *Group* object with ``pk=23``.
+        returns the details of the *Group* object with ``uuid="a6e5b..."``.
 
     Response::
 
@@ -995,11 +1065,11 @@ Groups
             ]
           }, 
           "method": "GET", 
-          "path": "/api/v2/groups/23", 
+          "path": "/api/v2/groups/a6e5b",
           "pk": 23, 
           "query_string": "", 
           "resource_type": "groups", 
-          "url": "http://localhost:5000/api/v2/groups/23", 
+          "url": "http://localhost:5000/api/v2/groups/a6e5b",
           "url_root": "http://localhost:5000/"
         }
                 

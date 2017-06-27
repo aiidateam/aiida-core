@@ -43,6 +43,7 @@ class TestMigrationsSQLA(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
+        super(TestMigrationsSQLA, cls).setUpClass(*args, **kwargs)
         cls.migr_method_dir_path = os.path.dirname(
             os.path.realpath(utils.__file__))
 
@@ -52,14 +53,15 @@ class TestMigrationsSQLA(AiidaTestCase):
         print "========================================"
 
         # Getting the alembic configuration
-        alembic_cfg = self.get_conf_from_alembic_file()
+        alembic_cfg = self.get_conf_from_alembic_file(
+            self.migr_method_dir_path)
 
         # Set the alembic script directory location
         self.alembic_dpath = os.path.join(self.migr_method_dir_path,
                                      utils.ALEMBIC_REL_PATH)
         alembic_cfg.set_main_option('script_location', self.alembic_dpath)
 
-        # Undo all previous migrations
+        # Undo all previous real migration of the database
         with sa.engine.begin() as connection:
             alembic_cfg.attributes['connection'] = connection
             command.downgrade(alembic_cfg, "base")
@@ -71,9 +73,16 @@ class TestMigrationsSQLA(AiidaTestCase):
             print get_db_schema_version(alembic_cfg)
             print "LLLLLLLLLLLLLLLLL"
 
-    def get_conf_from_alembic_file(self):
+    @staticmethod
+    def get_conf_from_alembic_file(migr_method_dir_path):
+        """
+        Constructs the path to the alembic file and returns a configuration
+        object.
+        :param migr_method_dir_path: The path to the alembic.ini file.
+        :return: The configuration object of the parsed file.
+        """
         # Constructing the alembic full path & getting the configuration
-        alembic_fpath = os.path.join(self.migr_method_dir_path,
+        alembic_fpath = os.path.join(migr_method_dir_path,
                                      utils.ALEMBIC_FILENAME)
         return Config(alembic_fpath)
 
@@ -84,28 +93,25 @@ class TestMigrationsSQLA(AiidaTestCase):
         """
         from aiida.backends.sqlalchemy.utils import get_migration_head
         from aiida.backends.sqlalchemy.utils import check_schema_version
+        from aiida.backends.sqlalchemy.tests.migration_test import versions
 
         try:
             # Getting the alembic configuration
             alembic_cfg = self.get_conf_from_alembic_file()
 
-            # Change the script location to the test script location to
-            # perform the needed tests.
-            # alembic_dpath = os.path.join(os.path.dirname(
-            #     os.path.realpath(__file__)),
-            #     TEST_ALEMBIC_REL_PATH)
-
-            from aiida.backends.sqlalchemy.tests.migration_test import versions
+            # Constructing the versions directory
             versions_dpath = os.path.join(
                 os.path.dirname(versions.__file__))
 
+            # Setting dynamically the the path to the alembic configuration
+            # (this is where the env.py file can be found)
             alembic_cfg.set_main_option('script_location', self.alembic_dpath)
+            # Setting dynamically the versions directory. These are the
+            # migration scripts to pass from one version to the other. The
+            # default ones are overridden with test-specific migrations.
             alembic_cfg.set_main_option('version_locations', versions_dpath)
 
-            print "WWWWWWW", alembic_cfg.get_main_option('version_locations')
-            print "WWWWWWW", alembic_cfg.get_main_option('script_location')
-            # alembic_cfg.set_main_option('script_location', alembic_dpath)
-
+            # Using the connection initialized by the tests
             with sa.engine.begin() as connection:
                 alembic_cfg.attributes['connection'] = connection
 

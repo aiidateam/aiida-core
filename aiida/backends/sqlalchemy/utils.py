@@ -400,7 +400,7 @@ CREATE TRIGGER autoupdate_tc
                             closure_table_child_field=closure_table_child_field)
 
 
-def check_schema_version(force_migration=False):
+def check_schema_version(force_migration=False, alembic_cfg=None):
     """
     Check if the version stored in the database is the same of the version
     of the code.
@@ -421,14 +421,16 @@ def check_schema_version(force_migration=False):
     from aiida.common.utils import query_yes_no
     from aiida.backends import sqlalchemy as sa
 
-    # Constructing the alembic full path & getting the configuration
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    alembic_fpath = os.path.join(dir_path, ALEMBIC_FILENAME)
-    alembic_cfg = Config(alembic_fpath)
+    # If an alembic configuration file is given then use that one.
+    if alembic_cfg is None:
+        # Constructing the alembic full path & getting the configuration
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        alembic_fpath = os.path.join(dir_path, ALEMBIC_FILENAME)
+        alembic_cfg = Config(alembic_fpath)
 
-    # Set the alembic script directory location
-    alembic_dpath = os.path.join(dir_path, ALEMBIC_REL_PATH)
-    alembic_cfg.set_main_option('script_location', alembic_dpath)
+        # Set the alembic script directory location
+        alembic_dpath = os.path.join(dir_path, ALEMBIC_REL_PATH)
+        alembic_cfg.set_main_option('script_location', alembic_dpath)
 
     # Getting the version of the code and the database
     # Reusing the existing engine (initialized by AiiDA)

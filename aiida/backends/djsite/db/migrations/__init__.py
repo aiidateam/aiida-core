@@ -13,7 +13,7 @@ LATEST_MIGRATION = '0004_add_daemon_and_uuid_indices'
 
 
 def _update_schema_version(version, apps, schema_editor):
-    from aiida.backends.utils import set_db_schema_version
+    from aiida.backends.djsite.utils import set_db_schema_version
     set_db_schema_version(version)
 
 

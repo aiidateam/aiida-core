@@ -81,64 +81,6 @@ class Graph(VerdiCommandWithSubcommands):
         # TODO this command deserves to be improved, with options and further subcommands
 
 
-        def kpoints_desc(node):
-            """
-            Returns a string with infos retrieved from  kpoints node's properties.
-            :param node:
-            :return: retstr
-            """
-            try:
-                mesh = node.get_kpoints_mesh()
-                return "{}x{}x{} (+{:.1f},{:.1f},{:.1f})".format(
-                    mesh[0][0], mesh[0][1], mesh[0][2],
-                    mesh[1][0], mesh[1][1], mesh[1][2])
-            except AttributeError:
-                return '({} kpts)'.format(len(node.get_kpoints()))
-
-        def pw_desc(node):
-            """
-            Returns a string with infos retrieved from  PwCalculation node's properties.
-            :param node:
-            :return: retsrt:
-            """
-            ############I won't use this until node.inp. methods won't be working correctly
-            # return '{}'.format(node.inp.parameters.dict.CONTROL['calculation'])
-            ###########
-
-            ###############3I rather use this black magic
-            return '{}'.format(dict(node.get_inputs(also_labels=True))['parameters'].dict.CONTROL['calculation'])
-
-        def get_additional_string(node):
-            """
-            Returns a string with infos retrieved from  PwCalculation node's properties.
-            The actual returned string depends on the node class
-            :param node:
-            :return: retstr
-            """
-            class_name = node.__class__.__name__
-
-            func_mapping = {
-                "StructureData": lambda x: x.get_formula(mode='hill_compact'),
-                "InlineCalculation": lambda x: "{}()".format(x.get_function_name()),
-                "KpointsData": kpoints_desc,
-                "PwCalculation": pw_desc,
-            }
-
-            func = func_mapping.get(class_name, None)
-            if func is None:
-                retstr = ""
-
-            else:
-                retstr = "{}".format(func(node))
-
-            if isinstance(node, JobCalculation):
-                retstr = " ".join([retstr, node.get_state(from_attribute=True)])
-
-            if retstr:
-                return "\n{}".format(retstr)
-            else:
-                return ""
-
         def draw_node_settings(node, **kwargs):
             """
             Returns a string with all infos needed in a .dot file  to define a node of a graph.
@@ -157,10 +99,11 @@ class Graph(VerdiCommandWithSubcommands):
                     ",".join('{}="{}"'.format(k, v) for k, v in kwargs.iteritems()))
             else:
                 additional_params = ""
-            additional_string = get_additional_string(node)
             if node.label:
                 label_string = "\n'{}'".format(node.label)
+                additional_string = ""
             else:
+                additional_string = "\n {}".format(node.get_desc())
                 label_string = ""
             labelstring = 'label="{} ({}){}{}"'.format(
                 node.__class__.__name__, node.pk, label_string,

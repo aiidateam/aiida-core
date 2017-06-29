@@ -48,14 +48,7 @@ class User(VerdiCommandWithSubcommands):
         return "\n".join(emails)
 
 
-@user.command(context_settings=CONTEXT_SETTINGS)
-@click.argument('email', type=str)
-@click.option('--first-name', prompt='First Name', type=str)
-@click.option('--last-name', prompt='Last Name', type=str)
-@click.option('--institution', prompt='Institution', type=str)
-@click.option('--no-password', is_flag=True)
-@click.pass_obj
-def configure(email, first_name, last_name, institution, no_password):
+def do_configure(email, first_name, last_name, institution, no_password):
     from aiida.backends.utils import is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()
@@ -168,6 +161,16 @@ def configure(email, first_name, last_name, institution, no_password):
             print "** NOTE: no password set for this user, "
             print "         so he/she will not be able to login"
             print "         via the REST API and the Web Interface."
+
+
+@user.command(context_settings=CONTEXT_SETTINGS)
+@click.option('--first-name', prompt='First Name', type=str)
+@click.option('--last-name', prompt='Last Name', type=str)
+@click.option('--institution', prompt='Institution', type=str)
+@click.option('--no-password', is_flag=True)
+@click.argument('email', type=str)
+def configure(first_name, last_name, institution, no_password, email):
+    do_configure(email, first_name, last_name, institution, no_password)
 
 
 @user.command()

@@ -14,26 +14,31 @@ import uuid
 from enum import Enum
 import itertools
 
-import plum.port as port
-import plum.process
+import plum.port
+from plum.process import load
 from plum.process_monitor import MONITOR
 import plum.process_monitor
 
+import aiida.orm
+from aiida.orm.data import Data
+from aiida.orm import load_node
+from aiida.orm.implementation.general.calculation.work import WorkCalculation
 import voluptuous
 from abc import ABCMeta
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
+from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
-from aiida.work.defaults import class_loader
+from aiida.work.globals import class_loader
 import aiida.work.util
 from aiida.work.util import PROCESS_LABEL_ATTR, get_or_create_output_group
+from aiida.work.globals import class_loader
+from aiida.work.util import ProcessStack, PROCESS_LABEL_ATTR
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
-from aiida.orm.calculation.work import WorkCalculation
 from aiida import LOG_LEVEL_REPORT
-
 
 
 class DictSchema(object):
@@ -78,16 +83,41 @@ class DictSchema(object):
         return template
 
 
+class _WithNonDb(object):
+    """
+    A mixin that adds support to a port to flag a that should not be stored
+    in the database using the non_db=True flag.
+
+    The mixins have to go before the main port class in the superclass order
+    to make sure the mixin has the chance to strip out the non_db keyword.
+    """
+
+    def __init__(self, *args, **kwargs):
+        non_db = kwargs.pop('non_db', False)
+        super(_WithNonDb, self).__init__(*args, **kwargs)
+        self._non_db = non_db
+
+    @property
+    def non_db(self):
+        return self._non_db
+
+
+class InputPort(_WithNonDb, plum.port.InputPort):
+    pass
+
+
+class DynamicInputPort(_WithNonDb, plum.port.DynamicInputPort):
+    pass
+
+
+class InputGroupPort(_WithNonDb, plum.port.InputGroupPort):
+    pass
+
+
 class ProcessSpec(plum.process.ProcessSpec):
-    def __init__(self):
-        super(ProcessSpec, self).__init__()
-        self._fastforwardable = False
-
-    def is_fastforwardable(self):
-        return self._fastforwardable
-
-    def fastforwardable(self):
-        self._fastforwardable = True
+    INPUT_PORT_TYPE = InputPort
+    DYNAMIC_INPUT_PORT_TYPE = DynamicInputPort
+    INPUT_GROUP_PORT_TYPE = InputGroupPort
 
     def get_inputs_template(self):
         """
@@ -128,17 +158,18 @@ class Process(plum.process.Process):
         Keys used to identify things in the saved instance state bundle.
         """
         CALC_ID = 'calc_id'
-        PARENT_CALC_PID = 'parent_calc_pid'
+        PARENT_PID = 'parent_calc_pid'
 
     @classmethod
     def define(cls, spec):
-        import aiida.orm
         super(Process, cls).define(spec)
 
         spec.input("_store_provenance", valid_type=bool, default=True,
-                   required=False)
-        spec.input("_description", valid_type=basestring, required=False)
-        spec.input("_label", valid_type=basestring, required=False)
+                   non_db=True)
+        spec.input("_description", valid_type=basestring, required=False,
+                   non_db=True)
+        spec.input("_label", valid_type=basestring, required=False,
+                   non_db=True)
 
         spec.dynamic_input(valid_type=(aiida.orm.Data, aiida.orm.Calculation))
         spec.dynamic_output(valid_type=aiida.orm.Data)
@@ -148,16 +179,12 @@ class Process(plum.process.Process):
         return cls.spec().get_inputs_template()
 
     @classmethod
-    def _create_default_exec_engine(cls):
-        from aiida.work.defaults import serial_engine
-        return serial_engine
-
-    @classmethod
-    def create_db_record(cls):
+    def get_or_create_db_record(cls):
         """
         Create a database calculation node that represents what happened in
         this process.
-        :return:
+        :return: A calculation
+        :rtype: :class:`Calculation`
         """
         from aiida.orm.calculation.work import WorkCalculation
         calc = WorkCalculation()
@@ -165,24 +192,45 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self):
-        super(Process, self).__init__()
+    @classmethod
+    def load_copy(cls, bundle):
+        bundle['COPY'] = True
+        return cls.load(bundle)
+
+    @classmethod
+    def retry(cls, bundle):
+        bundle['COPY'] = True
+        return cls.restart(bundle)
+
+    def __init__(self, inputs=None, pid=None, logger=None):
+        super(Process, self).__init__(inputs, pid, logger)
+
         self._calc = None
-        self._parent_pid = None
+        # Get the parent from the top of the process stack
+        try:
+            self._parent_pid = ProcessStack.top().pid
+        except IndexError:
+            self._parent_pid = None
+
+        self._pid = self._create_and_setup_db_record()
+
+        if logger is None:
+            self.set_logger(self._calc.logger)
 
     @property
     def calc(self):
         return self._calc
 
     @override
-    def save_instance_state(self, bundle):
-        super(Process, self).save_instance_state(bundle)
+    def save_instance_state(self, out_state):
+        super(Process, self).save_instance_state(out_state)
 
         if self.inputs._store_provenance:
             assert self.calc.is_stored
 
-        bundle[self.SaveKeys.CALC_ID.value] = self.pid
-        bundle.set_class_loader(class_loader)
+        out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
+        out_state[self.SaveKeys.CALC_ID.value] = self.pid
+        out_state.set_class_loader(class_loader)
 
     def run_after_queueing(self, wait_on):
         return self._run
@@ -201,51 +249,66 @@ class Process(plum.process.Process):
         else:
             return super(Process, self).out(output_port, value)
 
-    # Messages #####################################################
+    # region Process messages
     @override
-    def on_create(self, pid, inputs, saved_instance_state):
-        from aiida.orm import load_node
-        super(Process, self).on_create(pid, inputs, saved_instance_state)
+    def load_instance_state(self, saved_state, logger=None):
+        super(Process, self).load_instance_state(saved_state)
 
-        if saved_instance_state is None:
-            # Get the parent from the top of the process stack
-            try:
-                self._parent_pid = aiida.work.util.ProcessStack.top().pid
-            except IndexError:
-                pass
+        is_copy = saved_state.get('COPY', False)
 
-            self._pid = self._create_and_setup_db_record()
-        else:
-            if self.SaveKeys.CALC_ID.value in saved_instance_state:
-                self._calc = load_node(saved_instance_state[self.SaveKeys.CALC_ID.value])
-                self._pid = self.calc.pk
+        if self.SaveKeys.CALC_ID.value in saved_state:
+            if is_copy:
+                old = load_node(saved_state[self.SaveKeys.CALC_ID.value])
+                self._calc = old.copy()
+                self._calc.store()
             else:
-                self._pid = self._create_and_setup_db_record()
+                self._calc = load_node(saved_state[self.SaveKeys.CALC_ID.value])
 
-            if self.SaveKeys.PARENT_CALC_PID.value in saved_instance_state:
-                self._parent_pid = saved_instance_state[
-                    self.SaveKeys.PARENT_CALC_PID.value]
+            self._pid = self.calc.pk
+        else:
+            self._pid = self._create_and_setup_db_record()
 
-        if self._logger is None:
-            self.set_logger(self.calc.logger)
+        if logger is None:
+            self.set_logger(self._calc.logger)
+
+        if self.SaveKeys.PARENT_PID.value in saved_state:
+            self._parent_pid = saved_state[self.SaveKeys.PARENT_PID.value]
 
     @override
-    def on_start(self):
-        super(Process, self).on_start()
-        aiida.work.util.ProcessStack.push(self)
+    def on_playing(self):
+        super(Process, self).on_playing()
+        ProcessStack.push(self)
+
+    @override
+    def on_done_playing(self):
+        super(Process, self).on_done_playing()
+        ProcessStack.pop(self)
 
     @override
     def on_finish(self):
-        """
-        Called when a Process enters the FINISHED state at which point
-        we set the corresponding attribute of the workcalculation node
-        """
         super(Process, self).on_finish()
         self.calc._set_attr(WorkCalculation.FINISHED_KEY, True)
+
+    @override
+    def on_stop(self):
+        super(Process, self).on_stop()
         self.calc.seal()
 
     @override
-    def _on_output_emitted(self, output_port, value, dynamic):
+    def on_fail(self):
+        import traceback
+        super(Process, self).on_fail()
+
+        exc_info = self.get_exc_info()
+        exc = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
+        self.logger.error("{} failed:\n{}".format(
+            self.pid, "".join(exc)))
+
+        self.calc._set_attr(WorkCalculation.FAILED_KEY, self.get_exception().message)
+        self.calc.seal()
+
+    @override
+    def on_output_emitted(self, output_port, value, dynamic):
         """
         The process has emitted a value on the given output port.
 
@@ -254,33 +317,47 @@ class Process(plum.process.Process):
         :param dynamic: Was the output port a dynamic one (i.e. not known
         beforehand?)
         """
-        from aiida.orm import Data
-        super(Process, self)._on_output_emitted(output_port, value, dynamic)
-        assert isinstance(value, Data), \
-            "Values outputted from process must be instances of AiiDA Data" \
-            "types.  Got: {}".format(value.__class__)
+        super(Process, self).on_output_emitted(output_port, value, dynamic)
+        if not isinstance(value, Data):
+            raise TypeError(
+                "Values outputted from process must be instances of AiiDA Data " \
+                "types.  Got: {}".format(value.__class__)
+            )
 
-        if not value.is_stored:
+        # Try making us the creator
+        try:
             value.add_link_from(self.calc, output_port, LinkType.CREATE)
-            if self.inputs._store_provenance:
-                value.store()
+        except ValueError:
+            # Must have already been created...nae dramas
+            pass
+
+        value.store()
         value.add_link_from(self.calc, output_port, LinkType.RETURN)
-    #################################################################
+
+    # end region
 
     @override
     def do_run(self):
-        # Exclude all private inputs
-        ins = {k: v for k, v in self.inputs.iteritems() if not k.startswith('_')}
+        # Only keep calculation inputs
+        ins = {}
+        for name, value in self.inputs.iteritems():
+            try:
+                port = self.spec().get_input(name)
+            except ValueError:
+                ins[name] = value
+            else:
+                if not port.non_db:
+                    ins[name] = value
+
         return self._run(**ins)
 
     @protected
     def get_parent_calc(self):
-        from aiida.orm import load_node
         # Can't get it if we don't know our parent
         if self._parent_pid is None:
             return None
 
-        # First try and get the process from the registry in case it is running
+        # First try and get the process from the monitor in case it is running
         try:
             return MONITOR.get_process(self._parent_pid).calc
         except ValueError:
@@ -305,20 +382,15 @@ class Process(plum.process.Process):
         message = '[{}|{}|{}]: {}'.format(self.calc.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
 
-    # @override
-    # def create_input_args(self, inputs):
-    #     parsed = super(Process, self).create_input_args(inputs)
-    #     # Now remove any that have a leading underscore
-    #     for name in parsed.keys():
-    #         if name.startswith('_'):
-    #             del parsed[name]
-    #     return parsed
-
     def _create_and_setup_db_record(self):
-        self._calc = self.create_db_record()
+        self._calc = self.get_or_create_db_record()
         self._setup_db_record()
         if self.inputs._store_provenance:
-            self.calc.store_all()
+            try:
+                self.calc.store_all()
+            except ModificationNotAllowed as exception:
+                # The calculation was already stored
+                pass
 
         if self.calc.pk is not None:
             return self.calc.pk
@@ -339,21 +411,23 @@ class Process(plum.process.Process):
         # deal with things like input groups
         to_link = {}
         for name, input in self.inputs.iteritems():
-            # Ignore all inputs starting with a leading underscore
-            if name.startswith('_'):
-                continue
+            try:
+                port = self.spec().get_input(name)
+            except ValueError:
+                # It's not in the spec, so we better support dynamic inputs
+                assert self.spec().has_dynamic_input()
+                to_link[name] = input
+            else:
+                # Ignore any inputs that should not be saved
+                if port.non_db:
+                    continue
 
-            if self.spec().has_input(name):
-                if isinstance(self.spec().get_input(name), port.InputGroupPort):
+                if isinstance(port, plum.port.InputGroupPort):
                     to_link.update(
                         {"{}_{}".format(name, k): v for k, v in
                          input.iteritems()})
                 else:
                     to_link[name] = input
-            else:
-                # It's not in the spec, so we better support dynamic inputs
-                assert self.spec().has_dynamic_input()
-                to_link[name] = input
 
         for name, input in to_link.iteritems():
 
@@ -380,14 +454,6 @@ class Process(plum.process.Process):
             if '_label' in self.raw_inputs:
                 self.calc.label = self.raw_inputs._label
 
-    def _can_fast_forward(self, inputs):
-        return False
-
-    def _fast_forward(self):
-        node = None  # Here we should find the old node
-        for k, v in node.get_output_dict():
-            self.out(k, v)
-
 
 class FunctionProcess(Process):
     _func_args = None
@@ -411,7 +477,7 @@ class FunctionProcess(Process):
         :param kwargs: Optional keyword arguments that will become additional
             inputs to the process
         :return: A Process class that represents the function
-        :rtype: :class:`Process`
+        :rtype: :class:`FunctionProcess`
         """
         import inspect
         from aiida.orm.data import Data
@@ -448,6 +514,15 @@ class FunctionProcess(Process):
                      '_func_args': args})
 
     @classmethod
+    def create_inputs(cls, *args, **kwargs):
+        ins = {}
+        if kwargs:
+            ins.update(kwargs)
+        if args:
+            ins.update(cls.args_to_dict(*args))
+        return ins
+
+    @classmethod
     def args_to_dict(cls, *args):
         """
         Create an input dictionary (i.e. label: value) from supplied args.
@@ -459,8 +534,8 @@ class FunctionProcess(Process):
         return dict(zip(cls._func_args, args))
 
     @override
-    def _setup_db_record(self):
-        super(FunctionProcess, self)._setup_db_record()
+    def setup_db_record(self):
+        super(FunctionProcess, self).setup_db_record()
         add_source_info(self.calc, self._func)
         # Save the name of the function
         self.calc._set_attr(PROCESS_LABEL_ATTR, self._func.__name__)
@@ -483,32 +558,4 @@ class FunctionProcess(Process):
                 raise TypeError(
                     "Workfunction returned unsupported type '{}'\n"
                     "Must be a Data type or a Mapping of string => Data".
-                    format(outs.__class__))
-
-
-class _ProcessFinaliser(plum.process_monitor.ProcessMonitorListener):
-    """
-    Take care of finalising a process when it finishes either through successful
-    completion or because of a failure caused by an exception.
-    """
-    def __init__(self):
-        MONITOR.add_monitor_listener(self)
-
-    @override
-    def on_monitored_process_destroying(self, process):
-        aiida.work.util.ProcessStack.pop(process)
-
-    @override
-    def on_monitored_process_failed(self, pid):
-        from aiida.orm import load_node
-        try:
-            calc_node = load_node(pk=pid)
-        except ValueError:
-            pass
-        else:
-            calc_node.seal()
-        aiida.work.util.ProcessStack.pop(pid=pid)
-
-
-# Have a global singleton to take care of finalising all processes
-_finaliser = _ProcessFinaliser()
+                        format(outs.__class__))

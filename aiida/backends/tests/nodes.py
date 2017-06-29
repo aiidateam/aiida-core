@@ -20,7 +20,6 @@ from aiida.orm.node import Node
 from aiida.orm.utils import load_node
 
 
-
 class TestDataNode(AiidaTestCase):
     """
     These tests check the features of Data nodes that differ from the base Node
@@ -1108,7 +1107,6 @@ class TestNodeBasic(AiidaTestCase):
                           [(self.user_email, 'text'),
                            (self.user_email, 'text2'), ])
 
-
     def test_code_loading_from_string(self):
         """
         Checks that the method Code.get_from_string works correctly.
@@ -1560,7 +1558,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(Exception):
             # I should get an error if I ask for a computer id/pk that doesn't
             # exist
-            _ = JobCalculation(computer=self.computer.id+100000,
+            _ = JobCalculation(computer=self.computer.id + 100000,
                                resources={'num_machines': 2,
                                           'num_mpiprocs_per_machine': 1}).store()
 
@@ -1689,6 +1687,20 @@ class TestSubNodesAndLinks(AiidaTestCase):
                                                         ]))
         n2_out_links = [(l, n.pk) for l, n in n2.get_outputs(also_labels=True)]
         self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
+
+    @unittest.skip("This test should be enabled when link type constraints are properly implemented")
+    def test_multiple_create_links(self):
+        """
+        Cannot have two CREATE links for the same node.
+        """
+        n1 = Node()
+        n2 = Node()
+        n3 = Node()
+
+        # Caching the links
+        n3.add_link_from(n1, label='CREATE', link_type=LinkType.CREATE)
+        with self.assertRaises(UniquenessError):
+            n3.add_link_from(n2, label='CREATE', link_type=LinkType.CREATE)
 
     def test_valid_links(self):
         import tempfile

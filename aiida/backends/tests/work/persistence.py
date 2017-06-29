@@ -31,7 +31,7 @@ class TestProcess(AiidaTestCase):
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_save_load(self):
-        dp = DummyProcess.new_instance()
+        dp = DummyProcess.new()
 
         # Create a bundle
         b = self.persistence.create_bundle(dp)
@@ -41,4 +41,4 @@ class TestProcess(AiidaTestCase):
         # Now check that they are equal
         self.assertEqual(b, b2)
 
-        dp.run_until_complete()
+        dp.play()

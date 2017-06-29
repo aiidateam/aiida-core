@@ -122,7 +122,6 @@ def get_log_messages(*args, **kwargs):
 
 
 def get_authinfo(computer, aiidauser):
-
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
         from django.core.exceptions import (ObjectDoesNotExist,
@@ -319,9 +318,8 @@ def _get_column(colname, alias):
             "\n{} is not a column of {}\n"
             "Valid columns are:\n"
             "{}".format(
-                    colname, alias,
-                    '\n'.join(alias._sa_class_manager.mapper.c.keys())
-                )
+                colname, alias,
+                '\n'.join(alias._sa_class_manager.mapper.c.keys())
+            )
         )
-
 

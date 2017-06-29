@@ -304,8 +304,8 @@ class Scheduler(object):
         # TODO: Parsing?
 
         command = self._get_detailed_jobinfo_command(jobid=jobid)
-        retval, stdout, stderr = self.transport.exec_command_wait(
-            command)
+        with self.transport:
+            retval, stdout, stderr = self.transport.exec_command_wait(command)
 
         return u"""Detailed jobinfo obtained with command '{}'
 Return Code: {}
@@ -344,8 +344,9 @@ stderr:
         Note: typically, only either jobs or user can be specified. See also
         comments in _get_joblist_command.
         """
-        retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_joblist_command(jobs=jobs, user=user))
+        with self.transport:
+            retval, stdout, stderr = self.transport.exec_command_wait(
+                self._get_joblist_command(jobs=jobs, user=user))
 
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:

@@ -8,62 +8,102 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from plum.wait import WaitOn, validate_callback_func
-from aiida.orm.utils import load_node, load_workflow
+from plum.wait import WaitOnOneOff
+from aiida.orm.utils import load_workflow
+from aiida.common.datastructures import wf_states
 from aiida.common.lang import override
-from aiida.work.defaults import class_loader
+from aiida.work.globals import get_event_emitter, class_loader, REGISTRY
 
 
-
-class WaitOnJobCalculation(WaitOn):
+class WaitOnProcessTerminated(WaitOnOneOff):
     PK = "pk"
 
-    @classmethod
-    def create_from(cls, bundle):
-        return WaitOnJobCalculation(
-            bundle[cls.BundleKeys.CALLBACK_NAME.value], bundle[cls.PK])
-
-    def __init__(self, callback_name, pk):
-        super(WaitOnJobCalculation, self).__init__(callback_name)
+    @override
+    def __init__(self, pk):
+        super(WaitOnProcessTerminated, self).__init__()
         self._pk = pk
 
     @override
-    def is_ready(self, registry=None):
-        return not load_node(pk=self._pk)._is_running()
+    def load_instance_state(self, saved_state):
+        super(WaitOnProcessTerminated, self).load_instance_state(saved_state)
+        self._pk = saved_state[self.PK]
 
     @override
     def save_instance_state(self, out_state):
-        super(WaitOnJobCalculation, self).save_instance_state(out_state)
+        super(WaitOnProcessTerminated, self).save_instance_state(out_state)
         out_state[self.PK] = self._pk
         out_state.set_class_loader(class_loader)
 
+    @override
+    def wait(self, timeout=None):
+        if self.has_occurred():
+            return True
 
-def wait_on_job_calculation(callback, pk):
-    validate_callback_func(callback)
-    return WaitOnJobCalculation(callback.__name__, pk)
+        emitter = get_event_emitter()
+        try:
+            # Need to start listening first so we don't do the following:
+            # 1. REGISTRY.has_finished(..) returns False
+            # <- Calculation terminates
+            # 2. Start listening
+            # 3. Wait forever because the calculation has finished already
+
+            # Start listening to all the states we care about
+            for proc_type in ['calc', 'process']:
+                for state in ['stopped', 'failed']:
+                    evt = "{}.{}.{}".format(proc_type, self._pk, state)
+                    emitter.start_listening(self._calc_terminated, evt)
+
+            if REGISTRY.has_finished(self._pk):
+                self.set()
+
+            return super(WaitOnProcessTerminated, self).wait(timeout=timeout)
+        finally:
+            emitter.stop_listening(self._calc_terminated)
+
+    def _calc_terminated(self, emitter, event, body):
+        self.set()
 
 
-class WaitOnWorkflow(WaitOn):
+class WaitOnWorkflow(WaitOnOneOff):
     PK = "pk"
 
-    def __init__(self, callback, pk):
-        super(WaitOnWorkflow, self).__init__(callback)
+    def __init__(self, pk):
+        super(WaitOnWorkflow, self).__init__()
         self._pk = pk
 
     @override
-    def is_ready(self):
-        wf = load_workflow(self._pk)
-        if wf.has_finished_ok() or wf.has_failed():
+    def wait(self, timeout=None):
+        if self.has_occurred():
             return True
-        else:
-            return False
+
+        # Need to start listening first so we DON'T do the following:
+        # 1. REGISTRY.has_finished(..) returns False
+        # <- Calculation terminates
+        # 2. Start listening
+        # 3. Wait forever because the calculation has finished already
+
+        emitter = get_event_emitter()
+        try:
+            emitter.start_listening(
+                self._workflow_finished_handler, "legacy_workflow.{}".format(self._pk))
+
+            wf = load_workflow(pk=self._pk)
+            if wf.get_state() in [wf_states.FINISHED, wf_states.ERROR]:
+                self.set()
+
+            return super(WaitOnWorkflow, self).wait(timeout=timeout)
+        finally:
+            emitter.stop_listening(self._workflow_finished_handler)
+
+    def _workflow_finished_handler(self, emitter, event, body):
+        self.set()
 
     @override
     def save_instance_state(self, out_state):
         super(WaitOnWorkflow, self).save_instance_state(out_state)
         out_state[self.PK] = self._pk
+        out_state.set_class_loader(class_loader)
 
-
-def wait_on_workflow(callback, pk):
-    validate_callback_func(callback)
-    return WaitOnWorkflow(callback.__name__, pk)
+    @override
+    def load_instance_state(self, saved_state):
+        self._pk = saved_state[self.PK]

@@ -28,6 +28,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError,
                                      ValidationError)
 from aiida.common.links import LinkType
+from aiida.common.lang import override
 
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
@@ -149,6 +150,12 @@ class Node(AbstractNode):
         except DatabaseError as de:
             raise ValueError(de.message)
 
+    def __int__(self):
+        if self._to_be_store:
+            return None
+        else:
+            return self._dbnode.id
+
     @classmethod
     def query(cls, *args, **kwargs):
         raise NotImplementedError("The node query method is not supported in "
@@ -159,7 +166,7 @@ class Node(AbstractNode):
         session = get_scoped_session()
 
         self.dbnode.label = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             session.add(self._dbnode)
             self._increment_version_number_db()
 
@@ -168,7 +175,7 @@ class Node(AbstractNode):
         session = get_scoped_session()
 
         self.dbnode.description = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             session.add(self._dbnode)
             self._increment_version_number_db()
 
@@ -202,7 +209,7 @@ class Node(AbstractNode):
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot call the internal _add_dblink_from if the "
                 "destination node is not stored")
@@ -380,7 +387,7 @@ class Node(AbstractNode):
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
@@ -502,6 +509,10 @@ class Node(AbstractNode):
         return newobject
 
     @property
+    def pk(self):
+        return self.dbnode.id
+
+    @property
     def id(self):
         return self.dbnode.id
 
@@ -519,14 +530,14 @@ class Node(AbstractNode):
           a transaction open!
         """
 
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ModificationNotAllowed(
                 "Node with pk= {} was already stored".format(self.id))
 
         # For each parent, check that all its inputs are stored
-        for link in self._inputlinks_cache:
+        for link in self._inputlinks_cache.itervalues():
             try:
-                parent_node = self._inputlinks_cache[link][0]
+                parent_node = link.src
                 parent_node._check_are_parents_stored()
             except ModificationNotAllowed:
                 raise ModificationNotAllowed("Parent node (UUID={}) has "
@@ -571,19 +582,15 @@ class Node(AbstractNode):
           a transaction open!
         """
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "Node with pk= {} is not stored yet".format(self.id))
 
         # This raises if there is an unstored node.
         self._check_are_parents_stored()
-        # I have to store only those links where the source is already
-        # stored
-        links_to_store = list(self._inputlinks_cache.keys())
 
-        for label in links_to_store:
-            src, link_type = self._inputlinks_cache[label]
-            self._add_dblink_from(src, label, link_type)
+        for link in self._inputlinks_cache.itervalues():
+            self._add_dblink_from(link.src, link.label, link.link_type)
         # If everything went smoothly, clear the entries from the cache.
         # I do it here because I delete them all at once if no error
         # occurred; otherwise, links will not be stored and I
@@ -623,39 +630,40 @@ class Node(AbstractNode):
 
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
-        if self._to_be_stored:
-            self._validate()
+        with self._state_lock:
+            if not self.is_stored:
+                self._validate()
 
-            self._check_are_parents_stored()
+                self._check_are_parents_stored()
 
-            # I save the corresponding django entry
-            # I set the folder
-            # NOTE: I first store the files, then only if this is successful,
-            # I store the DB entry. In this way,
-            # I assume that if a node exists in the DB, its folder is in place.
-            # On the other hand, periodically the user might need to run some
-            # bookkeeping utility to check for lone folders.
-            self._repository_folder.replace_with_folder(
-                self._get_temp_folder().abspath, move=True, overwrite=True)
+                # I save the corresponding django entry
+                # I set the folder
+                # NOTE: I first store the files, then only if this is successful,
+                # I store the DB entry. In this way,
+                # I assume that if a node exists in the DB, its folder is in place.
+                # On the other hand, periodically the user might need to run some
+                # bookkeeping utility to check for lone folders.
+                self._repository_folder.replace_with_folder(
+                    self._get_temp_folder().abspath, move=True, overwrite=True)
 
-        #    import aiida.backends.sqlalchemy
-            try:
-                # aiida.backends.sqlalchemy.get_scoped_session().add(self._dbnode)
-                session.add(self._dbnode)
-                # Save its attributes 'manually' without incrementing
-                # the version for each add.
-                self.dbnode.attributes = self._attrs_cache
-                flag_modified(self.dbnode, "attributes")
-                # This should not be used anymore: I delete it to
-                # possibly free memory
-                del self._attrs_cache
+            #    import aiida.backends.sqlalchemy
+                try:
+                    # aiida.backends.sqlalchemy.get_scoped_session().add(self._dbnode)
+                    session.add(self._dbnode)
+                    # Save its attributes 'manually' without incrementing
+                    # the version for each add.
+                    self.dbnode.attributes = self._attrs_cache
+                    flag_modified(self.dbnode, "attributes")
+                    # This should not be used anymore: I delete it to
+                    # possibly free memory
+                    del self._attrs_cache
 
-                self._temp_folder = None
-                self._to_be_stored = False
+                    self._temp_folder = None
+                    self._to_be_stored = False
 
-                # Here, I store those links that were in the cache and
-                # that are between stored nodes.
-                self._store_cached_input_links(with_transaction=False)
+                    # Here, I store those links that were in the cache and
+                    # that are between stored nodes.
+                    self._store_cached_input_links(with_transaction=False)
 
                 if with_transaction:
                     try:
@@ -667,28 +675,28 @@ class Node(AbstractNode):
                         session.rollback()
                         raise
 
-            # This is one of the few cases where it is ok to do a 'global'
-            # except, also because I am re-raising the exception
-            except:
-                # I put back the files in the sandbox folder since the
-                # transaction did not succeed
-                self._get_temp_folder().replace_with_folder(
-                    self._repository_folder.abspath, move=True, overwrite=True)
-                raise
+                # This is one of the few cases where it is ok to do a 'global'
+                # except, also because I am re-raising the exception
+                except:
+                    # I put back the files in the sandbox folder since the
+                    # transaction did not succeed
+                    self._get_temp_folder().replace_with_folder(
+                        self._repository_folder.abspath, move=True, overwrite=True)
+                    raise
 
-            # Set up autogrouping used be verdi run
-            autogroup = aiida.orm.autogroup.current_autogroup
-            grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
+                # Set up autogrouping used be verdi run
+                autogroup = aiida.orm.autogroup.current_autogroup
+                grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
 
-            if autogroup is not None:
-                if not isinstance(autogroup, aiida.orm.autogroup.Autogroup):
-                    raise ValidationError("current_autogroup is not an AiiDA Autogroup")
+                if autogroup is not None:
+                    if not isinstance(autogroup, aiida.orm.autogroup.Autogroup):
+                        raise ValidationError("current_autogroup is not an AiiDA Autogroup")
 
-                if autogroup.is_to_be_grouped(self):
-                    group_name = autogroup.get_group_name()
-                    if group_name is not None:
-                        g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
-                        g.add_nodes(self)
+                    if autogroup.is_to_be_grouped(self):
+                        group_name = autogroup.get_group_name()
+                        if group_name is not None:
+                            g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
+                            g.add_nodes(self)
 
         return self
 

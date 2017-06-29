@@ -67,13 +67,14 @@ class AiidaTestCase(unittest.TestCase):
             else:
                 raise ConfigurationError("Unknown backend type")
 
-
             # Check that it is of the right class
             if not issubclass(cls.__impl_class, AiidaTestImplementation):
-                raise InternalError("The AiiDA test implementation is not of type "
+                raise InternalError(
+                    "The AiiDA test implementation is not of type "
                     "{}, that is not a subclass of AiidaTestImplementation".format(
-                    cls.__impl_class.__name__
-                ))
+                        cls.__impl_class.__name__
+                    )
+                )
 
         return cls.__impl_class
 
@@ -143,7 +144,7 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
 
     actually_run_tests = []
     num_tests_expected = 0
-    
+
     # To avoid adding more than once the same test
     # (e.g. if you type both db and db.xxx)
     found_modulenames = set()

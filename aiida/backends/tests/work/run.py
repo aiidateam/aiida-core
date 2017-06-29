@@ -19,7 +19,6 @@ from aiida.work.test_utils import DummyProcess
 from aiida.work.persistence import Persistence
 
 
-
 class TestRun(AiidaTestCase):
     def setUp(self):
         super(TestRun, self).setUp()
@@ -44,4 +43,4 @@ class TestRun(AiidaTestCase):
         dp = DummyProcess.create_from(cp)
         self.assertIsInstance(dp, DummyProcess)
         self.assertEqual(dp.raw_inputs, inputs)
-        dp.run_until_complete()
+        dp.play()

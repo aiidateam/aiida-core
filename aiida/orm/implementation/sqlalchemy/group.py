@@ -111,7 +111,7 @@ class Group(AbstractGroup):
         return unicode(self._dbgroup.uuid)
 
     def __int__(self):
-        if self._to_be_stored:
+        if not self.is_stored:
             return None
         else:
             return self._dbnode.id

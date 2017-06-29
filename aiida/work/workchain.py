@@ -8,23 +8,23 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from abc import ABCMeta, abstractmethod
+from copy import deepcopy
 import inspect
-from enum import Enum
-from aiida.work.defaults import registry
-from aiida.work.run import RunningType, RunningInfo
-from aiida.work.process import Process, ProcessSpec
-from aiida.work.legacy.wait_on import WaitOnWorkflow
-from aiida.common.lang import override
-from aiida.common.utils import get_class_string, get_object_string, \
-    get_object_from_string
-from aiida.orm import load_node, load_workflow
-from plum.wait_ons import Checkpoint, WaitOnAll, WaitOnProcess
+import uuid
+from abc import ABCMeta, abstractmethod
+from collections import namedtuple, Mapping, Sequence, Set
+from plum.wait_ons import Checkpoint, WaitOnAll
 from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
-from collections import namedtuple
+from plum.thread_executor import Future
+from aiida.orm import Node
+from aiida.work.process import Process, ProcessSpec
+from aiida.work.util import WithHeartbeat
+from aiida.common.lang import override
+from aiida.common.utils import get_class_string
+from aiida.work.run import RunningType, RunningInfo
 from aiida.work.interstep import *
-from plum.engine.execution_engine import Future
+from plum.wait import create_from as create_waiton_from
 
 
 class _WorkChainSpec(ProcessSpec):
@@ -54,7 +54,43 @@ class _WorkChainSpec(ProcessSpec):
         return self._outline
 
 
-class WorkChain(Process):
+def serialise_value(value):
+    """
+    Convert a value to a format that can be serialised.  In practice this means
+    converting Nodes to UUIDs, Mapping and Sequence values that are Nodes to UUIDs
+     
+    .. note::
+        Deepcopies are created for all values passed.
+        
+    :param value: The value to convert (if it falls into above criteria)
+    :return: A UUID, a copy of the mapping given with UUIDs as values where 
+        appropriate or similarly for a sequence.
+    """
+    if isinstance(value, Node):
+        return uuid.UUID(value.uuid)
+    elif isinstance(value, Mapping):
+        return value.__class__((k, serialise_value(v)) for k, v in value.iteritems())
+    elif isinstance(value, (Sequence, Set)):
+        return value.__class__(serialise_value(v) for v in value)
+    else:
+        return deepcopy(value)
+
+
+def deserialise_value(value):
+    if isinstance(value, uuid.UUID):
+        try:
+            return load_node(uuid=value)
+        except ValueError:
+            return deepcopy(value)
+    if isinstance(value, Mapping):
+        return value.__class__((k, deserialise_value(v)) for k, v in value.iteritems())
+    elif isinstance(value, (Sequence, Set)):
+        return value.__class__(deserialise_value(v) for v in value)
+    else:
+        return deepcopy(value)
+
+
+class WorkChain(Process, WithHeartbeat):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
@@ -63,7 +99,6 @@ class WorkChain(Process):
     _STEPPER_STATE = 'stepper_state'
     _BARRIERS = 'barriers'
     _INTERSTEPS = 'intersteps'
-    _ABORTED = 'aborted'
 
     @classmethod
     def define(cls, spec):
@@ -100,8 +135,7 @@ class WorkChain(Process):
             try:
                 return self._content[name]
             except KeyError:
-                raise AttributeError("Context does not have a variable {}"
-                                     .format(name))
+                raise AttributeError("Context does not have a variable {}".format(name))
 
         def __delattr__(self, item):
             del self._content[item]
@@ -124,15 +158,14 @@ class WorkChain(Process):
 
         def save_instance_state(self, out_state):
             for k, v in self._content.iteritems():
-                out_state[k] = v
+                out_state[k] = serialise_value(v)
 
-    def __init__(self):
-        super(WorkChain, self).__init__()
-        self._context = None
+    def __init__(self, inputs=None, pid=None, logger=None):
+        super(WorkChain, self).__init__(inputs, pid, logger)
+        self._context = self.Context()
         self._stepper = None
         self._barriers = []
         self._intersteps = []
-        self._aborted = False
 
     @property
     def ctx(self):
@@ -141,31 +174,16 @@ class WorkChain(Process):
     @override
     def save_instance_state(self, out_state):
         super(WorkChain, self).save_instance_state(out_state)
-
         # Ask the context to save itself
-        bundle = Bundle()
-        self.ctx.save_instance_state(bundle)
-        out_state[self._CONTEXT] = bundle
-
-        # Save intersteps
-        for interstep in self._intersteps:
-            bundle = Bundle()
-            interstep.save_instance_state(bundle)
-            out_state.setdefault(self._INTERSTEPS, []).append(bundle)
-
-        # Save barriers
-        for barrier in self._barriers:
-            bundle = Bundle()
-            barrier.save_instance_state(bundle)
-            out_state.setdefault(self._BARRIERS, []).append(bundle)
+        context_state = Bundle()
+        self.ctx.save_instance_state(context_state)
+        out_state[self._CONTEXT] = context_state
 
         # Ask the stepper to save itself
         if self._stepper is not None:
-            bundle = Bundle()
-            self._stepper.save_position(bundle)
-            out_state[self._STEPPER_STATE] = bundle
-
-        out_state[self._ABORTED] = self._aborted
+            stepper_state = Bundle()
+            self._stepper.save_position(stepper_state)
+            out_state[self._STEPPER_STATE] = stepper_state
 
     def insert_barrier(self, wait_on):
         """
@@ -222,9 +240,6 @@ class WorkChain(Process):
         return self._do_step()
 
     def _do_step(self, wait_on=None):
-        if self._aborted:
-            return
-
         for interstep in self._intersteps:
             interstep.on_next_step_starting(self)
         self._intersteps = []
@@ -234,10 +249,6 @@ class WorkChain(Process):
             finished, retval = self._stepper.step()
         except _PropagateReturn:
             finished, retval = True, None
-
-        # Could have aborted during the step
-        if self._aborted:
-            return
 
         if not finished:
             if retval is not None:
@@ -253,39 +264,35 @@ class WorkChain(Process):
                 interstep.on_last_step_finished(self)
 
             if self._barriers:
-                return WaitOnAll(self._do_step.__name__, self._barriers)
+                return WaitOnAll(self._barriers), self._do_step
             else:
-                return Checkpoint(self._do_step.__name__)
+                return Checkpoint(), self._do_step
 
     @override
-    def on_create(self, pid, inputs, saved_state):
-        super(WorkChain, self).on_create(pid, inputs, saved_state)
+    def load_instance_state(self, saved_state, logger=None):
+        super(WorkChain, self).load_instance_state(saved_state, logger)
+        # Recreate the context
+        self._context = self.Context(deserialise_value(saved_state[self._CONTEXT]))
 
-        if saved_state is None:
-            self._context = self.Context()
+        # Recreate the stepper
+        if self._STEPPER_STATE in saved_state:
+            self._stepper = self.spec().get_outline().create_stepper(self)
+            self._stepper.load_position(
+                saved_state[self._STEPPER_STATE])
         else:
-            # Recreate the context
-            self._context = self.Context(saved_state[self._CONTEXT])
+            self._stepper = None
 
-            # Recreate the stepper
-            if self._STEPPER_STATE in saved_state:
-                self._stepper = self.spec().get_outline().create_stepper(self)
-                self._stepper.load_position(
-                    saved_state[self._STEPPER_STATE])
+        try:
+            self._intersteps = [_INTERSTEP_FACTORY.create(b) for
+                                b in saved_state[self._INTERSTEPS]]
+        except KeyError:
+            self._intersteps = []
 
-            try:
-                self._intersteps = [load_with_classloader(b) for
-                                    b in saved_state[self._INTERSTEPS]]
-            except KeyError:
-                self._intersteps = []
-
-            try:
-                self._barriers = [WaitOn.create_from(b) for
-                                  b in saved_state[self._BARRIERS]]
-            except KeyError:
-                pass
-
-            self._aborted = saved_state[self._ABORTED]
+        try:
+            self._barriers = [create_waiton_from(b) for
+                              b in saved_state[self._BARRIERS]]
+        except KeyError:
+            self._barriers = []
 
     def abort_nowait(self, msg=None):
         """
@@ -295,8 +302,7 @@ class WorkChain(Process):
         :param msg: The abort message
         :type msg: str
         """
-        self.report("Aborting: {}".format(msg))
-        self._aborted = True
+        self.abort(msg=msg, timeout=0)
 
     def abort(self, msg=None, timeout=None):
         """
@@ -309,8 +315,10 @@ class WorkChain(Process):
         :type timeout: float
         :return: True if the process is aborted at the end of the function, False otherwise
         """
+        aborted = super(WorkChain, self).abort(msg, timeout)
         self.report("Aborting: {}".format(msg))
-        self._aborted = True
+        return aborted
+
 
 def ToContext(**kwargs):
     """
@@ -328,14 +336,31 @@ def ToContext(**kwargs):
         interstep = value.build(key)
         intersteps.append(interstep)
 
+        # if isinstance(value, Action):
+        #     pass
+        # elif isinstance(value, RunningInfo):
+        #     value = action_from_running_info(value)
+        # elif isinstance(value, Future):
+        #     value = Calc(RunningInfo(RunningType.PROCESS, value.pid))
+        # else:
+        #     value = Legacy(value)
+
+        # if not isinstance(value, Action):
+        #     raise ValueError("the values in the kwargs need to be of type Action")
+
+        # if key not in self.ctx:
+        #     interstep = Assign(key, value)
+        # elif isinstance(self.ctx[key], list):
+        #     interstep = Append(key, value)
+        # else:
+        #     interstep = Assign(key, value)
+
+        # intersteps.append(interstep)
+
     return intersteps
 
 
 class _InterstepFactory(object):
-    """
-    Factory to create the appropriate Interstep instance based
-    on the class string that was written to the bundle
-    """
     def create(self, bundle):
         class_string = bundle[Bundle.CLASS]
         if class_string == get_class_string(ToContext):
@@ -376,7 +401,7 @@ class Stepper(object):
 
 class _Instruction(object):
     """
-    This class represents an instruction in a a workchain.  To step through the
+    This class represents an instruction in a workchain. To step through the
     step you need to get a stepper by calling ``create_stepper()`` from which
     you can call the :class:`~Stepper.step()` method.
     """

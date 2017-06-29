@@ -16,7 +16,6 @@ from aiida.work.run import async, run
 import aiida.work.util as util
 
 
-
 @workfunction
 def simple_wf():
     return {'result': get_true_node()}
@@ -45,6 +44,9 @@ class TestWf(AiidaTestCase):
     def test_async(self):
         self.assertTrue(async(simple_wf).result()['result'])
         self.assertTrue(async(return_input, get_true_node()).result()['result'])
+        # Wait till all the processes are completely done
+        while len(plum.process_monitor.MONITOR.get_pids()):
+            pass
 
     def test_run(self):
         self.assertTrue(run(simple_wf)['result'])

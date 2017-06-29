@@ -1639,7 +1639,7 @@ class KpointsData(ArrayData):
         :return (str) lattice_name: the name of the bravais lattice and its
              eventual variation
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             bravais_lattice = self._find_bravais_info(epsilon_length=epsilon_length,
                                                       epsilon_angle=epsilon_angle)
             self.bravais_lattice = bravais_lattice

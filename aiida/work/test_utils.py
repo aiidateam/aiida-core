@@ -9,6 +9,7 @@
 ###########################################################################
 
 
+from plum.wait_ons import Barrier
 from aiida.work.process import Process
 
 
@@ -16,6 +17,7 @@ class DummyProcess(Process):
     """
     A Process that does nothing when it runs.
     """
+
     @classmethod
     def define(cls, spec):
         super(DummyProcess, cls).define(spec)
@@ -31,6 +33,7 @@ class BadOutput(Process):
     A Process that emits an output that isn't part of the spec raising an
     exception.
     """
+
     @classmethod
     def define(cls, spec):
         super(BadOutput, cls).define(spec)
@@ -43,3 +46,19 @@ class BadOutput(Process):
 class ExceptionProcess(Process):
     def _run(self):
         raise RuntimeError("CRASH")
+
+
+class WaitChain(Process):
+    """
+    This waits until it is asked to continue
+    """
+
+    def _run(self):
+        return Barrier(), self.s2
+
+    def s2(self):
+        pass
+
+    def continue_(self):
+        # Open the barrier
+        self.get_waiting_on().open()

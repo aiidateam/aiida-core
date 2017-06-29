@@ -162,7 +162,7 @@ class Workflow(AbstractWorkflow):
         :return: a string
         """
         self.dbworkflowinstance.label = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             self._dbworkflowinstance.save(commit=False)
             self._increment_version_number_db()
 
@@ -186,7 +186,7 @@ class Workflow(AbstractWorkflow):
         :return: a string
         """
         self.dbworkflowinstance.description = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             self._dbworkflowinstance.save(commit=False)
             self._increment_version_number_db()
 
@@ -238,7 +238,7 @@ class Workflow(AbstractWorkflow):
         """
         Stores the DbWorkflow object data in the database
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             self._dbworkflowinstance.save()
 
             if hasattr(self, '_params'):
@@ -300,7 +300,7 @@ class Workflow(AbstractWorkflow):
                                           "which is not of type int, bool, float or str.")
             return the_params
 
-        if self._to_be_stored:
+        if not self.is_stored:
             self._params = params
         else:
             the_params = par_validate(params)
@@ -311,7 +311,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow paramenters
         :return: a dictionary of storable objects
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             return self._params
         else:
             return self.dbworkflowinstance.get_parameters()
@@ -322,7 +322,7 @@ class Workflow(AbstractWorkflow):
         :param name: a string with the parameters name to retrieve
         :return: a dictionary of storable objects
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             return self._params(_name)
         else:
             return self.dbworkflowinstance.get_parameter(_name)
@@ -349,7 +349,7 @@ class Workflow(AbstractWorkflow):
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("You cannot add attributes before storing")
         self.dbworkflowinstance.add_attributes(_params)
 
@@ -360,7 +360,7 @@ class Workflow(AbstractWorkflow):
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("You cannot add attributes before storing")
         self.dbworkflowinstance.add_attribute(_name, _value)
 

@@ -12,10 +12,11 @@ import collections
 import uritools
 import os.path
 
+from plum.persistence import Bundle
 import plum.persistence.pickle_persistence
 from plum.process import Process
 from aiida.common.lang import override
-from aiida.work.defaults import class_loader
+from aiida.work.globals import class_loader
 
 
 class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
@@ -23,9 +24,12 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     def load_checkpoint_from_file(self, filepath):
         cp = super(Persistence, self).load_checkpoint_from_file(filepath)
 
-        inputs = cp[Process.BundleKeys.INPUTS.value]
+        inputs = cp.get(Process.BundleKeys.INPUTS.value, None)
         if inputs:
             cp[Process.BundleKeys.INPUTS.value] = self._load_nodes_from(inputs)
+        outputs = cp.get(Process.BundleKeys.OUTPUTS.value, None)
+        if outputs:
+            cp[Process.BundleKeys.OUTPUTS.value] = self._load_nodes_from(outputs)
 
         cp.set_class_loader(class_loader)
         return cp
@@ -34,16 +38,19 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     def create_bundle(self, process):
         b = super(Persistence, self).create_bundle(process)
 
-        inputs = b[Process.BundleKeys.INPUTS.value]
+        inputs = b.get(Process.BundleKeys.INPUTS.value, None)
         if inputs:
             b[Process.BundleKeys.INPUTS.value] = self._convert_to_ids(inputs)
+        outputs = b.get(Process.BundleKeys.OUTPUTS.value, None)
+        if outputs:
+            b[Process.BundleKeys.OUTPUTS.value] = self._convert_to_ids(outputs)
 
         return b
 
     def _convert_to_ids(self, nodes):
         from aiida.orm import Node
 
-        input_ids = {}
+        input_ids = Bundle()
         for label, node in nodes.iteritems():
             if node is None:
                 continue
@@ -63,7 +70,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     def _load_nodes_from(self, pks_mapping):
         """
         Take a dictionary of of {label: pk} or nested dictionary i.e.
-        {label: {label: pk}} and convert to the equivalent dictionary but
+        {label: {label: pk}} and convert to the equivalent Bundle but
         with nodes instead of the ids.
 
         :param pks_mapping: The dictionary of node pks.
@@ -72,7 +79,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         """
         from aiida.orm import load_node
 
-        nodes = {}
+        nodes = Bundle()
         for label, pk in pks_mapping.iteritems():
             if isinstance(pk, collections.Mapping):
                 nodes[label] = self._load_nodes_from(pk)
@@ -81,30 +88,29 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         return nodes
 
 
-_DEFAULT_STORAGE = None
+_GLOBAL_PERSISTENCE = None
 
 
-def get_default():
-    global _DEFAULT_STORAGE
+def get_global_persistence():
+    global _GLOBAL_PERSISTENCE
 
-    if _DEFAULT_STORAGE is None:
+    if _GLOBAL_PERSISTENCE is None:
         _create_storage()
 
-    return _DEFAULT_STORAGE
+    return _GLOBAL_PERSISTENCE
 
 
 def _create_storage():
     import aiida.common.setup as setup
     import aiida.settings as settings
-    global _DEFAULT_STORAGE
+    global _GLOBAL_PERSISTENCE
 
     parts = uritools.urisplit(settings.REPOSITORY_URI)
     if parts.scheme == u'file':
         WORKFLOWS_DIR = os.path.expanduser(
             os.path.join(parts.path, setup.WORKFLOWS_SUBDIR))
 
-        _DEFAULT_STORAGE = Persistence(
-            auto_persist=False,
+        _GLOBAL_PERSISTENCE = Persistence(
             running_directory=os.path.join(WORKFLOWS_DIR, 'running'),
             finished_directory=os.path.join(WORKFLOWS_DIR, 'finished'),
             failed_directory=os.path.join(WORKFLOWS_DIR, 'failed'))

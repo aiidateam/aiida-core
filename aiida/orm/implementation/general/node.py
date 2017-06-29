@@ -8,22 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from abc import ABCMeta, abstractmethod, abstractproperty
-from aiida.common.utils import abstractclassmethod
 
-import collections
-import logging
 import os
-import types
-
+import logging
+import collections
+import threading
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
 from aiida.common.folders import SandboxFolder
 from aiida.common.utils import combomethod
 
 from aiida.common.links import LinkType
-from aiida.common.lang import override
 from aiida.common.old_pluginloader import get_query_type_string
-from aiida.backends.utils import validate_attribute_key
 
 _NO_DEFAULT = tuple()
 
@@ -63,6 +59,10 @@ def clean_value(value):
         # (e.g. if there is something that behaves like an integer
         # but is not an integer, I still accept it)
         return value
+
+
+LinkKey = collections.namedtuple("LinkKey", ["label", "src_uuid"])
+LinkInfo = collections.namedtuple("LinkInfo", ["src", "link_type", "label"])
 
 
 class AbstractNode(object):
@@ -235,16 +235,17 @@ class AbstractNode(object):
         """
         Return True if the node is stored, False otherwise.
         """
-        return not self._to_be_stored
+        with self._state_lock:
+            return not self._to_be_stored
 
     def __repr__(self):
-         return '<{}: {}>'.format(self.__class__.__name__, str(self))
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def __str__(self):
-         if not self.is_stored:
-             return "uuid: {} (unstored)".format(self.uuid)
-         else:
-             return "uuid: {} (pk: {})".format(self.uuid, self.pk)
+        if not self.is_stored:
+            return "uuid: {} (unstored)".format(self.uuid)
+        else:
+            return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
     def _init_internal_params(self):
         """
@@ -451,18 +452,18 @@ class AbstractNode(object):
         """
         assert src is not None, "You must provide a valid Node to link"
 
-        # Check that the label does not already exist
+        # If the exact same link already exists then just return as it is
+        # already done
 
         # This can happen also if both nodes are stored, e.g. if one first
         # stores the output node and then the input node. Therefore I check
         # it here.
-        if label in self._inputlinks_cache:
-            raise UniquenessError("Input link with name '{}' already present "
-                                  "in the internal cache".format(label))
+        if LinkKey(label, src.uuid) in self._inputlinks_cache:
+            return
 
         # See if I am pointing to already saved nodes and I am already
         # linking to a given node
-        if src.uuid in [_[0].uuid for _ in self._inputlinks_cache.values()]:
+        if src.uuid in [v.src.uuid for v in self._inputlinks_cache.values()]:
             raise UniquenessError(
                 "A link from node with UUID={} and "
                 "the current node (UUID={}) already exists!".format(
@@ -495,19 +496,20 @@ class AbstractNode(object):
             raise UniquenessError("Input link with name '{}' already present "
                                   "in the internal cache".format(label))
 
-        self._inputlinks_cache[label] = (src, link_type)
+        self._inputlinks_cache[LinkKey(label, src.uuid)] = LinkInfo(src, link_type, label)
 
     def _replace_link_from(self, src, label, link_type=LinkType.UNSPECIFIED):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
-
+        
         :note: In subclasses, change only this. Moreover, remember to call
            the super() method in order to properly use the caching logic!
 
         :param src: the source object
         :param str label: the name of the label to set the link from src.
         """
+        link_key = LinkKey(label, src.uuid)
         # If both are stored, write directly on the DB
         if self.is_stored and src.is_stored:
             self._replace_dblink_from(src, label, link_type)
@@ -515,7 +517,7 @@ class AbstractNode(object):
             # (this could happen if I first store the output node, then
             # the input node.
             try:
-                del self._inputlinks_cache[label]
+                del self._inputlinks_cache[link_key]
             except KeyError:
                 pass
         else:  # at least one is not stored: set in the internal cache
@@ -523,17 +525,17 @@ class AbstractNode(object):
             # linking to a given node
             # It is similar to the 'add' method, but if I am replacing the
             # same node, I will not complain (k!=label)
-            if src.uuid in [v[0].uuid for k, v in
-                            self._inputlinks_cache.iteritems() if k != label]:
+            if src.uuid in [v.src.uuid for k, v in
+                            self._inputlinks_cache.iteritems() if k != link_key]:
                 raise UniquenessError(
                     "A link from node with UUID={} and "
                     "the current node (UUID={}) already exists!".format(
                         src.uuid, self.uuid))
             # I insert the link directly in the cache rather than calling
             # _add_cachelink_from because this latter performs an undesired check
-            self._inputlinks_cache[label] = (src, link_type)
+            self._inputlinks_cache[link_key] = LinkInfo(src, link_type, label)
 
-           # self._add_cachelink_from(src, label, link_type)
+            # self._add_cachelink_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         """
@@ -972,7 +974,6 @@ class AbstractNode(object):
         except AttributeError:
             raise AttributeError("set_extras takes a dictionary as argument")
 
-
     def reset_extras(self, new_extras):
         """
         Deletes existing extras and creates new ones.
@@ -1053,7 +1054,6 @@ class AbstractNode(object):
         """
         return dict(self.iterextras())
 
-
     def del_extra(self, key):
         """
         Delete a extra, acting directly on the DB!
@@ -1105,7 +1105,6 @@ class AbstractNode(object):
             yield # Needed after return to convert it to a generator
         for _ in self._db_iterextras():
             yield _
-
 
     def iterattrs(self):
         """
@@ -1268,7 +1267,7 @@ class AbstractNode(object):
         """
         # I also update the internal _dbnode variable, if it was saved
         # from aiida.backends.djsite.db.models import DbNode
-        #        if not self._to_be_stored:
+        #        if self.is_stored:
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         pass
 
@@ -1402,7 +1401,6 @@ class AbstractNode(object):
           a transaction open!
         """
         pass
-
 
     def _store_input_nodes(self):
         """
@@ -1642,7 +1640,7 @@ class NodeInputManager(object):
         except KeyError:
             raise AttributeError(
                 "Node '{}' does not have an input with link '{}'"
-                .format(self._node.pk, name))
+                    .format(self._node.pk, name))
 
     def __getitem__(self, name):
         """

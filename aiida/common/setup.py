@@ -15,11 +15,20 @@ import json
 # The username (email) used by the default superuser, that should also run
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
+from aiida.utils.find_folder import find_path
 
 
 DEFAULT_AIIDA_USER = "aiida@localhost"
 
-AIIDA_CONFIG_FOLDER = "~/.aiida"
+AIIDA_PATH = [path for path in os.environ.get('AIIDA_PATH', '').split(':') if path] + [os.path.expanduser('~')]
+for path in AIIDA_PATH:
+    try:
+        AIIDA_CONFIG_FOLDER = str(find_path(root=path, dir_name='.aiida'))
+        break
+    except OSError:
+        pass
+else:
+    AIIDA_CONFIG_FOLDER = "~/.aiida"
 CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 

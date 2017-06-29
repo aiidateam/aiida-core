@@ -17,8 +17,6 @@ Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 from flask import Flask, jsonify
 from flask_restful import Api
 
-# TODo Transform the app into aa class to be instantiated by the runner
-
 class App(Flask):
     """
     Basic Flask App customized for this REST Api purposes
@@ -26,39 +24,44 @@ class App(Flask):
 
     def __init__(self, *args, **kwargs):
 
-        from aiida.restapi.common.exceptions import RestInputValidationError, \
-            RestValidationError
+        # Decide whether or not to catch the internal server exceptions (
+        # default is True)
+        catch_internal_server = True
+        try:
+            catch_internal_server = kwargs.pop('catch_internal_server')
+        except KeyError:
+            pass
 
         # Basic initialization
         super(App, self).__init__(*args, **kwargs)
 
-
-        # Decide whether or not to catch the internal server exceptions (
-        # default is True)
-        catch_internal_server = True
-
-        if 'catch_internal_server' in kwargs and not kwargs[
-            'catch_internal_server']:
-            catch_internal_server = False
+        # Error handler
+        from aiida.restapi.common.exceptions import RestInputValidationError, \
+            RestValidationError
 
         if catch_internal_server:
-            # Error handler
+
             @self.errorhandler(Exception)
             def error_handler(error):
+
                 if isinstance(error, RestValidationError):
                     response = jsonify({'message': error.message})
                     response.status_code = 400
+
                 elif isinstance(error, RestInputValidationError):
                     response = jsonify({'message': error.message})
                     response.status_code = 400
+
                 # Generic server-side error (not to make the api crash if an
                 # unhandled exception is raised. Caution is never enough!!)
                 else:
-                    response = jsonify({
-                        'message': 'Internal server error. The original '
-                                   'message was: \"{}\"'.format(
-                            error.message)
-                    })
+                    response = jsonify(
+                        {
+                            'message': 'Internal server error. The original '
+                                       'message was: \"{}\"'.format(
+                                error.message)
+                        }
+                    )
                     response.status_code = 500
 
                 return response
@@ -84,18 +87,17 @@ class AiidaApi(Api):
         """
 
         from aiida.restapi.resources import Calculation, Computer, Code, Data, \
-            Group, \
-            Node, User
+            Group, Node, User, StructureData, KpointsData, BandsData
 
         super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'])
 
-        ## Add resources to the api
+        ## Add resources and endpoints to the api
         self.add_resource(Computer,
                           # supported urls
                           '/computers/',
                           '/computers/page/',
                           '/computers/page/<int:page>/',
-                          '/computers/<int:pk>/',
+                          '/computers/<id>/',
                           '/computers/schema/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
@@ -106,16 +108,17 @@ class AiidaApi(Api):
                           '/nodes/statistics/',
                           '/nodes/page/',
                           '/nodes/page/<int:page>/',
-                          '/nodes/<int:pk>/',
-                          '/nodes/<int:pk>/io/inputs/',
-                          '/nodes/<int:pk>/io/inputs/page/',
-                          '/nodes/<int:pk>/io/inputs/page/<int:page>/',
-                          '/nodes/<int:pk>/io/outputs/',
-                          '/nodes/<int:pk>/io/outputs/page/',
-                          '/nodes/<int:pk>/io/outputs/page/<int:page>/',
-                          '/nodes/<int:pk>/io/tree/',
-                          '/nodes/<int:pk>/content/attributes/',
-                          '/nodes/<int:pk>/content/extras/',
+                          '/nodes/<id>/',
+                          '/nodes/<id>/io/inputs/',
+                          '/nodes/<id>/io/inputs/page/',
+                          '/nodes/<id>/io/inputs/page/<int:page>/',
+                          '/nodes/<id>/io/outputs/',
+                          '/nodes/<id>/io/outputs/page/',
+                          '/nodes/<id>/io/outputs/page/<int:page>/',
+                          '/nodes/<id>/io/tree/',
+                          '/nodes/<id>/content/attributes/',
+                          '/nodes/<id>/content/extras/',
+                          '/nodes/<id>/content/visualization/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
@@ -125,16 +128,16 @@ class AiidaApi(Api):
                           '/calculations/statistics/',
                           '/calculations/page/',
                           '/calculations/page/<int:page>/',
-                          '/calculations/<int:pk>/',
-                          '/calculations/<int:pk>/io/inputs/',
-                          '/calculations/<int:pk>/io/inputs/page/',
-                          '/calculations/<int:pk>/io/inputs/page/<int:page>/',
-                          '/calculations/<int:pk>/io/outputs/',
-                          '/calculations/<int:pk>/io/outputs/page/',
-                          '/calculations/<int:pk>/io/outputs/page/<int:page>/',
-                          '/calculations/<int:pk>/io/tree/',
-                          '/calculations/<int:pk>/content/attributes/',
-                          '/calculations/<int:pk>/content/extras/',
+                          '/calculations/<id>/',
+                          '/calculations/<id>/io/inputs/',
+                          '/calculations/<id>/io/inputs/page/',
+                          '/calculations/<id>/io/inputs/page/<int:page>/',
+                          '/calculations/<id>/io/outputs/',
+                          '/calculations/<id>/io/outputs/page/',
+                          '/calculations/<id>/io/outputs/page/<int:page>/',
+                          '/calculations/<id>/io/tree/',
+                          '/calculations/<id>/content/attributes/',
+                          '/calculations/<id>/content/extras/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
@@ -144,16 +147,17 @@ class AiidaApi(Api):
                           '/data/statistics/',
                           '/data/page/',
                           '/data/page/<int:page>',
-                          '/data/<int:pk>/',
-                          '/data/<int:pk>/io/inputs/',
-                          '/data/<int:pk>/io/inputs/page/',
-                          '/data/<int:pk>/io/inputs/page/<int:page>/',
-                          '/data/<int:pk>/io/outputs/',
-                          '/data/<int:pk>/io/outputs/page/',
-                          '/data/<int:pk>/io/outputs/page/<int:page>/',
-                          '/data/<int:pk>/io/tree/',
-                          '/data/<int:pk>/content/attributes/',
-                          '/data/<int:pk>/content/extras/',
+                          '/data/<id>/',
+                          '/data/<id>/io/inputs/',
+                          '/data/<id>/io/inputs/page/',
+                          '/data/<id>/io/inputs/page/<int:page>/',
+                          '/data/<id>/io/outputs/',
+                          '/data/<id>/io/outputs/page/',
+                          '/data/<id>/io/outputs/page/<int:page>/',
+                          '/data/<id>/io/tree/',
+                          '/data/<id>/content/attributes/',
+                          '/data/<id>/content/extras/',
+                          '/data/<id>/content/visualization/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
@@ -163,18 +167,82 @@ class AiidaApi(Api):
                           '/codes/statistics/',
                           '/codes/page/',
                           '/codes/page/<int:page>/',
-                          '/codes/<int:pk>/',
-                          '/codes/<int:pk>/io/inputs/',
-                          '/codes/<int:pk>/io/inputs/page/',
-                          '/codes/<int:pk>/io/inputs/page/<int:page>/',
-                          '/codes/<int:pk>/io/outputs/',
-                          '/codes/<int:pk>/io/outputs/page/',
-                          '/codes/<int:pk>/io/outputs/page/<int:page>/',
-                          '/codes/<int:pk>/io/tree/',
-                          '/codes/<int:pk>/content/attributes/',
-                          '/codes/<int:pk>/content/extras/',
+                          '/codes/<id>/',
+                          '/codes/<id>/io/inputs/',
+                          '/codes/<id>/io/inputs/page/',
+                          '/codes/<id>/io/inputs/page/<int:page>/',
+                          '/codes/<id>/io/outputs/',
+                          '/codes/<id>/io/outputs/page/',
+                          '/codes/<id>/io/outputs/page/<int:page>/',
+                          '/codes/<id>/io/tree/',
+                          '/codes/<id>/content/attributes/',
+                          '/codes/<id>/content/extras/',
+                          '/codes/<id>/content/visualization/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
+
+        self.add_resource(StructureData,
+                          '/structures/',
+                          '/structures/schema/',
+                          '/structures/statistics/',
+                          '/structures/page/',
+                          '/structures/page/<int:page>',
+                          '/structures/<id>/',
+                          '/structures/<id>/io/inputs/',
+                          '/structures/<id>/io/inputs/page/',
+                          '/structures/<id>/io/inputs/page/<int:page>/',
+                          '/structures/<id>/io/outputs/',
+                          '/structures/<id>/io/outputs/page/',
+                          '/structures/<id>/io/outputs/page/<int:page>/',
+                          '/structures/<id>/io/tree/',
+                          '/structures/<id>/content/attributes/',
+                          '/structures/<id>/content/extras/',
+                          '/structures/<id>/content/visualization/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
+
+        self.add_resource(KpointsData,
+                          '/kpoints/',
+                          '/kpoints/schema/',
+                          '/kpoints/statistics/',
+                          '/kpoints/page/',
+                          '/kpoints/page/<int:page>',
+                          '/kpoints/<id>/',
+                          '/kpoints/<id>/io/inputs/',
+                          '/kpoints/<id>/io/inputs/page/',
+                          '/kpoints/<id>/io/inputs/page/<int:page>/',
+                          '/kpoints/<id>/io/outputs/',
+                          '/kpoints/<id>/io/outputs/page/',
+                          '/kpoints/<id>/io/outputs/page/<int:page>/',
+                          '/kpoints/<id>/io/tree/',
+                          '/kpoints/<id>/content/attributes/',
+                          '/kpoints/<id>/content/extras/',
+                          '/kpoints/<id>/content/visualization/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
+
+        self.add_resource(BandsData,
+                          '/bands/',
+                          '/bands/schema/',
+                          '/bands/statistics/',
+                          '/bands/page/',
+                          '/bands/page/<int:page>',
+                          '/bands/<id>/',
+                          '/bands/<id>/io/inputs/',
+                          '/bands/<id>/io/inputs/page/',
+                          '/bands/<id>/io/inputs/page/<int:page>/',
+                          '/bands/<id>/io/outputs/',
+                          '/bands/<id>/io/outputs/page/',
+                          '/bands/<id>/io/outputs/page/<int:page>/',
+                          '/bands/<id>/io/tree/',
+                          '/bands/<id>/content/attributes/',
+                          '/bands/<id>/content/extras/',
+                          '/bands/<id>/content/visualization/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
 
         self.add_resource(User,
                           '/users/',
@@ -182,7 +250,7 @@ class AiidaApi(Api):
                           '/users/statistics/',
                           '/users/page/',
                           '/users/page/<int:page>/',
-                          '/users/<int:pk>/',
+                          '/users/<id>/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
@@ -192,6 +260,6 @@ class AiidaApi(Api):
                           '/groups/statistics/',
                           '/groups/page/',
                           '/groups/page/<int:page>/',
-                          '/groups/<int:pk>/',
+                          '/groups/<id>/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)

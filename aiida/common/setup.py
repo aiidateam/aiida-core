@@ -36,7 +36,7 @@ DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 DEFAULT_PROCESS = 'verdi'
 
 # The default umask for file creation under AIIDA_CONFIG_FOLDER
-DEFAULT_UMASK = 0077
+DEFAULT_UMASK = 0o0077
 
 # Profile keys
 aiidadb_backend_key = "AIIDADB_BACKEND"

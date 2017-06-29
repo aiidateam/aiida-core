@@ -8,6 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.calculation import Calculation
-from aiida.orm.implementation.calculation import JobCalculation, _input_subfolder
+from aiida.orm.implementation.calculation import JobCalculation as _JC, \
+    _input_subfolder
 
+class JobCalculation(_JC):
+    """
+    Here I put all the attributes/method that are common to all backends
+    """
 
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from a JobCalculation node's 
+        properties.
+        """
+        return self.get_state(from_attribute=True)

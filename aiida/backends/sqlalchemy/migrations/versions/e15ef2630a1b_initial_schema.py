@@ -19,9 +19,8 @@ depends_on = None
 
 
 def upgrade():
-    op.execute(CreateSequence(Sequence('db_dbuser_id_seq')))
     op.create_table('db_dbuser',
-    sa.Column('id', sa.INTEGER(), server_default=sa.text(u"nextval('db_dbuser_id_seq'::regclass)"), nullable=False),
+    sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('email', sa.VARCHAR(length=254), autoincrement=False, nullable=True),
     sa.Column('password', sa.VARCHAR(length=128), autoincrement=False, nullable=True),
     sa.Column('is_superuser', sa.BOOLEAN(), autoincrement=False, nullable=False),
@@ -35,9 +34,9 @@ def upgrade():
     sa.PrimaryKeyConstraint('id', name=u'db_dbuser_pkey'),
     postgresql_ignore_search_path=False
     )
-    op.execute(CreateSequence(Sequence('db_dbworkflow_id_seq')))
+    op.create_index('ix_db_dbuser_email', 'db_dbuser', ['email'], unique=True)
     op.create_table('db_dbworkflow',
-    sa.Column('id', sa.INTEGER(), server_default=sa.text(u"nextval('db_dbworkflow_id_seq'::regclass)"), nullable=False),
+    sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('uuid', postgresql.UUID(), autoincrement=False, nullable=True),
     sa.Column('ctime', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.Column('mtime', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
@@ -56,15 +55,17 @@ def upgrade():
     sa.PrimaryKeyConstraint('id', name=u'db_dbworkflow_pkey'),
     postgresql_ignore_search_path=False
     )
-    op.execute(CreateSequence(Sequence('db_dbworkflowstep_id_seq')))
+    op.create_index('ix_db_dbworkflow_label', 'db_dbworkflow', ['label'])
     op.create_table('db_dbworkflowstep',
-    sa.Column('id', sa.INTEGER(), server_default=sa.text(u"nextval('db_dbworkflowstep_id_seq'::regclass)"), nullable=False),
+    sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('parent_id', sa.INTEGER(), autoincrement=False, nullable=True),
+    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('name', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
     sa.Column('time', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.Column('nextcall', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
     sa.Column('state', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
     sa.ForeignKeyConstraint(['parent_id'], [u'db_dbworkflow.id'], name=u'db_dbworkflowstep_parent_id_fkey'),
+    sa.ForeignKeyConstraint(['user_id'], [u'db_dbuser.id'], name=u'db_dbworkflowstep_user_id_fkey'),
     sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_pkey'),
     sa.UniqueConstraint('parent_id', 'name', name=u'db_dbworkflowstep_parent_id_name_key'),
     postgresql_ignore_search_path=False
@@ -107,9 +108,10 @@ def upgrade():
     sa.PrimaryKeyConstraint('id', name=u'db_dbgroup_pkey'),
     sa.UniqueConstraint('name', 'type', name=u'db_dbgroup_name_type_key')
     )
-    op.execute(CreateSequence(Sequence('db_dbnode_id_seq')))
+    op.create_index('ix_db_dbgroup_name', 'db_dbgroup', ['name'])
+    op.create_index('ix_db_dbgroup_type', 'db_dbgroup', ['type'])
     op.create_table('db_dbnode',
-    sa.Column('id', sa.INTEGER(), server_default=sa.text(u"nextval('db_dbnode_id_seq'::regclass)"), nullable=False),
+    sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('uuid', postgresql.UUID(), autoincrement=False, nullable=True),
     sa.Column('type', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
     sa.Column('label', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
@@ -118,15 +120,16 @@ def upgrade():
     sa.Column('mtime', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.Column('nodeversion', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('public', sa.BOOLEAN(), autoincrement=False, nullable=True),
-    sa.Column('dbcomputer_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=False),
     sa.Column('attributes', postgresql.JSONB(), autoincrement=False, nullable=True),
     sa.Column('extras', postgresql.JSONB(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['dbcomputer_id'], [u'db_dbcomputer.id'], name=u'db_dbnode_dbcomputer_id_fkey', initially=u'DEFERRED', deferrable=True),
-    sa.ForeignKeyConstraint(['user_id'], [u'db_dbuser.id'], name=u'db_dbnode_user_id_fkey', initially=u'DEFERRED', deferrable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbnode_pkey'),
-    postgresql_ignore_search_path=False
+    sa.Column('dbcomputer_id', sa.INTEGER(), autoincrement=False, nullable=True),
+    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=False),
+    sa.ForeignKeyConstraint(['dbcomputer_id'], [u'db_dbcomputer.id'], name=u'db_dbnode_dbcomputer_id_fkey', ondelete=u'RESTRICT', initially=u'DEFERRED', deferrable=True),
+    sa.ForeignKeyConstraint(['user_id'], [u'db_dbuser.id'], name=u'db_dbnode_user_id_fkey', ondelete=u'RESTRICT', initially=u'DEFERRED', deferrable=True),
+    sa.PrimaryKeyConstraint('id', name=u'db_dbnode_pkey'),postgresql_ignore_search_path=False
     )
+    op.create_index('ix_db_dbnode_label', 'db_dbnode', ['label'])
+    op.create_index('ix_db_dbnode_type', 'db_dbnode', ['type'])
     op.create_table('db_dbgroup_dbnodes',
     sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('dbnode_id', sa.INTEGER(), autoincrement=False, nullable=True),
@@ -165,9 +168,8 @@ def upgrade():
     sa.ForeignKeyConstraint(['input_id'], [u'db_dbnode.id'], name=u'db_dblink_input_id_fkey', initially=u'DEFERRED', deferrable=True),
     sa.ForeignKeyConstraint(['output_id'], [u'db_dbnode.id'], name=u'db_dblink_output_id_fkey', ondelete=u'CASCADE', initially=u'DEFERRED', deferrable=True),
     sa.PrimaryKeyConstraint('id', name=u'db_dblink_pkey'),
-    sa.UniqueConstraint('input_id', 'output_id', name=u'db_dblink_input_id_output_id_key'),
-    sa.UniqueConstraint('output_id', 'label', name=u'db_dblink_output_id_label_key')
     )
+    op.create_index('ix_db_dblink_label', 'db_dblink', ['label'])
     op.create_table('db_dbworkflowstep_calculations',
     sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('dbworkflowstep_id', sa.INTEGER(), autoincrement=False, nullable=True),
@@ -198,6 +200,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('id', name=u'db_dbcalcstate_pkey'),
     sa.UniqueConstraint('dbnode_id', 'state', name=u'db_dbcalcstate_dbnode_id_state_key')
     )
+    op.create_index('ix_db_dbcalcstate_state', 'db_dbcalcstate', ['state'])
     op.create_table('db_dbsetting',
     sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('key', sa.VARCHAR(length=255), autoincrement=False, nullable=False),
@@ -207,6 +210,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('id', name=u'db_dbsetting_pkey'),
     sa.UniqueConstraint('key', name=u'db_dbsetting_key_key')
     )
+    op.create_index('ix_db_dbsetting_key', 'db_dbsetting', ['key'])
     op.create_table('db_dbcomment',
     sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('uuid', postgresql.UUID(), autoincrement=False, nullable=True),
@@ -230,6 +234,10 @@ def upgrade():
     sa.Column('metadata', postgresql.JSONB(), autoincrement=False, nullable=True),
     sa.PrimaryKeyConstraint('id', name=u'db_dblog_pkey')
     )
+    op.create_index('ix_db_dblog_levelname', 'db_dblog', ['levelname'])
+    op.create_index('ix_db_dblog_loggername', 'db_dblog', ['loggername'])
+    op.create_index('ix_db_dblog_objname', 'db_dblog', ['objname'])
+    op.create_index('ix_db_dblog_objpk', 'db_dblog', ['objpk'])
     op.create_table('db_dbworkflowstep_sub_workflows',
     sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('dbworkflowstep_id', sa.INTEGER(), autoincrement=False, nullable=True),
@@ -243,21 +251,21 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table('db_dbcomputer')
-    op.drop_table('db_dbworkflowstep_sub_workflows')
-    op.drop_table('db_dblog')
-    op.drop_table('db_dbcomment')
-    op.drop_table('db_dbsetting')
-    op.drop_table('db_dbcalcstate')
-    op.drop_table('db_dbpath')
     op.drop_table('db_dbworkflowstep_calculations')
-    op.drop_table('db_dbuser')
-    op.drop_table('db_dblink')
+    op.drop_table('db_dbworkflowstep_sub_workflows')
     op.drop_table('db_dbworkflowdata')
-    op.drop_table('db_dbworkflow')
-    op.drop_table('db_dbnode')
-    op.drop_table('db_dblock')
-    op.drop_table('db_dbgroup')
-    op.drop_table('db_dbgroup_dbnodes')
-    op.drop_table('db_dbauthinfo')
     op.drop_table('db_dbworkflowstep')
+    op.drop_table('db_dbworkflow')
+    op.drop_table('db_dbgroup_dbnodes')
+    op.drop_table('db_dbgroup')
+    op.drop_table('db_dblink')
+    op.drop_table('db_dbpath')
+    op.drop_table('db_dbcalcstate')
+    op.drop_table('db_dbcomment')
+    op.drop_table('db_dbnode')
+    op.drop_table('db_dbauthinfo')
+    op.drop_table('db_dbuser')
+    op.drop_table('db_dbcomputer')
+    op.drop_table('db_dblog')
+    op.drop_table('db_dbsetting')
+    op.drop_table('db_dblock')

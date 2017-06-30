@@ -672,7 +672,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         # Search for the group of the user
         qb = QueryBuilder()
-        qb.append(User, tag=user, filters={'id': {'==': user.id}})
+        qb.append(User, tag='user', filters={'id': {'==': user.id}})
         qb.append(Group, belongs_to='user',
                   filters={'id': {'==': group.id}})
         self.assertEquals(qb.count(), 1, "The expected group that belongs to "

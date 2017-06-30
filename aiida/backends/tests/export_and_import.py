@@ -15,7 +15,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 
 
-class TestSpecificImport(AiidaTestCase):
+class TestSpecificImport():
     def test_import(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
@@ -158,7 +158,7 @@ class TestSpecificImport(AiidaTestCase):
                                              "query.")
 
 
-class TestSimple(AiidaTestCase):
+class TestSimple():
 
     def setUp(self):
         self.clean_db()
@@ -577,7 +577,82 @@ class TestSimple(AiidaTestCase):
             shutil.rmtree(temp_folder, ignore_errors=True)
 
 
-class TestComplex(AiidaTestCase):
+class TestComplexx(AiidaTestCase):
+    def test_7(self):
+        """
+        This test checks that nodes belonging to user A (which is not the
+        default user) can be correctly exported, imported, enriched with nodes
+        from the default user, re-exported & re-imported and that in the end
+        all the nodes that have been finally imported belonging to the right
+        users.
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm import load_node
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.importexport import export
+        from aiida.common.datastructures import calc_states
+        from aiida.common.links import LinkType
+        from aiida.common.utils import get_configured_user_email
+        from aiida.orm.user import User
+
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            # Create another user
+            new_email = "newuser@new.n"
+            user = User(email=new_email)
+            user.force_save()
+
+            # Create a structure data node that has a calculation as output
+            sd1 = StructureData()
+            sd1.dbnode.user = user._dbuser
+            sd1.label = 'sd1'
+            sd1.store()
+
+            jc1 = JobCalculation()
+            jc1.set_computer(self.computer)
+            jc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc1.dbnode.user = user._dbuser
+            jc1.label = 'jc1'
+            jc1.store()
+            jc1.add_link_from(sd1)
+            jc1._set_state(calc_states.PARSING)
+
+            # Create a group and add the data inside
+            from aiida.orm.group import Group
+            g1 = Group(name="node_group")
+            g1.store()
+            g1.add_nodes([sd1, jc1])
+
+            # At this point we export the generated data
+            filename1 = os.path.join(temp_folder, "export1.tar.gz")
+            export([sd1.dbnode, jc1.dbnode, g1.dbgroup],
+                   outfile=filename1, silent=True)
+            n_uuids = [sd1.uuid, jc1.uuid]
+            self.clean_db()
+            self.insert_data()
+            import_data(filename1, silent=True)
+
+            # Check that the imported nodes are correctly imported and that
+            # the user assigned to the nodes is the right one
+            for uuid in n_uuids:
+                self.assertEquals(load_node(uuid).get_user().email, new_email)
+
+            from aiida.orm.querybuilder import QueryBuilder
+            qb = QueryBuilder()
+            qb.append(Group, filters={'uuid': {'==': g1.uuid}})
+            self.assertEquals(qb.count(), 1, "The group was not found.")
+
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
+
+class TestComplex():
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly
@@ -662,7 +737,7 @@ class TestComplex(AiidaTestCase):
             shutil.rmtree(temp_folder, ignore_errors=True)
 
 
-class TestComputer(AiidaTestCase):
+class TestComputer():
 
     def setUp(self):
         self.clean_db()

@@ -1256,7 +1256,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 nodes_to_store = [dbnode_reverse_mappings[node_uuid]
                                   for node_uuid in groupnodes]
                 if nodes_to_store:
-                    group.dbnodes.add(*nodes_to_store)
+                    group.dbnodes.add_all(*nodes_to_store)
 
             ######################################################
             # Put everything in a specific group

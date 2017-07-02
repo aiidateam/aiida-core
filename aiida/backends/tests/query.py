@@ -655,6 +655,37 @@ class QueryBuilderJoinsTests(AiidaTestCase):
                     Node, edge_filters={'label':'is_advisor'}, tag='student'
                 ).count(), number_students)
 
+    def test_joins3_user_group(self):
+        from aiida.orm.user import User
+        from aiida.orm.querybuilder import QueryBuilder
+
+        # Create another user
+        new_email = "newuser@new.n"
+        user = User(email=new_email)
+        user.force_save()
+
+        # Create a group that belongs to that user
+        from aiida.orm.group import Group
+        group = Group(name="node_group")
+        group.dbgroup.user = user._dbuser
+        group.store()
+
+        # Search for the group of the user
+        qb = QueryBuilder()
+        qb.append(User, tag='user', filters={'id': {'==': user.id}})
+        qb.append(Group, belongs_to='user',
+                  filters={'id': {'==': group.id}})
+        self.assertEquals(qb.count(), 1, "The expected group that belongs to "
+                                         "the selected user was not found.")
+
+        # Search for the user that owns a group
+        qb = QueryBuilder()
+        qb.append(Group, tag='group', filters={'id': {'==': group.id}})
+        qb.append(User, owner_of='group', filters={'id': {'==': user.id}})
+
+        self.assertEquals(qb.count(), 1, "The expected user that owns the "
+                                         "selected group was not found.")
+
 
 class QueryBuilderPath(AiidaTestCase):
     def test_query_path(self):

@@ -33,6 +33,7 @@ def is_daemon_user():
 
 
 def _get_env_with_venv_bin():
+    from aiida.common import setup
     pybin = os.path.dirname(sys.executable)
     currenv = os.environ.copy()
     currenv['PATH'] = pybin + ':' + currenv['PATH']

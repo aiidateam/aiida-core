@@ -25,8 +25,7 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
 
 from aiida.orm.implementation.general.group import AbstractGroup
 
-from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
-
+from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class Group(AbstractGroup):

@@ -13,15 +13,17 @@ import argparse
 import imp
 import os
 
-import aiida  # Mainly needed to locate the correct aiida path
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from flask_cors import CORS
+
+from aiida.backends.utils import load_dbenv
+
 
 def run_api(App, Api, *args, **kwargs):
     """
     Takes a flask.Flask instance and runs it. Parses
     command-line flags to configure the app.
 
-    App: Class inheriting from Flask app class
+    App: Class inheriting from Flask app class  
     Api = flask_restful API class to be used to wrap the app
 
     *args: required by argparse
@@ -40,6 +42,8 @@ def run_api(App, Api, *args, **kwargs):
 
     """
 
+    import aiida  # Mainly needed to locate the correct aiida path
+
     # Unpack parameters and assign defaults if needed
     prog_name = kwargs['prog_name'] if 'prog_name' in kwargs else ""
 
@@ -56,6 +60,9 @@ def run_api(App, Api, *args, **kwargs):
 
     parse_aiida_profile = kwargs['parse_aiida_profile'] if \
         'parse_aiida_profile' in kwargs else False
+
+    catch_internal_server = kwargs['catch_internal_server'] if\
+        'catch_internal_server' in kwargs else False
 
     hookup = kwargs['hookup'] if 'hookup' in kwargs else False
 
@@ -138,15 +145,21 @@ def run_api(App, Api, *args, **kwargs):
     else:
         pass  # This way the default of .aiida/config.json will be used
 
-    # Set the AiiDA environment, if not already done
-    if not is_dbenv_loaded():
-        load_dbenv()
+    # Set the AiiDA environment. If already loaded, load_dbenv will raise an
+    # exception
+    # if not is_dbenv_loaded():
+    load_dbenv()
 
     # Instantiate an app
-    app = App(__name__)
+    app_kwargs = dict(catch_internal_server=catch_internal_server)
+    app = App(__name__, **app_kwargs)
 
     # Config the app
     app.config.update(**confs.APP_CONFIG)
+
+    # cors
+    cors_prefix = os.path.join(confs.PREFIX, "*");
+    cors = CORS(app, resources={r"" + cors_prefix: {"origins": "*"}})
 
     # Config the serializer used by the app
     if confs.SERIALIZER_CONFIG:
@@ -162,17 +175,15 @@ def run_api(App, Api, *args, **kwargs):
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app,
                                           restrictions=[30])
 
-    # Instantiate an Api associating its app
+    # Instantiate an Api by associating its app
     api_kwargs = dict(PREFIX=confs.PREFIX,
-                  PERPAGE_DEFAULT=confs.PERPAGE_DEFAULT,
-                  LIMIT_DEFAULT=confs.LIMIT_DEFAULT,
-                  custom_schema=confs.custom_schema)
-
+                      PERPAGE_DEFAULT=confs.PERPAGE_DEFAULT,
+                      LIMIT_DEFAULT=confs.LIMIT_DEFAULT,
+                      custom_schema=confs.custom_schema)
     api = Api(app, **api_kwargs)
 
     # Check if the app has to be hooked-up or just returned
     if hookup:
-        # Hook up the app
         api.app.run(
             debug=parsed_args.debug,
             host=parsed_args.host,
@@ -189,13 +200,12 @@ def run_api(App, Api, *args, **kwargs):
         return (app, api)
 
 
-
 # Standard boilerplate to run the api
 if __name__ == '__main__':
     """
     I run the app via a wrapper that accepts arguments such as host and port
     e.g. python api.py --host=127.0.0.2 --port=6000 --config-dir=~/.restapi
-    Default address is 127.0.01:5000, default config directory is
+    Default address is 127.0.0.1:5000, default config directory is
     <aiida_path>/aiida/restapi/common
 
     Start the app by sliding the argvs to flaskrun, choose to take as an
@@ -205,6 +215,7 @@ if __name__ == '__main__':
     """
     import sys
     from aiida.restapi.api import AiidaApi, App
+
     """
     Or, equivalently, (useful starting point for derived apps)
     import the app object and the Api class that you want to combine.

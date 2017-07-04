@@ -18,6 +18,8 @@ from aiida.restapi.common.exceptions import RestValidationError, \
 
 # Important to match querybuilder keys
 pk_dbsynonym = 'id'
+# Example uuid (version 4)
+uuid_ref = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 
 ########################## Classes #####################
@@ -135,43 +137,69 @@ class Utils(object):
         # type: (string) -> (list_of_strings).
         return filter(None, path.split('/'))
 
-    def parse_path(self, path_string):
+    def parse_path(self, path_string, parse_pk_uuid=None):
         """
         Takes the path and parse it checking its validity. Does not parse "io",
         "content" fields. I do not check the validity of the path, since I
         assume
         that this is done by the Flask routing methods.
-        It assunme
-
+  
         :param path_string: the path string
+        :param parse_id_uuid: if 'pk' ('uuid') expects an integer (uuid 
+        starting pattern) 
         :return:resource_type (string)
                 page (integer)
-                pk (integer)
-                result_type (string))
+                id (string: uuid starting pattern, int: pk)
+                query_type (string))
         """
 
         ## Initialization
         page = None
-        pk = None
+        id = None
         query_type = "default"
         path = self.split_path(self.strip_prefix(path_string))
 
         ## Pop out iteratively the "words" of the path until it is an empty
         # list.
         ##  This way it should be easier to plug in more endpoint logic
+
         # Resource type
         resource_type = path.pop(0)
         if not path:
-            return (resource_type, page, pk, query_type)
-        # Node_pk
-        try:
-            pk = int(path[0])
-            foo = path.pop(0)
-        except ValueError:
-            pass
+            return (resource_type, page, id, query_type)
+
+        # Validate uuid or starting pattern of uuid.
+        # Technique: - take our uuid_ref and replace the first characters the
+        #  string to be validated as uuid.
+        #            - validate instead the newly built string
+        if parse_pk_uuid == 'pk':
+            raw_id = path[0]
+            try:
+                # Check whether it can be an integer
+                id = int(raw_id)
+            except ValueError:
+                pass
+            else:
+                path.pop(0)
+        elif parse_pk_uuid == 'uuid':
+            import uuid
+            raw_id = path[0]
+            maybe_uuid = raw_id + uuid_ref[len(raw_id):]
+            try:
+                _ = uuid.UUID(maybe_uuid, version=4)
+            except ValueError:
+                # assume that it cannot be an id and go to the next check
+                pass
+            else:
+                # It is an id so pop out the path element
+                id = raw_id
+                path.pop(0)
+
         if not path:
-            return (resource_type, page, pk, query_type)
-        # Result type (input, output, attributes, extras, schema)
+            return (resource_type, page, id, query_type)
+
+        # Query type (input, output, attributes, extras, visualization,
+        # schema, statistics)
         if path[0] == 'schema':
             query_type = path.pop(0)
             if path:
@@ -179,7 +207,7 @@ class Utils(object):
                     "url requesting schema resources do not "
                     "admit further fields")
             else:
-                return (resource_type, page, pk, query_type)
+                return (resource_type, page, id, query_type)
         elif path[0] == 'statistics':
             query_type = path.pop(0)
             if path:
@@ -187,22 +215,22 @@ class Utils(object):
                     "url requesting statistics resources do not "
                     "admit further fields")
             else:
-                return (resource_type, page, pk, query_type)
+                return (resource_type, page, id, query_type)
         elif path[0] == "io" or path[0] == "content":
-            foo = path.pop(0)
+            path.pop(0)
             query_type = path.pop(0)
             if not path:
-                return (resource_type, page, pk, query_type)
+                return (resource_type, page, id, query_type)
+
         # Page (this has to be in any case the last field)
         if path[0] == "page":
-            do_paginate = True
-            foo = path.pop(0)
+            path.pop(0)
             if not path:
                 page = 1
-                return (resource_type, page, pk, query_type)
+                return (resource_type, page, id, query_type)
             else:
                 page = int(path.pop(0))
-                return (resource_type, page, pk, query_type)
+                return (resource_type, page, id, query_type)
 
     def validate_request(self, limit=None, offset=None, perpage=None, page=None,
                          query_type=None, is_querystring_defined=False):
@@ -228,10 +256,12 @@ class Utils(object):
             raise RestValidationError("perpage key requires that a page is "
                                       "requested (i.e. the path must contain "
                                       "/page/)")
-        # 4. if resource_type=='schema'
-        if query_type == 'schema' and is_querystring_defined:
+        # 4. No querystring if query type = schema', 'visualization', 'schema'
+        if query_type in ('schema', 'visualization', 'statistics') and \
+                is_querystring_defined:
             raise RestInputValidationError("schema requests do not allow "
                                            "specifying a query string")
+
 
     def paginate(self, page, perpage, total_count):
         """
@@ -746,7 +776,7 @@ class Utils(object):
         value = (valueString | valueBool | valueDateTime | valueNum |
                  valueOrderby)
         # List of values (I do not check the homogeneity of the types of values,
-        # query builder will do it in a sense)
+        # query builder will do it somehow)
         valueList = Group(value + OneOrMore(Suppress(',') + value) + Optional(
             Suppress(',')))
 
@@ -768,7 +798,6 @@ class Utils(object):
         ## Parse the query string
         try:
             fields = generalGrammar.parseString(query_string)
-            field_dict = fields.asDict()
             field_list = fields.asList()
         except ParseException as e:
             raise RestInputValidationError(

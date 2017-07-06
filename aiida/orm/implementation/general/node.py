@@ -8,18 +8,22 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from abc import ABCMeta, abstractmethod, abstractproperty
+from aiida.common.utils import abstractclassmethod
 
-import os
-import logging
 import collections
-import threading
+import logging
+import os
+import types
+
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
 from aiida.common.folders import SandboxFolder
 from aiida.common.utils import combomethod
 
+from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.common.old_pluginloader import get_query_type_string
+from aiida.backends.utils import validate_attribute_key
 
 _NO_DEFAULT = tuple()
 
@@ -48,7 +52,7 @@ def clean_value(value):
         # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.iteritems()}
     elif (isinstance(value, collections.Iterable) and
-            not isinstance(value, types.StringTypes)):
+              not isinstance(value, types.StringTypes)):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object
@@ -113,8 +117,8 @@ class AbstractNode(object):
                 if newcls._plugin_type_string == 'node.Node.':
                     newcls._plugin_type_string = ''
                 newcls._query_type_string = get_query_type_string(
-                        newcls._plugin_type_string
-                    )
+                    newcls._plugin_type_string
+                )
             # Experimental: type string for external plugins
             else:
                 from aiida.common.pluginloader import entry_point_tpstr_from
@@ -122,8 +126,8 @@ class AbstractNode(object):
                 if entry_point_tpstr_from(classname):
                     newcls._plugin_type_string = entry_point_tpstr_from(classname)
                     newcls._query_type_string = get_query_type_string(
-                            newcls._plugin_type_string
-                        )
+                        newcls._plugin_type_string
+                    )
             return newcls
 
     # This will be set by the metaclass call
@@ -149,8 +153,6 @@ class AbstractNode(object):
         :return: a description string     
         """
         return ""
-
-
 
     @staticmethod
     def get_db_columns():
@@ -235,8 +237,7 @@ class AbstractNode(object):
         """
         Return True if the node is stored, False otherwise.
         """
-        with self._state_lock:
-            return not self._to_be_stored
+        return not self._to_be_stored
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -537,7 +538,7 @@ class AbstractNode(object):
 
             # self._add_cachelink_from(src, label, link_type)
 
-    def _remove_link_from(self, label):
+    def _remove_link_from(self, label, src_uuid):
         """
         Remove from the DB the input link with the given label.
 
@@ -550,15 +551,16 @@ class AbstractNode(object):
         :param link_type: The type of link, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
+        link_key = LinkKey(label, src_uuid)
         # Try to remove from the local cache, no problem if none is present
         try:
-            del self._inputlinks_cache[label]
+            del self._inputlinks_cache[link_key]
         except KeyError:
             pass
 
         # If both are stored, remove also from the DB
         if self.is_stored:
-            self._remove_dblink_from(label)
+            self._remove_dblink_from(link_key)
 
     @abstractmethod
     def _replace_dblink_from(self, src, label, link_type):
@@ -692,13 +694,12 @@ class AbstractNode(object):
             # Needed for the check
             input_list_keys = [i[0] for i in inputs_list]
 
-            for label, v in self._inputlinks_cache.iteritems():
-                src = v[0]
-                if label in input_list_keys:
+            for link in self._inputlinks_cache.itervalues():
+                if link.label in input_list_keys:
                     raise InternalError("There exist a link with the same name "
                                         "'{}' both in the DB and in the internal "
-                                        "cache for node pk= {}!".format(label, self.pk))
-                inputs_list.append((label, src))
+                                        "cache for node pk= {}!".format(link.label, self.pk))
+                inputs_list.append((link.label, link.src))
 
         if node_type is None:
             filtered_list = inputs_list
@@ -930,7 +931,6 @@ class AbstractNode(object):
                 "storing the node")
         self._set_db_extra(key, clean_value(value), exclusive)
 
-
     def set_extra_exclusive(self, key, value):
         """
         Set an extra in exclusive mode (stops if the attribute
@@ -941,7 +941,6 @@ class AbstractNode(object):
         :param value: key value
         """
         self.set_extra(key, value, exclusive=True)
-
 
     @abstractmethod
     def _set_db_extra(self, key, value, exclusive):
@@ -1020,7 +1019,7 @@ class AbstractNode(object):
                              "if no extra is found.")
 
         try:
-            if self._to_be_stored:
+            if not self.is_stored:
                 raise AttributeError("DbExtra '{}' does not exist yet, the "
                                      "node is not stored".format(key))
             else:
@@ -1102,7 +1101,7 @@ class AbstractNode(object):
             # added (in particular, we do not even have an ID to use!)
             # Return without value, meaning that this is an empty generator
             return
-            yield # Needed after return to convert it to a generator
+            yield  # Needed after return to convert it to a generator
         for _ in self._db_iterextras():
             yield _
 
@@ -1415,8 +1414,8 @@ class AbstractNode(object):
                 "_store_input_nodes can be called only if the node is "
                 "unstored (node {} is stored, instead)".format(self.pk))
 
-        for label in self._inputlinks_cache:
-            parent = self._inputlinks_cache[label][0]
+        for link in self._inputlinks_cache.itervalues():
+            parent = link.src
             if not parent.is_stored:
                 parent.store(with_transaction=False)
 
@@ -1428,13 +1427,13 @@ class AbstractNode(object):
           stored.
         """
         # Preliminary check to verify that inputs are stored already
-        for label in self._inputlinks_cache:
-            if not self._inputlinks_cache[label][0].is_stored:
+        for link in self._inputlinks_cache.itervalues():
+            if not link.src.is_stored:
                 raise ModificationNotAllowed(
                     "Cannot store the input link '{}' because the "
                     "source node is not stored. Either store it first, "
                     "or call _store_input_links with the store_parents "
-                    "parameter set to True".format(label))
+                    "parameter set to True".format(link.label))
 
     @abstractmethod
     def _store_cached_input_links(self, with_transaction=True):

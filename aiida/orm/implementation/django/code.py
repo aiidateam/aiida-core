@@ -125,6 +125,8 @@ class Code(AbstractCode):
                     self.get_remote_computer().dbcomputer.pk)
 
 
+
+
 def delete_code(code):
     """
     Delete a code from the DB.

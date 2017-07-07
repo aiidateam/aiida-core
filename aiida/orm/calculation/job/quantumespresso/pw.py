@@ -96,7 +96,20 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
         }
 
         return retdict
-   
+
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from  PwCalculation node's 
+        properties.
+        :param self:
+        :return: retsrt:
+        """
+
+        retstr = super(PwCalculation, self).get_desc()
+
+        return " ".join(['{}'.format(self.inp.parameters.dict.CONTROL[
+                                     'calculation']), retstr])
+
     @classmethod
     def input_helper(cls, *args, **kwargs):
         """

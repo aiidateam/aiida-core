@@ -40,6 +40,23 @@ class KpointsData(ArrayData):
         except AttributeError:
             pass
 
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from  kpoints node's properties.
+        :param node:
+        :return: retstr
+        """
+        try:
+            mesh = self.get_kpoints_mesh()
+            return "Kpoints mesh: {}x{}x{} (+{:.1f},{:.1f},{:.1f})".format(
+                mesh[0][0], mesh[0][1], mesh[0][2],
+                mesh[1][0], mesh[1][1], mesh[1][2])
+        except AttributeError:
+            try:
+                return '(Path of {} kpts)'.format(len(self.get_kpoints()))
+            except OSError:
+                return self.dbnode.type
+
     @property
     def cell(self):
         """

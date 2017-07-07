@@ -11,7 +11,8 @@
 LIMIT_DEFAULT = 400
 PERPAGE_DEFAULT = 20
 
-##Version prefix for all the URLs
+##Version prefix for all the URLs (in most cases, you need to omit trailing
+# slash)
 PREFIX="/api/v2"
 
 
@@ -85,4 +86,4 @@ In case you want to use the default stored in
 .aiida/config.json, set this varibale to "default"
 
 """
-default_aiida_profile = None
+default_aiida_profile = 'sqlalchemy'

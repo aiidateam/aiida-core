@@ -32,6 +32,9 @@ from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
 
+from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.sqlalchemy.models.computer import DbComputer
+
 
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
@@ -262,6 +265,40 @@ class DbNode(Base):
             return "{} node [{}]: {}".format(simplename, self.pk, self.label)
         else:
             return "{} node [{}]".format(simplename, self.pk)
+
+    # User email
+    @hybrid_property
+    def user_email(self):
+        """
+        Returns: the email of the user
+        """
+        return self.user.email
+
+    @user_email.expression
+    def user_email(cls):
+        """
+        Returns: the email of the user at a class level (i.e. in the database)
+        """
+        return select([DbUser.email]).where(DbUser.id == cls.user_id).label(
+            'user_email')
+
+    # Computer name
+    @hybrid_property
+    def computer_name(self):
+        """
+        Returns: the of the computer
+        """
+        return self.dbcomputer.name
+
+    @computer_name.expression
+    def computer_name(cls):
+        """
+        Returns: the name of the computer at a class level (i.e. in the 
+        database)
+        """
+        return select([DbComputer.name]).where(DbComputer.id ==
+                                                 cls.dbcomputer_id).label(
+            'computer_name')
 
 
     @hybrid_property

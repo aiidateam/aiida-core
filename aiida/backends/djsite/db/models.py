@@ -161,8 +161,8 @@ class DbNode(m.Model):
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     # creation time
-    ctime = m.DateTimeField(default=timezone.now, editable=False)
-    mtime = m.DateTimeField(auto_now=True, editable=False)
+    ctime = m.DateTimeField(default=timezone.now, db_index=True, editable=False)
+    mtime = m.DateTimeField(auto_now=True, db_index=True, editable=False)
     # Cannot delete a user if something is associated to it
     user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT,
                         related_name='dbnodes')

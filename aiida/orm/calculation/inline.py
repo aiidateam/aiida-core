@@ -9,8 +9,21 @@
 ###########################################################################
 
 
-from aiida.orm.implementation.calculation import InlineCalculation, make_inline
+from aiida.orm.implementation.calculation import InlineCalculation as _IC, \
+                                                                   make_inline
 
+
+class InlineCalculation(_IC):
+    """
+    Here I put all the attributes/method that are common to all backends
+    """
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from a InlineCalculation node's 
+        properties.
+        :return: description string
+        """
+        return "{}()".format(self.get_function_name())
 
 def optional_inline(func):
     """
@@ -50,3 +63,5 @@ def optional_inline(func):
             return func(*args, **kwargs)
 
     return wrapped_function
+
+

@@ -16,6 +16,36 @@ from aiida.orm.importexport import import_data
 
 
 class TestSpecificImport(AiidaTestCase):
+
+    def test_simple_import(self):
+        """
+        This is a very simple test which checks that an export file with nodes
+        that are not associated to a computer is imported correctly. In Django
+        when such nodes are exported, there is an empty set for computers
+        in the export file. In SQLA there is such a set only when a computer is
+        associated with the exported nodes. When an empty computer set is
+        found at the export file (when imported to an SQLA profile), the SQLA
+        import code used to crash. This test demonstrates this problem.
+        :return:
+        """
+        import inspect
+        import os
+
+        curr_path = inspect.getfile(inspect.currentframe())
+        folder_path = os.path.dirname(curr_path)
+        relative_folder_path = ("export_import_test_files/"
+                                "SSSP_parameters_2.aiida")
+        test_file_path = os.path.join(folder_path, relative_folder_path)
+
+        # Clean the database
+        self.clean_db()
+
+        # Insert the default data to the database
+        self.insert_data()
+
+        # Import the needed data
+        import_data(test_file_path, silent=True)
+
     def test_import(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node

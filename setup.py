@@ -43,7 +43,7 @@ if __name__ == '__main__':
         packages=find_packages(),
         # Don't forget to install it as well (by adding to the install_requires)
         setup_requires=[
-            'reentry >= 0.9.1'
+            'reentry >= 1.0.2'
         ],
         reentry_register=True,
         entry_points={

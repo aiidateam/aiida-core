@@ -1744,24 +1744,43 @@ entity_names_to_sqla_schema = {
 }
 
 django_fields_to_sqla = {
-    "aiida.backends.sqlalchemy.models.node.DbNode": {
-        "dbcomputer" : "dbcomputer_id",
+    NODE_ENTITY_NAME: {
+        "dbcomputer": "dbcomputer_id",
         "user": "user_id"},
-    "aiida.backends.sqlalchemy.models.computer.DbComputer": {
-        "metadata" : "_metadata"}
+    GROUP_ENTITY_NAME: {},
+    COMPUTER_ENTITY_NAME: {
+        "metadata": "_metadata"}
 }
 
 sqla_fields_to_django = {
-    "aiida.backends.sqlalchemy.models.node.DbNode": {
-        "dbcomputer_id" : "dbcomputer",
+    NODE_ENTITY_NAME: {
+        "dbcomputer_id": "dbcomputer",
         "user_id": "user"},
-    "aiida.backends.sqlalchemy.models.node.DbLink": {},
-    "aiida.backends.sqlalchemy.models.group.DbGroup": {},
-    "aiida.backends.sqlalchemy.models.computer.DbComputer": {
+    LINK_ENTITY_NAME: {},
+    GROUP_ENTITY_NAME: {},
+    COMPUTER_ENTITY_NAME: {
         "_metadata" : "metadata"},
-    "aiida.backends.sqlalchemy.models.user.DbUser": {}
+    USER_ENTITY_NAME: {}
 }
 
+# django_fields_to_sqla = {
+#     "aiida.backends.sqlalchemy.models.node.DbNode": {
+#         "dbcomputer" : "dbcomputer_id",
+#         "user": "user_id"},
+#     "aiida.backends.sqlalchemy.models.computer.DbComputer": {
+#         "metadata" : "_metadata"}
+# }
+#
+# sqla_fields_to_django = {
+#     "aiida.backends.sqlalchemy.models.node.DbNode": {
+#         "dbcomputer_id" : "dbcomputer",
+#         "user_id": "user"},
+#     "aiida.backends.sqlalchemy.models.node.DbLink": {},
+#     "aiida.backends.sqlalchemy.models.group.DbGroup": {},
+#     "aiida.backends.sqlalchemy.models.computer.DbComputer": {
+#         "_metadata" : "metadata"},
+#     "aiida.backends.sqlalchemy.models.user.DbUser": {}
+# }
 
 def get_all_fields_info_sqla():
 
@@ -1788,65 +1807,69 @@ def get_all_fields_info_sqla():
             "label": {}
         }
     all_fields_info[NODE_ENTITY_NAME] = {
-             "ctime" : {
+             "ctime": {
                 "convert_type" : "date"
              },
-             "uuid" : {},
-             "public" : {},
-             "mtime" : {
+             "uuid": {},
+             "public": {},
+             "mtime": {
                 "convert_type" : "date"
              },
-             "type" : {},
-             "label" : {},
-             "nodeversion" : {},
-             "user" : {
+             "type": {},
+             "label": {},
+             "nodeversion": {},
+             "user": {
                 "requires" : USER_ENTITY_NAME,
                 "related_name" : "dbnodes"
              },
-             "dbcomputer" : {
+             "dbcomputer": {
                 "requires" : COMPUTER_ENTITY_NAME,
                 "related_name" : "dbnodes"
              },
-             "description" : {}
+             "description": {}
         }
     all_fields_info[USER_ENTITY_NAME] = {
-             "last_name" : {},
-             "first_name" : {},
-             "institution" : {},
-             "email" : {}
+             "last_name": {},
+             "first_name": {},
+             "institution": {},
+             "email": {}
         }
     all_fields_info[COMPUTER_ENTITY_NAME] = {
-             "transport_type" : {},
-             "transport_params" : {},
-             "hostname" : {},
-             "description" : {},
-             "scheduler_type" : {},
-             "metadata" : {},
-             "enabled" : {},
-             "uuid" : {},
-             "name" : {}
+             "transport_type": {},
+             "transport_params": {},
+             "hostname": {},
+             "description": {},
+             "scheduler_type": {},
+             "metadata": {},
+             "enabled": {},
+             "uuid": {},
+             "name": {}
         }
     all_fields_info[GROUP_ENTITY_NAME] = {
-             "description" : {},
-             "user" : {
+             "description": {},
+             "user": {
                 "related_name" : "dbgroups",
-                "requires" : COMPUTER_ENTITY_NAME
+                "requires" : USER_ENTITY_NAME
              },
-             "time" : {
+             "dbnodes": {
+                 "related_name": "dbgroups",
+                 "requires": NODE_ENTITY_NAME
+             },
+             "time": {
                 "convert_type" : "date"
              },
-             "type" : {},
-             "uuid" : {},
-             "name" : {}
+             "type": {},
+             "uuid": {},
+             "name": {}
         }
     all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
-             "dbnode" : {
+             "dbnode": {
                 "requires": NODE_ENTITY_NAME,
                 "related_name": "dbattributes"
              },
-             "key" : {},
-             "tval" : {},
-             "fval" : {},
+             "key": {},
+             "tval": {},
+             "fval": {},
              "bval": {},
              "datatype": {},
              "dval": {
@@ -1910,17 +1933,17 @@ relationship_dic = {
 }
 
 
-def fill_in_query(partial_query, originating_entity_str, current_entity_str):
+def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag_suffix=""):
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
     # print current_entity_str
-    sqla_current_entity_str = sqla_to_django_schema[current_entity_str]
+    # sqla_current_entity_str = sqla_to_django_schema[current_entity_str]
     # print all_fields_info[sqla_current_entity_str]
 
     # current_entity_mod = get_object_from_string(current_entity_str)
 
     # entity_prop = all_fields_info[sqla_to_django_schema[current_entity_str]].keys()
-    entity_prop = all_fields_info[sqla_current_entity_str].keys()
+    entity_prop = all_fields_info[current_entity_str].keys()
 
     # sqla_current_entity_str = django_to_sqla_schema[current_entity_str]
     # project_cols = list()
@@ -1934,26 +1957,26 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str):
         project_cols.append(nprop)
 
     # Here we should reference the entity of the main query
-    current_entity_mod = get_object_from_string(current_entity_str)
+    current_entity_mod = entity_names_to_entities[current_entity_str]
 
-    aiida_current_entity_str = current_entity_str.split(".")[-1][2:]
-    # print aiida_current_entity_str
-    aiida_originating_entity_str = originating_entity_str.split(".")[-1][2:]
+    # aiida_current_entity_str = current_entity_str.split(".")[-1][2:]
+    # # print aiida_current_entity_str
+    # aiida_originating_entity_str = originating_entity_str.split(".")[-1][2:]
     # print aiida_originating_entity_str
 
     # print relationship_dic[aiida_current_entity_str]
-    rel_string = relationship_dic[aiida_current_entity_str][aiida_originating_entity_str]
+    rel_string = relationship_dic[current_entity_str][originating_entity_str]
     # print rel_string
-    mydict= {rel_string: originating_entity_str}
+    mydict= {rel_string: originating_entity_str + tag_suffix}
     # print "mydict", mydict
 
-    partial_query.append(current_entity_mod, tag=str(current_entity_str),
+    partial_query.append(current_entity_mod, tag=str(current_entity_str + tag_suffix),
                          project=project_cols, outerjoin=True, **mydict)
 
     # prepare the recursion for the referenced entities
     foreign_fields = {k: v for k, v in
                       all_fields_info[
-                          sqla_current_entity_str].iteritems()
+                          current_entity_str].iteritems()
                       # all_fields_info[model_name].iteritems()
                       if 'requires' in v}
 
@@ -1961,6 +1984,58 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str):
         ref_model_name = v['requires']
         fill_in_query(partial_query, current_entity_str, ref_model_name)
 
+
+# def fill_in_query(partial_query, originating_entity_str, current_entity_str):
+# 
+#     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
+#     # print current_entity_str
+#     sqla_current_entity_str = sqla_to_django_schema[current_entity_str]
+#     # print all_fields_info[sqla_current_entity_str]
+# 
+#     # current_entity_mod = get_object_from_string(current_entity_str)
+# 
+#     # entity_prop = all_fields_info[sqla_to_django_schema[current_entity_str]].keys()
+#     entity_prop = all_fields_info[sqla_current_entity_str].keys()
+# 
+#     # sqla_current_entity_str = django_to_sqla_schema[current_entity_str]
+#     # project_cols = list()
+#     project_cols = ["id"]
+#     for prop in entity_prop:
+#         nprop = prop
+#         if django_fields_to_sqla.has_key(current_entity_str):
+#             if django_fields_to_sqla[current_entity_str].has_key(prop):
+#                 nprop = django_fields_to_sqla[current_entity_str][prop]
+# 
+#         project_cols.append(nprop)
+# 
+#     # Here we should reference the entity of the main query
+#     current_entity_mod = get_object_from_string(current_entity_str)
+# 
+#     aiida_current_entity_str = current_entity_str.split(".")[-1][2:]
+#     # print aiida_current_entity_str
+#     aiida_originating_entity_str = originating_entity_str.split(".")[-1][2:]
+#     # print aiida_originating_entity_str
+# 
+#     # print relationship_dic[aiida_current_entity_str]
+#     rel_string = relationship_dic[aiida_current_entity_str][aiida_originating_entity_str]
+#     # print rel_string
+#     mydict= {rel_string: originating_entity_str}
+#     # print "mydict", mydict
+# 
+#     partial_query.append(current_entity_mod, tag=str(current_entity_str),
+#                          project=project_cols, outerjoin=True, **mydict)
+# 
+#     # prepare the recursion for the referenced entities
+#     foreign_fields = {k: v for k, v in
+#                       all_fields_info[
+#                           sqla_current_entity_str].iteritems()
+#                       # all_fields_info[model_name].iteritems()
+#                       if 'requires' in v}
+# 
+#     for k, v in foreign_fields.iteritems():
+#         ref_model_name = v['requires']
+#         fill_in_query(partial_query, current_entity_str, ref_model_name)
+        
 
 def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
                      allowed_licenses=None, forbidden_licenses=None,
@@ -2005,11 +2080,12 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     given_node_entry_ids = list()
     given_group_entry_ids = list()
 
+
     # entry_ids_to_add = defaultdict(list)
     # I store a list of the actual dbnodes
     group_entries = []
     # group_class_string = get_class_string(models.group.DbGroup)
-    group_class_sign = entity_names_to_signatures(GROUP_ENTITY_NAME)
+    group_class_sign = entity_names_to_signatures[GROUP_ENTITY_NAME]
     for entry in what:
         entry_class_string = get_class_string(entry)
         entry_entity_name = schema_to_entity_names(entry_class_string)
@@ -2019,8 +2095,10 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
         if entry_entity_name == GROUP_ENTITY_NAME:
             # group_entries.append(entry)
             given_group_entry_ids.append(entry.pk)
-        else:
+        elif entry_entity_name == NODE_ENTITY_NAME:
             given_node_entry_ids.append(entry.pk)
+        else:
+            continue
 
     if also_parents:
         # It is a defaultdict, it will provide an empty list
@@ -2086,20 +2164,21 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
                           else given_group_entry_ids)
 
         qb = QueryBuilder()
-        qb.append(get_object_from_string(k),
+        # qb.append(get_object_from_string(k),
+        qb.append(entity_names_to_entities[given_entity],
                   filters={"id": {"in": entry_ids_to_add}},
                   project=project_cols,
                   tag=given_entity, outerjoin=True)
-        entries_to_add[k] = qb
+        entries_to_add[given_entity] = qb
 
-        # entries_to_add = dict()
-        for k, v in entry_ids_to_add.iteritems():
-            qb = QueryBuilder()
-            # qb.isouter = True
-            # qb.append(Node, filters={"id": {"in": v}}, project=project_cols,
-            qb.append(get_object_from_string(k), filters={"id": {"in": entry_ids_to_add}}, project=project_cols,
-                      tag=k, outerjoin=True)
-            entries_to_add[k] = qb
+        # # entries_to_add = dict()
+        # for k, v in entry_ids_to_add.iteritems():
+        #     qb = QueryBuilder()
+        #     # qb.isouter = True
+        #     # qb.append(Node, filters={"id": {"in": v}}, project=project_cols,
+        #     qb.append(get_object_from_string(k), filters={"id": {"in": entry_ids_to_add}}, project=project_cols,
+        #               tag=k, outerjoin=True)
+        #     entries_to_add[k] = qb
 
     # TODO (Spyros) To see better! Especially for functional licenses
     # Check the licenses of exported data.
@@ -2119,18 +2198,19 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
         print "STORING DATABASE ENTRIES..."
 
     export_data = dict()
-    for top_entity_str, partial_query in entries_to_add.iteritems():
+    for entity_name, partial_query in entries_to_add.iteritems():
 
         foreign_fields = {k: v for k, v in
-                          all_fields_info[
-                              sqla_to_django_schema[top_entity_str]].iteritems()
+                          all_fields_info[entity_name].iteritems()
                           # all_fields_info[model_name].iteritems()
                           if 'requires' in v}
 
+        iter_counter = 0
         for k, v in foreign_fields.iteritems():
             ref_model_name = v['requires']
-            new_ref_model_name = django_to_sqla_schema[ref_model_name]
-            fill_in_query(partial_query, top_entity_str, new_ref_model_name)
+            # new_ref_model_name = django_to_sqla_schema[ref_model_name]
+            # fill_in_query(partial_query, entity_name, new_ref_model_name)
+            fill_in_query(partial_query, entity_name, ref_model_name, str(iter_counter))
 
         for temp_d in partial_query.iterdict():
             for k in temp_d.keys():

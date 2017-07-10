@@ -24,6 +24,7 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.code import Code
     from aiida.orm.node import Node
+    from aiida.common.links import LinkType
     from aiida.orm.querybuilder import QueryBuilder
 
     def draw_node_settings(node, **kwargs):
@@ -57,11 +58,26 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
                                        additional_params)
 
     def draw_link_settings(inp_id, out_id, link_label, link_type):
-        return '    {} -> {} [label="{}"];'.format("N{}".format(inp_id),  "N{}".format(out_id), link_label)
+        if link_type in (LinkType.CREATE.value, LinkType.INPUT.value):
+            style='solid'  # Solid lines and black colors
+            color = "0.0 0.0 0.0" # for CREATE and INPUT (The provenance graph)
+        elif link_type == LinkType.RETURN.value:
+            style='dotted'  # Dotted  lines of
+            color = "0.0 0.0 0.0" # black color for Returns
+        elif link_type == LinkType.CALL.value:
+            style='bold' # Bold lines and
+            color = "0.0 1.0 1.0" # Bright red for calls
+        else:
+            style='solid'   # Solid and
+            color="0.0 0.0 0.5" #grey lines for unspecified links!
+        return '    {} -> {} [label="{}", color="{}", style="{}"];'.format("N{}".format(inp_id),  "N{}".format(out_id), link_label, color, style)
 
     # Breadth-first search of all ancestors and descendant nodes of a given node
     links = {}  # Accumulate links here
     nodes = {origin_node.pk: draw_node_settings(origin_node, style='filled', color='lightblue')} #Accumulate nodes specs here
+    # Additional nodes (the ones added with either one of  include_calculation_inputs or include_calculation_outputs
+    # is set to true. I have to put them in a different dictionary because nodes is the one used for the recursion,
+    # whereas these should not be used for the recursion:
     additional_nodes = {}
 
     last_nodes = [origin_node] # Put the nodes whose links have not been scanned yet
@@ -69,29 +85,40 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
     # Go through the graph on-ward (i.e. look at inputs)
     depth = 0
     while last_nodes:
+        # I augment depth every time I get through a new iteration
         depth += 1
+        # I check whether I should stop here:
         if ancestor_depth is not None and depth > ancestor_depth:
             break
-
+        # I continue by adding new nodes here!
         new_nodes = []
         for node in last_nodes:
+            # This query gives me all the inputs of this node, and link labels and types!
             input_query = QueryBuilder()
             input_query.append(Node, filters={'id':node.pk}, tag='n')
             input_query.append(Node, input_of='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
             for inp, link_id, link_label, link_type in input_query.iterall():
-                if link_id not in links:
-                    links[link_id] = draw_link_settings(inp.pk, node.pk, link_label, link_type)
+                # I removed this check, to me there is no way that this link was already referred to!
+                # if link_id not in links:
+                links[link_id] = draw_link_settings(inp.pk, node.pk, link_label, link_type)
+                # For the nodes I need to check, maybe this same node is referred to multiple times.
                 if inp.pk not in nodes:
                     nodes[inp.pk] = draw_node_settings(inp)
                     new_nodes.append(inp)
-                
 
+            # Checking whether I also should include all the outputs of a calculation into the drawing:
             if include_calculation_outputs and isinstance(node, Calculation):
+                # Query for the outputs, giving me also link labels and types:
                 output_query = QueryBuilder()
                 output_query.append(Node, filters={'id':node.pk}, tag='n')
                 output_query.append(Node, output_of='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
-
+                # Iterate through results
                 for out, link_id, link_label, link_type in output_query.iterall():
+                    # This link might have been drawn already, because the output is maybe
+                    # already drawn.
+                    # To check: Maybe it's more efficient not to check this, since
+                    # the dictionaries are large and contain many keys...
+                    # I.e. just always draw, also when overwriting an existing (identical) entry.
                     if link_id not in links:
                         links[link_id] = draw_link_settings(node.pk, out.pk, link_label, link_type)
                     if out.pk not in nodes and out.pk not in additional_nodes:
@@ -105,18 +132,20 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
     depth = 0
     while last_nodes:
         depth += 1
+        # Also here, checking of maximum descendant depth is set and applies.
         if descendant_depth is not None and depth > descendant_depth:
             break
         new_nodes = []
 
         for node in last_nodes:
+            # Query for the outputs:
             output_query = QueryBuilder()
             output_query.append(Node, filters={'id':node.pk}, tag='n')
             output_query.append(Node, output_of='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
 
             for out, link_id, link_label, link_type in output_query.iterall():
-                if link_id not in links:
-                    links[link_id] = draw_link_settings(node.pk, out.pk, link_label, link_type)
+                # Draw the link
+                links[link_id] = draw_link_settings(node.pk, out.pk, link_label, link_type)
                 if out.pk not in nodes:
                     nodes[out.pk] = draw_node_settings(out)
                     new_nodes.append(out)
@@ -126,9 +155,10 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
                 input_query.append(Node, filters={'id':node.pk}, tag='n')
                 input_query.append(Node, input_of='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
                 for inp, link_id, link_label, link_type in input_query.iterall():
+                    # Also here, maybe it's just better not to check?
                     if link_id not in links:
                         links[link_id] = draw_link_settings(inp.pk, node.pk, link_label, link_type)
-                    if out.pk not in nodes and out.pk not in additional_nodes:
+                    if inp.pk not in nodes and inp.pk not in additional_nodes:
                         additional_nodes[inp.pk] = draw_node_settings(inp)
         last_nodes = new_nodes
 

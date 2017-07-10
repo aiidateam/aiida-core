@@ -1,6 +1,7 @@
 import os, tempfile
 
-def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='dot'):
+def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='dot',
+        include_calculation_inputs=False, include_calculation_outputs=False):
     """
     The algorithm starts from the original node and goes both input-ward and output-ward via a breadth-first algorithm.
 
@@ -22,10 +23,8 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
     from aiida.orm.calculation import Calculation
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.code import Code
-    from aiida.orm.data.array.kpoints import KpointsData
-    from aiida.orm.data.structure import StructureData
-    from aiida.orm.calculation.inline import InlineCalculation
-
+    from aiida.orm.node import Node
+    from aiida.orm.querybuilder import QueryBuilder
 
     def draw_node_settings(node, **kwargs):
         """
@@ -57,10 +56,13 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
         return "N{} [{},{}{}];".format(node.pk, shape, labelstring,
                                        additional_params)
 
+    def draw_link_settings(inp_id, out_id, link_label, link_type):
+        return '    {} -> {} [label="{}"];'.format("N{}".format(inp_id),  "N{}".format(out_id), link_label)
 
     # Breadth-first search of all ancestors and descendant nodes of a given node
-    links = []  # Accumulate links here
+    links = {}  # Accumulate links here
     nodes = {origin_node.pk: draw_node_settings(origin_node, style='filled', color='lightblue')} #Accumulate nodes specs here
+    additional_nodes = {}
 
     last_nodes = [origin_node] # Put the nodes whose links have not been scanned yet
 
@@ -73,12 +75,28 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
 
         new_nodes = []
         for node in last_nodes:
-            inputs = node.get_inputs(also_labels=True)
-            for linkname, inp in inputs:
-                links.append((inp.pk, node.pk, linkname))
+            input_query = QueryBuilder()
+            input_query.append(Node, filters={'id':node.pk}, tag='n')
+            input_query.append(Node, input_of='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
+            for inp, link_id, link_label, link_type in input_query.iterall():
+                if link_id not in links:
+                    links[link_id] = draw_link_settings(inp.pk, node.pk, link_label, link_type)
                 if inp.pk not in nodes:
                     nodes[inp.pk] = draw_node_settings(inp)
                     new_nodes.append(inp)
+                
+
+            if include_calculation_outputs and isinstance(node, Calculation):
+                output_query = QueryBuilder()
+                output_query.append(Node, filters={'id':node.pk}, tag='n')
+                output_query.append(Node, output_of='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
+
+                for out, link_id, link_label, link_type in output_query.iterall():
+                    if link_id not in links:
+                        links[link_id] = draw_link_settings(node.pk, out.pk, link_label, link_type)
+                    if out.pk not in nodes and out.pk not in additional_nodes:
+                        additional_nodes[out.pk] = draw_node_settings(out)
+
         last_nodes = new_nodes
 
 
@@ -90,22 +108,39 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
         if descendant_depth is not None and depth > descendant_depth:
             break
         new_nodes = []
+
         for node in last_nodes:
-            outputs = node.get_outputs(also_labels=True)
-            for linkname, out in outputs:
-                links.append((node.pk, out.pk, linkname))
+            output_query = QueryBuilder()
+            output_query.append(Node, filters={'id':node.pk}, tag='n')
+            output_query.append(Node, output_of='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
+
+            for out, link_id, link_label, link_type in output_query.iterall():
+                if link_id not in links:
+                    links[link_id] = draw_link_settings(node.pk, out.pk, link_label, link_type)
                 if out.pk not in nodes:
                     nodes[out.pk] = draw_node_settings(out)
                     new_nodes.append(out)
+
+            if include_calculation_inputs and isinstance(node, Calculation):
+                input_query = QueryBuilder()
+                input_query.append(Node, filters={'id':node.pk}, tag='n')
+                input_query.append(Node, input_of='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
+                for inp, link_id, link_label, link_type in input_query.iterall():
+                    if link_id not in links:
+                        links[link_id] = draw_link_settings(inp.pk, node.pk, link_label, link_type)
+                    if out.pk not in nodes and out.pk not in additional_nodes:
+                        additional_nodes[inp.pk] = draw_node_settings(inp)
         last_nodes = new_nodes
 
     # Writing the graph to a temporary file
     fd, fname = tempfile.mkstemp(suffix='.dot')
     with open(fname, 'w') as fout:
         fout.write("digraph G {\n")
-        for l in links:
-            fout.write('    {} -> {} [label="{}"];\n'.format("N{}".format(l[0]),  "N{}".format(l[1]), l[2]))
+        for l_name, l_values in links.iteritems():
+            fout.write('    {}\n'.format(l_values))
         for n_name, n_values in nodes.iteritems():
+            fout.write("    {}\n".format(n_values))
+        for n_name, n_values in additional_nodes.iteritems():
             fout.write("    {}\n".format(n_values))
         fout.write("}\n")
 

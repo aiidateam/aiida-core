@@ -73,6 +73,8 @@ class Graph(VerdiCommandWithSubcommands):
                 "recursing upwards, if not set it will recurse to the end", type=PositiveInt)
         parser.add_argument('-d', '--descendant-depth', help="The maximum depth when "
                 "recursing through the descendants, if not set it will recurse to the end", type=PositiveInt)
+        parser.add_argument('--outputs', help="Always show all outputs of a calculation", action='store_true')
+        parser.add_argument('--inputs', help="Always show all inputs of a calculation", action='store_true')
         parser.add_argument('-f', '--format', help="The output format, something that "
             "can be recognized by graphvix (see http://www.graphviz.org/doc/info/output.html)", default='dot')
         # Parse args and retrieve root pk
@@ -86,7 +88,9 @@ class Graph(VerdiCommandWithSubcommands):
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
-        exit_status, output_file_name = draw_graph(n, ancestor_depth=parsed_args.ancestor_depth, descendant_depth=parsed_args.descendant_depth, format=parsed_args.format)
+        exit_status, output_file_name = draw_graph(n, 
+                ancestor_depth=parsed_args.ancestor_depth, descendant_depth=parsed_args.descendant_depth, format=parsed_args.format,
+                include_calculation_inputs=parsed_args.inputs, include_calculation_outputs=parsed_args.outputs)
         if not exit_status:
             print "Output file is {}".format(output_file_name)
 

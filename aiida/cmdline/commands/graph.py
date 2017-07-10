@@ -49,12 +49,18 @@ class Graph(VerdiCommandWithSubcommands):
         :return: Generate a .dot file that can be rendered by graphviz utility dot
         """
         from aiida.orm import load_node
-        from aiida.orm.calculation import Calculation
-        from aiida.orm.calculation.job import JobCalculation
-        from aiida.orm.code import Code
-        from aiida.orm.data.array.kpoints import KpointsData
-        from aiida.orm.data.structure import StructureData
-        from aiida.orm.calculation.inline import InlineCalculation
+        from aiida.common.graph import draw_graph
+
+
+        def PositiveInt(value):
+            try:
+                ivalue=int(value)
+                if ivalue < 0:
+                    raise Exception("Negative value")
+                return ivalue
+            except Exception as e:
+                print e
+                raise argparse.ArgumentTypeError("%s is not a non-negative integer" % value)
 
         # Parse input arguments
         parser = argparse.ArgumentParser(
@@ -63,7 +69,12 @@ class Graph(VerdiCommandWithSubcommands):
 
         parser.add_argument('ROOT', help="The pk of the root node",
                             type=int)
-
+        parser.add_argument('-a', '--ancestor-depth', help="The maximum depth when "
+                "recursing upwards, if not set it will recurse to the end", type=PositiveInt)
+        parser.add_argument('-d', '--descendant-depth', help="The maximum depth when "
+                "recursing through the descendants, if not set it will recurse to the end", type=PositiveInt)
+        parser.add_argument('-f', '--format', help="The output format, something that "
+            "can be recognized by graphvix (see http://www.graphviz.org/doc/info/output.html)", default='dot')
         # Parse args and retrieve root pk
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -75,84 +86,8 @@ class Graph(VerdiCommandWithSubcommands):
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
-
-        # The algorithm starts from the root_pk and goes both input-ward and output-ward via a breadth-first algorithm
-        # until the connected part of the graph that contains the root_pk is fully explored.
-        # TODO this command deserves to be improved, with options and further subcommands
-
-
-        def draw_node_settings(node, **kwargs):
-            """
-            Returns a string with all infos needed in a .dot file  to define a node of a graph.
-            :param node:
-            :param kwargs: Additional key-value pairs to be added to the returned string
-            :return: a string
-            """
-            if isinstance(node, Calculation):
-                shape = "shape=polygon,sides=4"
-            elif isinstance(node, Code):
-                shape = "shape=diamond"
-            else:
-                shape = "shape=ellipse"
-            if kwargs:
-                additional_params = ",{}".format(
-                    ",".join('{}="{}"'.format(k, v) for k, v in kwargs.iteritems()))
-            else:
-                additional_params = ""
-            if node.label:
-                label_string = "\n'{}'".format(node.label)
-                additional_string = ""
-            else:
-                additional_string = "\n {}".format(node.get_desc())
-                label_string = ""
-            labelstring = 'label="{} ({}){}{}"'.format(
-                node.__class__.__name__, node.pk, label_string,
-                additional_string)
-            return "N{} [{},{}{}];".format(node.pk, shape, labelstring,
-                                           additional_params)
+        exit_status, output_file_name = draw_graph(n, ancestor_depth=parsed_args.ancestor_depth, descendant_depth=parsed_args.descendant_depth, format=parsed_args.format)
+        if not exit_status:
+            print "Output file is {}".format(output_file_name)
 
 
-        # Breadth-first search of all ancestors and descendant nodes of a given node
-        links = []  # Accumulate links here
-        nodes = {n.pk: draw_node_settings(n, style='filled', color='lightblue')} #Accumulate nodes specs here
-
-        last_nodes = [n] # Put the nodes whose links have not been scanned yet
-
-        # Go through the graph on-ward (i.e. look at inputs)
-        while last_nodes:
-            new_nodes = []
-            for node in last_nodes:
-                inputs = node.get_inputs(also_labels=True)
-                for linkname, inp in inputs:
-                    links.append((inp.pk, node.pk, linkname))
-                    if inp.pk not in nodes:
-                        nodes[inp.pk] = draw_node_settings(inp)
-                        new_nodes.append(inp)
-            last_nodes = new_nodes
-
-        # Go through the graph down-ward (i.e. look at outputs)
-        last_nodes = [n]
-        while last_nodes:
-            new_nodes = []
-            for node in last_nodes:
-                outputs = node.get_outputs(also_labels=True)
-                for linkname, out in outputs:
-                    links.append((node.pk, out.pk, linkname))
-                    if out.pk not in nodes:
-                        nodes[out.pk] = draw_node_settings(out)
-                        new_nodes.append(out)
-            last_nodes = new_nodes
-
-        # Generate name of the output file. Default
-        out_file_name = "{}.dot".format(root_pk)
-        print "out_file_name ", out_file_name
-        with open(out_file_name,'w') as fout:
-
-            fout.write("digraph G {\n")
-
-            for l in links:
-                fout.write('    {} -> {} [label="{}"];\n'.format("N{}".format(l[0]),  "N{}".format(l[1]), l[2]))
-            for n_name, n_values in nodes.iteritems():
-                fout.write("    {}\n".format(n_values))
-
-            fout.write("}\n")

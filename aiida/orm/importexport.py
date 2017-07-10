@@ -1479,284 +1479,98 @@ fields_to_export = {
          'ctime', 'dbcomputer', 'label', 'type'],
 }
 
-
-def get_all_fields_info_sqla():
-
-    unique_identifiers = {
-        "aiida.backends.djsite.db.models.DbNode": "uuid",
-        "aiida.backends.djsite.db.models.DbLink": None,
-        "aiida.backends.djsite.db.models.DbGroup": "uuid",
-        "aiida.backends.djsite.db.models.DbAttribute": None,
-        "aiida.backends.djsite.db.models.DbComputer": "uuid",
-        "aiida.backends.djsite.db.models.DbUser": "email"
-    }
-
-    all_fields_info = dict()
-    all_fields_info["aiida.backends.djsite.db.models.DbLink"] = {
-            "input": {
-                "requires": "aiida.backends.djsite.db.models.DbNode",
-                "related_name": "output_links"
-            },
-            "type": {},
-            "output": {
-                "requires": "aiida.backends.djsite.db.models.DbNode",
-                "related_name": "input_links"
-            },
-            "label": {}
-        }
-    all_fields_info["aiida.backends.djsite.db.models.DbNode"] = {
-             "ctime" : {
-                "convert_type" : "date"
-             },
-             "uuid" : {},
-             "public" : {},
-             "mtime" : {
-                "convert_type" : "date"
-             },
-             "type" : {},
-             "label" : {},
-             "nodeversion" : {},
-             "user" : {
-                "requires" : "aiida.backends.djsite.db.models.DbUser",
-                "related_name" : "dbnodes"
-             },
-             "dbcomputer" : {
-                "requires" : "aiida.backends.djsite.db.models.DbComputer",
-                "related_name" : "dbnodes"
-             },
-             "description" : {}
-        }
-    all_fields_info["aiida.backends.djsite.db.models.DbUser"] = {
-             "last_name" : {},
-             "first_name" : {},
-             "institution" : {},
-             "email" : {}
-        }
-    all_fields_info["aiida.backends.djsite.db.models.DbComputer"] = {
-             "transport_type" : {},
-             "transport_params" : {},
-             "hostname" : {},
-             "description" : {},
-             "scheduler_type" : {},
-             "metadata" : {},
-             "enabled" : {},
-             "uuid" : {},
-             "name" : {}
-        }
-    all_fields_info["aiida.backends.djsite.db.models.DbGroup"] = {
-             "description" : {},
-             "user" : {
-                "related_name" : "dbgroups",
-                "requires" : "aiida.backends.djsite.db.models.DbUser"
-             },
-             "time" : {
-                "convert_type" : "date"
-             },
-             "type" : {},
-             "uuid" : {},
-             "name" : {}
-        }
-    all_fields_info["aiida.backends.djsite.db.models.DbAttribute"] = {
-             "dbnode" : {
-                "requires" : "aiida.backends.djsite.db.models.DbNode",
-                "related_name" : "dbattributes"
-             },
-             "key" : {},
-             "tval" : {},
-             "fval" : {},
-             "bval" : {},
-             "datatype" : {},
-             "dval" : {
-                "convert_type" : "date"
-             },
-             "ival" : {}
-        }
-    return all_fields_info, unique_identifiers
-
-
-def get_all_fields_info_sqla_old():
-    """
-    Retrieve automatically the information on the fields and store them in a
-    dictionary, that will be also stored in the export data, in the metadata
-    file.
-
-    :return: a tuple with two elements, the all_fiekds_info dictionary, and the
-      unique_identifiers dictionary.
-    """
-
-    import django.db.models.fields as djf
-    import sqlalchemy.orm as sorm
-    import sqlalchemy.sql.sqltypes as stypes
-    import sqlalchemy.dialects.postgresql.base as sbase
-    # import django_extensions
-    from sqlalchemy.orm import class_mapper
-
-    # from aiida.backends.djsite.db import models
-    from aiida.backends.sqlalchemy import models
-
-    all_fields_info = {}
-
-    user_model_string = get_class_string(models.user.DbUser)
-
-    node_model_string = get_class_string(models.node.DbNode)
-
-    # TODO: These will probably need to have a default value in the IMPORT!
-    # TODO: maybe define this inside the Model!
-    all_exclude_fields = {
-        user_model_string: ['password', 'is_staff',
-                            'is_superuser', 'is_active',
-                            'last_login', 'date_joined'],
-        node_model_string: ['dbstates', 'workflow_step',
-                            'inputs', 'dbcomments', 'parents']
-    }
-
-    # I start only with DbNode
-    export_models = set([get_class_string(Model) for Model in
-                         [models.node.DbNode, models.node.DbLink,
-                          models.group.DbGroup]])
-
-    while True:
-        missing_models = export_models - set(all_fields_info.keys())
-        if not missing_models:
-            break
-
-        for model_name in missing_models:
-            Model = get_object_from_string(model_name)
-            # print "===================="
-            # print "Model", Model
-            thisinfo = {}
-            exclude_fields = all_exclude_fields.get(model_name, [])
-            for field in class_mapper(Model).iterate_properties:
-                # print "--------------------"
-                # print field.key, field.__class__
-
-                if field.key not in exclude_fields:
-                    continue
-
-                if isinstance(field, sorm.relationships.RelationshipProperty):
-                    # print "field.local_columns", field.local_columns
-                    # print "field.mapper.entity", field.mapper.entity
-                    # print "field.backref[0]", field.backref[0]
-                    rel_model_name = get_class_string(field.mapper.entity)
-                    related_name = field.key
-                    thisinfo[field.backref[0]] = {
-                            # The 'values' method will return the id (an integer),
-                            # so no custom serializer is required
-                            'requires': rel_model_name,
-                            'related_name': related_name,
-                        }
-                    export_models.add(rel_model_name)
-                elif isinstance(field, sorm.properties.ColumnProperty):
-                    # print field.columns[0].type
-                    # print field.columns[0].type.__class__
-                    if isinstance(field.columns[0].type, (stypes.Integer,
-                                  stypes.Boolean, stypes.String,
-                                  stypes.Text, stypes.Float)):
-                        thisinfo[unicode(field.expression._label)] = {}
-                    elif isinstance(field.columns[0].type, stypes.DateTime):
-                        thisinfo[unicode(field.expression._label)] = {
-                            'convert_type': 'date'}
-                    elif isinstance(field.columns[0].type, sbase.UUID):
-                        thisinfo[unicode(field.expression._label)] = {}
-                else:
-                    raise NotImplementedError(
-                        "Export not implemented for field {} of type {}."
-                            .format(field, field.__class__))
-
-                all_fields_info[model_name] = thisinfo
-
-
-
-                # if field.key in exclude_fields:
-                #     continue
-                # # if isinstance(field, sorm.AutoField):
-                # #     # Do not explicitly store the ID field
-                # #     pass
-                # elif isinstance(field, (sorm.CharField, djf.TextField,
-                #                         djf.IntegerField, djf.FloatField,
-                #                         djf.BooleanField, djf.NullBooleanField,
-                #                         django_extensions.db.fields.UUIDField)):
-                #     thisinfo[field.name] = {}
-                # elif isinstance(field, djf.DateTimeField):
-                #     # This information is needed on importing
-                #     thisinfo[field.name] = {'convert_type': 'date'}
-                # elif isinstance(field, django_extensions.db.fields.UUIDField):
-                #     thisinfo[field.name] = {}
-                # elif isinstance(field, djf.related.ForeignKey):
-                #     rel_model_name = get_class_string(field.rel.to)
-                #     related_name = field.rel.related_name
-                #     thisinfo[field.name] = {
-                #         # The 'values' method will return the id (an integer),
-                #         # so no custom serializer is required
-                #         'requires': rel_model_name,
-                #         'related_name': related_name,
-                #     }
-                #     export_models.add(rel_model_name)
-                # else:
-                #     raise NotImplementedError(
-                #         "Export not implemented for field of type {}.{}".format(
-                #             get_class_string(field)))
-                # all_fields_info[model_name] = thisinfo
-
-
-            # for field in Model._meta.fields:
-            #     if field.name in exclude_fields:
-            #         continue
-            #     if isinstance(field, djf.AutoField):
-            #         # Do not explicitly store the ID field
-            #         pass
-            #     elif isinstance(field, (djf.CharField, djf.TextField,
-            #                             djf.IntegerField, djf.FloatField,
-            #                             djf.BooleanField, djf.NullBooleanField,
-            #                             django_extensions.db.fields.UUIDField)):
-            #         thisinfo[field.name] = {}
-            #     elif isinstance(field, djf.DateTimeField):
-            #         # This information is needed on importing
-            #         thisinfo[field.name] = {'convert_type': 'date'}
-            #     elif isinstance(field, django_extensions.db.fields.UUIDField):
-            #         thisinfo[field.name] = {}
-            #     elif isinstance(field, djf.related.ForeignKey):
-            #         rel_model_name = get_class_string(field.rel.to)
-            #         related_name = field.rel.related_name
-            #         thisinfo[field.name] = {
-            #             # The 'values' method will return the id (an integer),
-            #             # so no custom serializer is required
-            #             'requires': rel_model_name,
-            #             'related_name': related_name,
-            #         }
-            #         export_models.add(rel_model_name)
-            #     else:
-            #         raise NotImplementedError(
-            #             "Export not implemented for field of type {}.{}".format(
-            #                 get_class_string(field)))
-            #     all_fields_info[model_name] = thisinfo
-
-    sys.exit()
-
-    unique_identifiers = {}
-    for k in all_fields_info:
-        if k == user_model_string:
-            unique_identifiers[k] = 'email'
-            continue
-
-        # No unique identifier in this case
-        if k in [get_class_string(models.DbAttribute),
-                 get_class_string(models.DbLink),
-                 get_class_string(models.DbExtra)]:
-            unique_identifiers[k] = None
-            continue
-
-        m = get_object_from_string(k)
-        field_names = [f.name for f in m._meta.fields]
-        if 'uuid' in field_names:
-            unique_identifiers[k] = 'uuid'
-        else:
-            raise ValueError("Unable to identify the unique identifier "
-                             "for model {}".format(k))
-
-    return all_fields_info, unique_identifiers
-
-
+# def get_all_fields_info_sqla():
+#
+#     unique_identifiers = {
+#         "aiida.backends.djsite.db.models.DbNode": "uuid",
+#         "aiida.backends.djsite.db.models.DbLink": None,
+#         "aiida.backends.djsite.db.models.DbGroup": "uuid",
+#         "aiida.backends.djsite.db.models.DbAttribute": None,
+#         "aiida.backends.djsite.db.models.DbComputer": "uuid",
+#         "aiida.backends.djsite.db.models.DbUser": "email"
+#     }
+#
+#     all_fields_info = dict()
+#     all_fields_info["aiida.backends.djsite.db.models.DbLink"] = {
+#             "input": {
+#                 "requires": "aiida.backends.djsite.db.models.DbNode",
+#                 "related_name": "output_links"
+#             },
+#             "type": {},
+#             "output": {
+#                 "requires": "aiida.backends.djsite.db.models.DbNode",
+#                 "related_name": "input_links"
+#             },
+#             "label": {}
+#         }
+#     all_fields_info["aiida.backends.djsite.db.models.DbNode"] = {
+#              "ctime" : {
+#                 "convert_type" : "date"
+#              },
+#              "uuid" : {},
+#              "public" : {},
+#              "mtime" : {
+#                 "convert_type" : "date"
+#              },
+#              "type" : {},
+#              "label" : {},
+#              "nodeversion" : {},
+#              "user" : {
+#                 "requires" : "aiida.backends.djsite.db.models.DbUser",
+#                 "related_name" : "dbnodes"
+#              },
+#              "dbcomputer" : {
+#                 "requires" : "aiida.backends.djsite.db.models.DbComputer",
+#                 "related_name" : "dbnodes"
+#              },
+#              "description" : {}
+#         }
+#     all_fields_info["aiida.backends.djsite.db.models.DbUser"] = {
+#              "last_name" : {},
+#              "first_name" : {},
+#              "institution" : {},
+#              "email" : {}
+#         }
+#     all_fields_info["aiida.backends.djsite.db.models.DbComputer"] = {
+#              "transport_type" : {},
+#              "transport_params" : {},
+#              "hostname" : {},
+#              "description" : {},
+#              "scheduler_type" : {},
+#              "metadata" : {},
+#              "enabled" : {},
+#              "uuid" : {},
+#              "name" : {}
+#         }
+#     all_fields_info["aiida.backends.djsite.db.models.DbGroup"] = {
+#              "description" : {},
+#              "user" : {
+#                 "related_name" : "dbgroups",
+#                 "requires" : "aiida.backends.djsite.db.models.DbUser"
+#              },
+#              "time" : {
+#                 "convert_type" : "date"
+#              },
+#              "type" : {},
+#              "uuid" : {},
+#              "name" : {}
+#         }
+#     all_fields_info["aiida.backends.djsite.db.models.DbAttribute"] = {
+#              "dbnode" : {
+#                 "requires" : "aiida.backends.djsite.db.models.DbNode",
+#                 "related_name" : "dbattributes"
+#              },
+#              "key" : {},
+#              "tval" : {},
+#              "fval" : {},
+#              "bval" : {},
+#              "datatype" : {},
+#              "dval" : {
+#                 "convert_type" : "date"
+#              },
+#              "ival" : {}
+#         }
+#     return all_fields_info, unique_identifiers
 
 
 def get_all_fields_info():
@@ -1861,21 +1675,72 @@ def get_all_fields_info():
 
     return all_fields_info, unique_identifiers
 
+NODE_ENTITY_NAME = "Node"
+LINK_ENTITY_NAME = "Link"
+GROUP_ENTITY_NAME = "Group"
+ATTRIBUTE_ENTITY_NAME = "Attribute"
+COMPUTER_ENTITY_NAME = "Computer"
+USER_ENTITY_NAME = "User"
 
-sqla_to_django_schema = {
-    "aiida.backends.sqlalchemy.models.node.DbNode": "aiida.backends.djsite.db.models.DbNode",
-    "aiida.backends.sqlalchemy.models.node.DbLink": "aiida.backends.djsite.db.models.DbLink",
-    "aiida.backends.sqlalchemy.models.group.DbGroup": "aiida.backends.djsite.db.models.DbGroup",
-    "aiida.backends.sqlalchemy.models.computer.DbComputer": "aiida.backends.djsite.db.models.DbComputer",
-    "aiida.backends.sqlalchemy.models.user.DbUser": "aiida.backends.djsite.db.models.DbUser"
+entity_names_to_signatures = {
+    NODE_ENTITY_NAME: "aiida.backends.djsite.db.models.DbNode",
+    LINK_ENTITY_NAME: "aiida.backends.djsite.db.models.DbLink",
+    GROUP_ENTITY_NAME: "aiida.backends.djsite.db.models.DbGroup",
+    COMPUTER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbComputer",
+    USER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbUser"
 }
 
-django_to_sqla_schema = {
-    "aiida.backends.djsite.db.models.DbNode": "aiida.backends.sqlalchemy.models.node.DbNode",
-    "aiida.backends.djsite.db.models.DbLink": "aiida.backends.sqlalchemy.models.node.DbLink",
-    "aiida.backends.djsite.db.models.DbGroup": "aiida.backends.sqlalchemy.models.group.DbGroup",
-    "aiida.backends.djsite.db.models.DbComputer": "aiida.backends.sqlalchemy.models.computer.DbComputer",
-    "aiida.backends.djsite.db.models.DbUser": "aiida.backends.sqlalchemy.models.user.DbUser"
+from aiida.orm.node import Node
+from aiida.orm.group import Group
+from aiida.orm.computer import Computer
+from aiida.orm.user import User
+
+entity_names_to_entities = {
+    NODE_ENTITY_NAME: Node,
+    GROUP_ENTITY_NAME: Group,
+    COMPUTER_ENTITY_NAME: Computer,
+    USER_ENTITY_NAME: User
+}
+
+
+def schema_to_entity_names(class_string):
+    if class_string is None or len(class_string) == 0:
+        return
+    if(class_string == "aiida.backends.djsite.db.models.DbNode" or
+               class_string == "aiida.backends.sqlalchemy.models.node.DbNode"):
+        return NODE_ENTITY_NAME
+
+    if(class_string == "aiida.backends.djsite.db.models.DbLink" or
+               class_string == "aiida.backends.sqlalchemy.models.node.DbLink"):
+        return LINK_ENTITY_NAME
+
+    if(class_string == "aiida.backends.djsite.db.models.DbGroup" or
+               class_string == "aiida.backends.sqlalchemy.models.group.DbGroup"):
+        return GROUP_ENTITY_NAME
+
+    if(class_string == "aiida.backends.djsite.db.models.DbComputer" or
+               class_string == "aiida.backends.sqlalchemy.models.computer.DbComputer"):
+        return COMPUTER_ENTITY_NAME
+    if (class_string == "aiida.backends.djsite.db.models.DbUser" or
+            class_string == "aiida.backends.sqlalchemy.models.user.DbUser"):
+        return USER_ENTITY_NAME
+
+
+entity_names_to_django_schema = {
+    NODE_ENTITY_NAME: "aiida.backends.djsite.db.models.DbNode",
+    LINK_ENTITY_NAME: "aiida.backends.djsite.db.models.DbLink",
+    GROUP_ENTITY_NAME: "aiida.backends.djsite.db.models.DbGroup",
+    COMPUTER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbComputer",
+    USER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbUser"
+}
+
+entity_names_to_sqla_schema = {
+    NODE_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbNode",
+    LINK_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbLink",
+    GROUP_ENTITY_NAME: "aiida.backends.sqlalchemy.models.group.DbGroup",
+    COMPUTER_ENTITY_NAME:
+        "aiida.backends.sqlalchemy.models.computer.DbComputer",
+    USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser"
 }
 
 django_fields_to_sqla = {
@@ -1897,35 +1762,133 @@ sqla_fields_to_django = {
     "aiida.backends.sqlalchemy.models.user.DbUser": {}
 }
 
-def export_spyros(dbnodes, dbcomputers, dbgroups, folder, also_parents = True, also_calc_outputs=True,
-                allowed_licenses=None, forbidden_licenses=None,
-                silent=False):
 
-    exported_dbnode_ids = list()
-    exported_dbcomputer_ids = list()
-    exported_dbgroup_ids = list()
+def get_all_fields_info_sqla():
 
-    dbnodes_to_export = list()
-    # name of the referenced entity to the ids that have to be added
-    referenced_entities = dict()
-    while dbnodes_to_export:
-        pass
+    unique_identifiers = {
+        NODE_ENTITY_NAME: "uuid",
+        LINK_ENTITY_NAME: None,
+        GROUP_ENTITY_NAME: "uuid",
+        ATTRIBUTE_ENTITY_NAME: None,
+        COMPUTER_ENTITY_NAME: "uuid",
+        USER_ENTITY_NAME: "email"
+    }
 
-# relationship_dic = {
-#     "Node": {
-#         "Computer": "computer_of",
-#         "Group": "group_of",
-#         "User": "creator_of"
-#     },
-#     "Group": {
-#         "Node": "member_of"
-#     },
-#     "Computer": {
-#         "Node": "has_computer"
-#     },
-#     "User": {
-#         "Node": "created_by"
-#     }
+    all_fields_info = dict()
+    all_fields_info[LINK_ENTITY_NAME] = {
+            "input": {
+                "requires": NODE_ENTITY_NAME,
+                "related_name": "output_links"
+            },
+            "type": {},
+            "output": {
+                "requires": NODE_ENTITY_NAME,
+                "related_name": "input_links"
+            },
+            "label": {}
+        }
+    all_fields_info[NODE_ENTITY_NAME] = {
+             "ctime" : {
+                "convert_type" : "date"
+             },
+             "uuid" : {},
+             "public" : {},
+             "mtime" : {
+                "convert_type" : "date"
+             },
+             "type" : {},
+             "label" : {},
+             "nodeversion" : {},
+             "user" : {
+                "requires" : USER_ENTITY_NAME,
+                "related_name" : "dbnodes"
+             },
+             "dbcomputer" : {
+                "requires" : COMPUTER_ENTITY_NAME,
+                "related_name" : "dbnodes"
+             },
+             "description" : {}
+        }
+    all_fields_info[USER_ENTITY_NAME] = {
+             "last_name" : {},
+             "first_name" : {},
+             "institution" : {},
+             "email" : {}
+        }
+    all_fields_info[COMPUTER_ENTITY_NAME] = {
+             "transport_type" : {},
+             "transport_params" : {},
+             "hostname" : {},
+             "description" : {},
+             "scheduler_type" : {},
+             "metadata" : {},
+             "enabled" : {},
+             "uuid" : {},
+             "name" : {}
+        }
+    all_fields_info[GROUP_ENTITY_NAME] = {
+             "description" : {},
+             "user" : {
+                "related_name" : "dbgroups",
+                "requires" : COMPUTER_ENTITY_NAME
+             },
+             "time" : {
+                "convert_type" : "date"
+             },
+             "type" : {},
+             "uuid" : {},
+             "name" : {}
+        }
+    all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
+             "dbnode" : {
+                "requires": NODE_ENTITY_NAME,
+                "related_name": "dbattributes"
+             },
+             "key" : {},
+             "tval" : {},
+             "fval" : {},
+             "bval": {},
+             "datatype": {},
+             "dval": {
+                "convert_type": "date"
+             },
+             "ival": {}
+        }
+    return all_fields_info, unique_identifiers
+
+# sqla_to_django_schema = {
+#     "aiida.backends.sqlalchemy.models.node.DbNode": "aiida.backends.djsite.db.models.DbNode",
+#     "aiida.backends.sqlalchemy.models.node.DbLink": "aiida.backends.djsite.db.models.DbLink",
+#     "aiida.backends.sqlalchemy.models.group.DbGroup": "aiida.backends.djsite.db.models.DbGroup",
+#     "aiida.backends.sqlalchemy.models.computer.DbComputer": "aiida.backends.djsite.db.models.DbComputer",
+#     "aiida.backends.sqlalchemy.models.user.DbUser": "aiida.backends.djsite.db.models.DbUser"
+# }
+#
+# django_to_sqla_schema = {
+#     "aiida.backends.djsite.db.models.DbNode": "aiida.backends.sqlalchemy.models.node.DbNode",
+#     "aiida.backends.djsite.db.models.DbLink": "aiida.backends.sqlalchemy.models.node.DbLink",
+#     "aiida.backends.djsite.db.models.DbGroup": "aiida.backends.sqlalchemy.models.group.DbGroup",
+#     "aiida.backends.djsite.db.models.DbComputer": "aiida.backends.sqlalchemy.models.computer.DbComputer",
+#     "aiida.backends.djsite.db.models.DbUser": "aiida.backends.sqlalchemy.models.user.DbUser"
+# }
+#
+# django_fields_to_sqla = {
+#     "aiida.backends.sqlalchemy.models.node.DbNode": {
+#         "dbcomputer" : "dbcomputer_id",
+#         "user": "user_id"},
+#     "aiida.backends.sqlalchemy.models.computer.DbComputer": {
+#         "metadata" : "_metadata"}
+# }
+#
+# sqla_fields_to_django = {
+#     "aiida.backends.sqlalchemy.models.node.DbNode": {
+#         "dbcomputer_id" : "dbcomputer",
+#         "user_id": "user"},
+#     "aiida.backends.sqlalchemy.models.node.DbLink": {},
+#     "aiida.backends.sqlalchemy.models.group.DbGroup": {},
+#     "aiida.backends.sqlalchemy.models.computer.DbComputer": {
+#         "_metadata" : "metadata"},
+#     "aiida.backends.sqlalchemy.models.user.DbUser": {}
 # }
 
 relationship_dic = {
@@ -1941,7 +1904,8 @@ relationship_dic = {
         "Node": "computer_of"
     },
     "User": {
-        "Node": "creator_of"
+        "Node": "creator_of",
+        "Group": "owner_of"
     }
 }
 
@@ -1972,10 +1936,6 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str):
     # Here we should reference the entity of the main query
     current_entity_mod = get_object_from_string(current_entity_str)
 
-    # print("lalalalalal")
-    # print(originating_entity_str)
-    # print(current_entity_str)
-
     aiida_current_entity_str = current_entity_str.split(".")[-1][2:]
     # print aiida_current_entity_str
     aiida_originating_entity_str = originating_entity_str.split(".")[-1][2:]
@@ -2003,7 +1963,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str):
 
 
 def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
-                allowed_licenses=None, forbidden_licenses=None, silent=False):
+                     allowed_licenses=None, forbidden_licenses=None,
+                     silent=False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
 
@@ -2029,12 +1990,8 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     import json
     import aiida
 
-    from collections import defaultdict
-
-    # from aiida.backends.djsite.db import models
     from aiida.backends.sqlalchemy import models
     from aiida.orm import Node, Calculation
-    from aiida.common.exceptions import LicensingException
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
 
@@ -2045,90 +2002,115 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
 
+    given_node_entry_ids = list()
+    given_group_entry_ids = list()
 
-    entries_ids_to_add = defaultdict(list)
+    # entry_ids_to_add = defaultdict(list)
     # I store a list of the actual dbnodes
-    groups_entries = []
-    group_class_string = get_class_string(models.group.DbGroup)
+    group_entries = []
+    # group_class_string = get_class_string(models.group.DbGroup)
+    group_class_sign = entity_names_to_signatures(GROUP_ENTITY_NAME)
     for entry in what:
-        class_string = get_class_string(entry)
-        entries_ids_to_add[class_string].append(entry.pk)
-        if class_string == group_class_string:
-            groups_entries.append(entry)
+        entry_class_string = get_class_string(entry)
+        entry_entity_name = schema_to_entity_names(entry_class_string)
+
+        # entry_ids_to_add[class_string].append(entry.pk)
+        # if entry_class_string == group_class_sign:
+        if entry_entity_name == GROUP_ENTITY_NAME:
+            # group_entries.append(entry)
+            given_group_entry_ids.append(entry.pk)
+        else:
+            given_node_entry_ids.append(entry.pk)
 
     if also_parents:
         # It is a defaultdict, it will provide an empty list
-        given_nodes = entries_ids_to_add[
-            "aiida.backends.sqlalchemy.models.node.DbNode"]
-        if given_nodes:
+        # given_nodes = entry_ids_to_add[
+        #     "aiida.backends.sqlalchemy.models.node.DbNode"]
+        # if given_nodes:
+        if given_node_entry_ids:
             # Also add the parents (to any level) to the query
             # This is done via the ancestor relationship.
             qb = QueryBuilder()
-            qb.append(Node, tag='low_node', filters={'id': {'in': given_nodes}})
+            qb.append(Node, tag='low_node',
+                      filters={'id': {'in': given_node_entry_ids}})
             qb.append(Node, ancestor_of='low_node', project=['id'])
             additional_ids = [_ for [_] in qb.all()] # Good way, since that works also when qb.all() returns []
-            given_nodes = list(set(given_nodes + additional_ids))
-            entries_ids_to_add[
-                "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
+            given_node_entry_ids = list(
+                set(given_node_entry_ids + additional_ids))
+            # entry_ids_to_add[
+            #     "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
 
     if also_calc_outputs:
-        given_nodes = entries_ids_to_add[
-            "aiida.backends.sqlalchemy.models.node.DbNode"]
-        if given_nodes:
+        # given_nodes = entry_ids_to_add[
+        #     "aiida.backends.sqlalchemy.models.node.DbNode"]
+        # if given_nodes:
+        if given_node_entry_ids:
             # Add all (direct) outputs of a calculation object that was already
              # selected
             qb = QueryBuilder()
             qb.append(Calculation, tag='high_node',
-                      filters={'id': {'in': given_nodes}}) # Only looking at calculations and subclasses
+                      filters={'id': {'in': given_node_entry_ids}}) # Only looking at calculations and subclasses
             qb.append(Node, output_of='high_node', project=['id']) # and the outputs
             additional_ids = [_ for [_] in qb.all()]
-            given_nodes = list(set(given_nodes + additional_ids)) # What if given_nodes is a set from the start?
-            entries_ids_to_add[
-                "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
+            given_node_entry_ids = list(set(given_node_entry_ids + additional_ids)) # What if given_nodes is a set from the start?
+            # entry_ids_to_add[
+            #     "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
 
-
-    # Here we get all the columns that we plan to project
-    model_name = get_class_string(models.node.DbNode)
-    project_cols = ["id"]
-    # The following gets a list of fields that we need, e.g. user, mtime, uuid, computer
-    entity_prop = all_fields_info[sqla_to_django_schema[model_name]].keys()
-
-    # Here we do the necessary renaming of
-    for prop in entity_prop:
-        nprop = (django_fields_to_sqla[model_name][prop]
-                if django_fields_to_sqla[model_name].has_key(prop)
-                else prop)
-        project_cols.append(nprop)
-    # project_cols contains the strings we can use to project, i.e. user_id, mtime, uuid, dbcomputer_id
+    # Here we get all the columns that we plan to project per entity that we
+    # would like to extract
+    given_entities = list()
+    if len(given_group_entry_ids) > 0:
+        given_entities.append(GROUP_ENTITY_NAME)
+    if len(given_node_entry_ids) > 0:
+        given_entities.append(NODE_ENTITY_NAME)
 
     entries_to_add = dict()
-    for k, v in entries_ids_to_add.iteritems():
+    for given_entity in given_entities:
+        project_cols = ["id"]
+        # The following gets a list of fields that we need, e.g. user, mtime, uuid, computer
+        entity_prop = all_fields_info[given_entity].keys()
+
+        # Here we do the necessary renaming of properties
+        for prop in entity_prop:
+            nprop = (django_fields_to_sqla[given_entity][prop]
+                    if django_fields_to_sqla[given_entity].has_key(prop)
+                    else prop)
+            project_cols.append(nprop)
+        # project_cols contains the strings we can use to project, i.e. user_id, mtime, uuid, dbcomputer_id
+
+
+        # Getting the ids that correspond to the right entity
+        entry_ids_to_add = (given_node_entry_ids
+                          if (given_entity ==
+                              entity_names_to_signatures[NODE_ENTITY_NAME])
+                          else given_group_entry_ids)
+
         qb = QueryBuilder()
-        # qb.isouter = True
-        qb.append(Node, filters={"id": {"in": v}}, project=project_cols,
-                  tag=k, outerjoin=True)
+        qb.append(get_object_from_string(k),
+                  filters={"id": {"in": entry_ids_to_add}},
+                  project=project_cols,
+                  tag=given_entity, outerjoin=True)
         entries_to_add[k] = qb
 
-    # print "entries_to_add ===>", entries_to_add
-    # sys.exit()
-
-    # entries_to_add = {k: [Q(id__in=v)]for k, v
-    #                   in entries_ids_to_add. iteritems()}
-
+        # entries_to_add = dict()
+        for k, v in entry_ids_to_add.iteritems():
+            qb = QueryBuilder()
+            # qb.isouter = True
+            # qb.append(Node, filters={"id": {"in": v}}, project=project_cols,
+            qb.append(get_object_from_string(k), filters={"id": {"in": entry_ids_to_add}}, project=project_cols,
+                      tag=k, outerjoin=True)
+            entries_to_add[k] = qb
 
     # TODO (Spyros) To see better! Especially for functional licenses
     # Check the licenses of exported data.
     if allowed_licenses is not None or forbidden_licenses is not None:
         qb = QueryBuilder()
         qb.append(Node, project=["id", "attributes.source.license"],
-                  filters={"id": {"in": entries_ids_to_add[
+                  filters={"id": {"in": entry_ids_to_add[
                       'aiida.backends.sqlalchemy.models.node.DbNode']}})
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
         node_licenses = list((a,b) for [a,b] in qb.all() if b is not None)
         check_licences(node_licenses, allowed_licenses, forbidden_licenses)
-
-
-
 
     ############################################################
     ##### Start automatic recursive export data generation #####
@@ -2141,7 +2123,7 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
 
         foreign_fields = {k: v for k, v in
                           all_fields_info[
-                              sqla_to_django_schema[model_name]].iteritems()
+                              sqla_to_django_schema[top_entity_str]].iteritems()
                           # all_fields_info[model_name].iteritems()
                           if 'requires' in v}
 
@@ -2149,11 +2131,6 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
             ref_model_name = v['requires']
             new_ref_model_name = django_to_sqla_schema[ref_model_name]
             fill_in_query(partial_query, top_entity_str, new_ref_model_name)
-
-
-        # print "===============> "
-        # print str(partial_query)
-        # print partial_query.dict()
 
         for temp_d in partial_query.iterdict():
             for k in temp_d.keys():
@@ -2167,12 +2144,6 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
                     export_data[sqla_to_django_schema[k]].update(temp_d2)
                 except KeyError:
                     export_data[sqla_to_django_schema[k]] = temp_d2
-
-    # print export_data
-
-    # Until here
-    # sys.exit()
-
 
     ######################################
     # Manually manage links and attributes
@@ -2253,7 +2224,7 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     if not silent:
         print "STORING GROUP ELEMENTS..."
     groups_uuid = {g.uuid: list(g.dbnodes.values_list('uuid', flat=True))
-                   for g in groups_entries}
+                   for g in group_entries}
 
     ######################################
     # Now I store

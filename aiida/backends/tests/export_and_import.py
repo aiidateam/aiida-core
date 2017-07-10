@@ -649,7 +649,8 @@ class TestComplexx(AiidaTestCase):
 
         finally:
             # Deleting the created temporary folder
-            shutil.rmtree(temp_folder, ignore_errors=True)
+            # shutil.rmtree(temp_folder, ignore_errors=True)
+            print "===========> ", temp_folder
 
 
 class TestComplex():

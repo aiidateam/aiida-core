@@ -1687,7 +1687,8 @@ entity_names_to_signatures = {
     LINK_ENTITY_NAME: "aiida.backends.djsite.db.models.DbLink",
     GROUP_ENTITY_NAME: "aiida.backends.djsite.db.models.DbGroup",
     COMPUTER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbComputer",
-    USER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbUser"
+    USER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbUser",
+    ATTRIBUTE_ENTITY_NAME: "aiida.backends.djsite.db.models.DbAttribute"
 }
 
 from aiida.orm.node import Node
@@ -1933,7 +1934,8 @@ relationship_dic = {
 }
 
 
-def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag_suffix=""):
+def fill_in_query(partial_query, originating_entity_str, current_entity_str,
+                  tag_suffixes=[], entity_separator="_"):
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
     # print current_entity_str
@@ -1967,10 +1969,12 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag
     # print relationship_dic[aiida_current_entity_str]
     rel_string = relationship_dic[current_entity_str][originating_entity_str]
     # print rel_string
-    mydict= {rel_string: originating_entity_str + tag_suffix}
+    mydict= {rel_string: entity_separator.join(tag_suffixes)}
     # print "mydict", mydict
 
-    partial_query.append(current_entity_mod, tag=str(current_entity_str + tag_suffix),
+    partial_query.append(current_entity_mod,
+                         tag=entity_separator.join(tag_suffixes) +
+                             entity_separator + current_entity_str,
                          project=project_cols, outerjoin=True, **mydict)
 
     # prepare the recursion for the referenced entities
@@ -1980,9 +1984,11 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag
                       # all_fields_info[model_name].iteritems()
                       if 'requires' in v}
 
+    new_tag_suffixes = tag_suffixes + [current_entity_str]
     for k, v in foreign_fields.iteritems():
         ref_model_name = v['requires']
-        fill_in_query(partial_query, current_entity_str, ref_model_name)
+        fill_in_query(partial_query, current_entity_str, ref_model_name,
+                      new_tag_suffixes)
 
 
 # def fill_in_query(partial_query, originating_entity_str, current_entity_str):
@@ -2198,6 +2204,7 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
         print "STORING DATABASE ENTRIES..."
 
     export_data = dict()
+    entity_separator = '_'
     for entity_name, partial_query in entries_to_add.iteritems():
 
         foreign_fields = {k: v for k, v in
@@ -2205,31 +2212,39 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
                           # all_fields_info[model_name].iteritems()
                           if 'requires' in v}
 
-        iter_counter = 0
         for k, v in foreign_fields.iteritems():
             ref_model_name = v['requires']
             # new_ref_model_name = django_to_sqla_schema[ref_model_name]
             # fill_in_query(partial_query, entity_name, new_ref_model_name)
-            fill_in_query(partial_query, entity_name, ref_model_name, str(iter_counter))
+            fill_in_query(partial_query, entity_name, ref_model_name,
+                          [entity_name], entity_separator)
 
         for temp_d in partial_query.iterdict():
             for k in temp_d.keys():
+                # Get current entity
+                current_entity = k.split(entity_separator)[-1]
+
                 # This is a empty result of an outer join.
                 # It should not be taken into account.
                 if temp_d[k]["id"] is None:
                     continue
 
-                temp_d2 = {temp_d[k]["id"]: serialize_dict(temp_d[k], remove_fields=['id'], rename_fields=sqla_fields_to_django[k])}
+                temp_d2 = {
+                    temp_d[k]["id"]:
+                        serialize_dict(temp_d[k],
+                                       remove_fields=['id'],
+                                       rename_fields=
+                                       sqla_fields_to_django[current_entity])}
                 try:
-                    export_data[sqla_to_django_schema[k]].update(temp_d2)
+                    export_data[current_entity].update(temp_d2)
                 except KeyError:
-                    export_data[sqla_to_django_schema[k]] = temp_d2
+                    export_data[current_entity] = temp_d2
 
     ######################################
     # Manually manage links and attributes
     ######################################
     # I use .get because there may be no nodes to export
-    all_nodes_pk = export_data.get("aiida.backends.djsite.db.models.DbNode").keys()
+    all_nodes_pk = export_data.get(NODE_ENTITY_NAME).keys()
     if sum(len(model_data) for model_data in export_data.values()) == 0:
         if not silent:
             print "No nodes to store, exiting..."
@@ -2240,20 +2255,11 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
             sum(len(model_data) for model_data in export_data.values()),
             len(all_nodes_pk))
 
-    # !!!!!!!! WHY AGAIN ANOTHER QUERY FOR ALREADY EXTRACTED NODES !!!!!
-    # => In order to get the attributes too... => See if this can be optimized
+    # A second QueryBuilder query to get the atributes. See if this can be
+    # optimized
     all_nodes_query = QueryBuilder()
-    all_nodes_query.append(Node, filters={"id": {"in": all_nodes_pk}}, project=["*"])
-    # all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
-
-    # sys.exit()
-
-    # if not silent:
-    #     print "Exporting a total of {} db entries, of which {} nodes.".format(
-    #         sum(len(model_data) for model_data in export_data.values()),
-    #         len(all_nodes_pk))
-    # all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
-
+    all_nodes_query.append(Node, filters={"id": {"in": all_nodes_pk}},
+                           project=["*"])
     ## ATTRIBUTES
     if not silent:
         print "STORING NODE ATTRIBUTES..."
@@ -2264,20 +2270,6 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
         (node_attributes[str(n.pk)],
          node_attributes_conversion[str(n.pk)]) = serialize_dict(
             n.get_attrs(), track_conversion=True)
-        # for item in n.get_attrs().iteritems():
-        #     (node_attributes[str(n.pk)],
-        #      node_attributes_conversion[str(n.pk)]) = item
-
-    # See if the above is correct!!!!
-
-    ## If I want to store them 'raw'; it is faster, but more error prone and
-    ## less version-independent, I think. Better to optimize the n.attributes
-    ## call.
-    # all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
-    #node_attributes_raw = list(models.DbAttribute.objects.filter(
-    #    dbnode__in=all_nodes_pk).distinct().values(
-    #    'bval', 'tval', 'ival', 'fval', 'dval',
-    #    'datatype', 'time', 'dbnode', 'key')
 
     if not silent:
         print "STORING NODE LINKS..."
@@ -2285,20 +2277,20 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     ## that will get automatically attached to a parent node in the end DB,
     ## if the parent node is already present in the DB)
 
-    links_qb =  QueryBuilder()
+    links_qb = QueryBuilder()
     links_qb.append(Node, project=['uuid'], tag='input')
     links_qb.append(Node,
-            project=['uuid'], tag='output', filters={'id':{'in':all_nodes_pk}},
-            edge_project=['label'], output_of='input')
+                    project=['uuid'], tag='output',
+                    filters={'id':{'in':all_nodes_pk}},
+                    edge_project=['label'], output_of='input')
     links_uuid = list()
 
     for input_uuid, output_uuid, link_label in links_qb.iterall():
         links_uuid.append({
-            'input':str(input_uuid),
-            'output':str(output_uuid),
-            'label':str(link_label)
+            'input': str(input_uuid),
+            'output': str(output_uuid),
+            'label': str(link_label)
         })
-
 
     # The following has to be written more properly
     if not silent:
@@ -2313,6 +2305,11 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     nodesubfolder = folder.get_subfolder('nodes',create=True,
                                          reset_limit=True)
 
+    # Add the proper signatures for the exported data
+    for entity_name in export_data.keys():
+        export_data[entity_names_to_signatures[entity_name]] = (
+            export_data.pop(entity_name))
+
     if not silent:
         print "STORING DATA..."
 
@@ -2324,6 +2321,21 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
                 'links_uuid': links_uuid,
                 'groups_uuid': groups_uuid,
                 }, f)
+
+    # Add proper signature to unique identifiers & all_fields_info
+    # Ignore if a key doesn't exist in any of the two dictionaries
+    for entity_name in set(unique_identifiers.keys() + all_fields_info.keys()):
+        try:
+            unique_identifiers[entity_names_to_signatures[entity_name]] = (
+                unique_identifiers.pop(entity_name))
+        except KeyError:
+            pass
+        try:
+            all_fields_info[entity_names_to_signatures[entity_name]] = (
+                all_fields_info.pop(entity_name))
+        except KeyError:
+            pass
+
 
     metadata = {
         'aiida_version': aiida.get_version(),

@@ -788,7 +788,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.common.datastructures import calc_states
     from aiida.orm.querybuilder import QueryBuilder
 
-
     # This is the export version expected by this function
     expected_export_version = '0.2'
 
@@ -804,16 +803,16 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     # The sandbox has to remain open until the end
     with SandboxFolder() as folder:
         if os.path.isdir(in_path):
-            extract_tree(in_path,folder,silent=silent)
+            extract_tree(in_path,folder, silent=silent)
         else:
             if tarfile.is_tarfile(in_path):
-                extract_tar(in_path,folder,silent=silent,
+                extract_tar(in_path,folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif zipfile.is_zipfile(in_path):
-                extract_zip(in_path,folder,silent=silent,
+                extract_zip(in_path,folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif os.path.isfile(in_path) and in_path.endswith('.cif'):
-                extract_cif(in_path,folder,silent=silent,
+                extract_cif(in_path,folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             else:
                 raise ValueError("Unable to detect the input file format, it "
@@ -834,38 +833,43 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # PRELIMINARY CHECKS #
         ######################
         if metadata['export_version'] != expected_export_version:
-            raise ValueError("File export version is {}, but I can import only "
-                             "version {}".format(metadata['export_version'],
-                                                 expected_export_version))
+            raise ValueError("File export version is {}, but I can "
+                             "import only version {}"
+                             .format(metadata['export_version'],
+                                     expected_export_version))
 
-        ##########################################################################
-        # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
-        ##########################################################################
+        ###################################################################
+        #           CREATE UUID REVERSE TABLES AND CHECK IF               #
+        #              I HAVE ALL NODES FOR THE LINKS                     #
+        ###################################################################
         linked_nodes = set(chain.from_iterable((l['input'], l['output'])
                                                for l in data['links_uuid']))
-        group_nodes = set(chain.from_iterable(data['groups_uuid'].itervalues()))
+        group_nodes = set(chain.from_iterable(
+            data['groups_uuid'].itervalues()))
 
         # I preload the nodes, I need to check each of them later, and I also
         # store them in a reverse table
         # I break up the query due to SQLite limitations..
-        relevant_db_nodes = {}
+        # relevant_db_nodes = {}
+        db_nodes_uuid = set()
         qb = QueryBuilder()
-        qb.append(Node, project=["*"])
-        # qb.append(Node, filters={"uuid": {"in": linked_nodes}},
-        #           project=["uuid"])
-        for wrapped_res in qb.iterall():
-            node = wrapped_res[0]
-            relevant_db_nodes.update({node.uuid: node})
+        qb.append(Node, filters={"uuid": {"in": linked_nodes}},
+                  project=["uuid"])
+        for res in qb.iterall():
+            relevant_db_nodes.add(res[0])
+            # relevant_db_nodes.updaate({node.uuid: node})
 
         # for group in grouper(999, linked_nodes):
         #     relevant_db_nodes.update({n.uuid: n for n in
         #                               models.DbNode.objects.filter(uuid__in=group)})
 
-        db_nodes_uuid = set(relevant_db_nodes.keys())
+        # db_nodes_uuid = set(relevant_db_nodes.keys())
         # dbnode_model = get_class_string(models.DbNode)
-        dbnode_model = "aiida.backends.djsite.db.models.DbNode"
+        # dbnode_model = "aiida.backends.djsite.db.models.DbNode"
         import_nodes_uuid = set(v['uuid'] for v in
-                                data['export_data'][dbnode_model].values())
+                                data['export_data'][
+                                    entity_names_to_signatures[
+                                        NODE_ENTITY_NAME]].values())
 
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)
@@ -881,63 +885,64 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         ###################################
         # DOUBLE-CHECK MODEL DEPENDENCIES #
         ###################################
-        # I hardcode here the model order, for simplicity; in any case, this is
-        # fixed by the export version
-
-        model_order = [m for m in
-                       ("aiida.backends.djsite.db.models.DbUser",
-                        "aiida.backends.djsite.db.models.DbComputer",
-                        "aiida.backends.djsite.db.models.DbNode",
-                        "aiida.backends.djsite.db.models.DbGroup",
-                        )
+        # The entity import order. It is defined by the database model
+        # relationships
+        entity_sig_order = [entity_names_to_signatures[m]
+                        for m in (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME,
+                                  NODE_ENTITY_NAME, GROUP_ENTITY_NAME)]
                        # ("aiida.backends.sqlalchemy.models.user.DbUser",
                        #  "aiida.backends.sqlalchemy.models.computer.DbComputer",
                        #  "aiida.backends.sqlalchemy.models.node.DbNode",
                        #  "aiida.backends.sqlalchemy.models.group.DbGroup",
                        # )
-        ]
+        # ]
 
         # Models that do appear in the import file, but whose import is
         # managed manually
-        model_manual = [m for m in
-                        ("aiida.backends.djsite.db.models.DbLink",
-                         "aiida.backends.djsite.db.models.DbAttribute",)
-                        # ("aiida.backends.sqlalchemy.models.node.DbLink",
-                        #  "aiida.backends.djsite.db.models.DbAttribute",)
-        ]
+        # model_manual = [m for m in
+        #                 ("aiida.backends.djsite.db.models.DbLink",
+        #                  "aiida.backends.djsite.db.models.DbAttribute",)
+        #                 # ("aiida.backends.sqlalchemy.models.node.DbLink",
+        #                 #  "aiida.backends.djsite.db.models.DbAttribute",)
+        # ]
 
-        all_known_models = model_order + model_manual
+        # "Entities" that do appear in the import file, but whose import is
+        # managed manually
+        entity_sig_manual = [entity_names_to_signatures[m]
+                         for m in (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)]
+
+        all_known_entity_sigs = entity_sig_order + entity_sig_manual
 
         for import_field_name in metadata['all_fields_info']:
-            if import_field_name not in all_known_models:
+            if import_field_name not in all_known_entity_sigs:
                 raise NotImplementedError("Apparently, you are importing a "
                                           "file with a model '{}', but this does not appear in "
                                           "all_known_models!".format(import_field_name))
 
-        for idx, model_name in enumerate(model_order):
+        for idx, entity_sig in enumerate(entity_sig_order):
             dependencies = []
-            for field in metadata['all_fields_info'][model_name].values():
+            for field in metadata['all_fields_info'][entity_sig].values():
                 try:
                     dependencies.append(field['requires'])
                 except KeyError:
                     # (No ForeignKey)
                     pass
             for dependency in dependencies:
-                if dependency not in model_order[:idx]:
+                if dependency not in entity_sig_order[:idx]:
                     raise ValueError("Model {} requires {} but would be loaded "
-                                     "first; stopping...".format(model_name,
+                                     "first; stopping...".format(entity_sig,
                                                                  dependency))
 
         ###################################################
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
         ###################################################
         import_unique_ids_mappings = {}
-        for model_name, import_data in data['export_data'].iteritems():
-            if model_name in metadata['unique_identifiers']:
+        for entity_sig, import_data in data['export_data'].iteritems():
+            if entity_sig in metadata['unique_identifiers']:
                 # I have to reconvert the pk to integer
-                import_unique_ids_mappings[model_name] = {
-                    int(k): v[metadata['unique_identifiers'][model_name]] for k, v in
-                    import_data.iteritems()}
+                import_unique_ids_mappings[entity_sig] = {
+                    int(k): v[metadata['unique_identifiers'][entity_sig]]
+                    for k, v in import_data.iteritems()}
 
         ###############
         # IMPORT DATA #
@@ -955,44 +960,40 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             existing_entries = {}
 
             # I first generate the list of data
-            for model_name in model_order:
-                Model = get_object_from_string(django_to_sqla_schema[model_name])
-                fields_info = metadata['all_fields_info'].get(model_name, {})
+            for entity_sig in entity_sig_order:
+                entity_name = signatures_to_entity_names[entity_sig]
+                entity = entity_names_to_entities[entity_name]
                 unique_identifier = metadata['unique_identifiers'].get(
-                    model_name, None)
+                    entity_sig, None)
 
-                new_entries[model_name] = {}
-                existing_entries[model_name] = {}
+                new_entries[entity_sig] = {}
+                existing_entries[entity_sig] = {}
 
-                foreign_ids_reverse_mappings[model_name] = {}
+                foreign_ids_reverse_mappings[entity_sig] = {}
 
                 # Not necessarily all models are exported
-                if model_name in data['export_data']:
+                if entity_sig in data['export_data']:
 
                     if unique_identifier is not None:
                         import_unique_ids = set(v[unique_identifier] for v in
-                                                data['export_data'][model_name].values())
-
-                        # relevant_db_entries = {getattr(n, unique_identifier): n
-                        #                        for n in Model.objects.filter(
-                        #     **{'{}__in'.format(unique_identifier):
-                        #            import_unique_ids})}
+                                                data['export_data'][entity_sig].values())
 
                         qb = QueryBuilder()
-                        qb.append(Model, filters={unique_identifier: {"in": import_unique_ids}},
+                        qb.append(entity, filters={unique_identifier: {"in": import_unique_ids}},
                                   project=["*"], tag="res")
                         relevant_db_entries = {getattr(v[0], unique_identifier): v[0] for v in qb.all()}
 
-                        foreign_ids_reverse_mappings[model_name] = {
+                        foreign_ids_reverse_mappings[entity_sig] = {
                             k: v.pk for k, v in relevant_db_entries.iteritems()}
                         dupl_counter = 0
                         imported_comp_names = set()
-                        for k, v in data['export_data'][model_name].iteritems():
-                            if model_name == "aiida.backends.djsite.db.models.DbComputer":
+                        for k, v in data['export_data'][entity_sig].iteritems():
+                            if entity_sig == entity_names_to_signatures[
+                                COMPUTER_ENTITY_NAME]:
                                 # Check if there is already a computer with the
                                 # same name in the database
                                 qb = QueryBuilder()
-                                qb.append(Model,
+                                qb.append(entity,
                                           filters={'name': {"==": v["name"]}},
                                           project=["*"], tag="res")
                                 dupl = (qb.count()
@@ -1007,7 +1008,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                             dupl_counter))
                                     dupl_counter += 1
                                     qb = QueryBuilder()
-                                    qb.append(Model,
+                                    qb.append(entity,
                                               filters={
                                                   'name': {"==": v["name"]}},
                                               project=["*"], tag="res")
@@ -1018,41 +1019,41 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                             if v[unique_identifier] in relevant_db_entries.keys():
                                 # Already in DB
-                                existing_entries[model_name][k] = v
+                                existing_entries[entity_sig][k] = v
                             else:
                                 # To be added
-                                new_entries[model_name][k] = v
+                                new_entries[entity_sig][k] = v
                     else:
-                        new_entries[model_name] = data['export_data'][model_name].copy()
+                        new_entries[entity_sig] = data['export_data'][entity_sig].copy()
 
             # I import data from the given model
-            for model_name in model_order:
-                Model = get_object_from_string(django_to_sqla_schema[model_name])
-                fields_info = metadata['all_fields_info'].get(model_name, {})
+            for entity_sig in entity_sig_order:
+                entity_name = signatures_to_entity_names[entity_sig]
+                entity = entity_names_to_entities[entity_name]
+                fields_info = metadata['all_fields_info'].get(entity_sig, {})
                 unique_identifier = metadata['unique_identifiers'].get(
-                    model_name, None)
+                    entity_sig, None)
 
-                for import_entry_id, entry_data in existing_entries[model_name].iteritems():
+                for import_entry_id, entry_data in existing_entries[entity_sig].iteritems():
                     unique_id = entry_data[unique_identifier]
-                    existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
+                    existing_entry_id = foreign_ids_reverse_mappings[entity_sig][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
-                    if model_name not in ret_dict:
-                        ret_dict[model_name] = { 'new': [], 'existing': [] }
-                    ret_dict[model_name]['existing'].append((import_entry_id,
+                    if entity_sig not in ret_dict:
+                        ret_dict[entity_sig] = { 'new': [], 'existing': [] }
+                    ret_dict[entity_sig]['existing'].append((import_entry_id,
                                                              existing_entry_id))
                     if not silent:
-                        print "existing %s: %s (%s->%s)" % (model_name, unique_id,
+                        print "existing %s: %s (%s->%s)" % (entity_sig, unique_id,
                                                             import_entry_id,
                                                             existing_entry_id)
-                        # print "  `-> WARNING: NO DUPLICITY CHECK DONE!"
-                        # CHECK ALSO FILES!
 
                 # Store all objects for this model in a list, and store them
                 # all in once at the end.
                 objects_to_create = []
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = {}
-                for import_entry_id, entry_data in new_entries[model_name].iteritems():
+                for import_entry_id, entry_data in (
+                        new_entries[entity_sig].iteritems()):
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
@@ -1060,14 +1061,14 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
                                        for k, v in entry_data.iteritems())
 
-                    # print "================================> INSIDE"
-                    objects_to_create.append(Model(**import_data))
+                    db_entity = get_object_from_string(
+                        entity_names_to_sqla_schema[entity_name])
+                    objects_to_create.append(db_entity(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
 
                 # Before storing entries in the DB, I store the files (if these
                 # are nodes). Note: only for new entries!
-                # if model_name == get_class_string("aiida.backends.djsite.db.models.DbNode"):
-                if model_name == "aiida.backends.djsite.db.models.DbNode":
+                if entity_sig == entity_names_to_signatures[NODE_ENTITY_NAME]:
 
                     if not silent:
                         print "STORING NEW NODE FILES & ATTRIBUTES..."
@@ -1115,33 +1116,26 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                             o.attributes = dict()
                             for k, v in deserialized_attributes.items():
                                 o.attributes[k] = v
-                            #     o.set_attr(k, v)
 
-
-                # Store them all in once; however, the PK are not set in this way...
-                # Model.objects.bulk_create(objects_to_create)
+                # Store them all in once; However, the PK
+                # are not set in this way...
                 if objects_to_create:
                     session.add_all(objects_to_create)
-                    # session.commit()
 
-                # Get back the just-saved entries
-                # just_saved = dict(Model.objects.filter(
-                #     **{"{}__in".format(unique_identifier):
-                #            import_entry_ids.keys()}).values_list(unique_identifier, 'pk'))
                 if import_entry_ids.keys():
                     qb = QueryBuilder()
-                    qb.append(Model, filters={
+                    qb.append(entity, filters={
                         unique_identifier: {"in": import_entry_ids.keys()}},
                               project=[unique_identifier, "id"], tag="res")
-                    # print qb.all()
-                    # exit(0)
                     just_saved = {v[0]: v[1] for v in qb.all()}
                 else:
                     just_saved = dict()
 
-
                 imported_states = []
-                if model_name == "aiida.backends.djsite.db.models.DbNode":
+                if entity_sig == entity_names_to_signatures[NODE_ENTITY_NAME]:
+                    ################################################
+                    # Needs more from here and below
+                    ################################################
                     if not silent:
                         print "SETTING THE IMPORTED STATES FOR NEW NODES..."
                     # I set for all nodes, even if I should set it only
@@ -1150,11 +1144,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     for unique_id, new_pk in just_saved.iteritems():
                         imported_states.append(
                             DbCalcState(dbnode_id=new_pk,
-                                               state=calc_states.IMPORTED))
+                                        state=calc_states.IMPORTED))
 
                     session.add_all(imported_states)
-                    # session.commit()
-                    # models.DbCalcState.objects.bulk_create(imported_states)
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings
@@ -1163,14 +1155,14 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     if isinstance(unique_id, UUID):
                         unique_id = str(unique_id)
                     import_entry_id = import_entry_ids[unique_id]
-                    foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
-                    if model_name not in ret_dict:
-                        ret_dict[model_name] = { 'new': [], 'existing': [] }
-                    ret_dict[model_name]['new'].append((import_entry_id,
+                    foreign_ids_reverse_mappings[entity_sig][unique_id] = new_pk
+                    if entity_sig not in ret_dict:
+                        ret_dict[entity_sig] = { 'new': [], 'existing': [] }
+                    ret_dict[entity_sig]['new'].append((import_entry_id,
                                                         new_pk))
 
                     if not silent:
-                        print "NEW %s: %s (%s->%s)" % (model_name, unique_id,
+                        print "NEW %s: %s (%s->%s)" % (entity_sig, unique_id,
                                                        import_entry_id,
                                                        new_pk)
 
@@ -1682,14 +1674,31 @@ ATTRIBUTE_ENTITY_NAME = "Attribute"
 COMPUTER_ENTITY_NAME = "Computer"
 USER_ENTITY_NAME = "User"
 
+NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode",
+LINK_SIGNATURE = "aiida.backends.djsite.db.models.DbLink",
+GROUP_SIGNATURE = "aiida.backends.djsite.db.models.DbGroup",
+COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer",
+USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser",
+ATTRIBUTE_SIGNATURE = "aiida.backends.djsite.db.models.DbAttribute"
+
 entity_names_to_signatures = {
-    NODE_ENTITY_NAME: "aiida.backends.djsite.db.models.DbNode",
-    LINK_ENTITY_NAME: "aiida.backends.djsite.db.models.DbLink",
-    GROUP_ENTITY_NAME: "aiida.backends.djsite.db.models.DbGroup",
-    COMPUTER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbComputer",
-    USER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbUser",
-    ATTRIBUTE_ENTITY_NAME: "aiida.backends.djsite.db.models.DbAttribute"
+    NODE_ENTITY_NAME: NODE_SIGNATURE,
+    LINK_ENTITY_NAME: LINK_SIGNATURE,
+    GROUP_ENTITY_NAME: GROUP_SIGNATURE,
+    COMPUTER_ENTITY_NAME: COMPUTER_SIGNATURE,
+    USER_ENTITY_NAME: USER_SIGNATURE,
+    ATTRIBUTE_ENTITY_NAME: ATTRIBUTE_SIGNATURE,
 }
+
+signatures_to_entity_names = {
+    NODE_SIGNATURE: NODE_ENTITY_NAME,
+    LINK_SIGNATURE: LINK_ENTITY_NAME,
+    GROUP_SIGNATURE: GROUP_ENTITY_NAME,
+    COMPUTER_SIGNATURE: COMPUTER_ENTITY_NAME,
+    USER_SIGNATURE: USER_ENTITY_NAME,
+    ATTRIBUTE_SIGNATURE: ATTRIBUTE_ENTITY_NAME,
+}
+
 
 from aiida.orm.node import Node
 from aiida.orm.group import Group

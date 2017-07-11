@@ -2071,7 +2071,6 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     import json
     import aiida
 
-    from aiida.backends.sqlalchemy import models
     from aiida.orm import Node, Calculation
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
@@ -2087,7 +2086,6 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     given_group_entry_ids = set()
 
     # I store a list of the actual dbnodes
-    group_entries = []
     for entry in what:
         entry_class_string = get_class_string(entry)
         entry_entity_name = schema_to_entity_names(entry_class_string)
@@ -2111,9 +2109,6 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
             given_node_entry_ids = given_node_entry_ids.union(additional_ids)
 
     if also_calc_outputs:
-        # given_nodes = entry_ids_to_add[
-        #     "aiida.backends.sqlalchemy.models.node.DbNode"]
-        # if given_nodes:
         if given_node_entry_ids:
             # Add all (direct) outputs of a calculation object that was already
              # selected
@@ -2135,7 +2130,8 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     entries_to_add = dict()
     for given_entity in given_entities:
         project_cols = ["id"]
-        # The following gets a list of fields that we need, e.g. user, mtime, uuid, computer
+        # The following gets a list of fields that we need,
+        # e.g. user, mtime, uuid, computer
         entity_prop = all_fields_info[given_entity].keys()
 
         # Here we do the necessary renaming of properties
@@ -2264,9 +2260,20 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
 
     if not silent:
         print "STORING GROUP ELEMENTS..."
-
-    groups_uuid = {g.uuid: list(g.dbnodes.values_list('uuid', flat=True))
-                   for g in group_entries}
+    # We export the group/node correlation
+    groups_uuid = dict()
+    for curr_group in export_data[GROUP_ENTITY_NAME]:
+        group_uuid_qb = QueryBuilder()
+        group_uuid_qb.append(entity_names_to_entities[GROUP_ENTITY_NAME],
+                             filters={'id': {'==': curr_group}},
+                             project=['uuid'], tag='group')
+        group_uuid_qb.append(entity_names_to_entities[NODE_ENTITY_NAME],
+                             project=['uuid'], member_of='group')
+        for res in group_uuid_qb.iterall():
+            if groups_uuid.has_key(str(res[0])):
+                groups_uuid[str(res[0])].append(str(res[1]))
+            else:
+                groups_uuid[str(res[0])] = [str(res[1])]
 
     ######################################
     # Now I store

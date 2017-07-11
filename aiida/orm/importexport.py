@@ -2083,34 +2083,23 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
 
-    given_node_entry_ids = list()
-    given_group_entry_ids = list()
+    given_node_entry_ids = set()
+    given_group_entry_ids = set()
 
-
-    # entry_ids_to_add = defaultdict(list)
     # I store a list of the actual dbnodes
     group_entries = []
-    # group_class_string = get_class_string(models.group.DbGroup)
-    group_class_sign = entity_names_to_signatures[GROUP_ENTITY_NAME]
     for entry in what:
         entry_class_string = get_class_string(entry)
         entry_entity_name = schema_to_entity_names(entry_class_string)
 
-        # entry_ids_to_add[class_string].append(entry.pk)
-        # if entry_class_string == group_class_sign:
         if entry_entity_name == GROUP_ENTITY_NAME:
-            # group_entries.append(entry)
-            given_group_entry_ids.append(entry.pk)
+            given_group_entry_ids.add(entry.pk)
         elif entry_entity_name == NODE_ENTITY_NAME:
-            given_node_entry_ids.append(entry.pk)
+            given_node_entry_ids.add(entry.pk)
         else:
             continue
 
     if also_parents:
-        # It is a defaultdict, it will provide an empty list
-        # given_nodes = entry_ids_to_add[
-        #     "aiida.backends.sqlalchemy.models.node.DbNode"]
-        # if given_nodes:
         if given_node_entry_ids:
             # Also add the parents (to any level) to the query
             # This is done via the ancestor relationship.
@@ -2118,11 +2107,8 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
             qb.append(Node, tag='low_node',
                       filters={'id': {'in': given_node_entry_ids}})
             qb.append(Node, ancestor_of='low_node', project=['id'])
-            additional_ids = [_ for [_] in qb.all()] # Good way, since that works also when qb.all() returns []
-            given_node_entry_ids = list(
-                set(given_node_entry_ids + additional_ids))
-            # entry_ids_to_add[
-            #     "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
+            additional_ids = [_ for [_] in qb.all()]
+            given_node_entry_ids = given_node_entry_ids.union(additional_ids)
 
     if also_calc_outputs:
         # given_nodes = entry_ids_to_add[
@@ -2136,9 +2122,7 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
                       filters={'id': {'in': given_node_entry_ids}}) # Only looking at calculations and subclasses
             qb.append(Node, output_of='high_node', project=['id']) # and the outputs
             additional_ids = [_ for [_] in qb.all()]
-            given_node_entry_ids = list(set(given_node_entry_ids + additional_ids)) # What if given_nodes is a set from the start?
-            # entry_ids_to_add[
-            #     "aiida.backends.sqlalchemy.models.node.DbNode"] = given_nodes
+            given_node_entry_ids = given_node_entry_ids.union(additional_ids)
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract
@@ -2160,8 +2144,6 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
                     if django_fields_to_sqla[given_entity].has_key(prop)
                     else prop)
             project_cols.append(nprop)
-        # project_cols contains the strings we can use to project, i.e. user_id, mtime, uuid, dbcomputer_id
-
 
         # Getting the ids that correspond to the right entity
         entry_ids_to_add = (given_node_entry_ids
@@ -2170,21 +2152,11 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
                           else given_group_entry_ids)
 
         qb = QueryBuilder()
-        # qb.append(get_object_from_string(k),
         qb.append(entity_names_to_entities[given_entity],
                   filters={"id": {"in": entry_ids_to_add}},
                   project=project_cols,
                   tag=given_entity, outerjoin=True)
         entries_to_add[given_entity] = qb
-
-        # # entries_to_add = dict()
-        # for k, v in entry_ids_to_add.iteritems():
-        #     qb = QueryBuilder()
-        #     # qb.isouter = True
-        #     # qb.append(Node, filters={"id": {"in": v}}, project=project_cols,
-        #     qb.append(get_object_from_string(k), filters={"id": {"in": entry_ids_to_add}}, project=project_cols,
-        #               tag=k, outerjoin=True)
-        #     entries_to_add[k] = qb
 
     # TODO (Spyros) To see better! Especially for functional licenses
     # Check the licenses of exported data.
@@ -2214,8 +2186,6 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
 
         for k, v in foreign_fields.iteritems():
             ref_model_name = v['requires']
-            # new_ref_model_name = django_to_sqla_schema[ref_model_name]
-            # fill_in_query(partial_query, entity_name, new_ref_model_name)
             fill_in_query(partial_query, entity_name, ref_model_name,
                           [entity_name], entity_separator)
 
@@ -2292,9 +2262,9 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
             'label': str(link_label)
         })
 
-    # The following has to be written more properly
     if not silent:
         print "STORING GROUP ELEMENTS..."
+
     groups_uuid = {g.uuid: list(g.dbnodes.values_list('uuid', flat=True))
                    for g in group_entries}
 

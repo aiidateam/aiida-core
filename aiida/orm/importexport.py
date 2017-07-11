@@ -1786,15 +1786,32 @@ sqla_fields_to_django = {
 def get_all_fields_info_sqla():
 
     unique_identifiers = {
-        NODE_ENTITY_NAME: "uuid",
-        LINK_ENTITY_NAME: None,
-        GROUP_ENTITY_NAME: "uuid",
-        ATTRIBUTE_ENTITY_NAME: None,
+        USER_ENTITY_NAME: "email",
         COMPUTER_ENTITY_NAME: "uuid",
-        USER_ENTITY_NAME: "email"
+        LINK_ENTITY_NAME: None,
+        NODE_ENTITY_NAME: "uuid",
+        ATTRIBUTE_ENTITY_NAME: None,
+        GROUP_ENTITY_NAME: "uuid",
     }
 
     all_fields_info = dict()
+    all_fields_info[USER_ENTITY_NAME] = {
+             "last_name": {},
+             "first_name": {},
+             "institution": {},
+             "email": {}
+        }
+    all_fields_info[COMPUTER_ENTITY_NAME] = {
+             "transport_type": {},
+             "transport_params": {},
+             "hostname": {},
+             "description": {},
+             "scheduler_type": {},
+             "metadata": {},
+             "enabled": {},
+             "uuid": {},
+             "name": {}
+        }
     all_fields_info[LINK_ENTITY_NAME] = {
             "input": {
                 "requires": NODE_ENTITY_NAME,
@@ -1829,22 +1846,20 @@ def get_all_fields_info_sqla():
              },
              "description": {}
         }
-    all_fields_info[USER_ENTITY_NAME] = {
-             "last_name": {},
-             "first_name": {},
-             "institution": {},
-             "email": {}
-        }
-    all_fields_info[COMPUTER_ENTITY_NAME] = {
-             "transport_type": {},
-             "transport_params": {},
-             "hostname": {},
-             "description": {},
-             "scheduler_type": {},
-             "metadata": {},
-             "enabled": {},
-             "uuid": {},
-             "name": {}
+    all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
+             "dbnode": {
+                "requires": NODE_ENTITY_NAME,
+                "related_name": "dbattributes"
+             },
+             "key": {},
+             "tval": {},
+             "fval": {},
+             "bval": {},
+             "datatype": {},
+             "dval": {
+                "convert_type": "date"
+             },
+             "ival": {}
         }
     all_fields_info[GROUP_ENTITY_NAME] = {
              "description": {},
@@ -1862,21 +1877,6 @@ def get_all_fields_info_sqla():
              "type": {},
              "uuid": {},
              "name": {}
-        }
-    all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
-             "dbnode": {
-                "requires": NODE_ENTITY_NAME,
-                "related_name": "dbattributes"
-             },
-             "key": {},
-             "tval": {},
-             "fval": {},
-             "bval": {},
-             "datatype": {},
-             "dval": {
-                "convert_type": "date"
-             },
-             "ival": {}
         }
     return all_fields_info, unique_identifiers
 
@@ -2305,7 +2305,7 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     nodesubfolder = folder.get_subfolder('nodes',create=True,
                                          reset_limit=True)
 
-    # Add the proper signatures for the exported data
+    # Add the proper signatures to the exported data
     for entity_name in export_data.keys():
         export_data[entity_names_to_signatures[entity_name]] = (
             export_data.pop(entity_name))
@@ -2331,11 +2331,15 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
         except KeyError:
             pass
         try:
+            # Update the requires field
+            for dic in all_fields_info[entity_name].values():
+                if 'requires' in dic.keys():
+                    dic['requires'] = entity_names_to_signatures[
+                        dic['requires']]
             all_fields_info[entity_names_to_signatures[entity_name]] = (
                 all_fields_info.pop(entity_name))
         except KeyError:
             pass
-
 
     metadata = {
         'aiida_version': aiida.get_version(),

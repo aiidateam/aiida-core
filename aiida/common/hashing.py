@@ -11,7 +11,6 @@ from passlib.context import CryptContext
 import random
 import hashlib
 import time
-import numpy as np
 from datetime import datetime
 
 """
@@ -182,6 +181,8 @@ def make_hash(object_to_hash, float_precision=12):
     the string of dictionary do not suffice if we want to check for equality
     of dictionaries using hashes.
     """
+    import numpy as np
+
     if isinstance(object_to_hash, (tuple, list)):
         hashes = tuple([
                 make_hash(_, float_precision=float_precision)

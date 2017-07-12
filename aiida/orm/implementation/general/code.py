@@ -93,6 +93,15 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
                                                              computer_str,
                                                              self.pk, self.uuid)
 
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from  PwCalculation node's 
+        properties.
+        :param node:
+        :return: retsrt:
+        """
+        return '{}'.format(self.label)
+
     @classmethod
     def get_code_helper(cls, label, machinename=None):
         """
@@ -142,6 +151,7 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
         :raise NotExistent: if no code identified by the given string is found
         :raise MultipleObjectsError: if the string cannot identify uniquely
             a code
+        :raise InputValidationError: if neither a pk nor a label was passed in
         """
         from aiida.common.exceptions import (NotExistent, MultipleObjectsError,
                                              InputValidationError)
@@ -182,23 +192,22 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
         :raise NotExistent: if no code identified by the given string is found
         :raise MultipleObjectsError: if the string cannot identify uniquely
             a code
+        :raise InputValidationError: if code_string is not of string type
 
         """
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError, InputValidationError
 
-        from aiida.common.exceptions import InputValidationError
-
-        # check if code_string is a integer
         try:
-            int(code_string)
-            raise InputValidationError("Pass code string in the format of label@machinename")
-
-        except ValueError:
-
-            # split with the leftmost '@' symbol (i.e. code names cannot
-            # contain '@' symbols, computer names can)
             label, sep, machinename = code_string.partition('@')
+        except AttributeError as exception:
+            raise InputValidationError("the provided code_string is not of valid string type")
 
+        try:
             return cls.get_code_helper(label, machinename)
+        except NotExistent:
+            raise NotExistent("{} could not be resolved to a valid code label".format(code_string))
+        except MultipleObjectsError:
+            raise MultipleObjectsError("{} could not be uniquely resolved".format(code_string))
 
 
     @abstractclassmethod

@@ -1,10 +1,10 @@
-## v0.9.0rc1
+## v0.9.0
 
 ### Data export functionality
 - A number of new functionalities have been added to export band structures to a number of formats, including: gnuplot, matplotlib (both to export a python file, and directly PNG or PDF; both with support of LaTeX typesetting and not); JSON; improved agr (xmgrace) output. Also support for two-color bands for collinear magnetic systems. Added also possibility to specify export-format-specific parameters.
 - Added method get_export_formats() to know available export formats for a given data subclass
 - Added label prettifiers to properly typeset high-symmetry k-point labels for different formats (simple/old format, seekpath, ...) into a number of plotting codes (xmgrace, gnuplot, latex, ...)
-- Improvement of command-line export functionality (more options, possibility to write directly to file, possibility to pass custom options to exporter)
+- Improvement of command-line export functionality (more options, possibility to write directly to file, possibility to pass custom options to exporter, by removing its DbPath dependency)
 
 ### Workchains
 - Crucial bug fix: workchains can now be run through the daemon, i.e. by using `aiida.work.submit`
@@ -25,14 +25,37 @@
 
 ### Documentation
 - General improvements to documentation
+- Added documentation to upgrade AiiDA from v0.8.0 to v0.9.0
 - Added documentation of new plugin system and tutorial
 - Added more in-depth documentation on how to export data nodes to various formats
 - Added explanation on how to export band structures and available formats
+- Added documentation on how to run tests in developer's guide
+- Documented Latex requirements
+- Updated WorkChain documentation for `WaitingEquationOfState` example
+- Updated AiiDA installation documentation for installing virtual environment
+- Updated documentation to use Jupyter
+
+### Enhancements
+- Speedups the travis builds process by caching pip files between runs
+- Node can be loaded by passing the start of its UUID
+- Handled invalid verdi command line arguments; added help texts for same
+- upgraded `Paramiko` to 2.1.2 and avoided to create empty file when remote connection is failed
+- `verdi calculation kill` command is now available for `SGE plugin`
+- Updated `Plum` from 0.7.8 to 0.7.9 to create a workchain inputs that had default value and evaluated to false
+- Now QueryBuilder will be imported by default for all verdi commands
+
+### Bug Fixes
+- Bug fixes in QE input parser
+- Code.get() method accepts the pk in integer or string format whereas Code.get_from_string() method accepts pk only in string format
+- `verdi code show` command now shows the description of the code
+- Bug fix to check if computer is properly configured before submitting the calculation
 
 ### Miscellaneous
 - Replacing dependency from old unmantained `pyspglib` to new `spglib`
 - Accept BaseTypes as attributes/extras, and convert them automatically to their value. In this way, for instance, it is now possible to pass a `Int`, `Float`, `Str`, ... as value of a dictionary, and store all into a `ParameterData`.
 - Switch from `pkg_resources` to reentry to allow for much faster loading of modules when possible, and therefore allowing for good speed for bash completion
+- Removed obsolete code for Sqlite
+- Removed `mayavi2` package from dependencies
 
 
 ## v0.8.1

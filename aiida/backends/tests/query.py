@@ -167,7 +167,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
         from datetime import datetime
-
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
         n0 = Node()
         n0.label = 'hello'
         n0.description=''
@@ -222,13 +222,17 @@ class TestQueryBuilder(AiidaTestCase):
 
         qb2 = QueryBuilder(**qh)
 
+
         resdict = qb2.dict()
-
         self.assertEqual(len(resdict), 1)
+        self.assertTrue(isinstance(resdict[0]['n1']['ctime'], datetime))
 
-        resdict = resdict[0]
-        self.assertTrue(isinstance(resdict['n1']['ctime'], datetime))
-        self.assertEqual(resdict['n2']['label'], 'bar')
+
+        res_one = qb2.one()
+        self.assertTrue('bar' in res_one)
+
+
+
 
         qh = {
             'path': [
@@ -254,6 +258,11 @@ class TestQueryBuilder(AiidaTestCase):
         query1 = qb.get_query()
         qb.add_filter('n2', {'label': 'nonexistentlabel'})
         self.assertEqual(qb.count(), 0)
+
+        with self.assertRaises(NotExistent):
+            qb.one()
+        with self.assertRaises(MultipleObjectsError):
+            QueryBuilder().append(Node).one()
 
         query2 = qb.get_query()
         query3 = qb.get_query()
@@ -368,7 +377,7 @@ class TestQueryBuilder(AiidaTestCase):
         # here I am giving a nonsensical projection:
         with self.assertRaises(InputValidationError):
             QueryBuilder().append(StructureData, project=True)
-        
+
         # here I am giving a nonsensical projection for the edge:
         with self.assertRaises(InputValidationError):
             QueryBuilder().append(Calculation).append(StructureData, edge_tag='t').add_projection('t', True)
@@ -461,7 +470,7 @@ class TestAttributes(AiidaTestCase):
         res_uuids.add(n1.uuid)
 
         # I want all the nodes where whatever is smaller than 1. or there is no such value:
-        
+
         qb = QueryBuilder()
         qb.append(Node, filters={
                     'or':[
@@ -487,7 +496,7 @@ class QueryBuilderDateTimeAttribute(AiidaTestCase):
         n._set_attr('now', now)
         n.store()
 
-        qb = QueryBuilder().append(Node, 
+        qb = QueryBuilder().append(Node,
             filters={'attributes.now': {"and":[
                 {">":now-timedelta(seconds=1)},
                 {"<":now+timedelta(seconds=1)},
@@ -562,7 +571,7 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
         qb.limit(3)
         res = list(zip(*qb.all())[0])
         self.assertEqual(res, range(4,1, -1))
-        
+
 
 class QueryBuilderJoinsTests(AiidaTestCase):
     def test_joins1(self):
@@ -645,6 +654,37 @@ class QueryBuilderJoinsTests(AiidaTestCase):
                 ).append(
                     Node, edge_filters={'label':'is_advisor'}, tag='student'
                 ).count(), number_students)
+
+    def test_joins3_user_group(self):
+        from aiida.orm.user import User
+        from aiida.orm.querybuilder import QueryBuilder
+
+        # Create another user
+        new_email = "newuser@new.n"
+        user = User(email=new_email)
+        user.force_save()
+
+        # Create a group that belongs to that user
+        from aiida.orm.group import Group
+        group = Group(name="node_group")
+        group.dbgroup.user = user._dbuser
+        group.store()
+
+        # Search for the group of the user
+        qb = QueryBuilder()
+        qb.append(User, tag='user', filters={'id': {'==': user.id}})
+        qb.append(Group, belongs_to='user',
+                  filters={'id': {'==': group.id}})
+        self.assertEquals(qb.count(), 1, "The expected group that belongs to "
+                                         "the selected user was not found.")
+
+        # Search for the user that owns a group
+        qb = QueryBuilder()
+        qb.append(Group, tag='group', filters={'id': {'==': group.id}})
+        qb.append(User, owner_of='group', filters={'id': {'==': user.id}})
+
+        self.assertEquals(qb.count(), 1, "The expected user that owns the "
+                                         "selected group was not found.")
 
 
 class QueryBuilderPath(AiidaTestCase):

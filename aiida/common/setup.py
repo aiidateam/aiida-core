@@ -1080,7 +1080,8 @@ def set_property(name, value):
     elif type_string == "int":
         actual_value = int(value)
     elif type_string == 'list_of_str':
-        actual_value = value.replace(',', ' ').split()
+        # I expect the results as a list of strings
+        actual_value = value.replace(' ').split()
     else:
         # Implement here other data types
         raise NotImplementedError("Type string '{}' not implemented yet".format(

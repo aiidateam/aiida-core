@@ -36,7 +36,7 @@ from sqlalchemy.sql.expression import cast
 from aiida.common.exceptions import InputValidationError, ConfigurationError
 # The way I get column as a an attribute to the orm class
 from aiida.backends.utils import _get_column
-
+from aiida.common.links import LinkType
 
 
 class QueryBuilder(object):
@@ -1349,7 +1349,7 @@ class QueryBuilder(object):
                 join(
                     node1, link1, link1.input_id==node1.id
                 )
-            ).where(in_recursive_filters).cte(recursive=True)
+            ).where(and_(in_recursive_filters, link1.type != LinkType.RETURN.value)).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -1368,7 +1368,7 @@ class QueryBuilder(object):
                         link2,
                         link2.input_id == aliased_walk.c.descendant_id,
                     )
-                )
+                ).where(link2.type != LinkType.RETURN.value) # I can't follow RETURN links
             )) #.alias()
 
         self._tag_to_alias_map[edge_tag] = descendants_beta.c
@@ -1410,7 +1410,7 @@ class QueryBuilder(object):
                 join(
                     node1, link1, link1.input_id==node1.id
                 )
-            ).where(in_recursive_filters).cte(recursive=True)
+            ).where(and_(in_recursive_filters, link1.type != LinkType.RETURN.value)).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -1429,7 +1429,7 @@ class QueryBuilder(object):
                         link2,
                         link2.input_id == aliased_walk.c.descendant_id,
                     )
-                )
+                ).where(link2.type != LinkType.RETURN.value) # I can't follow RETURN links
             )) #.alias()
 
         self._tag_to_alias_map[edge_tag] = descendants_beta.c
@@ -1473,7 +1473,7 @@ class QueryBuilder(object):
                 join(
                     node1, link1, link1.output_id==node1.id
                 )
-            ).where(in_recursive_filters).cte(recursive=True)
+            ).where(and_(in_recursive_filters, link1.type != LinkType.RETURN.value)).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -1492,7 +1492,7 @@ class QueryBuilder(object):
                         link2,
                         link2.output_id == aliased_walk.c.ancestor_id,
                     )
-                )
+                ).where(link2.type != LinkType.RETURN.value) # I can't follow RETURN links
             ))
 
         self._tag_to_alias_map[edge_tag] = ancestors_recursive.c
@@ -1536,7 +1536,7 @@ class QueryBuilder(object):
                 join(
                     node1, link1, link1.output_id==node1.id
                 )
-            ).where(in_recursive_filters).cte(recursive=True)
+            ).where(and_(in_recursive_filters, link1.type != LinkType.RETURN.value)).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -1553,7 +1553,7 @@ class QueryBuilder(object):
                         link2,
                         link2.output_id == aliased_walk.c.ancestor_id,
                     )
-                )
+                ).where(link2.type != LinkType.RETURN.value) # I can't follow RETURN links
             ))
 
         self._tag_to_alias_map[edge_tag] = ancestors_recursive.c

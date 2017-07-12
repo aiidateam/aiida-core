@@ -15,7 +15,7 @@ from django.db import migrations
 from aiida.backends.djsite.db.migrations import update_schema_version
 
 
-SCHEMA_VERSION = "1.0.5"
+SCHEMA_VERSION = "1.0.6"
 
 
 class Migration(migrations.Migration):

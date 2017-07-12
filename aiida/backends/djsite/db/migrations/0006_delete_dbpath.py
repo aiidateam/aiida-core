@@ -20,7 +20,7 @@ SCHEMA_VERSION = "1.0.6"
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('db', '0004_add_daemon_and_uuid_indices'),
+        ('db', '0005_add_cmtime_indices'),
     ]
 
     operations = [

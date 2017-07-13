@@ -20,7 +20,9 @@ from aiida.orm.user import User
 IMPORTGROUP_TYPE = 'aiida.import'
 COMP_DUPL_SUFFIX = ' (Imported #{})'
 
-
+# Giving names to the various entities. Attributes and links are not AiiDA
+# entities but we will refer to them as entities in the file (to simplify
+# references to them).
 NODE_ENTITY_NAME = "Node"
 LINK_ENTITY_NAME = "Link"
 GROUP_ENTITY_NAME = "Group"
@@ -28,6 +30,7 @@ ATTRIBUTE_ENTITY_NAME = "Attribute"
 COMPUTER_ENTITY_NAME = "Computer"
 USER_ENTITY_NAME = "User"
 
+# The signatures used to reference the entities in the import/export file
 NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode"
 LINK_SIGNATURE = "aiida.backends.djsite.db.models.DbLink"
 GROUP_SIGNATURE = "aiida.backends.djsite.db.models.DbGroup"
@@ -35,6 +38,7 @@ COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer"
 USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser"
 ATTRIBUTE_SIGNATURE = "aiida.backends.djsite.db.models.DbAttribute"
 
+# Mapping from entity names to signatures (used by the SQLA import/export)
 entity_names_to_signatures = {
     NODE_ENTITY_NAME: NODE_SIGNATURE,
     LINK_ENTITY_NAME: LINK_SIGNATURE,
@@ -44,6 +48,7 @@ entity_names_to_signatures = {
     ATTRIBUTE_ENTITY_NAME: ATTRIBUTE_SIGNATURE,
 }
 
+# Mapping from signatures to entity names (used by the SQLA import/export)
 signatures_to_entity_names = {
     NODE_SIGNATURE: NODE_ENTITY_NAME,
     LINK_SIGNATURE: LINK_ENTITY_NAME,
@@ -53,6 +58,7 @@ signatures_to_entity_names = {
     ATTRIBUTE_SIGNATURE: ATTRIBUTE_ENTITY_NAME,
 }
 
+# Mapping from entity names to AiiDA classes (used by the SQLA import/export)
 entity_names_to_entities = {
     NODE_ENTITY_NAME: Node,
     GROUP_ENTITY_NAME: Group,
@@ -60,7 +66,13 @@ entity_names_to_entities = {
     USER_ENTITY_NAME: User
 }
 
+
 def schema_to_entity_names(class_string):
+    """
+    Mapping from classes path to entity names (used by the SQLA import/export)
+    This could have been written much simpler if it is only for SQLA but there
+    is an attempt the SQLA import/export code to be used for Django too.
+    """
     if class_string is None or len(class_string) == 0:
         return
     if(class_string == "aiida.backends.djsite.db.models.DbNode" or
@@ -72,25 +84,19 @@ def schema_to_entity_names(class_string):
         return LINK_ENTITY_NAME
 
     if(class_string == "aiida.backends.djsite.db.models.DbGroup" or
-               class_string == "aiida.backends.sqlalchemy.models.group.DbGroup"):
+               class_string ==
+               "aiida.backends.sqlalchemy.models.group.DbGroup"):
         return GROUP_ENTITY_NAME
 
     if(class_string == "aiida.backends.djsite.db.models.DbComputer" or
-               class_string == "aiida.backends.sqlalchemy.models.computer.DbComputer"):
+               class_string ==
+               "aiida.backends.sqlalchemy.models.computer.DbComputer"):
         return COMPUTER_ENTITY_NAME
     if (class_string == "aiida.backends.djsite.db.models.DbUser" or
             class_string == "aiida.backends.sqlalchemy.models.user.DbUser"):
         return USER_ENTITY_NAME
 
-
-entity_names_to_django_schema = {
-    NODE_ENTITY_NAME: "aiida.backends.djsite.db.models.DbNode",
-    LINK_ENTITY_NAME: "aiida.backends.djsite.db.models.DbLink",
-    GROUP_ENTITY_NAME: "aiida.backends.djsite.db.models.DbGroup",
-    COMPUTER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbComputer",
-    USER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbUser"
-}
-
+# Mapping of entity names to SQLA class paths
 entity_names_to_sqla_schema = {
     NODE_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbNode",
     LINK_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbLink",
@@ -100,18 +106,22 @@ entity_names_to_sqla_schema = {
     USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser"
 }
 
+# Mapping of the Django entity properties fields to SQLA property fields.
+# These are the names of the fields of the models that belong to the
+# corresponding entities.
+# Note that the Django field names are used in the export file.
 django_fields_to_sqla = {
     NODE_ENTITY_NAME: {
         "dbcomputer": "dbcomputer_id",
         "user": "user_id"},
     GROUP_ENTITY_NAME: {
-        # "dbnodes": "dbnodes_id",
         "user": "user_id"
     },
     COMPUTER_ENTITY_NAME: {
         "metadata": "_metadata"}
 }
 
+# As above but the opposite procedure
 sqla_fields_to_django = {
     NODE_ENTITY_NAME: {
         "dbcomputer_id": "dbcomputer",
@@ -127,7 +137,18 @@ sqla_fields_to_django = {
 
 
 def get_all_fields_info_sqla():
+    """
+    This method returns a description of the field names that should be used
+    to describe the entity properties.
+    Apart from of the listing of the fields per properties, it also shown
+    the dependencies among different entities (and on which fields). It is
+    also shown/return the unique identifiers used per entity.
 
+    This method is needed for the import/export SQLA methods. The corresponding
+    information for Django (which is/should be the same - since it is a
+    description of the dependencies of the data in the export file) is
+    generated automatically.
+    """
     unique_identifiers = {
         USER_ENTITY_NAME: "email",
         COMPUTER_ENTITY_NAME: "uuid",
@@ -174,18 +195,18 @@ def get_all_fields_info_sqla():
              "uuid": {},
              "public": {},
              "mtime": {
-                "convert_type" : "date"
+                "convert_type": "date"
              },
              "type": {},
              "label": {},
              "nodeversion": {},
              "user": {
                 "requires" : USER_ENTITY_NAME,
-                "related_name" : "dbnodes"
+                "related_name": "dbnodes"
              },
              "dbcomputer": {
                 "requires" : COMPUTER_ENTITY_NAME,
-                "related_name" : "dbnodes"
+                "related_name": "dbnodes"
              },
              "description": {}
         }
@@ -207,13 +228,9 @@ def get_all_fields_info_sqla():
     all_fields_info[GROUP_ENTITY_NAME] = {
              "description": {},
              "user": {
-                "related_name" : "dbgroups",
+                "related_name": "dbgroups",
                 "requires": USER_ENTITY_NAME
              },
-             # "dbnodes": {
-             #     "related_name": "dbgroups",
-             #     "requires": NODE_ENTITY_NAME
-             # },
              "time": {
                 "convert_type" : "date"
              },
@@ -222,24 +239,6 @@ def get_all_fields_info_sqla():
              "name": {}
         }
     return all_fields_info, unique_identifiers
-
-relationship_dic = {
-    "Node": {
-        "Computer": "has_computer",
-        "Group": "member_of",
-        "User": "created_by"
-    },
-    "Group": {
-        "Node": "group_of"
-    },
-    "Computer": {
-        "Node": "computer_of"
-    },
-    "User": {
-        "Node": "creator_of",
-        "Group": "owner_of"
-    }
-}
 
 
 def deserialize_attributes(attributes_data, conversion_data):
@@ -415,8 +414,8 @@ def extract_tree(infile, folder, silent=False):
             relpath = os.path.relpath(fullpath,root)
             if os.path.isdir(fullpath):
                 if os.path.dirname(relpath) != '':
-	            folder.get_subfolder(os.path.dirname(relpath)+os.sep,
-                                     create=True)
+                    folder.get_subfolder(os.path.dirname(relpath) +
+                                         os.sep, create=True)
             elif not os.path.isfile(fullpath):
                 continue
             if os.path.dirname(relpath) != '':
@@ -424,7 +423,7 @@ def extract_tree(infile, folder, silent=False):
                                      create=True)
             folder.insert_path(os.path.abspath(fullpath),relpath)
 
-    os.path.walk(infile,add_files,{'folder': folder,'root': infile})
+    os.path.walk(infile,add_files,{'folder': folder, 'root': infile})
 
 
 def extract_cif(infile, folder, nodes_export_subfolder="nodes",
@@ -1440,11 +1439,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                             input_id=in_id, output_id=out_id,
                             label=link['label']))
                         if entity_names_to_signatures[
-                            LINK_SIGNATURE] not in ret_dict:
+                            LINK_ENTITY_NAME] not in ret_dict:
                             ret_dict[entity_names_to_signatures[
-                                LINK_SIGNATURE]] = {'new': []}
+                                LINK_ENTITY_NAME]] = {'new': []}
                         ret_dict[entity_names_to_signatures[
-                            LINK_SIGNATURE]]['new'].append((in_id, out_id))
+                            LINK_ENTITY_NAME]]['new'].append((in_id, out_id))
 
             # Store new links
             if links_to_store:
@@ -1893,6 +1892,33 @@ def get_all_fields_info():
 
 def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                   tag_suffixes=[], entity_separator="_"):
+    """
+    This function recursively constructs QueryBuilder queries that are needed
+    for the SQLA export function. To manage to construct such queries, the
+    relationship dictionary is consulted (which shows how to reference
+    different AiiDA entities in QueryBuilder.
+    To find the dependencies of the relationships of the exported data, the
+    get_all_fields_info_sqla (which described the exported schema and its
+    dependencies) is consulted.
+    """
+
+    relationship_dic = {
+        "Node": {
+            "Computer": "has_computer",
+            "Group": "member_of",
+            "User": "created_by"
+        },
+        "Group": {
+            "Node": "group_of"
+        },
+        "Computer": {
+            "Node": "computer_of"
+        },
+        "User": {
+            "Node": "creator_of",
+            "Group": "owner_of"
+        }
+    }
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
 
@@ -2244,16 +2270,6 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
 
 
 def check_licences(node_licenses, allowed_licenses, forbidden_licenses):
-    """
-
-
-    Someone should explain me what happens with the functional licenses.
-
-    :param node_licenses:
-    :param allowed_licenses:
-    :param forbidden_licenses:
-    :return:
-    """
     from aiida.common.exceptions import LicensingException
     from inspect import isfunction
 

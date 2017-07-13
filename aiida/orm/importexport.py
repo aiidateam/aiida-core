@@ -816,8 +816,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                             nodes_export_subfolder=nodes_export_subfolder)
             else:
                 raise ValueError("Unable to detect the input file format, it "
-                                 "is neither a (possibly compressed) tar file, "
-                                 "nor a zip file.")
+                                 "is neither a (possibly compressed) tar "
+                                 "file, nor a zip file.")
 
         try:
             with open(folder.get_abs_path('metadata.json')) as f:
@@ -857,15 +857,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                   project=["uuid"])
         for res in qb.iterall():
             db_nodes_uuid.add(res[0])
-            # relevant_db_nodes.updaate({node.uuid: node})
 
-        # for group in grouper(999, linked_nodes):
-        #     relevant_db_nodes.update({n.uuid: n for n in
-        #                               models.DbNode.objects.filter(uuid__in=group)})
-
-        # db_nodes_uuid = set(relevant_db_nodes.keys())
-        # dbnode_model = get_class_string(models.DbNode)
-        # dbnode_model = "aiida.backends.djsite.db.models.DbNode"
         import_nodes_uuid = set(v['uuid'] for v in
                                 data['export_data'][
                                     entity_names_to_signatures[
@@ -876,10 +868,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
         if unknown_nodes and not ignore_unknown_nodes:
             raise ValueError(
-                "The import file refers to {} nodes with unknown UUID, therefore "
-                "it cannot be imported. Either first import the unknown nodes, "
-                "or export also the parents when exporting. The unknown UUIDs "
-                "are:\n".format(len(unknown_nodes)) +
+                "The import file refers to {} nodes with unknown UUID, "
+                "therefore it cannot be imported. Either first import the "
+                "unknown nodes, or export also the parents when exporting. "
+                "The unknown UUIDs are:\n".format(len(unknown_nodes)) +
                 "\n".join('* {}'.format(uuid) for uuid in unknown_nodes))
 
         ###################################
@@ -2182,8 +2174,7 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     if allowed_licenses is not None or forbidden_licenses is not None:
         qb = QueryBuilder()
         qb.append(Node, project=["id", "attributes.source.license"],
-                  filters={"id": {"in": entry_ids_to_add[
-                      'aiida.backends.sqlalchemy.models.node.DbNode']}})
+                  filters={"id": {"in": given_node_entry_ids}})
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
         node_licenses = list((a,b) for [a,b] in qb.all() if b is not None)
         check_licences(node_licenses, allowed_licenses, forbidden_licenses)
@@ -2283,20 +2274,21 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
 
     if not silent:
         print "STORING GROUP ELEMENTS..."
-    # We export the group/node correlation
     groups_uuid = dict()
-    for curr_group in export_data[GROUP_ENTITY_NAME]:
-        group_uuid_qb = QueryBuilder()
-        group_uuid_qb.append(entity_names_to_entities[GROUP_ENTITY_NAME],
-                             filters={'id': {'==': curr_group}},
-                             project=['uuid'], tag='group')
-        group_uuid_qb.append(entity_names_to_entities[NODE_ENTITY_NAME],
-                             project=['uuid'], member_of='group')
-        for res in group_uuid_qb.iterall():
-            if groups_uuid.has_key(str(res[0])):
-                groups_uuid[str(res[0])].append(str(res[1]))
-            else:
-                groups_uuid[str(res[0])] = [str(res[1])]
+    # If a group is in the exported date, we export the group/node correlation
+    if GROUP_ENTITY_NAME in export_data:
+        for curr_group in export_data[GROUP_ENTITY_NAME]:
+            group_uuid_qb = QueryBuilder()
+            group_uuid_qb.append(entity_names_to_entities[GROUP_ENTITY_NAME],
+                                 filters={'id': {'==': curr_group}},
+                                 project=['uuid'], tag='group')
+            group_uuid_qb.append(entity_names_to_entities[NODE_ENTITY_NAME],
+                                 project=['uuid'], member_of='group')
+            for res in group_uuid_qb.iterall():
+                if groups_uuid.has_key(str(res[0])):
+                    groups_uuid[str(res[0])].append(str(res[1]))
+                else:
+                    groups_uuid[str(res[0])] = [str(res[1])]
 
     ######################################
     # Now I store

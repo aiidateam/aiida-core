@@ -682,7 +682,7 @@ class TestComplexx(AiidaTestCase):
             self.assertEquals(qb.count(), 1, "The group was not found.")
         finally:
             # Deleting the created temporary folder
-            # shutil.rmtree(temp_folder, ignore_errors=True)
+            shutil.rmtree(temp_folder, ignore_errors=True)
 
 
 class TestComplex():

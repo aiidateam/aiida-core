@@ -643,6 +643,10 @@ class TestComplexx(AiidaTestCase):
                 self.assertEquals(load_node(uuid).get_user().email, new_email)
 
             from aiida.orm.querybuilder import QueryBuilder
+            from aiida.orm.node import Node
+            QueryBuilder().append(
+                Group, project=['*'], tag='group').append(
+                Node, project=['*'], member_of='group').all()
             qb = QueryBuilder()
             qb.append(Group, filters={'uuid': {'==': g1.uuid}})
             self.assertEquals(qb.count(), 1, "The group was not found.")

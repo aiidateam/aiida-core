@@ -856,7 +856,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         qb.append(Node, filters={"uuid": {"in": linked_nodes}},
                   project=["uuid"])
         for res in qb.iterall():
-            relevant_db_nodes.add(res[0])
+            db_nodes_uuid.add(res[0])
             # relevant_db_nodes.updaate({node.uuid: node})
 
         # for group in grouper(999, linked_nodes):
@@ -1049,9 +1049,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                 # Store all objects for this model in a list, and store them
                 # all in once at the end.
-                objects_to_create = []
+                objects_to_create = list()
                 # This is needed later to associate the import entry with the new pk
-                import_entry_ids = {}
+                import_entry_ids = dict()
                 for import_entry_id, entry_data in (
                         new_entries[entity_sig].iteritems()):
                     unique_id = entry_data[unique_identifier]
@@ -1238,17 +1238,19 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 print "STORING GROUP ELEMENTS..."
             import_groups = data['groups_uuid']
             for groupuuid, groupnodes in import_groups.iteritems():
-                # TODO: cache these to avoid too many queries
-                from aiida.backends.sqlalchemy.models.group import DbGroup
-                from uuid import UUID
-                group = session.query(DbGroup).filter(
-                    DbGroup.uuid == UUID(groupuuid)).all()
+                # # TODO: cache these to avoid too many queries
+                qb_group = QueryBuilder().append(
+                    Group, filters={'uuid': {'==': groupuuid}})
+                group = qb_group.first()[0]
 
-                # group = DbGroup.objects.get(uuid=groupuuid)
-                nodes_to_store = [dbnode_reverse_mappings[node_uuid]
+                nodes_ids_to_add = [dbnode_reverse_mappings[node_uuid]
                                   for node_uuid in groupnodes]
-                if nodes_to_store:
-                    group.dbnodes.add_all(*nodes_to_store)
+
+                qb_nodes = QueryBuilder().append(
+                    Node, filters={'id': {'in': nodes_ids_to_add}})
+                qb_nodes.all()
+                nodes_to_add = [n[0] for n in qb_nodes.all()]
+                group.add_nodes(nodes_to_add)
 
             ######################################################
             # Put everything in a specific group
@@ -1674,11 +1676,11 @@ ATTRIBUTE_ENTITY_NAME = "Attribute"
 COMPUTER_ENTITY_NAME = "Computer"
 USER_ENTITY_NAME = "User"
 
-NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode",
-LINK_SIGNATURE = "aiida.backends.djsite.db.models.DbLink",
-GROUP_SIGNATURE = "aiida.backends.djsite.db.models.DbGroup",
-COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer",
-USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser",
+NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode"
+LINK_SIGNATURE = "aiida.backends.djsite.db.models.DbLink"
+GROUP_SIGNATURE = "aiida.backends.djsite.db.models.DbGroup"
+COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer"
+USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser"
 ATTRIBUTE_SIGNATURE = "aiida.backends.djsite.db.models.DbAttribute"
 
 entity_names_to_signatures = {
@@ -1757,7 +1759,10 @@ django_fields_to_sqla = {
     NODE_ENTITY_NAME: {
         "dbcomputer": "dbcomputer_id",
         "user": "user_id"},
-    GROUP_ENTITY_NAME: {},
+    GROUP_ENTITY_NAME: {
+        # "dbnodes": "dbnodes_id",
+        "user": "user_id"
+    },
     COMPUTER_ENTITY_NAME: {
         "metadata": "_metadata"}
 }
@@ -1767,7 +1772,9 @@ sqla_fields_to_django = {
         "dbcomputer_id": "dbcomputer",
         "user_id": "user"},
     LINK_ENTITY_NAME: {},
-    GROUP_ENTITY_NAME: {},
+    GROUP_ENTITY_NAME: {
+        "user_id": "user"
+    },
     COMPUTER_ENTITY_NAME: {
         "_metadata" : "metadata"},
     USER_ENTITY_NAME: {}
@@ -1874,12 +1881,12 @@ def get_all_fields_info_sqla():
              "description": {},
              "user": {
                 "related_name" : "dbgroups",
-                "requires" : USER_ENTITY_NAME
+                "requires": USER_ENTITY_NAME
              },
-             "dbnodes": {
-                 "related_name": "dbgroups",
-                 "requires": NODE_ENTITY_NAME
-             },
+             # "dbnodes": {
+             #     "related_name": "dbgroups",
+             #     "requires": NODE_ENTITY_NAME
+             # },
              "time": {
                 "convert_type" : "date"
              },
@@ -2152,9 +2159,8 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
 
         # Getting the ids that correspond to the right entity
         entry_ids_to_add = (given_node_entry_ids
-                          if (given_entity ==
-                              entity_names_to_signatures[NODE_ENTITY_NAME])
-                          else given_group_entry_ids)
+                            if (given_entity == NODE_ENTITY_NAME)
+                            else given_group_entry_ids)
 
         qb = QueryBuilder()
         qb.append(entity_names_to_entities[given_entity],

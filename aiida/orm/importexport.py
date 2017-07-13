@@ -1033,10 +1033,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
                     if entity_sig not in ret_dict:
                         ret_dict[entity_sig] = { 'new': [], 'existing': [] }
-                    ret_dict[entity_sig]['existing'].append((import_entry_id,
-                                                             existing_entry_id))
+                    ret_dict[entity_sig]['existing'].append(
+                        (import_entry_id, existing_entry_id))
                     if not silent:
-                        print "existing %s: %s (%s->%s)" % (entity_sig, unique_id,
+                        print "existing %s: %s (%s->%s)" % (entity_sig,
+                                                            unique_id,
                                                             import_entry_id,
                                                             existing_entry_id)
 
@@ -1152,7 +1153,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[entity_sig][unique_id] = new_pk
                     if entity_sig not in ret_dict:
-                        ret_dict[entity_sig] = { 'new': [], 'existing': [] }
+                        ret_dict[entity_sig] = {'new': [], 'existing': []}
                     ret_dict[entity_sig]['new'].append((import_entry_id,
                                                         new_pk))
 
@@ -1170,12 +1171,15 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
             # Needed for fast checks of existing links
             from aiida.backends.sqlalchemy.models.node import DbLink
-            existing_links_raw = session.query(DbLink.input, DbLink.output, DbLink.label).all()
-            existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
-            existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
+            existing_links_raw = session.query(DbLink.input, DbLink.output,
+                                               DbLink.label).all()
+            existing_links_labels = {(l[0], l[1]): l[2]
+                                     for l in existing_links_raw}
+            existing_input_links = {(l[1], l[2]): l[0]
+                                    for l in existing_links_raw}
 
             dbnode_reverse_mappings = foreign_ids_reverse_mappings[
-                "aiida.backends.djsite.db.models.DbNode"]
+                entity_names_to_signatures[NODE_ENTITY_NAME]]
             for link in import_links:
                 try:
                     in_id = dbnode_reverse_mappings[link['input']]
@@ -1188,41 +1192,46 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                          "or both unknown nodes, stopping "
                                          "(in_uuid={}, out_uuid={}, "
                                          "label={})".format(link['input'],
-                                                            link['output'], link['label']))
+                                                            link['output'],
+                                                            link['label']))
 
                 try:
                     existing_label = existing_links_labels[in_id, out_id]
                     if existing_label != link['label']:
-                        raise ValueError("Trying to rename an existing link name, "
-                                         "stopping (in={}, out={}, old_label={}, "
-                                         "new_label={})".format(in_id, out_id,
-                                                                existing_label, link['label']))
-                        # Do nothing, the link is already in place and has the correct
-                        # name
+                        raise ValueError("Trying to rename an existing link "
+                                         "name, stopping (in={}, out={}, "
+                                         "old_label={}, new_label={})"
+                                         .format(in_id, out_id, existing_label,
+                                                 link['label']))
+                        # Do nothing, the link is already in place and has
+                        # the correct name
                 except KeyError:
                     try:
-                        existing_input = existing_input_links[out_id, link['label']]
-                        # If existing_input were the correct one, I would have found
+                        existing_input = existing_input_links[out_id,
+                                                              link['label']]
+                        # If existing_input were the correct one, I would have
                         # it already in the previous step!
-                        raise ValueError("There exists already an input link to "
-                                         "node {} with label {} but it does not "
-                                         "come the expected input {}".format(
-                            out_id, link['label'], in_id))
+                        raise ValueError("There exists already an input link "
+                                         "to node {} with label {} but it "
+                                         "does not come the expected input {}"
+                                         .format(out_id, link['label'], in_id))
                     except KeyError:
                         # New link
                         links_to_store.append(DbLink(
-                            input_id=in_id, output_id=out_id, label=link['label']))
-                        if 'aiida.backends.djsite.db.models.DbLink' not in ret_dict:
-                            ret_dict['aiida.backends.djsite.db.models.DbLink'] = { 'new': [] }
-                        ret_dict['aiida.backends.djsite.db.models.DbLink']['new'].append((in_id,out_id))
+                            input_id=in_id, output_id=out_id,
+                            label=link['label']))
+                        if entity_names_to_signatures[
+                            LINK_SIGNATURE] not in ret_dict:
+                            ret_dict[entity_names_to_signatures[
+                                LINK_SIGNATURE]] = {'new': []}
+                        ret_dict[entity_names_to_signatures[
+                            LINK_SIGNATURE]]['new'].append((in_id, out_id))
 
             # Store new links
             if links_to_store:
                 if not silent:
                     print "   ({} new links...)".format(len(links_to_store))
                 session.add_all(links_to_store)
-                # session.commit()
-                # models.DbLink.objects.bulk_create(links_to_store)
             else:
                 if not silent:
                     print "   (0 new links...)"
@@ -1235,26 +1244,26 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 qb_group = QueryBuilder().append(
                     Group, filters={'uuid': {'==': groupuuid}})
                 group = qb_group.first()[0]
-
                 nodes_ids_to_add = [dbnode_reverse_mappings[node_uuid]
-                                  for node_uuid in groupnodes]
-
+                                    for node_uuid in groupnodes]
                 qb_nodes = QueryBuilder().append(
                     Node, filters={'id': {'in': nodes_ids_to_add}})
-                qb_nodes.all()
                 nodes_to_add = [n[0] for n in qb_nodes.all()]
                 group.add_nodes(nodes_to_add)
 
             ######################################################
             # Put everything in a specific group
-            dbnode_model_name = "aiida.backends.djsite.db.models.DbNode"
-            existing = existing_entries.get(dbnode_model_name, {})
+            existing = existing_entries.get(
+                entity_names_to_signatures[NODE_ENTITY_NAME], {})
             existing_pk = [foreign_ids_reverse_mappings[
-                               dbnode_model_name][v['uuid']]
+                               entity_names_to_signatures[
+                                   NODE_ENTITY_NAME]][v['uuid']]
                            for v in existing.itervalues()]
-            new = new_entries.get(dbnode_model_name, {})
+            new = new_entries.get(entity_names_to_signatures[
+                                      NODE_ENTITY_NAME], {})
             new_pk = [foreign_ids_reverse_mappings[
-                          dbnode_model_name][v['uuid']]
+                          entity_names_to_signatures[
+                              NODE_ENTITY_NAME]][v['uuid']]
                       for v in new.itervalues()]
 
             pks_for_group = existing_pk + new_pk

@@ -662,26 +662,28 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                          "or both unknown nodes, stopping "
                                          "(in_uuid={}, out_uuid={}, "
                                          "label={})".format(link['input'],
-                                                            link['output'], link['label']))
+                                                            link['output'],
+                                                            link['label']))
 
                 try:
                     existing_label = existing_links_labels[in_id, out_id]
                     if existing_label != link['label']:
-                        raise ValueError("Trying to rename an existing link name, "
-                                         "stopping (in={}, out={}, old_label={}, "
-                                         "new_label={})".format(in_id, out_id,
-                                                                existing_label, link['label']))
-                        # Do nothing, the link is already in place and has the correct
-                        # name
+                        raise ValueError("Trying to rename an existing link "
+                                         "name, stopping (in={}, out={}, "
+                                         "old_label={}, new_label={})"
+                                         .format(in_id, out_id, existing_label,
+                                                 link['label']))
+                        # Do nothing, the link is already in place and has
+                        # the correct name
                 except KeyError:
                     try:
                         existing_input = existing_input_links[out_id, link['label']]
                         # If existing_input were the correct one, I would have found
                         # it already in the previous step!
-                        raise ValueError("There exists already an input link to "
-                                         "node {} with label {} but it does not "
-                                         "come the expected input {}".format(
-                            out_id, link['label'], in_id))
+                        raise ValueError("There exists already an input link "
+                                         "to node {} with label {} but it "
+                                         "does not come the expected input {}"
+                                         .format(out_id, link['label'], in_id))
                     except KeyError:
                         # New link
                         links_to_store.append(models.DbLink(
@@ -779,7 +781,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     import zipfile
     from itertools import chain
 
-    # from django.db import transaction
     from aiida.utils import timezone
 
     from aiida.orm import Node, Group
@@ -787,6 +788,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
     from aiida.orm.querybuilder import QueryBuilder
+
+    # Backend specific imports
+    from aiida.backends.sqlalchemy.models.node import DbCalcState
 
     # This is the export version expected by this function
     expected_export_version = '0.2'
@@ -882,21 +886,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         entity_sig_order = [entity_names_to_signatures[m]
                         for m in (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME,
                                   NODE_ENTITY_NAME, GROUP_ENTITY_NAME)]
-                       # ("aiida.backends.sqlalchemy.models.user.DbUser",
-                       #  "aiida.backends.sqlalchemy.models.computer.DbComputer",
-                       #  "aiida.backends.sqlalchemy.models.node.DbNode",
-                       #  "aiida.backends.sqlalchemy.models.group.DbGroup",
-                       # )
-        # ]
-
-        # Models that do appear in the import file, but whose import is
-        # managed manually
-        # model_manual = [m for m in
-        #                 ("aiida.backends.djsite.db.models.DbLink",
-        #                  "aiida.backends.djsite.db.models.DbAttribute",)
-        #                 # ("aiida.backends.sqlalchemy.models.node.DbLink",
-        #                 #  "aiida.backends.djsite.db.models.DbAttribute",)
-        # ]
 
         # "Entities" that do appear in the import file, but whose import is
         # managed manually
@@ -908,8 +897,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         for import_field_name in metadata['all_fields_info']:
             if import_field_name not in all_known_entity_sigs:
                 raise NotImplementedError("Apparently, you are importing a "
-                                          "file with a model '{}', but this does not appear in "
-                                          "all_known_models!".format(import_field_name))
+                                          "file with a model '{}', but this "
+                                          "does not appear in "
+                                          "all_known_models!"
+                                          .format(import_field_name))
 
         for idx, entity_sig in enumerate(entity_sig_order):
             dependencies = []
@@ -921,9 +912,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     pass
             for dependency in dependencies:
                 if dependency not in entity_sig_order[:idx]:
-                    raise ValueError("Model {} requires {} but would be loaded "
-                                     "first; stopping...".format(entity_sig,
-                                                                 dependency))
+                    raise ValueError("Entity {} requires {} but would be "
+                                     "loaded first; stopping..."
+                                     .format(entity_sig, dependency))
 
         ###################################################
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
@@ -940,8 +931,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # IMPORT DATA #
         ###############
         # DO ALL WITH A TRANSACTION
-        # with transaction.atomic():
-        # if True
         import aiida.backends.sqlalchemy
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
@@ -1017,14 +1006,16 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                                 imported_comp_names.add(v["name"])
 
-                            if v[unique_identifier] in relevant_db_entries.keys():
+                            if v[unique_identifier] in (
+                                    relevant_db_entries.keys()):
                                 # Already in DB
                                 existing_entries[entity_sig][k] = v
                             else:
                                 # To be added
                                 new_entries[entity_sig][k] = v
                     else:
-                        new_entries[entity_sig] = data['export_data'][entity_sig].copy()
+                        new_entries[entity_sig] = data[
+                            'export_data'][entity_sig].copy()
 
             # I import data from the given model
             for entity_sig in entity_sig_order:
@@ -1034,9 +1025,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 unique_identifier = metadata['unique_identifiers'].get(
                     entity_sig, None)
 
-                for import_entry_id, entry_data in existing_entries[entity_sig].iteritems():
+                for import_entry_id, entry_data in (
+                        existing_entries[entity_sig].iteritems()):
                     unique_id = entry_data[unique_identifier]
-                    existing_entry_id = foreign_ids_reverse_mappings[entity_sig][unique_id]
+                    existing_entry_id = foreign_ids_reverse_mappings[
+                        entity_sig][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
                     if entity_sig not in ret_dict:
                         ret_dict[entity_sig] = { 'new': [], 'existing': [] }
@@ -1057,8 +1050,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
-                        import_unique_ids_mappings=import_unique_ids_mappings,
-                        foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
+                        import_unique_ids_mappings=
+                        import_unique_ids_mappings,
+                        foreign_ids_reverse_mappings=
+                        foreign_ids_reverse_mappings)
                                        for k, v in entry_data.iteritems())
 
                     db_entity = get_object_from_string(
@@ -1079,8 +1074,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                             nodes_export_subfolder, export_shard_uuid(o.uuid)))
                         if not subfolder.exists():
                             raise ValueError("Unable to find the repository "
-                                             "folder for node with UUID={} in the exported "
-                                             "file".format(o.uuid))
+                                             "folder for node with UUID={} "
+                                             "in the exported file"
+                                             .format(o.uuid))
                         destdir = RepositoryFolder(
                             section=Node._section_name,
                             uuid=o.uuid)
@@ -1140,7 +1136,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         print "SETTING THE IMPORTED STATES FOR NEW NODES..."
                     # I set for all nodes, even if I should set it only
                     # for calculations
-                    from aiida.backends.sqlalchemy.models.node import DbCalcState
                     for unique_id, new_pk in just_saved.iteritems():
                         imported_states.append(
                             DbCalcState(dbnode_id=new_pk,
@@ -1176,8 +1171,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             # Needed for fast checks of existing links
             from aiida.backends.sqlalchemy.models.node import DbLink
             existing_links_raw = session.query(DbLink.input, DbLink.output, DbLink.label).all()
-            # existing_links_raw = DbLink.objects.all().values_list(
-            #     'input', 'output', 'label')
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 

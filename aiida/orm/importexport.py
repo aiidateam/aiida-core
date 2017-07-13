@@ -976,15 +976,23 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                     if unique_identifier is not None:
                         import_unique_ids = set(v[unique_identifier] for v in
-                                                data['export_data'][entity_sig].values())
+                                                data['export_data'][
+                                                    entity_sig].values())
 
-                        qb = QueryBuilder()
-                        qb.append(entity, filters={unique_identifier: {"in": import_unique_ids}},
-                                  project=["*"], tag="res")
-                        relevant_db_entries = {getattr(v[0], unique_identifier): v[0] for v in qb.all()}
+                        relevant_db_entries = dict()
+                        if len(import_unique_ids) > 0:
+                            qb = QueryBuilder()
+                            qb.append(entity, filters={
+                                unique_identifier: {"in": import_unique_ids}},
+                                      project=["*"], tag="res")
+                            relevant_db_entries = {
+                                getattr(v[0], unique_identifier):
+                                    v[0] for v in qb.all()}
 
-                        foreign_ids_reverse_mappings[entity_sig] = {
-                            k: v.pk for k, v in relevant_db_entries.iteritems()}
+                            foreign_ids_reverse_mappings[entity_sig] = {
+                                k: v.pk for k, v in
+                                relevant_db_entries.iteritems()}
+
                         dupl_counter = 0
                         imported_comp_names = set()
                         for k, v in data['export_data'][entity_sig].iteritems():

@@ -12,20 +12,239 @@ import sys
 
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
-
-
+from aiida.orm.computer import Computer
+from aiida.orm.group import Group
+from aiida.orm.node import Node
+from aiida.orm.user import User
 
 IMPORTGROUP_TYPE = 'aiida.import'
 COMP_DUPL_SUFFIX = ' (Imported #{})'
 
 
+NODE_ENTITY_NAME = "Node"
+LINK_ENTITY_NAME = "Link"
+GROUP_ENTITY_NAME = "Group"
+ATTRIBUTE_ENTITY_NAME = "Attribute"
+COMPUTER_ENTITY_NAME = "Computer"
+USER_ENTITY_NAME = "User"
+
+NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode"
+LINK_SIGNATURE = "aiida.backends.djsite.db.models.DbLink"
+GROUP_SIGNATURE = "aiida.backends.djsite.db.models.DbGroup"
+COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer"
+USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser"
+ATTRIBUTE_SIGNATURE = "aiida.backends.djsite.db.models.DbAttribute"
+
+entity_names_to_signatures = {
+    NODE_ENTITY_NAME: NODE_SIGNATURE,
+    LINK_ENTITY_NAME: LINK_SIGNATURE,
+    GROUP_ENTITY_NAME: GROUP_SIGNATURE,
+    COMPUTER_ENTITY_NAME: COMPUTER_SIGNATURE,
+    USER_ENTITY_NAME: USER_SIGNATURE,
+    ATTRIBUTE_ENTITY_NAME: ATTRIBUTE_SIGNATURE,
+}
+
+signatures_to_entity_names = {
+    NODE_SIGNATURE: NODE_ENTITY_NAME,
+    LINK_SIGNATURE: LINK_ENTITY_NAME,
+    GROUP_SIGNATURE: GROUP_ENTITY_NAME,
+    COMPUTER_SIGNATURE: COMPUTER_ENTITY_NAME,
+    USER_SIGNATURE: USER_ENTITY_NAME,
+    ATTRIBUTE_SIGNATURE: ATTRIBUTE_ENTITY_NAME,
+}
+
+entity_names_to_entities = {
+    NODE_ENTITY_NAME: Node,
+    GROUP_ENTITY_NAME: Group,
+    COMPUTER_ENTITY_NAME: Computer,
+    USER_ENTITY_NAME: User
+}
+
+def schema_to_entity_names(class_string):
+    if class_string is None or len(class_string) == 0:
+        return
+    if(class_string == "aiida.backends.djsite.db.models.DbNode" or
+               class_string == "aiida.backends.sqlalchemy.models.node.DbNode"):
+        return NODE_ENTITY_NAME
+
+    if(class_string == "aiida.backends.djsite.db.models.DbLink" or
+               class_string == "aiida.backends.sqlalchemy.models.node.DbLink"):
+        return LINK_ENTITY_NAME
+
+    if(class_string == "aiida.backends.djsite.db.models.DbGroup" or
+               class_string == "aiida.backends.sqlalchemy.models.group.DbGroup"):
+        return GROUP_ENTITY_NAME
+
+    if(class_string == "aiida.backends.djsite.db.models.DbComputer" or
+               class_string == "aiida.backends.sqlalchemy.models.computer.DbComputer"):
+        return COMPUTER_ENTITY_NAME
+    if (class_string == "aiida.backends.djsite.db.models.DbUser" or
+            class_string == "aiida.backends.sqlalchemy.models.user.DbUser"):
+        return USER_ENTITY_NAME
+
+
+entity_names_to_django_schema = {
+    NODE_ENTITY_NAME: "aiida.backends.djsite.db.models.DbNode",
+    LINK_ENTITY_NAME: "aiida.backends.djsite.db.models.DbLink",
+    GROUP_ENTITY_NAME: "aiida.backends.djsite.db.models.DbGroup",
+    COMPUTER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbComputer",
+    USER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbUser"
+}
+
+entity_names_to_sqla_schema = {
+    NODE_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbNode",
+    LINK_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbLink",
+    GROUP_ENTITY_NAME: "aiida.backends.sqlalchemy.models.group.DbGroup",
+    COMPUTER_ENTITY_NAME:
+        "aiida.backends.sqlalchemy.models.computer.DbComputer",
+    USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser"
+}
+
+django_fields_to_sqla = {
+    NODE_ENTITY_NAME: {
+        "dbcomputer": "dbcomputer_id",
+        "user": "user_id"},
+    GROUP_ENTITY_NAME: {
+        # "dbnodes": "dbnodes_id",
+        "user": "user_id"
+    },
+    COMPUTER_ENTITY_NAME: {
+        "metadata": "_metadata"}
+}
+
+sqla_fields_to_django = {
+    NODE_ENTITY_NAME: {
+        "dbcomputer_id": "dbcomputer",
+        "user_id": "user"},
+    LINK_ENTITY_NAME: {},
+    GROUP_ENTITY_NAME: {
+        "user_id": "user"
+    },
+    COMPUTER_ENTITY_NAME: {
+        "_metadata" : "metadata"},
+    USER_ENTITY_NAME: {}
+}
+
+
+def get_all_fields_info_sqla():
+
+    unique_identifiers = {
+        USER_ENTITY_NAME: "email",
+        COMPUTER_ENTITY_NAME: "uuid",
+        LINK_ENTITY_NAME: None,
+        NODE_ENTITY_NAME: "uuid",
+        ATTRIBUTE_ENTITY_NAME: None,
+        GROUP_ENTITY_NAME: "uuid",
+    }
+
+    all_fields_info = dict()
+    all_fields_info[USER_ENTITY_NAME] = {
+             "last_name": {},
+             "first_name": {},
+             "institution": {},
+             "email": {}
+        }
+    all_fields_info[COMPUTER_ENTITY_NAME] = {
+             "transport_type": {},
+             "transport_params": {},
+             "hostname": {},
+             "description": {},
+             "scheduler_type": {},
+             "metadata": {},
+             "enabled": {},
+             "uuid": {},
+             "name": {}
+        }
+    all_fields_info[LINK_ENTITY_NAME] = {
+            "input": {
+                "requires": NODE_ENTITY_NAME,
+                "related_name": "output_links"
+            },
+            "type": {},
+            "output": {
+                "requires": NODE_ENTITY_NAME,
+                "related_name": "input_links"
+            },
+            "label": {}
+        }
+    all_fields_info[NODE_ENTITY_NAME] = {
+             "ctime": {
+                "convert_type" : "date"
+             },
+             "uuid": {},
+             "public": {},
+             "mtime": {
+                "convert_type" : "date"
+             },
+             "type": {},
+             "label": {},
+             "nodeversion": {},
+             "user": {
+                "requires" : USER_ENTITY_NAME,
+                "related_name" : "dbnodes"
+             },
+             "dbcomputer": {
+                "requires" : COMPUTER_ENTITY_NAME,
+                "related_name" : "dbnodes"
+             },
+             "description": {}
+        }
+    all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
+             "dbnode": {
+                "requires": NODE_ENTITY_NAME,
+                "related_name": "dbattributes"
+             },
+             "key": {},
+             "tval": {},
+             "fval": {},
+             "bval": {},
+             "datatype": {},
+             "dval": {
+                "convert_type": "date"
+             },
+             "ival": {}
+        }
+    all_fields_info[GROUP_ENTITY_NAME] = {
+             "description": {},
+             "user": {
+                "related_name" : "dbgroups",
+                "requires": USER_ENTITY_NAME
+             },
+             # "dbnodes": {
+             #     "related_name": "dbgroups",
+             #     "requires": NODE_ENTITY_NAME
+             # },
+             "time": {
+                "convert_type" : "date"
+             },
+             "type": {},
+             "uuid": {},
+             "name": {}
+        }
+    return all_fields_info, unique_identifiers
+
+relationship_dic = {
+    "Node": {
+        "Computer": "has_computer",
+        "Group": "member_of",
+        "User": "created_by"
+    },
+    "Group": {
+        "Node": "group_of"
+    },
+    "Computer": {
+        "Node": "computer_of"
+    },
+    "User": {
+        "Node": "creator_of",
+        "Group": "owner_of"
+    }
+}
+
+
 def deserialize_attributes(attributes_data, conversion_data):
     import datetime
     import pytz
-
-    # print "WWWWWWWWW => ", attributes_data, " ====== ", conversion_data
-    # if conversion_data is None:
-    #     print "Lalala"
 
     if isinstance(attributes_data, dict):
         ret_data = {}
@@ -785,7 +1004,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
     from aiida.orm import Node, Group
     from aiida.common.folders import SandboxFolder, RepositoryFolder
-    from aiida.common.utils import get_class_string, get_object_from_string
+    from aiida.common.utils import get_object_from_string
     from aiida.common.datastructures import calc_states
     from aiida.orm.querybuilder import QueryBuilder
 
@@ -1671,302 +1890,14 @@ def get_all_fields_info():
 
     return all_fields_info, unique_identifiers
 
-NODE_ENTITY_NAME = "Node"
-LINK_ENTITY_NAME = "Link"
-GROUP_ENTITY_NAME = "Group"
-ATTRIBUTE_ENTITY_NAME = "Attribute"
-COMPUTER_ENTITY_NAME = "Computer"
-USER_ENTITY_NAME = "User"
-
-NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode"
-LINK_SIGNATURE = "aiida.backends.djsite.db.models.DbLink"
-GROUP_SIGNATURE = "aiida.backends.djsite.db.models.DbGroup"
-COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer"
-USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser"
-ATTRIBUTE_SIGNATURE = "aiida.backends.djsite.db.models.DbAttribute"
-
-entity_names_to_signatures = {
-    NODE_ENTITY_NAME: NODE_SIGNATURE,
-    LINK_ENTITY_NAME: LINK_SIGNATURE,
-    GROUP_ENTITY_NAME: GROUP_SIGNATURE,
-    COMPUTER_ENTITY_NAME: COMPUTER_SIGNATURE,
-    USER_ENTITY_NAME: USER_SIGNATURE,
-    ATTRIBUTE_ENTITY_NAME: ATTRIBUTE_SIGNATURE,
-}
-
-signatures_to_entity_names = {
-    NODE_SIGNATURE: NODE_ENTITY_NAME,
-    LINK_SIGNATURE: LINK_ENTITY_NAME,
-    GROUP_SIGNATURE: GROUP_ENTITY_NAME,
-    COMPUTER_SIGNATURE: COMPUTER_ENTITY_NAME,
-    USER_SIGNATURE: USER_ENTITY_NAME,
-    ATTRIBUTE_SIGNATURE: ATTRIBUTE_ENTITY_NAME,
-}
-
-
-from aiida.orm.node import Node
-from aiida.orm.group import Group
-from aiida.orm.computer import Computer
-from aiida.orm.user import User
-
-entity_names_to_entities = {
-    NODE_ENTITY_NAME: Node,
-    GROUP_ENTITY_NAME: Group,
-    COMPUTER_ENTITY_NAME: Computer,
-    USER_ENTITY_NAME: User
-}
-
-
-def schema_to_entity_names(class_string):
-    if class_string is None or len(class_string) == 0:
-        return
-    if(class_string == "aiida.backends.djsite.db.models.DbNode" or
-               class_string == "aiida.backends.sqlalchemy.models.node.DbNode"):
-        return NODE_ENTITY_NAME
-
-    if(class_string == "aiida.backends.djsite.db.models.DbLink" or
-               class_string == "aiida.backends.sqlalchemy.models.node.DbLink"):
-        return LINK_ENTITY_NAME
-
-    if(class_string == "aiida.backends.djsite.db.models.DbGroup" or
-               class_string == "aiida.backends.sqlalchemy.models.group.DbGroup"):
-        return GROUP_ENTITY_NAME
-
-    if(class_string == "aiida.backends.djsite.db.models.DbComputer" or
-               class_string == "aiida.backends.sqlalchemy.models.computer.DbComputer"):
-        return COMPUTER_ENTITY_NAME
-    if (class_string == "aiida.backends.djsite.db.models.DbUser" or
-            class_string == "aiida.backends.sqlalchemy.models.user.DbUser"):
-        return USER_ENTITY_NAME
-
-
-entity_names_to_django_schema = {
-    NODE_ENTITY_NAME: "aiida.backends.djsite.db.models.DbNode",
-    LINK_ENTITY_NAME: "aiida.backends.djsite.db.models.DbLink",
-    GROUP_ENTITY_NAME: "aiida.backends.djsite.db.models.DbGroup",
-    COMPUTER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbComputer",
-    USER_ENTITY_NAME: "aiida.backends.djsite.db.models.DbUser"
-}
-
-entity_names_to_sqla_schema = {
-    NODE_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbNode",
-    LINK_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbLink",
-    GROUP_ENTITY_NAME: "aiida.backends.sqlalchemy.models.group.DbGroup",
-    COMPUTER_ENTITY_NAME:
-        "aiida.backends.sqlalchemy.models.computer.DbComputer",
-    USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser"
-}
-
-django_fields_to_sqla = {
-    NODE_ENTITY_NAME: {
-        "dbcomputer": "dbcomputer_id",
-        "user": "user_id"},
-    GROUP_ENTITY_NAME: {
-        # "dbnodes": "dbnodes_id",
-        "user": "user_id"
-    },
-    COMPUTER_ENTITY_NAME: {
-        "metadata": "_metadata"}
-}
-
-sqla_fields_to_django = {
-    NODE_ENTITY_NAME: {
-        "dbcomputer_id": "dbcomputer",
-        "user_id": "user"},
-    LINK_ENTITY_NAME: {},
-    GROUP_ENTITY_NAME: {
-        "user_id": "user"
-    },
-    COMPUTER_ENTITY_NAME: {
-        "_metadata" : "metadata"},
-    USER_ENTITY_NAME: {}
-}
-
-# django_fields_to_sqla = {
-#     "aiida.backends.sqlalchemy.models.node.DbNode": {
-#         "dbcomputer" : "dbcomputer_id",
-#         "user": "user_id"},
-#     "aiida.backends.sqlalchemy.models.computer.DbComputer": {
-#         "metadata" : "_metadata"}
-# }
-#
-# sqla_fields_to_django = {
-#     "aiida.backends.sqlalchemy.models.node.DbNode": {
-#         "dbcomputer_id" : "dbcomputer",
-#         "user_id": "user"},
-#     "aiida.backends.sqlalchemy.models.node.DbLink": {},
-#     "aiida.backends.sqlalchemy.models.group.DbGroup": {},
-#     "aiida.backends.sqlalchemy.models.computer.DbComputer": {
-#         "_metadata" : "metadata"},
-#     "aiida.backends.sqlalchemy.models.user.DbUser": {}
-# }
-
-def get_all_fields_info_sqla():
-
-    unique_identifiers = {
-        USER_ENTITY_NAME: "email",
-        COMPUTER_ENTITY_NAME: "uuid",
-        LINK_ENTITY_NAME: None,
-        NODE_ENTITY_NAME: "uuid",
-        ATTRIBUTE_ENTITY_NAME: None,
-        GROUP_ENTITY_NAME: "uuid",
-    }
-
-    all_fields_info = dict()
-    all_fields_info[USER_ENTITY_NAME] = {
-             "last_name": {},
-             "first_name": {},
-             "institution": {},
-             "email": {}
-        }
-    all_fields_info[COMPUTER_ENTITY_NAME] = {
-             "transport_type": {},
-             "transport_params": {},
-             "hostname": {},
-             "description": {},
-             "scheduler_type": {},
-             "metadata": {},
-             "enabled": {},
-             "uuid": {},
-             "name": {}
-        }
-    all_fields_info[LINK_ENTITY_NAME] = {
-            "input": {
-                "requires": NODE_ENTITY_NAME,
-                "related_name": "output_links"
-            },
-            "type": {},
-            "output": {
-                "requires": NODE_ENTITY_NAME,
-                "related_name": "input_links"
-            },
-            "label": {}
-        }
-    all_fields_info[NODE_ENTITY_NAME] = {
-             "ctime": {
-                "convert_type" : "date"
-             },
-             "uuid": {},
-             "public": {},
-             "mtime": {
-                "convert_type" : "date"
-             },
-             "type": {},
-             "label": {},
-             "nodeversion": {},
-             "user": {
-                "requires" : USER_ENTITY_NAME,
-                "related_name" : "dbnodes"
-             },
-             "dbcomputer": {
-                "requires" : COMPUTER_ENTITY_NAME,
-                "related_name" : "dbnodes"
-             },
-             "description": {}
-        }
-    all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
-             "dbnode": {
-                "requires": NODE_ENTITY_NAME,
-                "related_name": "dbattributes"
-             },
-             "key": {},
-             "tval": {},
-             "fval": {},
-             "bval": {},
-             "datatype": {},
-             "dval": {
-                "convert_type": "date"
-             },
-             "ival": {}
-        }
-    all_fields_info[GROUP_ENTITY_NAME] = {
-             "description": {},
-             "user": {
-                "related_name" : "dbgroups",
-                "requires": USER_ENTITY_NAME
-             },
-             # "dbnodes": {
-             #     "related_name": "dbgroups",
-             #     "requires": NODE_ENTITY_NAME
-             # },
-             "time": {
-                "convert_type" : "date"
-             },
-             "type": {},
-             "uuid": {},
-             "name": {}
-        }
-    return all_fields_info, unique_identifiers
-
-# sqla_to_django_schema = {
-#     "aiida.backends.sqlalchemy.models.node.DbNode": "aiida.backends.djsite.db.models.DbNode",
-#     "aiida.backends.sqlalchemy.models.node.DbLink": "aiida.backends.djsite.db.models.DbLink",
-#     "aiida.backends.sqlalchemy.models.group.DbGroup": "aiida.backends.djsite.db.models.DbGroup",
-#     "aiida.backends.sqlalchemy.models.computer.DbComputer": "aiida.backends.djsite.db.models.DbComputer",
-#     "aiida.backends.sqlalchemy.models.user.DbUser": "aiida.backends.djsite.db.models.DbUser"
-# }
-#
-# django_to_sqla_schema = {
-#     "aiida.backends.djsite.db.models.DbNode": "aiida.backends.sqlalchemy.models.node.DbNode",
-#     "aiida.backends.djsite.db.models.DbLink": "aiida.backends.sqlalchemy.models.node.DbLink",
-#     "aiida.backends.djsite.db.models.DbGroup": "aiida.backends.sqlalchemy.models.group.DbGroup",
-#     "aiida.backends.djsite.db.models.DbComputer": "aiida.backends.sqlalchemy.models.computer.DbComputer",
-#     "aiida.backends.djsite.db.models.DbUser": "aiida.backends.sqlalchemy.models.user.DbUser"
-# }
-#
-# django_fields_to_sqla = {
-#     "aiida.backends.sqlalchemy.models.node.DbNode": {
-#         "dbcomputer" : "dbcomputer_id",
-#         "user": "user_id"},
-#     "aiida.backends.sqlalchemy.models.computer.DbComputer": {
-#         "metadata" : "_metadata"}
-# }
-#
-# sqla_fields_to_django = {
-#     "aiida.backends.sqlalchemy.models.node.DbNode": {
-#         "dbcomputer_id" : "dbcomputer",
-#         "user_id": "user"},
-#     "aiida.backends.sqlalchemy.models.node.DbLink": {},
-#     "aiida.backends.sqlalchemy.models.group.DbGroup": {},
-#     "aiida.backends.sqlalchemy.models.computer.DbComputer": {
-#         "_metadata" : "metadata"},
-#     "aiida.backends.sqlalchemy.models.user.DbUser": {}
-# }
-
-relationship_dic = {
-    "Node": {
-        "Computer": "has_computer",
-        "Group": "member_of",
-        "User": "created_by"
-    },
-    "Group": {
-        "Node": "group_of"
-    },
-    "Computer": {
-        "Node": "computer_of"
-    },
-    "User": {
-        "Node": "creator_of",
-        "Group": "owner_of"
-    }
-}
-
 
 def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                   tag_suffixes=[], entity_separator="_"):
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
-    # print current_entity_str
-    # sqla_current_entity_str = sqla_to_django_schema[current_entity_str]
-    # print all_fields_info[sqla_current_entity_str]
 
-    # current_entity_mod = get_object_from_string(current_entity_str)
-
-    # entity_prop = all_fields_info[sqla_to_django_schema[current_entity_str]].keys()
     entity_prop = all_fields_info[current_entity_str].keys()
 
-    # sqla_current_entity_str = django_to_sqla_schema[current_entity_str]
-    # project_cols = list()
     project_cols = ["id"]
     for prop in entity_prop:
         nprop = prop
@@ -1979,16 +1910,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
     # Here we should reference the entity of the main query
     current_entity_mod = entity_names_to_entities[current_entity_str]
 
-    # aiida_current_entity_str = current_entity_str.split(".")[-1][2:]
-    # # print aiida_current_entity_str
-    # aiida_originating_entity_str = originating_entity_str.split(".")[-1][2:]
-    # print aiida_originating_entity_str
-
-    # print relationship_dic[aiida_current_entity_str]
     rel_string = relationship_dic[current_entity_str][originating_entity_str]
-    # print rel_string
     mydict= {rel_string: entity_separator.join(tag_suffixes)}
-    # print "mydict", mydict
 
     partial_query.append(current_entity_mod,
                          tag=entity_separator.join(tag_suffixes) +
@@ -2008,58 +1931,6 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
         fill_in_query(partial_query, current_entity_str, ref_model_name,
                       new_tag_suffixes)
 
-
-# def fill_in_query(partial_query, originating_entity_str, current_entity_str):
-# 
-#     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
-#     # print current_entity_str
-#     sqla_current_entity_str = sqla_to_django_schema[current_entity_str]
-#     # print all_fields_info[sqla_current_entity_str]
-# 
-#     # current_entity_mod = get_object_from_string(current_entity_str)
-# 
-#     # entity_prop = all_fields_info[sqla_to_django_schema[current_entity_str]].keys()
-#     entity_prop = all_fields_info[sqla_current_entity_str].keys()
-# 
-#     # sqla_current_entity_str = django_to_sqla_schema[current_entity_str]
-#     # project_cols = list()
-#     project_cols = ["id"]
-#     for prop in entity_prop:
-#         nprop = prop
-#         if django_fields_to_sqla.has_key(current_entity_str):
-#             if django_fields_to_sqla[current_entity_str].has_key(prop):
-#                 nprop = django_fields_to_sqla[current_entity_str][prop]
-# 
-#         project_cols.append(nprop)
-# 
-#     # Here we should reference the entity of the main query
-#     current_entity_mod = get_object_from_string(current_entity_str)
-# 
-#     aiida_current_entity_str = current_entity_str.split(".")[-1][2:]
-#     # print aiida_current_entity_str
-#     aiida_originating_entity_str = originating_entity_str.split(".")[-1][2:]
-#     # print aiida_originating_entity_str
-# 
-#     # print relationship_dic[aiida_current_entity_str]
-#     rel_string = relationship_dic[aiida_current_entity_str][aiida_originating_entity_str]
-#     # print rel_string
-#     mydict= {rel_string: originating_entity_str}
-#     # print "mydict", mydict
-# 
-#     partial_query.append(current_entity_mod, tag=str(current_entity_str),
-#                          project=project_cols, outerjoin=True, **mydict)
-# 
-#     # prepare the recursion for the referenced entities
-#     foreign_fields = {k: v for k, v in
-#                       all_fields_info[
-#                           sqla_current_entity_str].iteritems()
-#                       # all_fields_info[model_name].iteritems()
-#                       if 'requires' in v}
-# 
-#     for k, v in foreign_fields.iteritems():
-#         ref_model_name = v['requires']
-#         fill_in_query(partial_query, current_entity_str, ref_model_name)
-        
 
 def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
                      allowed_licenses=None, forbidden_licenses=None,
@@ -2503,7 +2374,6 @@ def export_tree_dj(what, folder, also_parents = True, also_calc_outputs=True,
     import aiida
     from aiida.backends.djsite.db import models
     from aiida.orm import Node, Calculation
-    from aiida.common.exceptions import LicensingException
     from aiida.common.folders import RepositoryFolder
 
     if not silent:

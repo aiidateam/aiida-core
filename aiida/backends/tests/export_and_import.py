@@ -11,12 +11,15 @@
 Tests for the export and import routines.
 """
 
+import unittest
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 
 
-class TestSpecificImport():
+class TestSpecificImport(AiidaTestCase):
 
+    @unittest.skip('')
     def test_simple_import(self):
         """
         This is a very simple test which checks that an export file with nodes
@@ -46,6 +49,7 @@ class TestSpecificImport():
         # Import the needed data
         import_data(test_file_path, silent=True)
 
+    @unittest.skip('')
     def test_import(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
@@ -188,7 +192,7 @@ class TestSpecificImport():
                                              "query.")
 
 
-class TestSimple():
+class TestSimple(AiidaTestCase):
 
     def setUp(self):
         self.clean_db()
@@ -197,6 +201,7 @@ class TestSimple():
     def tearDown(self):
         pass
 
+    @unittest.skip('')
     def test_1(self):
         import os
         import shutil
@@ -250,6 +255,7 @@ class TestSimple():
             shutil.rmtree(temp_folder, ignore_errors=True)
             # print temp_folder
 
+    @unittest.skip('')
     def test_2(self):
         """
         Test the check for the export format version.
@@ -308,22 +314,25 @@ class TestSimple():
         import shutil
         import tempfile
 
-        from aiida.orm import DataFactory
         from aiida.orm.importexport import export
         from aiida.common.folders import SandboxFolder
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm import load_node
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
-            StructureData = DataFactory('structure')
+            node_label = "Test structure data"
             sd = StructureData()
+            sd.label = str(node_label)
             sd.store()
 
             filename = os.path.join(temp_folder, "export.tar.gz")
             export([sd.dbnode], outfile=filename, silent=True)
 
             unpack = SandboxFolder()
-            with tarfile.open(filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
+            with tarfile.open(
+                    filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack.abspath)
 
             with open(unpack.get_abs_path('data.json'), 'r') as f:
@@ -336,7 +345,8 @@ class TestSimple():
             with open(unpack.get_abs_path('data.json'), 'w') as f:
                 json.dump(metadata, f)
 
-            with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
+            with tarfile.open(
+                    filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.add(unpack.abspath, arcname="")
 
             self.clean_db()
@@ -345,10 +355,13 @@ class TestSimple():
                 import_data(filename, silent=True)
 
             import_data(filename, ignore_unknown_nodes=True, silent=True)
+            self.assertEquals(load_node(sd.uuid).label, node_label)
+
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
+    @unittest.skip('')
     def test_4(self):
         """
         Test control of licenses.
@@ -415,6 +428,7 @@ class TestSimple():
             export_tree([sd.dbnode], folder=folder, silent=True,
                         forbidden_licenses=crashing_filter)
 
+    @unittest.skip('')
     def test_5(self):
         """
         This test checks that nodes belonging to different users are correctly
@@ -497,6 +511,7 @@ class TestSimple():
             shutil.rmtree(temp_folder, ignore_errors=True)
             # print temp_folder
 
+    @unittest.skip('')
     def test_6(self):
         """
         This test checks that nodes belonging to user A (which is not the
@@ -606,15 +621,11 @@ class TestSimple():
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-
-class TestComplexx(AiidaTestCase):
+    @unittest.skip('')
     def test_7(self):
         """
-        This test checks that nodes belonging to user A (which is not the
-        default user) can be correctly exported, imported, enriched with nodes
-        from the default user, re-exported & re-imported and that in the end
-        all the nodes that have been finally imported belonging to the right
-        users.
+        This test checks that nodes that belong to a specific group are
+        correctly imported and exported.
         """
         import os
         import shutil
@@ -625,8 +636,6 @@ class TestComplexx(AiidaTestCase):
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
         from aiida.common.datastructures import calc_states
-        from aiida.common.links import LinkType
-        from aiida.common.utils import get_configured_user_email
         from aiida.orm.user import User
 
         # Creating a folder for the import/export files
@@ -660,8 +669,7 @@ class TestComplexx(AiidaTestCase):
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([sd1.dbnode, jc1.dbnode, g1.dbgroup],
-                   outfile=filename1, silent=True)
+            export([g1.dbgroup], outfile=filename1, silent=True)
             n_uuids = [sd1.uuid, jc1.uuid]
             self.clean_db()
             self.insert_data()
@@ -685,7 +693,8 @@ class TestComplexx(AiidaTestCase):
             shutil.rmtree(temp_folder, ignore_errors=True)
 
 
-class TestComplex():
+class TestComplex(AiidaTestCase):
+    @unittest.skip('')
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly
@@ -770,7 +779,7 @@ class TestComplex():
             shutil.rmtree(temp_folder, ignore_errors=True)
 
 
-class TestComputer():
+class TestComputer(AiidaTestCase):
 
     def setUp(self):
         self.clean_db()
@@ -779,6 +788,7 @@ class TestComputer():
     def tearDown(self):
         pass
 
+    @unittest.skip('')
     def test_same_computer_import(self):
         """
         Test that you can import nodes in steps without any problems. In this
@@ -906,6 +916,7 @@ class TestComputer():
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
+    @unittest.skip('')
     def test_same_computer_different_name_import(self):
         """
         This test checks that if the computer is re-imported with a different
@@ -1013,6 +1024,7 @@ class TestComputer():
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
+    @unittest.skip('')
     def test_different_computer_same_name_import(self):
         """
         This test checks that if there is a name collision, the imported

@@ -984,6 +984,22 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
     return ret_dict
 
 
+def validate_uuid(given_uuid):
+    """
+    A simple check for the UUID validity.
+    """
+    from uuid import UUID
+    try:
+        parsed_uuid = UUID(given_uuid, version=4)
+    except ValueError:
+        # If not a valid UUID
+        return False
+
+    # Check if there was any kind of conversion of the hex during
+    # the validation
+    return str(parsed_uuid) == given_uuid
+
+
 def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
@@ -1069,21 +1085,26 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         group_nodes = set(chain.from_iterable(
             data['groups_uuid'].itervalues()))
 
+        # Check that UUIDs are valid
+        linked_nodes = set(x for x in linked_nodes if validate_uuid(x))
+        group_nodes = set(x for x in group_nodes if validate_uuid(x))
+
         # I preload the nodes, I need to check each of them later, and I also
         # store them in a reverse table
         # I break up the query due to SQLite limitations..
         # relevant_db_nodes = {}
         db_nodes_uuid = set()
-        qb = QueryBuilder()
-        qb.append(Node, filters={"uuid": {"in": linked_nodes}},
-                  project=["uuid"])
-        for res in qb.iterall():
-            db_nodes_uuid.add(res[0])
+        import_nodes_uuid = set()
+        if linked_nodes:
+            qb = QueryBuilder()
+            qb.append(Node, filters={"uuid": {"in": linked_nodes}},
+                      project=["uuid"])
+            for res in qb.iterall():
+                db_nodes_uuid.add(res[0])
 
-        import_nodes_uuid = set(v['uuid'] for v in
-                                data['export_data'][
-                                    entity_names_to_signatures[
-                                        NODE_ENTITY_NAME]].values())
+            for v in data['export_data'][ entity_names_to_signatures[
+                        NODE_ENTITY_NAME]].values():
+                import_nodes_uuid.add(v['uuid'])
 
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)
@@ -2123,7 +2144,10 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     # Manually manage links and attributes
     ######################################
     # I use .get because there may be no nodes to export
-    all_nodes_pk = export_data.get(NODE_ENTITY_NAME).keys()
+    all_nodes_pk = list()
+    if export_data.has_key(NODE_ENTITY_NAME):
+        all_nodes_pk.extend(export_data.get(NODE_ENTITY_NAME).keys())
+
     if sum(len(model_data) for model_data in export_data.values()) == 0:
         if not silent:
             print "No nodes to store, exiting..."
@@ -2134,21 +2158,23 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
             sum(len(model_data) for model_data in export_data.values()),
             len(all_nodes_pk))
 
-    # A second QueryBuilder query to get the atributes. See if this can be
-    # optimized
-    all_nodes_query = QueryBuilder()
-    all_nodes_query.append(Node, filters={"id": {"in": all_nodes_pk}},
-                           project=["*"])
     ## ATTRIBUTES
     if not silent:
         print "STORING NODE ATTRIBUTES..."
     node_attributes = {}
     node_attributes_conversion = {}
-    for res in all_nodes_query.iterall():
-        n = res[0]
-        (node_attributes[str(n.pk)],
-         node_attributes_conversion[str(n.pk)]) = serialize_dict(
-            n.get_attrs(), track_conversion=True)
+
+    # A second QueryBuilder query to get the attributes. See if this can be
+    # optimized
+    if len(all_nodes_pk) > 0:
+        all_nodes_query = QueryBuilder()
+        all_nodes_query.append(Node, filters={"id": {"in": all_nodes_pk}},
+                               project=["*"])
+        for res in all_nodes_query.iterall():
+            n = res[0]
+            (node_attributes[str(n.pk)],
+             node_attributes_conversion[str(n.pk)]) = serialize_dict(
+                n.get_attrs(), track_conversion=True)
 
     if not silent:
         print "STORING NODE LINKS..."

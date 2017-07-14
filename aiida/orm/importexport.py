@@ -297,7 +297,7 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
 
             # I store it in the FIELDNAME_id variable, that directly stores the
             # PK in the remote table, rather than requiring to create Model
-            # instances for the foreing relations
+            # instances for the foreign relations
             return ("{}_id".format(k),
                     foreign_ids_reverse_mappings[requires][unique_id])
         else:
@@ -1357,6 +1357,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # are not set in this way...
                 if objects_to_create:
                     session.add_all(objects_to_create)
+
+                session.flush()
 
                 if import_entry_ids.keys():
                     qb = QueryBuilder()

@@ -19,7 +19,7 @@ from aiida.orm.importexport import import_data
 
 class TestSpecificImport(AiidaTestCase):
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_simple_import(self):
         """
         This is a very simple test which checks that an export file with nodes
@@ -49,7 +49,7 @@ class TestSpecificImport(AiidaTestCase):
         # Import the needed data
         import_data(test_file_path, silent=True)
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_import(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
@@ -201,7 +201,7 @@ class TestSimple(AiidaTestCase):
     def tearDown(self):
         pass
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_1(self):
         import os
         import shutil
@@ -255,7 +255,7 @@ class TestSimple(AiidaTestCase):
             shutil.rmtree(temp_folder, ignore_errors=True)
             # print temp_folder
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_2(self):
         """
         Test the check for the export format version.
@@ -304,7 +304,7 @@ class TestSimple(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_3(self):
         """
         Test importing of nodes, that have links to unknown nodes.
@@ -362,7 +362,7 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_4(self):
         """
         Test control of licenses.
@@ -429,7 +429,7 @@ class TestSimple(AiidaTestCase):
             export_tree([sd.dbnode], folder=folder, silent=True,
                         forbidden_licenses=crashing_filter)
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_5(self):
         """
         This test checks that nodes belonging to different users are correctly
@@ -512,7 +512,7 @@ class TestSimple(AiidaTestCase):
             shutil.rmtree(temp_folder, ignore_errors=True)
             # print temp_folder
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_6(self):
         """
         This test checks that nodes belonging to user A (which is not the
@@ -622,7 +622,7 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    # @unittest.skip('')
+    # # @unittest.skip('')
     def test_7(self):
         """
         This test checks that nodes that belong to a specific group are
@@ -670,7 +670,7 @@ class TestSimple(AiidaTestCase):
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([g1.dbgroup], outfile=filename1, silent=True)
+            export([sd1.dbnode, jc1.dbnode, g1.dbgroup], outfile=filename1, silent=True)
             n_uuids = [sd1.uuid, jc1.uuid]
             self.clean_db()
             self.insert_data()
@@ -695,7 +695,7 @@ class TestSimple(AiidaTestCase):
 
 
 class TestComplex(AiidaTestCase):
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly
@@ -789,7 +789,7 @@ class TestComputer(AiidaTestCase):
     def tearDown(self):
         pass
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_same_computer_import(self):
         """
         Test that you can import nodes in steps without any problems. In this
@@ -917,7 +917,7 @@ class TestComputer(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_same_computer_different_name_import(self):
         """
         This test checks that if the computer is re-imported with a different
@@ -1025,7 +1025,7 @@ class TestComputer(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_different_computer_same_name_import(self):
         """
         This test checks that if there is a name collision, the imported

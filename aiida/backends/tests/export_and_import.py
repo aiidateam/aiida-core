@@ -304,6 +304,7 @@ class TestSimple(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
+    @unittest.skip('')
     def test_3(self):
         """
         Test importing of nodes, that have links to unknown nodes.
@@ -621,7 +622,7 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_7(self):
         """
         This test checks that nodes that belong to a specific group are

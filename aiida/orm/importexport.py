@@ -2181,21 +2181,22 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     ## All 'parent' links (in this way, I can automatically export a node
     ## that will get automatically attached to a parent node in the end DB,
     ## if the parent node is already present in the DB)
-
-    links_qb = QueryBuilder()
-    links_qb.append(Node, project=['uuid'], tag='input')
-    links_qb.append(Node,
-                    project=['uuid'], tag='output',
-                    filters={'id':{'in':all_nodes_pk}},
-                    edge_project=['label'], output_of='input')
     links_uuid = list()
+    # Export links only if there are nodes to be extracted
+    if len(all_nodes_pk) > 0:
+        links_qb = QueryBuilder()
+        links_qb.append(Node, project=['uuid'], tag='input')
+        links_qb.append(Node,
+                        project=['uuid'], tag='output',
+                        filters={'id': {'in': all_nodes_pk}},
+                        edge_project=['label'], output_of='input')
 
-    for input_uuid, output_uuid, link_label in links_qb.iterall():
-        links_uuid.append({
-            'input': str(input_uuid),
-            'output': str(output_uuid),
-            'label': str(link_label)
-        })
+        for input_uuid, output_uuid, link_label in links_qb.iterall():
+            links_uuid.append({
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label)
+            })
 
     if not silent:
         print "STORING GROUP ELEMENTS..."
@@ -2271,28 +2272,27 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     if silent is not True:
         print "STORING FILES..."
 
-    # Large speed increase by not getting the node itself and looping in memory
-    # in python, but just getting the uuid
-    # for uuid in models.DbNode.objects.filter(pk__in=all_nodes_pk).values_list(
-    #     'uuid', flat=True):
-    uuid_query = QueryBuilder()
-    uuid_query.append(Node, filters={"id": {"in": all_nodes_pk}},
-                               project=["uuid"])
-    for res in uuid_query.all():
-        uuid =  str(res[0])
-        sharded_uuid = export_shard_uuid(uuid)
+    # If there are no nodes, there are no files to store
+    if len(all_nodes_pk) > 0:
+        # Large speed increase by not getting the node itself and looping in memory
+        # in python, but just getting the uuid
+        uuid_query = QueryBuilder()
+        uuid_query.append(Node, filters={"id": {"in": all_nodes_pk}},
+                          project=["uuid"])
+        for res in uuid_query.all():
+            uuid = str(res[0])
+            sharded_uuid = export_shard_uuid(uuid)
 
-        # Important to set create=False, otherwise creates
-        # twice a subfolder. Maybe this is a bug of insert_path??
-
-        thisnodefolder = nodesubfolder.get_subfolder(
-            sharded_uuid, create=False,
-            reset_limit=True)
-        # In this way, I copy the content of the folder, and not the folder
-        # itself
-        thisnodefolder.insert_path(src=RepositoryFolder(
-            section=Node._section_name, uuid=uuid).abspath,
-                                   dest_name='.')
+            # Important to set create=False, otherwise creates
+            # twice a subfolder. Maybe this is a bug of insert_path??
+            thisnodefolder = nodesubfolder.get_subfolder(
+                sharded_uuid, create=False,
+                reset_limit=True)
+            # In this way, I copy the content of the folder, and not the folder
+            # itself
+            thisnodefolder.insert_path(src=RepositoryFolder(
+                section=Node._section_name, uuid=uuid).abspath,
+                                       dest_name='.')
 
 
 def check_licences(node_licenses, allowed_licenses, forbidden_licenses):

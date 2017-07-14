@@ -11,8 +11,6 @@
 Tests for the export and import routines.
 """
 
-import unittest
-
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 
@@ -503,7 +501,6 @@ class TestSimple(AiidaTestCase):
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
-            # print temp_folder
 
     def test_6(self):
         """
@@ -629,6 +626,8 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.common.datastructures import calc_states
         from aiida.orm.user import User
+        from aiida.orm.node import Node
+        from aiida.orm.querybuilder import QueryBuilder
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
@@ -672,8 +671,6 @@ class TestSimple(AiidaTestCase):
             for uuid in n_uuids:
                 self.assertEquals(load_node(uuid).get_user().email, new_email)
 
-            from aiida.orm.querybuilder import QueryBuilder
-            from aiida.orm.node import Node
             QueryBuilder().append(
                 Group, project=['*'], tag='group').append(
                 Node, project=['*'], member_of='group').all()

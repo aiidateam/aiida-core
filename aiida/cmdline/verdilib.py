@@ -629,6 +629,7 @@ class Quicksetup(VerdiCommand):
     _create_db_command = 'CREATE DATABASE "{}" OWNER "{}"'
     _grant_priv_command = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
     _get_users_command = "SELECT usename FROM pg_user WHERE usename='{}'"
+    # note: 'usename' is not a typo!
 
     def run(self, *args):
         ctx = self._ctx(args)
@@ -729,9 +730,10 @@ class Quicksetup(VerdiCommand):
     @click.option('--db-user-pw', type=str)
     @click.option('--db-name', type=str)
     @click.option('--repo', type=str)
+    @click.option('--set-default/--no-set-default', default=None, help='Whether to set new profile as default for shell and daemon.')
     @click.pass_obj
-    def _quicksetup_cmd(self, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
-                        profile, repo):
+    def _quicksetup_cmd(self, profile, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
+                        repo, set_default):
         '''Set up a sane aiida configuration with as little interaction as possible.'''
         from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
         create_base_dirs()
@@ -840,15 +842,21 @@ class Quicksetup(VerdiCommand):
 
         for process in valid_processes:
 
-            default_profile = default_profiles.get(process, '')
-            default_override = False
+            # if the user specifies whether to override that's fine
+            if set_default in [True, False]:
+                _set_default = set_default
+            # otherwise we may need to ask
+            else:
+                default_profile = default_profiles.get(process, '')
+                if default_profile:
+                    _set_default = click.confirm("The default profile for the '{}' process is set to '{}': "
+                                                     "do you want to set the newly created '{}' as the new default? (can be reverted later)"
+                                                     .format(process, default_profile, profile_name))
+                # if there are no other default profiles, we don't need to ask
+                else:
+                    _set_default = True
 
-            if default_profile:
-                default_override = click.confirm("The default profile for the '{}' process is set to '{}': "
-                                                 "do you want to set the newly created '{}' as the new default? (can be reverted later)"
-                                                 .format(process, default_profile, profile_name))
-
-            if not default_profile or default_override:
+            if _set_default:
                 set_default_profile(process, profile_name, force_rewrite=True)
 
     def _try_connect(self, **kwargs):

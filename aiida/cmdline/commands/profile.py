@@ -11,7 +11,7 @@
 This allows to manage profiles from command line.
 """
 import sys
-
+import click
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 
@@ -35,6 +35,7 @@ class Profile(VerdiCommandWithSubcommands):
             'setdefault': (self.profile_setdefault,
                            self.complete_processes_profiles),
             'list': (self.profile_list, self.complete_none),
+            'delete': (self.profile_delete, self.complete_processes_profiles),
         }
 
     def complete_processes_profiles(self, subargs_idx, subargs):
@@ -134,4 +135,44 @@ class Profile(VerdiCommandWithSubcommands):
             print "{}{} {}{}{} {}{}".format(
                 start_color, symbol,
                 bold_sequence, profile, default_str, nobold_sequence, end_color)
+
+    def profile_delete(self, *args):
+        """ Deletes profile
+
+        Asks whether to delete associated database
+        and associated database user.
+        """
+        from aiida.cmdline.verdilib import Quicksetup
+        from aiida.common.setup import get_or_create_config, update_config
+
+        #TODO: the functions used below  be moved outside Quicksetup
+        q = Quicksetup()
+        pg_info = q._get_pg_access()
+        pg_execute = pg_info['method']
+        dbinfo = pg_info['dbinfo']
+
+        confs = get_or_create_config()
+        profiles = confs.get('profiles',{})
+
+        profiles_to_delete = args
+        for profile_to_delete in profiles_to_delete:
+            try:
+                profile = profiles[profile_to_delete]
+            except KeyError:
+                raise ValueError('Profile "{}" does not exist'.format(profile_to_delete))
+
+            db = profile.get('AIIDADB_NAME', '')
+            if click.confirm('Delete associated database {}?\nAll data will be lost.'.format(db)):
+                print("Deleting database {}.".format(db))
+                q._drop_db(db, pg_execute, **dbinfo)
+
+            user = profile.get('AIIDADB_USER', '')
+            if click.confirm('Delete database user {}?'.format(user)):
+                print("Deleting user {}.".format(user))
+                q._drop_dbuser(user, pg_execute, **dbinfo)
+
+            print("Deleting config entry for profile {}.".format(profile_to_delete))
+            del profiles[profile_to_delete]
+            update_config(confs)
+
 

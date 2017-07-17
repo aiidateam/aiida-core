@@ -626,7 +626,9 @@ class Quicksetup(VerdiCommand):
     from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
     _create_user_command = 'CREATE USER "{}" WITH PASSWORD \'{}\''
+    _drop_user_command = 'DROP USER "{}"'
     _create_db_command = 'CREATE DATABASE "{}" OWNER "{}"'
+    _drop_db_command = 'DROP DATABASE "{}"'
     _grant_priv_command = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
     _get_users_command = "SELECT usename FROM pg_user WHERE usename='{}'"
     # note: 'usename' is not a typo!
@@ -859,6 +861,7 @@ class Quicksetup(VerdiCommand):
             if _set_default:
                 set_default_profile(process, profile_name, force_rewrite=True)
 
+    #TODO (ltalirz) db-related functions should be moved to the base level of verdilib
     def _try_connect(self, **kwargs):
         '''
         try to start a psycopg2 connection.
@@ -900,6 +903,17 @@ class Quicksetup(VerdiCommand):
         '''
         method(self._create_user_command.format(dbuser, dbpass), **kwargs)
 
+    def _drop_dbuser(self, dbuser, method=None, **kwargs):
+        '''
+        deletes a database user in postgres
+
+        :param dbuser: Name of the user to be created.
+        :param method: callable with signature method(psql_command, **connection_info)
+            where connection_info contains keys for psycopg2.connect.
+        :param kwargs: connection info as for psycopg2.connect.
+        '''
+        method(self._drop_user_command.format(dbuser), **kwargs)
+
     def _create_db(self, dbuser, dbname, method=None, **kwargs):
         '''create a database in postgres
 
@@ -911,6 +925,17 @@ class Quicksetup(VerdiCommand):
         '''
         method(self._create_db_command.format(dbname, dbuser), **kwargs)
         method(self._grant_priv_command.format(dbname, dbuser), **kwargs)
+
+    def _drop_db(self, dbname, method=None, **kwargs):
+        '''drops a database in postgres
+
+        :param dbname: Name of the database.
+        :param method: callable with signature method(psql_command, **connection_info)
+            where connection_info contains keys for psycopg2.connect.
+        :param kwargs: connection info as for psycopg2.connect.
+        '''
+        method(self._drop_db_command.format(dbname), **kwargs)
+
 
     def _pg_execute_psyco(self, command, **kwargs):
         '''

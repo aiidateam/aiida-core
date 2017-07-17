@@ -1723,8 +1723,6 @@ class QueryBuilder(object):
         """
         :param joined_entity: An entity that can use a computer (eg a node)
         :param entity_to_join: aliased dbcomputer entity
-
-
         """
         self._check_dbentities(
                 (joined_entity, self._impl.Node),
@@ -1734,6 +1732,37 @@ class QueryBuilder(object):
         self._query = self._query.join(
                 entity_to_join,
                 joined_entity.dbcomputer_id == entity_to_join.id,
+                isouter=isouterjoin
+        )
+    def _join_group_user(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased dbgroup
+        :param entity_to_join: aliased dbuser
+        """
+        self._check_dbentities(
+                (joined_entity, self._impl.Group),
+                (entity_to_join, self._impl.User),
+                'computer_of'
+            )
+        self._query = self._query.join(
+                entity_to_join,
+                joined_entity.user_id == entity_to_join.id,
+                isouter=isouterjoin
+        )
+
+    def _join_user_group(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased user
+        :param entity_to_join: aliased group
+        """
+        self._check_dbentities(
+                (joined_entity, self._impl.User),
+                (entity_to_join, self._impl.Group),
+                'computer_of'
+            )
+        self._query = self._query.join(
+                entity_to_join,
+                joined_entity.id == entity_to_join.user_id,
                 isouter=isouterjoin
         )
 
@@ -1750,6 +1779,8 @@ class QueryBuilder(object):
                 'computer_of':self._join_computer,
                 'created_by' : self._join_created_by,
                 'creator_of' : self._join_creator_of,
+                'owner_of' : self._join_group_user,
+                'belongs_to' : self._join_user_group,
         }
         if self._with_dbpath:
             d['ancestor_of'] = self._join_ancestors_u_dbpath
@@ -1787,6 +1818,8 @@ class QueryBuilder(object):
         *   *computer_of*
         *   *created_by*
         *   *creator_of*
+        *   *owner_of*
+        *   *belongs_to*
 
         Future:
 

@@ -74,8 +74,10 @@ class Profile(VerdiCommandWithSubcommands):
 
 
     def profile_list(self, *args):
-        from aiida.common.setup import get_profiles_list, get_default_profile
+        from aiida.common.setup import get_profiles_list, get_default_profile, AIIDA_CONFIG_FOLDER
         from aiida.backends import settings
+
+        print('Configuration folder: {}'.format(AIIDA_CONFIG_FOLDER))
 
         current_profile = settings.AIIDADB_PROFILE
         default_profile = get_default_profile(
@@ -134,4 +136,3 @@ class Profile(VerdiCommandWithSubcommands):
             print "{}{} {}{}{} {}{}".format(
                 start_color, symbol,
                 bold_sequence, profile, default_str, nobold_sequence, end_color)
-

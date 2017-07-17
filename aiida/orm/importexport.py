@@ -977,14 +977,20 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         #                        for n in Model.objects.filter(
                         #     **{'{}__in'.format(unique_identifier):
                         #            import_unique_ids})}
+                        relevant_db_entries = dict()
+                        if len(import_unique_ids) > 0:
+                            qb = QueryBuilder()
+                            qb.append(Model, filters={
+                                unique_identifier: {"in": import_unique_ids}},
+                                      project=["*"], tag="res")
+                            relevant_db_entries = {
+                                getattr(v[0], unique_identifier):
+                                    v[0] for v in qb.all()}
 
-                        qb = QueryBuilder()
-                        qb.append(Model, filters={unique_identifier: {"in": import_unique_ids}},
-                                  project=["*"], tag="res")
-                        relevant_db_entries = {getattr(v[0], unique_identifier): v[0] for v in qb.all()}
+                            foreign_ids_reverse_mappings[model_name] = {
+                                k: v.pk for k, v in
+                                relevant_db_entries.iteritems()}
 
-                        foreign_ids_reverse_mappings[model_name] = {
-                            k: v.pk for k, v in relevant_db_entries.iteritems()}
                         dupl_counter = 0
                         imported_comp_names = set()
                         for k, v in data['export_data'][model_name].iteritems():

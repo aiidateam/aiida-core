@@ -53,7 +53,7 @@ class User(AbstractUser):
 
     @staticmethod
     def get_db_columns():
-        from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
+        from aiida.orm.implementation.general.utils import get_db_columns
         return get_db_columns(DbUser)
 
     @property

@@ -7,6 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import os
+import ujson as uj
+
 ## Pagination defaults
 LIMIT_DEFAULT = 400
 PERPAGE_DEFAULT = 20
@@ -63,9 +66,6 @@ CACHING_TIMEOUTS = { #Caching TIMEOUTS (in seconds)
 Schema customization (if file schema_custom.json is present in this same folder)
 """
 #TODO add more verbose description
-import os
-import ujson as uj
-
 schema_custom_config = os.path.join(os.path.split(__file__)[0], 'schema_custom.json')
 try:
     with open(schema_custom_config) as fin:
@@ -85,4 +85,4 @@ In case you want to use the default stored in
 .aiida/config.json, set this varibale to "default"
 
 """
-default_aiida_profile = None
+default_aiida_profile = 'django'

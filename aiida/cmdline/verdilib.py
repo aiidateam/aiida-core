@@ -383,20 +383,24 @@ def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, d
     '''verdi setup command, forward cmdline arguments to the setup function.
     
     Note: command line options are IGNORED unless --non-interactive is given.'''
-    setup(profile=profile,
-          only_config=only_config,
-          non_interactive=non_interactive,
-          backend=backend,
-          email=email,
-          db_host=db_host,
-          db_port=db_port,
-          db_name=db_name,
-          db_user=db_user,
-          db_pass=db_pass,
-          first_name=first_name,
-          last_name=last_name,
-          institution=institution,
-          repo=repo)
+    kwargs = dict(
+        profile=profile,
+        only_config=only_config,
+        non_interactive=non_interactive,
+        backend=backend,
+        email=email,
+        db_host=db_host,
+        db_port=db_port,
+        db_name=db_name,
+        db_user=db_user,
+        db_pass=db_pass,
+        first_name=first_name,
+        last_name=last_name,
+        institution=institution,
+        repo=repo
+    )
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
+    setup(**kwargs)
 
 
 def setup(profile, only_config, non_interactive=False, **kwargs):
@@ -473,8 +477,8 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             click.echo("Error during configuation: {}".format(e.message), err=True)
             sys.exit(1)
         except KeyError as e:
-            sys.exit("--non-interactive requires all values to be given on the commandline! {}".format(e.message),
-                     err=True)
+            click.echo("--non-interactive requires all values to be given on the commandline! Missing argument: {}".format(e.message), err=True)
+            sys.exit(1)
     else:
         try:
             created_conf = create_configuration(profile=gprofile)

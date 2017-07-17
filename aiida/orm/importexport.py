@@ -593,7 +593,8 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
         relevant_db_nodes = {}
         for group in grouper(999, linked_nodes):
             relevant_db_nodes.update({n.uuid: n for n in
-                                      models.DbNode.objects.filter(uuid__in=group)})
+                                      models.DbNode.objects.filter(
+                                          uuid__in=group)})
 
         db_nodes_uuid = set(relevant_db_nodes.keys())
         dbnode_model = get_class_string(models.DbNode)
@@ -1102,9 +1103,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             for res in qb.iterall():
                 db_nodes_uuid.add(res[0])
 
-            for v in data['export_data'][ entity_names_to_signatures[
-                        NODE_ENTITY_NAME]].values():
-                import_nodes_uuid.add(v['uuid'])
+        for v in data['export_data'][entity_names_to_signatures[
+                    NODE_ENTITY_NAME]].values():
+            import_nodes_uuid.add(v['uuid'])
 
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)

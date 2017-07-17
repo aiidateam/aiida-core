@@ -139,13 +139,13 @@ class Profile(VerdiCommandWithSubcommands):
     def profile_delete(self, *args):
         """ Deletes profile
 
-        Asks whether to delete associated database
-        and associated database user.
+        Asks whether to delete associated database and associated database
+        user.
         """
         from aiida.cmdline.verdilib import Quicksetup
         from aiida.common.setup import get_or_create_config, update_config
 
-        #TODO: the functions used below  be moved outside Quicksetup
+        #TODO: the functions used below should be moved outside Quicksetup
         q = Quicksetup()
         pg_info = q._get_pg_access()
         pg_execute = pg_info['method']
@@ -162,7 +162,7 @@ class Profile(VerdiCommandWithSubcommands):
                 raise ValueError('Profile "{}" does not exist'.format(profile_to_delete))
 
             db = profile.get('AIIDADB_NAME', '')
-            if click.confirm('Delete associated database {}?\nAll data will be lost.'.format(db)):
+            if click.confirm('Delete associated database {}?\nWARNING: All data will be lost.'.format(db)):
                 print("Deleting database {}.".format(db))
                 q._drop_db(db, pg_execute, **dbinfo)
 
@@ -171,7 +171,7 @@ class Profile(VerdiCommandWithSubcommands):
                 print("Deleting user {}.".format(user))
                 q._drop_dbuser(user, pg_execute, **dbinfo)
 
-            print("Deleting config entry for profile {}.".format(profile_to_delete))
+            print("Deleting configuration for profile {}.".format(profile_to_delete))
             del profiles[profile_to_delete]
             update_config(confs)
 

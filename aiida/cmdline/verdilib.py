@@ -909,9 +909,9 @@ class Quicksetup(VerdiCommand):
 
     def _drop_dbuser(self, dbuser, method=None, **kwargs):
         '''
-        deletes a database user in postgres
+        drop a database user in postgres
 
-        :param dbuser: Name of the user to be created.
+        :param dbuser: Name of the user to be dropped.
         :param method: callable with signature method(psql_command, **connection_info)
             where connection_info contains keys for psycopg2.connect.
         :param kwargs: connection info as for psycopg2.connect.
@@ -931,7 +931,7 @@ class Quicksetup(VerdiCommand):
         method(self._grant_priv_command.format(dbname, dbuser), **kwargs)
 
     def _drop_db(self, dbname, method=None, **kwargs):
-        '''drops a database in postgres
+        '''drop a database in postgres
 
         :param dbname: Name of the database.
         :param method: callable with signature method(psql_command, **connection_info)

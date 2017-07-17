@@ -69,8 +69,9 @@ Below is a list with all the available subcommands.
   * **label**: view / set the label of a calculation
   * **description**: view / set the description of a calculation
   * **res**: shows the calculation results (from calc.res).
-  * **cleanworkdir**: cleans the work directory (remote folder) of AiiDA calculations 
-  
+  * **cleanworkdir**: cleans the work directory (remote folder) of AiiDA calculations
+
+
 .. note:: When using gotocomputer, be careful not to change any file
   that AiiDA created,
   nor to modify the output files or resubmit the calculation, 
@@ -238,6 +239,7 @@ Here there are some functions that are in the development stage, and that might 
 As such, they are buggy, possibly difficult to use, not necessarily documented, and they might be subject to non back-compatible changes.
 
   * **delproperty**, **describeproperties**, **getproperty**, **listproperties**,  **setproperty**: handle the properties, see :doc:`here<properties>` for more information.
+
 
 Type in ``verdi devel listproperties`` to get a list of all *set* properties, and
  ``verdi devel describeproperties`` to get a description of all properties that you can possibly set.

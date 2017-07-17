@@ -241,8 +241,7 @@ As such, they are buggy, possibly difficult to use, not necessarily documented, 
   * **delproperty**, **describeproperties**, **getproperty**, **listproperties**,  **setproperty**: handle the properties, see :doc:`here<properties>` for more information.
 
 
-Type in ``verdi devel listproperties`` to get a list of all *set* properties, and
- ``verdi devel describeproperties`` to get a description of all properties that you can possibly set.
+Type in ``verdi devel listproperties`` to get a list of all *set* properties, and ``verdi devel describeproperties`` to get a description of all properties that you can possibly set.
 The command ``verdi devel getproperty [propertyname]`` will give you the set value for that propery, that can be changed with ``setproperty``.
 
 .. _export:

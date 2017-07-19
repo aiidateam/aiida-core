@@ -482,3 +482,48 @@ def get_db_schema_version(config):
     ):
         script.run_env()
         return config.attributes['rev']
+
+
+def get_alembic_conf():
+    # Constructing the alembic full path & getting the configuration
+    import os
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    alembic_fpath = os.path.join(dir_path, ALEMBIC_FILENAME)
+    alembic_cfg = Config(alembic_fpath)
+
+    # Set the alembic script directory location
+    alembic_dpath = os.path.join(dir_path, ALEMBIC_REL_PATH)
+    alembic_cfg.set_main_option('script_location', alembic_dpath)
+
+    return alembic_cfg
+
+
+def alembic_command(selected_command, **kwargs):
+    if selected_command is None:
+        return
+
+    alembic_cfg = get_alembic_conf()
+    with sa.engine.begin() as connection:
+        alembic_cfg.attributes['connection'] = connection
+        if selected_command == 'revision':
+            command.revision(alembic_cfg, **kwargs)
+        elif selected_command == 'current':
+            command.current(alembic_cfg, **kwargs)
+        elif selected_command == 'history':
+            command.history(alembic_cfg, **kwargs)
+
+
+def alembic_revision(**kwargs):
+    alembic_cfg = get_alembic_conf()
+
+    with sa.engine.begin() as connection:
+        alembic_cfg.attributes['connection'] = connection
+        command.revision(alembic_cfg, **kwargs)
+
+
+def alembic_current(**kwargs):
+    alembic_cfg = get_alembic_conf()
+
+    with sa.engine.begin() as connection:
+        alembic_cfg.attributes['connection'] = connection
+        command.current(alembic_cfg, **kwargs)

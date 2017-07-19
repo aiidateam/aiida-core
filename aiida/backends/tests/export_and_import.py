@@ -660,7 +660,8 @@ class TestSimple(AiidaTestCase):
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([sd1.dbnode, jc1.dbnode, g1.dbgroup], outfile=filename1, silent=True)
+            export([sd1.dbnode, jc1.dbnode, g1.dbgroup], outfile=filename1,
+                   silent=True)
             n_uuids = [sd1.uuid, jc1.uuid]
             self.clean_db()
             self.insert_data()
@@ -671,9 +672,7 @@ class TestSimple(AiidaTestCase):
             for uuid in n_uuids:
                 self.assertEquals(load_node(uuid).get_user().email, new_email)
 
-            QueryBuilder().append(
-                Group, project=['*'], tag='group').append(
-                Node, project=['*'], member_of='group').all()
+            # Check that the exported group is imported correctly
             qb = QueryBuilder()
             qb.append(Group, filters={'uuid': {'==': g1.uuid}})
             self.assertEquals(qb.count(), 1, "The group was not found.")

@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-LATEST_MIGRATION = '0005_add_cmtime_indices'
+LATEST_MIGRATION = '0006_delete_dbpath'
 
 
 def _update_schema_version(version, apps, schema_editor):

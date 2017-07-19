@@ -647,6 +647,32 @@ To use the new version in production:
 * run ``verdi setup``
   This updates your daemon profile and related files. It should not be done when another version of aiida is wished to be used productively on the same machine/user.
 
+Updating from 0.9.* Django to 0.10.0 Django
++++++++++++++++++++++++++++++++++++++++++++
+
+* Backup your database
+
+* Upgrade AiiDA within the virtual environment
+
+* Run the migration::
+
+    python backends/djsite/manage.py --aiida-profile=PROFILENAME migrate
+
+  An warning will appear since we are deleting a table::
+
+      The following content types are stale and need to be deleted:
+
+        db | dbpath
+
+    Any objects related to these content types by a foreign key will also
+    be deleted. Are you sure you want to delete these content types?
+    If you're unsure, answer 'no'.
+
+        Type 'yes' to continue, or 'no' to cancel:
+
+  Have faith in your AiiDA team and type ``yes``!
+
+
 Updating from 0.8.* Django to 0.9.0 Django
 ++++++++++++++++++++++++++++++++++++++++++
 

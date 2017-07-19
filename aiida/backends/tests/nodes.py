@@ -59,7 +59,7 @@ class TestDataNode(AiidaTestCase):
 
 class TestTransitiveNoLoops(AiidaTestCase):
     """
-    Test the creation of the transitive closure table
+    Test the transitive closure functionality
     """
 
     def test_loop_not_allowed(self):

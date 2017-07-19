@@ -252,7 +252,7 @@ See also ``verdi import`` to import this data on another database.
 ``verdi graph``
 +++++++++++++++
 
-  * **generate**: generates a graph from a given root node, in ``.dot`` format. This can be rendered for example with the graphviz ``dot`` utility.
+  * **generate**: generates a graph from a given root node either in a graphical or a  ``.dot`` format.
 
 .. _group:
 

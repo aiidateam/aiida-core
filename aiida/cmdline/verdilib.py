@@ -554,7 +554,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             from aiida.backends.sqlalchemy.models.lock import DbLock
             from aiida.backends.sqlalchemy.models.log import DbLog
             from aiida.backends.sqlalchemy.models.node import (
-                DbLink, DbNode, DbPath, DbCalcState)
+                DbLink, DbNode, DbCalcState)
             from aiida.backends.sqlalchemy.models.user import DbUser
             from aiida.backends.sqlalchemy.models.workflow import (
                 DbWorkflow, DbWorkflowData, DbWorkflowStep)

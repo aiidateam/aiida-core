@@ -11,7 +11,6 @@ from sqlalchemy import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
 
-
 __all__ = ['django_filter', 'get_attr']
 
 
@@ -27,7 +26,7 @@ def iter_dict(attrs):
     elif isinstance(attrs, list):
         for i, val in enumerate(attrs):
             it = iter_dict(val)
-            for k, v  in it:
+            for k, v in it:
                 new_key = str(i)
                 if k:
                     new_key += "." + str(k)
@@ -84,14 +83,13 @@ def django_filter(cls_query, **kwargs):
     # query.
     current_join = None
 
-
     tmp_attr = dict(key=None, val=None)
     tmp_extra = dict(key=None, val=None)
 
     for key in sorted(kwargs.iterkeys()):
         val = kwargs[key]
 
-        join, field, op = [None]*3
+        join, field, op = [None] * 3
 
         splits = key.split("__")
         if len(splits) > 3:
@@ -182,77 +180,3 @@ def apply_json_cast(attr, val):
         attr = attr.astext.cast(Boolean)
 
     return attr
-
-
-def get_foreign_key_infos(foreign_key):
-    """
-    takes a foreignkey sqlalchemy object and returns the referent column
-    name and the referred relation and column names
-    :param foreign_key: a sqlalchemy ForeignKey object
-    :return: a tuple of strings
-    """
-    column_name = foreign_key.column.name
-    (referred_table_name, referred_field_name) = tuple(
-        foreign_key.target_fullname.split('.'))
-    return (column_name, referred_table_name, referred_field_name)
-
-
-def get_db_columns(db_class):
-    """
-    This function returns a dictionary where the keys are the columns of
-    the table corresponding to the db_class and the values are the column
-    properties such as type, is_foreign_key and if so, the related table
-    and column.
-    :param db_class: the database model whose schema has to be returned
-    :return: a dictionary
-    """
-
-    ## Retrieve the columns of the table corresponding to the present class
-    # and its foreignkeys
-    table = db_class.metadata.tables[db_class.__tablename__]
-    columns = table.columns
-    foreign_keys = [get_foreign_key_infos(foreign_key) for foreign_key in
-                    table.foreign_keys]
-
-    ## retrieve the types and convert them in python types
-    column_names = columns.keys()
-    column_types = map(lambda x: x.type, columns.values())
-    column_python_types = []
-
-    from sqlalchemy.dialects.postgresql import UUID, JSONB
-
-    for type in column_types:
-        # Treat the case where there is no natural python_type
-        # counterpart to the column type (specifically because of usage
-        # of sqlalchemy dialect)
-        try:
-            column_python_types.append(type.python_type)
-        except NotImplementedError:
-            if isinstance(type, UUID):
-                column_python_types.append(unicode)
-            elif isinstance(type, JSONB):
-                column_python_types.append(dict)
-            else:
-                raise NotImplementedError("Unknown type from the "
-                                          "database schema")
-
-    ## Fill in the returned dictionary
-    schema = {}
-
-    # Fill in the keys based on the column names and the types. By default we
-    #  assume that columns are no foreign keys
-    for k, v in iter(zip(column_names, column_python_types)):
-        schema[k] = {'type': v, 'is_foreign_key': False}
-
-    # Add infos about the foreign relationships
-    for k, referred_table_name, referred_field_name  in foreign_keys:
-
-        print k, referred_field_name, referred_table_name
-        schema[k].update({
-            'is_foreign_key': True,
-            'related_table': referred_table_name,
-            'related_column': referred_field_name,
-        })
-
-    return schema
-

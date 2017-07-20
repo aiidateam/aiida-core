@@ -23,8 +23,8 @@ from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.mixins import Sealable
-from aiida.orm.implementation.django.utils import get_db_columns
-
+# from aiida.orm.implementation.django.utils import get_db_columns
+from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class Node(AbstractNode):
@@ -42,7 +42,8 @@ class Node(AbstractNode):
 
     @staticmethod
     def get_db_columns():
-        from aiida.backends.djsite.db.models import DbNode
+        # from aiida.backends.djsite.db.models import DbNode
+        from aiida.backends.djsite.querybuilder_django.dummy_model import DbNode
         return get_db_columns(DbNode)
 
     @classmethod

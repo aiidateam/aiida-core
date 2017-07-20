@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
@@ -8,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 """
 The QueryBuilder: A class that allows you to query the AiiDA database, independent from backend.
 Note that the backend implementation is enforced and handled with a composition model!
@@ -257,9 +255,7 @@ class QueryBuilder(object):
 
         engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
 
-        if engine == "sqlite3":
-            from sqlalchemy.dialects import sqlite as mydialect
-        elif engine.startswith("mysql"):
+        if engine.startswith("mysql"):
             from sqlalchemy.dialects import mysql as mydialect
         elif engine.startswith("postgre"):
             from sqlalchemy.dialects import postgresql as mydialect
@@ -1727,8 +1723,6 @@ class QueryBuilder(object):
         """
         :param joined_entity: An entity that can use a computer (eg a node)
         :param entity_to_join: aliased dbcomputer entity
-
-
         """
         self._check_dbentities(
                 (joined_entity, self._impl.Node),
@@ -1738,6 +1732,37 @@ class QueryBuilder(object):
         self._query = self._query.join(
                 entity_to_join,
                 joined_entity.dbcomputer_id == entity_to_join.id,
+                isouter=isouterjoin
+        )
+    def _join_group_user(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased dbgroup
+        :param entity_to_join: aliased dbuser
+        """
+        self._check_dbentities(
+                (joined_entity, self._impl.Group),
+                (entity_to_join, self._impl.User),
+                'computer_of'
+            )
+        self._query = self._query.join(
+                entity_to_join,
+                joined_entity.user_id == entity_to_join.id,
+                isouter=isouterjoin
+        )
+
+    def _join_user_group(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased user
+        :param entity_to_join: aliased group
+        """
+        self._check_dbentities(
+                (joined_entity, self._impl.User),
+                (entity_to_join, self._impl.Group),
+                'computer_of'
+            )
+        self._query = self._query.join(
+                entity_to_join,
+                joined_entity.id == entity_to_join.user_id,
                 isouter=isouterjoin
         )
 
@@ -1754,6 +1779,8 @@ class QueryBuilder(object):
                 'computer_of':self._join_computer,
                 'created_by' : self._join_created_by,
                 'creator_of' : self._join_creator_of,
+                'owner_of' : self._join_group_user,
+                'belongs_to' : self._join_user_group,
         }
         if self._with_dbpath:
             d['ancestor_of'] = self._join_ancestors_u_dbpath
@@ -1791,6 +1818,8 @@ class QueryBuilder(object):
         *   *computer_of*
         *   *created_by*
         *   *creator_of*
+        *   *owner_of*
+        *   *belongs_to*
 
         Future:
 
@@ -2266,6 +2295,21 @@ class QueryBuilder(object):
         return returnval
 
 
+    def one(self):
+        """
+        Executes the query asking for exactly one results. Will raise an exception if this is not the case
+        :raises: MultipleObjectsError if more then one row can be returned
+        :raises: NotExistent if no result was found
+        """
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
+        self.limit(2)
+        res = self.all()
+        if len(res) > 1:
+            raise MultipleObjectsError("More than one result was found")
+        elif len(res) == 0:
+            raise NotExistent("No result was found")
+        return res[0]
+
 
     def count(self):
         """
@@ -2391,6 +2435,7 @@ class QueryBuilder(object):
 
         """
         return list(self.iterdict(batch_size=batch_size))
+
 
 
     def get_results_dict(self):

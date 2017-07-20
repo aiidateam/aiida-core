@@ -51,22 +51,15 @@ REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
 
 DATABASES = {
     'default': {
-        # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        # Add 'postgresql_psycopg2', 'mysql', or 'oracle'.
         'ENGINE': 'django.db.backends.' + DBENGINE,
-        'NAME': DBNAME,  # Or path to database file if using sqlite3.
-        'USER': DBUSER,  # Not used with sqlite3.
-        'PASSWORD': DBPASS,  # Not used with sqlite3.
+        'NAME': DBNAME,
+        'USER': DBUSER,
+        'PASSWORD': DBPASS,
         'HOST': DBHOST,
-        # Set to empty string for localhost. Not used with sqlite3.
         'PORT': DBPORT,
-        # Set to empty string for default. Not used with sqlite3.
     }
 }
-
-# Increase timeout for SQLite engine
-# Does not solve the problem, but alleviates it for small number of calculations
-if 'sqlite' in DBENGINE:
-    DATABASES['default']['OPTIONS'] = {'timeout': 60}
 
 # Checks on the REPOSITORY_* variables
 try:

@@ -1505,6 +1505,16 @@ class AbstractNode(object):
         # TODO: Fix getting the hash when get_attrs doesn't
         # produce the "full" content (e.g. for ArrayData)
         try:
+            if hasattr(self, 'get_array'):
+                return make_hash([
+                    self.get_attrs(),
+                    [
+                        self.get_array(name) for name in
+                        self.get_arraynames()
+                    ]
+                ])
+            else:
+                return make_hash(self.get_attrs())
             return make_hash(self.get_attrs())
         except:
             return None

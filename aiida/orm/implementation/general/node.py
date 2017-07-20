@@ -144,6 +144,9 @@ class AbstractNode(object):
     # See documentation in the set() method.
     _set_incompatibilities = []
 
+    # A list of attribute names that will be ignored when creating the hash.
+    _hash_ignored_attributes = []
+
     def get_desc(self):
         """
         Returns a string with infos retrieved from a node's
@@ -1508,7 +1511,10 @@ class AbstractNode(object):
         from aiida.common.hashing import make_hash
         try:
             return make_hash([
-                self.get_attrs(),
+                {
+                    key: val for key, val in self.get_attrs().items()
+                    if key not in self._hash_ignored_attributes
+                },
                 self.folder
             ])
         except:

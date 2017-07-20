@@ -44,6 +44,45 @@ class TestNodeHashing(AiidaTestCase):
             self.assertEqual(n1.uuid, n2.uuid)
             self.assertEqual(n1.folder.get_abs_path('.'), n2.folder.get_abs_path('.'))
 
+    @staticmethod
+    def create_folderdata_with_empty_file():
+        from aiida.orm.data.folder import FolderData
+        res = FolderData()
+        with res.folder.get_subfolder('path').open('name', 'w') as f:
+            pass
+        return res
+
+    @staticmethod
+    def create_folderdata_with_empty_folder():
+        from aiida.orm.data.folder import FolderData
+        res = FolderData()
+        res.folder.get_subfolder('path/name').create()
+        return res
+
+    def test_folder_file_different(self):
+        f1 = self.create_folderdata_with_empty_file()
+        f2 = self.create_folderdata_with_empty_folder()
+
+        assert (
+            f1.folder.get_subfolder('path').get_content_list() ==
+            f2.folder.get_subfolder('path').get_content_list()
+        )
+        assert f1.get_hash() != f2.get_hash()
+
+    def test_folder_same(self):
+        f1 = self.create_folderdata_with_empty_folder()
+        f2 = self.create_folderdata_with_empty_folder()
+        f1.store()
+        f2.store(find_same=True)
+        assert f1.uuid == f2.uuid
+
+    def test_file_same(self):
+        f1 = self.create_folderdata_with_empty_file()
+        f2 = self.create_folderdata_with_empty_file()
+        f1.store()
+        f2.store(find_same=True)
+        assert f1.uuid == f2.uuid
+
     def test_simple_unequal_nodes(self):
         attributes = [
             [(1.0, 1.1, 1.2), (2.0, 1.1, 1.2)],

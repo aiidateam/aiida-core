@@ -264,13 +264,18 @@ def _(object_to_hash):
 
 @make_hash.register(Folder)
 def _(folder):
+    # make sure file is closed after being read
+    def _read_file(folder, name):
+        with folder.open(name) as f:
+            return f.read()
+
     return make_hash_with_type(
         'pd',
         make_hash([
             (
                 name,
                 folder.get_subfolder(name) if folder.isdir(name) else
-                make_hash_with_type('pf', folder.open(name).read())
+                make_hash_with_type('pf', _read_file(folder, name))
             )
             for name in sorted(folder.get_content_list())
         ])

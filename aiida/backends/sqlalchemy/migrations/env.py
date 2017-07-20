@@ -15,8 +15,31 @@ fileConfig(config.config_file_name)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
+# from aiida.backends.sqlalchemy.models.base import Base
+# target_metadata = Base.metadata
+
+# from aiida.backends.sqlalchemy import get_scoped_session
+# from sqlalchemy import MetaData
+# ss = get_scoped_session()
+# target_metadata = MetaData()
+# target_metadata.reflect(bind=ss.bind)
+
+from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+from aiida.backends.sqlalchemy.models.comment import DbComment
+from aiida.backends.sqlalchemy.models.computer import DbComputer
+from aiida.backends.sqlalchemy.models.group import DbGroup
+from aiida.backends.sqlalchemy.models.lock import DbLock
+from aiida.backends.sqlalchemy.models.log import DbLog
+from aiida.backends.sqlalchemy.models.node import (
+    DbPath, DbCalcState, DbComputer,
+    DbContentError, DbLink, DbNode)
+from aiida.backends.sqlalchemy.models.settings import DbSetting
+from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.sqlalchemy.models.workflow import (
+    DbWorkflow, DbWorkflowData, DbWorkflowStep)
 from aiida.backends.sqlalchemy.models.base import Base
 target_metadata = Base.metadata
+
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

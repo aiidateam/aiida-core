@@ -10,7 +10,7 @@
 ###########################################################################
 import sys
 
-AVAIL_AL_COMMANDS = ['revision', 'current', 'history']
+AVAIL_AL_COMMANDS = ['revision', 'current', 'history', 'upgrade', 'sp']
 
 if __name__ == "__main__":
     # Copy sys.argv
@@ -74,5 +74,8 @@ if __name__ == "__main__":
             alembic_command(actual_argv[1])
         if actual_argv[1] == 'history':
             alembic_command(actual_argv[1])
+        if actual_argv[1] == 'upgrade':
+            alembic_command(actual_argv[1])
     else:
-        print("No valid command specified. The available commands are: ")
+        print("No valid command specified. The available commands are: " +
+              AVAIL_AL_COMMANDS)

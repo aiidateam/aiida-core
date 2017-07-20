@@ -80,5 +80,4 @@ class Model(object):
         sess.delete(self)
         if commit:
             sess.commit()
-
 Base = declarative_base(cls=Model, name='Model')

@@ -511,6 +511,8 @@ def alembic_command(selected_command, **kwargs):
             command.current(alembic_cfg, **kwargs)
         elif selected_command == 'history':
             command.history(alembic_cfg, **kwargs)
+        elif selected_command == 'upgrade':
+            command.upgrade(alembic_cfg, 'head')
 
 
 def alembic_revision(**kwargs):

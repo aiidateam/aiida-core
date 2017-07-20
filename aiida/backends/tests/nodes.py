@@ -12,15 +12,12 @@ Tests for nodes, attributes and links
 """
 import unittest
 
-import numpy as np
-
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
 from aiida.orm.data import Data
 from aiida.orm.node import Node
 from aiida.orm.utils import load_node
-# NOTE: Some AiiDA imports cause problems when placed outside of the tests.
 
 class TestNodeHashing(AiidaTestCase):
     """
@@ -60,6 +57,7 @@ class TestNodeHashing(AiidaTestCase):
             self.assertNotEquals(n1.uuid, n2.uuid)
 
     def test_unequal_arrays(self):
+        import numpy as np
         from aiida.orm.data.array import ArrayData
         arrays = [
             (np.zeros(1001), np.zeros(1005)),

@@ -466,7 +466,7 @@ class Node(AbstractNode):
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         return self._dbnode
 
-    def store_all(self, with_transaction=True):
+    def store_all(self, with_transaction=True, find_same=False):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -503,7 +503,7 @@ class Node(AbstractNode):
             # Always without transaction: either it is the context_man here,
             # or it is managed outside
             self._store_input_nodes()
-            self.store(with_transaction=False)
+            self.store(with_transaction=False, find_same=find_same)
             self._store_cached_input_links(with_transaction=False)
 
         return self

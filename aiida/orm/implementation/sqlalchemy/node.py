@@ -509,7 +509,7 @@ class Node(AbstractNode):
     def dbnode(self):
         return self._dbnode
 
-    def store_all(self, with_transaction=True):
+    def store_all(self, with_transaction=True, find_same=False):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -535,7 +535,7 @@ class Node(AbstractNode):
                                              "grandparents or other ancestors".format(parent_node.uuid))
 
         self._store_input_nodes()
-        self.store(with_transaction=False)
+        self.store(with_transaction=False, find_same=find_same)
         self._store_cached_input_links(with_transaction=False)
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -601,7 +601,7 @@ class Node(AbstractNode):
                 session.rollback()
                 raise
 
-    def store(self, with_transaction=True):
+    def store(self, with_transaction=True, find_same=False):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -617,6 +617,8 @@ class Node(AbstractNode):
         :parameter with_transaction: if False, no transaction is used. This
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
+
+        :param bool find_same: Whether I attempt to find an equal node in the DB.
         """
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -635,6 +637,17 @@ class Node(AbstractNode):
             # I assume that if a node exists in the DB, its folder is in place.
             # On the other hand, periodically the user might need to run some
             # bookkeeping utility to check for lone folders.
+
+            # For node hashing, if find_same is true:
+            if find_same:
+                same_node = self.get_same_node()
+                if same_node is not None:
+                    #~ pass
+                    self._dbnode = same_node.dbnode
+                    self._to_be_stored = False
+                    self._repo_folder = same_node._repo_folder
+                    return self
+
             self._repository_folder.replace_with_folder(
                 self._get_temp_folder().abspath, move=True, overwrite=True)
 

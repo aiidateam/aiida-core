@@ -142,11 +142,11 @@ class AbstractNode(object):
 
     def get_desc(self):
         """
-        Returns a string with infos retrieved from a node's 
+        Returns a string with infos retrieved from a node's
         properties.
         This method is actually overwritten by the inheriting classes
-        
-        :return: a description string     
+
+        :return: a description string
         """
         return ""
 
@@ -1103,11 +1103,11 @@ class AbstractNode(object):
             # Return without value, meaning that this is an empty generator
             return
             yield # Needed after return to convert it to a generator
-        for _ in self._db_iterextras():
+        for extra in self._db_iterextras():
             # Don't return if key == hash
-            if _[0] == 'hash':
+            if extra[0] == 'hash':
                 continue
-            yield _
+            yield extra
 
 
     def iterattrs(self):

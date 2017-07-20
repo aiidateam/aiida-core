@@ -18,12 +18,12 @@ try: # Python3
     from functools import singledispatch
     from collections import abc
 except ImportError: # Python2
-    import pathlib2 as pathlib
     from singledispatch import singledispatch
     import collections as abc
 
 import numpy as np
-import checksumdir
+
+from .folders import Folder
 
 """
 Here we define a single password hashing instance for the full AiiDA.
@@ -198,9 +198,9 @@ def make_hash(object_to_hash):
     )
 
 @make_hash.register(abc.Sequence)
-def _(object_to_hash):
+def _(sequence):
     hashes = tuple([
-        make_hash(x) for x in object_to_hash
+        make_hash(x) for x in sequence
     ])
     return make_hash_with_type('L', ",".join(hashes))
 
@@ -214,11 +214,11 @@ def _(object_to_hash):
     return make_hash_with_type('S', ",".join(hashes))
 
 @make_hash.register(abc.Mapping)
-def _(object_to_hash):
+def _(mapping):
     hashed_dictionary = {
         k: make_hash(v)
         for k,v
-        in object_to_hash.items()
+        in mapping.items()
     }
     return make_hash_with_type(
         'D',
@@ -262,15 +262,19 @@ def _(object_to_hash):
 def _(object_to_hash):
     return make_hash_with_type('d', str(object_to_hash))
 
-@make_hash.register(pathlib.Path)
-def _(object_to_hash):
-    try:
-        return make_hash_with_type(
-            'pd',
-            checksumdir.dirhash(str(object_to_hash))
-        )
-    except TypeError:
-        raise ValueError('Cannot hash pathlib.Path unless it is a directory.')
+@make_hash.register(Folder)
+def _(folder):
+    return make_hash_with_type(
+        'pd',
+        make_hash([
+            (
+                name,
+                folder.get_subfolder(name) if folder.isdir(name) else
+                make_hash_with_type('pf', folder.open(name).read())
+            )
+            for name in sorted(folder.get_content_list())
+        ])
+    )
 
 @make_hash.register(np.ndarray)
 def _(object_to_hash):

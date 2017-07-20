@@ -1509,7 +1509,7 @@ class AbstractNode(object):
         try:
             return make_hash([
                 self.get_attrs(),
-                pathlib.Path(self.get_abs_path())
+                self.folder
             ])
         except:
             return None

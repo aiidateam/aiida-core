@@ -160,7 +160,6 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
 
         for modulename in modulenames:
             if modulename not in found_modulenames:
-                print(modulename)
                 test_suite.addTest(test_loader.loadTestsFromName(modulename))
                 found_modulenames.add(modulename)
 

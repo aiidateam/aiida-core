@@ -264,10 +264,13 @@ def _(object_to_hash):
 
 @make_hash.register(pathlib.Path)
 def _(object_to_hash):
-    return make_hash_with_type(
-        'p',
-        checksumdir.dirhash(str(object_to_hash))
-    )
+    try:
+        return make_hash_with_type(
+            'pd',
+            checksumdir.dirhash(str(object_to_hash))
+        )
+    except TypeError:
+        raise ValueError('Cannot hash pathlib.Path unless it is a directory.')
 
 @make_hash.register(np.ndarray)
 def _(object_to_hash):

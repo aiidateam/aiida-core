@@ -1522,13 +1522,9 @@ class AbstractNode(object):
             qb = QueryBuilder()
             qb.append(self.__class__, filters={'extras.hash':hash_}, project='*', subclassing=False)
             same_node = qb.first()
-        else:
-            same_node = None
-
-        if same_node:
-            return same_node[0]
-        else:
-            return None
+            if same_node:
+                return same_node[0]
+        return None
 
     @property
     def out(self):

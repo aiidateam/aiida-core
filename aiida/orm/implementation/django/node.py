@@ -613,7 +613,6 @@ class Node(AbstractNode):
             if find_same:
                 same_node = self.get_same_node()
                 if same_node is not None:
-                    #~ pass
                     self._dbnode = same_node.dbnode
                     self._to_be_stored = False
                     self._repo_folder = same_node._repo_folder

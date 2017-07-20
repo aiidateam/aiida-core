@@ -1502,6 +1502,8 @@ class AbstractNode(object):
         Making a hash based on my attributes
         """
         from aiida.common.hashing import make_hash
+        # TODO: Fix getting the hash when get_attrs doesn't
+        # produce the "full" content (e.g. for ArrayData)
         try:
             return make_hash(self.get_attrs())
         except:

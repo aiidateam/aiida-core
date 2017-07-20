@@ -702,9 +702,7 @@ class Node(AbstractNode):
                         g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
                         g.add_nodes(self)
 
-        from aiida.backends.sqlalchemy.db.models import DbExtra
-        # Store the hash without cleaning and without incrementing the nodeversion number
-        DbExtra.set_value_for_node(self.dbnode, 'hash', self.get_hash())
+        self.dbnode.set_extra('hash', self.get_hash())
         return self
 
     @property

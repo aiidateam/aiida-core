@@ -22,6 +22,7 @@ install_requires = [
     'six==1.10',
     'future',
     'singledispatch >= 3.4.0.0',
+    'checksumdir >= 1.1.4'
     # We need for the time being to stay with an old version
     # of celery, including the versions of the AMQP libraries below,
     # because the support for a SQLA broker has been dropped in later

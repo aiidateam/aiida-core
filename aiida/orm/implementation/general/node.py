@@ -14,6 +14,10 @@ import collections
 import logging
 import os
 import types
+try:
+    import pathlib
+except ImportError:
+    import pathlib2 as pathlib
 
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
@@ -1502,23 +1506,13 @@ class AbstractNode(object):
         Making a hash based on my attributes
         """
         from aiida.common.hashing import make_hash
-        # TODO: Fix getting the hash when get_attrs doesn't
-        # produce the "full" content (e.g. for ArrayData)
         try:
-            if hasattr(self, 'get_array'):
-                return make_hash([
-                    self.get_attrs(),
-                    [
-                        self.get_array(name) for name in
-                        self.get_arraynames()
-                    ]
-                ])
-            else:
-                return make_hash(self.get_attrs())
-            return make_hash(self.get_attrs())
+            return make_hash([
+                self.get_attrs(),
+                pathlib.Path(self.get_abs_path())
+            ])
         except:
             return None
-
 
     def get_same_node(self):
         from aiida.orm.querybuilder import QueryBuilder

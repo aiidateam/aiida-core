@@ -14,13 +14,16 @@ import time
 from datetime import datetime
 import numbers
 try: # Python3
+    import pathlib
     from functools import singledispatch
     from collections import abc
 except ImportError: # Python2
+    import pathlib2 as pathlib
     from singledispatch import singledispatch
     import collections as abc
 
 import numpy as np
+import checksumdir
 
 """
 Here we define a single password hashing instance for the full AiiDA.
@@ -258,6 +261,13 @@ def _(object_to_hash):
 @make_hash.register(datetime)
 def _(object_to_hash):
     return make_hash_with_type('d', str(object_to_hash))
+
+@make_hash.register(pathlib.Path)
+def _(object_to_hash):
+    return make_hash_with_type(
+        'p',
+        checksumdir.dirhash(str(object_to_hash))
+    )
 
 @make_hash.register(np.ndarray)
 def _(object_to_hash):

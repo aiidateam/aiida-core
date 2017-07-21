@@ -416,8 +416,8 @@ class TestQueryBuilder(AiidaTestCase):
         qb.append(Node, tag='n1')
         qb.append(Node, tag='n2', edge_tag='e1', output_of='n1')
         qb.append(Node, tag='n3', edge_tag='e2', output_of='n2')
-        qb.append(Computer, computer_of='n3', tag='c1')
-        self.assertEqual(qb.get_used_tags(), ['n1', 'n2','e1', 'n3', 'e2', 'c1'])
+        qb.append(Computer, computer_of='n3', tag='c1', edge_tag='nonsense')
+        self.assertEqual(qb.get_used_tags(), ['n1', 'n2','e1', 'n3', 'e2', 'c1', 'nonsense'])
 
 
         # Now I am testing the default tags,
@@ -753,10 +753,6 @@ class QueryBuilderPath(AiidaTestCase):
 
         n6.add_link_from(n5)
         # Yet, now 2 links from 1 to 8
-
-
-
-
         self.assertEquals(
             QueryBuilder().append(
                     Node, filters={'id':n1.pk}, tag='anc'
@@ -770,7 +766,24 @@ class QueryBuilderPath(AiidaTestCase):
                 ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
                 ).count(), 2)
 
-        qb = QueryBuilder(expand_path=True).append(
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}, edge_filters={'depth':{'<':6}},
+                ).count(), 2)
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}, edge_filters={'depth':5},
+                ).count(), 2)
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}, edge_filters={'depth':{'<':5}},
+                ).count(), 0)
+
+        # TODO write a query that can filter certain paths by traversed ID
+        qb = QueryBuilder().append(
                 Node, filters={'id':n8.pk}, tag='desc',
             ).append(Node, ancestor_of='desc', edge_project='path', filters={'id':n1.pk})
         queried_path_set = set([frozenset(p) for p, in qb.all()])
@@ -782,7 +795,7 @@ class QueryBuilderPath(AiidaTestCase):
 
         self.assertTrue(queried_path_set == paths_there_should_be)
 
-        qb = QueryBuilder(expand_path=True).append(
+        qb = QueryBuilder().append(
                 Node, filters={'id':n1.pk}, tag='anc'
             ).append(
                 Node, descendant_of='anc',  filters={'id':n8.pk}, edge_project='path'

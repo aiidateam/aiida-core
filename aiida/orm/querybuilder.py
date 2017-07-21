@@ -65,13 +65,6 @@ class QueryBuilder(object):
         This cannot be overriden so far by the user.
 
 
-        :param bool with_dbpath:
-            Whether to use the DbPath table (if existing) to query ancestor-descendant relations.
-            The default now is True. Set to False if you want to use the recursive functionality.
-            This gives you the ability to project the path which constructed on the fly.
-            It also allows to have the AiiDA instance without the DbPath, which can consume
-            a lot of memory for heavy usage of AiiDA.
-            Check :func:`QueryBuilder.set_with_dbpath` for details.
         :param bool expand_path:
             If set to True (default is False) allows to project the path when querying
             ancestor-descendant relationships. This can cause the query to be much slower,
@@ -179,10 +172,6 @@ class QueryBuilder(object):
         # Setting debug levels:
         self.set_debug(kwargs.pop('debug',False))
 
-        # The internal _with_dbpath attributes reports whether I need to do something with the path.
-        # I.e. check, loads, etc, implementation left to backend implementation.
-        kwargs.pop('with_dbpath', False)
-        self.set_with_dbpath(False)
         # Whether expanding the path when using recursive functionality
         self.set_expand_path(kwargs.pop('expand_path',False))
 
@@ -236,7 +225,7 @@ class QueryBuilder(object):
         # I've gone through all the keywords, popping each item
         # If kwargs is not empty, there is a problem:
         if kwargs:
-            valid_keys = ('path', 'filters', 'project', 'limit', 'offset', 'order_by', 'with_dbpath')
+            valid_keys = ('path', 'filters', 'project', 'limit', 'offset', 'order_by')
             raise InputValidationError(
                     "Received additional keywords: {}"
                     "\nwhich I cannot process"
@@ -621,17 +610,14 @@ class QueryBuilder(object):
                     edge_exists = True
                 elif joining_keyword in ('ancestor_of', 'descendant_of'):
                     edge_exists = True
-                    if self._with_dbpath:
-                        aliased_edge = aliased(self._impl.Path)
-                    else:
 
-                        # An aliased_edge is created on the fly if I'm not using
-                        # the DbPath with a recursive query.
-                        # I don't have a way (yet) to add filters here,
-                        # since aliased_edge is None.
-                        # Every filter on the path should be dealt inside the function
-                        # ._join_ancestor... _join_descendant
-                        aliased_edge = None
+                    # An aliased_edge is created on the fly if I'm not using
+                    # the DbPath with a recursive query.
+                    # I don't have a way (yet) to add filters here,
+                    # since aliased_edge is None.
+                    # Every filter on the path should be dealt inside the function
+                    # ._join_ancestor... _join_descendant
+                    aliased_edge = None
 
 
 
@@ -651,7 +637,6 @@ class QueryBuilder(object):
                             )
                     if self._debug:
                         print "   I have chosen", edge_tag
-
                     self._tag_to_alias_map[edge_tag] = aliased_edge
 
                     # Filters on links:
@@ -664,9 +649,12 @@ class QueryBuilder(object):
                     if edge_project is not None:
                         self.add_projection(edge_tag, edge_project)
             except Exception as e:
+
                 if self._debug:
+
                     print "DEBUG: Exception caught in append (part joining), cleaning up"
-                    print "  ", e
+                    import traceback
+                    print  traceback.format_exc()
                 if l_class_added_to_map:
                     self._cls_to_tag_map.pop(cls)
                 self._tag_to_alias_map.pop(tag, None)
@@ -1034,6 +1022,12 @@ class QueryBuilder(object):
 
 
     def _get_tag_from_specification(self, specification):
+        """
+        :param specification: If that is a string, I assume the user has
+            deliberately specified it with tag=specification.
+            In that case, I simply check that it's not a duplicate.
+            If it is a class, I check if it's in the _cls_to_tag_map!
+        """
         if isinstance(specification, basestring):
             if specification in self._tag_to_alias_map.keys():
                 tag = specification
@@ -1073,27 +1067,7 @@ class QueryBuilder(object):
 
         return self
 
-    def set_with_dbpath(self, l_with_dbpath):
-        """
-        Sets whether I will use a DbPath table when querying ancestor-dependant relationships.
-        If set to False (default behavior now is True) I will use recursive queries.
-        You can check the source code of _join_ancestors_recursive and _join_descendants_recursive
-        for details.
-        This option allows to run AiiDA without a DbPath table, saving memory, especially for
-        heavy usage. Of course, if left to True, there needs to be a table with the triggers set.
-        Note that this feature behaves the same for the whole query.
-        You cannot query on ancestor-descendant relationship using the DbPath and another using
-        the recursive functionality within the same query.
 
-        :param bool l_with_dbpath: True to use DbPath, False to use recursive queries.
-        """
-
-        if not isinstance(l_with_dbpath, bool):
-            raise InputValidationError("I expect a boolean")
-        self._with_dbpath = l_with_dbpath
-        #~ if self._with_dbpath:
-            #~ self._impl.prepare_with_dbpath()
-        return self
 
     def set_expand_path(self, l_expand_path):
         """
@@ -1124,9 +1098,7 @@ class QueryBuilder(object):
 
         self._expand_path = l_expand_path
 
-        if self._expand_path and self._with_dbpath:
-            raise NotImplementedError("It is not implemented to expand the path when using the DbPath table.\n"
-                "Set with_dbpath to False to use that functionality")
+
         return self
 
     def limit(self, limit):
@@ -1473,7 +1445,7 @@ class QueryBuilder(object):
                 join(
                     node1, link1, link1.output_id==node1.id
                 )
-            ).where(and_(in_recursive_filters, link1.type != LinkType.RETURN.value)).cte(recursive=True)
+            ).where(and_(in_recursive_filters, link1.type != LinkType.RETURN.value, link1.type != LinkType.CALL.value)).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -1492,7 +1464,7 @@ class QueryBuilder(object):
                         link2,
                         link2.output_id == aliased_walk.c.ancestor_id,
                     )
-                ).where(link2.type != LinkType.RETURN.value) # I can't follow RETURN links
+                ).where(and_(link2.type != LinkType.RETURN.value, link2.type != LinkType.CALL.value)) # I can't follow RETURN or CALL links
             ))
 
         self._tag_to_alias_map[edge_tag] = ancestors_recursive.c
@@ -1536,7 +1508,7 @@ class QueryBuilder(object):
                 join(
                     node1, link1, link1.output_id==node1.id
                 )
-            ).where(and_(in_recursive_filters, link1.type != LinkType.RETURN.value)).cte(recursive=True)
+            ).where(and_(in_recursive_filters, link1.type != LinkType.RETURN.value, link1.type != LinkType.CALL.value)).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -1553,7 +1525,7 @@ class QueryBuilder(object):
                         link2,
                         link2.output_id == aliased_walk.c.ancestor_id,
                     )
-                ).where(link2.type != LinkType.RETURN.value) # I can't follow RETURN links
+                ).where(and_(link2.type != LinkType.RETURN.value, link2.type != LinkType.CALL.value)) # I can't follow RETURN links
             ))
 
         self._tag_to_alias_map[edge_tag] = ancestors_recursive.c
@@ -1783,16 +1755,13 @@ class QueryBuilder(object):
                 'owner_of' : self._join_group_user,
                 'belongs_to' : self._join_user_group,
         }
-        if self._with_dbpath:
-            d['ancestor_of'] = self._join_ancestors_u_dbpath
-            d['descendant_of'] = self._join_descendants_u_dbpath
+
+        if self._expand_path:
+            d['ancestor_of'] = self._join_ancestors_recursive_projecting_path
+            d['descendant_of'] = self._join_descendants_recursive_project_path
         else:
-            if self._expand_path:
-                d['ancestor_of'] = self._join_ancestors_recursive_projecting_path
-                d['descendant_of'] = self._join_descendants_recursive_project_path
-            else:
-                d['ancestor_of'] = self._join_ancestors_recursive
-                d['descendant_of'] = self._join_descendants_recursive
+            d['ancestor_of'] = self._join_ancestors_recursive
+            d['descendant_of'] = self._join_descendants_recursive
         return d
 
 
@@ -1981,7 +1950,7 @@ class QueryBuilder(object):
             edge_tag = verticespec.get('edge_tag', None)
             isouterjoin = verticespec.get('outerjoin')
 
-            if ( verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of')) and not(self._with_dbpath):
+            if ( verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of')):
                 filter_dict = self._filters.get(verticespec['joining_value'], {})
                 connection_func(toconnectwith, alias, isouterjoin=isouterjoin, filter_dict=filter_dict, edge_tag=edge_tag)
             elif edge_tag is None:

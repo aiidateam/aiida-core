@@ -10,10 +10,11 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from aiida.common.utils import abstractclassmethod
 
-import collections
-import logging
 import os
 import types
+import logging
+import importlib
+import collections
 try:
     import pathlib
 except ImportError:
@@ -1511,6 +1512,9 @@ class AbstractNode(object):
         from aiida.common.hashing import make_hash
         try:
             return make_hash([
+                importlib.import_module(
+                    self.__module__.split('.', 1)[0]
+                ).__version__,
                 {
                     key: val for key, val in self.get_attrs().items()
                     if key not in self._hash_ignored_attributes

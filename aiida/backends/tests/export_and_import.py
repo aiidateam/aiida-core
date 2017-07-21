@@ -461,7 +461,7 @@ class TestSimple(AiidaTestCase):
             sd2.dbnode.user = user._dbuser
             sd2.label = 'sd2'
             sd2.store()
-            sd2.add_link_from(jc1, label='l1', link_type=LinkType.RETURN)
+            sd2.add_link_from(jc1, label='l1', link_type=LinkType.CREATE) # I assume jc1 CREATED sd2
 
             jc2 = JobCalculation()
             jc2.set_computer(self.computer)
@@ -474,7 +474,7 @@ class TestSimple(AiidaTestCase):
             sd3 = StructureData()
             sd3.label = 'sd3'
             sd3.store()
-            sd3.add_link_from(jc2, label='l3', link_type=LinkType.RETURN)
+            sd3.add_link_from(jc2, label='l3', link_type=LinkType.CREATE)
 
             uuids_u1 = [sd1.uuid, jc1.uuid, sd2.uuid]
             uuids_u2 = [jc2.uuid, sd3.uuid]
@@ -546,7 +546,7 @@ class TestSimple(AiidaTestCase):
             sd2.dbnode.user = user._dbuser
             sd2.label = 'sd2'
             sd2.store()
-            sd2.add_link_from(jc1, label='l1', link_type=LinkType.RETURN)
+            sd2.add_link_from(jc1, label='l1', link_type=LinkType.CREATE)
 
             # Set the jc1 to FINISHED
             jc1._set_state(calc_states.FINISHED)
@@ -579,7 +579,7 @@ class TestSimple(AiidaTestCase):
             sd3 = StructureData()
             sd3.label = 'sd3'
             sd3.store()
-            sd3.add_link_from(jc2, label='l3', link_type=LinkType.RETURN)
+            sd3.add_link_from(jc2, label='l3', link_type=LinkType.CREATE)
 
             # Set the jc2 to FINISHED
             jc2._set_state(calc_states.FINISHED)

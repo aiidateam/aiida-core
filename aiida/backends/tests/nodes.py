@@ -54,8 +54,8 @@ class TestNodeHashing(AiidaTestCase):
             n1 = self.create_simple_node(*attr)
             n2 = self.create_simple_node(*attr)
             with caching.EnableCaching():
-                n1.store()
-                n2.store()
+                n1.store(use_cache=caching.defaults.use_cache)
+                n2.store(use_cache=caching.defaults.use_cache)
             self.assertEqual(n1.uuid, n2.uuid)
             self.assertEqual(n1.folder.get_abs_path('.'), n2.folder.get_abs_path('.'))
 

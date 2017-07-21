@@ -28,6 +28,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError,
                                      ValidationError)
 from aiida.common.links import LinkType
+from aiida.common import caching 
 
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
@@ -509,7 +510,7 @@ class Node(AbstractNode):
     def dbnode(self):
         return self._dbnode
 
-    def store_all(self, with_transaction=True, find_same=False):
+    def store_all(self, with_transaction=True, use_cache=caching.defaults.use_cache):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -535,7 +536,7 @@ class Node(AbstractNode):
                                              "grandparents or other ancestors".format(parent_node.uuid))
 
         self._store_input_nodes()
-        self.store(with_transaction=False, find_same=find_same)
+        self.store(with_transaction=False, use_cache=use_cache)
         self._store_cached_input_links(with_transaction=False)
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -601,7 +602,7 @@ class Node(AbstractNode):
                 session.rollback()
                 raise
 
-    def store(self, with_transaction=True, find_same=False):
+    def store(self, with_transaction=True, use_cache=caching.defaults.use_cache):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -618,7 +619,7 @@ class Node(AbstractNode):
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
 
-        :param bool find_same: Whether I attempt to find an equal node in the DB.
+        :param bool use_cache: Whether I attempt to find an equal node in the DB.
         """
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -638,8 +639,8 @@ class Node(AbstractNode):
             # On the other hand, periodically the user might need to run some
             # bookkeeping utility to check for lone folders.
 
-            # For node hashing, if find_same is true:
-            if find_same:
+            # For node hashing, if use_cache is true:
+            if use_cache:
                 same_node = self.get_same_node()
                 if same_node is not None:
                     self._dbnode = same_node.dbnode

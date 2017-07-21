@@ -15,6 +15,7 @@ import unittest
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
+from aiida.common import caching
 from aiida.orm.data import Data
 from aiida.orm.node import Node
 from aiida.orm.utils import load_node
@@ -39,8 +40,23 @@ class TestNodeHashing(AiidaTestCase):
         for attr in attributes:
             n1 = self.create_simple_node(*attr)
             n2 = self.create_simple_node(*attr)
+            n1.store(use_cache=True)
+            n2.store(use_cache=True)
+            self.assertEqual(n1.uuid, n2.uuid)
+            self.assertEqual(n1.folder.get_abs_path('.'), n2.folder.get_abs_path('.'))
+
+    def test_set_default(self):
+        attributes = [
+            (1.0, 2, 3),
+            ({'a': 'b', 'c': 'd'}, [1, 2, 3], {4, 2, 2})
+        ]
+        for attr in attributes:
+            n1 = self.create_simple_node(*attr)
+            n2 = self.create_simple_node(*attr)
+            caching.defaults.use_cache = True
             n1.store()
-            n2.store(find_same=True)
+            n2.store()
+            caching.defaults.use_cache = False
             self.assertEqual(n1.uuid, n2.uuid)
             self.assertEqual(n1.folder.get_abs_path('.'), n2.folder.get_abs_path('.'))
 
@@ -73,14 +89,14 @@ class TestNodeHashing(AiidaTestCase):
         f1 = self.create_folderdata_with_empty_folder()
         f2 = self.create_folderdata_with_empty_folder()
         f1.store()
-        f2.store(find_same=True)
+        f2.store(use_cache=True)
         assert f1.uuid == f2.uuid
 
     def test_file_same(self):
         f1 = self.create_folderdata_with_empty_file()
         f2 = self.create_folderdata_with_empty_file()
         f1.store()
-        f2.store(find_same=True)
+        f2.store(use_cache=True)
         assert f1.uuid == f2.uuid
 
     def test_simple_unequal_nodes(self):
@@ -92,7 +108,7 @@ class TestNodeHashing(AiidaTestCase):
             n1 = self.create_simple_node(*attr1)
             n2 = self.create_simple_node(*attr2)
             n1.store()
-            n2.store(find_same=True)
+            n2.store(use_cache=True)
             self.assertNotEquals(n1.uuid, n2.uuid)
 
     def test_unequal_arrays(self):
@@ -111,7 +127,7 @@ class TestNodeHashing(AiidaTestCase):
             a1 = create_arraydata(arr1)
             a1.store()
             a2 = create_arraydata(arr2)
-            a2.store(find_same=True)
+            a2.store(use_cache=True)
             self.assertNotEquals(a1.uuid, a2.uuid)
 
 class TestDataNode(AiidaTestCase):

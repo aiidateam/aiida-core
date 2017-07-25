@@ -15,7 +15,6 @@ from enum import Enum
 import itertools
 
 import plum.port
-from plum.process import load
 from plum.process_monitor import MONITOR
 import plum.process_monitor
 
@@ -31,11 +30,9 @@ from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
-from aiida.work.globals import class_loader
-import aiida.work.util
-from aiida.work.util import PROCESS_LABEL_ATTR, get_or_create_output_group
-from aiida.work.globals import class_loader
-from aiida.work.util import ProcessStack, PROCESS_LABEL_ATTR
+from . import globals
+from aiida.work.utils import PROCESS_LABEL_ATTR, get_or_create_output_group
+from aiida.work.utils import ProcessStack, PROCESS_LABEL_ATTR
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
 from aiida import LOG_LEVEL_REPORT
@@ -193,17 +190,12 @@ class Process(plum.process.Process):
     _spec_type = ProcessSpec
 
     @classmethod
-    def load_copy(cls, bundle):
-        bundle['COPY'] = True
-        return cls.load(bundle)
-
-    @classmethod
     def retry(cls, bundle):
         bundle['COPY'] = True
         return cls.restart(bundle)
 
-    def __init__(self, inputs=None, pid=None, logger=None):
-        super(Process, self).__init__(inputs, pid, logger)
+    def __init__(self, loop, inputs=None, pid=None, logger=None):
+        super(Process, self).__init__(loop, inputs, pid, logger)
 
         self._calc = None
         # Get the parent from the top of the process stack
@@ -230,7 +222,7 @@ class Process(plum.process.Process):
 
         out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
-        out_state.set_class_loader(class_loader)
+        out_state.set_class_loader(globals.class_loader)
 
     def run_after_queueing(self, wait_on):
         return self._run
@@ -244,15 +236,14 @@ class Process(plum.process.Process):
         if value is None:
             # In this case assume that output_port is the actual value and there
             # is just one return value
-            return super(Process, self).out(self.SINGLE_RETURN_LINKNAME,
-                                            output_port)
+            return super(Process, self).out(self.SINGLE_RETURN_LINKNAME, output_port)
         else:
             return super(Process, self).out(output_port, value)
 
     # region Process messages
     @override
-    def load_instance_state(self, saved_state, logger=None):
-        super(Process, self).load_instance_state(saved_state)
+    def load_instance_state(self, loop, saved_state, logger=None):
+        super(Process, self).load_instance_state(loop, saved_state, logger)
 
         is_copy = saved_state.get('COPY', False)
 

@@ -16,15 +16,14 @@ from collections import namedtuple, Mapping, Sequence, Set
 from plum.wait_ons import Checkpoint, WaitOnAll
 from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
-from plum.thread_executor import Future
 from aiida.orm import Node
 from aiida.work.process import Process, ProcessSpec
-from aiida.work.util import WithHeartbeat
+from aiida.work.utils import WithHeartbeat
 from aiida.common.lang import override
 from aiida.common.utils import get_class_string
 from aiida.work.run import RunningType, RunningInfo
 from aiida.work.interstep import *
-from plum.wait import create_from as create_waiton_from
+from plum.loop import persistence
 
 
 class _WorkChainSpec(ProcessSpec):
@@ -90,14 +89,13 @@ def deserialise_value(value):
         return deepcopy(value)
 
 
-class WorkChain(Process, WithHeartbeat):
+class WorkChain(Process, persistence.ContextMixin, WithHeartbeat):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
     _spec_type = _WorkChainSpec
     _CONTEXT = 'context'
     _STEPPER_STATE = 'stepper_state'
-    _BARRIERS = 'barriers'
     _INTERSTEPS = 'intersteps'
 
     @classmethod
@@ -108,77 +106,15 @@ class WorkChain(Process, WithHeartbeat):
         spec.dynamic_input()
         spec.dynamic_output()
 
-    class Context(object):
-        def __init__(self, value=None):
-            # Have to do it this way otherwise our setattr will be called
-            # causing infinite recursion.
-            # See http://rafekettler.com/magicmethods.html
-            super(WorkChain.Context, self).__setattr__('_content', {})
-
-            if value is not None:
-                for k, v in value.iteritems():
-                    self._content[k] = v
-
-        def _get_dict(self):
-            return self._content
-
-        def __getitem__(self, item):
-            return self._content[item]
-
-        def __setitem__(self, key, value):
-            self._content[key] = value
-
-        def __delitem__(self, key):
-            del self._content[key]
-
-        def __getattr__(self, name):
-            try:
-                return self._content[name]
-            except KeyError:
-                raise AttributeError("Context does not have a variable {}".format(name))
-
-        def __delattr__(self, item):
-            del self._content[item]
-
-        def __setattr__(self, name, value):
-            self._content[name] = value
-
-        def __dir__(self):
-            return sorted(self._content.keys())
-
-        def __iter__(self):
-            for k in self._content:
-                yield k
-
-        def get(self, key, default=None):
-            return self._content.get(key, default)
-
-        def setdefault(self, key, default=None):
-            return self._content.setdefault(key, default)
-
-        def save_instance_state(self, out_state):
-            for k, v in self._content.iteritems():
-                out_state[k] = serialise_value(v)
-
-    def __init__(self, inputs=None, pid=None, logger=None):
-        super(WorkChain, self).__init__(inputs, pid, logger)
-        self._context = self.Context()
+    def __init__(self, loop, inputs=None, pid=None, logger=None):
+        super(WorkChain, self).__init__(loop, inputs, pid, logger)
         self._stepper = None
         self._barriers = []
         self._intersteps = []
 
-    @property
-    def ctx(self):
-        return self._context
-
     @override
     def save_instance_state(self, out_state):
         super(WorkChain, self).save_instance_state(out_state)
-        # Ask the context to save itself
-        context_state = Bundle()
-        self.ctx.save_instance_state(context_state)
-        out_state[self._CONTEXT] = context_state
-
         # Ask the stepper to save itself
         if self._stepper is not None:
             stepper_state = Bundle()
@@ -264,16 +200,13 @@ class WorkChain(Process, WithHeartbeat):
                 interstep.on_last_step_finished(self)
 
             if self._barriers:
-                return WaitOnAll(self._barriers), self._do_step
+                return self.loop().create(WaitOnAll, self._barriers), self._do_step
             else:
-                return Checkpoint(), self._do_step
+                return self.loop().create(Checkpoint), self._do_step
 
     @override
     def load_instance_state(self, saved_state, logger=None):
         super(WorkChain, self).load_instance_state(saved_state, logger)
-        # Recreate the context
-        self._context = self.Context(deserialise_value(saved_state[self._CONTEXT]))
-
         # Recreate the stepper
         if self._STEPPER_STATE in saved_state:
             self._stepper = self.spec().get_outline().create_stepper(self)
@@ -287,12 +220,6 @@ class WorkChain(Process, WithHeartbeat):
                                 b in saved_state[self._INTERSTEPS]]
         except KeyError:
             self._intersteps = []
-
-        try:
-            self._barriers = [create_waiton_from(b) for
-                              b in saved_state[self._BARRIERS]]
-        except KeyError:
-            self._barriers = []
 
     def abort_nowait(self, msg=None):
         """

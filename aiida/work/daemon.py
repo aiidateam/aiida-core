@@ -4,25 +4,26 @@ import time
 import traceback
 
 from aiida.orm.querybuilder import QueryBuilder
-from aiida.orm import load_node
 from aiida.orm.mixins import Sealable
 from aiida.orm.calculation.job import JobCalculation
 from aiida.work.legacy.job_process import ContinueJobCalculation
-from aiida.work.util import CalculationHeartbeat
-from aiida.work.process import load
+from aiida.work.utils import CalculationHeartbeat
 import aiida.work.globals
 import aiida.work.persistence
 from plum.exceptions import LockError
+import aiida.work.loop.default
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def launch_pending_jobs(storage=None):
+def launch_pending_jobs(storage=None, loop=None):
     if storage is None:
         storage = aiida.work.globals.get_persistence()
+    if loop is None:
+        loop = aiida.work.loop.default.get_loop()
 
     executor = aiida.work.globals.get_thread_executor()
-    for proc in _load_all_processes(storage):
+    for proc in _load_all_processes(storage, loop):
         if executor.has_process(proc.pid):
             # If already playing, skip
             continue
@@ -37,11 +38,11 @@ def launch_pending_jobs(storage=None):
                 proc.pid, traceback.format_exc()))
 
 
-def _load_all_processes(storage):
+def _load_all_processes(storage, loop):
     procs = []
     for cp in storage.load_all_checkpoints():
         try:
-            procs.append(load(cp))
+            procs.append(loop.create(cp))
         except KeyboardInterrupt:
             raise
         except BaseException as exception:

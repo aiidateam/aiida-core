@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import plum.class_loader
 from aiida.work.class_loader import ClassLoader
 from aiida.work.process_registry import ProcessRegistry
-
-import plum.class_loader
-from plum.event import EmitterAggregator
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -18,8 +16,8 @@ def _build_registry():
 
 # Have globals that can be used by all of AiiDA
 class_loader = plum.class_loader.ClassLoader(ClassLoader())
+_loop = None
 _thread_executor = None
-_event_emitter = None
 REGISTRY = _build_registry()
 _rmq_control_panel = None
 _persistence = None
@@ -57,24 +55,6 @@ def get_heartbeat_pool():
         _heartbeat_pool = ThreadPoolExecutor(max_workers=_get_max_parallel_processes())
 
     return _heartbeat_pool
-
-
-
-def get_event_emitter():
-    global _event_emitter
-    if _event_emitter is None:
-        from aiida.work.event import DbPollingEmitter, ProcessMonitorEmitter, \
-            SchedulerEmitter
-        from aiida.work.legacy.event import WorkflowEmitter
-
-        aggregator = EmitterAggregator()
-        aggregator.add_child(ProcessMonitorEmitter())
-        aggregator.add_child(DbPollingEmitter())
-        aggregator.add_child(SchedulerEmitter())
-        aggregator.add_child(WorkflowEmitter())
-        _event_emitter = aggregator
-
-    return _event_emitter
 
 
 def get_persistence():

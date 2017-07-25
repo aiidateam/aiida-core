@@ -17,7 +17,6 @@ from aiida.work.run import run
 import functools
 
 
-
 def workfunction(func):
     """
     A decorator to turn a standard python function into a workfunction.
@@ -45,26 +44,16 @@ def workfunction(func):
         """
         This wrapper function is the actual function that is called.
         """
-        # Do this here so that it doesn't enter as an input to the process
-        return_pid = kwargs.pop('_return_pid', False)
-
         # Build up the Process representing this function
         FuncProc = FunctionProcess.build(func, **kwargs)
         inputs = FuncProc.create_inputs(*args, **kwargs)
-        outcome = run(FuncProc, _return_pid=return_pid, **inputs)
-        if return_pid:
-            results, pid = outcome
-        else:
-            results = outcome
+        result = run(FuncProc, **inputs)
 
         # Check if there is just one value returned
-        if len(results) == 1 and FuncProc.SINGLE_RETURN_LINKNAME in results:
-            results = results[FuncProc.SINGLE_RETURN_LINKNAME]
+        if len(result) == 1 and FuncProc.SINGLE_RETURN_LINKNAME in result:
+            result = result[FuncProc.SINGLE_RETURN_LINKNAME]
 
-        if return_pid:
-            return results, pid
-        else:
-            return results
+        return result
 
     wrapped_function._original = func
     wrapped_function._is_workfunction = True

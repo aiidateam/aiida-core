@@ -1,31 +1,30 @@
-
-import threading
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.globals import get_event_emitter
 from aiida.work.event import DbPollingEmitter
-import aiida.work.util as util
+import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess
+from plum.loop import BaseEventLoop
+from aiida.work.run import enqueue, run_loop
 
 
 class TestDbPollingTracker(AiidaTestCase):
     def setUp(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(get_event_emitter().num_listening(), 0)
-        self.emitter = DbPollingEmitter(1.0)
+
+        self.loop = BaseEventLoop()
+        self.loop.create(DbPollingEmitter, 1.0)
         self.notified_events = set()
-        self.event_received = threading.Event()
+        self.event_received = False
 
     def tearDown(self):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(get_event_emitter().num_listening(), 0)
 
     def test_simple_event(self):
-        dp = DummyProcess.new()
-        evt = "calc.{}.finished".format(dp.pid)
+        dp = enqueue(DummyProcess)
+        evt = "process.{}.finish".format(dp.pid)
 
-        with self.emitter.listen_scope(self._notify, evt):
-            dp.play()
-            self.assertTrue(self.event_received.wait(2.), "Did not get message in time")
+        with self.loop.messages().listen_scope(self._notify, evt):
+            run_loop()
+            self.assertTrue(self.event_received, "Did not get message")
 
         self.assertTrue(evt in self.notified_events)
 
@@ -34,15 +33,14 @@ class TestDbPollingTracker(AiidaTestCase):
         Make sure we don't get the event after we've said we don't want to
         listen anymore
         """
-        dp = DummyProcess.new()
-        evt = "calc.{}.finished".format(dp.pid)
+        dp = enqueue(DummyProcess)
+        evt = "process.{}.finished".format(dp.pid)
 
-        self.emitter.start_listening(self._notify, evt)
-        self.emitter.stop_listening(self._notify, evt)
-        dp.play()
-        self.assertFalse(self.event_received.is_set())
+        self.loop.messages().add_listener(self._notify, evt)
+        self.loop.messages().remove_listener(self._notify, evt)
+        run_loop()
+        self.assertFalse(self.event_received)
 
     def _notify(self, emitter, event, body):
         self.notified_events.add(event)
-        self.event_received.set()
-
+        self.event_received = True

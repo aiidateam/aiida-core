@@ -41,7 +41,7 @@ except RuntimeError:
     pass
 
 cp = persistence.load_checkpoint(pid)
-p = ProdSum.load_copy(cp)
+p = ProdSum.create_from(cp)
 
 p.play()
 

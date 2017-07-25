@@ -11,10 +11,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class WaitForTransport(WaitOnEvent, Unsavable):
     """
-    Wait for transport.  When the wait on is constructed it will wait to get a
-    transport and will be done as soon as it has it.  From this moment on it
-    retains the transport until release_transport() is called.  This must be
-    called to let others have the transport so don't forget!
+    Wait for transport.
     """
 
     def __init__(self, authinfo, transport_queue=None):

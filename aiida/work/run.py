@@ -10,10 +10,14 @@
 
 from enum import Enum
 from collections import namedtuple
-from aiida.work import util as util
+
+from plum.wait_ons import run_until as plum_run_until
+
+from aiida.work import utils as util
 from aiida.work.process import Process, FunctionProcess
 import aiida.work.persistence
-
+from aiida.work.loop.default import run, run_get_pid, enqueue, dequeue, run_loop, ResultAndPid
+from . import globals
 
 
 class RunningType(Enum):
@@ -73,7 +77,7 @@ def legacy_calc(pk):
     return RunningInfo(RunningType.LEGACY_CALC, pk)
 
 
-def async(process_class, *args, **kwargs):
+def async(process_class, *args, **inputs):
     """
     Run a workfunction or workchain asynchronously.  The inputs get passed
     on to the workchain/workchain.
@@ -84,27 +88,11 @@ def async(process_class, *args, **kwargs):
     :return: A future that represents the execution of the task.
     :rtype: :class:`plum.thread_executor.Future`
     """
-    p = _get_process_instance(process_class, *args, **kwargs)
-    return aiida.work.globals.get_thread_executor().play(p)
+    return enqueue(process_class, *args, **inputs)
 
 
-def run(process_class, *args, **inputs):
-    """
-    Synchronously (i.e. blocking) run a workfunction or process.
-
-    :param process_class: The process class or workfunction
-    :param args: Positional arguments for a workfunction
-    :param inputs: The list of keyword inputs
-    """
-    # Do this here so that it doesn't enter as an input to the process
-    return_pid = inputs.pop('_return_pid', False)
-
-    p = _get_process_instance(process_class, *args, **inputs)
-    outputs = p.play()
-    if return_pid:
-        return outputs, p.pid
-    else:
-        return outputs
+def run_until(process, state):
+    plum_run_until(process, state, globals.get_loop())
 
 
 def restart(pid, persistence=None):
@@ -139,7 +127,7 @@ def queue_up(process_class, inputs, storage):
 
     # The strategy for queueing up is this:
     # 1) Create the process which will set up all the provenance info, pid, etc
-    proc = process_class.new(inputs)
+    proc = enqueue(process_class, **inputs)
     # 2) Save the instance state of the Process
     storage.save(proc)
     return proc.pid

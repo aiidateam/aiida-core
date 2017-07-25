@@ -1,5 +1,4 @@
 import re
-from plum.event import PollingEmitter
 from aiida.orm import load_workflow
 from aiida.common.datastructures import wf_states
 from aiida.common.lang import override
@@ -7,7 +6,7 @@ from aiida.common.lang import override
 WORKFLOW_POLL_INTERVAL = 30.  # seconds
 
 
-class WorkflowEmitter(PollingEmitter):
+class WorkflowEmitter(object):
     PK_REGEX = re.compile('legacy_workflow\.(.+)')
 
     def __init__(self, poll_interval=WORKFLOW_POLL_INTERVAL):
@@ -19,7 +18,7 @@ class WorkflowEmitter(PollingEmitter):
             raise ValueError(
                 "This emitter only knows about legacy_workflow.[pk] events"
             )
-        super(WorkflowEmitter, self).start_listening(listener, event)
+        super(WorkflowEmitter, self).add_listener(listener, event)
 
     @override
     def poll(self):

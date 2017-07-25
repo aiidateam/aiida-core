@@ -13,7 +13,7 @@ import plum.knowledge_provider
 import plum.process_monitor
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override
-from aiida.work.util import ProcessStack
+from aiida.work.utils import ProcessStack
 
 
 class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):

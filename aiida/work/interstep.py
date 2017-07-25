@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple, MutableSequence
 from plum.util import Savable
-from plum.thread_executor import Future
+from plum.loop import Future
 from aiida.orm import load_node, load_workflow
 from aiida.work.run import RunningType, RunningInfo
 from aiida.work.legacy.wait_on import WaitOnProcessTerminated, WaitOnWorkflow

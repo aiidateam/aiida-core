@@ -14,10 +14,10 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.work.process import Process
 from aiida.work.workfunction import workfunction
 from aiida.common.lang import override
-from aiida.work.run import async
+from aiida.work.run import async, run
 from aiida.orm.data.base import Int
 from aiida.orm.calculation import Calculation
-from aiida.work.util import ProcessStack, CalculationHeartbeat, HeartbeatError
+from aiida.work.utils import ProcessStack, CalculationHeartbeat, HeartbeatError
 
 
 
@@ -38,7 +38,7 @@ def registry_tester():
     assert future.pid == out['node_pk']
 
     # Call a Process
-    StackTester.launch()
+    run(StackTester)
 
     return {'pid': Int(ProcessStack.get_active_process_id()),
             'node_pk': Int(ProcessStack.get_active_process_calc_node().pk)}
@@ -64,7 +64,7 @@ class TestProcessRegistry(AiidaTestCase):
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_process_pid_and_calc(self):
-        StackTester.launch()
+        run(StackTester)
 
     def test_wf_pid_and_calc(self):
         future = async(registry_tester)

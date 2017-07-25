@@ -23,10 +23,10 @@ from aiida.work.process_registry import ProcessRegistry
 from aiida.work.run import submit
 from aiida.common.lang import override
 from aiida.orm import load_node
-import aiida.work.util as util
+import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess, ExceptionProcess
 import aiida.work.daemon as work_daemon
-from aiida.work.util import CalculationHeartbeat
+from aiida.work.utils import CalculationHeartbeat
 
 
 class ProcessEventsTester(Process):

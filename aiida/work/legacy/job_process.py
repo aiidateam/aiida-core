@@ -11,21 +11,20 @@
 import plum.port as port
 import plum.process
 import plum.util
+from plum.loop import tasks
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states as scheduler_states
 from aiida.common.lang import override
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.daemon.execmanager import submit_calc, retrieve_all, parse_results, \
+from aiida.daemon.execmanager import parse_results, \
     update_job_calc_from_job_info, update_job_calc_from_detailed_job_info
 from aiida.orm.calculation.job import JobCalculation
-from aiida.work.globals import get_event_emitter
-from aiida.work.event import SchedulerEmitter
 from aiida.work.process import Process, DictSchema
-from aiida.work.wait_ons import WaitForTransport
-from aiida.work.util import WithHeartbeat
-from plum.event import WaitOnEvent
-from plum.persistence import Bundle
-from plum.process_states import Waiting
+from aiida.work.utils import WithHeartbeat
+from aiida.work import event
+
+from . import calc_submitter
+
 from voluptuous import Any
 
 
@@ -88,20 +87,14 @@ class JobProcess(Process, WithHeartbeat):
         super(JobProcess, self).__init__(inputs, pid, logger)
 
         # Everything below here doesn't need to be saved
-        self.__waiting_on = None
         self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     # region Process overrides
     @override
-    def load_instance_state(self, saved_state, logger=None):
+    def load_instance_state(self, loop, saved_state, logger=None):
         from aiida.backends.utils import get_authinfo
 
-        super(JobProcess, self).load_instance_state(saved_state, logger)
-
-        if Waiting.WAIT_ON in saved_state:
-            self.__waiting_on = saved_state[Waiting.WAIT_ON]['waiting_on']
-        else:
-            self.__waiting_on = None
+        super(JobProcess, self).load_instance_state(loop ,saved_state, logger)
         self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     @override
@@ -113,34 +106,6 @@ class JobProcess(Process, WithHeartbeat):
     @override
     def get_or_create_db_record(self):
         return self._CALC_CLASS()
-
-    @override
-    def save_wait_on_state(self, wait_on, callback):
-        bundle = Bundle({
-            'waiting_on': self.__waiting_on,
-            'calc_pk': self.calc.pk
-        })
-        return bundle
-
-    @override
-    def create_wait_on(self, saved_state, callback):
-        if saved_state['waiting_on'] == 'transport':
-            from aiida.backends.utils import get_authinfo
-            from aiida.orm import load_node
-
-            calc = load_node(pk=saved_state['calc_pk'])
-            return WaitForTransport(get_authinfo(calc.get_computer(), calc.get_user()))
-        elif saved_state['waiting_on'] == 'scheduler_event':
-            all_events = "job.{}.*".format(saved_state['calc_pk'])
-            return WaitOnEvent(get_event_emitter(), all_events)
-        else:
-            raise ValueError("Unrecognised wait on '{}'".format(saved_state['waiting_on']))
-
-    @override
-    def _run(self, **kwargs):
-        self.calc.submit()
-        # We need the transport to be able to submit
-        return self._create_wait_on('transport'), self._submit_job
 
     @override
     def _setup_db_record(self):
@@ -181,27 +146,29 @@ class JobProcess(Process, WithHeartbeat):
         if parent_calc:
             self._calc.add_link_from(parent_calc, "CALL", LinkType.CALL)
 
+    @override
+    def execute(self):
+        # Put the calculation in the TOSUBMIT state
+        self.calc.submit()
+
+        # Submit the calculation
+        return tasks.Await(
+            self._calc_submitted,
+            self.loop().create(calc_submitter.SubmitCalc, self.calc, self._authinfo)
+        )
     # endregion
 
-    def _submit_job(self, wait_on):
-        """
-        :param wait_on: The WaitOnTransport we need to proceed
-        :type wait_on: :class:`WaitOnTransport`
-        """
-        try:
-            submit_calc(self.calc, self._authinfo, wait_on.transport)
-        finally:
-            wait_on.release_transport()
+    def _calc_submitted(self, submit_result):
+        return tasks.Await(
+            self._scheduler_event_received,
+            self.loop().create(event.GetSchedulerEvent, self.calc, self._authinfo)
+        )
 
-        # Wait for any event from our job
-        return self._create_wait_on('scheduler_event'), self._scheduler_event_received
-
-    def _scheduler_event_received(self, wait_on):
+    def _scheduler_event_received(self, body):
         """
         :param wait_on: :class:`plum.event.WaitOnEvent`
         """
-        if not wait_on.get_event().endswith(SchedulerEmitter.JOB_NOT_FOUND):
-            body = wait_on.get_body()
+        if body['job_info'] != None:
             computed = update_job_calc_from_job_info(self.calc, body['job_info'])
             if computed:
                 # Computed, so get detailed job information
@@ -210,29 +177,27 @@ class JobProcess(Process, WithHeartbeat):
                     update_job_calc_from_detailed_job_info(self.calc, detailed_info)
             else:
                 # Wait for any event from our job
-                return self._create_wait_on('scheduler_event'), self._scheduler_event_received
+                return tasks.Await(
+                    self._scheduler_event_received,
+                    self.loop().create(event.GetSchedulerEvent, self.calc, self._authinfo, body['job_info'].job_state)
+                )
 
         # If the job is computed or not found assume it's done
         self.calc._set_scheduler_state(scheduler_states.DONE)
         self.calc._set_state(calc_states.COMPUTED)
 
-        # Now we need the transport to be able to retrieve
-        return self._create_wait_on('transport'), self._retrieve_and_parse
+        # Next, retrieve the calculation data
+        return tasks.Await(
+            self._retrieved,
+            self.loop().create(calc_submitter.RetrieveCalc, self.calc, self._authinfo)
+        )
 
-    def _retrieve_and_parse(self, wait_on):
+    def _retrieved(self, result):
         """
-        Process a computed job.
+        Parse a retrieved job calculation.
         """
-        try:
-            try:
-                retrieve_all(self.calc, wait_on.transport)
-            except BaseException:
-                self.calc._set_state(calc_states.RETRIEVALFAILED)
-                raise
-        finally:
-            # Make sure to always release the transport
-            wait_on.release_transport()
-
+        if self.calc.state != calc_states.PARSING:
+            self.calc._set_state(calc_states.PARSING)
         try:
             parse_results(self.calc)
         except BaseException:
@@ -246,17 +211,6 @@ class JobProcess(Process, WithHeartbeat):
         for label, node in self.calc.get_outputs_dict().iteritems():
             self.out(label, node)
 
-    def _create_wait_on(self, what):
-        if what == 'transport':
-            self.__waiting_on = what
-            return WaitForTransport(self._authinfo)
-        elif what == 'scheduler_event':
-            self.__waiting_on = what
-            all_events = "job.{}.*".format(self.calc.pk)
-            return WaitOnEvent(get_event_emitter(), all_events)
-        else:
-            raise ValueError("Don't know how to wait on '{}'".format(what))
-
 
 class ContinueJobCalculation(JobProcess):
     ACTIVE_CALC_STATES = [calc_states.TOSUBMIT, calc_states.SUBMITTING,
@@ -268,15 +222,24 @@ class ContinueJobCalculation(JobProcess):
         super(ContinueJobCalculation, cls).define(spec)
         spec.input("_calc", valid_type=JobCalculation, required=True, non_db=False)
 
-    def _run(self, **kwargs):
+    def execute(self):
         state = self.calc.get_state()
         if state in [calc_states.TOSUBMIT, calc_states.SUBMITTING]:
-            return self._create_wait_on('transport'), self._submit_job
+            return super(ContinueJobCalculation, self).execute()
         elif state in calc_states.WITHSCHEDULER:
-            return self._create_wait_on('scheduler_event'), self._scheduler_event_received
-        elif state in [calc_states.COMPUTED, calc_states.RETRIEVING, calc_states.PARSING]:
-            return self._create_wait_on('transport'), self._retrieve_and_parse
-            # Otherwise nothing to do...
+            return tasks.Await(
+                self._scheduler_event_received,
+                self.loop().create(event.GetSchedulerEvent, self.calc, self._authinfo)
+            )
+        elif state in [calc_states.COMPUTED, calc_states.RETRIEVING]:
+            return tasks.Await(
+                self._retrieved,
+                self.loop().create(calc_submitter.RetrieveCalc, self.calc, self._authinfo)
+            )
+        elif state is calc_states.PARSING:
+            return self._retrieved(True)
+
+        # Otherwise nothing to do...
 
     @override
     def get_or_create_db_record(self):

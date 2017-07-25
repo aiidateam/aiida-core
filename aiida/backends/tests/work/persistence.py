@@ -13,8 +13,9 @@ import tempfile
 import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.persistence import Persistence
-import aiida.work.util as util
+import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess
+from aiida.work.run import enqueue, run_loop
 
 
 class TestProcess(AiidaTestCase):
@@ -31,7 +32,7 @@ class TestProcess(AiidaTestCase):
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_save_load(self):
-        dp = DummyProcess.new()
+        dp = enqueue(DummyProcess)
 
         # Create a bundle
         b = self.persistence.create_bundle(dp)
@@ -41,4 +42,4 @@ class TestProcess(AiidaTestCase):
         # Now check that they are equal
         self.assertEqual(b, b2)
 
-        dp.play()
+        run_loop()

@@ -6,7 +6,7 @@ from plum.process_monitor import ProcessMonitorListener, MONITOR
 from aiida.backends.testbase import AiidaTestCase
 import aiida.work.globals as globals
 import aiida.work.test_utils as test_utils
-import aiida.work.rmq
+from aiida.work import rmq
 from plum.process_controller import ProcessController
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -35,8 +35,8 @@ class TestProcess(AiidaTestCase):
         super(TestProcess, self).setUp()
         self.controller = ProcessController()
         prefix = "{}.{}".format(self.__class__.__name__, uuid.uuid4())
-        self._subscribers = aiida.work.rmq.enable_subscribers(self.controller, prefix)
-        self.control_panel = aiida.work.rmq.ProcessControlPanel(prefix)
+        self._subscribers = rmq.enable_subscribers(self.controller, prefix)
+        self.control_panel = rmq.ProcessControlPanel(prefix)
 
     def tearDown(self):
         self.controller.remove_all(timeout=10)
@@ -46,7 +46,7 @@ class TestProcess(AiidaTestCase):
     def test_launch_simple(self):
         # Monitor launched processes
         capture = CaptureProcess()
-        MONITOR.start_listening(capture)
+        MONITOR.add_listener(capture)
 
         # Launch the process
         self.control_panel.launch.launch(test_utils.DummyProcess)
@@ -59,7 +59,7 @@ class TestProcess(AiidaTestCase):
 
         # Monitor launched processes
         capture = CaptureProcess()
-        MONITOR.start_listening(capture)
+        MONITOR.add_listener(capture)
 
         # Launch the process
         self.control_panel.launch.launch(test_utils.WaitChain)

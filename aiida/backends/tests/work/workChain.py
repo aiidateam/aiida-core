@@ -9,24 +9,24 @@
 ###########################################################################
 
 import inspect
-import unittest
+
+import plum.process_monitor
 
 from aiida.backends.testbase import AiidaTestCase
-import plum.process_monitor
-from plum.wait_ons import wait_until
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.orm.data.base import Int, Str
-import aiida.work.util as util
+import aiida.work.utils as util
 from aiida.common.links import LinkType
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_, assign_, append_
 from aiida.work.workchain import ToContext, _WorkChainSpec, Outputs
 from aiida.work import workfunction, ProcessState, run, async, submit
-from aiida.work.run import legacy_workflow
 import aiida.work.globals
+from aiida.work import async
 from aiida.daemon.workflowmanager import execute_steps
+from aiida.work.run import run_until, run_loop, enqueue, legacy_workflow
 
 PwProcess = PwCalculation.process()
 
@@ -103,26 +103,6 @@ class Wf(WorkChain):
         self.finished_steps[function_name] = True
 
 
-class TestContext(AiidaTestCase):
-    def test_attributes(self):
-        c = WorkChain.Context()
-        c.new_attr = 5
-        self.assertEqual(c.new_attr, 5)
-
-        del c.new_attr
-        with self.assertRaises(AttributeError):
-            c.new_attr
-
-    def test_dict(self):
-        c = WorkChain.Context()
-        c['new_attr'] = 5
-        self.assertEqual(c['new_attr'], 5)
-
-        del c['new_attr']
-        with self.assertRaises(KeyError):
-            c['new_attr']
-
-
 class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
@@ -130,7 +110,6 @@ class TestWorkchain(AiidaTestCase):
         self.procman = aiida.work.globals.get_thread_executor()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
-        self.assertEquals(aiida.work.globals.get_event_emitter().num_listening(), 0)
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
@@ -139,7 +118,6 @@ class TestWorkchain(AiidaTestCase):
         self.assertEqual(self.procman.get_num_processes(), 0, "Failed to abort all processes")
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
-        self.assertEquals(aiida.work.globals.get_event_emitter().num_listening(), 0)
 
     def test_run(self):
         A = Str('A')
@@ -148,7 +126,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        Wf.run(value=A, n=three)
+        run(Wf, value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -156,7 +134,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = Wf.run(value=B, n=three)
+        finished_steps = run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -164,7 +142,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = Wf.run(value=C, n=three)
+        finished_steps = run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -215,7 +193,7 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.r1['_return'] == B
                 assert self.ctx.r2['_return'] == B
 
-        Wf.run()
+        run(Wf)
 
     def test_str(self):
         self.assertIsInstance(str(Wf.spec()), basestring)
@@ -312,10 +290,8 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 self.out("value", Int(5))
 
-        p = MainWorkChain.new()
-        future = self.procman.play(p)
-        self.assertTrue(wait_until(p, ProcessState.WAITING, timeout=4.))
-        self.assertTrue(future.abort(timeout=3600.), "Failed to abort process")
+        p = enqueue(MainWorkChain)
+        run_loop()
 
     def test_tocontext_async_workchain(self):
         class MainWorkChain(WorkChain):
@@ -395,8 +371,8 @@ class TestWorkchain(AiidaTestCase):
         run(Workchain)
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
-        wf = wf_class.new(inputs)
-        wf.play()
+        wf = enqueue(wf_class, **inputs)
+        run_loop()
 
         return wf_class.finished_steps
 

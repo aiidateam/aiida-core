@@ -14,7 +14,7 @@ import tempfile
 
 import plum.process_monitor
 from aiida.orm.data.base import Int, Str
-from aiida.work.run import queue_up
+from aiida.work.run import enqueue, dequeue, run_loop
 from aiida.work.test_utils import DummyProcess
 from aiida.work.persistence import Persistence
 
@@ -31,16 +31,20 @@ class TestRun(AiidaTestCase):
         shutil.rmtree(self.storedir)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
-    def test_queue_up(self):
+    def test_enqueue(self):
         inputs = {'a': Int(2), 'b': Str('test')}
 
         # Queue up the process
-        pid = queue_up(DummyProcess, inputs, self.storage)
+        proc = enqueue(DummyProcess, inputs, self.storage)
 
         # Then load the checkpoint and instantiate the class
-        cp = self.storage.load_checkpoint(pid)
+        cp = self.storage.load_checkpoint(proc.pid)
 
-        dp = DummyProcess.create_from(cp)
+        # Remove the original process from the queue
+        dequeue(proc)
+
+        dp = enqueue(DummyProcess, cp)
         self.assertIsInstance(dp, DummyProcess)
         self.assertEqual(dp.raw_inputs, inputs)
-        dp.play()
+
+        run_loop()

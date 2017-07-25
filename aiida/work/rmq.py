@@ -3,12 +3,7 @@ import pika.exceptions
 import json
 import uuid
 
-import plum.rmq.control
-import plum.rmq.event
-import plum.rmq.launch
-from plum.rmq.util import SubscriberThread
-import plum.rmq
-import plum.rmq.status
+from plum import rmq
 from aiida.orm import load_node, Node
 
 _CONTROL_EXCHANGE = 'process.control'
@@ -54,9 +49,9 @@ def launch_decode(msg):
 
 
 def status_decode(msg):
-    decoded = plum.rmq.status.status_decode(msg)
+    decoded = rmq.status.status_decode(msg)
     # Just need to fix up the special case of PIDs being PKs (i.e. ints)
-    procs = decoded[plum.rmq.status.PROCS_KEY]
+    procs = decoded[rmq.status.PROCS_KEY]
     for pid in procs.keys():
         try:
             if not isinstance(pid, uuid.UUID):
@@ -67,63 +62,37 @@ def status_decode(msg):
     return decoded
 
 
-def _create_subscribers(procman, prefix, connection):
-    subs = [
-
-        plum.rmq.ProcessControlSubscriber(
-            connection=connection, exchange=".".join([prefix, _CONTROL_EXCHANGE]),
-            process_controller=procman
-        ),
-
-        plum.rmq.ProcessLaunchSubscriber(
-            connection=connection, queue=".".join([prefix, _LAUNCH_QUEUE]),
-            process_controller=procman
-        ),
-
-        plum.rmq.ProcessStatusSubscriber(
-            connection=connection, process_controller=procman,
-            exchange=".".join([prefix, _STATUS_REQUEST_EXCHANGE])
-        ),
-    ]
-
-    return subs
-
-
-def enable_subscribers(procman, prefix):
-    """
-    Enable RMQ subscribers for the process manager.  This means that RMQ
-    launch, status and control messages will be listened for and processed.
-    """
-    from functools import partial
-    create_subscribers = partial(_create_subscribers, procman, prefix)
-    thread = SubscriberThread(
-        _create_connection, create_subscribers, name="rmq_subscriber.{}".format(prefix)
+def insert_process_control_subscriber(loop, prefix, get_connection=_create_connection):
+    return loop.create(
+        rmq.control.ProcessControlSubscriber,
+        get_connection(),
+        "{}.{}".format(prefix, _CONTROL_EXCHANGE),
     )
-    thread.start()
-    return thread
 
 
-_GLOBAL_EVENT_PUBLISHER = None
+def insert_process_status_subscriber(loop, prefix, get_connection=_create_connection):
+    return loop.create(
+        rmq.status.ProcessStatusSubscriber,
+        get_connection(),
+        "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
+    )
 
 
-def enable_process_event_publisher():
-    global _GLOBAL_EVENT_PUBLISHER
-    if _GLOBAL_EVENT_PUBLISHER is None:
-        _GLOBAL_EVENT_PUBLISHER = \
-            plum.rmq.event.ProcessEventPublisher(
-                _create_connection(), exchange=_EVENT_EXCHANGE)
-    _GLOBAL_EVENT_PUBLISHER.enable_publish_all()
+def insert_process_launch_subscriber(loop, prefix, get_connection=_create_connection):
+    return loop.create(
+        rmq.launch.ProcessLaunchSubscriber,
+        get_connection(),
+        "{}.{}".format(prefix, _LAUNCH_QUEUE)
+    )
 
 
-def disable_process_event_publisher():
-    global _GLOBAL_EVENT_PUBLISHER
-    if _GLOBAL_EVENT_PUBLISHER is not None:
-        _GLOBAL_EVENT_PUBLISHER.disable_publish_all()
+def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
+    connection = get_connection()
+    get_conn = lambda: connection
 
-
-def create_process_event_listener():
-    return plum.rmq.event.ProcessEventSubscriber(
-        _create_connection(), exchange=_EVENT_EXCHANGE)
+    insert_process_control_subscriber(loop, prefix, get_conn)
+    insert_process_status_subscriber(loop, prefix, get_conn)
+    insert_process_launch_subscriber(loop, prefix, get_conn)
 
 
 class ProcessControlPanel(object):
@@ -133,26 +102,29 @@ class ProcessControlPanel(object):
     the polling functions so I create them all here and let it poll.
     """
 
-    def __init__(self, prefix, create_connection=_create_connection):
+    def __init__(self, loop, prefix, create_connection=_create_connection):
         self.daemon = True
 
         self._connection = create_connection()
 
-        self._control = plum.rmq.ProcessControlPublisher(
-            connection=self._connection,
-            exchange=".".join([prefix, _CONTROL_EXCHANGE])
+        self._control = loop.create(
+            rmq.control.ProcessControlPublisher,
+            self._connection,
+            "{}.{}".format(prefix, _CONTROL_EXCHANGE)
         )
 
-        self._status = plum.rmq.ProcessStatusRequester(
-            connection=self._connection,
-            exchange=".".join([prefix, _STATUS_REQUEST_EXCHANGE]),
-            decoder=status_decode
+        self._status = loop.create(
+            rmq.status.ProcessStatusRequester,
+            self._connection,
+            "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
+            status_decode
         )
 
-        self._launch = plum.rmq.ProcessLaunchPublisher(
-            connection=self._connection,
-            queue=".".join([prefix, _LAUNCH_QUEUE]),
-            encoder=encode_launch_task
+        self._launch = loop.create(
+            rmq.launch.ProcessLaunchPublisher,
+            self._connection,
+            "{}.{}".format(prefix, _LAUNCH_QUEUE),
+            encode_launch_task
         )
 
     @property

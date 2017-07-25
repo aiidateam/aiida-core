@@ -13,7 +13,6 @@ import uuid
 import shutil
 import tempfile
 import threading
-import time
 
 import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
@@ -21,12 +20,12 @@ from aiida.orm import load_node
 from aiida.orm.data.base import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.common.lang import override
-import aiida.work.globals as globals
+from aiida.work import globals
 from aiida.work.persistence import Persistence
 from aiida.work.process import Process, FunctionProcess
-from aiida.work.run import run, submit
+from aiida.work.run import run, run_get_pid, submit, enqueue, run_loop
 from aiida.work.workfunction import workfunction
-import aiida.work.util as util
+import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess, BadOutput
 
 
@@ -63,14 +62,14 @@ class TestProcess(AiidaTestCase):
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_process_stack(self):
-        ProcessStackTest.run()
+        run(ProcessStackTest)
 
     def test_inputs(self):
         with self.assertRaises(TypeError):
-            BadOutput.run()
+            run(BadOutput)
 
     def test_pid_is_uuid(self):
-        p = DummyProcess.new(inputs={'_store_provenance': False})
+        p = enqueue(DummyProcess, _store_provenance=False)
         self.assertEqual(uuid.UUID(p._calc.uuid), p.pid)
 
     def test_input_link_creation(self):
@@ -78,7 +77,7 @@ class TestProcess(AiidaTestCase):
 
         inputs = {l: Int(l) for l in dummy_inputs}
         inputs['_store_provenance'] = True
-        p = DummyProcess.new(inputs)
+        p = enqueue(DummyProcess, **inputs)
 
         for label, value in p._calc.get_inputs_dict().iteritems():
             self.assertTrue(label in inputs)
@@ -90,47 +89,42 @@ class TestProcess(AiidaTestCase):
 
     def test_none_input(self):
         # Check that if we pass no input the process runs fine
-        DummyProcess.new().play()
-        # Check that if we explicitly pass None as the input it also runs fine
-        DummyProcess.new(inputs=None).play()
+        run(DummyProcess)
 
     def test_seal(self):
-        rinfo = run(DummyProcess, _return_pid=True)[1]
-        # This is annoying but have to wait 'cause the sealed attribute
-        # sometimes isn't set yet
-        time.sleep(0.2)
-        self.assertTrue(load_node(pk=rinfo).is_sealed)
+        pid = run_get_pid(DummyProcess).pid
+        self.assertTrue(load_node(pk=pid).is_sealed)
 
         storedir = tempfile.mkdtemp()
         storage = Persistence.create_from_basedir(storedir)
 
-        rinfo = submit(DummyProcess, _jobs_store=storage)
-        n = load_node(pk=rinfo.pid)
+        pid = submit(DummyProcess, _jobs_store=storage)
+        n = load_node(pk=pid.pid)
         self.assertFalse(n.is_sealed)
 
-        dp = DummyProcess.create_from(storage.load_checkpoint(rinfo.pid))
-        dp.play()
+        dp = enqueue(DummyProcess, storage.load_checkpoint(pid.pid))
+        run_loop()
         self.assertTrue(n.is_sealed)
         shutil.rmtree(storedir)
 
     def test_description(self):
-        dp = DummyProcess.new(inputs={'_description': 'My description'})
-        self.assertEquals(dp.calc.description, 'My description')
+        dp = enqueue(DummyProcess, _description="Rockin' process")
+        self.assertEquals(dp.calc.description, "Rockin' process")
 
         with self.assertRaises(ValueError):
-            DummyProcess.new(inputs={'_description': 5})
+            enqueue(DummyProcess, _description=5)
 
     def test_label(self):
-        dp = DummyProcess.new(inputs={'_label': 'My label'})
+        dp = enqueue(DummyProcess, _label='My label')
         self.assertEquals(dp.calc.label, 'My label')
 
         with self.assertRaises(ValueError):
-            DummyProcess.new(inputs={'_label': 5})
+            enqueue(DummyProcess, _label=5)
 
     def test_work_calc_finish(self):
-        p = DummyProcess.new()
+        p = enqueue(DummyProcess)
         self.assertFalse(p.calc.has_finished_ok())
-        p.play()
+        run_loop()
         self.assertTrue(p.calc.has_finished_ok())
 
     def test_calculation_input(self):
@@ -138,10 +132,10 @@ class TestProcess(AiidaTestCase):
         def simple_wf():
             return {'a': Int(6), 'b': Int(7)}
 
-        outputs, pid = run(simple_wf, _return_pid=True)
+        outputs, pid = run_get_pid(simple_wf)
         calc = load_node(pid)
-        dp = DummyProcess.new(inputs={'calc': calc})
-        dp.play()
+        dp = enqueue(DummyProcess, calc=calc)
+        run_loop()
 
         input_calc = dp.calc.get_inputs_dict()['calc']
         self.assertTrue(isinstance(input_calc, FrozenDict))
@@ -155,7 +149,7 @@ class TestFunctionProcess(AiidaTestCase):
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
         FP = FunctionProcess.build(wf)
-        self.assertEqual(FP.run(**inputs), inputs)
+        self.assertEqual(run(FP, **inputs), inputs)
 
     def test_kwargs(self):
         def wf_with_kwargs(**kwargs):
@@ -171,16 +165,13 @@ class TestFunctionProcess(AiidaTestCase):
         inputs = {'a': a}
 
         FP = FunctionProcess.build(wf_with_kwargs)
-        outs = FP.run(**inputs)
+        outs = run(FP, **inputs)
         self.assertEqual(outs, inputs)
 
         FP = FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
-            FP.run(**inputs)
+            run(FP, **inputs)
 
         FP = FunctionProcess.build(wf_fixed_args)
-        outs = FP.run(**inputs)
+        outs = run(FP, **inputs)
         self.assertEqual(outs, inputs)
-
-
-

@@ -239,8 +239,7 @@ def conv_to_fortran(val):
     elif isinstance(val, basestring):
         val_str = "'{!s}'".format(val)
     else:
-        raise ValueError("Invalid value passed, accepts only bools, ints, "
-                         "floats and strings")
+        raise ValueError("Invalid value '{}' of type '{}' passed, accepts only bools, ints, floats and strings".format(val, type(val)))
 
     return val_str
 

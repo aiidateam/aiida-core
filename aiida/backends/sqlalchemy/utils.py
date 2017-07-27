@@ -498,21 +498,16 @@ def get_alembic_conf():
     return alembic_cfg
 
 
-def alembic_command(selected_command, **kwargs):
+def alembic_command(selected_command, *args, **kwargs):
     if selected_command is None:
         return
+
+    al_command = getattr(command, selected_command)
 
     alembic_cfg = get_alembic_conf()
     with sa.engine.begin() as connection:
         alembic_cfg.attributes['connection'] = connection
-        if selected_command == 'revision':
-            command.revision(alembic_cfg, **kwargs)
-        elif selected_command == 'current':
-            command.current(alembic_cfg, **kwargs)
-        elif selected_command == 'history':
-            command.history(alembic_cfg, **kwargs)
-        elif selected_command == 'upgrade':
-            command.upgrade(alembic_cfg, 'head')
+        al_command(alembic_cfg, *args, **kwargs)
 
 
 def alembic_revision(**kwargs):

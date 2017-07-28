@@ -516,19 +516,3 @@ def alembic_command(selected_command, *args, **kwargs):
             al_command(alembic_cfg, message=args[0][0])
         else:
             al_command(alembic_cfg, *args, **kwargs)
-
-
-def alembic_revision(**kwargs):
-    alembic_cfg = get_alembic_conf()
-
-    with sa.engine.begin() as connection:
-        alembic_cfg.attributes['connection'] = connection
-        command.revision(alembic_cfg, **kwargs)
-
-
-def alembic_current(**kwargs):
-    alembic_cfg = get_alembic_conf()
-
-    with sa.engine.begin() as connection:
-        alembic_cfg.attributes['connection'] = connection
-        command.current(alembic_cfg, **kwargs)

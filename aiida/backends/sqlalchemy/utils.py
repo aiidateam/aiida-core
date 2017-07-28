@@ -417,20 +417,12 @@ def check_schema_version(force_migration=False, alembic_cfg=None):
       Otherwise, just return.
     """
     import sys
-    import os
     from aiida.common.utils import query_yes_no
     from aiida.backends import sqlalchemy as sa
 
     # If an alembic configuration file is given then use that one.
     if alembic_cfg is None:
-        # Constructing the alembic full path & getting the configuration
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        alembic_fpath = os.path.join(dir_path, ALEMBIC_FILENAME)
-        alembic_cfg = Config(alembic_fpath)
-
-        # Set the alembic script directory location
-        alembic_dpath = os.path.join(dir_path, ALEMBIC_REL_PATH)
-        alembic_cfg.set_main_option('script_location', alembic_dpath)
+        alembic_cfg = get_alembic_conf()
 
     # Getting the version of the code and the database
     # Reusing the existing engine (initialized by AiiDA)
@@ -460,11 +452,21 @@ def check_schema_version(force_migration=False, alembic_cfg=None):
 
 
 def get_migration_head(config):
+    """
+    This function returns the head of the migration scripts.
+    :param config: The alembic configuration.
+    :return: The version of the head.
+    """
     script = ScriptDirectory.from_config(config)
     return script.get_current_head()
 
 
 def get_db_schema_version(config):
+    """
+    This function returns the current version of the database.
+    :param config: The alembic configuration.
+    :return: The version of the database.
+    """
     script = ScriptDirectory.from_config(config)
 
     def get_db_version(rev, _):
@@ -485,6 +487,11 @@ def get_db_schema_version(config):
 
 
 def get_alembic_conf():
+    """
+    This function returns the alembic configuration file contents by doing
+    the necessary updates in the 'script_location' name.
+    :return: The alembic configuration.
+    """
     # Constructing the alembic full path & getting the configuration
     import os
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -499,9 +506,19 @@ def get_alembic_conf():
 
 
 def alembic_command(selected_command, *args, **kwargs):
+    """
+    This function calls the necessary alembic command with the provided
+    arguments.
+    :param selected_command: The command that should be called from the
+    alembic commands.
+    :param args: The arguments.
+    :param kwargs: The keyword arguments.
+    :return: Nothing.
+    """
     if selected_command is None:
         return
 
+    # Get the requested alembic command from the available commands
     al_command = getattr(command, selected_command)
 
     alembic_cfg = get_alembic_conf()

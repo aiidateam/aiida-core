@@ -23,6 +23,10 @@ AVAIL_AL_COMMANDS = [REVISION_CMD, CURRENT_CMD, HISTORY_CMD,
 if __name__ == "__main__":
     import argparse
     from aiida.backends.sqlalchemy.utils import alembic_command
+    from aiida.backends.profile import load_profile
+    from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck
+    from aiida.backends.profile import BACKEND_SQLA
+    from aiida.common.exceptions import InvalidOperation
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -74,19 +78,11 @@ if __name__ == "__main__":
         # We load the needed profile.
         # This is going to set global variables in settings, including
         # settings.BACKEND
-        from aiida.backends.profile import load_profile
         load_profile(process=process_name, profile=profile_name)
-        from aiida.backends.profile import BACKEND_SQLA
         if settings.BACKEND != BACKEND_SQLA:
-            from aiida.common.exceptions import InvalidOperation
             raise InvalidOperation("A SQLAlchemy (alembic) revision "
                                    "generation procedure is initiated "
                                    "but a different backend is used!")
-        # We load the Django specific _load_dbenv_noschemacheck
-        # When there will be a need for SQLAlchemy for a schema migration,
-        # we may abstract thw _load_dbenv_noschemacheck and make a common
-        # one for both backends
-        from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck
         _load_dbenv_noschemacheck(process=process_name, profile=profile_name)
 
         if 'arguments' in args:

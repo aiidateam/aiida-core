@@ -143,7 +143,9 @@ class Profile(VerdiCommandWithSubcommands):
         user.
         """
         from aiida.cmdline.verdilib import Quicksetup
-        from aiida.common.setup import get_or_create_config, update_config
+        from aiida.common.setup import get_or_create_config, update_config, AIIDA_CONFIG_FOLDER
+        import os.path
+        from urlparse import urlparse
 
         #TODO: the functions used below should be moved outside Quicksetup
         q = Quicksetup()
@@ -161,18 +163,36 @@ class Profile(VerdiCommandWithSubcommands):
             except KeyError:
                 raise ValueError('Profile "{}" does not exist'.format(profile_to_delete))
 
+            #TODO: Check whether database exists
             db = profile.get('AIIDADB_NAME', '')
-            if click.confirm('Delete associated database {}?\nWARNING: All data will be lost.'.format(db)):
-                print("Deleting database {}.".format(db))
+            if click.confirm("Delete associated database '{}'?\nWARNING: All data will be lost.".format(db)):
+                print("Deleting database '{}'.".format(db))
                 q._drop_db(db, pg_execute, **dbinfo)
 
+            #TODO: Check whether this user appears in other AiiDA profiles
             user = profile.get('AIIDADB_USER', '')
-            if click.confirm('Delete database user {}?'.format(user)):
-                print("Deleting user {}.".format(user))
+            if click.confirm("Delete database user '{}'?\nWARNING: This user might be used by other profiles as well.".format(user)):
+                print("Deleting user '{}'.".format(user))
                 q._drop_dbuser(user, pg_execute, **dbinfo)
 
-            print("Deleting configuration for profile {}.".format(profile_to_delete))
-            del profiles[profile_to_delete]
-            update_config(confs)
+            repo_uri = profile.get('AIIDADB_REPOSITORY_URI','')
+            repo_path = urlparse(repo_uri).path
+            if click.confirm("Delete associated file repository '{}'?\nWARNING: All data will be lost.".format(repo_path)):
+
+                repo_path = os.path.expanduser(repo_path)
+                if not os.path.isabs(repo_path):
+                    print("WARNING: Unable to determine absolute path corresponding to '{}'.".format(repo_path))
+
+                if not os.path.isdir(repo_path):
+                    print("WARNING: '{}' is not a directory. Skipping ...".format(repo_path))
+                else:
+                    print("Deleting directory '{}'.".format(repo_path))
+                    import shutil
+                    shutil.rmtree(repo_path)
+
+            if click.confirm("Delete configuration for profile '{}'?\nWARNING: This permanently removes the profile from the list of AiiDA profiles.".format(profile_to_delete)):
+                print("Deleting configuration for profile '{}'.".format(profile_to_delete))
+                del profiles[profile_to_delete]
+                update_config(confs)
 
 

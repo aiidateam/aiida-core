@@ -507,7 +507,15 @@ def alembic_command(selected_command, *args, **kwargs):
     alembic_cfg = get_alembic_conf()
     with sa.engine.begin() as connection:
         alembic_cfg.attributes['connection'] = connection
-        al_command(alembic_cfg, *args, **kwargs)
+        if selected_command in ['current', 'history']:
+            if 'verbose' in args:
+                al_command(alembic_cfg, verbose=True)
+            else:
+                al_command(alembic_cfg, *args, **kwargs)
+        elif selected_command == 'revision':
+            al_command(alembic_cfg, message=args[0][0])
+        else:
+            al_command(alembic_cfg, *args, **kwargs)
 
 
 def alembic_revision(**kwargs):

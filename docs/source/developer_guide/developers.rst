@@ -54,6 +54,8 @@ and output nodes are also stored.
 Database schema
 +++++++++++++++
 
+Django
+------
 The Django database schema can be found in :py:mod:`aiida.backends.djsite.db.models`.
 
 If you need to change the database schema follow these steps:
@@ -94,6 +96,29 @@ If you need to change the database schema follow these steps:
    run::
 
      python manage.py migrate
+
+
+SQLAlchemy
+----------
+The Django database schema can be found in ``aiida/backends/sqlalchemy/models``
+
+If you need to change the database schema follow these steps:
+
+1. Make all the necessary changes to the model than you would like to modify
+   located in the ``aiida/backends/sqlalchemy/models`` directory.
+2. Create new migration file by going to ``aiida/backends/sqlalchemy`` and
+   executing::
+
+    ./alembic_manage.py revision "This is a new revision"
+
+   This will create a new migration file in ``aiida/backends/sqlalchemy/migrations/versions``
+   whose names begins with an automatically generated hash code and the
+   provided message for this new migration.
+3. Your database will be automatically migrated to the latest revision as soon
+   as you run your first verdi command. You can also migrate it manually with
+   the help of the alembic_manage.py script as you can see below.
+
+
 
 Commits and GIT usage
 +++++++++++++++++++++

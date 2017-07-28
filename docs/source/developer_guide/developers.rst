@@ -113,12 +113,32 @@ If you need to change the database schema follow these steps:
 
    This will create a new migration file in ``aiida/backends/sqlalchemy/migrations/versions``
    whose names begins with an automatically generated hash code and the
-   provided message for this new migration.
+   provided message for this new migration. Please look at the generated
+   file and ensure that migration is correct. If you are in doubt about the
+   operations mentioned in the file and its content, you can have a look at
+   the alembic documentation.
 3. Your database will be automatically migrated to the latest revision as soon
    as you run your first verdi command. You can also migrate it manually with
    the help of the alembic_manage.py script as you can see below.
 
+Overview of alembic_manage.py commands
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The alembic_manage.py provides several options to control your SQLAlchemy
+migrations. By executing::
 
+    ./alembic_manage.py --help
+
+you will get a full list of the available arguments that you can pass and
+commands. Briefly, the available commands are:
+
+* **upgrade** This command allows you to upgrade to the later version. For the
+  moment, you can only upgrade to the latest version.
+* **downgrade** This command allows you to downgrade the version of your
+  database. For the moment, you can only downgrade to the base version.
+* **history** This command lists the available migrations in chronological
+  order.
+* **current** It displays the current version of the database
+* **revision** It creates a new migration file based on the model changes.
 
 Commits and GIT usage
 +++++++++++++++++++++

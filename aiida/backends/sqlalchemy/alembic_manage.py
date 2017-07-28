@@ -24,15 +24,6 @@ if __name__ == "__main__":
     import argparse
     from aiida.backends.sqlalchemy.utils import alembic_command
 
-    # Copy sys.argv
-    actual_argv = sys.argv[:]
-
-    # Check if the first cmdline option is --aiida-process=PROCESSNAME
-    try:
-        first_cmdline_option = sys.argv[1]
-    except IndexError:
-        first_cmdline_option = None
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--aiida-profile', help='The AiiDA profile that you would like to use')
@@ -69,7 +60,7 @@ if __name__ == "__main__":
     parser_rev.add_argument(
         'arguments', nargs=1, help='Revision message')
 
-    args = parser.parse_args(actual_argv[1:])
+    args = parser.parse_args(sys.argv[1:])
 
     if args.command in AVAIL_AL_COMMANDS:
         # Use the default process if not specified

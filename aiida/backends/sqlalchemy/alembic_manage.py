@@ -54,15 +54,15 @@ if __name__ == "__main__":
         help='Output in verbose mode')
 
     parser_cur = subparsers.add_parser(
-        'current', help='Display the current revision for a database')
+        'current', help='Display the current version for a database')
     parser_cur.add_argument(
         'arguments', choices=['verbose'], nargs='?',
         help='Output in verbose mode')
 
     parser_rev = subparsers.add_parser(
-        'revision', help='Create a new revision file')
+        'revision', help='Create a new migration file')
     parser_rev.add_argument(
-        'arguments', nargs=1, help='Revision message')
+        'arguments', nargs=1, help='Migration message')
 
     args = parser.parse_args(sys.argv[1:])
 

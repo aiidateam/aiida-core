@@ -712,7 +712,10 @@ If the Quantum ESPRESSO plugin entry points are not listed, you can try the foll
   reentry scan
   verdi calculation plugins
 
-If the entry points are still not listed, please contact the developers for support
+If the entry points are still not listed, please contact the developers for support.
+Finally, make sure to restart the daemon::
+
+  verdi daemon restart
 
 
 Updating from 0.8.* Django to 0.9.0 Django

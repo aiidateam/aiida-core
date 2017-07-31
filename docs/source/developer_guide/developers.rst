@@ -117,7 +117,7 @@ If you need to change the database schema follow these steps:
    migration message to a message of your preference. Please look at the
    generatedvfile and ensure that migration is correct. If you are in doubt
    about the operations mentioned in the file and its content, you can have a
-   look at the alembic documentation.
+   look at the Alembic documentation.
 3. Your database will be automatically migrated to the latest revision as soon
    as you run your first verdi command. You can also migrate it manually with
    the help of the alembic_manage.py script as you can see below.
@@ -141,6 +141,36 @@ commands. Briefly, the available commands are:
 * **current** This command displays the current version of the database.
 * **revision** This command creates a new migration file based on the model
   changes.
+
+.. _first_alembic_migration:
+
+Debugging Alembic
+~~~~~~~~~~~~~~~~~
+Alembic migrations should work automatically and migrate your database to the
+latest version. However, if you were using SQLAlchemy before we introduced
+Alembic, you may get a message like to following during the first migration::
+
+    sqlalchemy.exc.ProgrammingError: (psycopg2.ProgrammingError) relation
+    "db_dbuser" already exists [SQL: '\nCREATE TABLE db_dbuser (\n\tid SERIAL
+    NOT NULL, \n\temail VARCHAR(254), \n\tpassword VARCHAR(128),
+    \n\tis_superuser BOOLEAN NOT NULL, \n\tfirst_name VARCHAR(254),
+    \n\tlast_name VARCHAR(254), \n\tinstitution VARCHAR(254), \n\tis_staff
+    BOOLEAN, \n\tis_active BOOLEAN, \n\tlast_login TIMESTAMP WITH TIME ZONE,
+    \n\tdate_joined TIMESTAMP WITH TIME ZONE, \n\tCONSTRAINT db_dbuser_pkey
+    PRIMARY KEY (id)\n)\n\n']
+
+In this case, you should create manually the Alembic table in your database and
+add a line with the database version number. To do so, use psql to connect
+to the desired database::
+
+    psql aiidadb_sqla
+
+(you should replace ``aiidadb_sqla`` with the name of the database that you
+would like to modify). Then, execute the following commands::
+
+    CREATE TABLE alembic_version (version_num character varying(32) not null, PRIMARY KEY(version_num));
+    INSERT INTO alembic_version VALUES ('e15ef2630a1b');
+    GRANT ALL ON alembic_version TO aiida;
 
 Commits and GIT usage
 +++++++++++++++++++++

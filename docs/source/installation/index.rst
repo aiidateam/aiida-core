@@ -717,6 +717,13 @@ Finally, make sure to restart the daemon::
 
   verdi daemon restart
 
+Now everything should be working properly and you can use the plugin as you were used to.
+You can use the ``CalculationFactory`` exactly in the same way to load calculation classes.
+For example you can still call ``CalculationFactory('quantumespresso.pw')`` to load the ``PwCalculation`` class.
+The only thing that will have changed is that you can no longer directly import from the old plugin location.
+That means that ``from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation`` will no longer work as those files no longer exist.
+Instead you can use the factories or the new import location ``from aiida_quantumespresso.calculation.pw import PwCalculation``.
+
 
 Updating from 0.8.* Django to 0.9.0 Django
 ++++++++++++++++++++++++++++++++++++++++++

@@ -151,9 +151,6 @@ class AbstractNode(object):
     # A list of attribute names that will be ignored when creating the hash.
     _hash_ignored_attributes = []
 
-    # An attribute / property that defines whether the node should be used as cache
-    _is_valid_cache = True
-
     def get_desc(self):
         """
         Returns a string with infos retrieved from a node's
@@ -1518,9 +1515,15 @@ class AbstractNode(object):
             qb = QueryBuilder()
             qb.append(self.__class__, filters={'extras.hash':hash_}, project='*', subclassing=False)
             for same_node, in qb.iterall():
-                if same_node._is_valid_cache:
+                if same_node._is_valid_cache():
                     return same_node
         return None
+
+    def _is_valid_cache(self):
+        """
+        Subclass hook to exclude certain Nodes (e.g. failed calculations) from being considered in the caching process.
+        """
+        return True
 
     @property
     def out(self):

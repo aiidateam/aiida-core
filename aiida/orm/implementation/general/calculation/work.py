@@ -10,6 +10,7 @@
 
 from aiida.orm.implementation.calculation import Calculation
 from aiida.common.lang import override
+from aiida.common import caching
 
 class WorkCalculation(Calculation):
     """
@@ -18,6 +19,8 @@ class WorkCalculation(Calculation):
     """
     FINISHED_KEY = '_finished'
     FAILED_KEY = '_failed'
+    _hash_ignored_attributes = [FINISHED_KEY]
+    _use_cache = caching.defaults.use_cache
 
     _hash_ignored_inputs = ['_return_pid', '_fast_forward']
     _hash_ignored_attributes = ['_finished', '_sealed']
@@ -59,3 +62,6 @@ class WorkCalculation(Calculation):
             ])
         except:
             return None
+
+    def _is_valid_cache(self):
+        return super(WorkCalculation, self)._is_valid_cache() and self.has_finished_ok

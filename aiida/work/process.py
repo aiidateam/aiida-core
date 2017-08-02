@@ -35,6 +35,7 @@ from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.work import WorkCalculation
 from aiida import LOG_LEVEL_REPORT
+from aiida.common import caching
 
 
 

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 import logging
@@ -12,11 +20,7 @@ from aiida.common.exceptions import (
     MissingPluginError, ValidationError)
 
 from aiida.common.utils import classproperty
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
+from aiida.common.utils import abstractclassmethod, abstractstaticmethod
 
 
 class AbstractComputer(object):
@@ -175,8 +179,7 @@ class AbstractComputer(object):
     def set(self, **kwargs):
         pass
 
-    @staticmethod
-    @abstractmethod
+    @abstractstaticmethod
     def get_db_columns():
         """
         This method returns a list with the column names and types of the
@@ -186,8 +189,7 @@ class AbstractComputer(object):
         """
         pass
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def list_names(cls):
         """
         Return a list with all the names of the computers in the DB.
@@ -206,8 +208,7 @@ class AbstractComputer(object):
     def to_be_stored(self):
         pass
 
-    @classmethod
-    @abstractmethod
+    @abstractclassmethod
     def get(cls, computer):
         """
         Return a computer from its name (or from another Computer or DbComputer instance)

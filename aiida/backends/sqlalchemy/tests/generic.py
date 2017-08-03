@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Generic tests that need the be specific to sqlalchemy
 """
@@ -35,16 +43,16 @@ class TestComputer(AiidaTestCase):
 
         _ = JobCalculation(**calc_params).store()
 
-        #print "Node stored with pk:",  _.dbnode.pk
+        session = aiida.backends.sqlalchemy.get_scoped_session()
 
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
         try:
-            aiida.backends.sqlalchemy.session.begin_nested()
+            session.begin_nested()
             with self.assertRaises(InvalidOperation):
                 delete_computer(self.computer)
         finally:
-            aiida.backends.sqlalchemy.session.rollback()
+            session.rollback()
 
 
 class TestGroupsSqla(AiidaTestCase):

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import functools
 import os
@@ -11,17 +19,12 @@ from aiida.backends.settings import AIIDADB_PROFILE
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.utils import get_session, get_engine
-from aiida.backends.sqlalchemy.utils import (install_tc)
+from aiida.backends.sqlalchemy.utils import install_tc
 from aiida.backends.testimplbase import AiidaTestImplementation
 from aiida.common.setup import get_profile_config
 from aiida.common.utils import get_configured_user_email
 from aiida.orm.computer import Computer
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.0"
 
 # Querying for expired objects automatically doesn't seem to work.
 # That's why expire on commit=False resolves many issues of objects beeing
@@ -49,21 +52,16 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def setUpClass_method(self):
 
-        if self.test_session is None:
-            if self.connection is None:
-                config = get_profile_config(AIIDADB_PROFILE)
-                engine = get_engine(config)
-                
-                self.test_session = get_session(engine=engine)
-                self.connection = engine.connect()
+        from aiida.backends.sqlalchemy import get_scoped_session
 
-            self.test_session = Session(bind=self.connection)
-            aiida.backends.sqlalchemy.session = self.test_session
+        if self.test_session is None:
+            # Should we use reset_session?
+            self.test_session = get_scoped_session()
 
         if self.drop_all:
-            Base.metadata.drop_all(self.connection)
-            Base.metadata.create_all(self.connection)
-            install_tc(self.connection)
+            Base.metadata.drop_all(self.test_session.connection)
+            Base.metadata.create_all(self.test_session.connection)
+            install_tc(self.test_session.connection)
         else:
             self.clean_db()
 
@@ -90,7 +88,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
         else:
             self.user = has_user
 
-        # Reqired by the calling class
+        # Required by the calling class
         self.user_email = self.user.email
 
         # Also self.computer is required by the calling class
@@ -125,7 +123,8 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def clean_db(self):
         from aiida.backends.sqlalchemy.models.computer import DbComputer
-        from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
+        from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, table_workflowstep_calc, \
+            table_workflowstep_subworkflow, DbWorkflowStep, DbWorkflowData
         from aiida.backends.sqlalchemy.models.group import DbGroup
         from aiida.backends.sqlalchemy.models.node import DbLink
         from aiida.backends.sqlalchemy.models.node import DbNode
@@ -133,6 +132,12 @@ class SqlAlchemyTests(AiidaTestImplementation):
         from aiida.backends.sqlalchemy.models.user import DbUser
 
         # Delete the workflows
+        # Complicated way to make sure we 'unwind' all the relationships
+        # between workflows and their children.
+        self.test_session.connection().execute(table_workflowstep_calc.delete())
+        self.test_session.connection().execute(table_workflowstep_subworkflow.delete())
+        self.test_session.query(DbWorkflowData).delete()
+        self.test_session.query(DbWorkflowStep).delete()
         self.test_session.query(DbWorkflow).delete()
 
         # Empty the relationship dbgroup.dbnode
@@ -178,9 +183,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
         self.test_session.close()
         self.test_session = None
-
-        # Don't close it each time, no need
-        #self.connection.close()
 
         # I clean the test repository
         shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Tests for nodes, attributes and links
 """
@@ -11,10 +19,6 @@ from aiida.orm.data import Data
 from aiida.orm.node import Node
 from aiida.orm.utils import load_node
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class TestDataNode(AiidaTestCase):
@@ -757,6 +761,19 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.boolval, a.get_attr('bool'))
         self.assertEquals(a_string, a.get_extra('bool'))
 
+        self.assertEquals(a.get_extras(), {'bool': a_string})
+
+    def test_get_extras_with_default(self):
+        a = Node()
+        a.store()
+        a.set_extra('a', 'b')
+        
+        self.assertEquals(a.get_extra('a'), 'b')
+        with self.assertRaises(AttributeError):
+            a.get_extra('c')
+
+        self.assertEquals(a.get_extra('c', 'def'), 'def')
+
     def test_attr_and_extras_multikey(self):
         """
         Multiple nodes with the same key. This should not be a problem
@@ -956,6 +973,83 @@ class TestNodeBasic(AiidaTestCase):
         extras_to_set.update(new_extras)
         self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
 
+    def test_basetype_as_attr(self):
+        """
+        Test that setting a basetype as an attribute works transparently
+        """
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.data.base import Str, List
+
+        # This one is unstored
+        l1 = List()
+        l1._set_list(['b', [1,2]])
+
+        # This one is stored
+        l2 = List()
+        l2._set_list(['f', True, {'gg': None}])
+        l2.store()
+
+        # Manages to store, and value is converted to its base type
+        p = ParameterData(dict={'b': Str("sometext"), 'c': l1})
+        p.store()
+        self.assertEqual(p.get_attr('b'), "sometext")
+        self.assertIsInstance(p.get_attr('b'),basestring)
+        self.assertEqual(p.get_attr('c'), ['b', [1,2]])
+        self.assertIsInstance(p.get_attr('c'), (list, tuple))
+        
+        # Check also before storing
+        n = Node()
+        n._set_attr('a', Str("sometext2"))
+        n._set_attr('b', l2)
+        self.assertEqual(n.get_attr('a'), "sometext2")
+        self.assertIsInstance(n.get_attr('a'),basestring)
+        self.assertEqual(n.get_attr('b'), ['f', True, {'gg': None}])
+        self.assertIsInstance(n.get_attr('b'), (list, tuple))
+        
+        # Check also deep in a dictionary/list
+        n = Node()
+        n._set_attr('a', {'b': [Str("sometext3")]})
+        self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+        n.store()
+        self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+
+    def test_basetype_as_extra(self):
+        """
+        Test that setting a basetype as an attribute works transparently
+        """
+        from aiida.orm.data.base import Str, List
+
+        # This one is unstored
+        l1 = List()
+        l1._set_list(['b', [1,2]])
+
+        # This one is stored
+        l2 = List()
+        l2._set_list(['f', True, {'gg': None}])
+        l2.store()
+
+        # Check also before storing
+        n = Node()
+        n.store()
+        n.set_extra('a', Str("sometext2"))
+        n.set_extra('c', l1)
+        n.set_extra('d', l2)
+        self.assertEqual(n.get_extra('a'), "sometext2")
+        self.assertIsInstance(n.get_extra('a'),basestring)
+        self.assertEqual(n.get_extra('c'), ['b', [1, 2]])
+        self.assertIsInstance(n.get_extra('c'), (list, tuple))
+        self.assertEqual(n.get_extra('d'), ['f', True, {'gg': None}])
+        self.assertIsInstance(n.get_extra('d'), (list, tuple))
+
+        # Check also deep in a dictionary/list
+        n = Node()
+        n.store()
+        n.set_extra('a', {'b': [Str("sometext3")]})
+        self.assertEqual(n.get_extra('a')['b'][0], "sometext3")
+        self.assertIsInstance(n.get_extra('a')['b'][0],basestring)     
+
     def test_versioning_lowlevel(self):
         """
         Checks the versioning.
@@ -1014,12 +1108,13 @@ class TestNodeBasic(AiidaTestCase):
                           [(self.user_email, 'text'),
                            (self.user_email, 'text2'), ])
 
-    def test_code_loading(self):
+
+    def test_code_loading_from_string(self):
         """
         Checks that the method Code.get_from_string works correctly.
         """
         from aiida.orm.code import Code
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError,InputValidationError
 
         # Create some code nodes
         code1 = Code()
@@ -1038,12 +1133,6 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(q_code_1.label, code1.label)
         self.assertEquals(q_code_1.get_remote_exec_path(),
                           code1.get_remote_exec_path())
-        # Test that the code1 can be loaded correctly with its id/pk
-        q_code_1 = Code.get_from_string(code1.id)
-        self.assertEquals(q_code_1.id, code1.id)
-        self.assertEquals(q_code_1.label, code1.label)
-        self.assertEquals(q_code_1.get_remote_exec_path(),
-                          code1.get_remote_exec_path())
 
         # Test that the code2 can be loaded correctly with its label
         q_code_2 = Code.get_from_string(code2.label + '@' +
@@ -1053,12 +1142,10 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(q_code_2.get_remote_exec_path(),
                           code2.get_remote_exec_path())
 
-        # Test that the code2 can be loaded correctly with its id/pk
-        q_code_2 = Code.get_from_string(code2.id)
-        self.assertEquals(q_code_2.id, code2.id)
-        self.assertEquals(q_code_2.label, code2.label)
-        self.assertEquals(q_code_2.get_remote_exec_path(),
-                          code2.get_remote_exec_path())
+
+        # Calling get_from_string for a non string type raises exception
+        with self.assertRaises(InputValidationError):
+            Code.get_from_string(code1.id)
 
         # Test that the lookup of a nonexistent code works as expected
         with self.assertRaises(NotExistent):
@@ -1073,6 +1160,149 @@ class TestNodeBasic(AiidaTestCase):
         # Query with the common label
         with self.assertRaises(MultipleObjectsError):
             Code.get_from_string(code3.label)
+
+    def test_get_subclass_from_pk(self):
+        """
+        This test checks that
+        aiida.orm.implementation.general.node.AbstractNode#get_subclass_from_pk
+        works correctly for both backends.
+        """
+        a1 = Node().store()
+
+        # Check that you can load it with a simple integer id.
+        a2 = Node.get_subclass_from_pk(a1.id)
+        self.assertEquals(a1.id, a2.id, "The ids of the stored and loaded node"
+                                        "should be equal (since it should be "
+                                        "the same node")
+
+        # Check that you can load it with an id of type long.
+        # a3 = Node.get_subclass_from_pk(long(a1.id))
+        a3 = Node.get_subclass_from_pk(long(a1.id))
+        self.assertEquals(a1.id, a3.id, "The ids of the stored and loaded node"
+                                        "should be equal (since it should be "
+                                        "the same node")
+
+        # Check that it manages to load the node even if the id is
+        # passed as a string.
+        a4 = Node.get_subclass_from_pk(str(a1.id))
+        self.assertEquals(a1.id, a4.id, "The ids of the stored and loaded node"
+                                        "should be equal (since it should be "
+                                        "the same node")
+
+        # Check that a ValueError exception is raised when a string that can
+        # not be casted to integer is passed.
+        with self.assertRaises(ValueError):
+            Node.get_subclass_from_pk("not_existing_node")
+
+        # Check that a NotExistent exception is raised when an unknown id
+        # is passed.
+        from aiida.common.exceptions import NotExistent
+        with self.assertRaises(NotExistent):
+            Node.get_subclass_from_pk(9999999999)
+
+        # Check that we get a NotExistent exception if we try to load an
+        # instance of a node that doesn't correspond to the Class used to
+        # load it.
+        from aiida.orm.code import Code
+        with self.assertRaises(NotExistent):
+            Code.get_subclass_from_pk(a1.id)
+
+    def test_code_loading_using_get(self):
+        """
+        Checks that the method Code.get(pk) works correctly.
+        """
+        from aiida.orm.code import Code
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+
+        # Create some code nodes
+        code1 = Code()
+        code1.set_remote_computer_exec((self.computer, '/bin/true'))
+        code1.label = 'test_code3'
+        code1.store()
+
+        code2 = Code()
+        code2.set_remote_computer_exec((self.computer, '/bin/true'))
+        code2.label = 'test_code4'
+        code2.store()
+
+        # Test that the code1 can be loaded correctly with its label only
+        q_code_1 = Code.get(label=code1.label)
+        self.assertEquals(q_code_1.id, code1.id)
+        self.assertEquals(q_code_1.label, code1.label)
+        self.assertEquals(q_code_1.get_remote_exec_path(),
+                          code1.get_remote_exec_path())
+
+        # Test that the code1 can be loaded correctly with its id/pk
+        q_code_1 = Code.get(code1.id)
+        self.assertEquals(q_code_1.id, code1.id)
+        self.assertEquals(q_code_1.label, code1.label)
+        self.assertEquals(q_code_1.get_remote_exec_path(),
+                          code1.get_remote_exec_path())
+
+        # Test that the code2 can be loaded correctly with its label and computername
+        q_code_2 = Code.get(label=code2.label,
+                            machinename=self.computer.get_name())
+        self.assertEquals(q_code_2.id, code2.id)
+        self.assertEquals(q_code_2.label, code2.label)
+        self.assertEquals(q_code_2.get_remote_exec_path(),
+                          code2.get_remote_exec_path())
+
+        # Test that the code2 can be loaded correctly with its id/pk
+        q_code_2 = Code.get(code2.id)
+        self.assertEquals(q_code_2.id, code2.id)
+        self.assertEquals(q_code_2.label, code2.label)
+        self.assertEquals(q_code_2.get_remote_exec_path(),
+                          code2.get_remote_exec_path())
+
+        # Test that the lookup of a nonexistent code works as expected
+        with self.assertRaises(NotExistent):
+            Code.get(label='nonexistent_code')
+
+        # Add another code with the label of code1
+        code3 = Code()
+        code3.set_remote_computer_exec((self.computer, '/bin/true'))
+        code3.label = 'test_code3'
+        code3.store()
+
+        # Query with the common label
+        with self.assertRaises(MultipleObjectsError):
+            Code.get(label=code3.label)
+
+        # Add another code whose label is equal to pk of another code
+        pk_label_duplicate = code1.pk
+        code4 = Code()
+        code4.set_remote_computer_exec((self.computer, '/bin/true'))
+        code4.label = pk_label_duplicate
+        code4.store()
+
+        # Since the label of code4 is identical to the pk of code1, calling
+        # Code.get(pk_label_duplicate) should return code1, as the pk takes
+        # precedence
+        q_code_4 = Code.get(code4.label)
+        self.assertEquals(q_code_4.id, code1.id)
+        self.assertEquals(q_code_4.label, code1.label)
+        self.assertEquals(q_code_4.get_remote_exec_path(),
+                          code1.get_remote_exec_path())
+
+    def test_code_description(self):
+        """
+        This test checks that the code description is retrieved correctly
+        when the code is searched with its id and label.
+        """
+        from aiida.orm.code import Code
+
+        # Create a code node
+        code = Code()
+        code.set_remote_computer_exec((self.computer, '/bin/true'))
+        code.label = 'test_code_label'
+        code.description = 'test code description'
+        code.store()
+
+        q_code1 = Code.get(label=code.label)
+        self.assertEquals(code.description, str(q_code1.description))
+
+        q_code2 = Code.get(code.id)
+        self.assertEquals(code.description, str(q_code2.description))
 
     def test_list_for_plugin(self):
         """
@@ -1098,6 +1328,47 @@ class TestNodeBasic(AiidaTestCase):
         retrieved_labels = set(Code.list_for_plugin('plugin_name', labels=True))
         self.assertEqual(retrieved_labels, set([code1.label, code2.label]))
 
+    def test_load_node(self):
+        """
+        Tests the load node functionality
+        """
+        from aiida.orm.data.array import ArrayData
+        from aiida.orm import Node, load_node
+        from aiida.common.exceptions import NotExistent
+
+        # I only need one node to test
+        node = Node().store()
+        uuid_stored = node.uuid # convenience to store the uuid
+        # Simple test to see whether I load correctly from the pk:
+        self.assertEqual(uuid_stored, load_node(node.pk).uuid)
+        # Testing the loading with the uuid:
+        self.assertEqual(uuid_stored, load_node(uuid_stored).uuid)
+
+        # Here I'm testing whether loading the node with the beginnings of a uuid works
+        for i in range(10, len(uuid_stored), 2):
+            start_uuid = uuid_stored[:i]
+            self.assertEqual(uuid_stored, load_node(start_uuid).uuid)
+
+        # Testing whether loading the node with part of UUID works, removing the dashes
+        for i in range(10, len(uuid_stored), 2):
+            start_uuid = uuid_stored[:i].replace('-', '')
+            self.assertEqual(uuid_stored, load_node(start_uuid).uuid)
+            # If I don't allow load_node to fix the dashes, this has to raise:
+            with self.assertRaises(NotExistent):
+                load_node(start_uuid, query_with_dashes=False)
+
+        # Now I am reverting the order of the uuid, this will raise a NotExistent error:
+        with self.assertRaises(NotExistent):
+            load_node(uuid_stored[::-1])
+
+        # I am giving a non-sensical pk, this should also raise
+        with self.assertRaises(NotExistent):
+            load_node(-1)
+
+        # Last check, when asking for specific subclass, this should raise:
+        for spec in (node.pk, uuid_stored):
+            with self.assertRaises(NotExistent):
+                load_node(spec, parent_class=ArrayData)
 
 class TestSubNodesAndLinks(AiidaTestCase):
     def test_cachelink(self):
@@ -1215,6 +1486,28 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(also_labels=True)]),
                          set([("N2", n2.uuid)]))
+
+    def test_has_children_has_parents(self):
+        """
+        This check verifies that the properties has_children has_parents of the
+        Node class behave correctly.
+        """
+
+        # Create 2 nodes and store them
+        n1 = Node().store()
+        n2 = Node().store()
+
+        # Create a link between these 2 nodes
+        n2.add_link_from(n1, "N1")
+
+        self.assertTrue(n1.has_children, "It should be true since n2 is the "
+                                         "child of n1.")
+        self.assertFalse(n1.has_parents, "It should be false since n1 doesn't "
+                                         "have any parents.")
+        self.assertFalse(n2.has_children, "It should be false since n2 "
+                                          "doesn't have any children.")
+        self.assertTrue(n2.has_parents, "It should be true since n1 is the "
+                                        "parent of n2.")
 
     def test_use_code(self):
         from aiida.orm import JobCalculation

@@ -12,9 +12,9 @@ Setup
 +++++
 
 To be able to export data to TCOD, one has to
-:ref:`install dependencies for CIF manipulation <CIF_manipulation_dependencies>`
-as well as :ref:`cod-tools package <codtools_installation>`, and set up an
-AiiDA :py:class:`Code <aiida.orm.code.Code>` for ``cif_cod_deposit`` script
+:ref:`install the atomic_tools dependencies to enable CIF manipulation <install_optional_dependencies>`
+as well as the :ref:`cod-tools package and plugin <codtools_plugin>`, and set up an
+AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>` for ``cif_cod_deposit`` script
 from **cod-tools**.
 
 How to deposit a structure
@@ -22,38 +22,39 @@ How to deposit a structure
 
 Best way to deposit data is to use the command line interface::
 
-    verdi DATATYPE structure deposit tcod [--type {published,prepublication,personal}]
-                                          [--username USERNAME] [--password]
-                                          [--user-email USER_EMAIL] [--title TITLE]
-                                          [--author-name AUTHOR_NAME]
-                                          [--author-email AUTHOR_EMAIL] [--url URL]
-                                          [--code CODE_LABEL]
-                                          [--computer COMPUTER_NAME]
-                                          [--replace REPLACE] [-m MESSAGE]
-                                          [--reduce-symmetry] [--no-reduce-symmetry]
-                                          [--parameter-data PARAMETER_DATA]
-                                          [--dump-aiida-database]
-                                          [--no-dump-aiida-database]
-                                          [--exclude-external-contents]
-                                          [--no-exclude-external-contents] [--gzip]
-                                          [--no-gzip]
-                                          [--gzip-threshold GZIP_THRESHOLD]
-                                          PK
+    verdi data DATATYPE deposit --database tcod
+                                     [--type {published,prepublication,personal}]
+                                     [--username USERNAME] [--password]
+                                     [--user-email USER_EMAIL] [--title TITLE]
+                                     [--author-name AUTHOR_NAME]
+                                     [--author-email AUTHOR_EMAIL] [--url URL]
+                                     [--code CODE_LABEL]
+                                     [--computer COMPUTER_NAME]
+                                     [--replace REPLACE] [-m MESSAGE]
+                                     [--reduce-symmetry] [--no-reduce-symmetry]
+                                     [--parameter-data PARAMETER_DATA]
+                                     [--dump-aiida-database]
+                                     [--no-dump-aiida-database]
+                                     [--exclude-external-contents]
+                                     [--no-exclude-external-contents] [--gzip]
+                                     [--no-gzip]
+                                     [--gzip-threshold GZIP_THRESHOLD]
+                                     PK
 
 Where:
 
 * ``DATATYPE`` -- one of AiiDA structural data types (at the moment of
-  writing, they were
-  :py:class:`StructureData <aiida.orm.data.structure.StructureData>`,
-  :py:class:`CifData <aiida.orm.data.cif.CifData>` and
-  :py:class:`TrajectoryData <aiida.orm.data.array.trajectory.TrajectoryData>`);
+  writing, these are
+  ``structure`` for :py:class:`StructureData <aiida.orm.data.structure.StructureData>`,
+  ``cif`` for :py:class:`CifData <aiida.orm.data.cif.CifData>` and
+  ``trajectory`` for :py:class:`TrajectoryData <aiida.orm.data.array.trajectory.TrajectoryData>`);
 * ``TITLE`` -- the title of the publication, where the exported data
   is/will be published; in case of personal communication, the title
   should be chosen so as to reflect the exported dataset the best;
-* ``CODE_LABEL`` -- label of AiiDA :py:class:`Code <aiida.orm.code.Code>`,
+* ``CODE_LABEL`` -- label of AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>`,
   associated with *cif_cod_deposit*;
 * ``COMPUTER_NAME`` -- name of AiiDA
-  :py:class:`Computer <aiida.orm.computer.Computer>`, where
+  :py:class:`Computer <aiida.orm.implementation.general.computer.AbstractComputer>`, where
   *cif_cod_deposit* script is to be launched;
 * ``REPLACE`` -- `TCOD ID`_ of the replaced entry in the event of
   redeposition;
@@ -67,11 +68,11 @@ Where:
 * ``--dump-aiida-database``, ``--no-dump-aiida-database`` -- turn on/off
   addition of relevant AiiDA database dump (on by default).
 
-  .. warning:: be aware that TCOD is an **open** database, thus **no
+  .. warning:: Be aware that TCOD is an **open** database, thus **no
     copyright-protected data should be deposited** unless permission is
     given by the owner of the rights.
 
-  .. note:: data, which is deposited as pre-publication material, **will
+  .. note:: Data, which is deposited as pre-publication material, **will
     be kept private on TCOD server** and will not be disclosed to anyone
     without depositor's permission.
 
@@ -103,14 +104,14 @@ Command line parameter  AiiDA property
 .. note:: ``--password`` does not accept any value; instead, the option
     will prompt the user to enter one's password in the terminal.
 
-.. note:: command line parameters can be used to override AiiDA
+.. note:: Command line parameters can be used to override AiiDA
     properties even if properties are set.
 
 Return values
 +++++++++++++
 
 The deposition process, which is of
-:py:class:`JobCalculation <aiida.orm.calculation.job.JobCalculation>`
+:py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`
 type, returns the output of ``cif_cod_deposit``, wrapped in
 :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`.
 

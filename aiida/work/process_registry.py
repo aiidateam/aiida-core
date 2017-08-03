@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import plum.process
 import plum.knowledge_provider
@@ -57,7 +66,8 @@ class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
         from aiida.orm import load_node
 
         try:
-            return load_node(pid).get_outputs_dict()
+            return {e[0]: e[1]
+                    for e in load_node(pid).get_outputs(also_labels=True)}
         except exceptions.NotExistent:
             raise plum.knowledge_provider.NotKnown(
                 "Can't find node with pk '{}'".format(pid))

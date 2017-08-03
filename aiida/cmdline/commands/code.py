@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 This allows to setup and configure a code from command line.
 
@@ -7,11 +15,6 @@ TODO: think if we want to allow to change path and prepend/append text.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 def cmdline_fill(attributes, store, print_header=True):
@@ -227,6 +230,9 @@ class CodeInputValidationClass(object):
         if not label.strip():
             raise ValidationError("No label specified")
 
+        if "@" in label:
+            raise ValidationError("Can not use '@' in label")
+
     description = ""
 
     def _get_description_string(self):
@@ -410,14 +416,15 @@ class CodeInputValidationClass(object):
         """
         from aiida.common.exceptions import ValidationError
         from aiida.orm import JobCalculation
-        from aiida.common.pluginloader import existing_plugins
+        from aiida.common.pluginloader import all_plugins
 
         if input_plugin is None:
             return
 
-        if input_plugin not in existing_plugins(JobCalculation,
-                                                'aiida.orm.calculation.job',
-                                                suffix='Calculation'):
+        #if input_plugin not in existing_plugins(JobCalculation,
+        #                                        'aiida.orm.calculation.job',
+        #                                        suffix='Calculation'):
+        if input_plugin not in all_plugins('calculations'):
             raise ValidationError("Invalid value '{}' for the input_plugin "
                                   "variable, it is not among the existing plugins".format(
                 str(input_plugin)))
@@ -801,20 +808,30 @@ class Code(VerdiCommandWithSubcommands):
         Get a Computer object with given identifier, that can either be
         the numeric ID (pk), or the label (if unique).
 
-        .. note:: If an string that can be converted to an integer is given,
-            the numeric ID is verified first (therefore, is a code A with a
-            label equal to the ID of another code B is present, code A cannot
-            be referenced by label).
+        .. note:: Since all command line arguments get converted to string types, we
+            cannot assess the intended type (an integer pk or a string label) from the
+            type of the variable code_id. If the code_id can be converted into an integer
+            we will assume the value corresponds to a pk. This means, however, that if there
+            would be another code, with a label directly equivalent to the string value of that
+            pk, that this code can not be referenced by its label, as the other code, corresponding
+            to the integer pk, will get matched first.
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
-
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError, InputValidationError
         from aiida.orm import Code as AiidaOrmCode
 
         try:
-            return AiidaOrmCode.get_from_string(code_id)
-        except (NotExistent, MultipleObjectsError) as e:
-            print >> sys.stderr, e.message
-            sys.exit(1)
+            pk = int(code_id)
+            try:
+                return AiidaOrmCode.get(pk=pk)
+            except (NotExistent, MultipleObjectsError, InputValidationError) as e:
+                print >> sys.stderr, e.message
+                sys.exit(1)
+        except ValueError:
+            try:
+                return AiidaOrmCode.get_from_string(code_id)
+            except (NotExistent, MultipleObjectsError) as e:
+                print >> sys.stderr, e.message
+                sys.exit(1)
 
     def code_show(self, *args):
         """

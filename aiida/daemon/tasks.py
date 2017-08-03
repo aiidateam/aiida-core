@@ -1,15 +1,21 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from datetime import timedelta
 
-from aiida.backends import settings
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from celery import Celery
 from celery.task import periodic_task
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
+from aiida.backends import settings
+from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+from aiida.common.setup import AIIDA_CONFIG_FOLDER, DAEMON_SUBDIR
 
 if not is_dbenv_loaded():
     load_dbenv(process="daemon")
@@ -18,11 +24,11 @@ from aiida.common.setup import get_profile_config
 from aiida.common.exceptions import ConfigurationError
 from aiida.daemon.timestamps import set_daemon_timestamp,get_last_daemon_timestamp
 
-DAEMON_INTERVALS_SUBMIT = 30
-DAEMON_INTERVALS_RETRIEVE = 30
+DAEMON_INTERVALS_SUBMIT = 10
+DAEMON_INTERVALS_RETRIEVE = 10
 DAEMON_INTERVALS_UPDATE = 30
 DAEMON_INTERVALS_WFSTEP = 30
-DAEMON_INTERVALS_TICK_WORKFLOWS = 30
+DAEMON_INTERVALS_TICK_WORKFLOWS = 5
 
 config = get_profile_config(settings.AIIDADB_PROFILE)
 
@@ -34,18 +40,12 @@ engine = config["AIIDADB_ENGINE"]
 # since now it is decoupled from a backend
 # one would simply substitute the broker with whatever the user wants...
 
-if engine == "sqlite3":
-    broker = (
-        "sqla+sqlite:///{AIIDADB_NAME}"
-    ).format(**config)
-elif engine.startswith("postgre"):
-    broker = (
-        "sqla+postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-        "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-    ).format(**config)
-else:
-    raise ConfigurationError("Unknown DB engine: {}".format(
-        engine))
+if not engine.startswith("postgre"):
+    raise ConfigurationError("Only PostgreSQL is currently supported as database engine, you have {}".format(engine))
+broker = (
+    "sqla+postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
+    "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
+).format(**config)
 
 app = Celery('tasks', broker=broker)
 

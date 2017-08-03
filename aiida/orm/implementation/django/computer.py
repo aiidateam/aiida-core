@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import json
 import collections
@@ -11,12 +19,7 @@ from aiida.common.lang import override
 from aiida.orm.implementation.general.computer import AbstractComputer, Util as ComputerUtil
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
-from aiida.orm.implementation.django.utils import get_db_columns
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
+from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class Computer(AbstractComputer):
@@ -77,7 +80,8 @@ class Computer(AbstractComputer):
 
     @staticmethod
     def get_db_columns():
-        from aiida.backends.djsite.db.models import DbComputer
+        # from aiida.backends.djsite.db.models import DbComputer
+        from aiida.backends.djsite.querybuilder_django.dummy_model import DbComputer
         return get_db_columns(DbComputer)
 
     @classmethod

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import collections
 
@@ -17,12 +25,7 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
 
 from aiida.orm.implementation.general.group import AbstractGroup
 
-from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
+from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class Group(AbstractGroup):
@@ -134,7 +137,8 @@ class Group(AbstractGroup):
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
         from aiida.orm.implementation.sqlalchemy.node import Node
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
 
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
@@ -232,13 +236,15 @@ class Group(AbstractGroup):
         for node in list_nodes:
             self._dbgroup.dbnodes.remove(node)
 
-        sa.session.commit()
+        sa.get_scoped_session().commit()
 
     @classmethod
     def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
               user=None, node_attributes=None, past_days=None,
               name_filters=None, **kwargs):
         from aiida.orm.implementation.sqlalchemy.node import Node
+
+        session = sa.get_scoped_session()
 
         filters = []
 
@@ -263,7 +269,7 @@ class Group(AbstractGroup):
 
             # In the case of the Node orm from Sqlalchemy, there is an id
             # property on it.
-            sub_query = (sa.session.query(table_groups_nodes).filter(
+            sub_query = (session.query(table_groups_nodes).filter(
                 table_groups_nodes.c["dbnode_id"].in_(
                     map(lambda n: n.id, nodes)),
                 table_groups_nodes.c["dbgroup_id"] == DbGroup.id
@@ -293,15 +299,18 @@ class Group(AbstractGroup):
             pass
 
         # TODO SP: handle **kwargs
-        groups = (sa.session.query(DbGroup.id).filter(*filters)
+        groups = (session.query(DbGroup.id).filter(*filters)
                   .order_by(DbGroup.id).distinct().all())
 
         return [cls(dbgroup=g[0]) for g in groups]
 
     def delete(self):
+
+        session = sa.get_scoped_session()
+
         if self.pk is not None:
-            sa.session.delete(self._dbgroup)
-            sa.session.commit()
+            session.delete(self._dbgroup)
+            session.commit()
 
             new_group = copy(self._dbgroup)
             make_transient(new_group)

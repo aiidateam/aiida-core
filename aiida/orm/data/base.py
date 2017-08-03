@@ -1,15 +1,31 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from abc import ABCMeta
+import numbers
 import collections
+
+try:
+    from functools import singledispatch
+except ImportError:
+    from singledispatch import singledispatch
+from past.builtins import basestring
+import numpy as np
+
 from aiida.orm import Data
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
-
-
 class BaseType(Data):
+    """
+    Store a base python type as a AiiDA node in the DB.
+
+    Provide the .value property to get the actual value.
+    """
     __metaclass__ = ABCMeta
 
     def __init__(self, *args, **kwargs):
@@ -80,91 +96,70 @@ class BaseType(Data):
 
         return kwargs
 
+def _left_operator(func):
+    def inner(self, other):
+        l = self.value
+        if isinstance(other, NumericType):
+            r = other.value
+        else:
+            r = other
+        return to_aiida_type(func(l, r))
+    return inner
+
+def _right_operator(func):
+    def inner(self, other):
+        assert not isinstance(other, NumericType)
+        return to_aiida_type(func(self.value, other))
+    return inner
 
 class NumericType(BaseType):
+    """
+    Specific subclass of :py:class:`BaseType` to store numbers,
+    overloading common operators (``+``, ``*``, ...)
+    """
+    @_left_operator
     def __add__(self, other):
-        if isinstance(other, NumericType):
-            return self.new(self.value + other.value)
-        else:
-            return self.new(self.value + other)
+        return self + other
 
-    def __iadd__(self, other):
-        assert not self.is_stored
-        if isinstance(other, NumericType):
-            self.value += other.value
-        else:
-            self.value += other
-        return self
-
+    @_right_operator
     def __radd__(self, other):
-        assert not isinstance(other, NumericType)
-        return self.new(other + self.value)
+        return other + self
 
+    @_left_operator
     def __sub__(self, other):
-        if isinstance(other, NumericType):
-            return self.new(self.value - other.value)
-        else:
-            return self.new(self.value - other)
+        return self - other
 
-    def __isub__(self, other):
-        assert not self.is_stored
-        if isinstance(other, NumericType):
-            self.value -= other.value
-        else:
-            self.value -= other
-        return self
-
+    @_right_operator
     def __rsub__(self, other):
-        assert not isinstance(other, NumericType)
-        return self.new(other - self.value)
+        return other - self
 
+    @_left_operator
     def __mul__(self, other):
-        if isinstance(other, NumericType):
-            return self.new(self.value * other.value)
-        else:
-            return self.new(self.value * other)
+        return self * other
 
-    def __imul__(self, other):
-        assert not self.is_stored
-        if isinstance(other, NumericType):
-            self.value *= other.value
-        else:
-            self.value *= other
-        return self
-
+    @_right_operator
     def __rmul__(self, other):
-        assert not isinstance(other, NumericType)
-        return self.new(other * self.value)
+        return other * self
 
-    def __pow__(self, power, modulo=None):
-        if isinstance(power, NumericType):
-            return self.new(self.value ** power.value)
-        else:
-            return self.new(self.value ** power)
+    @_left_operator
+    def __pow__(self, power):
+        return self ** power
 
+    @_left_operator
     def __lt__(self, other):
-        if isinstance(other, NumericType):
-            return self.value < other.value
-        else:
-            return self.value < other
+        return self < other
 
+    @_left_operator
     def __le__(self, other):
-        if isinstance(other, NumericType):
-            return self.value <= other.value
-        else:
-            return self.value <= other
+        return self <= other
 
+    @_left_operator
     def __gt__(self, other):
-        if isinstance(other, NumericType):
-            return self.value > other.value
-        else:
-            return self.value > other
+        return self > other
 
+    @_left_operator
     def __ge__(self, other):
-        if isinstance(other, NumericType):
-            return self.value >= other.value
-        else:
-            return self.value >= other
+        return self >= other
 
     def __float__(self):
         return float(self.value)
@@ -174,25 +169,48 @@ class NumericType(BaseType):
 
 
 class Float(NumericType):
+    """
+    Class to store float numbers as AiiDA nodes
+    """
     _type = float
 
 
 class Int(NumericType):
+    """
+    Class to store integer numbers as AiiDA nodes
+    """
     _type = int
 
 
 class Str(BaseType):
+    """
+    Class to store strings as AiiDA nodes
+    """
     _type = str
 
 
 class Bool(BaseType):
+    """
+    Class to store booleans as AiiDA nodes
+    """
     _type = bool
 
     def __int__(self):
-        return 0 if not self.value else 1
+        return int(bool(self))
+
+    # Python 2
+    def __nonzero__(self):
+        return self.__bool__()
+
+    # Python 3
+    def __bool__(self):
+        return self.value
 
 
 class List(Data, collections.MutableSequence):
+    """
+    Class to store python lists as AiiDA nodes
+    """
     _LIST_KEY = 'list'
 
     def __getitem__(self, item):
@@ -289,6 +307,7 @@ class List(Data, collections.MutableSequence):
         """
         return self._to_be_stored
 
+
 def get_true_node():
     """
     Return a Bool Data node, with value True
@@ -301,6 +320,7 @@ def get_true_node():
     TRUE = Bool(typevalue=(bool, True))
     return TRUE
 
+
 def get_false_node():
     """
     Return a Bool Data node, with value False
@@ -312,3 +332,27 @@ def get_false_node():
     """
     FALSE = Bool(typevalue=(bool, False))
     return FALSE
+
+@singledispatch
+def to_aiida_type(value):
+    """
+    Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types.
+    """
+    raise TypeError("Cannot convert value of type {} to AiiDA type.".format(type(value)))
+
+@to_aiida_type.register(basestring)
+def _(value):
+    return Str(value)
+
+@to_aiida_type.register(numbers.Integral)
+def _(value):
+    return Int(value)
+
+@to_aiida_type.register(numbers.Real)
+def _(value):
+    return Float(value)
+
+@to_aiida_type.register(bool)
+@to_aiida_type.register(np.bool_)
+def _(value):
+    return Bool(value)

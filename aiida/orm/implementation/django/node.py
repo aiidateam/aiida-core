@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import copy
 
@@ -11,17 +19,12 @@ from aiida.backends.djsite.utils import get_automatic_user
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.folders import RepositoryFolder
-from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.mixins import Sealable
-from aiida.orm.implementation.django.utils import get_db_columns
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
+# from aiida.orm.implementation.django.utils import get_db_columns
+from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class Node(AbstractNode):
@@ -39,7 +42,8 @@ class Node(AbstractNode):
 
     @staticmethod
     def get_db_columns():
-        from aiida.backends.djsite.db.models import DbNode
+        # from aiida.backends.djsite.db.models import DbNode
+        from aiida.backends.djsite.querybuilder_django.dummy_model import DbNode
         return get_db_columns(DbNode)
 
     @classmethod
@@ -53,12 +57,6 @@ class Node(AbstractNode):
             raise NotExistent("pk= {} is not an instance of {}".format(
                 pk, cls.__name__))
         return node
-
-    def __int__(self):
-        if self._to_be_stored:
-            return None
-        else:
-            return self._dbnode.pk
 
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbNode
@@ -150,14 +148,14 @@ class Node(AbstractNode):
     def _update_db_label_field(self, field_value):
         self.dbnode.label = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
 
     def _update_db_description_field(self, field_value):
         self.dbnode.description = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
 
@@ -166,7 +164,7 @@ class Node(AbstractNode):
             self._add_dblink_from(src, label, link_type)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._remove_dblink_from(label)
                 self._add_dblink_from(src, label, link_type)
 
@@ -242,221 +240,103 @@ class Node(AbstractNode):
                                   "name (raw message was {})"
                                   "".format(e.message))
 
-    def get_inputs(self, node_type=None, also_labels=False, only_in_db=False,
-                   link_type=None):
+    def _get_db_input_links(self, link_type):
         from aiida.backends.djsite.db.models import DbLink
 
         link_filter = {'output': self.dbnode}
         if link_type is not None:
             link_filter['type'] = link_type.value
-        inputs_list = [(i.label, i.input.get_aiida_class()) for i in
-                       DbLink.objects.filter(**link_filter).distinct()]
+        return [(i.label, i.input.get_aiida_class()) for i in
+                DbLink.objects.filter(**link_filter).distinct()]
 
-        if not only_in_db:
-            # Needed for the check
-            input_list_keys = [i[0] for i in inputs_list]
 
-            for label, v in self._inputlinks_cache.iteritems():
-                src = v[0]
-                if label in input_list_keys:
-                    raise InternalError("There exist a link with the same name "
-                                        "'{}' both in the DB and in the internal "
-                                        "cache for node pk= {}!".format(label, self.pk))
-                inputs_list.append((label, src))
-
-        if node_type is None:
-            filtered_list = inputs_list
-        else:
-            filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
-
-        if also_labels:
-            return list(filtered_list)
-        else:
-            return [i[1] for i in filtered_list]
-
-    @override
-    def get_outputs(self, type=None, also_labels=False, link_type=None):
+    def _get_db_output_links(self, link_type):
         from aiida.backends.djsite.db.models import DbLink
 
         link_filter = {'input': self.dbnode}
         if link_type is not None:
             link_filter['type'] = link_type.value
-        outputs_list = ((i.label, i.output.get_aiida_class()) for i in
-                        DbLink.objects.filter(**link_filter).distinct())
+        return ((i.label, i.output.get_aiida_class()) for i in
+                DbLink.objects.filter(**link_filter).distinct())
 
-        if type is None:
-            if also_labels:
-                return list(outputs_list)
-            else:
-                return [i[1] for i in outputs_list]
-        else:
-            filtered_list = (i for i in outputs_list if isinstance(i[1], type))
-            if also_labels:
-                return list(filtered_list)
-            else:
-                return [i[1] for i in filtered_list]
-
-    def set_computer(self, computer):
+    def _set_db_computer(self, computer):
         from aiida.backends.djsite.db.models import DbComputer
-        if self._to_be_stored:
-            self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
-        else:
-            raise ModificationNotAllowed(
-                "Node with uuid={} was already stored".format(self.uuid))
+        self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
 
-    def _set_attr(self, key, value):
+    def _set_db_attr(self, key, value):
+        """
+        Set the value directly in the DB, without checking if it is stored, or
+        using the cache.
+
+        DO NOT USE DIRECTLY.
+
+        :param str key: key name
+        :param value: its value
+        """
         from aiida.backends.djsite.db.models import DbAttribute
-        DbAttribute.validate_key(key)
 
-        if self._to_be_stored:
-            self._attrs_cache[key] = copy.deepcopy(value)
-        else:
-            DbAttribute.set_value_for_node(self.dbnode, key, value)
-            self._increment_version_number_db()
+        DbAttribute.set_value_for_node(self.dbnode, key, value)
+        self._increment_version_number_db()
 
-    def _del_attr(self, key):
+    def _del_db_attr(self, key):
         from aiida.backends.djsite.db.models import DbAttribute
-        if self._to_be_stored:
-            try:
-                del self._attrs_cache[key]
-            except KeyError:
-                raise AttributeError(
-                    "DbAttribute {} does not exist".format(key))
-        else:
-            if not DbAttribute.has_key(self.dbnode, key):
-                raise AttributeError("DbAttribute {} does not exist".format(
-                    key))
-            DbAttribute.del_value_for_node(self.dbnode, key)
-            self._increment_version_number_db()
+        if not DbAttribute.has_key(self.dbnode, key):
+            raise AttributeError("DbAttribute {} does not exist".format(
+                key))
+        DbAttribute.del_value_for_node(self.dbnode, key)
+        self._increment_version_number_db()
 
-    def get_attr(self, key, default=_NO_DEFAULT):
+    def _get_db_attr(self, key):
         from aiida.backends.djsite.db.models import DbAttribute
-        try:
-            if self._to_be_stored:
-                try:
-                    return self._attrs_cache[key]
-                except KeyError:
-                    raise AttributeError(
-                        "DbAttribute '{}' does not exist".format(key))
-            else:
-                return DbAttribute.get_value_for_node(
-                    dbnode=self.dbnode, key=key)
-        except AttributeError:
-            if default is _NO_DEFAULT:
-                raise
-            return default
+        return DbAttribute.get_value_for_node(
+            dbnode=self.dbnode, key=key)
 
-    def set_extra(self, key, value, exclusive=False):
+    def _set_db_extra(self, key, value, exclusive=False):
         from aiida.backends.djsite.db.models import DbExtra
-        DbExtra.validate_key(key)
 
-        if self._to_be_stored:
-            raise ModificationNotAllowed(
-                "The extras of a node can be set only after "
-                "storing the node")
         DbExtra.set_value_for_node(self.dbnode, key, value,
                                    stop_if_existing=exclusive)
         self._increment_version_number_db()
 
-    def set_extra_exclusive(self, key, value):
-        from aiida.backends.djsite.db.models import DbExtra
-        DbExtra.validate_key(key)
-
-        if self._to_be_stored:
-            raise ModificationNotAllowed(
-                "The extras of a node can be set only after "
-                "storing the node")
-        DbExtra.set_value_for_node(self.dbnode, key, value,
-                                   stop_if_existing=True)
-        self._increment_version_number_db()
-
-    def reset_extras(self, new_extras):
+    def _reset_db_extras(self, new_extras):
         raise NotImplementedError("Reset of extras has not been implemented"
                                   "for Django backend.")
 
-    def get_extra(self, key, *args):
+    def _get_db_extra(self, key, *args):
         from aiida.backends.djsite.db.models import DbExtra
-        if len(args) > 1:
-            raise ValueError("After the key name you can pass at most one"
-                             "value, that is the default value to be used "
-                             "if no extra is found.")
+        return DbExtra.get_value_for_node(dbnode=self.dbnode,
+                                          key=key)
 
-        try:
-            if self._to_be_stored:
-                raise AttributeError("DbExtra '{}' does not exist yet, the "
-                                     "node is not stored".format(key))
-            else:
-                return DbExtra.get_value_for_node(dbnode=self.dbnode,
-                                                  key=key)
-        except AttributeError as e:
-            try:
-                return args[0]
-            except IndexError:
-                raise e
-
-    def get_extras(self):
-        return dict(self.iterextras())
-
-    def del_extra(self, key):
+    def _del_db_extra(self, key):
         from aiida.backends.djsite.db.models import DbExtra
-        if self._to_be_stored:
-            raise ModificationNotAllowed(
-                "The extras of a node can be set and deleted "
-                "only after storing the node")
         if not DbExtra.has_key(self.dbnode, key):
             raise AttributeError("DbExtra {} does not exist".format(
                 key))
         return DbExtra.del_value_for_node(self.dbnode, key)
         self._increment_version_number_db()
 
-    def extras(self):
+    def _db_iterextras(self):
         from aiida.backends.djsite.db.models import DbExtra
-        if self._to_be_stored:
-            return
-        else:
-            extraslist = DbExtra.list_all_node_elements(self.dbnode)
-            for e in extraslist:
-                yield e.key
+        extraslist = DbExtra.list_all_node_elements(self.dbnode)
+        for e in extraslist:
+            yield (e.key, e.getvalue())
 
-    def iterextras(self):
-        from aiida.backends.djsite.db.models import DbExtra
-        if self._to_be_stored:
-            # If it is not stored yet, there are no extras that can be
-            # added (in particular, we do not even have an ID to use!)
-            # Return without value, meaning that this is an empty generator
-            return
-        else:
-            extraslist = DbExtra.list_all_node_elements(self.dbnode)
-            for e in extraslist:
-                yield (e.key, e.getvalue())
-
-    def iterattrs(self):
+    def _db_iterattrs(self):
         from aiida.backends.djsite.db.models import DbAttribute
-        # TODO: check what happens if someone stores the object while
-        #        the iterator is being used!
-        if self._to_be_stored:
-            for k, v in self._attrs_cache.iteritems():
-                yield (k, v)
-        else:
-            all_attrs = DbAttribute.get_all_values_for_node(self.dbnode)
-            for attr in all_attrs:
-                yield (attr, all_attrs[attr])
 
-    def get_attrs(self):
-        return dict(self.iterattrs())
+        all_attrs = DbAttribute.get_all_values_for_node(self.dbnode)
+        for attr in all_attrs:
+            yield (attr, all_attrs[attr])
 
-    def attrs(self):
-        from aiida.backends.djsite.db.models import DbAttribute
-        # Note: I "duplicate" the code from iterattrs, rather than
+    def _db_attrs(self):
+        # Note: I "duplicate" the code from iterattrs and reimplement it
+        # here, rather than
         # calling iterattrs from here, because iterattrs is slow on each call
         # since it has to call .getvalue(). To improve!
-        if self._to_be_stored:
-            for k in self._attrs_cache.iterkeys():
-                yield k
-        else:
-            attrlist = DbAttribute.list_all_node_elements(self.dbnode)
-            for attr in attrlist:
-                yield attr.key
+        from aiida.backends.djsite.db.models import DbAttribute
+        attrlist = DbAttribute.list_all_node_elements(self.dbnode)
+        for attr in attrlist:
+            yield attr.key
 
     def add_comment(self, content, user=None):
         from aiida.backends.djsite.db.models import DbComment
@@ -575,10 +455,6 @@ class Node(AbstractNode):
         return unicode(self.dbnode.uuid)
 
     @property
-    def pk(self):
-        return self.dbnode.pk
-
-    @property
     def id(self):
         return self.dbnode.id
 
@@ -603,7 +479,7 @@ class Node(AbstractNode):
         from aiida.common.utils import EmptyContextManager
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 
@@ -632,39 +508,6 @@ class Node(AbstractNode):
 
         return self
 
-    def _store_input_nodes(self):
-        """
-        Find all input nodes, and store them, checking that they do not
-        have unstored inputs in turn.
-
-        :note: this function stores all nodes without transactions; always
-          call it from within a transaction!
-        """
-        if not self._to_be_stored:
-            raise ModificationNotAllowed(
-                "_store_input_nodes can be called only if the node is "
-                "unstored (node {} is stored, instead)".format(self.pk))
-
-        for label in self._inputlinks_cache:
-            parent = self._inputlinks_cache[label][0]
-            if not parent.is_stored:
-                parent.store(with_transaction=False)
-
-    def _check_are_parents_stored(self):
-        """
-        Check if all parents are already stored, otherwise raise.
-
-        :raise ModificationNotAllowed: if one of the input nodes in not already
-          stored.
-        """
-        # Preliminary check to verify that inputs are stored already
-        for label in self._inputlinks_cache:
-            if not self._inputlinks_cache[label][0].is_stored:
-                raise ModificationNotAllowed(
-                    "Cannot store the input link '{}' because the "
-                    "source node is not stored. Either store it first, "
-                    "or call _store_input_links with the store_parents "
-                    "parameter set to True".format(label))
 
     def _store_cached_input_links(self, with_transaction=True):
         """
@@ -690,7 +533,7 @@ class Node(AbstractNode):
         from aiida.common.utils import EmptyContextManager
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 
@@ -741,7 +584,7 @@ class Node(AbstractNode):
         import aiida.orm.autogroup
 
         if with_transaction:
-            context_man = transaction.commit_on_success()
+            context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
 

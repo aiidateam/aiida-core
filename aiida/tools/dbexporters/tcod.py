@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 from aiida.orm import DataFactory
 from aiida.orm.calculation.inline import optional_inline
@@ -63,7 +67,7 @@ tcod_loops = {
 conforming_dictionaries = [
     {
         'name': 'cif_tcod.dic',
-        'version': '0.009',
+        'version': '0.010',
         'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_tcod.dic'
     },
     {
@@ -382,7 +386,6 @@ def _inline_to_standalone_script(calc):
             for x in input_dict.keys()]
     args_string = ",\n    ".join(sorted(args))
     return """#!/usr/bin/env runaiida
-# -*- coding: utf-8 -*-
 {}
 
 for key, value in {}(
@@ -403,6 +406,7 @@ def _collect_calculation_data(calc):
     from aiida.orm.calculation import Calculation
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.calculation.inline import InlineCalculation
+    import hashlib
     import os
     calcs_now = []
     for d in calc.get_inputs(node_type=Data):
@@ -422,11 +426,32 @@ def _collect_calculation_data(calc):
         files_in  = _collect_files(calc._raw_input_folder.abspath)
         files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
         this_calc['env'] = calc.get_environment_variables()
-        this_calc['stdout'] = calc.get_scheduler_output()
-        this_calc['stderr'] = calc.get_scheduler_error()
+        stdout_name = '{}.out'.format(aiida_executable_name)
+        while stdout_name in [files_in,files_out]:
+            stdout_name = '_{}'.format(stdout_name)
+        stderr_name = '{}.err'.format(aiida_executable_name)
+        while stderr_name in [files_in,files_out]:
+            stderr_name = '_{}'.format(stderr_name)
+        files_out.append({
+            'name'    : stdout_name,
+            'contents': calc.get_scheduler_output(),
+            'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
+            'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
+            'role'    : 'stdout',
+            'type'    : 'file',
+            })
+        files_out.append({
+            'name'    : stderr_name,
+            'contents': calc.get_scheduler_error(),
+            'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
+            'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
+            'role'    : 'stderr',
+            'type'    : 'file',
+            })
+        this_calc['stdout'] = stdout_name
+        this_calc['stderr'] = stderr_name
     else:
         # Calculation is InlineCalculation
-        import hashlib
         python_script = _inline_to_standalone_script(calc)
         files_in.append({
             'name'    : inline_executable_name,
@@ -454,7 +479,8 @@ def _collect_calculation_data(calc):
     for f in files_out:
         if os.path.basename(f['name']) != calc._SCHED_OUTPUT_FILE and \
            os.path.basename(f['name']) != calc._SCHED_ERROR_FILE:
-            f['role'] = 'output'
+            if 'role' not in f.keys():
+                f['role'] = 'output'
             this_calc['files'].append(f)
 
     calcs_now.append(this_calc)
@@ -468,6 +494,10 @@ def _collect_files(base, path=''):
     from aiida.common.folders import Folder
     from aiida.common.utils import md5_file,sha1_file
     import os
+
+    def get_filename(file_dict):
+        return file_dict['name']
+
     if os.path.isdir(os.path.join(base,path)):
         folder = Folder(os.path.join(base,path))
         files_now = []
@@ -479,10 +509,34 @@ def _collect_files(base, path=''):
                     'name': path,
                     'type': 'folder',
                 })
-        for f in sorted(folder.get_content_list()):
+        for f in folder.get_content_list():
             files = _collect_files(base,path=os.path.join(path,f))
             files_now.extend(files)
-        return files_now
+        return sorted(files_now,key=get_filename)
+    elif path == '.aiida/calcinfo.json':
+        files = []
+        with open(os.path.join(base,path)) as f:
+            files.append({
+                'name': path,
+                'contents': f.read(),
+                'md5': md5_file(os.path.join(base,path)),
+                'sha1': sha1_file(os.path.join(base,path)),
+                'type': 'file',
+                })
+        import json
+        with open(os.path.join(base,path)) as f:
+            calcinfo = json.load(f)
+        if 'local_copy_list' in calcinfo:
+            for local_copy in calcinfo['local_copy_list']:
+                with open(local_copy[0]) as f:
+                    files.append({
+                        'name': os.path.normpath(local_copy[1]),
+                        'contents': f.read(),
+                        'md5': md5_file(local_copy[0]),
+                        'sha1': sha1_file(local_copy[0]),
+                        'type': 'file',
+                        })
+        return files
     else:
         with open(os.path.join(base,path)) as f:
             return [{
@@ -577,7 +631,8 @@ def _collect_tags(node, calc,parameters=None,
     and prepare it to be saved in TCOD CIF.
     """
     import os, json
-    tags = { '_audit_creation_method': "AiiDA version {}".format(__version__) }
+    import aiida
+    tags = { '_audit_creation_method': "AiiDA version {}".format(aiida.__version__) }
 
     # Recording the dictionaries (if any)
 
@@ -603,8 +658,7 @@ def _collect_tags(node, calc,parameters=None,
 
     export_files = []
 
-    sn = 0
-    fn = 0
+    sn = 1
     for step in calc_data:
         tags['_tcod_computation_step'].append(sn)
         tags['_tcod_computation_command'].append(
@@ -616,20 +670,10 @@ def _collect_tags(node, calc,parameters=None,
         else:
             tags['_tcod_computation_environment'].append('')
         if 'stdout' in step and step['stdout'] is not None:
-            if cif_encode_contents(step['stdout'])[1] is not None:
-                raise ValueError("Standard output of computation step {} "
-                                 "can not be stored in a CIF file: "
-                                 "encoding is required, but not currently "
-                                 "supported".format(sn))
             tags['_tcod_computation_stdout'].append(step['stdout'])
         else:
             tags['_tcod_computation_stdout'].append('')
         if 'stderr' in step and step['stderr'] is not None:
-            if cif_encode_contents(step['stderr'])[1] is not None:
-                raise ValueError("Standard error of computation step {} "
-                                 "can not be stored in a CIF file: "
-                                 "encoding is required, but not currently "
-                                 "supported".format(sn))
             tags['_tcod_computation_stderr'].append(step['stderr'])
         else:
             tags['_tcod_computation_stderr'].append('')
@@ -859,7 +903,7 @@ def export_cif(what, **kwargs):
     :return: string with contents of CIF file.
     """
     cif = export_cifnode(what, **kwargs)
-    return cif._exportstring('cif')
+    return cif._exportstring('cif')[0]
 
 
 def export_values(what, **kwargs):
@@ -975,10 +1019,10 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
             replace=None, message=None, **kwargs):
     """
     Launches a
-    :py:class:`aiida.orm.calculation.job.JobCalculation`
+    :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`
     to deposit data node to \*COD-type database.
 
-    :return: launched :py:class:`aiida.orm.calculation.job.JobCalculation`
+    :return: launched :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`
         instance.
     :raises ValueError: if any of the required parameters are not given.
     """
@@ -1135,11 +1179,11 @@ def deposition_cmdline_parameters(parser, expclass="Data"):
 def translate_calculation_specific_values(calc, translator, **kwargs):
     """
     Translates calculation-specific values from
-    :py:class:`aiida.orm.calculation.job.JobCalculation` subclass to
+    :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation` subclass to
     appropriate TCOD CIF tags.
 
     :param calc: an instance of
-        :py:class:`aiida.orm.calculation.job.JobCalculation` subclass.
+        :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation` subclass.
     :param translator: class, derived from
         :py:class:`aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator`.
     :raises ValueError: if **translator** is not derived from proper class.

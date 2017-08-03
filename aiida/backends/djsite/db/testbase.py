@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Base class for AiiDA tests
 """
@@ -12,10 +20,6 @@ from aiida.backends.testimplbase import AiidaTestImplementation
 # can be run using 'verdi test db.generic')
 # The value must be the module name containing the subclasses of unittest.TestCase
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 # This contains the codebase for the setUpClass and tearDown methods used internally by the AiidaTestCase
 # This inherits only from 'object' to avoid that it is picked up by the automatic discovery of tests
@@ -67,11 +71,16 @@ class DjangoTests(AiidaTestImplementation):
         self.computer.store()
 
     def clean_db(self):
-        from aiida.backends.djsite.db.models import DbComputer
+        from aiida.backends.djsite.db.models import (
+            DbComputer, DbUser, DbWorkflow, DbWorkflowStep, DbWorkflowData)
+        from aiida.common.utils import get_configured_user_email
 
-        # I first delete the workflows
-        from aiida.backends.djsite.db.models import DbWorkflow
-
+        # Complicated way to make sure we 'unwind' all the relationships
+        # between workflows and their children.
+        DbWorkflowStep.calculations.through.objects.all().delete()
+        DbWorkflowStep.sub_workflows.through.objects.all().delete()
+        DbWorkflowData.objects.all().delete()
+        DbWorkflowStep.objects.all().delete()
         DbWorkflow.objects.all().delete()
 
         # Delete groups
@@ -92,11 +101,9 @@ class DjangoTests(AiidaTestImplementation):
 
         DbNode.objects.all().delete()
 
-        ## I do not delete it, see discussion in setUpClass
-        # try:
-        #    DbUser.objects.get(email=get_configured_user_email()).delete()
-        # except ObjectDoesNotExist:
-        #    pass
+        # I delete all the users except the default user.
+        # See discussion in setUpClass
+        DbUser.objects.exclude(email=get_configured_user_email()).delete()
 
         DbComputer.objects.all().delete()
 

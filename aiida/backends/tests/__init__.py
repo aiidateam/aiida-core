@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
@@ -45,6 +49,9 @@ db_test_list = {
         'backup_setup_script': ['aiida.backends.tests.backup_setup_script'],
         'restapi': ['aiida.backends.tests.restapi'],
         'computer': ['aiida.backends.tests.computer'],
+        'examplehelpers': ['aiida.backends.tests.example_helpers'],
+        'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
+        'orm.log': ['aiida.backends.tests.orm.log'],
         'work.class_loader': ['aiida.backends.tests.work.class_loader'],
         'work.daemon': ['aiida.backends.tests.work.daemon'],
         'work.persistence': ['aiida.backends.tests.work.persistence'],
@@ -57,6 +64,9 @@ db_test_list = {
         'work.workChain': ['aiida.backends.tests.work.workChain'],
         'work.workfunction': ['aiida.backends.tests.work.workfunction'],
         'work.legacy.job_process': ['aiida.backends.tests.work.legacy.job_process'],
+        'pluginloader': ['aiida.backends.tests.test_plugin_loader'],
+        'daemon': ['aiida.backends.tests.daemon'],
+        'verdi_commands': ['aiida.backends.tests.verdi_commands'],
     }
 }
 
@@ -67,7 +77,7 @@ def get_db_test_names():
             retlist.append(name)
 
 
-    # Explode the list so that if I have a.b.c, 
+    # Explode the list so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
     final_list = [_ for _ in retlist]
     for k in retlist:
@@ -83,11 +93,11 @@ def get_db_test_names():
 
 def get_db_test_list():
     """
-    This function returns the db_test_list for the current backend, 
+    This function returns the db_test_list for the current backend,
     merged with the 'common' tests.
 
     :note: This function should be called only after setting the
-    backend, and then it returns only the tests for this backend, and the common ones.
+      backend, and then it returns only the tests for this backend, and the common ones.
     """
     from aiida.backends import settings
     from aiida.common.exceptions import ConfigurationError
@@ -113,7 +123,7 @@ def get_db_test_list():
         for t in tests:
             retdict[k].append(t)
 
-    # Explode the dictionary so that if I have a.b.c, 
+    # Explode the dictionary so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
     final_retdict = defaultdict(list)
     for k, v in retdict.iteritems():

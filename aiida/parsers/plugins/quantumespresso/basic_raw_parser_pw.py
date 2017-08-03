@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 A collection of function that are used to parse the output of Quantum Espresso PW.
 The function that needs to be called from outside is parse_raw_output().
@@ -17,10 +25,6 @@ from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 
 # parameter that will be used later for comparisons
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 lattice_tolerance = 1.e-5
 
@@ -49,7 +53,7 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
     :returns out_dict: a dictionary with parsed data
     :return successful: a boolean that is False in case of failed calculations
             
-    :raises QEOutputParsingError: for errors in the parsing,
+    :raises aiida.parsers.plugins.quantumespresso.QEOutputParsingError: for errors in the parsing,
     :raises AssertionError: if two keys in the parsed dicts are found to be qual
 
     3 different keys to check in output: parser_warnings, xml_warnings and warnings.

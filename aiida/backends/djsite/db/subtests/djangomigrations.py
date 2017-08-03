@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.backends.testbase import AiidaTestCase
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class CalcStateChanges(AiidaTestCase):
@@ -41,18 +45,24 @@ class CalcStateChanges(AiidaTestCase):
 
             time_before_fix = timezone.now()
 
+            # First of all, I re-enable logging in case it was disabled by
+            # mistake by a previous test (e.g. one that disables and reenables
+            # again, but that failed)
+            logging.disable(logging.NOTSET)
             # Temporarily disable logging to the stream handler (i.e. screen)
             # because otherwise fix_calc_states will print warnings
             handler = next((h for h in logging.getLogger('aiida').handlers if
-                           isinstance(h, logging.StreamHandler)), None)
+                            isinstance(h, logging.StreamHandler)), None)
+
             if handler:
+                original_level = handler.level
                 handler.setLevel(logging.ERROR)
 
             # Call the code that deals with updating these states
             state_change.fix_calc_states(None, None)
 
             if handler:
-                handler.setLevel(logging.NOTSET)
+                handler.setLevel(original_level)
 
             current_state = job.get_state()
             self.assertNotEqual(current_state, state,
@@ -67,7 +77,9 @@ class CalcStateChanges(AiidaTestCase):
                 levelname__exact=logging.getLevelName(logging.WARNING),
                 time__gt=time_before_fix
             )
+
             self.assertEquals(len(result), 1,
-                              "Couldn't find a warning message with the change"
-                              "from {} to {}".format(state, calc_states.FAILED)
+                              "Couldn't find a warning message with the change "
+                              "from {} to {}, or found too many: I got {} log "
+                              "messages".format(state, calc_states.FAILED, len(result))
                               )

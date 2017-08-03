@@ -1,16 +1,13 @@
 PH
 ++
 
-.. note:: The PH plugin referenced below is available in the EPFL version.
-
 Description
 -----------
 Plugin for the Quantum Espresso ph.x executable.
 
 Supported codes
 ---------------
-* tested from ph.x v5.0 onwards. Back compatibility is not guaranteed (although
-  versions 4.3x might work most of the times).
+* tested from ph.x v5.0 onwards.
 
 Inputs
 ------
@@ -33,10 +30,11 @@ Inputs
       {"INPUTPH":{"ethr-ph":1e-16},
       }
   
-  See the QE documentation for the full list of variables and their meaning. 
-  Note: some keywords don't have to be specified or Calculation will enter 
-  the SUBMISSIONFAILED state, and are already taken care of by AiiDA (are related 
-  with the structure or with path to files)::
+  A full list of variables and their meaning is found in the `ph.x documentation`_.
+
+  .. _ph.x documentation: http://www.quantum-espresso.org/wp-content/uploads/Doc/INPUT_PH.html
+
+  Following keywords are already taken care of by AiiDA::
     
       'INPUTPH', 'outdir': scratch directory
       'INPUTPH', 'prefix': file prefix
@@ -69,10 +67,10 @@ Outputs
 There are several output nodes that can be created by the plugin, according to the calculation details.
 All output nodes can be accessed with the ``calculation.out`` method.
 
-* output_parameters :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` 
-  (accessed by ``calculation.res``)
+* output_parameters :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`
   Contains small properties. Example: dielectric constant, 
   warnings (possible error messages generated in the run).
+  ``calculation.out.output_parameters`` can also be accessed by the ``calculation.res`` shortcut.
   Furthermore, various ``dynamical_matrix_*`` keys are created, each is a dictionary containing
   the keys ``q_point`` and ``frequencies``.
 

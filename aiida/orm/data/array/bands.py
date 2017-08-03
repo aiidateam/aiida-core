@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
@@ -8,12 +16,24 @@ from aiida.orm.data.array.kpoints import KpointsData
 import numpy
 from string import Template
 from aiida.common.exceptions import ValidationError
+from aiida.common.utils import prettify_labels, join_labels
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
+def prepare_header_comment(uuid, plot_info, comment_char='#'):
+    from aiida import get_file_header
 
+    filetext = []
+    filetext += get_file_header(comment_char="").splitlines()
+    filetext.append("")
+    filetext.append("Dumped from BandsData UUID={}"
+                    .format(uuid))
+    filetext.append("\tpoints\tbands")
+    filetext.append("\t{}\t{}".format(*plot_info['y'].shape))
+    filetext.append("")
+    filetext.append("\tlabel\tpoint")
+    for l in plot_info['raw_labels']:
+        filetext.append("\t{}\t{:.8f}".format(l[1], l[0]))
+
+    return "\n".join("{} {}".format(comment_char, l) for l in filetext)
 
 # TODO: set and get bands could have more functionalities: how do I know the number of bands for example?
 
@@ -29,8 +49,8 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
     intersection between valence and conduction band if present.
     Use this function with care!
 
-    :param (float) number_electrons: (optional) number of electrons in the unit cell
-    :param (float) fermi_energy: (optional) value of the fermi energy.
+    :param number_electrons: (optional, float) number of electrons in the unit cell
+    :param fermi_energy: (optional, float) value of the fermi energy.
 
     :note: By default, the algorithm uses the occupations array
       to guess the number of electrons and the occupied bands. This is to be
@@ -191,6 +211,14 @@ class BandsData(KpointsData):
     """
     Class to handle bands data
     """
+
+
+    # Associate file extensions to default plotting formats
+    _custom_export_format_replacements = {'dat': 'dat_multicolumn',
+                                          'png': 'mpl_png',
+                                          'pdf': 'mpl_pdf',
+                                          'py': 'mpl_singlefile',
+                                          'gnu': 'gnuplot'}
 
     def set_kpointsdata(self, kpointsdata):
         """
@@ -390,39 +418,43 @@ class BandsData(KpointsData):
         else:
             return to_return
 
-    def _exportstring(self, fileformat, path=None, comments=True, cartesian=True,
-                      **kwargs):
+    def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None,
+                           get_segments=False, y_origin=0.):
         """
-        Export the bands to a string.
-        :param fileformat: format of the file created (e.g. 'agr').
-        :param path: absolute path of the file to be created (used for
-                additional files, and put in plot_info['filename'])
-        :param comments: if True, append some extra informations at the
-                beginning of the file.
+        Get data to plot a band structure
+
         :param cartesian: if True, distances (for the x-axis) are computed in
                 cartesian coordinates, otherwise they are computed in reciprocal
                 coordinates. cartesian=True will fail if no cell has been set.
-        :param **kwargs: additional parameters to be passed to the
-                _prepare_[fileformat] method
-
-        :note: this function will NOT produce nice plots if:
-              - there is no path of kpoints, but a set of isolated points
-              - the path is not continuous AND no labels are set
+        :param prettify_format: by default, strings are not prettified. If you want
+             to prettify them, pass a valid prettify_format string (see valid options
+             in the docstring of :py:func:prettify_labels).
+        :param join_symbols: by default, strings are not joined. If you pass a string,
+             this is used to join strings that are much closer than a given threshold.
+             The most typical string is the pipe symbol: ``|``.
+        :param get_segments: if True, also computes the band split into segments
+        :param y_origin: if present, shift bands so to set the value specified at ``y=0``
+        :return: a plot_info dictiorary, whose keys are ``x`` (array of distances
+           for the x axis of the plot); ``y`` (array of bands), ``labels`` (list
+           of tuples in the format (float x value of the label, label string),
+           ``band_type_idx`` (array containing an index for each band: if there is only
+           one spin, then it's an array of zeros, of length equal to the number of bands
+           at each point; if there are two spins, then it's an array of zeros or ones
+           depending on the type of spin; the length is always equalt to the total
+           number of bands per kpoint).
         """
-        # TODO: check for None in bands
-        import os
-        from aiida import get_file_header
-
-        preparer_name = "_prepare_" + fileformat
-
         # load the x and y's of the graph
         stored_bands = self.get_bands()
         if len(stored_bands.shape) == 2:
             bands = stored_bands
+            band_type_idx = numpy.array([0]*stored_bands.shape[1])
         elif len(stored_bands.shape) == 3:
             bands = numpy.concatenate([_ for _ in stored_bands], axis=1)
+            band_type_idx = numpy.array([0] * stored_bands.shape[2] + [1] * stored_bands.shape[2])
         else:
             raise ValueError("Unexpected shape of bands")
+
+        bands -= y_origin
 
         # here I build the x distances on the graph (in cartesian coordinates
         # if cartesian==True AND if the cell was set, otherwise in reciprocal
@@ -450,132 +482,76 @@ class BandsData(KpointsData):
         x = [float(sum(distances[:i])) for i in range(len(distances) + 1)]
 
         # transform the index of the labels in the coordinates of x
-        the_labels = [(x[i[0]], i[1]) for i in labels]
+        raw_labels = [(x[i[0]], i[1]) for i in labels]
 
-        if the_labels:
-            new_labels = [list(the_labels[0])]
-            # modify labels when in overlapping position
-            j = 0
-            for i in range(1, len(the_labels)):
-                if new_labels[j][1] == 'G' and 'agr' in fileformat:
-                    new_labels[j][1] = r"\xG"
-                if the_labels[i][0] == the_labels[i - 1][0]:
-                    new_labels[j][1] += "|" + the_labels[i][1]
-                else:
-                    new_labels.append(list(the_labels[i]))
-                    j += 1
-            if new_labels[j][1] == 'G' and 'agr' in fileformat:
-                new_labels[j][1] = r"\xG"
+        the_labels = raw_labels
 
-        else:
-            new_labels = []
+        if prettify_format:
+            the_labels = prettify_labels(the_labels, format=prettify_format)
+        if join_symbol:
+            the_labels = join_labels(the_labels, join_symbol=join_symbol)
 
         plot_info = {}
         plot_info['x'] = x
         plot_info['y'] = bands
-        plot_info['labels'] = new_labels
-        if path:
-            plot_info['filename'] = path
-            if fileformat == 'agr':
-                plot_info['filename'] = os.path.splitext(path)[0] + '.dat'
+        plot_info['band_type_idx'] = band_type_idx
+        plot_info['raw_labels'] = raw_labels
+        plot_info['labels'] = the_labels
 
-        # generic info
-        if comments:
-            filetext = []
-            # filetext.append("{}".format(get_file_header()))
-            filetext.append("# Dumped from BandsData UUID={}"
-                            .format(self.uuid))
-            filetext.append("#\tpoints\tbands")
-            filetext.append("#\t{}\t{}".format(*bands.shape))
-            filetext.append("# \tlabel\tpoint")
-            for l in new_labels:
-                filetext.append("#\t{}\t{:.8f}".format(l[1], l[0]))
-            filetext = get_file_header() + "#\n" + "\n".join(filetext) + "\n\n"
-        else:
-            filetext = ""
+        if get_segments:
+            plot_info['path'] = []
+            plot_info['paths'] = []
 
-        try:
-            newfiletext, extra_files = getattr(self, preparer_name)(plot_info, **kwargs)
-            filetext += newfiletext
-        except AttributeError:
-            raise
-        #            raise ValueError("Format {} is not valid".format(fileformat))
+            if len(labels) > 1:
+                for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
+                    plot_info['path'].append([label_from, label_to])
+                    path_dict = {'length': position_to - position_from,
+                                 'from': label_from,
+                                 'to': label_to,
+                                 'values': bands[position_from:position_to + 1, :].transpose().tolist(),
+                                 'x': x[position_from:position_to + 1],
+                                 }
+                    plot_info['paths'].append(path_dict)
+            else:
+                label_from = "0"
+                label_to = "1"
+                path_dict = {'length': bands.shape[0] - 1,
+                             'from': label_from,
+                             'to': label_to,
+                             'values': bands.transpose().tolist(),
+                             'x': x,
+                             }
+                plot_info['paths'].append(path_dict)
+                plot_info['path'].append([label_from, label_to])
 
-        if extra_files is not None:
-            return filetext, extra_files
-        else:
-            return filetext
+        return plot_info
 
-    def export(self, path, fileformat=None, overwrite=False, comments=True,
-               cartesian=True, **kwargs):
-        """
-        Export the bands to a file.
-        :param path: absolute path of the file to be created
-        :param fileformat: format of the file created. If None, tries to use
-        the extension of path to understand the correct one.
-        :param overwrite: if set to True, overwrites file found at path. Default=False
-        :param comments: if True, append some extra informations at the
-        beginning of the file.
-        :param cartesian: if True, distances (for the x-axis) are computed in
-        cartesian coordinates, otherwise they are computed in reciprocal
-        coordinates. cartesian=True will fail if no cell has been set.
-        :param **kwargs: additional parameters to be passed to the
-        _prepare_[fileformat] method
-
-        :note: this function will NOT produce nice plots if:
-              - there is no path of kpoints, but a set of isolated points
-              - the path is not continuous AND no labels are set
-        """
-        import os
-
-        if not path:
-            raise ValueError("Path not recognized")
-
-        if os.path.exists(path) and not overwrite:
-            raise OSError("A file was already found at {}".format(path))
-
-        if fileformat is None:
-            extension = os.path.splitext(path)[1].split('.')[1]
-            if not extension:
-                raise ValueError("Cannot recognized the fileformat from the "
-                                 "extension")
-            fileformat = extension
-            if extension == 'dat':
-                fileformat = 'dat_1'
-
-        try:
-            filetext, extra_files = self._exportstring(fileformat, path=path,
-                                                       comments=comments, cartesian=cartesian,
-                                                       **kwargs)
-        except ValueError:
-            extra_files = None
-            filetext = self._exportstring(fileformat, path=path,
-                                          comments=comments, cartesian=cartesian,
-                                          **kwargs)
-
-        if extra_files is not None:
-            # write extra files
-            for k, v in extra_files.iteritems():
-                if os.path.exists(k) and not overwrite:
-                    raise OSError("A file was already found: {}".format(k))
-                else:
-                    with open(k, "w") as f:
-                        f.write(v)
-
-        with open(path, 'w') as f:
-            f.write(filetext)
-
-    def get_export_formats(self):
-        names = dir(self)
-        return [i.split('_prepare_')[1] for i in names if i.startswith('_prepare_')]
-
-    def _prepare_agr_batch(self, plot_info, **kwargs):
+    def _prepare_agr_batch(self, main_file_name="", comments=True, prettify_format=None):
         """
         Prepare two files, data and batch, to be plot with xmgrace as:
         xmgrace -batch file.dat
+
+        :param main_file_name: if the user asks to write the main content on a
+             file, this contains the filename. This should be used to infer a
+             good filename for the additional files.
+             In this case, we remove the extension, and add '_data.dat'
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
+        :param prettify_format: if None, use the default prettify format. Otherwise
+            specify a string with the prettifier to use.
         """
-        if kwargs:
-            raise TypeError("_prepare_agr_batch takes no keyword arguments")
+        import os
+
+        dat_filename = os.path.splitext(main_file_name)[0] + "_data.dat"
+
+        if prettify_format is None:
+            # Default. Specified like this to allow caller functions to pass 'None'
+            prettify_format = 'agr_seekpath'
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format=prettify_format,
+            join_symbol="|")
 
         bands = plot_info['y']
         x = plot_info['x']
@@ -591,19 +567,22 @@ class BandsData(KpointsData):
         x_max_lim = max(x)
 
         # first prepare the xy coordinates of the sets
-        raw_data, _ = self._prepare_dat_2(plot_info)
+        raw_data, _ = self._prepare_dat_blocks(plot_info)
 
-        # add the xy coordinates of the vertical lines
-        for l in labels:
-            new_block = ["{}\t{}".format(l[0], y_min_lim)]
-            new_block.append("{}\t{}".format(l[0], y_max_lim))
-            new_block.append("")
-            raw_data += "\n".join(new_block)
 
-        filexy_name = plot_info['filename']
+        ## Manually add the xy coordinates of the vertical lines - not needed! Use gridlines
+        #new_block = []
+        #for l in labels:
+        #    new_block.append("{}\t{}".format(l[0], y_min_lim))
+        #    new_block.append("{}\t{}".format(l[0], y_max_lim))
+        #    new_block.append("")
+        #raw_data += "\n".join(new_block)
 
         batch = []
-        batch.append('READ XY "{}"'.format(filexy_name))
+        if comments:
+            batch.append(prepare_header_comment(self.uuid, plot_info, comment_char="#"))
+
+        batch.append('READ XY "{}"'.format(dat_filename))
 
         # axis limits
         batch.append("world {}, {}, {}, {}".format(x_min_lim, y_min_lim, x_max_lim, y_max_lim))
@@ -619,10 +598,12 @@ class BandsData(KpointsData):
         for i, l in enumerate(labels):
             batch.append("xaxis  tick major {}, {}".format(i, l[0]))
             batch.append('xaxis  ticklabel {}, "{}"'.format(i, l[1]))
+        batch.append('xaxis  tick major color 7')
+        batch.append('xaxis  tick major grid on')
 
         # minor graphical tweak
         batch.append("yaxis  tick minor ticks 3")
-        batch.append("frame linewidth 2.0")
+        batch.append("frame linewidth 1.0")
 
         # use helvetica fonts
         batch.append('map font 4 to "Helvetica", "Helvetica"')
@@ -634,49 +615,89 @@ class BandsData(KpointsData):
             batch.append("s{} line color 1".format(i))
             batch.append("s{} linewidth 1".format(i))
 
-        # set color and linewidths of bands
-        for i in range(num_bands, num_bands + num_labels):
-            batch.append("s{} line color 1".format(i))
-            batch.append("s{} linewidth 2".format(i))
+        ## set color and linewidths of label lines - not needed! use gridlines
+        #for i in range(num_bands, num_bands + num_labels):
+        #    batch.append("s{} hidden true".format(i))
 
         batch_data = "\n".join(batch) + "\n"
-        extra_files = {"batch.dat": batch_data}
+        extra_files = {dat_filename: raw_data.encode('utf-8')}
 
-        return raw_data, extra_files
+        return batch_data.encode('utf-8'), extra_files
 
-    def _prepare_dat_1(self, plot_info, **kwargs):
+    def _prepare_dat_1(self, *args, **kwargs):
+        """
+        Output data in .dat format, using multiple columns for all y values
+        associated to the same x.
+
+        .. deprecated:: 0.8.1
+            Use 'dat_multicolumn' format instead
+        """
+        import warnings
+        warnings.warn(
+            "dat_1 format is deprecated, use dat_multicolumn instead",
+            DeprecationWarning)
+        return self._prepare_dat_multicolumn(*args, **kwargs)
+
+    def _prepare_dat_multicolumn(self, main_file_name="", comments=True):
         """
         Write an N x M matrix. First column is the distance between kpoints,
         The other columns are the bands. Header contains number of kpoints and
         the number of bands (commented).
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
         """
-        if kwargs:
-            raise TypeError("_prepare_dat_1 takes no keyword arguments")
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format=None,
+            join_symbol="|")
 
         bands = plot_info['y']
         x = plot_info['x']
 
         return_text = []
+        if comments:
+            return_text.append(prepare_header_comment(self.uuid, plot_info, comment_char="#"))
 
         for i in zip(x, bands):
             line = ["{:.8f}".format(i[0])] + ["{:.8f}".format(j) for j in i[1]]
             return_text.append("\t".join(line))
 
-        return "\n".join(return_text) + '\n', None
+        return ("\n".join(return_text) + '\n').encode('utf-8'), {}
 
-    def _prepare_dat_2(self, plot_info, **kwargs):
+    def _prepare_dat_2(self, *args, **kwargs):
+        """
+        Output data in .dat format, using blocks.
+
+        .. deprecated:: 0.8.1
+            Use 'dat_block' format instead
+        """
+        import warnings
+        warnings.warn(
+            "dat_2 format is deprecated, use dat_blocks instead",
+            DeprecationWarning)
+        return self._prepare_dat_blocks(*args, **kwargs)
+
+    def _prepare_dat_blocks(self, main_file_name="", comments=True):
         """
         Format suitable for gnuplot using blocks.
         Columns with x and y (path and band energy). Several blocks, separated
         by two empty lines, one per energy band.
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
         """
-        if kwargs:
-            raise TypeError("_prepare_dat_2 takes no keyword arguments")
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format=None,
+            join_symbol="|")
 
         bands = plot_info['y']
         x = plot_info['x']
 
         return_text = []
+        if comments:
+            return_text.append(prepare_header_comment(self.uuid, plot_info, comment_char="#"))
 
         the_bands = numpy.transpose(bands)
 
@@ -687,39 +708,462 @@ class BandsData(KpointsData):
             return_text.append("")
             return_text.append("")
 
-        return "\n".join(return_text), None
+        return ("\n".join(return_text)).encode('utf-8'), {}
 
-    def _prepare_agr(self, plot_info, setnumber_offset=0, color_number=1,
-                     legend="", title="", y_max_lim=None, y_min_lim=None,
-                     y_origin=0., **kwargs):
+    def _matplotlib_get_dict(self, main_file_name="", comments=True, title="", legend=None, legend2=None,
+                            y_max_lim=None, y_min_lim=None,
+                            y_origin=0., prettify_format=None, **kwargs):
         """
-        Prepare an xmgrace agr file
+        Prepare the data to send to the python-matplotlib plotting script
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
         :param plot_info: a dictionary
         :param setnumber_offset: an offset to be applied to all set numbers
         (i.e. s0 is replaced by s[offset], s1 by s[offset+1], etc.)
         :param color_number: the color number for lines, symbols, error bars
         and filling (should be less than the parameter max_num_agr_colors
         defined below)
-        :param legend: the legend (applied only to the first set)
         :param title: the title
+        :param legend: the legend (applied only to the first of the set)
+        :param legend2: the legend for second-type spins (applied only to the first of the set)
         :param y_max_lim: the maximum on the y axis (if None, put the
             maximum of the bands)
         :param y_min_lim: the minimum on the y axis (if None, put the
             minimum of the bands)
         :param y_origin: the new origin of the y axis -> all bands are replaced
             by bands-y_origin
+        :param prettify_format: if None, use the default prettify format. Otherwise
+            specify a string with the prettifier to use.
+        :param kwargs: additional customization variables; only a subset is
+            accepted, see internal variable 'valid_additional_keywords
         """
-        if kwargs:
-            raise TypeError("_prepare_agr got unexpected keyword argument(s) {}"
-                            "".format(kwargs.keys()))
+        #import math
+
+        # Only these keywords are accepted in kwargs, and then set into the json
+        valid_additional_keywords = [
+            "bands_color", # Color of band lines
+            "bands_linewidth",  # linewidth of bands
+            "bands_linestyle", # linestyle of bands
+            "bands_marker", # marker for bands
+            "bands_markersize",  # size of the marker of bands
+            "bands_markeredgecolor",  # marker edge color for bands
+            "bands_markeredgewidth",  # marker edge width for bands
+            "bands_markerfacecolor",  # marker face color for bands
+
+            "bands_color2",  # Color of band lines (for other spin, if present)
+            "bands_linewidth2",  # linewidth of bands (for other spin, if present)
+            "bands_linestyle2",  # linestyle of bands (for other spin, if present)
+            "bands_marker2",  # marker for bands (for other spin, if present)
+            "bands_markersize2",  # size of the marker of bands (for other spin, if present)
+            "bands_markeredgecolor2",  # marker edge color for bands (for other spin, if present)
+            "bands_markeredgewidth2",  # marker edge width for bands (for other spin, if present)
+            "bands_markerfacecolor2",  # marker face color for bands (for other spin, if present)
+
+            "plot_zero_axis", # If true, plot an axis at y=0
+            "zero_axis_color",  # Color of the axis at y=0
+            "zero_axis_linestyle",  # linestyle of the axis at y=0
+            "zero_axis_linewidth",  # linewidth of the axis at y=0
+            "use_latex", # If true, use latex to render captions
+        ]
+
+        # Note: I do not want to import matplotlib here, for two reasons:
+        # 1. I would like to be able to print the script for the user
+        # 2. I don't want to mess up with the user matplotlib backend
+        #    (that I should do if the user does not have a X server, but that
+        #    I do not want to do if he's e.g. in jupyter)
+        # Therefore I just create a string that can be executed as needed, e.g. with eval.
+        # I take care of sanitizing the output.
+        if prettify_format is None:
+            # Default. Specified like this to allow caller functions to pass 'None'
+            prettify_format = 'latex_seekpath'
+
+        # The default for use_latex is False
+        join_symbol = r"\textbar{}" if kwargs.get('use_latex', False) else "|"
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format=prettify_format,
+            join_symbol=join_symbol,
+            get_segments=True, y_origin=y_origin)
+
+        all_data = {}
+
+        bands = plot_info['y']
+        x = plot_info['x']
+        the_bands = numpy.transpose(bands)
+        labels = plot_info['labels']
+        # prepare xticks labels
+        tick_pos, tick_labels = zip(*labels)
+
+        #all_data['bands'] = the_bands.tolist()
+        all_data['paths'] = plot_info['paths']
+        all_data['band_type_idx'] = plot_info['band_type_idx'].tolist()
+        #all_data['x'] = x
+
+        all_data['tick_pos'] = tick_pos
+        all_data['tick_labels'] = tick_labels
+        all_data['legend_text'] = legend
+        all_data['legend_text2'] = legend2
+        all_data['yaxis_label'] = "Dispersion ({})".format(self.units)
+        all_data['title'] = title
+        if comments:
+            all_data['comment'] = prepare_header_comment(
+                self.uuid, plot_info, comment_char='#')
+
+        # axis limits
+        if y_max_lim is None:
+            y_max_lim = numpy.array(bands).max()
+        if y_min_lim is None:
+            y_min_lim = numpy.array(bands).min()
+        x_min_lim = min(x)  # this isn't a numpy array, but a list
+        x_max_lim = max(x)
+        #ytick_spacing = 10 ** int(math.log10((y_max_lim - y_min_lim)))
+        all_data['x_min_lim'] = x_min_lim
+        all_data['x_max_lim'] = x_max_lim
+        all_data['y_min_lim'] = y_min_lim
+        all_data['y_max_lim'] = y_max_lim
+        #all_data['ytick_spacing'] = ytick_spacing
+
+        for k, v in kwargs.iteritems():
+            if k not in valid_additional_keywords:
+                raise TypeError("_matplotlib_get_dict() got an unexpected keyword argument '{}'".format(
+                    k
+                ))
+            all_data[k] = v
+
+        return all_data
+
+    def _prepare_mpl_singlefile(self, *args, **kwargs):
+        """
+        Prepare a python script using matplotlib to plot the bands
+
+        For the possible parameters, see documentation of
+        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        """
+        import json
+
+        all_data = self._matplotlib_get_dict(*args, **kwargs)
+
+        s_header = matplotlib_header_template.substitute()
+        s_import = matplotlib_import_data_inline_template.substitute(
+            all_data_json = json.dumps(all_data, indent=2))
+        s_body = matplotlib_body_template.substitute()
+        s_footer = matplotlib_footer_template_show.substitute()
+
+        s = s_header + s_import + s_body + s_footer
+
+        return s.encode('utf-8'), {}
+
+    def _prepare_mpl_withjson(self, main_file_name="", *args, **kwargs):
+        """
+        Prepare a python script using matplotlib to plot the bands, with the JSON
+        returned as an independent file.
+
+        For the possible parameters, see documentation of
+        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        """
+        import json
+        import os
+
+        all_data = self._matplotlib_get_dict(*args, main_file_name=main_file_name, **kwargs)
+
+        json_fname = os.path.splitext(main_file_name)[0] + "_data.json"
+        # Escape double_quotes
+        json_fname = json_fname.replace('"', '\"')
+
+        ext_files = {json_fname: json.dumps(all_data, indent=2).encode('utf-8')}
+
+        s_header = matplotlib_header_template.substitute()
+        s_import = matplotlib_import_data_fromfile_template.substitute(
+            json_fname = json_fname)
+        s_body = matplotlib_body_template.substitute()
+        s_footer = matplotlib_footer_template_show.substitute()
+
+        s = s_header + s_import + s_body + s_footer
+
+        return s.encode('utf-8'), ext_files
+
+    def _prepare_gnuplot(self, main_file_name="",
+                         title="",
+                         comments=True, prettify_format=None,
+                         y_max_lim=None, y_min_lim=None,
+                         y_origin=0.):
+        """
+        Prepare an gnuplot script to plot the bands, with the .dat file
+        returned as an independent file.
+
+        :param main_file_name: if the user asks to write the main content on a
+             file, this contains the filename. This should be used to infer a
+             good filename for the additional files.
+             In this case, we remove the extension, and add '_data.dat'
+        :param title: if specified, add a title to the plot
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
+        :param prettify_format: if None, use the default prettify format. Otherwise
+            specify a string with the prettifier to use.
+        """
+        import os
+
+        dat_filename = os.path.splitext(main_file_name)[0] + "_data.dat"
+
+        if prettify_format is None:
+            # Default. Specified like this to allow caller functions to pass 'None'
+            prettify_format = 'gnuplot_seekpath'
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format=prettify_format,
+            join_symbol="|",
+            y_origin=y_origin)
+
+        bands = plot_info['y']
+        x = plot_info['x']
+        labels = plot_info['labels']
+
+        num_labels = len(labels)
+        num_bands = bands.shape[1]
+
+
+        # axis limits
+        if y_max_lim is None:
+            y_max_lim = bands.max()
+        if y_min_lim is None:
+            y_min_lim = bands.min()
+        x_min_lim = min(x)  # this isn't a numpy array, but a list
+        x_max_lim = max(x)
+
+        # first prepare the xy coordinates of the sets
+        raw_data, _ = self._prepare_dat_blocks(plot_info, comments=comments)
+
+        xtics_string = u", ".join(u'"{}" {}'.format(label, pos) for pos, label in
+                                 plot_info['labels'])
+
+        script = []
+        # Start with some useful comments
+
+        if comments:
+                script.append(prepare_header_comment(self.uuid, plot_info=plot_info,
+                                                     comment_char="# "))
+        script.append("")
+
+        script.append(u"""## Uncomment the next two lines to write directly to PDF
+## Note: You need to have gnuplot installed with pdfcairo support!
+#set term pdfcairo
+#set output 'out.pdf'
+
+### Uncomment one of the options below to change font
+### For the LaTeX fonts, you can download them from here:
+### https://sourceforge.net/projects/cm-unicode/
+### And then install them in your system
+## LaTeX Serif font, if installed
+#set termopt font "CMU Serif, 12"
+## LaTeX Sans Serif font, if installed
+#set termopt font "CMU Sans Serif, 12"
+## Classical Times New Roman
+#set termopt font "Times New Roman, 12"
+""")
+
+        # Actual logic
+        script.append(u'set termopt enhanced') # Properly deals with e.g. subscripts
+        script.append(u'set encoding utf8') # To deal with Greek letters
+        script.append(u'set xtics ({})'.format(xtics_string))
+        script.append(u'set grid xtics lt 1 lc rgb "#888888"')
+
+        script.append(u'unset key')
+
+        script.append(u'set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
+        script.append(u'set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
+
+        script.append(u'set ylabel "{}"'.format(u"Dispersion ({})".format(self.units)))
+
+        if title:
+            script.append(u'set title "{}"'.format(
+                title.replace('"', '\"')))
+
+        # Plot, escaping filename
+        script.append(u'plot "{}" with l lc rgb "#000000"'.format(
+            os.path.basename(dat_filename).replace('"', '\"')))
+
+        script_data = u"\n".join(script) + u"\n"
+        extra_files = {dat_filename: raw_data.encode('utf-8')}
+
+        return script_data.encode('utf-8'), extra_files
+
+    def _prepare_mpl_pdf(self, main_file_name="", *args, **kwargs):
+        """
+        Prepare a python script using matplotlib to plot the bands, with the JSON
+        returned as an independent file.
+
+        For the possible parameters, see documentation of
+        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        """
+        import json
+        import os
+        import tempfile
+        import subprocess
+        import sys
+
+        all_data = self._matplotlib_get_dict(*args, **kwargs)
+
+        # Use the Agg backend
+        s_header = matplotlib_header_agg_template.substitute()
+        s_import = matplotlib_import_data_inline_template.substitute(
+            all_data_json = json.dumps(all_data, indent=2))
+        s_body = matplotlib_body_template.substitute()
+
+        # I get a temporary file name
+        handle, filename = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(filename)
+
+        escaped_fname =  filename.replace('"', '\"')
+
+        s_footer = matplotlib_footer_template_exportfile.substitute(
+            fname=escaped_fname, format="pdf"
+        )
+
+        s = s_header + s_import + s_body + s_footer
+
+        # I don't exec it because I might mess up with the matplotlib backend etc.
+        # I run instead in a different process, with the same executable
+        # (so it should work properly with virtualenvs)
+        #exec s
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(s)
+            f.flush()
+
+            subprocess.check_output([sys.executable, f.name])
+
+
+        if not os.path.exists(filename):
+            raise RuntimeError("Unable to generate the PDF...")
+
+        with open(filename, 'rb') as f:
+            imgdata = f.read()
+        os.remove(filename)
+
+        return imgdata, {}
+
+
+    def _prepare_mpl_png(self, main_file_name="", *args, **kwargs):
+        """
+        Prepare a python script using matplotlib to plot the bands, with the JSON
+        returned as an independent file.
+
+        For the possible parameters, see documentation of
+        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        """
+        import json
+        import os
+        import tempfile
+        import subprocess
+        import sys
+
+        all_data = self._matplotlib_get_dict(*args, **kwargs)
+
+        # Use the Agg backend
+        s_header = matplotlib_header_agg_template.substitute()
+        s_import = matplotlib_import_data_inline_template.substitute(
+            all_data_json = json.dumps(all_data, indent=2))
+        s_body = matplotlib_body_template.substitute()
+
+        # I get a temporary file name
+        handle, filename = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(filename)
+
+        escaped_fname =  filename.replace('"', '\"')
+
+        s_footer = matplotlib_footer_template_exportfile_with_dpi.substitute(
+            fname=escaped_fname, format="png", dpi=300
+        )
+
+        s = s_header + s_import + s_body + s_footer
+
+        # I don't exec it because I might mess up with the matplotlib backend etc.
+        # I run instead in a different process, with the same executable
+        # (so it should work properly with virtualenvs)
+        #exec s
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(s)
+            f.flush()
+
+            subprocess.check_output([sys.executable, f.name])
+
+
+        if not os.path.exists(filename):
+            raise RuntimeError("Unable to generate the PNG...")
+
+        with open(filename, 'rb') as f:
+            imgdata = f.read()
+        os.remove(filename)
+
+        return imgdata, {}
+
+    def show_mpl(self, **kwargs):
+        """
+        Call a show() command for the band structure using matplotlib.
+        This uses internally the 'mpl_singlefile' format, with empty
+        main_file_name.
+        
+        Other kwargs are passed to self._exportstring.
+        """
+        exec self._exportstring(fileformat='mpl_singlefile', main_file_name='',
+                                **kwargs)
+        
+
+    def _prepare_agr(self, main_file_name="", comments=True, setnumber_offset=0, color_number=1,
+                     color_number2=2, legend="", title="", y_max_lim=None, y_min_lim=None,
+                     y_origin=0., prettify_format=None):
+        """
+        Prepare an xmgrace agr file
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
+        :param plot_info: a dictionary
+        :param setnumber_offset: an offset to be applied to all set numbers
+        (i.e. s0 is replaced by s[offset], s1 by s[offset+1], etc.)
+        :param color_number: the color number for lines, symbols, error bars
+        and filling (should be less than the parameter max_num_agr_colors
+        defined below)
+        :param color_number2: the color number for lines, symbols, error bars
+        and filling for the second-type spins (should be less than the parameter max_num_agr_colors
+        defined below)
+        :param legend: the legend (applied only to the first set)
+        :param title: the title
+        :param y_max_lim: the maximum on the y axis (if None, put the
+            maximum of the bands); applied *after* shifting the origin
+            by ``y_origin``
+        :param y_min_lim: the minimum on the y axis (if None, put the
+            minimum of the bands); applied *after* shifting the origin
+            by ``y_origin``
+        :param y_origin: the new origin of the y axis -> all bands are replaced
+            by bands-y_origin
+        :param prettify_format: if None, use the default prettify format. Otherwise
+            specify a string with the prettifier to use.
+        """
+        if prettify_format is None:
+            # Default. Specified like this to allow caller functions to pass 'None'
+            prettify_format = 'agr_seekpath'
+
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True,
+            prettify_format=prettify_format,
+            join_symbol="|",
+            y_origin=y_origin)
 
         import math
         # load the x and y of every set
         if color_number > max_num_agr_colors:
             raise ValueError("Color number is too high (should be less than {})"
                              "".format(max_num_agr_colors))
+        if color_number2 > max_num_agr_colors:
+            raise ValueError("Color number 2 is too high (should be less than {})"
+                             "".format(max_num_agr_colors))
 
-        bands = plot_info['y'] - y_origin
+        bands = plot_info['y']
         x = plot_info['x']
         the_bands = numpy.transpose(bands)
         labels = plot_info['labels']
@@ -755,12 +1199,16 @@ class BandsData(KpointsData):
             all_sets.append(this_set)
 
         set_descriptions = ""
-        for i, this_set in enumerate(all_sets):
+        for i, (this_set, band_type) in enumerate(zip(all_sets, plot_info['band_type_idx'])):
+            if band_type % 2 == 0:
+                linecolor = color_number
+            else:
+                linecolor = color_number2
             width = str(2.0)
             set_descriptions += agr_set_description_template.substitute(
                 set_number=i + setnumber_offset,
                 linewidth=width,
-                color_number=color_number,
+                color_number=linecolor,
                 legend=legend if i == 0 else ""
             )
 
@@ -785,49 +1233,40 @@ class BandsData(KpointsData):
 
         s = agr_template.substitute(graphs=graphs, sets=the_sets)
 
-        return s, None
+        if comments:
+            s = prepare_header_comment(self.uuid, plot_info, comment_char="#") + "\n" + s
 
-    def _prepare_json(self, plot_info, **kwargs):
+        return s.encode('utf-8'), {}
+
+    def _get_band_segments(self, cartesian):
+        plot_info = self._get_bandplot_data(cartesian=cartesian,
+                                            prettify_format=None,
+                                            join_symbol=None,get_segments=True)
+
+        out_dict = {'label': self.label}
+
+        out_dict['path'] = plot_info['path']
+        out_dict['paths'] = plot_info['paths']
+
+        return out_dict
+
+    def _prepare_json(self, main_file_name="", comments=True):
         """
         Prepare a json file in a format compatible with the AiiDA band visualizer
-        :param plot_info: a dictionary
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
         """
         import json
+        from aiida import get_file_header
 
-        if kwargs:
-            raise TypeError("_prepare_json got unexpected keyword argument(s) {}"
-                            "".format(kwargs.keys()))
+        json_dict = self._get_band_segments(cartesian=True)
+        json_dict['original_uuid'] = self.uuid
 
-        json_dict = {'label': self.label}
+        if comments:
+            json_dict['comments'] = get_file_header(comment_char="")
 
-        bands = plot_info['y']
-        labels = self.labels
-
-        json_dict['path'] = []
-        json_dict['paths'] = []
-
-        try:
-            _ = self.labels[1][1]
-            for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
-                json_dict['path'].append([label_from, label_to])
-                path_dict = {'length': position_to - position_from,
-                             'from': label_from,
-                             'to': label_to,
-                             'values': bands[position_from:position_to + 1, :].transpose().tolist(),
-                             }
-                json_dict['paths'].append(path_dict)
-        except (TypeError, IndexError):
-            label_from = "0"
-            label_to = "1"
-            path_dict = {'length': bands.shape[0] - 1,
-                         'from': label_from,
-                         'to': label_to,
-                         'values': bands.transpose().tolist(),
-                         }
-            json_dict['paths'].append(path_dict)
-            json_dict['path'].append([label_from, label_to])
-
-        return json.dumps(json_dict), None
+        return json.dumps(json_dict).encode('utf-8'), {}
 
 
 max_num_agr_colors = 15
@@ -1194,3 +1633,186 @@ agr_singleset_template = Template(
     @type xy
     $xydata
     """)
+
+# text.latex.preview=True is needed to have a proper alignment of
+# tick marks with and without subscripts
+# see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
+matplotlib_header_agg_template = Template(
+    '''# -*- coding: utf-8 -*-
+
+import matplotlib
+matplotlib.use('Agg')
+
+from matplotlib import rc
+# Uncomment to change default font
+#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Times New Roman']})
+# To use proper font for, e.g., Gamma if usetex is set to False
+rc('mathtext', fontset='cm')
+
+rc('text', usetex=True)
+import matplotlib.pyplot as plt
+plt.rcParams.update({'text.latex.preview': True})
+
+import pylab as pl
+
+# I use json to make sure the input is sanitized
+import json
+
+print_comment = False
+''')
+
+# text.latex.preview=True is needed to have a proper alignment of
+# tick marks with and without subscripts
+# see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
+matplotlib_header_template = Template(
+    '''# -*- coding: utf-8 -*-
+
+from matplotlib import rc
+# Uncomment to change default font
+#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Times New Roman']})
+# To use proper font for, e.g., Gamma if usetex is set to False
+rc('mathtext', fontset='cm')
+
+rc('text', usetex=True)
+import matplotlib.pyplot as plt
+plt.rcParams.update({'text.latex.preview': True})
+
+import pylab as pl
+
+# I use json to make sure the input is sanitized
+import json
+
+print_comment = False
+''')
+
+matplotlib_import_data_inline_template = Template(
+    '''all_data_str = r"""$all_data_json"""
+''')
+
+matplotlib_import_data_fromfile_template = Template(
+    '''with open("$json_fname") as f:
+    all_data_str = f.read()
+''')
+
+matplotlib_body_template = Template(
+    '''all_data = json.loads(all_data_str)
+
+if not all_data.get('use_latex', False):
+    rc('text', usetex=False)
+
+#x = all_data['x']
+#bands = all_data['bands']
+paths = all_data['paths']
+tick_pos = all_data['tick_pos']
+tick_labels = all_data['tick_labels']
+
+# Option for bands (all, or those of type 1 if there are two spins)
+further_plot_options1 = {}
+further_plot_options1['color'] = all_data.get('bands_color', 'k')
+further_plot_options1['linewidth'] = all_data.get('bands_linewidth', 0.5)
+further_plot_options1['linestyle'] = all_data.get('bands_linestyle', None)
+further_plot_options1['marker'] = all_data.get('bands_marker', None)
+further_plot_options1['markersize'] = all_data.get('bands_markersize', None)
+further_plot_options1['markeredgecolor'] = all_data.get('bands_markeredgecolor', None)
+further_plot_options1['markeredgewidth'] = all_data.get('bands_markeredgewidth', None)
+further_plot_options1['markerfacecolor'] = all_data.get('bands_markerfacecolor', None)
+
+# Options for second-type of bands if present (e.g. spin up vs. spin down)
+further_plot_options2 = {}
+further_plot_options2['color'] = all_data.get('bands_color2', 'r')
+# Use the values of further_plot_options1 by default
+further_plot_options2['linewidth'] = all_data.get('bands_linewidth2',
+    further_plot_options1['linewidth']
+    )
+further_plot_options2['linestyle'] = all_data.get('bands_linestyle2',
+    further_plot_options1['linestyle']
+    )
+further_plot_options2['marker'] = all_data.get('bands_marker2',
+    further_plot_options1['marker']
+    )
+further_plot_options2['markersize'] = all_data.get('bands_markersize2',
+    further_plot_options1['markersize']
+    )
+further_plot_options2['markeredgecolor'] = all_data.get('bands_markeredgecolor2',
+    further_plot_options1['markeredgecolor']
+    )
+further_plot_options2['markeredgewidth'] = all_data.get('bands_markeredgewidth2',
+    further_plot_options1['markeredgewidth']
+    )
+further_plot_options2['markerfacecolor'] = all_data.get('bands_markerfacecolor2',
+    further_plot_options1['markerfacecolor']
+    )
+
+fig = pl.figure()
+p = fig.add_subplot(1,1,1)
+
+first_band_1 = True
+first_band_2 = True
+
+for path in paths:
+    if path['length'] <= 1:
+        # Avoid printing empty lines
+        continue
+    x = path['x']
+    #for band in bands:
+    for band, band_type in zip(path['values'], all_data['band_type_idx']):
+
+        # For now we support only two colors
+        if band_type % 2 == 0:
+            further_plot_options = further_plot_options1
+        else:
+            further_plot_options = further_plot_options2
+
+        # Put the legend text only once
+        label = None
+        if first_band_1 and band_type % 2 == 0:
+            first_band_1 = False
+            label = all_data.get('legend_text', None)
+        elif first_band_2 and band_type % 2 == 1:
+            first_band_2 = False
+            label = all_data.get('legend_text2', None)
+
+        p.plot(x, band, label=label,
+               **further_plot_options
+        )
+
+
+p.set_xticks(tick_pos)
+p.set_xticklabels(tick_labels)
+p.set_xlim([all_data['x_min_lim'], all_data['x_max_lim']])
+p.set_ylim([all_data['y_min_lim'], all_data['y_max_lim']])
+p.xaxis.grid(True, which='major', color='#888888', linestyle='-', linewidth=0.5)
+
+if all_data.get('plot_zero_axis', False):
+    p.axhline(
+        0.,
+        color=all_data.get('zero_axis_color', '#888888'),
+        linestyle=all_data.get('zero_axis_linestyle', '--'),
+        linewidth=all_data.get('zero_axis_linewidth', 0.5),
+        )
+if all_data['title']:
+    p.set_title(all_data['title'])
+if all_data['legend_text']:
+    p.legend(loc='best')
+p.set_ylabel(all_data['yaxis_label'])
+
+try:
+    if print_comment:
+        print all_data['comment']
+except KeyError:
+    pass
+''')
+
+matplotlib_footer_template_show = Template('''pl.show()
+'''
+)
+
+matplotlib_footer_template_exportfile = Template('''pl.savefig("$fname", format="$format")
+'''
+)
+
+matplotlib_footer_template_exportfile_with_dpi = Template('''pl.savefig("$fname", format="$format", dpi=$dpi)
+'''
+)

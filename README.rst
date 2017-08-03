@@ -16,6 +16,11 @@ The official homepage is at http://www.aiida.net
 
 The code is hosted on GitHub at https://github.com/aiidateam/aiida_core
 
+The documentation is hosted on Read The Docs at: 
+
+- (stable version) http://aiida-core.readthedocs.io/en/stable
+- (develop version) http://aiida-core.readthedocs.io/en/latest
+
 How to cite AiiDA
 -----------------
 If you use AiiDA in your research, please consider citing the following work:

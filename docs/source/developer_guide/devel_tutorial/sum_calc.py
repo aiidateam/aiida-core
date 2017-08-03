@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from aiida.orm import JobCalculation
 from aiida.orm.data.parameter import ParameterData 
@@ -16,8 +24,8 @@ class SumCalculation(JobCalculation):
     def _init_internal_params(self):
         super(SumCalculation, self)._init_internal_params()
         
-        self._INPUT_FILE_NAME = 'in.json'
-        self._OUTPUT_FILE_NAME = 'out.json'
+        self._DEFAULT_INPUT_FILE = 'in.json'
+        self._DEFAULT_OUTPUT_FILE = 'out.json'
         self._default_parser = 'sum'
         
     @classproperty
@@ -70,7 +78,7 @@ class SumCalculation(JobCalculation):
         input_json = parameters.get_dict() 
         
         # write all the input to a file
-        input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
+        input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
         with open(input_filename, 'w') as infile:
             json.dump(input_json, infile)
         
@@ -80,10 +88,10 @@ class SumCalculation(JobCalculation):
         calcinfo.uuid = self.uuid
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = []
-        calcinfo.retrieve_list = [self._OUTPUT_FILE_NAME]
+        calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE]
         
         codeinfo = CodeInfo()
-        codeinfo.cmdline_params = [self._INPUT_FILE_NAME,self._OUTPUT_FILE_NAME]
+        codeinfo.cmdline_params = [self._DEFAULT_INPUT_FILE,self._DEFAULT_OUTPUT_FILE]
         codeinfo.code_uuid = code.uuid
         calcinfo.codes_info = [codeinfo]
         

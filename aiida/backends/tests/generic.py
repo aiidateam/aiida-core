@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Generic tests that need the use of the DB
 """
@@ -7,10 +15,6 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm.node import Node
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 
 class TestCode(AiidaTestCase):
@@ -99,9 +103,9 @@ class TestWfBasic(AiidaTestCase):
         """
         Checks the versioning.
         """
-        from aiida.workflows.test import WorkflowTestEmpty
+        from aiida.workflows.test import WFTestEmpty
 
-        w = WorkflowTestEmpty().store()
+        w = WFTestEmpty().store()
 
         # Even if I stored many attributes, this should stay at 1
         self.assertEquals(w._dbworkflowinstance.nodeversion, 1)
@@ -389,3 +393,13 @@ class TestDbExtras(AiidaTestCase):
     def test_replacement(self):
         pass
 
+class TestBool(AiidaTestCase):
+    def test_bool_conversion(self):
+        from aiida.orm.data.base import Bool
+        for val in [True, False]:
+            self.assertEqual(val, bool(Bool(val)))
+
+    def test_int_conversion(self):
+        from aiida.orm.data.base import Bool
+        for val in [True, False]:
+            self.assertEqual(int(val), int(Bool(val)))

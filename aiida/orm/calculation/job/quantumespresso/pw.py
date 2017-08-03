@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Plugin to create a Quantum Espresso pw.x file.
 """
@@ -21,10 +29,6 @@ from aiida.orm.calculation.job.quantumespresso import BasePwCpInputGenerator
 from aiida.common.utils import classproperty
 from aiida.orm.data.array.kpoints import KpointsData
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class PwCalculation(BasePwCpInputGenerator, JobCalculation):
@@ -92,7 +96,20 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
         }
 
         return retdict
-   
+
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from  PwCalculation node's 
+        properties.
+        :param self:
+        :return: retsrt:
+        """
+
+        retstr = super(PwCalculation, self).get_desc()
+
+        return " ".join(['{}'.format(self.inp.parameters.dict.CONTROL[
+                                     'calculation']), retstr])
+
     @classmethod
     def input_helper(cls, *args, **kwargs):
         """

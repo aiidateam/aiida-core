@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import os
 import sys
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class Calculation(VerdiCommandWithSubcommands):
@@ -54,12 +57,9 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.common.pluginloader import existing_plugins
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.common.pluginloader import all_plugins
 
-        plugins = sorted(existing_plugins(JobCalculation,
-                                          'aiida.orm.calculation.job',
-                                          suffix='Calculation'))
+        plugins = sorted(all_plugins('calculations'))
         # Do not return plugins that are already on the command line
         other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
         return_plugins = [_ for _ in plugins if _ not in other_subargs]
@@ -137,6 +137,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         import argparse
         from aiida.orm.calculation.job import JobCalculation as C
+        from aiida.common.setup import get_property
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -180,7 +181,7 @@ class Calculation(VerdiCommandWithSubcommands):
                             type=int, default=None,
                             help='set a limit to the number of rows returned')
         parser.add_argument('-o', '--order-by',
-                            choices=['id', 'ctime'], 
+                            choices=['id', 'ctime'],
                             default='ctime',
                             help='order the results')
         parser.add_argument('--project',
@@ -190,7 +191,8 @@ class Calculation(VerdiCommandWithSubcommands):
                                     'mtime', 'user'
                                 ),
                             nargs='+',
-                            default=('pk', 'state', 'ctime', 'sched', 'computer', 'type'),
+                            default=get_property("verdishell.calculation_list"),
+                            #('pk', 'ctime', 'state', 'sched', 'computer', 'type', 'label'),
                             help="Define the list of properties to show"
                         )
 
@@ -203,35 +205,19 @@ class Calculation(VerdiCommandWithSubcommands):
         if parsed_args.all_states:
             parsed_args.states = None
 
-        try:
-            C._list_calculations(
-                states=parsed_args.states,
-                past_days=parsed_args.past_days,
-                pks=parsed_args.pks,
-                all_users=parsed_args.all_users,
-                group=parsed_args.group,
-                group_pk=parsed_args.group_pk,
-                relative_ctime=parsed_args.relative_ctime,
-                # with_scheduler_state=parsed_args.with_scheduler_state,
-                order_by=parsed_args.order_by,
-                limit=parsed_args.limit,
-                projections=parsed_args.project,
-            )
-        except Exception as e:
-            import traceback
-            print '1', e.__doc__
-            print '2', sys.exc_info()
-            print '3', sys.exc_info()[0]
-            print '4', sys.exc_info()[1]
-            print '5', sys.exc_info()[2],
-            print 'Sorry I mean line...',
-            print traceback.tb_lineno(sys.exc_info()[2])
-            ex_type, ex, tb = sys.exc_info()
-            print '6', traceback.print_tb(tb)
-            # ~ print >> sys.stderr, "Error ({}): {}".format(
-            # ~ e.__class__.__name__,
-            # ~ e.message
-            # ~ )
+        C._list_calculations(
+            states=parsed_args.states,
+            past_days=parsed_args.past_days,
+            pks=parsed_args.pks,
+            all_users=parsed_args.all_users,
+            group=parsed_args.group,
+            group_pk=parsed_args.group_pk,
+            relative_ctime=parsed_args.relative_ctime,
+            # with_scheduler_state=parsed_args.with_scheduler_state,
+            order_by=parsed_args.order_by,
+            limit=parsed_args.limit,
+            projections=parsed_args.project,
+        )
 
     def calculation_res(self, *args):
         """
@@ -365,7 +351,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         from aiida.orm import CalculationFactory
         from aiida.orm.calculation.job import JobCalculation
-        from aiida.common.pluginloader import existing_plugins
+        from aiida.common.pluginloader import all_plugins
         from aiida.common.exceptions import MissingPluginError
 
         if args:
@@ -383,12 +369,12 @@ class Calculation(VerdiCommandWithSubcommands):
                     for key, val in C._use_methods.iteritems():
                         print "    {}: {}".format(key,
                                                   val['valid_types'].__name__)
+                    print("  Module location: {}".format(C.__module__))
+
                 except MissingPluginError:
                     print "! {}: NOT FOUND!".format(arg)
         else:
-            plugins = sorted(existing_plugins(JobCalculation,
-                                              'aiida.orm.calculation.job',
-                                              suffix='Calculation'))
+            plugins = sorted(all_plugins('calculations'))
             if plugins:
                 print("## Pass as a further parameter one (or more) "
                       "plugin names to get more details on a given plugin.")
@@ -424,7 +410,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.common.pluginloader import get_class_typestring
+        from aiida.common.old_pluginloader import get_class_typestring
 
         try:
             calc = load_node(parsed_args.calc)
@@ -580,7 +566,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.common.pluginloader import get_class_typestring
+        from aiida.common.old_pluginloader import get_class_typestring
 
         try:
             calc = load_node(parsed_args.calc)

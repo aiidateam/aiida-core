@@ -1,43 +1,83 @@
-from aiida.common.exceptions import InputValidationError, InvalidOperation, ConfigurationError
-#from aiida.restapi.caching import cache
-#from aiida.restapi.common.config import CACHING_TIMEOUTS
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.backends.settings import BACKEND
+from aiida.common.exceptions import InputValidationError, InvalidOperation, \
+    ConfigurationError
+from aiida.common.utils import get_object_from_string, issingular
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
 from aiida.restapi.common.utils import pk_dbsynonym
-from aiida.restapi.common.config import LIMIT_DEFAULT, custom_schema
-from aiida.common.utils import get_object_from_string, issingular
-from aiida.backends.settings import BACKEND
-from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
 
 class BaseTranslator(object):
     """
-    Generic class for translator. It also contains all methods
-    required to build QueryBuilder object
+    Generic class for translator. It contains the methods
+    required to build a related QueryBuilder object
     """
 
     # A label associated to the present class
     __label__ = None
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    _aiida_class = None
+    # The string name of the AiiDA class
     _aiida_type = None
+
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = None
+
+    # If True (False) the corresponding AiiDA class has (no) uuid property
+    _has_uuid = None
 
     _result_type = __label__
 
     _default = _default_projections = []
     _is_qb_initialized = False
-    _is_pk_query = None
+    _is_id_query = None
     _total_count = None
 
-
-    def __init__(self):
+    def __init__(self, Class=None, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
+
+        keyword Class (default None but becomes this class): is the class
+        from which one takes the initial values of the attributes. By default
+        is this class so that class atributes are  translated into object
+        attributes. In case of inheritance one cane use the
+        same constructore but pass the inheriting class to pass its attributes.
         """
+
+        # Assume default class is this class (cannot be done in the
+        # definition as it requires self)
+        if Class is None:
+            Class = self.__class__
+
+        # Assign class parameters to the object
+        self.__label__ = Class.__label__
+        self._aiida_class = Class._aiida_class
+        self._aiida_type = Class._aiida_type
+        self._qb_type = Class._qb_type
+        self._result_type = Class.__label__
+
+        self._default = Class._default
+        self._default_projections = Class._default_projections
+        self._is_qb_initialized = Class._is_qb_initialized
+        self._is_id_query = Class._is_id_query
+        self._total_count = Class._total_count
+
+        # Basic filter (dict) to set the identity of the uuid. None if
+        #  no specific node is requested
+        self._id_filter = None
+
         # basic query_help object
         self._query_help = {
             "path": [{
@@ -51,6 +91,13 @@ class BaseTranslator(object):
         # query_builder object (No initialization)
         self.qb = QueryBuilder()
 
+        self.LIMIT_DEFAULT = kwargs['LIMIT_DEFAULT']
+
+        if 'custom_schema' in kwargs:
+            self.custom_schema = kwargs['custom_schema']
+        else:
+            self.custom_schema = None
+
     def __repr__(self):
         """
         This function is required for the caching system to be able to compare
@@ -62,30 +109,65 @@ class BaseTranslator(object):
         """
         return ""
 
-    @classmethod
-    def get_schema(cls):
+    def get_schema(self):
 
         # Construct the full class string
-        class_string = 'aiida.orm.' + cls._aiida_type
+        class_string = 'aiida.orm.' + self._aiida_type
 
         # Load correspondent orm class
         orm_class = get_object_from_string(class_string)
 
-        # Construct the json object to return it
+        # Construct the json object to be returned
         basic_schema = orm_class.get_db_columns()
 
-        if cls._default_projections == ['**']:
-            schema = basic_schema # No custom schema, take the basic one
-        else:
-            schema = dict([(k, basic_schema[k]) for k in cls._default_projections
-                                  if k in basic_schema.keys()])
+        """
+        Determine the API schema (spartially overlapping with the ORM/database one).
+        When the ORM is based on django, however, attributes and extras are not colums of the database but are
+        nevertheless         valid projections. We add them by hand into the API schema.
+        """
+        # TODO change the get_db_columns method to include also relationships such as attributes, extras, input,
+        # and outputs        in order to have a more complete definition of the schema.
 
-        # Convert the related_tablevalues to the RESTAPI resources
-        # (orm class/db table ==> RESTapi resource)
+        if self._default_projections == ['**']:
+            schema = basic_schema  # No custom schema, take the basic one
+        else:
+
+            # Non-schema possible projections (only for nodes when django is backend)
+            non_schema_projs = ('attributes', 'extras')
+            # Sub-projections of JSON fields (applies to both SQLA and Django)
+            non_schema_proj_prefix = ('attributes.', 'extras.')
+
+            schema_key = []
+            schema_values = []
+
+            for k in self._default_projections:
+                if k in basic_schema.keys():
+                    schema_key.append(k)
+                    schema_values.append(basic_schema[k])
+                elif k in non_schema_projs:
+                    # Catches 'attributes' and 'extras'
+                    schema_key.append(k)
+                    value = dict(type=dict, is_foreign_key=False)
+                    schema_values.append(value)
+                elif k.startswith(non_schema_proj_prefix):
+                    # Catches 'attributes.<key>' and 'extras.<key>'
+                    schema_key.append(k)
+                    value = dict(type=None, is_foreign_key=False)
+                    schema_values.append(value)
+
+            schema = dict(zip(schema_key, schema_values))
+
         def table2resource(table_name):
+            """
+            Convert the related_tablevalues to the RESTAPI resources
+            (orm class/db table ==> RESTapi resource)
+
+            :param table_name (str): name of the table (in SQLA is __tablename__)
+            :return: resource_name (str): name of the API resource
+            """
             # TODO Consider ways to make this function backend independent (one
-            # idea would be to gro from table name to aiida class name which is
-            # univoque)
+            # idea would be to go from table name to aiida class name which is
+            # unique)
             if BACKEND == BACKEND_DJANGO:
                 (spam, resource_name) = issingular(table_name[2:].lower())
             elif BACKEND == BACKEND_SQLA:
@@ -102,12 +184,12 @@ class BaseTranslator(object):
         for k, v in schema.iteritems():
 
             # Add custom fields to the column dictionaries
-            if 'fields' in custom_schema:
-                if k in custom_schema['fields'].keys():
-                    schema[k].update(custom_schema['fields'][k])
+            if 'fields' in self.custom_schema:
+                if k in self.custom_schema['fields'].keys():
+                    schema[k].update(self.custom_schema['fields'][k])
 
             # Convert python types values into strings
-            schema[k]['type']=str(schema[k]['type'])[7:-2]
+            schema[k]['type'] = str(schema[k]['type'])[7:-2]
 
             # Construct the 'related resource' field from the 'related_table'
             # field
@@ -115,7 +197,14 @@ class BaseTranslator(object):
                 schema[k]['related_resource'] = table2resource(
                     schema[k].pop('related_table'))
 
-        return dict(columns=schema)
+        # TODO Construct the ordering (all these things have to be moved in matcloud_backend)
+        if self._default_projections != ['**']:
+            ordering = self._default_projections
+        else:
+            # random ordering if not set explicitely in
+            ordering = schema.keys()
+
+        return dict(fields=schema, ordering=ordering)
 
     def init_qb(self):
         """
@@ -145,7 +234,7 @@ class BaseTranslator(object):
             #     return cache.memoize()
             #
 
-        #    @cache.memoize(timeout=CACHING_TIMEOUTS[self.__label__])
+            #    @cache.memoize(timeout=CACHING_TIMEOUTS[self.__label__])
 
     def get_total_count(self):
         """
@@ -172,7 +261,6 @@ class BaseTranslator(object):
                   }
         :return: query_help dict including filters if any.
         """
-
         if isinstance(filters, dict):
             if len(filters) > 0:
                 for tag, tag_filters in filters.iteritems():
@@ -264,33 +352,34 @@ class BaseTranslator(object):
         for tag, columns in orders.iteritems():
             self._query_help['order_by'][tag] = def_order(columns)
 
-    def set_query(self, filters=None, orders=None, projections=None, pk=None):
+    def set_query(self, filters=None, orders=None, projections=None, id=None):
         """
         Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
 
         :param filters: dictionary with the filters
         :param orders: dictionary with the order for each tag
-        :param pk (integer): pk of a specific node
+        :param orders: dictionary with the projections
+        :param id (integer): id of a specific node
         """
 
         tagged_filters = {}
 
         ## Check if filters are well defined and construct an ad-hoc filter
-        # for pk_query
-        if pk is not None:
-            self._is_pk_query = True
+        # for id_query
+        if id is not None:
+            self._is_id_query = True
             if self._result_type == self.__label__ and len(filters) > 0:
-                raise RestInputValidationError("selecting a specific pk does "
+                raise RestInputValidationError("selecting a specific id does "
                                                "not "
                                                "allow to specify filters")
-            elif not self._check_pk_validity(pk):
-                raise RestValidationError(
-                    "either the selected pk does not exist "
-                    "or the corresponding object is not of "
-                    "type aiida.orm.{}".format(self._aiida_type))
+
+            try:
+                self._check_id_validity(id)
+            except RestValidationError as e:
+                raise RestValidationError(e.message)
             else:
-                tagged_filters[self.__label__] = {'id': {'==': pk}}
+                tagged_filters[self.__label__] = self._id_filter
                 if self._result_type is not self.__label__:
                     tagged_filters[self._result_type] = filters
         else:
@@ -338,11 +427,11 @@ class BaseTranslator(object):
                 limit = int(limit)
             except ValueError:
                 raise InputValidationError("Limit value must be an integer")
-            if limit > LIMIT_DEFAULT:
+            if limit > self.LIMIT_DEFAULT:
                 raise RestValidationError("Limit and perpage cannot be bigger "
-                                          "than {}".format(LIMIT_DEFAULT))
+                                          "than {}".format(self.LIMIT_DEFAULT))
         else:
-            limit = LIMIT_DEFAULT
+            limit = self.LIMIT_DEFAULT
 
         if offset is not None:
             try:
@@ -377,17 +466,8 @@ class BaseTranslator(object):
                                    "initialized.")
 
         results = []
-        from aiida.backends.settings import BACKEND
-
         if self._total_count > 0:
-            if BACKEND == "django":
-                from django.db import transaction
-                with transaction.atomic():
-                    for tmp in self.qb.iterdict():
-                        results.append(tmp[label])
-            elif BACKEND == "sqlalchemy":
-                for tmp in self.qb.iterdict():
-                    results.append(tmp[label])
+            results = [res[label] for res in self.qb.dict()]
 
         # TODO think how to make it less hardcoded
         if self._result_type == 'input_of':
@@ -419,32 +499,57 @@ class BaseTranslator(object):
         data = self.get_formatted_result(self._result_type)
         return data
 
-    def _check_pk_validity(self, pk):
+    def _check_id_validity(self, id):
         """
-        Checks whether a pk corresponds to an object of the expected type,
+        Checks whether a id full id or id starting pattern) corresponds to
+         an object of the expected type,
         whenever type is a valid column of the database (ex. for nodes,
-        but not for users)_
-        :param pk: (integer) ok to check
-        :return: True or False
+        but not for users)
+        
+        :param id: id, or id starting pattern
+        
+        :return: True if id valid (invalid). If True, sets the
+            id filter attribute correctly
+            
+        :raise: RestValidationError if No node is found or id pattern does
+        not identify a unique node
         """
-        # The logic could be to load the node or to use querybuilder. Let's
-        # do with qb for consistency, although it would be easier to do it
-        # with load_node
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
-        query_help_base = {
-            'path': [
-                {
-                    'type': self._qb_type,
-                    'label': self.__label__,
-                },
-            ],
-            'filters': {
-                self.__label__:
-                    {
-                        'id': {'==': pk}
-                    }
-            }
-        }
+        from aiida.orm.utils import create_node_id_qb
 
-        qb_base = QueryBuilder(**query_help_base)
-        return qb_base.count() == 1
+        if self._has_uuid:
+
+            # For consistency check that tid is a string
+            if not isinstance(id, (str, unicode)):
+                raise RestValidationError('parameter id has to be an string')
+
+            qb = create_node_id_qb(uuid=id, parent_class=self._aiida_class)
+        else:
+
+            # Similarly, check that id is an integer
+            if not isinstance(id, int):
+                raise RestValidationError('parameter id has to be an integer')
+
+            qb = create_node_id_qb(pk=id, parent_class=self._aiida_class)
+
+        # project only the pk
+        qb.add_projection('node', ['id'])
+        # for efficiency i don;t go further than two results
+        qb.limit(2)
+
+        try:
+            pk = qb.one()[0]
+        except MultipleObjectsError:
+            raise RestValidationError("More than one node found."
+                                      " Provide longer starting pattern"
+                                      " for id.")
+        except NotExistent:
+            raise RestValidationError("either no object's id starts"
+                                      " with '{}' or the corresponding object"
+                                      " is not of type aiida.orm.{}"
+                                      .format(id, self._aiida_type))
+        else:
+            # create a permanent filter
+            self._id_filter = {'id': {'==': pk}}
+            return True

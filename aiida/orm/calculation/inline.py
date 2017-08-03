@@ -1,12 +1,29 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
-from aiida.orm.implementation.calculation import InlineCalculation, make_inline
+from aiida.orm.implementation.calculation import InlineCalculation as _IC, \
+                                                                   make_inline
 
+
+class InlineCalculation(_IC):
+    """
+    Here I put all the attributes/method that are common to all backends
+    """
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from a InlineCalculation node's 
+        properties.
+        :return: description string
+        """
+        return "{}()".format(self.get_function_name())
 
 def optional_inline(func):
     """
@@ -46,3 +63,5 @@ def optional_inline(func):
             return func(*args, **kwargs)
 
     return wrapped_function
+
+

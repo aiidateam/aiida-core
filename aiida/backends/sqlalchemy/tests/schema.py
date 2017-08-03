@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.models.node import DbNode
@@ -22,6 +31,84 @@ class TestRelationshipsSQLA(AiidaTestCase):
 
     """
 
+    def test_outputs_children_relationship(self):
+        """
+        This test checks that the outputs_q, children_q relationship and the
+        corresponding properties work as expected.
+        """
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+
+        # Create a link between these 2 nodes
+        n2.add_link_from(n1, "N1")
+        n3.add_link_from(n2, "N2")
+
+        # Check that the result of outputs is a list
+        self.assertIsInstance(n1.dbnode.outputs, list,
+                              "This is expected to be a list")
+
+        # Check that the result of outputs_q is a query
+        from sqlalchemy.orm.dynamic import AppenderQuery
+        self.assertIsInstance(n1.dbnode.outputs_q, AppenderQuery,
+                              "This is expected to be an AppenderQuery")
+
+        # Check that the result of children is a list
+        self.assertIsInstance(n1.dbnode.children, list,
+                              "This is expected to be a list")
+
+        # Check that the result of children_q is a list
+        from sqlalchemy.orm.dynamic import AppenderQuery
+        self.assertIsInstance(n1.dbnode.children_q, AppenderQuery,
+                              "This is expected to be an AppenderQuery")
+
+        # Check that the result of outputs is correct
+        out = set([_.pk for _ in n1.dbnode.outputs])
+        self.assertEqual(out, set([n2.pk]))
+
+        # Check that the result of children is correct
+        out = set([_.pk for _ in n1.dbnode.children])
+        self.assertEqual(out, set([n2.pk, n3.pk]))
+
+    def test_inputs_parents_relationship(self):
+        """
+        This test checks that the inputs_q, parents_q relationship and the
+        corresponding properties work as expected.
+        """
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+
+        # Create a link between these 2 nodes
+        n2.add_link_from(n1, "N1")
+        n3.add_link_from(n2, "N2")
+
+        # Check that the result of outputs is a list
+        self.assertIsInstance(n1.dbnode.inputs, list,
+                              "This is expected to be a list")
+
+        # Check that the result of outputs_q is a query
+        from sqlalchemy.orm.dynamic import AppenderQuery
+        self.assertIsInstance(n1.dbnode.inputs_q, AppenderQuery,
+                              "This is expected to be an AppenderQuery")
+
+        # Check that the result of children is a list
+        self.assertIsInstance(n1.dbnode.parents, list,
+                              "This is expected to be a list")
+
+        # Check that the result of children_q is a list
+        from sqlalchemy.orm.dynamic import AppenderQuery
+        self.assertIsInstance(n1.dbnode.parents_q, AppenderQuery,
+                              "This is expected to be an AppenderQuery")
+
+        # Check that the result of inputs is correct
+        out = set([_.pk for _ in n3.dbnode.inputs])
+        self.assertEqual(out, set([n2.pk]))
+
+        # Check that the result of parents is correct
+        out = set([_.pk for _ in n3.dbnode.parents])
+        self.assertEqual(out, set([n1.pk, n2.pk]))
+
     def test_User_node_1(self):
         """
         Test that when a user and a node having that user are created,
@@ -43,9 +130,10 @@ class TestRelationshipsSQLA(AiidaTestCase):
         self.assertIsNone(dbu1.id)
         self.assertIsNone(dbn1.id)
 
+        session = aiida.backends.sqlalchemy.get_scoped_session()
         # Add only the node and commit
-        aiida.backends.sqlalchemy.session.add(dbn1)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(dbn1)
+        session.commit()
 
         # Check that a pk has been assigned, which means that things have
         # been flushed into the database
@@ -75,13 +163,15 @@ class TestRelationshipsSQLA(AiidaTestCase):
         self.assertIsNone(dbu1.id)
         self.assertIsNone(dbn1.id)
 
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         # Catch all the SQLAlchemy warnings generated by the following code
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=sa_exc.SAWarning)
 
             # Add only the user and commit
-            aiida.backends.sqlalchemy.session.add(dbu1)
-            aiida.backends.sqlalchemy.session.commit()
+            session.add(dbu1)
+            session.commit()
 
         # Check that a pk has been assigned (or not), which means that things
         # have been flushed into the database
@@ -112,9 +202,11 @@ class TestRelationshipsSQLA(AiidaTestCase):
         self.assertIsNone(dbn1.id)
         self.assertIsNone(dbn2.id)
 
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         # Add only first node and commit
-        aiida.backends.sqlalchemy.session.add(dbn1)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(dbn1)
+        session.commit()
 
         # Check for which object a pk has been assigned, which means that
         # things have been at least flushed into the database
@@ -149,9 +241,11 @@ class TestRelationshipsSQLA(AiidaTestCase):
         self.assertIsNone(dbu1.id)
         self.assertIsNone(dbn1.id)
 
+        session = aiida.backends.sqlalchemy.get_scoped_session()
+
         # Add only first node and commit
-        aiida.backends.sqlalchemy.session.add(dbn1)
-        aiida.backends.sqlalchemy.session.commit()
+        session.add(dbn1)
+        session.commit()
 
         # Check for which object a pk has been assigned, which means that
         # things have been at least flushed into the database
@@ -185,8 +279,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
     #     self.assertIsNone(dbn1.id)
     #
     #     # Add only the node and commit
-    #     aiida.backends.sqlalchemy.session.add(dbn1)
-    #     aiida.backends.sqlalchemy.session.commit()
+    #     aiida.backends.sqlalchemy.get_scoped_session().add(dbn1)
+    #     aiida.backends.sqlalchemy.get_scoped_session().commit()
     #
     #     # Check that a pk has been assigned, which means that things have
     #     # been flushed into the database
@@ -215,8 +309,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
     #     self.assertIsNone(dbn1.id)
     #
     #     # Add only the user and commit
-    #     aiida.backends.sqlalchemy.session.add(dbc1)
-    #     aiida.backends.sqlalchemy.session.commit()
+    #     aiida.backends.sqlalchemy.get_scoped_session().add(dbc1)
+    #     aiida.backends.sqlalchemy.get_scoped_session().commit()
     #
     #     # Check that a pk has been assigned (or not), which means that things
     #     # have been flushed into the database
@@ -248,8 +342,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
     #     self.assertIsNone(dbn2.id)
     #
     #     # Add only first node and commit
-    #     aiida.backends.sqlalchemy.session.add(dbn1)
-    #     aiida.backends.sqlalchemy.session.commit()
+    #     aiida.backends.sqlalchemy.get_scoped_session().add(dbn1)
+    #     aiida.backends.sqlalchemy.get_scoped_session().commit()
     #
     #     # Check for which object a pk has been assigned, which means that
     #     # things have been at least flushed into the database
@@ -286,8 +380,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
     #     self.assertIsNone(dbn1.id)
     #
     #     # Add only first node and commit
-    #     aiida.backends.sqlalchemy.session.add(dbn1)
-    #     aiida.backends.sqlalchemy.session.commit()
+    #     aiida.backends.sqlalchemy.get_scoped_session().add(dbn1)
+    #     aiida.backends.sqlalchemy.get_scoped_session().commit()
     #
     #     # Check for which object a pk has been assigned, which means that
     #     # things have been at least flushed into the database

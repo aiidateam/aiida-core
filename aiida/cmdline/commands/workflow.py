@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
-
 
 class Workflow(VerdiCommandWithSubcommands):
     """
-    Manage the AiiDA worflow manager
+    Manage the AiiDA legacy worflow manager
 
     Valid subcommands are:
     * list: list the running workflows running and their state. Pass a -h
@@ -132,9 +135,9 @@ class Workflow(VerdiCommandWithSubcommands):
         Pass a list of workflow PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
-        from aiida.backends.utils import load_dbenv
-
-        load_dbenv()
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.workflow import kill_from_pk

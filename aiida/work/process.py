@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
+import inspect
 import collections
 import uuid
 from enum import Enum
@@ -19,12 +28,12 @@ from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from aiida.work.defaults import class_loader
 import aiida.work.util
-from aiida.work.util import PROCESS_LABEL_ATTR
+from aiida.work.util import PROCESS_LABEL_ATTR, get_or_create_output_group
+from aiida.orm.calculation import Calculation
+from aiida.orm.data.parameter import ParameterData
+from aiida.orm.calculation.work import WorkCalculation
+from aiida import LOG_LEVEL_REPORT
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class DictSchema(object):
@@ -35,12 +44,15 @@ class DictSchema(object):
         """
         Call this to validate the value against the schema.
 
+        :param value: a regular dictionary or a ParameterData instance 
         :return: tuple (success, msg).  success is True if the value is valid
             and False otherwise, in which case msg will contain information about
             the validation failure.
         :rtype: tuple
         """
         try:
+            if isinstance(value, ParameterData):
+                value = value.get_dict()
             self._schema(value)
             return True, None
         except voluptuous.Invalid as e:
@@ -128,7 +140,7 @@ class Process(plum.process.Process):
         spec.input("_description", valid_type=basestring, required=False)
         spec.input("_label", valid_type=basestring, required=False)
 
-        spec.dynamic_input(valid_type=aiida.orm.Data)
+        spec.dynamic_input(valid_type=(aiida.orm.Data, aiida.orm.Calculation))
         spec.dynamic_output(valid_type=aiida.orm.Data)
 
     @classmethod
@@ -214,7 +226,7 @@ class Process(plum.process.Process):
                 self._parent_pid = saved_instance_state[
                     self.SaveKeys.PARENT_CALC_PID.value]
 
-        if self.logger is None:
+        if self._logger is None:
             self.set_logger(self.calc.logger)
 
     @override
@@ -224,7 +236,12 @@ class Process(plum.process.Process):
 
     @override
     def on_finish(self):
+        """
+        Called when a Process enters the FINISHED state at which point
+        we set the corresponding attribute of the workcalculation node
+        """
         super(Process, self).on_finish()
+        self.calc._set_attr(WorkCalculation.FINISHED_KEY, True)
         self.calc.seal()
 
     @override
@@ -278,6 +295,16 @@ class Process(plum.process.Process):
         # Out of options
         return None
 
+    @protected
+    def report(self, msg, *args, **kwargs):
+        """
+        Log a message to the logger, which should get saved to the
+        database through the attached DbLogHandler. The class name and function
+        name of the caller are prepended to the given message
+        """
+        message = '[{}|{}|{}]: {}'.format(self.calc.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
+        self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
+
     # @override
     # def create_input_args(self, inputs):
     #     parsed = super(Process, self).create_input_args(inputs)
@@ -329,6 +356,10 @@ class Process(plum.process.Process):
                 to_link[name] = input
 
         for name, input in to_link.iteritems():
+
+            if isinstance(input, Calculation):
+                input = get_or_create_output_group(input)
+
             if not input.is_stored:
                 # If the input isn't stored then assume our parent created it
                 if parent_calc:

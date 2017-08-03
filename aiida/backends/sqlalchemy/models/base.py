@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from __future__ import absolute_import
 
 from sqlalchemy import orm
@@ -12,10 +20,6 @@ from aiida.common.exceptions import InvalidOperation
 # https://github.com/mitsuhiko/flask-sqlalchemy/blob/master/flask_sqlalchemy/__init__.py#L491
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 
 class _QueryProperty(object):
@@ -28,17 +32,17 @@ class _QueryProperty(object):
             mapper = orm.class_mapper(_type)
             if mapper:
                 return self.query_class(
-                    mapper, session=aiida.backends.sqlalchemy.session)
+                    mapper, session=aiida.backends.sqlalchemy.get_scoped_session())
         except UnmappedClassError:
             return None
 
 
 class _SessionProperty(object):
     def __get__(self, obj, _type):
-        if not aiida.backends.sqlalchemy.session:
+        if not aiida.backends.sqlalchemy.get_scoped_session():
             raise InvalidOperation("You need to call load_dbenv before "
                                    "accessing the session of SQLALchemy.")
-        return aiida.backends.sqlalchemy.session
+        return aiida.backends.sqlalchemy.get_scoped_session()
 
 
 class _AiidaQuery(orm.Query):
@@ -56,6 +60,8 @@ class _AiidaQuery(orm.Query):
                 yield r
 
 
+from aiida.backends.sqlalchemy import get_scoped_session
+
 class Model(object):
 
     query = _QueryProperty()
@@ -63,14 +69,17 @@ class Model(object):
     session = _SessionProperty()
 
     def save(self, commit=True):
-        self.session.add(self)
+        sess = get_scoped_session()
+        sess.add(self)
         if commit:
-            self.session.commit()
+            sess.commit()
         return self
 
+
     def delete(self, commit=True):
-        self.session.delete(self)
+        sess = get_scoped_session()
+        sess.delete(self)
         if commit:
-            self.session.commit()
+            sess.commit()
 
 Base = declarative_base(cls=Model, name='Model')

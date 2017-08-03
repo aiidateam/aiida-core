@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from aiida.orm.calculation.job.sum import SumCalculation
 from aiida.parsers.parser import Parser
@@ -30,13 +38,13 @@ class SumParser(Parser):
         # check what is inside the folder
         list_of_files = out_folder.get_folder_list()
         # at least the stdout should exist
-        if self._calc._OUTPUT_FILE_NAME not in list_of_files:
+        if self._calc._DEFAULT_OUTPUT_FILE not in list_of_files:
             successful = False
             self.logger.error("Output json not found")
             return successful,()
         
         try:
-            with open( out_folder.get_abs_path(self._calc._OUTPUT_FILE_NAME) ) as f:
+            with open( out_folder.get_abs_path(self._calc._DEFAULT_OUTPUT_FILE) ) as f:
                 out_dict = json.load(f)
         except ValueError:
             successful=False

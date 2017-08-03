@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import collections
 
@@ -16,13 +24,7 @@ from django.db import transaction, IntegrityError
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.orm.implementation.django.utils import get_db_columns
-
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
+from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class Group(AbstractGroup):
@@ -62,7 +64,8 @@ class Group(AbstractGroup):
 
     @staticmethod
     def get_db_columns():
-        from aiida.backends.djsite.db.models import DbGroup
+        # from aiida.backends.djsite.db.models import DbGroup
+        from aiida.backends.djsite.querybuilder_django.dummy_model import DbGroup
         return get_db_columns(DbGroup)
 
     @property
@@ -117,11 +120,10 @@ class Group(AbstractGroup):
 
     def store(self):
         if not self.is_stored:
-            sid = transaction.savepoint()
             try:
-                self.dbgroup.save()
+                with transaction.atomic():
+                    self.dbgroup.save()
             except IntegrityError:
-                transaction.savepoint_rollback(sid)
                 raise UniquenessError("A group with the same name (and of the "
                                       "same type) already "
                                       "exists, unable to store")

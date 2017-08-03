@@ -100,7 +100,7 @@ to create the new branch, and finally delete the old one with::
   git push origin :oldname
   
 (notice the : symbol).
-Note that if you are working e.g. on BitBucket, there may be a filter to
+Note that if you are working e.g. on GitHub, there may be a filter to
 disallow the deletion of branches (check in the repository settings, and 
 then under "Branch management"). Moreover, the "Main branch" (set in the
 repository settings, under "Repository details") cannot be deleted. 
@@ -131,10 +131,10 @@ the association::
 (for the meaning of --set-upsteam see the section
 :ref:`git_associate_local_remote_branch` above).
 
-Disallow a branch deletion, or committing to a branch, on BitBucket
--------------------------------------------------------------------
+Disallow a branch deletion, or committing to a branch, on GitHub
+----------------------------------------------------------------
 You can find these settings in the repository settings of the web interface, and 
-then under "Branch management".
+then under "Branches".
 
 .. note:: if you commit to a branch (locally) and then discover that you cannot
   push (e.g. you mistakenly committed to the master branch), you can remove
@@ -148,20 +148,20 @@ then under "Branch management".
 Merge from a different repository
 ---------------------------------
   
-It is possible to do a pull request of a forked repository from the BitBucket
+It is possible to do a pull request of a forked repository from the GitHub
 web interface. However, if one just wants to keep in sync, e.g., the main
 AiiDA repository with a fork you are working into without creating a pull
 request (e.g., for daily merge of your fork's develop into the main repo's
 develop), you can:
   
 * commit and pull all your changes in your fork
-* from the BitBucket web interface, sync your fork with the main repository,
+* from the GitHub web interface, sync your fork with the main repository,
   if needed
 * go in a local cloned version of the main repository
 * [*only the first time*] add a remote pointing to the new repository, with
   the name you prefer (here: ``myfork``)::
     
-    git remote add myfork git@bitbucket.org:BUTBUCKETUSER/FORKEDREPO.git
+    git remote add myfork git@github.com:GITHUBUSER/FORKEDREPO.git
     
 * checkout to the correct branch you want to merge into (``git
   checkout develop``)

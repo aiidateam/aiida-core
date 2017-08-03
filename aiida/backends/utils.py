@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from __future__ import absolute_import
 
@@ -9,12 +17,26 @@ from aiida.common.exceptions import (
         InvalidOperation
     )
 
+AIIDA_ATTRIBUTE_SEP = '.'
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
+def validate_attribute_key(key):
+    """
+    Validate the key string to check if it is valid (e.g., if it does not
+    contain the separator symbol.).
 
+    :return: None if the key is valid
+    :raise ValidationError: if the key is not valid
+    """
+    from aiida.common.exceptions import ValidationError
+
+    if not isinstance(key, basestring):
+        raise ValidationError("The key must be a string.")
+    if not key:
+        raise ValidationError("The key cannot be an empty string.")
+    if AIIDA_ATTRIBUTE_SEP in key:
+        raise ValidationError("The separator symbol '{}' cannot be present "
+                              "in the key of attributes, extras, etc.".format(
+            AIIDA_ATTRIBUTE_SEP))
 
 
 def QueryFactory():
@@ -123,7 +145,8 @@ def get_authinfo(computer, aiidauser):
                     aiidauser.email, computer.name))
     elif settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-        from aiida.backends.sqlalchemy import session
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
         from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
         try:
             authinfo = session.query(DbAuthInfo).filter_by(
@@ -281,5 +304,24 @@ def get_current_profile():
         return settings.AIIDADB_PROFILE
     else:
         return None
+
+
+def _get_column(colname, alias):
+    """
+    Return the column for a given projection. Needed by the QueryBuilder
+    """
+
+    try:
+        return getattr(alias, colname)
+    except:
+        from aiida.common.exceptions import InputValidationError
+        raise InputValidationError(
+            "\n{} is not a column of {}\n"
+            "Valid columns are:\n"
+            "{}".format(
+                    colname, alias,
+                    '\n'.join(alias._sa_class_manager.mapper.c.keys())
+                )
+        )
 
 

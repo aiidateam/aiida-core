@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 This module defines the classes related to Xy data. That is data that contains
 collections of y-arrays bound to a single x-array, and the methods to operate
@@ -7,13 +15,8 @@ on them.
 
 from aiida.orm.data.array import ArrayData
 import numpy as np
-import matplotlib.pyplot as plt
 from aiida.common.exceptions import InputValidationError, NotExistent
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 def check_convert_single_to_tuple(item):
     """
@@ -152,9 +155,6 @@ class XyData(ArrayData):
             raise NotExistent("Could not retrieve array associated with y array"
                               " {}".format(y_names[i]))
         return zip(y_names,y_arrays,y_units)
-    
-    def _exportstring(self):
-        raise NotImplementedError
 
     # def plot_dosdata(self, dosdata_type, spin='',path='', fmt='pdf'):
     #     """

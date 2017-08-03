@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from aiida.backends.djsite.db.models import DbUser
 from aiida.common.lang import override
 from aiida.orm.implementation.general.user import AbstractUser, Util as UserUtil
 from aiida.utils.email import normalize_email
-from aiida.orm.implementation.django.utils import get_db_columns
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
+from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class User(AbstractUser):
@@ -51,7 +54,9 @@ class User(AbstractUser):
 
     @staticmethod
     def get_db_columns():
-        return get_db_columns(DbUser)
+        from aiida.backends.djsite.querybuilder_django.dummy_model import \
+            DbUser as DbU
+        return get_db_columns(DbU)
 
     @property
     def pk(self):
@@ -60,6 +65,10 @@ class User(AbstractUser):
     @property
     def id(self):
         return self._dbuser.pk
+
+    def __int__(self):
+        # Needed to pass this object to raw django queries
+        return self.id
 
     @property
     def to_be_stored(self):

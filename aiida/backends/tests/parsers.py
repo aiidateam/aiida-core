@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Tests for specific subclasses of Data
 """
 
 from aiida.backends.testbase import AiidaTestCase
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 ### Here comparisons are defined #####################################
@@ -112,11 +116,10 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
                 f.flush()
 
 
-
 def is_valid_folder_name(name):
     """
     Return True if the string (that will be the folder name of each subtest)
-    is a valid name for a test function: it should start with test_, and
+    is a valid name for a test function: it should start with ``test_``, and
     contain only letters, digits or underscores.
     """
     import string
@@ -131,7 +134,6 @@ def is_valid_folder_name(name):
 
     return True
 
-
 class TestParsers(AiidaTestCase):
     """
     This class dynamically finds all tests in a given subfolder, and loads
@@ -142,18 +144,16 @@ class TestParsers(AiidaTestCase):
     longMessage = True
 
     def read_test(self, outfolder):
-
         import os
         import importlib
         import json
 
-        from aiida.common.exceptions import NotExistent
         from aiida.orm import JobCalculation
         from aiida.orm.utils import load_node
         from aiida.orm.importexport import import_data
 
         imported = import_data(outfolder,
-                                    ignore_unknown_nodes=True, silent=True)
+                               ignore_unknown_nodes=True, silent=True)
 
         calc = None
         for _, pk in imported['aiida.backends.djsite.db.models.DbNode']['new']:
@@ -266,13 +266,13 @@ class TestParsers(AiidaTestCase):
                                     test_number, test_node_name, attr_test,
                                     e.message)
                                 if e.args:
-                                    e.args = tuple([
-                                                       "Failed test #{} for {}->{}: {}".format(
-                                                           test_number,
-                                                           test_node_name,
-                                                           attr_test,
-                                                           e.args[0])]
-                                                   + list(e.args[1:]))
+                                    e.args = tuple(
+                                        ["Failed test #{} for {}->{}: {}".format(
+                                            test_number,
+                                            test_node_name,
+                                            attr_test,
+                                            e.args[0])]
+                                        + list(e.args[1:]))
                                 raise e
 
         return base_test

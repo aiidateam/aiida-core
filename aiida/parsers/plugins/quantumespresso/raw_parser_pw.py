@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 A collection of function that are used to parse the output of Quantum Espresso PW.
 The function that needs to be called from outside is parse_raw_output().
@@ -18,10 +26,6 @@ from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 
 # parameter that will be used later for comparisons
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 lattice_tolerance = 1.e-5
 
@@ -169,7 +173,7 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
 
 def cell_volume(a1,a2,a3):
     """
-    returns the volume of the primitive cell: |a1.(a2xa3)|
+    returns the volume of the primitive cell: ``|a1.(a2xa3)|``
     """
     a_mid_0 = a2[1]*a3[2] - a2[2]*a3[1]
     a_mid_1 = a2[2]*a3[0] - a2[0]*a3[2]
@@ -1201,6 +1205,10 @@ def parse_pw_text_output(data, xml_data={}, structure_data={}, input_dict={}):
     # useful for queries (maybe), and structure_data will not be stored as a ParameterData
     parsed_data['number_of_atoms'] = nat
     parsed_data['number_of_species'] = ntyp
+    times_strings = ['h_psi','s_psi','cdiaghg']
+    times_strings += ['fft','fft_scatter', 'init_run']
+    times_strings += ['wfcinit','c_bands']
+
     parsed_data['volume'] = volume
     
     c_bands_error = False
@@ -1208,6 +1216,7 @@ def parse_pw_text_output(data, xml_data={}, structure_data={}, input_dict={}):
     # now grep quantities that can be considered isolated informations.
     for count,line in enumerate(data_lines):
         
+        bool_time = [any(re.findall('\\b{}\\b'.format(i), line)) for i in times_strings]
         # to be used for later
         if 'Carrying out vdW-DF run using the following parameters:' in line:
             vdw_correction=True
@@ -1245,6 +1254,24 @@ def parse_pw_text_output(data, xml_data={}, structure_data={}, input_dict={}):
                 parsed_data['wall_time_seconds'] = convert_qe_time_to_sec(time)
             except ValueError:
                 raise QEOutputParsingError("Unable to convert wall_time in seconds.")
+
+        elif any(bool_time) and 'WALL' in line:
+            bindex = bool_time.index(True)
+            bstring = times_strings[bindex] + '_time'
+            bstring_seconds= times_strings[bindex] + '_time_seconds'
+            try:
+                time = line.split('CPU')[1].split('WALL')[0]
+                parsed_data[bstring] = time
+            except Exception:
+                error_string = 'Error while parsing ' + times_strings[bindex]
+                parsed_data['warnings'].append(error_string)                
+            try:
+                parsed_data[bstring_seconds] = convert_qe_time_to_sec(time)
+            except ValueError:
+                error_string = 'Unable to convert ' + times_strings[bindex] + ' seconds'
+                parsed_data['warnings'].append(error_string)                
+ 
+
         
         elif 'SUMMARY OF PHASES' in line:
             try:
@@ -1708,10 +1735,10 @@ def parse_pw_text_output(data, xml_data={}, structure_data={}, input_dict={}):
 def parse_QE_errors(lines,count,warnings):
     """
     Parse QE errors messages (those appearing between some lines with
-    ``'%%%%%%%%'``)
+    ``%%%%%%%%``)
     :param lines: list of strings, the output text file as read by readlines()
-    or as obtained by data.split('\n') when data is the text file read by read()
-    :param count: the line at which we identified some ``'%%%%%%%%'``
+    or as obtained by data.split('\\n') when data is the text file read by read()
+    :param count: the line at which we identified some ``%%%%%%%%``
     :param warnings: the warnings already parsed in the file
     :return messages: a list of QE error messages
     """

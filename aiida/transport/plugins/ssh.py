@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from stat import S_ISDIR,S_ISREG
 import StringIO
 import paramiko
@@ -10,10 +18,6 @@ from aiida.common.utils import escape_for_bash
 from aiida.transport import FileAttribute
 from aiida.common import aiidalogger
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
 def parse_sshconfig(computername):
@@ -576,9 +580,9 @@ class SshTransport(aiida.transport.Transport):
         (that could be windows), I assume the remote computer is Linux-based
         and use '/' as separators!
 
-        :param (str) path: directory to create
-        :param (bool) ignore_existing: if set to true, it doesn't give any error
-            if the leaf directory does already exist
+        :param path: directory to create (string)
+        :param ignore_existing: if set to true, it doesn't give any error
+            if the leaf directory does already exist (bool)
 
         :raise OSError: If the directory already exists.
         """
@@ -609,8 +613,8 @@ class SshTransport(aiida.transport.Transport):
         """
         Create a folder (directory) named path.
 
-        :param (str) path: name of the folder to create
-        :param (bool) ignore_existing: if True, does not give any error if the directory
+        :param path: name of the folder to create
+        :param ignore_existing: if True, does not give any error if the directory
                   already exists
 
         :raise OSError: If the directory already exists.
@@ -640,7 +644,7 @@ class SshTransport(aiida.transport.Transport):
         Remove a file or a directory at path, recursively
         Flags used: -r: recursive copy; -f: force, makes the command non interactive;
 
-        :param (str) path: remote path to delete
+        :param path: remote path to delete
 
         :raise IOError: if the rm execution failed.
         """
@@ -702,8 +706,8 @@ class SshTransport(aiida.transport.Transport):
         """
         Change permissions to path
 
-        :param (str) path: path to file
-        :param (int) mode: new permission bits
+        :param path: path to file
+        :param mode: new permission bits (integer)
         """
         if not path:
             raise IOError("Input path is an empty argument.")
@@ -732,13 +736,14 @@ class SshTransport(aiida.transport.Transport):
             ignore_nonexisting=False):
         """
         Put a file or a folder from local to remote.
-        redirects to putfile or puttree.
-        :param (str) localpath: an (absolute) local path
-        :param (str) remotepath: a remote path
-        :param (bool) dereference: follow symbolic links.
+        Redirects to putfile or puttree.
+
+        :param localpath: an (absolute) local path
+        :param remotepath: a remote path
+        :param dereference: follow symbolic links (boolean).
             Default = True (default behaviour in paramiko). False is not implemented.
-        :param (bool) overwrite: if True overwrites files and folders.
-            Default = False
+        :param  overwrite: if True overwrites files and folders (boolean).
+            Default = False.
 
         :raise ValueError: if local path is invalid
         :raise OSError: if the localpath does not exist
@@ -808,9 +813,9 @@ class SshTransport(aiida.transport.Transport):
         """
         Put a file from local to remote.
 
-        :param (str) localpath: an (absolute) local path
-        :param (str) remotepath: a remote path
-        :param (bool) overwrite: if True overwrites files and folders. 
+        :param localpath: an (absolute) local path
+        :param remotepath: a remote path
+        :param overwrite: if True overwrites files and folders (boolean).
             Default = True.
 
         :raise ValueError: if local path is invalid
@@ -836,11 +841,11 @@ class SshTransport(aiida.transport.Transport):
         """
         Put a folder recursively from local to remote.
 
-        :param (str) localpath: an (absolute) local path
-        :param (str) remotepath: a remote path
-        :param (bool) dereference: follow symbolic links.
+        :param localpath: an (absolute) local path
+        :param remotepath: a remote path
+        :param dereference: follow symbolic links (boolean)
             Default = True (default behaviour in paramiko). False is not implemented.
-        :param (bool) overwrite: if True overwrites files and folders.
+        :param overwrite: if True overwrites files and folders (boolean).
             Default = True
 
         :raise ValueError: if local path is invalid
@@ -905,12 +910,12 @@ class SshTransport(aiida.transport.Transport):
         Get a file or folder from remote to local.
         Redirects to getfile or gettree.
 
-        :param (str) remotepath: a remote path
-        :param (str) localpath: an (absolute) local path
-        :param (bool) dereference: follow symbolic links.
+        :param remotepath: a remote path
+        :param localpath: an (absolute) local path
+        :param dereference: follow symbolic links.
             Default = True (default behaviour in paramiko). 
             False is not implemented.
-        :param (bool) overwrite: if True overwrites files and folders.
+        :param overwrite: if True overwrites files and folders.
             Default = False
 
         :raise ValueError: if local path is invalid
@@ -972,9 +977,9 @@ class SshTransport(aiida.transport.Transport):
         """
         Get a file from remote to local.
 
-        :param (str) remotepath: a remote path
-        :param (str) localpath: an (absolute) local path
-        :param (bool) overwrite: if True overwrites files and folders.
+        :param remotepath: a remote path
+        :param  localpath: an (absolute) local path
+        :param  overwrite: if True overwrites files and folders.
                 Default = False
 
         :raise ValueError: if local path is invalid
@@ -991,19 +996,27 @@ class SshTransport(aiida.transport.Transport):
         if not dereference:
             raise NotImplementedError
             
-        return self.sftp.get(remotepath,localpath,callback)
+        # Workaround for bug #724 in paramiko -- remove localpath on IOError
+        try:
+            return self.sftp.get(remotepath,localpath,callback)
+        except IOError as e:
+            try:
+                os.remove(localpath)
+            except OSError:
+                pass
+            raise e
         
         
     def gettree(self,remotepath,localpath,callback=None,dereference=True,overwrite=True):
         """
         Get a folder recursively from remote to local.
 
-        :param (str) remotepath: a remote path
-        :param (str) localpath: an (absolute) local path
-        :param (bool) dereference: follow symbolic links. 
+        :param remotepath: a remote path
+        :param localpath: an (absolute) local path
+        :param dereference: follow symbolic links. 
             Default = True (default behaviour in paramiko). 
             False is not implemented.
-        :param (bool) overwrite: if True overwrites files and folders.
+        :param  overwrite: if True overwrites files and folders.
             Default = False
 
         :raise ValueError: if local path is invalid
@@ -1068,10 +1081,10 @@ class SshTransport(aiida.transport.Transport):
         Copy a file from remote source to remote destination
         Redirects to copy().
         
-        :param (str) remotesource:
-        :param (str) remotedestination:
-        :param (bool) dereference:
-        :param (str) pattern:
+        :param remotesource: 
+        :param remotedestination:
+        :param dereference:
+        :param pattern:
         """
         cp_flags = '-f'
         return self.copy(remotesource,remotedestination,dereference,cp_flags,pattern)
@@ -1083,10 +1096,10 @@ class SshTransport(aiida.transport.Transport):
         copy a folder recursively from remote source to remote destination
         Redirects to copy()
 
-        :param (str) remotesource:
-        :param (str) remotedestination:
-        :param (bool) dereference:
-        :param (str) pattern:
+        :param remotesource:
+        :param remotedestination:
+        :param dereference:
+        :param pattern:
         """
         cp_flags = '-r -f'
         return self.copy(remotesource,remotedestination,dereference,cp_flags,pattern)
@@ -1095,12 +1108,12 @@ class SshTransport(aiida.transport.Transport):
     def copy(self,remotesource,remotedestination,dereference=False):
         """
         Copy a file or a directory from remote source to remote destination.
-        Flags used: -r: recursive copy; -f: force, makes the command non interactive;
-          -L follows symbolic links
+        Flags used: ``-r``: recursive copy; ``-f``: force, makes the command non interactive;
+        ``-L`` follows symbolic links
 
-        :param (str) remotesource: file to copy from
-        :param (str) remotedestination: file to copy to
-        :param (bool) dereference: if True, copy content instead of copying the symlinks only
+        :param  remotesource: file to copy from
+        :param remotedestination: file to copy to
+        :param dereference: if True, copy content instead of copying the symlinks only
             Default = False.
         :raise IOError: if the cp execution failed.
 
@@ -1174,7 +1187,9 @@ class SshTransport(aiida.transport.Transport):
 
                 
     def _local_listdir(self,path,pattern=None):
-        # acts on the local folder, for the rest, same as listdir
+        """
+        Acts on the local folder, for the rest, same as listdir
+        """
         if not pattern:
             return os.listdir( path )
         else:
@@ -1193,9 +1208,10 @@ class SshTransport(aiida.transport.Transport):
     def listdir(self,path='.',pattern=None):
         """
         Get the list of files at path.
-        :param (str) path: default = '.'
-        :param (str) filter: returns the list of files matching pattern.
-                             Unix only. (Use to emulate ls * for example)
+
+        :param path: default = '.'
+        :param filter: returns the list of files matching pattern.
+                             Unix only. (Use to emulate ``ls *`` for example)
         """
         if not pattern:
             return self.sftp.listdir(path)
@@ -1273,11 +1289,11 @@ class SshTransport(aiida.transport.Transport):
         For a higher-level _exec_command_internal that automatically waits for the
         job to finish, use exec_command_wait.
 
-        :param (str) command: the command to execute
-        :param (bool) combine_stderr: (default False) if True, combine stdout and
+        :param  command: the command to execute
+        :param combine_stderr: (default False) if True, combine stdout and
                 stderr on the same buffer (i.e., stdout).
                 Note: If combine_stderr is True, stderr will always be empty.
-        :param (int) bufsize: same meaning of the one used by paramiko.
+        :param bufsize: same meaning of the one used by paramiko.
         
         :return: a tuple with (stdin, stdout, stderr, channel),
             where stdin, stdout and stderr behave as file-like objects,
@@ -1312,12 +1328,12 @@ class SshTransport(aiida.transport.Transport):
         """
         Executes the specified command and waits for it to finish.
         
-        :param (str) command: the command to execute
-        :param (str) stdin: (optional,default=None) can be a string or a
+        :param command: the command to execute
+        :param stdin: (optional,default=None) can be a string or a
                    file-like object.
-        :param (bool) combine_stderr: (optional, default=False) see docstring of
+        :param combine_stderr: (optional, default=False) see docstring of
                    self._exec_command_internal()
-        :param (int) bufsize: same meaning of paramiko.
+        :param bufsize: same meaning of paramiko.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are strings.
@@ -1391,10 +1407,10 @@ class SshTransport(aiida.transport.Transport):
     def symlink(self,remotesource,remotedestination):
         """
         Create a symbolic link between the remote source and the remote 
-        destination
+        destination.
         
-        :param (str) remotesource: remote source. Can contain a pattern. 
-        :param (str) remotedestination:remote destination
+        :param remotesource: remote source. Can contain a pattern. 
+        :param remotedestination: remote destination
         """
         # paramiko gives some errors if path is starting with '.'
         s = os.path.normpath(remotesource)

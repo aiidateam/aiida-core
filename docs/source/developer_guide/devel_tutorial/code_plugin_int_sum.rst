@@ -39,7 +39,7 @@ Code
 ----
 The code is an external program that does a useful calculation for us. For
 detailed information on how to setup the new codes, you can have a look at the
-:doc:`respective documentation page <../../setup/computerandcodes>`.
+:ref:`respective documentation page <setup_computers_codes>`.
 
 Imagine that we have the following python code that we want to install. It
 does the simple task of adding two numbers that are found in a JSON file, whose
@@ -98,8 +98,8 @@ summation code (a detailed description of the different sections follows)::
         def _init_internal_params(self):
             super(SumCalculation, self)._init_internal_params()
 
-            self._INPUT_FILE_NAME = 'in.json'
-            self._OUTPUT_FILE_NAME = 'out.json'
+            self._DEFAULT_INPUT_FILE = 'in.json'
+            self._DEFAULT_OUTPUT_FILE = 'out.json'
             self._default_parser = 'sum'
 
         @classproperty
@@ -152,7 +152,7 @@ summation code (a detailed description of the different sections follows)::
             input_json = parameters.get_dict()
 
             # write all the input to a file
-            input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
+            input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
             with open(input_filename, 'w') as infile:
                 json.dump(input_json, infile)
 
@@ -162,10 +162,10 @@ summation code (a detailed description of the different sections follows)::
             calcinfo.uuid = self.uuid
             calcinfo.local_copy_list = []
             calcinfo.remote_copy_list = []
-            calcinfo.retrieve_list = [self._OUTPUT_FILE_NAME]
+            calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE]
 
             codeinfo = CodeInfo()
-            codeinfo.cmdline_params = [self._INPUT_FILE_NAME,self._OUTPUT_FILE_NAME]
+            codeinfo.cmdline_params = [self._DEFAULT_INPUT_FILE,self._DEFAULT_OUTPUT_FILE]
             codeinfo.code_uuid = code.uuid
             calcinfo.codes_info = [codeinfo]
 
@@ -196,7 +196,7 @@ using ``CalculationFactory``.
 
 .. note:: The base ``Calculation`` class should only be used as the abstract
   base class. Any calculation that needs to run on a remote scheduler must
-  inherit from  :class:`~aiida.orm.calculation.job.JobCalculation`, that
+  inherit from  :class:`~aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`, that
   contains all the methods to run on a remote scheduler, get the calculation
   state, copy files remotely and retrieve them, ...
 
@@ -256,7 +256,7 @@ external code, creating a suitable JSON file::
     input_json = parameters.get_dict()
 
     # write all the input to a file
-    input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
+    input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
     with open(input_filename, 'w') as infile:
         json.dump(input_json, infile)
 
@@ -274,7 +274,7 @@ You should also define a list of output files that will be retrieved
 automatically after the code execution, and that will be stored permanently
 into the AiiDA database::
 
-   calcinfo.retrieve_list = [self._OUTPUT_FILE_NAME]
+   calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE]
 
 For the time being, just define also the following variables as empty lists
 (we will describe them in the next sections)::
@@ -292,7 +292,7 @@ Moreover, AiiDA takes care of escaping spaces and other symbols).
 In our case, our code requires the name of the input file, followed by the
 name of the output file, so we write::
 
-    codeinfo.cmdline_params = [self._INPUT_FILE_NAME,self._OUTPUT_FILE_NAME]
+    codeinfo.cmdline_params = [self._DEFAULT_INPUT_FILE,self._DEFAULT_OUTPUT_FILE]
 
 Finally, we link the just created ``codeinfo`` to the ``calcinfo``, and return
 it::
@@ -324,12 +324,12 @@ is ready!
         def _init_internal_params(self):
             super(SumCalculation, self)._init_internal_params()
 
-            self._INPUT_FILE_NAME = 'in.json'
-            self._OUTPUT_FILE_NAME = 'out.json'
+            self._DEFAULT_INPUT_FILE = 'in.json'
+            self._DEFAULT_OUTPUT_FILE = 'out.json'
             self._default_parser = 'sum'
 
   In particular, it is good practice to define
-  a ``_INPUT_FILE_NAME`` and ``_OUTPUT_FILE_NAME`` attributes (pointing to the
+  a ``_DEFAULT_INPUT_FILE`` and ``_DEFAULT_OUTPUT_FILE`` attributes (pointing to the
   default input and output file name -- these variables are then used by some
   ``verdi`` commands, such as ``verdi calculation outputcat``). Also, you need
   to define the name of the default parser that will be invoked when the
@@ -448,13 +448,13 @@ detail later::
             # check what is inside the folder
             list_of_files = out_folder.get_folder_list()
             # at least the stdout should exist
-            if self._calc._OUTPUT_FILE_NAME not in list_of_files:
+            if self._calc._DEFAULT_OUTPUT_FILE not in list_of_files:
                 successful = False
                 self.logger.error("Output json not found")
                 return successful,()
 
             try:
-                with open( out_folder.get_abs_path(self._calc._OUTPUT_FILE_NAME) ) as f:
+                with open( out_folder.get_abs_path(self._calc._DEFAULT_OUTPUT_FILE) ) as f:
                     out_dict = json.load(f)
             except ValueError:
                 successful=False
@@ -480,7 +480,7 @@ be retrieved using::
 
 We then read and parse the output file that will contain the result::
 
-    with open( out_folder.get_abs_path(self._calc._OUTPUT_FILE_NAME) ) as f:
+    with open( out_folder.get_abs_path(self._calc._DEFAULT_OUTPUT_FILE) ) as f:
         out_dict = json.load(f)
 
 .. note:: all parsers have a ``self._calc`` attribute that points to the 

@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Tests for specific subclasses of Data
 """
 from aiida.orm import load_node
-from aiida.common.exceptions import ModificationNotAllowed, ValidationError
+from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase
 import unittest
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 def simplify(string):
@@ -117,7 +121,7 @@ class TestCifData(AiidaTestCase):
     Tests for CifData class.
     """
     from aiida.orm.data.cif import has_pycifrw
-    from aiida.orm.data.structure import has_ase, has_pymatgen, has_pyspglib, \
+    from aiida.orm.data.structure import has_ase, has_pymatgen, has_spglib, \
         get_pymatgen_version
     from distutils.version import StrictVersion
 
@@ -313,12 +317,12 @@ O 0.5 0.5 0.5
                                      primitive_cell=True, subtrans_included=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 5)
 
-
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """
@@ -327,7 +331,6 @@ O 0.5 0.5 0.5
         adapted from http://www.crystallography.net/cod/9012064.cif@120115
         """
         import tempfile
-        import ase
 
         from aiida.orm.data.cif import CifData
 
@@ -553,7 +556,7 @@ _publ_section_title                     'Test CIF'
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     def test_refine(self):
         """
         Test case for refinement (space group determination) for a
@@ -616,6 +619,27 @@ _publ_section_title                     'Test CIF'
         with self.assertRaises(ValueError):
             ret_dict = refine_inline(c)
 
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
+    def test_parse_formula(self):
+        from aiida.orm.data.cif import parse_formula
+
+        self.assertEqual(parse_formula("C H"),
+                         {'C': 1, 'H': 1})
+
+        self.assertEqual(parse_formula("C5 H1"),
+                         {'C': 5, 'H': 1})
+
+        self.assertEqual(parse_formula("Ca5 Ho"),
+                         {'Ca': 5, 'Ho': 1})
+
+        self.assertEqual(parse_formula("H0.5 O"),
+                         {'H': 0.5, 'O': 1})
+
+        # Invalid literal for float()
+        with self.assertRaises(ValueError):
+            parse_formula("H0.5.2 O")
 
 
 class TestKindValidSymbols(AiidaTestCase):
@@ -994,7 +1018,7 @@ class TestStructureData(AiidaTestCase):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
-    from aiida.orm.data.structure import has_ase, has_pyspglib
+    from aiida.orm.data.structure import has_ase, has_spglib
 
     def test_cell_ok_and_atoms(self):
         """
@@ -1268,7 +1292,7 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
-    @unittest.skipIf(not has_pyspglib(), "Unable to import pyspglib")
+    @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     def test_kind_8(self):
         """
         Test the ase_refine_cell() function
@@ -1421,7 +1445,7 @@ class TestStructureData(AiidaTestCase):
         # Exception thrown if ase can't be found
         except ImportError:
             return
-        self.assertEquals(simplify(c._prepare_cif()),
+        self.assertEquals(simplify(c._prepare_cif()[0]),
                           simplify("""#\#CIF1.1
 ##########################################################################
 #               Crystallographic Information Format file
@@ -1463,7 +1487,6 @@ _cell_formula_units_Z                   1
 _chemical_formula_sum                   'Ba2 Ti'
 """))
 
-
     def test_xyz_parser(self):
         from aiida.orm.data.structure import StructureData
         import numpy as np
@@ -1487,30 +1510,30 @@ Shifted Silver dimer;
 Ag 0 0 -.5
 Ag 0 0 2.0335
 """
-        
+
         for xyz_string in (xyz_string1, xyz_string2, xyz_string3):
             s = StructureData()
             # Parsing the string:
             s._parse_xyz(xyz_string)
             # Making sure that the periodic boundary condition are not True
             # because I cannot parse a cell!
-            self.assertTrue(not(any(s.pbc)))
+            self.assertTrue(not (any(s.pbc)))
             # Making sure that the structure has sites, kinds and a cell
             self.assertTrue(s.sites)
             self.assertTrue(s.kinds)
             self.assertTrue(s.cell)
             # The default cell is given in these cases:
-            self.assertEqual(s.cell, np.diag([1,1,1]).tolist())
+            self.assertEqual(s.cell, np.diag([1, 1, 1]).tolist())
 
         # Testing a case where 1
-        xyz_string4 =  """
+        xyz_string4 = """
 1
 
 Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
 Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
 Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
 """
-        xyz_string5 =  """
+        xyz_string5 = """
 10
 
 Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
@@ -1528,7 +1551,6 @@ Ag 0 0
         for xyz_string in (xyz_string4, xyz_string5, xyz_string6):
             with self.assertRaises(TypeError):
                 StructureData()._parse_xyz(xyz_string)
-
 
 
 class TestStructureDataLock(AiidaTestCase):
@@ -1637,6 +1659,7 @@ class TestStructureDataReload(AiidaTestCase):
             self.assertAlmostEqual(b.sites[0].position[i], 0.)
         for i in range(3):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
+
 
     def test_copy(self):
         """
@@ -1847,9 +1870,10 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     from aiida.orm.data.structure import has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
+                    "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_1(self):
         """
         Test's imput is derived from COD entry 9011963, processed with
@@ -1918,8 +1942,9 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         self.assertEquals(dict1, dict2)
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_2(self):
         """
@@ -1974,8 +1999,9 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_1(self):
         """
@@ -1994,8 +2020,9 @@ class TestPymatgenFromStructureData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_2(self):
         from aiida.orm.data.structure import StructureData
@@ -2027,8 +2054,9 @@ class TestPymatgenFromStructureData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'), 
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_3(self):
         """
@@ -2512,6 +2540,77 @@ class TestTrajectoryData(AiidaTestCase):
         with self.assertRaises(ValueError):
             td = TrajectoryData(structurelist=structurelist)
 
+    def test_export_to_file(self):
+        """
+        Export the band structure on a file, check if it is working
+        """
+        import numpy
+        import os
+        import tempfile
+        from aiida.orm.data.array.trajectory import TrajectoryData
+
+        n = TrajectoryData()
+
+        # I create sample data
+        stepids = numpy.array([60, 70])
+        times = stepids * 0.01
+        cells = numpy.array([
+            [[2., 0., 0., ],
+             [0., 2., 0., ],
+             [0., 0., 2., ]],
+            [[3., 0., 0., ],
+             [0., 3., 0., ],
+             [0., 0., 3., ]]])
+        symbols = numpy.array(['H', 'O', 'C'])
+        positions = numpy.array([
+            [[0., 0., 0.],
+             [0.5, 0.5, 0.5],
+             [1.5, 1.5, 1.5]],
+            [[0., 0., 0.],
+             [0.5, 0.5, 0.5],
+             [1.5, 1.5, 1.5]]])
+        velocities = numpy.array([
+            [[0., 0., 0.],
+             [0., 0., 0.],
+             [0., 0., 0.]],
+            [[0.5, 0.5, 0.5],
+             [0.5, 0.5, 0.5],
+             [-0.5, -0.5, -0.5]]])
+
+        # I set the node
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
+                         positions=positions, times=times,
+                         velocities=velocities)
+
+
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+
+
+        # It is not obvious how to check that the bands are correct.
+        # I just check, for a few formats, that the file is correctly
+        # created, at this stage
+        ## I use this to get a file. I then close it and ask the .export() function
+        ## to create it again. I have to remember to delete everything at the end.
+        handle, filename = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(filename)
+
+        for format in ['cif', 'xsf']:
+            files_created = [] # In case there is an exception
+            try:
+                files_created = n.export(filename, fileformat=format)
+                with open(filename) as f:
+                    filedata = f.read()
+            finally:
+                for file in files_created:
+                    if os.path.exists(file):
+                        os.remove(file)
+
 
 class TestKpointsData(AiidaTestCase):
     """
@@ -2533,9 +2632,9 @@ class TestKpointsData(AiidaTestCase):
         input_mesh = [4, 4, 4]
         k.set_kpoints_mesh(input_mesh)
         mesh, offset = k.get_kpoints_mesh()
-        self.assertEqual(mesh, tuple(input_mesh))
+        self.assertEqual(mesh, list(input_mesh))
         self.assertEqual(offset,
-                         (0., 0., 0.))  # must be a tuple of three 0 by default
+                         [0., 0., 0.])  # must be a tuple of three 0 by default
 
         # a too long list should fail
         with self.assertRaises(ValueError):
@@ -2545,13 +2644,13 @@ class TestKpointsData(AiidaTestCase):
         input_offset = [0.5, 0.5, 0.5]
         k.set_kpoints_mesh(input_mesh, input_offset)
         mesh, offset = k.get_kpoints_mesh()
-        self.assertEqual(mesh, tuple(input_mesh))
-        self.assertEqual(offset, tuple(input_offset))
+        self.assertEqual(mesh, list(input_mesh))
+        self.assertEqual(offset, list(input_offset))
 
         # verify the same but after storing
         k.store()
-        self.assertEqual(mesh, tuple(input_mesh))
-        self.assertEqual(offset, tuple(input_offset))
+        self.assertEqual(mesh, list(input_mesh))
+        self.assertEqual(offset, list(input_offset))
 
         # cannot modify it after storage
         with self.assertRaises(ModificationNotAllowed):
@@ -2644,6 +2743,189 @@ class TestKpointsData(AiidaTestCase):
         klist = k.get_kpoints(cartesian=True)
         self.assertTrue(numpy.allclose(klist, input_klist, atol=1e-16))
 
+    def test_path(self):
+        """
+        Test the methods to generate automatically a list of kpoints
+        """
+        from aiida.orm.data.array.kpoints import KpointsData
+        import numpy
+        
+        k = KpointsData()
+        
+        # shouldn't get anything wiothout having set the cell
+        with self.assertRaises(ValueError):
+            k.set_kpoints_path()
+        
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+        
+        k.set_cell(cell)
+        k.set_kpoints_path()
+        # something should be retrieved
+        klist = k.get_kpoints()
+        
+        # test the various formats for specifying the path
+        k.set_kpoints_path([('G','M'),
+                            ])
+        k.set_kpoints_path([('G','M',30),
+                            ])
+        k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.)),
+                            ])
+        k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.),30),
+                            ])
+
+        # at least 2 points per segment
+        with self.assertRaises(ValueError):
+            k.set_kpoints_path([('G','M',1),
+                                ])
+        with self.assertRaises(ValueError):
+            k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.),1),
+                                ])
+        
+        # try to set points with a spacing
+        k.set_kpoints_path(kpoint_distance=0.1)
+        
+        # try to modify after storage
+        k.store()
+        with self.assertRaises(ModificationNotAllowed):
+            k.set_kpoints_path()
+
+    def test_tetra_x(self):
+      """
+      testing tetragonal cells with axis along X
+      """
+      import numpy
+      from aiida.orm import DataFactory
+      alat = 1.5
+      cell_x = [[alat,0,0],[0,1,0],[0,0,1]]
+      K = DataFactory('array.kpoints')
+      k = K()
+      k.set_cell(cell_x)
+      points = k.get_special_points(cartesian=True)
+
+      self.assertAlmostEqual(points[0]['Z'][0], numpy.pi/alat )
+      self.assertAlmostEqual(points[0]['Z'][1], 0.)
+
+    def test_tetra_z(self):
+      """
+      testing tetragonal cells with axis along X
+      """
+      import numpy
+      from aiida.orm import DataFactory
+      alat = 1.5
+      cell_x = [[1,0,0],[0,1,0],[0,0,alat]]
+      K = DataFactory('array.kpoints')
+      k = K()
+      k.set_cell(cell_x)
+      points = k.get_special_points(cartesian=True)
+
+      self.assertAlmostEqual(points[0]['Z'][2], numpy.pi/alat )
+      self.assertAlmostEqual(points[0]['Z'][0], 0.)
+
+            
+class TestBandsData(AiidaTestCase):
+    """
+    Tests the BandsData objects.
+    """
+    
+    def test_band(self):
+        """
+        Check the methods to set and retrieve a mesh.
+        """
+        from aiida.orm.data.array.bands import BandsData
+        from aiida.orm.data.array.kpoints import KpointsData
+        import numpy
+        
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+        
+        k = KpointsData()
+        k.set_cell(cell)
+        k.set_kpoints_path()
+        
+        b = BandsData()
+        b.set_kpointsdata(k)
+        self.assertTrue( numpy.array_equal(b.cell,k.cell) )
+        
+        input_bands = numpy.array([numpy.ones(4) for i in range(k.get_kpoints().shape[0]) ]) 
+        input_occupations = input_bands
+        
+        b.set_bands(input_bands, occupations=input_occupations, units='ev')
+        b.set_bands(input_bands, units='ev')
+        b.set_bands(input_bands, occupations=input_occupations)
+        with self.assertRaises(TypeError):
+            b.set_bands(occupations=input_occupations, units='ev')
+        
+        b.set_bands(input_bands, occupations=input_occupations, units='ev')
+        bands,occupations = b.get_bands(also_occupations=True)
+        
+        self.assertTrue( numpy.array_equal(bands,input_bands) )
+        self.assertTrue( numpy.array_equal(occupations,input_occupations) )
+        self.assertTrue( b.units=='ev' )
+        
+        b.store()
+        with self.assertRaises(ModificationNotAllowed):
+            b.set_bands(bands)
+
+    def test_export_to_file(self):
+        """
+        Export the band structure on a file, check if it is working
+        """
+        import numpy
+        import os
+        import tempfile
+        from aiida.orm.data.array.bands import BandsData
+        from aiida.orm.data.array.kpoints import KpointsData
+
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+
+        k = KpointsData()
+        k.set_cell(cell)
+        k.set_kpoints_path()
+
+        b = BandsData()
+        b.set_kpointsdata(k)
+
+        # 4 bands with linearly increasing energies, it does not make sense
+        # but is good for testing
+        input_bands = numpy.array([numpy.ones(4)*i for i in range(k.get_kpoints().shape[0]) ])
+
+        b.set_bands(input_bands, units='eV')
+
+        # It is not obvious how to check that the bands are correct.
+        # I just check, for a few formats, that the file is correctly
+        # created, at this stage
+        ## I use this to get a file. I then close it and ask the .export() function
+        ## to create it again. I have to remember to delete everything at the end.
+        handle, filename = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(filename)
+
+        for format in ['agr', 'agr_batch', 'json', 'mpl_singlefile',
+                       'dat_blocks', 'dat_multicolumn']:
+            files_created = [] # In case there is an exception
+            try:
+                files_created = b.export(filename, fileformat=format)
+                with open(filename) as f:
+                    filedata = f.read()
+            finally:
+                for file in files_created:
+                    if os.path.exists(file):
+                        os.remove(file)
+
 
 # class TestData(AiidaTestCase):
 #     """
@@ -2666,4 +2948,4 @@ class TestKpointsData(AiidaTestCase):
 #         # Data._validate(), thus the ValidationError.
 #         with self.assertRaises(ValidationError):
 #             data.store()
-# 
+#

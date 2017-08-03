@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import os
 import sys
 import unittest
@@ -40,6 +49,7 @@ class AiidaTestCase(unittest.TestCase):
     Internally it loads the AiidaTestImplementation subclass according to the current backend
     """
     _class_was_setup = False
+    __backend_instance = None
 
     @classmethod
     def get_backend_class(cls):

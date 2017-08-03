@@ -26,8 +26,8 @@ No. Description                     Input                                       
 === =============================== ================================================================== ================================================================== ====== ============
 
 Type of each step's calculation
-(:py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`
-or :py:class:`JobCalculation <aiida.orm.calculation.job.JobCalculation>`)
+(:py:class:`InlineCalculation <aiida.orm.implementation.general.calculation.inline.InlineCalculation>`
+or :py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`)
 defined in column *Type*. Each step is described in more detail below:
 
 * Conversion of the StructureData to CifData
@@ -37,7 +37,7 @@ defined in column *Type*. Each step is described in more detail below:
     ASE atoms object.
 * Detection of the symmetry and reduction to the unit cell
     Detection of the symmetry and reduction to the unit cell is performed
-    using `pyspglib.spglib.refine_cell() function`_.
+    using `spglib.refine_cell() function`_.
 * Niggli reduction of the unit cell
     Reduction of the unit cell to Niggli cell is a *nice to have* feature,
     as it would allow to represent structure as an unambiguously selected
@@ -54,7 +54,7 @@ defined in column *Type*. Each step is described in more detail below:
     re-running of calculations, outputs from the calculations and exported
     subset of AiiDA database. It's not quite clear what/how to record the
     metadata for calculations of type
-    :py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`.
+    :py:class:`InlineCalculation <aiida.orm.implementation.general.calculation.inline.InlineCalculation>`.
 * Depostition to the TCOD
     Deposition of the final
     :py:class:`CifData <aiida.orm.data.cif.CifData>` to the TCOD is
@@ -62,5 +62,5 @@ defined in column *Type*. Each step is described in more detail below:
     :ref:`cif_cod_deposit script from cod-tools package <codtools_cifcoddeposit>`.
 
 .. _Theoretical Crystallography Open Database: http://www.crystallography.net/tcod/
-.. _pyspglib.spglib.refine_cell() function: http://spglib.sourceforge.net/api.html#spg-refine-cell
+.. _spglib.refine_cell() function: https://atztogo.github.io/spglib/python-spglib.html#refine-cell
 .. _TCOD CIF dictionaries: http://www.crystallography.net/tcod/cif/dictionaries/

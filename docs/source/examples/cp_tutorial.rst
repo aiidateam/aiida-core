@@ -1,7 +1,7 @@
 .. _my-ref-to-cp-tutorial:
 
-Quantum Espresso Car-Parrinello user-tutorial
-=============================================
+Car-Parrinello
+==============
 
 .. toctree::
    :maxdepth: 2
@@ -160,4 +160,4 @@ Exception tolerant code
 -----------------------
 You can find a more sophisticated example, that checks the possible exceptions
 and prints nice error messages inside your AiiDA folder, under
-``examples/submission/test_cp.py``.
+``examples/submission/quantumespresso/test_cp.py``.

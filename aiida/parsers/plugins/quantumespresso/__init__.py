@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.parsers.exceptions import OutputParsingError
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class QEOutputParsingError(OutputParsingError):
+    """
+    Exception raised by a parser error in a QE code
+    """
     pass
     # def __init__(self,message):
     # wrappedmessage = "Error parsing Quantum Espresso PW output: " + message
@@ -135,12 +142,13 @@ def convert_qe_time_to_sec(timestr):
 
 def ldlparse_QE_errors(lines,count,warnings):
     """
-    Parse QE errors messages (those appearing between some lines with
-    ``'%%%%%%%%'``)
+    Parse QE errors messages, i.e., those appearing between some lines
+    with ``%%%%%%%%``
+
     :param lines: list of strings, the output text file as read by readlines()
-    or as obtained by data.split('\n') when data is the text file read by
-    read()
-    :param count: the line at which we identified some ``'%%%%%%%%'``
+      or as obtained by ``data.split('\\n')`` when data is the text file read by
+      read()
+    :param count: the line at which we identified some ``%%%%%%%%``
     :param warnings: the warnings already parsed in the file
     :return messages: a list of QE error messages
     """
@@ -167,11 +175,12 @@ def ldlparse_QE_errors(lines,count,warnings):
 
 def parse_QE_errors(lines,count,warnings):
     """
-    Parse QE errors messages (those appearing between some lines with
-    ``'%%%%%%%%'``)
+    Parse QE errors messages, i.e., those appearing between some lines 
+    with ``%%%%%%%%``
+
     :param lines: list of strings, the output text file as read by readlines()
-    or as obtained by data.split('\n') when data is the text file read by read()
-    :param count: the line at which we identified some ``'%%%%%%%%'``
+      or as obtained by ``data.split('\\n')`` when data is the text file read by read()
+    :param count: the line at which we identified some ``%%%%%%%%``
     :param warnings: the warnings already parsed in the file
     :return messages: a list of QE error messages
     """

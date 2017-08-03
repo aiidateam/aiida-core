@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import importlib
+from collections import Mapping
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
@@ -16,10 +25,6 @@ from aiida.orm.implementation.django.calculation.job import JobCalculation
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 logger = aiidalogger.getChild('Workflow')
 
@@ -107,7 +112,7 @@ class Workflow(AbstractWorkflow):
             params = kwargs.pop('params', None)
 
             if params is not None:
-                if type(params) is dict:
+                if isinstance(params, Mapping):
                     self.set_params(params)
 
             # This stores the MD5 as well, to test in case the workflow has
@@ -162,7 +167,7 @@ class Workflow(AbstractWorkflow):
 
         self.dbworkflowinstance.label = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()
 
@@ -189,7 +194,7 @@ class Workflow(AbstractWorkflow):
 
         self.dbworkflowinstance.description = field_value
         if not self._to_be_stored:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()
 

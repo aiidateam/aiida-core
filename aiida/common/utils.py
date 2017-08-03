@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import datetime
 import filecmp
 import functools
@@ -11,10 +19,6 @@ from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class classproperty(object):
@@ -31,6 +35,34 @@ class classproperty(object):
 
     def __get__(self, instance, owner):
         return self.getter(owner)
+
+
+class abstractclassmethod(classmethod):
+    """
+    A decorator indicating abstract classmethods.
+
+    Backported from python3.
+    """
+    __isabstractmethod__ = True
+
+    def __init__(self, callable):
+        callable.__isabstractmethod__ = True
+        super(abstractclassmethod, self).__init__(callable)
+
+
+class abstractstaticmethod(staticmethod):
+    """
+    A decorator indicating abstract staticmethods.
+
+    Similar to abstractmethod.
+    Backported from python3.
+    """
+
+    __isabstractmethod__ = True
+
+    def __init__(self, callable):
+        callable.__isabstractmethod__ = True
+        super(abstractstaticmethod, self).__init__(callable)
 
 
 def get_configured_user_email():
@@ -409,7 +441,6 @@ def get_object_string(obj):
 
     :param obj: The object to get the string for
     :return: The string that identifies the object
-    :rtype: str
     """
     if inspect.isfunction(obj):
         return "{}.{}".format(obj.__module__, obj.__name__)
@@ -922,3 +953,232 @@ def issingular(singularForm):
     pluralForm = pluralize(singularForm)
     singular = True if singularForm is not pluralForm else False
     return singular, pluralForm
+
+
+class Prettifier(object):
+    """
+    Class to manage prettifiers (typically for labels of kpoints
+    in band plots)
+    """
+
+    @classmethod
+    def _prettify_label_pass(cls,label):
+        """
+        No-op prettifier, simply returns  the same label
+
+        :param label: a string to prettify
+        """
+        return label
+
+    @classmethod
+    def _prettify_label_agr(cls,label):
+        """
+        Prettifier for XMGrace
+
+        :param label: a string to prettify
+        """
+        import re
+        newlabel = label
+
+        newlabel = newlabel.replace('GAMMA', r'\xG\f{}')
+        newlabel = newlabel.replace('DELTA', r'\xD\f{}')
+        newlabel = newlabel.replace('LAMBDA', r'\xL\f{}')
+        newlabel = newlabel.replace('SIGMA', r'\xS\f{}')
+        newlabel = re.sub('_(.{0,1})', r'\\s\1\\N', newlabel)
+
+        return newlabel
+
+    @classmethod
+    def _prettify_label_agr_simple(cls,label):
+        """
+        Prettifier for XMGrace (for old label names)
+
+        :param label: a string to prettify
+        """
+        import re
+
+        newlabel = label
+
+        newlabel = re.sub('([0-9])', r'\\s\1\\N', newlabel)
+
+        if newlabel == 'G':
+            return r'\xG'
+        else:
+            return newlabel
+
+    @classmethod
+    def _prettify_label_gnuplot(cls,label):
+        """
+        Prettifier for Gnuplot
+
+        :note: uses unicode, returns unicode strings (potentially, if needed)
+
+        :param label: a string to prettify
+        """
+        import re
+        newlabel = label
+
+        newlabel = newlabel.replace(u'GAMMA', u'Γ')
+        newlabel = newlabel.replace(u'DELTA', u'Δ')
+        newlabel = newlabel.replace(u'LAMBDA', u'Λ')
+        newlabel = newlabel.replace(u'SIGMA', u'Σ')
+        newlabel = re.sub(u'_(.{0,1})', ur'_{\1}', newlabel)
+
+        return newlabel
+
+    @classmethod
+    def _prettify_label_gnuplot_simple(cls,label):
+        """
+        Prettifier for Gnuplot (for old label names)
+
+        :note: uses unicode, returns unicode strings (potentially, if needed)
+
+        :param label: a string to prettify
+        """
+        import re
+
+        newlabel = label
+
+        newlabel = re.sub(u'([0-9])', ur'_{\1}', newlabel)
+
+        if newlabel == 'G':
+            return u'Γ'
+        else:
+            return newlabel
+
+
+    @classmethod
+    def _prettify_label_latex(cls,label):
+        """
+        Prettifier for matplotlib, using LaTeX syntax
+
+        :param label: a string to prettify
+        """
+        import re
+        newlabel = label
+
+        newlabel = newlabel.replace('GAMMA', r'$\Gamma$')
+        newlabel = newlabel.replace('DELTA', r'$\Delta$')
+        newlabel = newlabel.replace('LAMBDA', r'$\Lambda$')
+        newlabel = newlabel.replace('SIGMA', r'$\Sigma$')
+        newlabel = re.sub('_(.{0,1})', r'$_{\1}$', newlabel)
+
+        #newlabel = newlabel + r"$_{\vphantom{0}}$"
+
+        return newlabel
+
+    @classmethod
+    def _prettify_label_latex_simple(cls,label):
+        """
+        Prettifier for matplotlib, using LaTeX syntax (for old label names)
+
+        :param label: a string to prettify
+        """
+        import re
+
+        newlabel = label
+        newlabel = re.sub('([0-9])', r'$_{\1}$', newlabel)
+
+        if newlabel == 'G':
+            return r'$\Gamma$'
+        else:
+            return newlabel
+
+    @classproperty
+    def prettifiers(cls):
+        """
+        Property that returns a dictionary that for each string associates
+        the function to prettify a label
+
+        :return: a dictionary where keys are strings and values are functions
+        """
+        return {
+        'agr_seekpath': cls._prettify_label_agr,
+        'agr_simple': cls._prettify_label_agr_simple,
+        'latex_simple': cls._prettify_label_latex_simple,
+        'latex_seekpath': cls._prettify_label_latex,
+        'gnuplot_simple': cls._prettify_label_gnuplot_simple,
+        'gnuplot_seekpath': cls._prettify_label_gnuplot,
+        'pass': cls._prettify_label_pass,
+    }
+
+    @classmethod
+    def get_prettifiers(cls):
+        """
+        Return a list of valid prettifier strings
+
+        :return: a list of strings
+        """
+        return sorted(cls.prettifiers.keys())
+
+    def __init__(self, format):
+        """
+        Create a class to pretttify strings of a given format
+
+        :param format: a string with the format to use to prettify.
+           Valid formats are obtained from self.prettifiers
+        """
+        if format is None:
+            format = 'pass'
+        try:
+            self._prettifier_f = self.prettifiers[format]
+        except KeyError:
+            raise ValueError("Unknown prettifier format {}; "
+                             "valid formats: {}".format(
+                format,
+                ", ".join(self.get_prettifiers())
+                ))
+
+    def prettify(self, label):
+        """
+        Prettify a label using the format passed in the initializer
+
+        :param label: the string to prettify
+        :return: a prettified string
+        """
+        return self._prettifier_f(label)
+
+
+def prettify_labels(labels, format=None):
+    """
+    Prettify label for typesetting in various formats
+
+    :param labels: a list of length-2 tuples, in the format(position, label)
+    :param format: a string with the format for the prettifier (e.g. 'agr',
+         'matplotlib', ...)
+    :return: the same list as labels, but with the second value possibly replaced
+         with a prettified version that typesets nicely in the selected format
+    """
+    prettifier = Prettifier(format)
+
+    retlist = []
+    for label_pos, label in labels:
+        retlist.append((label_pos, prettifier.prettify(label)))
+    return retlist
+
+
+def join_labels(labels, join_symbol="|", threshold=1.e-6):
+    """
+    Join labels with a joining symbol when they are very close
+
+    :param labels: a list of length-2 tuples, in the format(position, label)
+    :param join_symbol: the string to use to join different paths. By default, a pipe
+    :param threshold: the threshold to decide if two float values are the same and should
+         be joined
+    :return: the same list as labels, but with the second value possibly replaced
+         with strings joined when close enough
+    """
+    if labels:
+        new_labels = [list(labels[0])]
+        # modify labels when in overlapping position
+        j = 0
+        for i in range(1, len(labels)):
+            if abs(labels[i][0] - labels[i - 1][0]) < threshold:
+                new_labels[j][1] += join_symbol + labels[i][1]
+            else:
+                new_labels.append(list(labels[i]))
+                j += 1
+    else:
+        new_labels = []
+
+    return new_labels

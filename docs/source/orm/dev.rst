@@ -21,7 +21,14 @@ Node
 ++++
 .. automodule:: aiida.orm.implementation.general.node
    :members:
-   :special-members: __init__
+   :private-members:
+   :special-members:
+
+
+.. automodule:: aiida.orm.node
+   :members:
+
+.. autoclass:: aiida.orm.node.Node
 
 Workflow
 ++++++++
@@ -43,6 +50,7 @@ ORM documentation: Data
 
 .. automodule:: aiida.orm.data
    :members:
+   :private-members: _exportstring
 
 .. _my-ref-to-structure:
 
@@ -82,6 +90,11 @@ Remote
 .. automodule:: aiida.orm.data.remote
    :members:
 
+OrbitalData
++++++++++++
+.. automodule:: aiida.orm.data.orbital
+   :members:
+
 ArrayData
 +++++++++
 .. automodule:: aiida.orm.data.array
@@ -96,11 +109,30 @@ KpointsData
 .. automodule:: aiida.orm.data.array.kpoints
    :members:
 
+BandsData
+.........
+.. automodule:: aiida.orm.data.array.bands
+   :members:
+
+ProjectionData
+..............
+.. automodule:: aiida.orm.data.array.projection
+   :members:
+
 TrajectoryData
 ..............
 .. automodule:: aiida.orm.data.array.trajectory
    :members:
 
+XyData
+..............
+.. automodule:: aiida.orm.data.array.xy
+   :members:
+
+Base data types
++++++++++++++++
+.. automodule:: aiida.orm.data.base
+   :members:
 
 
 ORM documentation: Calculations
@@ -115,6 +147,14 @@ ORM documentation: Calculations
    :special-members: __init__
 
 .. automodule:: aiida.orm.implementation.general.calculation.job
+   :members:
+   :special-members: __init__
+
+.. automodule:: aiida.orm.implementation.general.calculation.inline
+   :members:
+   :special-members: __init__
+
+.. automodule:: aiida.orm.calculation
    :members:
    :special-members: __init__
 
@@ -147,13 +187,15 @@ Quantum Espresso - PW immigrant
    :members:
    :special-members: __init__
 
-Wannier90  - Wannier90
-++++++++++++++++++++++
-.. automodule:: aiida.orm.calculation.job.wannier90
-   :members:
-   :special-members: __init__
+.. NOTE: Wannier90 plugin not yet merged
+.. Wannier90  - Wannier90
+.. ++++++++++++++++++++++
+.. .. automodule:: aiida.orm.calculation.job.wannier90
+..    :members:
+..    :special-members: __init__
 
 TemplateReplacer
 ++++++++++++++++
 .. automodule:: aiida.orm.calculation.job.simpleplugins.templatereplacer
    :members:
+

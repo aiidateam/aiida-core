@@ -1,17 +1,22 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 from aiida.work.process import Process
 
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__authors__ = "The AiiDA team."
-__version__ = "0.7.1"
 
 class DummyProcess(Process):
     """
     A Process that does nothing when it runs.
     """
+
     @classmethod
     def define(cls, spec):
         super(DummyProcess, cls).define(spec)
@@ -27,6 +32,7 @@ class BadOutput(Process):
     A Process that emits an output that isn't part of the spec raising an
     exception.
     """
+
     @classmethod
     def define(cls, spec):
         super(BadOutput, cls).define(spec)

@@ -1,12 +1,19 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
 import importlib
 from threading import local
+from aiida.orm.calculation import Calculation
+from aiida.common.links import LinkType
+from aiida.orm.data.frozendict import FrozenDict
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
 
 # The name of the attribute to store the label of a process in a node with.
 PROCESS_LABEL_ATTR = '_process_label'
@@ -34,7 +41,7 @@ class ProcessStack(object):
         Get the calculation node of the process at the top of the stack
 
         :return: The calculation node
-        :rtype: :class:`aiida.orm.calculation.job.JobCalculation`
+        :rtype: :class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`
         """
         return cls.top().calc
 
@@ -114,3 +121,20 @@ def is_workfunction(func):
         return func._is_workfunction
     except AttributeError:
         return False
+
+
+def get_or_create_output_group(calculation):
+    """
+    For a given Calculation, get or create a new frozendict Data node that
+    has as its values all output Data nodes of the Calculation.
+
+    :param calculation: Calculation
+    """
+    if not isinstance(calculation, Calculation):
+        raise TypeError("Can only create output groups for type Calculation")
+
+    d = calculation.get_outputs_dict(link_type=(LinkType.CREATE))
+    d.update(calculation.get_outputs_dict(link_type=(LinkType.RETURN)))
+
+    return FrozenDict(dict=d)
+

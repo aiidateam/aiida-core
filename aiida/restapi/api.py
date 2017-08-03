@@ -1,172 +1,265 @@
-#!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
-Implementation of RESTful API for materialscloud.org based on flask + flask_restful module
+Implementation of RESTful API for materialscloud.org based on flask +
+flask_restful module
 For the time being the API returns the parsed valid endpoints upon GET request
 Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 """
 
 from flask import Flask, jsonify
 from flask_restful import Api
-from flask_cors import CORS, cross_origin
-from aiida.restapi.common.exceptions import RestInputValidationError,\
-    RestValidationError
-from aiida.restapi.resources import Calculation, Computer, Code, Data, Group, \
-    Node, User
-import aiida.restapi.common.config as conf
-from aiida.restapi.common.flaskrun import flaskrun
-from flask.ext.sqlalchemy import SQLAlchemy
 
+class App(Flask):
+    """
+    Basic Flask App customized for this REST Api purposes
+    """
 
-## Initiate an app with its api
-app = Flask(__name__)
-api = Api(app, prefix=conf.PREFIX)
-cors = CORS(app, resources={r"/api/v2/*": {"origins": "*"}})
+    def __init__(self, *args, **kwargs):
 
-## Error handling for error raised for invalid urls (not for non existing
-# resources!)
-@app.errorhandler(Exception)
-def error_handler(error):
-    if isinstance(error, RestValidationError):
-        response = jsonify({'message': error.message})
-        response.status_code = 400
-    elif isinstance(error, RestInputValidationError):
-        response = jsonify({'message': error.message})
-        response.status_code = 400
-    # Generic server-side error (not to make the api crash if an unhandled
-    # exception is raised. Caution is never enough!!)
-    else:
-        response = jsonify({'message': 'Internal server error. The original '
+        # Decide whether or not to catch the internal server exceptions (
+        # default is True)
+        catch_internal_server = True
+        try:
+            catch_internal_server = kwargs.pop('catch_internal_server')
+        except KeyError:
+            pass
+
+        # Basic initialization
+        super(App, self).__init__(*args, **kwargs)
+
+        # Error handler
+        from aiida.restapi.common.exceptions import RestInputValidationError, \
+            RestValidationError
+
+        if catch_internal_server:
+
+            @self.errorhandler(Exception)
+            def error_handler(error):
+
+                if isinstance(error, RestValidationError):
+                    response = jsonify({'message': error.message})
+                    response.status_code = 400
+
+                elif isinstance(error, RestInputValidationError):
+                    response = jsonify({'message': error.message})
+                    response.status_code = 400
+
+                # Generic server-side error (not to make the api crash if an
+                # unhandled exception is raised. Caution is never enough!!)
+                else:
+                    response = jsonify(
+                        {
+                            'message': 'Internal server error. The original '
                                        'message was: \"{}\"'.format(
-            error.message)})
-        response.status_code = 500
+                                error.message)
+                        }
+                    )
+                    response.status_code = 500
 
-    return response
+                return response
 
-
-## Add resources to the api
-api.add_resource(Computer,
-                 # supported urls
-                 '/computers/',
-                 '/computers/schema/',
-                 '/computers/statistics/',
-                 '/computers/page/',
-                 '/computers/page/<int:page>/',
-                 '/computers/<int:pk>/',
-                 '/computers/schema/',
-                 strict_slashes=False)
-
-api.add_resource(Node,
-                 '/nodes/',
-                 '/nodes/schema/',
-                 '/nodes/statistics/',
-                 '/nodes/page/',
-                 '/nodes/page/<int:page>/',
-                 '/nodes/<int:pk>/',
-                 '/nodes/<int:pk>/io/inputs/',
-                 '/nodes/<int:pk>/io/inputs/page/',
-                 '/nodes/<int:pk>/io/inputs/page/<int:page>/',
-                 '/nodes/<int:pk>/io/outputs/',
-                 '/nodes/<int:pk>/io/outputs/page/',
-                 '/nodes/<int:pk>/io/outputs/page/<int:page>/',
-                 '/nodes/<int:pk>/io/tree/',
-                 '/nodes/<int:pk>/content/attributes/',
-                 '/nodes/<int:pk>/content/extras/',
-                 '/nodes/statistics/',
-                 strict_slashes=False)
-
-api.add_resource(Calculation,
-                 '/calculations/',
-                 '/calculations/schema/',
-                 '/calculations/statistics/',
-                 '/calculations/page/',
-                 '/calculations/page/<int:page>/',
-                 '/calculations/<int:pk>/',
-                 '/calculations/<int:pk>/io/inputs/',
-                 '/calculations/<int:pk>/io/inputs/page/',
-                 '/calculations/<int:pk>/io/inputs/page/<int:page>/',
-                 '/calculations/<int:pk>/io/outputs/',
-                 '/calculations/<int:pk>/io/outputs/page/',
-                 '/calculations/<int:pk>/io/outputs/page/<int:page>/',
-                 '/calculations/<int:pk>/io/tree/',
-                 '/calculations/<int:pk>/content/attributes/',
-                 '/calculations/<int:pk>/content/extras/',
-                 '/calculations/schema/',
-                 '/calculations/statistics/',
-                 strict_slashes=False)
-
-api.add_resource(Data,
-                 '/data/',
-                 '/data/schema/',
-                 '/data/statistics/',
-                 '/data/page/',
-                 '/data/page/<int:page>',
-                 '/data/<int:pk>/',
-                 '/data/<int:pk>/io/inputs/',
-                 '/data/<int:pk>/io/inputs/page/',
-                 '/data/<int:pk>/io/inputs/page/<int:page>/',
-                 '/data/<int:pk>/io/outputs/',
-                 '/data/<int:pk>/io/outputs/page/',
-                 '/data/<int:pk>/io/outputs/page/<int:page>/',
-                 '/data/<int:pk>/io/tree/',
-                 '/data/<int:pk>/content/attributes/',
-                 '/data/<int:pk>/content/extras/',
-                 '/data/schema/',
-                 '/data/statistics/',
-                 strict_slashes=False)
-
-api.add_resource(Code,
-                 '/codes/',
-                 '/codes/schema/',
-                 '/codes/statistics/',
-                 '/codes/page/',
-                 '/codes/page/<int:page>/',
-                 '/codes/<int:pk>/',
-                 '/codes/<int:pk>/io/inputs/',
-                 '/codes/<int:pk>/io/inputs/page/',
-                 '/codes/<int:pk>/io/inputs/page/<int:page>/',
-                 '/codes/<int:pk>/io/outputs/',
-                 '/codes/<int:pk>/io/outputs/page/',
-                 '/codes/<int:pk>/io/outputs/page/<int:page>/',
-                 '/codes/<int:pk>/io/tree/',
-                 '/codes/<int:pk>/content/attributes/',
-                 '/codes/<int:pk>/content/extras/',
-                 '/codes/schema/',
-                 '/codes/statistics/',
-                 strict_slashes=False)
-
-api.add_resource(User,
-                 '/users/',
-                 '/users/schema/',
-                 '/users/statistics/',
-                 '/users/page/',
-                 '/users/page/<int:page>/',
-                 '/users/<int:pk>/',
-                 strict_slashes=False)
-
-api.add_resource(Group,
-                 '/groups/',
-                 '/groups/schema/',
-                 '/groups/statistics/',
-                 '/groups/page/',
-                 '/groups/page/<int:page>/',
-                 '/groups/<int:pk>/',
-                 strict_slashes=False)
+        else:
+            pass
 
 
-# Standard boilerplate to run the app
-if __name__ == '__main__':
+class AiidaApi(Api):
+    """
+    AiiDA customized version of the flask_restful Api class
+    """
 
-    #Config the app
-    app.config.update(**conf.APP_CONFIG)
+    def __init__(self, app=None, **kwargs):
+        """
+        The need to have a special constructor is to include directly the
+        addition of resources with the parameters required to initialize the
+        resource classes.
 
-    #Config the serializer used by the app
-    if conf.SERIALIZER_CONFIG:
-        from aiida.restapi.common.utils import CustomJSONEncoder
-        app.json_encoder = CustomJSONEncoder
+        Args:
+            **kwargs: parameters to be passed to the resources for
+            configuration and PREFIX
+        """
 
-    #I run the app via a wrapper that accepts arguments such as host and port
-    #e.g. python api.py --host=127.0.0.2 --port=6000
-    # Default address is 127.0.01:5000
-    #Warm up the engine - brum brum - and staaarrrt!!
-    flaskrun(app)
+        from aiida.restapi.resources import Calculation, Computer, Code, Data, \
+            Group, Node, User, StructureData, KpointsData, BandsData
+
+        super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'])
+
+        ## Add resources and endpoints to the api
+        self.add_resource(Computer,
+                          # supported urls
+                          '/computers/',
+                          '/computers/page/',
+                          '/computers/page/<int:page>/',
+                          '/computers/<id>/',
+                          '/computers/schema/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs)
+
+        self.add_resource(Node,
+                          '/nodes/',
+                          '/nodes/schema/',
+                          '/nodes/statistics/',
+                          '/nodes/page/',
+                          '/nodes/page/<int:page>/',
+                          '/nodes/<id>/',
+                          '/nodes/<id>/io/inputs/',
+                          '/nodes/<id>/io/inputs/page/',
+                          '/nodes/<id>/io/inputs/page/<int:page>/',
+                          '/nodes/<id>/io/outputs/',
+                          '/nodes/<id>/io/outputs/page/',
+                          '/nodes/<id>/io/outputs/page/<int:page>/',
+                          '/nodes/<id>/io/tree/',
+                          '/nodes/<id>/content/attributes/',
+                          '/nodes/<id>/content/extras/',
+                          '/nodes/<id>/content/visualization/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs)
+
+        self.add_resource(Calculation,
+                          '/calculations/',
+                          '/calculations/schema/',
+                          '/calculations/statistics/',
+                          '/calculations/page/',
+                          '/calculations/page/<int:page>/',
+                          '/calculations/<id>/',
+                          '/calculations/<id>/io/inputs/',
+                          '/calculations/<id>/io/inputs/page/',
+                          '/calculations/<id>/io/inputs/page/<int:page>/',
+                          '/calculations/<id>/io/outputs/',
+                          '/calculations/<id>/io/outputs/page/',
+                          '/calculations/<id>/io/outputs/page/<int:page>/',
+                          '/calculations/<id>/io/tree/',
+                          '/calculations/<id>/content/attributes/',
+                          '/calculations/<id>/content/extras/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs)
+
+        self.add_resource(Data,
+                          '/data/',
+                          '/data/schema/',
+                          '/data/statistics/',
+                          '/data/page/',
+                          '/data/page/<int:page>',
+                          '/data/<id>/',
+                          '/data/<id>/io/inputs/',
+                          '/data/<id>/io/inputs/page/',
+                          '/data/<id>/io/inputs/page/<int:page>/',
+                          '/data/<id>/io/outputs/',
+                          '/data/<id>/io/outputs/page/',
+                          '/data/<id>/io/outputs/page/<int:page>/',
+                          '/data/<id>/io/tree/',
+                          '/data/<id>/content/attributes/',
+                          '/data/<id>/content/extras/',
+                          '/data/<id>/content/visualization/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs)
+
+        self.add_resource(Code,
+                          '/codes/',
+                          '/codes/schema/',
+                          '/codes/statistics/',
+                          '/codes/page/',
+                          '/codes/page/<int:page>/',
+                          '/codes/<id>/',
+                          '/codes/<id>/io/inputs/',
+                          '/codes/<id>/io/inputs/page/',
+                          '/codes/<id>/io/inputs/page/<int:page>/',
+                          '/codes/<id>/io/outputs/',
+                          '/codes/<id>/io/outputs/page/',
+                          '/codes/<id>/io/outputs/page/<int:page>/',
+                          '/codes/<id>/io/tree/',
+                          '/codes/<id>/content/attributes/',
+                          '/codes/<id>/content/extras/',
+                          '/codes/<id>/content/visualization/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs)
+
+        self.add_resource(StructureData,
+                          '/structures/',
+                          '/structures/schema/',
+                          '/structures/statistics/',
+                          '/structures/page/',
+                          '/structures/page/<int:page>',
+                          '/structures/<id>/',
+                          '/structures/<id>/io/inputs/',
+                          '/structures/<id>/io/inputs/page/',
+                          '/structures/<id>/io/inputs/page/<int:page>/',
+                          '/structures/<id>/io/outputs/',
+                          '/structures/<id>/io/outputs/page/',
+                          '/structures/<id>/io/outputs/page/<int:page>/',
+                          '/structures/<id>/io/tree/',
+                          '/structures/<id>/content/attributes/',
+                          '/structures/<id>/content/extras/',
+                          '/structures/<id>/content/visualization/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
+
+        self.add_resource(KpointsData,
+                          '/kpoints/',
+                          '/kpoints/schema/',
+                          '/kpoints/statistics/',
+                          '/kpoints/page/',
+                          '/kpoints/page/<int:page>',
+                          '/kpoints/<id>/',
+                          '/kpoints/<id>/io/inputs/',
+                          '/kpoints/<id>/io/inputs/page/',
+                          '/kpoints/<id>/io/inputs/page/<int:page>/',
+                          '/kpoints/<id>/io/outputs/',
+                          '/kpoints/<id>/io/outputs/page/',
+                          '/kpoints/<id>/io/outputs/page/<int:page>/',
+                          '/kpoints/<id>/io/tree/',
+                          '/kpoints/<id>/content/attributes/',
+                          '/kpoints/<id>/content/extras/',
+                          '/kpoints/<id>/content/visualization/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
+
+        self.add_resource(BandsData,
+                          '/bands/',
+                          '/bands/schema/',
+                          '/bands/statistics/',
+                          '/bands/page/',
+                          '/bands/page/<int:page>',
+                          '/bands/<id>/',
+                          '/bands/<id>/io/inputs/',
+                          '/bands/<id>/io/inputs/page/',
+                          '/bands/<id>/io/inputs/page/<int:page>/',
+                          '/bands/<id>/io/outputs/',
+                          '/bands/<id>/io/outputs/page/',
+                          '/bands/<id>/io/outputs/page/<int:page>/',
+                          '/bands/<id>/io/tree/',
+                          '/bands/<id>/content/attributes/',
+                          '/bands/<id>/content/extras/',
+                          '/bands/<id>/content/visualization/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
+
+        self.add_resource(User,
+                          '/users/',
+                          '/users/schema/',
+                          '/users/statistics/',
+                          '/users/page/',
+                          '/users/page/<int:page>/',
+                          '/users/<id>/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs)
+
+        self.add_resource(Group,
+                          '/groups/',
+                          '/groups/schema/',
+                          '/groups/statistics/',
+                          '/groups/page/',
+                          '/groups/page/<int:page>/',
+                          '/groups/<id>/',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs)

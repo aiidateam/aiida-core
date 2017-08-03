@@ -1,8 +1,6 @@
 ASE
 ---
 
-.. note:: The ASE plugin referenced below is available in the EPFL version.
-
 Description
 ^^^^^^^^^^^
 `ASE`_ (Atomic Simulation Environment) is a set of tools and Python modules for 

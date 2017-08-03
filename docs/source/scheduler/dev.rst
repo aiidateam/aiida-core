@@ -9,7 +9,7 @@ We report here the generic AiiDA scheduler implementation.
 Generic scheduler class
 -----------------------
 
-.. automodule:: aiida.scheduler.__init__
+.. automodule:: aiida.scheduler
    :members:
    :special-members: __enter__
 

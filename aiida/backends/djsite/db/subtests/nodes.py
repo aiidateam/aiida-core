@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Tests for nodes, attributes and links
 """
@@ -6,10 +14,6 @@ Tests for nodes, attributes and links
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
 
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
 
 
 class TestDataNodeDjango(AiidaTestCase):
@@ -279,22 +283,22 @@ class TestNodeBasicDjango(AiidaTestCase):
         """
         """
         from aiida.orm import load_node
-        from aiida.common.exceptions import NotExistent
+        from aiida.common.exceptions import NotExistent, InputValidationError
 
         a = Node()
         a.store()
         self.assertEquals(a.pk, load_node(pk=a.pk).pk)
         self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InputValidationError):
             load_node(node_id=a.pk, pk=a.pk)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InputValidationError):
             load_node(pk=a.pk, uuid=a.uuid)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             load_node(pk=a.uuid)
-        with self.assertRaises(NotExistent):
+        with self.assertRaises(TypeError):
             load_node(uuid=a.pk)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InputValidationError):
             load_node()
 
 

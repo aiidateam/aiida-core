@@ -19,15 +19,25 @@ from aiida.scheduler.datastructures import (
 
 
 _map_status_ps = {
-    'D': job_states.RUNNING, # uninterruptible sleep
-    'I': job_states.RUNNING, # We still mark jobs that are idle as running
     'R': job_states.RUNNING,
-    'S': job_states.RUNNING, # We still mark jobs that are idle as running
-    'T': job_states.SUSPENDED, # stopped
-    'U': job_states.RUNNING,
-    'W': job_states.RUNNING, # paging
-    'X': job_states.DONE, # dead
-    'Z': job_states.DONE, # Zombie, dead process
+    'R+': job_states.RUNNING,  # If exiting, for our purposes it is still running
+    'F': job_states.DONE,
+    'H': job_states.QUEUED_HELD,
+    'Tl': job_states.UNDETERMINED,
+    'Q': job_states.QUEUED,
+    'R': job_states.RUNNING,
+    'S': job_states.SUSPENDED,
+    'S+': job_states.SUSPENDED,
+    'Sl': job_states.SUSPENDED,
+    'Ssl': job_states.SUSPENDED,
+    'SLl': job_states.SUSPENDED,
+    'S<l': job_states.SUSPENDED,
+    'Ss': job_states.SUSPENDED,
+    'Ss+': job_states.SUSPENDED,
+    'T': job_states.DONE,  # TODO: what to do here?
+    'U': job_states.SUSPENDED,
+    'W': job_states.QUEUED,
+    'X': job_states.DONE,
 }
 
 
@@ -203,7 +213,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                         this_job.job_state = job_states.SUSPENDED
                     else:
                         this_job.job_state = \
-                            _map_status_ps[job_state_string[:1]]
+                            _map_status_ps[job_state_string]
                 except KeyError:
                     self.logger.warning("Unrecognized job_state '{}' for job "
                                         "id {}".format(job_state_string,

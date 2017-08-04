@@ -10,11 +10,10 @@
 
 from aiida.backends.testbase import AiidaTestCase
 
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
+from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 from aiida.work.class_loader import ClassLoader
 import aiida.work.util as util
 from aiida.work.legacy.job_process import JobProcess
-from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 
 class TestJobProcess(AiidaTestCase):
     def setUp(self):
@@ -27,7 +26,7 @@ class TestJobProcess(AiidaTestCase):
 
     def test_class_loader(self):
         cl = ClassLoader()
-        PwProcess = JobProcess.build(PwCalculation)
+        TemplatereplacerProcess = JobProcess.build(TemplatereplacerCalculation)
 
     def test_job_process_set_label_and_description(self):
         label = 'test_label'

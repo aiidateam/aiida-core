@@ -50,3 +50,7 @@ class TestJobProcess(AiidaTestCase):
 
         self.assertEquals(job_instance.calc.label, label)
         self.assertEquals(job_instance.calc.description, description)
+
+        job_instance.destroy()
+        job_instance.run_until_complete()
+

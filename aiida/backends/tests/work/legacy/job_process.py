@@ -14,7 +14,7 @@ from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work.class_loader import ClassLoader
 import aiida.work.util as util
 from aiida.work.legacy.job_process import JobProcess
-
+from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 
 class TestJobProcess(AiidaTestCase):
     def setUp(self):

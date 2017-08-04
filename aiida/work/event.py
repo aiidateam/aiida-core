@@ -1,117 +1,114 @@
+import apricotpy
 import re
-from collections import namedtuple
-import threading
 
-import plum.loop.persistence
-from plum.loop import tasks
-from plum.loop import LoopObject
 from aiida.backends.utils import get_authinfo
-from aiida.common.datastructures import calc_states
 from aiida.common.lang import override
 from aiida.orm import load_node
 from aiida.orm.calculation import Calculation
-from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.scheduler.datastructures import job_states
 from . import transport
 
+#
+# class DbPollingEmitter(apricotpy.LoopObject):
+#     """
+#     Emits loop messages about calculations in the database
+#     """
+#     PK_REGEX = re.compile('calc\.(.+)\.(.+)')
+#     DEFAULT_POLL_INTERVAL = 30  # seconds
+#
+#     def __init__(self, loop, poll_interval=DEFAULT_POLL_INTERVAL):
+#         super(DbPollingEmitter, self).__init__(loop)
+#
+#         self._poll_interval = poll_interval
+#         self._callback_handle = None
+#
+#     @override
+#     def on_loop_inserted(self, loop):
+#         super(DbPollingEmitter, self).on_loop_inserted(loop)
+#
+#         # Listen for anyone that wants to know about calculations
+#         loop.messages().add_listener(self._listener_changed, 'mailman.listener_*.calc.*')
+#
+#         if self._should_poll():
+#             self._callback_handle = self.loop().call_soon(self._poll)
+#
+#     @override
+#     def on_loop_removed(self):
+#         self.loop().messages.remove_listener(self._listener_changed)
+#
+#         if self._callback_handle is not None:
+#             self._callback_handle.cancel()
+#             self._callback_handle = None
+#
+#         super(DbPollingEmitter, self).on_loop_removed()
+#
+#     def _poll(self):
+#         self._callback_handle = None
+#         self._do_poll()
+#         self._update_polling()
+#
+#     def _do_poll(self):
+#         messages = self.loop().messages()
+#         pk_events = {}
+#         for e in messages.specific_listeners().iterkeys():
+#             match = self.PK_REGEX.match(e)
+#             if match is not None:
+#                 pk_events.setdefault(int(match.group(1)), set()).add(match.group(2))
+#
+#         q = QueryBuilder()
+#         q.append(
+#             Calculation,
+#             filters={
+#                 'id': {'in': pk_events.keys()},
+#                 'or': [
+#                     {'attributes': {'has_key': WorkCalculation.FAILED_KEY}},
+#                     {'attributes.{}'.format(WorkCalculation.FINISHED_KEY): True}
+#                 ]
+#             },
+#             project=[
+#                 'id',
+#                 'attributes.{}'.format(WorkCalculation.FAILED_KEY),
+#                 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
+#             ]
+#         )
+#         for r in q.all():
+#             if r[2]:
+#                 messages.send("calc.{}.finished".format(r[0]))
+#                 messages.send("calc.{}.stopped".format(r[0]))
+#             elif r[1] is not None:
+#                 messages.send("calc.{}.failed".format(r[0]))
+#
+#     def _listener_changed(self, loop, subject, body):
+#         self._update_polling()
+#
+#     def _update_polling(self):
+#         if self._should_poll():
+#             if self._callback_handle is None:
+#                 self._callback_handle = self.loop().call_later(self._poll_interval, self._poll)
+#         else:
+#             if self._callback_handle is not None:
+#                 self._callback_handle.cancel()
+#                 self._callback_handle = None
+#
+#     def _should_poll(self):
+#         for e in self.loop().messages().specific_listeners().iterkeys():
+#             if self.PK_REGEX.match(e) is not None:
+#                 return True
+#
+#         return False
 
-class DbPollingEmitter(LoopObject):
+
+class GetSchedulerUpdate(apricotpy.PersistableTask):
     """
-    Emits loop messages about calculations in the database
+    This task will get a scheduler update for the given job
     """
-    PK_REGEX = re.compile('calc\.(.+)\.(.+)')
-    DEFAULT_POLL_INTERVAL = 30  # seconds
 
-    def __init__(self, loop, poll_interval=DEFAULT_POLL_INTERVAL):
-        super(DbPollingEmitter, self).__init__(loop)
-
-        self._poll_interval = poll_interval
-        self._callback_handle = None
-
-    @override
-    def on_loop_inserted(self, loop):
-        super(DbPollingEmitter, self).on_loop_inserted(loop)
-
-        # Listen for anyone that wants to know about calculations
-        loop.messages().add_listener(self._listener_changed, 'mailman.listener_*.calc.*')
-
-        if self._should_poll():
-            self._callback_handle = self.loop().call_soon(self._poll)
-
-    @override
-    def on_loop_removed(self):
-        self.loop().messages.remove_listener(self._listener_changed)
-
-        if self._callback_handle is not None:
-            self._callback_handle.cancel()
-            self._callback_handle = None
-
-        super(DbPollingEmitter, self).on_loop_removed()
-
-    def _poll(self):
-        self._callback_handle = None
-        self._do_poll()
-        self._update_polling()
-
-    def _do_poll(self):
-        messages = self.loop().messages()
-        pk_events = {}
-        for e in messages.specific_listeners().iterkeys():
-            match = self.PK_REGEX.match(e)
-            if match is not None:
-                pk_events.setdefault(int(match.group(1)), set()).add(match.group(2))
-
-        q = QueryBuilder()
-        q.append(
-            Calculation,
-            filters={
-                'id': {'in': pk_events.keys()},
-                'or': [
-                    {'attributes': {'has_key': WorkCalculation.FAILED_KEY}},
-                    {'attributes.{}'.format(WorkCalculation.FINISHED_KEY): True}
-                ]
-            },
-            project=[
-                'id',
-                'attributes.{}'.format(WorkCalculation.FAILED_KEY),
-                'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
-            ]
-        )
-        for r in q.all():
-            if r[2]:
-                self.loop()
-                messages.send("calc.{}.finished".format(r[0]))
-                messages.send("calc.{}.stopped".format(r[0]))
-            elif r[1] is not None:
-                messages.send("calc.{}.failed".format(r[0]))
-
-    def _listener_changed(self, loop, subject, body):
-        self._update_polling()
-
-    def _update_polling(self):
-        if self._should_poll():
-            if self._callback_handle is None:
-                self._callback_handle = self.loop().call_later(self._poll_interval, self._poll)
-        else:
-            if self._callback_handle is not None:
-                self._callback_handle.cancel()
-                self._callback_handle = None
-
-    def _should_poll(self):
-        for e in self.loop().messages().specific_listeners().iterkeys():
-            if self.PK_REGEX.match(e) is not None:
-                return True
-
-        return False
-
-
-class GetSchedulerUpdate(plum.loop.persistence.PersistableTask):
     def __init__(self, loop, calc, authinfo, last_state=None):
         super(GetSchedulerUpdate, self).__init__(loop)
 
-        self._updated = loop.create_futrue()
+        self._updated = None
         self._calc = calc
         self._authinfo = authinfo
         self._callback_handle = None
@@ -121,8 +118,10 @@ class GetSchedulerUpdate(plum.loop.persistence.PersistableTask):
             raise ValueError("Calculation has no job id")
 
     def execute(self):
-        self._callback_handle = transport.call_me_with_transport(self.loop(), self._authinfo, self._submit_calc)
-        return tasks.Await(self._updated)
+        self._updated = self.loop().create_futrue()
+        self._callback_handle = transport.call_me_with_transport(
+            self.loop(), self._authinfo, self._submit_calc)
+        return apricotpy.Await(self._updated)
 
     def save_instance_state(self, out_state):
         super(GetSchedulerUpdate, self).save_instance_state(out_state)

@@ -10,7 +10,7 @@
 
 import plum.port as port
 import plum.process
-import plum.util
+import plum.utils
 from plum.loop import tasks
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states as scheduler_states
@@ -72,7 +72,7 @@ class JobProcess(Process, WithHeartbeat):
             # Outputs
             spec.dynamic_output(valid_type=Data)
 
-        class_name = "{}_{}".format(cls.__name__, plum.util.fullname(calc_class))
+        class_name = "{}_{}".format(cls.__name__, plum.utils.fullname(calc_class))
 
         # Dynamically create the type for this Process
         return type(class_name, (cls,),
@@ -94,7 +94,7 @@ class JobProcess(Process, WithHeartbeat):
     def load_instance_state(self, loop, saved_state, logger=None):
         from aiida.backends.utils import get_authinfo
 
-        super(JobProcess, self).load_instance_state(loop ,saved_state, logger)
+        super(JobProcess, self).load_instance_state(loop, saved_state, logger)
         self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     @override

@@ -20,16 +20,16 @@ from aiida.orm import load_node
 from aiida.orm.data.base import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.common.lang import override
-from aiida.work import globals
+from aiida import work
 from aiida.work.persistence import Persistence
-from aiida.work.process import Process, FunctionProcess
+from aiida.work.loop import default as loop
 from aiida.work.run import run, run_get_pid, submit, enqueue, run_loop
 from aiida.work.workfunction import workfunction
 import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess, BadOutput
 
 
-class ProcessStackTest(Process):
+class ProcessStackTest(work.Process):
     @override
     def _run(self):
         pass
@@ -50,16 +50,16 @@ class ProcessStackTest(Process):
 class TestProcess(AiidaTestCase):
     def setUp(self):
         super(TestProcess, self).setUp()
+
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
-        procman = globals.get_thread_executor()
-        procman.abort_all(timeout=10.)
-        self.assertEqual(procman.get_num_processes(), 0, "Failed to abort all processes")
+
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
+        loop.reset()
 
     def test_process_stack(self):
         run(ProcessStackTest)
@@ -96,7 +96,7 @@ class TestProcess(AiidaTestCase):
         self.assertTrue(load_node(pk=pid).is_sealed)
 
         storedir = tempfile.mkdtemp()
-        storage = Persistence.create_from_basedir(storedir)
+        storage = enqueue(Persistence.create_from_basedir, storedir)
 
         pid = submit(DummyProcess, _jobs_store=storage)
         n = load_node(pk=pid.pid)
@@ -148,7 +148,7 @@ class TestFunctionProcess(AiidaTestCase):
             return {'a': a, 'b': b, 'c': c}
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
-        FP = FunctionProcess.build(wf)
+        FP = work.FunctionProcess.build(wf)
         self.assertEqual(run(FP, **inputs), inputs)
 
     def test_kwargs(self):
@@ -164,14 +164,14 @@ class TestFunctionProcess(AiidaTestCase):
         a = Int(4)
         inputs = {'a': a}
 
-        FP = FunctionProcess.build(wf_with_kwargs)
+        FP = work.FunctionProcess.build(wf_with_kwargs)
         outs = run(FP, **inputs)
         self.assertEqual(outs, inputs)
 
-        FP = FunctionProcess.build(wf_without_kwargs)
+        FP = work.FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
             run(FP, **inputs)
 
-        FP = FunctionProcess.build(wf_fixed_args)
+        FP = work.FunctionProcess.build(wf_fixed_args)
         outs = run(FP, **inputs)
         self.assertEqual(outs, inputs)

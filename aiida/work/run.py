@@ -13,7 +13,7 @@ from collections import namedtuple
 
 from plum.wait_ons import run_until as plum_run_until
 
-from aiida.work import utils as util
+from . import utils
 from aiida.work.process import Process, FunctionProcess
 import aiida.work.persistence
 from aiida.work.loop.default import run, run_get_pid, enqueue, dequeue, run_loop, ResultAndPid
@@ -103,7 +103,7 @@ def restart(pid, persistence=None):
 
 
 def submit(process_class, _jobs_store=None, **kwargs):
-    assert not util.is_workfunction(process_class), \
+    assert not utils.is_workfunction(process_class), \
         "You cannot submit a workfunction to the daemon"
 
     if _jobs_store is None:
@@ -147,7 +147,7 @@ def _get_process_instance(process_class, *args, **kwargs):
     if isinstance(process_class, Process):
         # Nothing to do
         return process_class
-    elif util.is_workfunction(process_class):
+    elif utils.is_workfunction(process_class):
         wf_class = FunctionProcess.build(process_class._original, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
         return wf_class.new(inputs=inputs)

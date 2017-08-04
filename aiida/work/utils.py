@@ -8,12 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import apricotpy
 import importlib
+import plum
 import threading
 from threading import local
 import time
 import random
-import plum.process
 from aiida.common.links import LinkType
 from aiida.common.lang import override, protected
 from aiida.common.exceptions import ModificationNotAllowed
@@ -132,7 +133,7 @@ class HeartbeatError(BaseException):
     pass
 
 
-class CalculationHeartbeat(object):
+class CalculationHeartbeat(apricotpy.LoopObject):
     """
     This class implements a thread that runs in the background updating the
     heartbeat expiry of a calculation.  The intended behaviour is that while
@@ -153,54 +154,50 @@ class CalculationHeartbeat(object):
     HEARTBEAT_TAG = 'heartbeat_tag'
     DEFAULT_BEAT_INTERVAL = 60.0  # seconds
 
-    def __init__(self, calc, beat_interval=DEFAULT_BEAT_INTERVAL, lost_callback=None):
-        super(CalculationHeartbeat, self).__init__()
+    def __init__(self, loop, calc, beat_interval=DEFAULT_BEAT_INTERVAL, lost_callback=None):
+        super(CalculationHeartbeat, self).__init__(loop)
         self._calc = calc
         self._beat_interval = beat_interval
         self._lost_callback = lost_callback
 
-        self._finished = threading.Event()
         self._heartbeat_expires = None
         self._heartbeat_tag = random.randint(0, 2147483647)
 
-    def __enter__(self):
-        self.start()
-        return self
+        self._heartbeat_callback = None
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.stop()
-
-    @override
-    def start(self):
-        from aiida.work.globals import get_heartbeat_pool
+    def on_loop_inserted(self, loop):
+        super(CalculationHeartbeat, self).on_loop_inserted(loop)
 
         self._acquire_heartbeat()
-        future = get_heartbeat_pool().submit(self.run)
-        while not future.running():
-            pass
 
-    @override
+        # Figure out how long we've got left and give us a bit of leeway
+        delta = self._heartbeat_expires - time.time()
+        self._heartbeat_callback = self.loop().call_later(0.9 * delta, self.run)
+
     def run(self):
-        # Here we should have the lock already from the start() call
-        while not self._finished.is_set():
-            # Figure out how long we've got left and give us a bit of leeway
-            delta = self._heartbeat_expires - time.time()
-            if self._finished.wait(timeout=0.9 * delta):
-                break
-            if not self._update_heartbeat():
-                break
-        self._heartbeat_expires = None
+        self._heartbeat_callback = None
 
-    def stop(self):
-        # Check if we've started
-        if self._heartbeat_expires is not None:
-            self._finished.set()
-            # Try to clean up after ourselves
-            try:
-                self._calc._del_attr(self.HEARTBEAT_EXPIRES)
-                self._calc._del_attr(self.HEARTBEAT_TAG)
-            except ModificationNotAllowed:
-                pass
+        if self._update_heartbeat():
+            # Figure out how long we've got left and give us a bit of leeway
+            delta = self._heartbeat_expires - self.loop().time()
+            self._heartbeat_callback = self.loop().call_later(0.9 * delta, self.run)
+        else:
+            # Lost the heartbeat
+            if self._lost_callback is not None:
+                self.loop().call_soon(self._lost_callback, self)
+
+            self.loop().remove(self)
+
+    def on_loop_removed(self):
+        if self._heartbeat_callback is not None:
+            self._heartbeat_callback.cancel()
+
+        # Try to clean up after ourselves
+        try:
+            self._calc._del_attr(self.HEARTBEAT_EXPIRES)
+            self._calc._del_attr(self.HEARTBEAT_TAG)
+        except ModificationNotAllowed:
+            pass
 
     def _acquire_heartbeat(self):
         current_expiry = self._calc.get_attr(self.HEARTBEAT_EXPIRES, None)
@@ -230,9 +227,6 @@ class CalculationHeartbeat(object):
             self._update_tag()
             return True
         else:
-            # Lost the heartbeat
-            if self._lost_callback is not None:
-                self._lost_callback(self)
             return False
 
     def _update_expiry(self):
@@ -246,24 +240,23 @@ class CalculationHeartbeat(object):
         self._heartbeat_tag = tag
 
 
-class WithHeartbeat(plum.process.Process):
+class WithHeartbeat(plum.Process):
     """
     A mixin of sorts to add a calculation heartbeat to Process calculations.
     """
 
-    def __init__(self, inputs, pid, logger=None):
-        super(WithHeartbeat, self).__init__(inputs, pid, logger)
+    def __init__(self, *args, **kwargs):
+        super(WithHeartbeat, self).__init__(*args, **kwargs)
         self._heartbeat = None
 
-    @override
-    def on_playing(self):
-        super(WithHeartbeat, self).on_playing()
+    def on_loop_inserted(self, loop):
+        super(WithHeartbeat, self).on_loop_inserted(loop)
         self._start_heartbeat()
 
-    @override
-    def on_done_playing(self):
-        super(WithHeartbeat, self).on_done_playing()
-        self._stop_heartbeat()
+    def on_loop_removed(self):
+        if self._heartbeat is not None:
+            self.loop().remove(self._heartbeat)
+        super(WithHeartbeat, self).on_loop_removed()
 
     def on_start(self):
         super(WithHeartbeat, self).on_start()
@@ -273,8 +266,8 @@ class WithHeartbeat(plum.process.Process):
         super(WithHeartbeat, self).on_run()
         assert self._heartbeat is not None
 
-    def on_wait(self, wait_on):
-        super(WithHeartbeat, self).on_wait(wait_on)
+    def on_wait(self, awaiting_uuid):
+        super(WithHeartbeat, self).on_wait(awaiting_uuid)
         assert self._heartbeat is not None
 
     def on_resume(self):
@@ -307,14 +300,14 @@ class WithHeartbeat(plum.process.Process):
         return self._heartbeat is not None
 
     def _start_heartbeat(self):
-        self._heartbeat = CalculationHeartbeat(
-            self.calc, lost_callback=self._heartbeat_lost)
-        self._heartbeat.start()
+        self._heartbeat = self.loop().create(
+            CalculationHeartbeat,
+            self.calc, lost_callback=self._heartbeat_lost
+        )
 
     def _stop_heartbeat(self):
-        if self._heartbeat is not None:
-            self._heartbeat.stop()
-            self._heartbeat = None
+        self.loop().remove(self._heartbeat)
+        self._heartbeat = None
 
     def _heartbeat_lost(self, heartbeat):
         self._heartbeat = None

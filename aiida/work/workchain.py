@@ -8,22 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import apricotpy
 from copy import deepcopy
 import inspect
 import uuid
-from abc import ABCMeta, abstractmethod
 from collections import namedtuple, Mapping, Sequence, Set
 from plum.wait_ons import Checkpoint, WaitOnAll
-from plum.wait import WaitOn
-from plum.persistence.bundle import Bundle
 from aiida.orm import Node
 from aiida.work.process import Process, ProcessSpec
 from aiida.work.utils import WithHeartbeat
-from aiida.common.lang import override
 from aiida.common.utils import get_class_string
-from aiida.work.run import RunningType, RunningInfo
 from aiida.work.interstep import *
-from plum.loop import persistence
+
+__all__ = ['WorkChain']
 
 
 class _WorkChainSpec(ProcessSpec):
@@ -89,7 +86,7 @@ def deserialise_value(value):
         return deepcopy(value)
 
 
-class WorkChain(Process, persistence.ContextMixin, WithHeartbeat):
+class WorkChain(apricotpy.ContextMixin, Process, WithHeartbeat):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
@@ -117,7 +114,7 @@ class WorkChain(Process, persistence.ContextMixin, WithHeartbeat):
         super(WorkChain, self).save_instance_state(out_state)
         # Ask the stepper to save itself
         if self._stepper is not None:
-            stepper_state = Bundle()
+            stepper_state = apricotpy.Bundle()
             self._stepper.save_position(stepper_state)
             out_state[self._STEPPER_STATE] = stepper_state
 
@@ -182,7 +179,7 @@ class WorkChain(Process, persistence.ContextMixin, WithHeartbeat):
         self._barriers = []
 
         try:
-            finished, retval = self._stepper.step()
+            finished, retval = self._stepper.start()
         except _PropagateReturn:
             finished, retval = True, None
 
@@ -289,7 +286,7 @@ def ToContext(**kwargs):
 
 class _InterstepFactory(object):
     def create(self, bundle):
-        class_string = bundle[Bundle.CLASS]
+        class_string = bundle['class']
         if class_string == get_class_string(ToContext):
             return ToContext(**bundle[ToContext.TO_ASSIGN])
         else:
@@ -403,7 +400,7 @@ class _Block(_Instruction):
             # Save the position of the current step we're working (if it's not a
             # direct function)
             if self._current_stepper is not None:
-                stepper_pos = Bundle()
+                stepper_pos = apricotpy.Bundle()
                 self._current_stepper.save_position(stepper_pos)
                 out_position[self._STEPPER_POS] = stepper_pos
 
@@ -511,7 +508,7 @@ class _If(_Instruction):
         def save_position(self, out_position):
             out_position[self._POSITION] = self._pos
             if self._current_stepper is not None:
-                stepper_pos = Bundle()
+                stepper_pos = apricotpy.Bundle()
                 self._current_stepper.save_position(stepper_pos)
                 out_position[self._STEPPER_POS] = stepper_pos
 
@@ -602,7 +599,7 @@ class _While(_Conditional, _Instruction):
                     self._finished = True
                     return True, None
 
-            finished, retval = self._stepper.step()
+            finished, retval = self._stepper.start()
             if finished:
                 self._check_condition = True
                 self._stepper = None
@@ -612,7 +609,7 @@ class _While(_Conditional, _Instruction):
 
         def save_position(self, out_position):
             if self._stepper is not None:
-                stepper_pos = Bundle()
+                stepper_pos = apricotpy.Bundle()
                 self._stepper.save_position(stepper_pos)
                 out_position[self._STEPPER_POS] = stepper_pos
             out_position[self._CHECK_CONDITION] = self._check_condition

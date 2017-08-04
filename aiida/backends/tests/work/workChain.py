@@ -56,8 +56,8 @@ class Wf(WorkChain):
             ),
         )
 
-    def __init__(self, inputs=None, pid=None, logger=None):
-        super(Wf, self).__init__(inputs, pid, logger)
+    def __init__(self, loop, inputs=None, pid=None, logger=None):
+        super(Wf, self).__init__(loop, inputs, pid, logger)
         # Reset the finished step
         self.finished_steps = {
             k: False for k in
@@ -265,7 +265,7 @@ class TestWorkchain(AiidaTestCase):
             def after(self):
                 raise RuntimeError("Shouldn't get here")
 
-        WcWithReturn.run()
+        run(WcWithReturn)
 
     def test_tocontext_submit_workchain_no_daemon(self):
         class MainWorkChain(WorkChain):

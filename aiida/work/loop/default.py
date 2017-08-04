@@ -11,7 +11,6 @@ def get_loop():
     global _loop
     if _loop is None:
         _loop = utils.loop_factory()
-        utils.add_message_emitters(_loop)
 
     return _loop
 
@@ -32,9 +31,11 @@ def run(process_class, *args, **inputs):
     :param inputs: The list of keyword inputs
     :return: The result of the process
     """
-    # Do this here so that it doesn't enter as an input to the process
-    proc = enqueue(process_class, *args, **inputs)
-    return get_loop().run_until_complete(proc)
+    loop = utils.loop_factory()
+    proc = loop.create(process_class, *args, **inputs)
+    result = loop.run_until_complete(proc)
+    loop.close()
+    return result
 
 
 def run_get_pid(process_class, *args, **inputs):
@@ -71,7 +72,7 @@ def run_loop():
     future = loop.create_future()
 
     # Set the future when all processes are done
-    def check_for_processes(loop, subject, body):
+    def check_for_processes(loop, subject, body, sender_id):
         if not loop.objects(obj_type=Process):
             future.set_result('done')
             loop.messages().remove_listener(check_for_processes)

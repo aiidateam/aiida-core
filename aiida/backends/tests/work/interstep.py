@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import apricotpy
 import aiida.work.globals
-from plum.persistence import Bundle
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.base import Int
 from aiida.work import workfunction, run, async
@@ -104,7 +104,7 @@ class TestIntersteps(AiidaTestCase):
         running = RunningInfo(RunningType.PROCESS, pid)
         action = Action(running, 'test')
 
-        state = Bundle()
+        state = apricotpy.Bundle()
         assign_instance = assign_(action).build(key)
         assign_instance.save_instance_state(state)
         assign_recreated = Assign.create_from(state)
@@ -119,7 +119,7 @@ class TestIntersteps(AiidaTestCase):
         running = RunningInfo(RunningType.PROCESS, pid)
         action = Action(running, 'test')
 
-        state = Bundle()
+        state = apricotpy.Bundle()
         append_instance = append_(action).build(key)
         append_instance.save_instance_state(state)
         append_recreated = Append.create_from(state)

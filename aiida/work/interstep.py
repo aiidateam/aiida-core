@@ -1,7 +1,7 @@
+import apricotpy
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple, MutableSequence
-from plum.util import Savable
-from plum.loop import Future
+from plum.utils import Savable
 from aiida.orm import load_node, load_workflow
 from aiida.work.run import RunningType, RunningInfo
 from aiida.work.legacy.wait_on import WaitOnProcessTerminated, WaitOnWorkflow
@@ -40,7 +40,7 @@ class Interstep(Savable):
 
 class UpdateContext(Interstep):
     """
-    Intersteps that evaluate an action and store
+    Interstep that evaluates an action and store
     the results in the context of the Process
     """
 
@@ -169,10 +169,8 @@ def Legacy(object):
 
 
 def Outputs(running_info):
-    if isinstance(running_info, Future):
-        # Create the correct information from the future
-        rinfo = RunningInfo(RunningType.PROCESS, running_info.pid)
-        return Action(rinfo, get_object_string(_get_proc_outputs_from_registry))
+    if isinstance(running_info, apricotpy.Awaitable):
+        return running_info
     elif running_info.type == RunningType.PROCESS:
         return Action(running_info, get_object_string(_get_proc_outputs_from_registry))
     elif running_info.type == RunningType.LEGACY_CALC:

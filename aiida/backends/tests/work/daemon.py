@@ -68,8 +68,8 @@ class ProcessEventsTester(Process):
             self.out("emitted", get_true_node())
 
     @override
-    def on_wait(self, wait_on):
-        super(ProcessEventsTester, self).on_wait(wait_on)
+    def on_wait(self, awaiting_uuid):
+        super(ProcessEventsTester, self).on_wait(awaiting_uuid)
         self.out("wait", get_true_node())
 
     @override

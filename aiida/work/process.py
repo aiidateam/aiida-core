@@ -38,6 +38,9 @@ from aiida.orm.data.parameter import ParameterData
 from aiida import LOG_LEVEL_REPORT
 
 
+__all__ = ['Process', 'FunctionProcess']
+
+
 class DictSchema(object):
     def __init__(self, schema):
         self._schema = voluptuous.Schema(schema)
@@ -222,7 +225,6 @@ class Process(plum.process.Process):
 
         out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
-        out_state.set_class_loader(globals.class_loader)
 
     def run_after_queueing(self, wait_on):
         return self._run

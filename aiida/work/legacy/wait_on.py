@@ -62,36 +62,44 @@ class WaitOnProcessTerminated(WaitOn):
 
 
 class WaitOnWorkflow(WaitOn):
-    PK = "pk"
+    PK = 'PK'
+    RETURN_RESULTS = 'RETURN_RESULTS'
+    POLL_INTERVAL = 'POLL_INTERVAL'
+    DEFAULT_POLL_INTERVAL = 30  # seconds
 
-    def __init__(self, pk, loop):
+    def __init__(self, loop, pk, return_results=False,
+                 poll_interval=DEFAULT_POLL_INTERVAL):
         super(WaitOnWorkflow, self).__init__(loop)
-        self._pk = pk
-        self._init()
+        self._workflow = load_workflow(pk=pk)
+        self._return_outputs = return_results
+        self._poll_interval = poll_interval
+
+    def on_loop_inserted(self, loop):
+        super(WaitOnWorkflow, self).on_loop_inserted(loop)
+        self._check_if_finished()
 
     @override
     def save_instance_state(self, out_state):
         super(WaitOnWorkflow, self).save_instance_state(out_state)
-        out_state[self.PK] = self._pk
-        out_state.set_class_loader(class_loader)
+        out_state[self.PK] = self._workflow.pk
+        out_state[self.RETURN_RESULTS] = self._return_outputs
+        out_state[self.POLL_INTERVAL] = self._poll_interval
 
     @override
-    def load_instance_state(self, saved_state, loop):
+    def load_instance_state(self, loop, saved_state):
         super(WaitOnWorkflow, self).load_instance_state(saved_state, loop)
-        self._pk = saved_state[self.PK]
-        self._init()
+        self._workflow = load_workflow(pk=saved_state[self.PK])
+        self._return_outputs = saved_state[self.RETURN_RESULTS]
+        self._poll_interval = saved_state[self.POLL_INTERVAL]
 
-    def _init(self):
-        self.loop().messages().add_listener(
-            self._workflow_finished, "legacy_workflow.{}".format(self._pk))
-
-        wf = load_workflow(pk=self._pk)
-        if wf.get_state() in [wf_states.FINISHED, wf_states.ERROR]:
+    def _check_if_finished(self):
+        if self._workflow.get_state() in [wf_states.FINISHED, wf_states.ERROR]:
             self._done()
-
-    def _workflow_finished(self, subject, body):
-        self._done()
+        else:
+            self.loop().call_later(self._poll_interval, self._check_if_finished)
 
     def _done(self):
-        self.future().set_result(True)
-        self.loop().messages().remove_listener(self)
+        if self._return_outputs:
+            self.set_result(self._workflow.get_results())
+        else:
+            self.set_result(True)

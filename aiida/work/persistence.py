@@ -12,7 +12,6 @@ import collections
 import uritools
 import os.path
 
-from plum.persistence import Bundle
 import plum.persistence.pickle_persistence
 from plum.process import Process
 from aiida.common.lang import override
@@ -50,7 +49,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     def _convert_to_ids(self, nodes):
         from aiida.orm import Node
 
-        input_ids = Bundle()
+        input_ids = apricotpy.Bundle()
         for label, node in nodes.iteritems():
             if node is None:
                 continue
@@ -79,7 +78,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         """
         from aiida.orm import load_node
 
-        nodes = Bundle()
+        nodes = apricotpy.Bundle()
         for label, pk in pks_mapping.iteritems():
             if isinstance(pk, collections.Mapping):
                 nodes[label] = self._load_nodes_from(pk)

@@ -10,7 +10,7 @@
 
 from aiida.backends.testbase import AiidaTestCase
 
-from plum.util import fullname
+from plum.utils import fullname
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work.globals import class_loader
 import aiida.work.utils as util

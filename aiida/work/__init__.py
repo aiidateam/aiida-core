@@ -9,13 +9,16 @@
 ###########################################################################
 
 from aiida.work.workfunction import workfunction
-from aiida.work.workchain import WorkChain
+from .workchain import *
 from aiida.work.run import async, run, submit
 import aiida.work.globals
 from aiida.work.globals import \
     enable_persistence as enable_global_persistence, \
     disable_persistence as disable_global_persistence
-from plum.process import ProcessState
+from .process import *
+
+__all__ = (process.__all__ +
+           workchain.__all__)
 
 
 def load_checkpoint(pid):

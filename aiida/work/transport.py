@@ -1,14 +1,13 @@
+import apricotpy
 from collections import namedtuple
 import logging
 import threading
 import traceback
 
-from plum.loop import LoopObject
-
 _LOGGER = logging.getLogger(__name__)
 
 
-class TransportQueue(LoopObject):
+class TransportQueue(apricotpy.LoopObject):
     """
     A queue to get transport objects from authinfo.  This class allows clients
     to register their interest in a transport object which will be provided at

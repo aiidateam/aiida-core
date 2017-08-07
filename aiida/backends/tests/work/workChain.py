@@ -172,6 +172,20 @@ class TestWorkchain(AiidaTestCase):
         with self.assertRaises(ValueError):
             Wf.spec()
 
+    def test_serialize_fct(self):
+        class Wf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Wf, cls).define(spec)
+                spec.input('foo', valid_type=Int, serialize_fct=lambda x: Int(x))
+                # Try defining an invalid outline
+                spec.outline(cls.test_foo)
+
+            def test_foo(self):
+                assert isinstance(self.inputs.foo, Int)
+
+        run(Wf, foo=1)
+
     def test_context(self):
         A = Str("a")
         B = Str("b")

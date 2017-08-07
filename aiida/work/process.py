@@ -44,7 +44,7 @@ class DictSchema(object):
         """
         Call this to validate the value against the schema.
 
-        :param value: a regular dictionary or a ParameterData instance 
+        :param value: a regular dictionary or a ParameterData instance
         :return: tuple (success, msg).  success is True if the value is valid
             and False otherwise, in which case msg will contain information about
             the validation failure.
@@ -77,6 +77,11 @@ class DictSchema(object):
                 template[key] = self._get_template(value)
         return template
 
+class InputPort(port.InputPort):
+    def __init__(self, name, serialize_fct=None, deserialize_fct=None, **kwargs):
+        super(InputPort, self).__init__(name, **kwargs)
+        self._serialize_fct = serialize_fct
+        self._deserialize_fct = deserialize_fct
 
 class ProcessSpec(plum.process.ProcessSpec):
     def __init__(self):
@@ -88,6 +93,15 @@ class ProcessSpec(plum.process.ProcessSpec):
 
     def fastforwardable(self):
         self._fastforwardable = True
+
+    def input(self, name, **kwargs):
+        """
+        Define an Process input.
+
+        :param name: The name of the input.
+        :param kwargs: The input port options.
+        """
+        self.input_port(name, InputPort(name, **kwargs))
 
     def get_inputs_template(self):
         """
@@ -169,6 +183,14 @@ class Process(plum.process.Process):
         super(Process, self).__init__()
         self._calc = None
         self._parent_pid = None
+
+    @classmethod
+    def new_instance(cls, inputs=None, pid=None, logger=None):
+        if inputs is not None:
+            for name, port in cls.spec().inputs.items():
+                if name in inputs and port._serialize_fct is not None:
+                    inputs[name] = port._serialize_fct(inputs[name])
+        return super(Process, cls).new_instance(inputs=inputs, pid=pid, logger=logger)
 
     @property
     def calc(self):

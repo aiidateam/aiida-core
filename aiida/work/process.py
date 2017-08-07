@@ -25,6 +25,7 @@ from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
+from aiida.common import caching
 from aiida.utils.calculation import add_source_info
 from aiida.work.defaults import class_loader
 import aiida.work.util
@@ -44,7 +45,7 @@ class DictSchema(object):
         """
         Call this to validate the value against the schema.
 
-        :param value: a regular dictionary or a ParameterData instance 
+        :param value: a regular dictionary or a ParameterData instance
         :return: tuple (success, msg).  success is True if the value is valid
             and False otherwise, in which case msg will contain information about
             the validation failure.
@@ -314,11 +315,16 @@ class Process(plum.process.Process):
     #             del parsed[name]
     #     return parsed
 
+    def run_until_complete(self):
+        with open('/home/greschd/Desktop/foo.txt', 'a') as f:
+            f.write(str(type(self).__mro__) + '\n')
+        super(Process, self).run_until_complete()
+
     def _create_and_setup_db_record(self):
         self._calc = self.create_db_record()
         self._setup_db_record()
         if self.inputs._store_provenance:
-            self.calc.store_all()
+            self.calc.store_all(use_cache=caching.defaults.use_cache)
 
         if self.calc.pk is not None:
             return self.calc.pk

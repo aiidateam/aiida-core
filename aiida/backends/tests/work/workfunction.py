@@ -15,6 +15,7 @@ from aiida.orm.data.base import get_true_node
 from aiida.orm import load_node
 from aiida.work.run import async, run
 import aiida.work.util as util
+from aiida.common import caching
 
 
 
@@ -52,10 +53,7 @@ class TestWf(AiidaTestCase):
         self.assertTrue(run(return_input, get_true_node())['result'])
 
     def test_caching(self):
-        r, pid = run(simple_wf, _return_pid=True)
-        print(type(r))
-        print(r)
-        print(pid)
-        n = load_node(pid)
-        print(n)
-        print(type(n))
+        with caching.EnableCaching():
+            r, pid = run(simple_wf, _return_pid=True)
+            r2, pid2 = run(simple_wf, _return_pid=True)
+            self.assertEqual(pid, pid2)

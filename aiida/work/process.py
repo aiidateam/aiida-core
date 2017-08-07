@@ -84,6 +84,7 @@ class ProcessSpec(plum.process.ProcessSpec):
         super(ProcessSpec, self).__init__()
         self._fastforwardable = False
         self._inherited_input_keys = {}
+        self._inherited_input_prefixes = {}
 
     def is_fastforwardable(self):
         return self._fastforwardable
@@ -91,26 +92,31 @@ class ProcessSpec(plum.process.ProcessSpec):
     def fastforwardable(self):
         self._fastforwardable = True
 
-    def inherit_inputs(self, process, exclude=()):
+    def inherit_inputs(self, process, exclude=(), namespace=None):
         """
         Inherit input parameters from another process.
 
         :param process: Process whose input parameters are inherited.
         :type process: aiida.work.process.Process
 
-        :param exclude: Input parameters which are not inherited.
+        :param exclude: Input parameters which are not inherited. Parameters whose name starts with an underscore are always excluded.
         :type exclude: List[str]
         """
         inputs = {
             name: port for name, port in process.spec().inputs.items()
-            if name not in exclude
+            if name not in exclude and not name.startswith('_')
         }
-        self._inputs.update(inputs)
+        prefix = '' if namespace is None else namespace + '_'
+        self._inherited_input_prefixes[process] = prefix
         self._inherited_input_keys[process] = viewkeys(inputs)
+
+
+        prefixed_inputs = {prefix + name: value for name, value in inputs.items()}
+        self._inputs.update(prefixed_inputs)
 
     def inherited_input_keys(self, process):
         """
-        Get the input parameters which are inherited from a given process.
+        Get the input parameters which are inherited from a given process (without namespace prefix).
 
         :param process: Process from which the parameters were inherited.
         :type process: aiida.work.process.Process
@@ -118,6 +124,12 @@ class ProcessSpec(plum.process.ProcessSpec):
         :returns: List[str]
         """
         return self._inherited_input_keys[process]
+
+    def inherited_input_prefix(self, process):
+        """
+        Get the namespace prefix for input inherited from a given process.
+        """
+        return self._inherited_input_prefixes[process]
 
     def get_inputs_template(self):
         """
@@ -418,7 +430,7 @@ class Process(plum.process.Process):
         for k, v in node.get_output_dict():
             self.out(k, v)
 
-    def inherited_inputs(self, process):
+    def inherited_inputs(self, process, add_prefix=False):
         """
         Returns a dict containing the inputs which were inherited from the given
         process.
@@ -428,10 +440,13 @@ class Process(plum.process.Process):
 
         :returns: Dict[str, aiida.orm.data.Data]
         """
-        inherited_keys = self.spec().inherited_input_keys(process)
+        spec = self.spec()
+        inherited_keys = spec.inherited_input_keys(process)
+        prefix = spec.inherited_input_prefix(process)
+        added_prefix = prefix if add_prefix else ''
         return {
-            key: self.inputs[key] for key in
-            inherited_keys & set(self.inputs.keys())
+            added_prefix + key: self.inputs[prefix + key] for key in inherited_keys
+            if prefix + key in  self.inputs
         }
 
 

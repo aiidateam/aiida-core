@@ -226,6 +226,19 @@ class TestProcessInheritedInputs(AiidaTestCase):
                 SimpleProcess.run(**self.inherited_inputs(SimpleProcess))
         ValidExcludeInheritProcess.run(a=Int(1), c=Int(1))
 
+    def test_namespace(self):
+        SimpleProcess = self.SimpleProcess
+        class NamespaceInheritProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(NamespaceInheritProcess, cls).define(spec)
+                spec.inherit_inputs(SimpleProcess, namespace='sub')
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(**self.inherited_inputs(SimpleProcess))
+        NamespaceInheritProcess.run(sub_a=Int(1), sub_b=Int(1))
+
     def test_exclude_invalid(self):
         SimpleProcess = self.SimpleProcess
         class InvalidExcludeInheritProcess(Process):

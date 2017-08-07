@@ -188,16 +188,17 @@ class Process(plum.process.Process):
     def new_instance(cls, inputs=None, pid=None, logger=None):
         if inputs is not None:
             for name, port in cls.spec().inputs.items():
-                if name in inputs and port._serialize_fct is not None:
-                    inputs[name] = port._serialize_fct(inputs[name])
+                if name in inputs:
+                    if hasattr(port, '_serialize_fct') and port._serialize_fct is not None:
+                        inputs[name] = port._serialize_fct(inputs[name])
         return super(Process, cls).new_instance(inputs=inputs, pid=pid, logger=logger)
 
     def get_deserialized_input(self, name):
         port = self.spec().inputs.get(name, None)
-        if port is None or port._deserialize_fct is None:
-            return self.inputs[name]
-        else:
+        if hasattr(port, '_deserialize_fct') and port._deserialize_fct is not None:
             return port._deserialize_fct(self.inputs[name])
+        else:
+            return self.inputs[name]
 
     @property
     def calc(self):

@@ -84,7 +84,6 @@ class ProcessSpec(plum.process.ProcessSpec):
         super(ProcessSpec, self).__init__()
         self._fastforwardable = False
         self._inherited_input_keys = {}
-        self._inherited_input_prefixes = {}
 
     def is_fastforwardable(self):
         return self._fastforwardable
@@ -107,9 +106,8 @@ class ProcessSpec(plum.process.ProcessSpec):
             if name not in exclude and not name.startswith('_')
         }
         prefix = '' if namespace is None else namespace + '_'
-        self._inherited_input_prefixes[process] = prefix
-        self._inherited_input_keys[process] = viewkeys(inputs)
-
+        self._inherited_input_keys.setdefault(process, {})
+        self._inherited_input_keys[process][prefix] = viewkeys(inputs)
 
         prefixed_inputs = {prefix + name: value for name, value in inputs.items()}
         self._inputs.update(prefixed_inputs)
@@ -124,12 +122,6 @@ class ProcessSpec(plum.process.ProcessSpec):
         :returns: List[str]
         """
         return self._inherited_input_keys[process]
-
-    def inherited_input_prefix(self, process):
-        """
-        Get the namespace prefix for input inherited from a given process.
-        """
-        return self._inherited_input_prefixes[process]
 
     def get_inputs_template(self):
         """
@@ -430,7 +422,7 @@ class Process(plum.process.Process):
         for k, v in node.get_output_dict():
             self.out(k, v)
 
-    def inherited_inputs(self, process, add_prefix=False):
+    def inherited_inputs(self, process):
         """
         Returns a dict containing the inputs which were inherited from the given
         process.
@@ -441,13 +433,14 @@ class Process(plum.process.Process):
         :returns: Dict[str, aiida.orm.data.Data]
         """
         spec = self.spec()
-        inherited_keys = spec.inherited_input_keys(process)
-        prefix = spec.inherited_input_prefix(process)
-        added_prefix = prefix if add_prefix else ''
-        return {
-            added_prefix + key: self.inputs[prefix + key] for key in inherited_keys
-            if prefix + key in  self.inputs
-        }
+        inherited_keys_dict = spec.inherited_input_keys(process)
+        res = {}
+        for prefix, keys in inherited_keys_dict.items():
+            for k in keys:
+                prefixed_key = prefix + k
+                if prefixed_key in self.inputs:
+                    res[k] = self.inputs[prefixed_key]
+        return res
 
 
 class FunctionProcess(Process):

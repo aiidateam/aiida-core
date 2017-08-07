@@ -93,6 +93,15 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
                                                              computer_str,
                                                              self.pk, self.uuid)
 
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from  PwCalculation node's 
+        properties.
+        :param node:
+        :return: retsrt:
+        """
+        return '{}'.format(self.label)
+
     @classmethod
     def get_code_helper(cls, label, machinename=None):
         """

@@ -36,7 +36,7 @@ DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 DEFAULT_PROCESS = 'verdi'
 
 # The default umask for file creation under AIIDA_CONFIG_FOLDER
-DEFAULT_UMASK = 0077
+DEFAULT_UMASK = 0o0077
 
 # Profile keys
 aiidadb_backend_key = "AIIDADB_BACKEND"
@@ -869,6 +869,15 @@ _property_table = {
         "'aiida.backends.djsite.db.models:aiida.orm.querytool.Querytool'",
         "",
         None),
+    "verdishell.calculation_list": (
+        "projections_for_calculation_list",
+        "list_of_str",
+        "A list of the projections that should be shown by default "
+        "when typing 'verdi calculation list'. "
+        "Set by passing the projections space separated as a string, for example: "
+        "verdi devel setproperty verdishell.calculation_list 'pk time state'",
+        ('pk', 'ctime', 'state', 'sched', 'computer', 'type'),
+        None),
     "logging.aiida_loglevel": (
         "logging_aiida_log_level",
         "string",
@@ -1070,6 +1079,9 @@ def set_property(name, value):
         actual_value = unicode(value)
     elif type_string == "int":
         actual_value = int(value)
+    elif type_string == 'list_of_str':
+        # I expect the results as a list of strings
+        actual_value = value.split()
     else:
         # Implement here other data types
         raise NotImplementedError("Type string '{}' not implemented yet".format(

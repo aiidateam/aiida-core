@@ -29,6 +29,7 @@ table_groups_nodes = Table(
     Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED"))
 )
 
+
 class DbGroup(Base):
     __tablename__ = "db_dbgroup"
 
@@ -51,6 +52,10 @@ class DbGroup(Base):
     __table_args__ = (
         UniqueConstraint('name', 'type'),
     )
+
+    @property
+    def pk(self):
+        return self.id
 
     def __str__(self):
         if self.type:

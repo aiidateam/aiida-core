@@ -192,6 +192,13 @@ class Process(plum.process.Process):
                     inputs[name] = port._serialize_fct(inputs[name])
         return super(Process, cls).new_instance(inputs=inputs, pid=pid, logger=logger)
 
+    def get_deserialized_input(self, name):
+        port = self.spec().inputs.get(name, None)
+        if port is None or port._deserialize_fct is None:
+            return self.inputs[name]
+        else:
+            return port._deserialize_fct(self.inputs[name])
+
     @property
     def calc(self):
         return self._calc

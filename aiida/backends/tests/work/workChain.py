@@ -172,6 +172,23 @@ class TestWorkchain(AiidaTestCase):
         with self.assertRaises(ValueError):
             Wf.spec()
 
+    def test_same_input_node(self):
+        class Wf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Wf, cls).define(spec)
+                spec.input('a', valid_type=Int)
+                spec.input('b', valid_type=Int)
+                # Try defining an invalid outline
+                spec.outline(cls.check_a_b)
+
+            def check_a_b(self):
+                assert 'a' in self.inputs
+                assert 'b' in self.inputs
+
+        x = Int(1)
+        run(Wf, a=x, b=x)
+
     def test_context(self):
         A = Str("a")
         B = Str("b")

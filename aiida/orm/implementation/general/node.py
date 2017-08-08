@@ -142,11 +142,11 @@ class AbstractNode(object):
 
     def get_desc(self):
         """
-        Returns a string with infos retrieved from a node's 
+        Returns a string with infos retrieved from a node's
         properties.
         This method is actually overwritten by the inheriting classes
-        
-        :return: a description string     
+
+        :return: a description string
         """
         return ""
 
@@ -462,11 +462,16 @@ class AbstractNode(object):
 
         # See if I am pointing to already saved nodes and I am already
         # linking to a given node
-        if src.uuid in [_[0].uuid for _ in self._inputlinks_cache.values()]:
-            raise UniquenessError(
-                "A link from node with UUID={} and "
-                "the current node (UUID={}) already exists!".format(
-                    src.uuid, self.uuid))
+        for other_node, other_link_type in self._inputlinks_cache.values():
+            if src.uuid == other_node.uuid:
+                if other_link_type == link_type:
+                    return
+                else:
+                    raise UniquenessError(
+                        "A link from node with UUID={} and the current node (UUID={}) already exists, but has type {} instead of {}!".format(
+                            src.uuid, self.uuid, other_link_type, link_type
+                        )
+                    )
 
         # Check if the source allows output links from this node
         # (will raise ValueError if this is not the case)

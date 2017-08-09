@@ -1664,7 +1664,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(UniquenessError):
             n3.add_link_from(n4, label='l2')
 
-        # Same error also in _replace_link_from
+        # Replace link from a node which already has a link
         with self.assertRaises(UniquenessError):
             n3._replace_link_from(n2, label='l4')
 

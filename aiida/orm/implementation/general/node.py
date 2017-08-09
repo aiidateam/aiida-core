@@ -460,19 +460,6 @@ class AbstractNode(object):
             raise UniquenessError("Input link with name '{}' already present "
                                   "in the internal cache".format(label))
 
-        # See if I am pointing to already saved nodes and I am already
-        # linking to a given node
-        for other_node, other_link_type in self._inputlinks_cache.values():
-            if src.uuid == other_node.uuid:
-                if other_link_type == link_type:
-                    return
-                else:
-                    raise UniquenessError(
-                        "A link from node with UUID={} and the current node (UUID={}) already exists, but has type {} instead of {}!".format(
-                            src.uuid, self.uuid, other_link_type, link_type
-                        )
-                    )
-
         # Check if the source allows output links from this node
         # (will raise ValueError if this is not the case)
         src._linking_as_output(self, link_type)

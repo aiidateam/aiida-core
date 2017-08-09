@@ -511,21 +511,9 @@ class AbstractNode(object):
             except KeyError:
                 pass
         else:  # at least one is not stored: set in the internal cache
-            # See if I am pointing to already saved nodes and I am already
-            # linking to a given node
-            # It is similar to the 'add' method, but if I am replacing the
-            # same node, I will not complain (k!=label)
-            if src.uuid in [v[0].uuid for k, v in
-                            self._inputlinks_cache.iteritems() if k != label]:
-                raise UniquenessError(
-                    "A link from node with UUID={} and "
-                    "the current node (UUID={}) already exists!".format(
-                        src.uuid, self.uuid))
             # I insert the link directly in the cache rather than calling
             # _add_cachelink_from because this latter performs an undesired check
             self._inputlinks_cache[label] = (src, link_type)
-
-           # self._add_cachelink_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         """

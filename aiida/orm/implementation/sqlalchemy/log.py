@@ -101,7 +101,7 @@ class SqlaLogEntry(LogEntry):
         """
         Get the primary key of the entry
         """
-        return self._model.pk
+        return self._model.objpk
 
     @property
     def time(self):

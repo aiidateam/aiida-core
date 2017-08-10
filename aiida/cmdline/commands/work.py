@@ -17,7 +17,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 LOG_LEVELS = [
     levelname for levelname in [
-        logging.getLevelName(i) for i in range(51)
+        logging.getLevelName(i) for i in range(logging.CRITICAL + 1)
     ]
     if not levelname.startswith('Level')
 ]

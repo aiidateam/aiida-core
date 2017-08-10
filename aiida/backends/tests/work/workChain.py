@@ -172,6 +172,24 @@ class TestWorkchain(AiidaTestCase):
         with self.assertRaises(ValueError):
             Wf.spec()
 
+    def test_identical_input_node_different_label(self):
+        # We allow the creation of multiple INPUT links from the same node
+        # as long as the label is different
+        class Wf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Wf, cls).define(spec)
+                spec.input('a', valid_type=Int)
+                spec.input('b', valid_type=Int)
+                spec.outline(cls.check_inputs)
+
+            def check_inputs(self):
+                assert 'a' in self.inputs
+                assert 'b' in self.inputs
+
+        A = Int(1)
+        run(Wf, a=A, b=A)
+
     def test_context(self):
         A = Str("a")
         B = Str("b")

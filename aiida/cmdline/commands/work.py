@@ -15,12 +15,13 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-LOG_LEVELS = [
-    levelname for levelname in [
-        logging.getLevelName(i) for i in range(logging.CRITICAL + 1)
+LOG_LEVEL_MAPPING = {
+    levelname: i for levelname, i in [
+        (logging.getLevelName(i), i) for i in range(logging.CRITICAL + 1)
     ]
     if not levelname.startswith('Level')
-]
+}
+LOG_LEVELS = LOG_LEVEL_MAPPING.keys()
 
 class Work(VerdiCommandWithSubcommands):
     """
@@ -118,21 +119,12 @@ def report(pk, levelname, order_by, indent_size):
             'objpk': pk,
         }
 
-        # get all levels higher than 'levelname'
-        for i, name in enumerate(LOG_LEVELS):
-            if name == levelname:
-                all_levelnames = LOG_LEVELS[i:]
-                break
-
-        entries = []
-        for ln in all_levelnames:
-            filters['levelname'] = ln
-            entries.extend(backend.log.find(filter_by=filters))
-
-        if entries is None or len(entries) == 0:
-            return []
-        else:
-            return [(_, depth) for _ in entries]
+        entries = backend.log.find(filter_by=filters)
+        entries = [
+            entry for entry in entries
+            if LOG_LEVEL_MAPPING[entry.levelname] >= LOG_LEVEL_MAPPING[levelname]
+        ]
+        return [(_, depth) for _ in entries]
 
     def get_subtree(pk, level=0):
         qb = QueryBuilder(with_dbpath=False)

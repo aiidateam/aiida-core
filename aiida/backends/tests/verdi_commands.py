@@ -224,7 +224,10 @@ class TestVerdiWorkCommands(AiidaTestCase):
         """
         from aiida.cmdline.commands.work import report
 
-        result = CliRunner().invoke(report, [str(self.workchain_pid)])
+        result = CliRunner().invoke(
+            report, [str(self.workchain_pid)],
+            catch_exceptions=False
+        )
         self.assertTrue(self.test_string in result.output)
 
     def test_report_debug(self):
@@ -233,5 +236,8 @@ class TestVerdiWorkCommands(AiidaTestCase):
         """
         from aiida.cmdline.commands.work import report
 
-        result = CliRunner().invoke(report, [str(self.workchain_pid), '--levelname', 'DEBUG'])
+        result = CliRunner().invoke(
+            report, [str(self.workchain_pid), '--levelname', 'DEBUG'],
+            catch_exceptions=False
+        )
         self.assertTrue(self.test_string in result.output)

@@ -241,3 +241,15 @@ class TestVerdiWorkCommands(AiidaTestCase):
             catch_exceptions=False
         )
         self.assertTrue(self.test_string in result.output)
+
+    def test_report_error(self):
+        """
+        Test that 'verdi work report' does not contain the report message when called with levelname ERROR.
+        """
+        from aiida.cmdline.commands.work import report
+
+        result = CliRunner().invoke(
+            report, [str(self.workchain_pid), '--levelname', 'ERROR'],
+            catch_exceptions=False
+        )
+        self.assertTrue(self.test_string not in result.output)

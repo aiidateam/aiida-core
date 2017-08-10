@@ -446,7 +446,7 @@ class NodeTranslator(BaseTranslator):
                 description = mainNode.dbnode.type.split('.')[-2]
 
             nodes.append({
-                "uuid_pattern": nodeCount,
+                "id": nodeCount,
                 "nodeid": pk,
                 "nodeuuid": uuid,
                 "nodetype": nodetype,
@@ -476,7 +476,7 @@ class NodeTranslator(BaseTranslator):
                     description = node.dbnode.type.split('.')[-2]
 
                 nodes.append({
-                    "uuid_pattern": nodeCount,
+                    "id": nodeCount,
                     "nodeid": pk,
                     "nodeuuid": uuid,
                     "nodetype": nodetype,
@@ -513,7 +513,7 @@ class NodeTranslator(BaseTranslator):
                     description = node.dbnode.type.split('.')[-2]
 
                 nodes.append({
-                    "uuid_pattern": nodeCount,
+                    "id": nodeCount,
                     "nodeid": pk,
                     "nodeuuid": uuid,
                     "nodetype": nodetype,

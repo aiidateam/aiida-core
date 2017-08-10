@@ -124,8 +124,10 @@ def report(pk, levelname, order_by, indent_size):
                 all_levelnames = LOG_LEVELS[i:]
                 break
 
-        filters['levelname__in'] = all_levelnames
-        entries = backend.log.find(filter_by=filters)
+        entries = []
+        for ln in all_levelnames:
+            filters['levelname'] = ln
+            entries.extend(backend.log.find(filter_by=filters))
 
         if entries is None or len(entries) == 0:
             return []

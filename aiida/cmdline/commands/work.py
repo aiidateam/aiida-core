@@ -16,10 +16,8 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 LOG_LEVEL_MAPPING = {
-    levelname: i for levelname, i in [
-        (logging.getLevelName(i), i) for i in range(logging.CRITICAL + 1)
-    ]
-    if not levelname.startswith('Level')
+    levelname: value for levelname, value in logging._levelNames.items()
+    if isinstance(value, int)
 }
 LOG_LEVELS = LOG_LEVEL_MAPPING.keys()
 

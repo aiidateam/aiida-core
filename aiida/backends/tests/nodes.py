@@ -1657,20 +1657,22 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # Caching the links
         n2.add_link_from(n1, label='l1')
+        n3.add_link_from(n1, label='l1')
         n3.add_link_from(n2, label='l2')
+
+        # Add link with same label and link_type, regardless of src node
+        with self.assertRaises(UniquenessError):
+            n3.add_link_from(n4, label='l1')
+
+        # Twice the link to the same node but different label is fine
         n3.add_link_from(n1, label='l3')
 
-        # Twice the same link name
-        with self.assertRaises(UniquenessError):
-            n3.add_link_from(n4, label='l2')
+        # Same should be allowed in _replace_link_from
+        n3._replace_link_from(n2, label='l4')
 
-        # Twice the link to the same node
+        # However, replacing with existing link of identical label and link_type
         with self.assertRaises(UniquenessError):
-            n3.add_link_from(n2, label='l4')
-
-        # Same error also in _replace_link_from
-        with self.assertRaises(UniquenessError):
-            n3._replace_link_from(n2, label='l4')
+            n3._replace_link_from(n1, label='l4')
 
         n2.store_all()
         n3.store_all()
@@ -1678,17 +1680,21 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n2_in_links = [(l, n.uuid) for l, n in n2.get_inputs_dict().iteritems()]
         self.assertEquals(sorted(n2_in_links), sorted([('l1', n1.uuid),
                                                        ]))
+
         n3_in_links = [(l, n.uuid) for l, n in n3.get_inputs_dict().iteritems()]
-        self.assertEquals(sorted(n3_in_links), sorted([('l2', n2.uuid),
-                                                       ('l3', n1.uuid),
+        self.assertEquals(sorted(n3_in_links), sorted([('l1', n1.uuid),
+                                                       ('l4', n2.uuid),
+                                                       ('l3', n1.uuid)
                                                        ]))
 
         n1_out_links = [(l, n.pk) for l, n in n1.get_outputs(also_labels=True)]
         self.assertEquals(sorted(n1_out_links), sorted([('l1', n2.pk),
-                                                        ('l3', n3.pk),
+                                                        ('l1', n3.pk),
+                                                        ('l3', n3.pk)
                                                         ]))
         n2_out_links = [(l, n.pk) for l, n in n2.get_outputs(also_labels=True)]
-        self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
+        self.assertEquals(sorted(n2_out_links), sorted([('l4', n3.pk)
+                                                        ]))
 
     def test_valid_links(self):
         import tempfile

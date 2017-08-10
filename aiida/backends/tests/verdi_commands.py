@@ -220,22 +220,18 @@ class TestVerdiWorkCommands(AiidaTestCase):
 
     def test_report(self):
         """
-        Do some code listing test to ensure the correct behaviour of
-        verdi code list
+        Test that 'verdi work report' contains the report message.
         """
         from aiida.cmdline.commands.work import report
 
-        # Run a verdi code list -c, capture the output and check the result
         result = CliRunner().invoke(report, [str(self.workchain_pid)])
         self.assertTrue(self.test_string in result.output)
 
     def test_report_debug(self):
         """
-        Do some code listing test to ensure the correct behaviour of
-        verdi code list
+        Test that 'verdi work report' contains the report message when called with levelname DEBUG.
         """
         from aiida.cmdline.commands.work import report
 
-        # Run a verdi code list -c, capture the output and check the result
         result = CliRunner().invoke(report, [str(self.workchain_pid), '--levelname', 'DEBUG'])
         self.assertTrue(self.test_string in result.output)

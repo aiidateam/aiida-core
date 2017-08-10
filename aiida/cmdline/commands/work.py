@@ -8,12 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
+import logging
 from tabulate import tabulate
 from aiida.cmdline.commands import work, verdi
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
+LOG_LEVELS = [
+    levelname for levelname in [
+        logging.getLevelName(i) for i in range(51)
+    ]
+    if not levelname.startswith('Level')
+]
 
 class Work(VerdiCommandWithSubcommands):
     """
@@ -71,7 +78,7 @@ def do_list(past_days, all_nodes, limit):
         ])
 
     # Revert table:
-    # in this way, I order by 'desc', so I start by the most recent, but then 
+    # in this way, I order by 'desc', so I start by the most recent, but then
     # I print this as the las one (like 'verdi calculation list' does)
     # This is useful when 'limit' is set to not None
     table = table[::-1]
@@ -82,8 +89,8 @@ def do_list(past_days, all_nodes, limit):
 @click.argument('pk', nargs=1, type=int)
 @click.option('-i', '--indent-size', type=int, default=2)
 @click.option('-l', '--levelname',
-              type=click.Choice(['DEBUG', 'INFO', 'REPORT', 'WARNING', 'ERROR', 'CRITICAL']),
-              default=None,
+              type=click.Choice(LOG_LEVELS),
+              default='REPORT',
               help='Filter the results by name of the log level'
               )
 @click.option('-o', '--order-by',
@@ -111,9 +118,13 @@ def report(pk, levelname, order_by, indent_size):
             'objpk': pk,
         }
 
-        if levelname:
-            filters['levelname'] = levelname
+        # get all levels higher than 'levelname'
+        for i, name in enumerate(LOG_LEVELS):
+            if name == levelname:
+                all_levelnames = LOG_LEVELS[i:]
+                break
 
+        filters['levelname__in'] = all_levelnames
         entries = backend.log.find(filter_by=filters)
 
         if entries is None or len(entries) == 0:

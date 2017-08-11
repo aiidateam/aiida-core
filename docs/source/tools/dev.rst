@@ -8,8 +8,4 @@ aiida.tools documentation
 Tools
 -----
 
-pw input parser
-+++++++++++++++
-.. automodule:: aiida.tools.codespecific.quantumespresso.pwinputparser
-   :members:
-   :special-members: __init__
+.. TODO: link to aiida-quantumespresso plugin docs

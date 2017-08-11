@@ -180,17 +180,17 @@ class Node(AbstractNode):
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             try:
-                self._remove_dblink_from(label)
+                self._remove_dblink_from(label, link_type)
                 self._add_dblink_from(src, label, link_type)
                 session.commit()
             except:
                 session.rollback()
                 raise
 
-    def _remove_dblink_from(self, label):
+    def _remove_dblink_from(self, label, link_type):
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
-        link = DbLink.query.filter_by(label=label).first()
+        link = DbLink.query.filter_by(label=label, type=link_type).first()
         if link is not None:
             session.delete(link)
 
@@ -524,9 +524,9 @@ class Node(AbstractNode):
                 "Node with pk= {} was already stored".format(self.id))
 
         # For each parent, check that all its inputs are stored
-        for link in self._inputlinks_cache:
+        for link in self._inputlinks_cache.itervalues():
             try:
-                parent_node = self._inputlinks_cache[link][0]
+                parent_node = link.src
                 parent_node._check_are_parents_stored()
             except ModificationNotAllowed:
                 raise ModificationNotAllowed("Parent node (UUID={}) has "
@@ -579,10 +579,9 @@ class Node(AbstractNode):
         self._check_are_parents_stored()
         # I have to store only those links where the source is already
         # stored
-        links_to_store = list(self._inputlinks_cache.keys())
+        links_to_store = list(self._inputlinks_cache.itervalues())
 
-        for label in links_to_store:
-            src, link_type = self._inputlinks_cache[label]
+        for src, label, link_type in links_to_store:
             self._add_dblink_from(src, label, link_type)
         # If everything went smoothly, clear the entries from the cache.
         # I do it here because I delete them all at once if no error

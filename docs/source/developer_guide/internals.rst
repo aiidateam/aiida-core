@@ -99,11 +99,9 @@ Link management methods
 
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._replace_link_from` replaces or creates an input link.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._remove_link_from` removes an input link that is stored in the database.
-
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._replace_dblink_from` is similar to :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._replace_link_from` but works directly on the database.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._remove_dblink_from` is similar to :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._remove_link_from` but works directly on the database.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._remove_dblink_from` works directly on the database.
 
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._add_dblink_from` adds a link to the current node from the given 'src' node. It acts directly on the database.
 

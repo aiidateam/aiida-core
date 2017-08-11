@@ -17,17 +17,9 @@ Base class
 .. automodule:: aiida.tools.dbexporters.tcod_plugins
    :members:
 
-CP
-++
-.. automodule:: aiida.tools.dbexporters.tcod_plugins.cp
-   :members:
-
 NWChem (pymatgen-based)
 +++++++++++++++++++++++
 .. automodule:: aiida.tools.dbexporters.tcod_plugins.nwcpymatgen
    :members:
-
-PW
-++
-.. automodule:: aiida.tools.dbexporters.tcod_plugins.pw
-   :members:
+   
+.. TODO: link to aiida-quantumespresso plugin docs

@@ -15,7 +15,6 @@ from aiida.work.class_loader import ClassLoader
 import aiida.work.util as util
 from aiida.work.legacy.job_process import JobProcess
 
-
 class TestJobProcess(AiidaTestCase):
     def setUp(self):
         super(TestJobProcess, self).setUp()
@@ -28,3 +27,28 @@ class TestJobProcess(AiidaTestCase):
     def test_class_loader(self):
         cl = ClassLoader()
         TemplatereplacerProcess = JobProcess.build(TemplatereplacerCalculation)
+
+    def test_job_process_set_label_and_description(self):
+        label = 'test_label'
+        description = 'test_description'
+        inputs = {
+            '_options': {
+                    'computer': self.computer,
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    },
+                    'max_wallclock_seconds': 10,
+                },
+            '_label': label,
+            '_description': description
+        }
+
+        job_class = TemplatereplacerCalculation.process()
+        job_instance = job_class.new_instance(inputs)
+
+        self.assertEquals(job_instance.calc.label, label)
+        self.assertEquals(job_instance.calc.description, description)
+
+        job_instance.destroy()
+        job_instance.run_until_complete()

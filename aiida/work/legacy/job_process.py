@@ -151,3 +151,10 @@ class JobProcess(Process):
 
         if parent_calc:
             self._calc.add_link_from(parent_calc, "CALL", LinkType.CALL)
+
+
+        if self.raw_inputs:
+            if '_description' in self.raw_inputs:
+                self._calc.description = self.raw_inputs._description
+            if '_label' in self.raw_inputs:
+                self._calc.label = self.raw_inputs._label

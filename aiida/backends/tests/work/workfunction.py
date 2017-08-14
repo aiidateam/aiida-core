@@ -11,7 +11,7 @@
 import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.workfunction import workfunction
-from aiida.orm.data.base import get_true_node
+from aiida.orm.data.base import get_true_node, Int
 from aiida.orm import load_node
 from aiida.work.run import async, run
 import aiida.work.util as util
@@ -53,7 +53,12 @@ class TestWf(AiidaTestCase):
         self.assertTrue(run(return_input, get_true_node())['result'])
 
     def test_caching(self):
+        @workfunction
+        def simple_cached_wf(inp):
+            return {'result': inp}
+
         with caching.EnableCaching():
-            r, pid = run(simple_wf, _return_pid=True)
-            r2, pid2 = run(simple_wf, _return_pid=True)
+            r, pid = run(simple_cached_wf, inp=Int(2), _return_pid=True)
+            r2, pid2 = run(simple_cached_wf,  inp=Int(2), _return_pid=True, _fast_forward=True)
             self.assertEqual(pid, pid2)
+            self.assertEqual(r, r2)

@@ -18,6 +18,7 @@ import plum.port as port
 import plum.process
 from plum.process_monitor import MONITOR
 import plum.process_monitor
+from plum.error import FastForwardError
 
 import voluptuous
 from abc import ABCMeta
@@ -315,16 +316,17 @@ class Process(plum.process.Process):
     #             del parsed[name]
     #     return parsed
 
-    def run_until_complete(self):
-        with open('/home/greschd/Desktop/foo.txt', 'a') as f:
-            f.write(str(type(self).__mro__) + '\n')
-        super(Process, self).run_until_complete()
-
     def _create_and_setup_db_record(self):
         self._calc = self.create_db_record()
         self._setup_db_record()
         if self.inputs._store_provenance:
-            self.calc.store_all(use_cache=caching.defaults.use_cache)
+            self.calc.store_all(use_cache=self._fast_forward_enabled())
+            if self.calc.has_finished_ok():
+                self._state = plum.process.ProcessState.FINISHED
+                for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
+                    if name.endswith('_{pk}'.format(pk=value.pk)):
+                        continue
+                    self.out(name, value)
 
         if self.calc.pk is not None:
             return self.calc.pk
@@ -386,14 +388,10 @@ class Process(plum.process.Process):
             if '_label' in self.raw_inputs:
                 self.calc.label = self.raw_inputs._label
 
-    def _can_fast_forward(self, inputs):
-        return False
-
-    def _fast_forward(self):
-        node = None  # Here we should find the old node
-        for k, v in node.get_output_dict():
-            self.out(k, v)
-
+    def _fast_forward_enabled(self):
+        # First priority: inputs
+        return self._parsed_inputs.get('_fast_forward', False)
+        # TODO: Add process and global level settings
 
 class FunctionProcess(Process):
     _func_args = None

@@ -12,6 +12,7 @@ import inspect
 import unittest
 import aiida.backends.settings as settings
 
+from aiida.orm import load_node
 from aiida.backends.testbase import AiidaTestCase
 from plum.engine.ticking import TickingEngine
 import plum.process_monitor
@@ -337,6 +338,67 @@ class TestWorkchain(AiidaTestCase):
         te.shutdown()
 
         return finished_steps
+
+class TestFastForwardingWorkChain(TestWorkchain):
+    def setUp(self):
+        super(TestFastForwardingWorkChain, self).setUp()
+        class ReturnInputsFastForward(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(ReturnInputsFastForward, cls).define(spec)
+                spec.input('a', valid_type=Int)
+                spec.input('b', valid_type=Int, default=Int(2), required=False)
+                spec.outline(cls.return_inputs)
+                spec.deterministic()
+
+            def return_inputs(self):
+                self.out('a', self.inputs.a)
+                self.out('b', self.inputs.b)
+        self.wf_class = ReturnInputsFastForward
+        self.reference_result, self.reference_pid = run(
+            self.wf_class, a=Int(1), b=Int(2), _return_pid=True
+        )
+        self.reference_wc = load_node(self.reference_pid)
+
+    def tearDown(self):
+        super(TestFastForwardingWorkChain, self).tearDown()
+        self.clean_db()
+
+    def test_hash(self):
+        res, pid = run(
+            self.wf_class,
+            a=Int(1), b=Int(2),
+            _fast_forward=True, _return_pid=True
+        )
+        wc = load_node(pid)
+        self.assertEquals(wc.get_hash(), self.reference_wc.get_hash())
+        self.assertNotEquals(wc.get_hash(), None)
+
+    def test_fastforwarding(self):
+        res, pid = run(
+            self.wf_class,
+            a=Int(1), b=Int(2),
+            _fast_forward=True, _return_pid=True
+        )
+        self.assertEquals(pid, self.reference_pid)
+
+    def test_fastforwarding_default(self):
+        res, pid = run(
+            self.wf_class,
+            a=Int(1),
+            _fast_forward=True, _return_pid=True
+        )
+        self.assertEquals(pid, self.reference_pid)
+        self.assertEquals(res, self.reference_result)
+
+    def test_fastforwarding_different(self):
+        res, pid = run(
+            self.wf_class,
+            a=Int(2), b=Int(1),
+            _fast_forward=True, _return_pid=True
+        )
+        self.assertNotEquals(pid, self.reference_pid)
+        self.assertNotEquals(res, self.reference_result)
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):

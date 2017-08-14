@@ -19,7 +19,8 @@ class WorkCalculation(Calculation):
     FINISHED_KEY = '_finished'
     FAILED_KEY = '_failed'
 
-    _hash_ignored_inputs = []
+    _hash_ignored_inputs = ['_return_pid', '_fast_forward']
+    _hash_ignored_attributes = ['_finished', '_sealed']
 
     @override
     def has_finished_ok(self):
